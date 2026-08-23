@@ -1489,6 +1489,13 @@ separately.
   transient-type wave. The sequence marker is stateless; pending and unresolved
   constants are mutable compiler/name-resolution placeholders, not completed
   pool metadata.
+- Reconstruct pseudo constants if this slice includes the pseudo-family wave:
+  `ThisClassConstant`, `ParentClassConstant`, and `ChildClassConstant` rebuild
+  logical path shells with target-owned child identities; `KeywordConstant`
+  rebuilds the per-format singleton shell; `DeferredValueConstant`,
+  `ExpressionConstant`, and `UnresolvedNameConstant` fail closed before
+  unresolved compiler/AST placeholder state can be copied. Copy unresolved-name
+  input arrays at construction.
 - Reject `CastTypeConstant` adoption in that wave because it is a transient
   compiler/JIT marker and cannot be assembled into a pool.
 - Reject moving an already-owned live `HandleConstant` to another pool.
@@ -1545,6 +1552,7 @@ Commits:
 - `Make parsed value adoption clone-free` literal/version/decimal-auto wave
 - `Make dependant type adoption clone-free` dependant/recursive type wave
 - `Make annotation type adoption clone-free` annotation/transient type wave
+- `Make pseudo constant adoption clone-free` pseudo path/placeholder wave
 
 Primary source areas:
 
@@ -1558,6 +1566,9 @@ Primary source areas:
 - `UInt8ArrayConstant`, `FPNConstant`, and `Float128Constant` if bundled
 - `Annotation`, `AnnotatedTypeConstant`, `TypeSequenceTypeConstant`,
   `PendingTypeConstant`, and `UnresolvedTypeConstant` if bundled
+- `PseudoConstant`, `ThisClassConstant`, `ParentClassConstant`,
+  `ChildClassConstant`, `KeywordConstant`, `DeferredValueConstant`,
+  `ExpressionConstant`, and `UnresolvedNameConstant` if bundled
 - `HandleConstant`
 - `ClassComposition`
 - `OwnershipDiagnostics` boundary validation where adoption failures surface
@@ -1663,6 +1674,13 @@ appropriate:
   the same allocation/interner shape as shallow clone. Pending and unresolved
   types already cannot be valid assembled runtime metadata, so fail-closed
   adoption removes an invalid path rather than changing valid runtime behavior.
+- Pseudo path constants keep the same auto-narrowing path value. The copy hooks
+  pre-register child identities in the target pool because locator adoption does
+  not rewrite the shell field when recursive registration is deferred. Keyword
+  constants keep the same per-pool per-format singleton behavior. Deferred,
+  expression, and unresolved-name constants already represent unfinished
+  compiler state, so fail-closed adoption removes an invalid path rather than
+  changing valid runtime behavior.
 - The validator is diagnostic coverage, not a complete architectural fix.
 - The validator is off unless explicitly enabled, so normal constant interning
   and runtime cache performance is unchanged.

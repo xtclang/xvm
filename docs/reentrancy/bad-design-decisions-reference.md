@@ -261,6 +261,16 @@ and `UnresolvedTypeConstant` are mutable compiler/name-resolution placeholders;
 adopting them into another pool would publish unfinished compiler state as if it
 were completed runtime metadata, so adoption fails closed.
 
+Pseudo constants show the same boundary in a smaller form. `ThisClassConstant`,
+`ParentClassConstant`, and `ChildClassConstant` are logical path records, so they
+can be rebuilt cheaply from target-owned child identities. `KeywordConstant` is
+a per-format pool singleton and is rebuilt the same way. `DeferredValueConstant`,
+`ExpressionConstant`, and `UnresolvedNameConstant` are not serialized metadata;
+they are unresolved compiler/AST placeholders. Shallow-cloning them would copy
+resolution callbacks, AST pointers, or temporary name/hash state. This branch
+also copies unresolved-name input arrays because a caller-owned `String[]` is not
+an immutable unresolved-name value.
+
 Immutable scalar values are now explicit too. `ByteConstant`, `IntConstant`,
 `StringConstant`, `RegExConstant`, the fixed decimal value, and the fixed-size
 binary float values do not currently carry owner-local caches. That is exactly

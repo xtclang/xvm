@@ -209,6 +209,15 @@ Done in this branch:
 - `PendingTypeConstant` and `UnresolvedTypeConstant` now reject adoption because
   they are mutable compiler/name-resolution placeholders, not completed pool
   metadata.
+- `ThisClassConstant`, `ParentClassConstant`, and `ChildClassConstant` now
+  reconstruct pseudo class-path shells with target-owned child identities. The
+  focused test proved that locator adoption by itself is not enough when
+  recursive registration is deferred; the shell field must be born target-owned.
+- `KeywordConstant` now reconstructs the same per-format singleton shell in the
+  destination pool.
+- `DeferredValueConstant`, `ExpressionConstant`, and `UnresolvedNameConstant`
+  now reject adoption because they are unresolved compiler/AST placeholders.
+  `UnresolvedNameConstant` also copies caller name arrays at construction.
 - `CastTypeConstant` now rejects adoption because it is a transient compiler/JIT
   marker and already cannot be assembled into a pool.
 
@@ -217,10 +226,10 @@ Remaining linked finding:
 - The `MatchAnyConstant` shell and foreign-key boundary are closed, but its
   locator is still a `TypeConstant`. Terminal, single-child type wrappers,
   storable relational shells, dependant child/property shells, and recursive
-  typedef shells are closed. Annotated type shells, the stateless sequence
-  marker, and pending/unresolved placeholders are also closed by this branch.
-  Remaining type-family clone-free work is now the reviewed abstract/base
-  fallback plus any identity/pseudo/value leaves that still intentionally opt in
+  typedef shells are closed. Annotated type shells, pseudo path constants, the
+  stateless sequence marker, and pending/unresolved placeholders are also closed
+  by this branch. Remaining clone-free work is now the reviewed abstract/base
+  fallback plus the eight identity/path leaves that still intentionally opt in
   to the transitional clone helper.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes

@@ -51,6 +51,13 @@ public class DeferredValueConstant
     }
 
     @Override
+    protected DeferredValueConstant copyForAdoption(AdoptionContext context) {
+        // Deferred values are unresolved compiler placeholders. They should be replaced before pool
+        // registration can publish a completed constant, not cloned into another owner.
+        throw new IllegalStateException("cannot adopt deferred value before resolution");
+    }
+
+    @Override
     protected void setPosition(int iPos) {
         throw new UnsupportedOperationException();
     }

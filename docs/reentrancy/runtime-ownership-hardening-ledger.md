@@ -260,6 +260,17 @@ Branch fix:
 - `TypeSequenceTypeConstant.copyForAdoption(...)` reconstructs the stateless
   formal marker explicitly, removing another concrete type from inherited
   shallow clone without changing cache or interning behavior.
+- `ThisClassConstant`, `ParentClassConstant`, and `ChildClassConstant` rebuild
+  pseudo class-path shells with target-owned child identities up front. This is
+  not just style: `ConstantPool.register(...)` can publish a constant before
+  recursive registration runs, and locator adoption does not rewrite the
+  constant's own child field.
+- `KeywordConstant.copyForAdoption(...)` rebuilds the per-format pseudo
+  singleton shell in the destination pool.
+- `DeferredValueConstant`, `ExpressionConstant`, and
+  `UnresolvedNameConstant` fail closed. They are unresolved compiler/AST
+  placeholders, and `UnresolvedNameConstant` also now copies caller-owned name
+  arrays that participate in temporary identity.
 - `ConditionalConstant` no longer grants shallow-clone adoption to the condition
   family. Each concrete condition reconstructs its logical link-time predicate,
   and the transient `iTest` brute-force simulation slot is private scratch state
@@ -277,8 +288,8 @@ Proof/guards:
 - `ConstantAdoptionTest` directly exercises the adoption boundary.
 - The same test copied into detached `master` fails the adoption cases by
   retaining copied helper, runtime, compiler-register, condition-simulation,
-  byte-array backing, annotation-array, placeholder, or cache state; it passes
-  on this branch.
+  byte-array backing, annotation-array, placeholder, pseudo child-owner, or
+  cache state; it passes on this branch.
 - `ConstantAdoptionValidator` now runs at `ConstantPool.register(...)` when
   `-Dxvm.asm.validateConstantAdoption=true` is enabled. It compares source and
   adopted copies and reports identical helper/runtime references unless they

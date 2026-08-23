@@ -107,6 +107,14 @@ public class ThisClassConstant
     }
 
     @Override
+    protected ThisClassConstant copyForAdoption(AdoptionContext context) {
+        // "this:class" is a logical declaration-level identity path. Rebuild it and let target
+        // registration intern the declaration identity before this shell is published.
+        var pool = context.pool();
+        return new ThisClassConstant(pool, pool.register(m_constClass));
+    }
+
+    @Override
     protected int compareDetails(Constant that) {
         if (!(that instanceof ThisClassConstant)) {
             return -1;

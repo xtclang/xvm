@@ -51,6 +51,13 @@ public class ExpressionConstant
     }
 
     @Override
+    protected ExpressionConstant copyForAdoption(AdoptionContext context) {
+        // Expression constants wrap compiler AST nodes. They are unresolved compile-time state, not
+        // immutable pool metadata that can be moved to a different owner.
+        throw new IllegalStateException("cannot adopt expression constant before compilation completes");
+    }
+
+    @Override
     protected int compareDetails(Constant that) {
         return that instanceof ExpressionConstant exprThat
             && this.m_expr.equals(exprThat.m_expr)

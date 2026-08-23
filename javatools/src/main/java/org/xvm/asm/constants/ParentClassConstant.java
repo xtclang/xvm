@@ -156,6 +156,14 @@ public class ParentClassConstant
     }
 
     @Override
+    protected ParentClassConstant copyForAdoption(AdoptionContext context) {
+        // Auto-narrowing parent-class constants are logical child-path records. Rebuild the shell so
+        // the child field is target-owned even when recursive registration is deferred.
+        var pool = context.pool();
+        return new ParentClassConstant(pool, pool.register(m_constChild));
+    }
+
+    @Override
     protected int compareDetails(Constant that) {
         if (!(that instanceof ParentClassConstant)) {
             return -1;

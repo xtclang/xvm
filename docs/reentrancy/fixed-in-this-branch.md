@@ -282,6 +282,21 @@ shallow-clone helper state identified by the audit:
   the destination pool. This has the same allocation and interning shape as the
   old shallow clone, but removes another concrete type from the inherited
   fallback.
+- `ThisClassConstant`, `ParentClassConstant`, and `ChildClassConstant` now
+  reconstruct auto-narrowing pseudo class paths instead of inheriting the
+  pseudo-family shallow clone. Their copy hooks pre-register the logical child
+  identity in the target pool, because `ConstantPool.register(...)` can publish
+  the shell before recursive registration is enabled and locator adoption alone
+  does not rewrite the shell's own child field. This preserves the old path
+  value and interning behavior while making child ownership explicit.
+- `KeywordConstant` now reconstructs the per-format pseudo singleton shell in
+  the destination pool. There is no cache or steady-state cost change: each pool
+  still interns one keyword constant per format.
+- `DeferredValueConstant`, `ExpressionConstant`, and `UnresolvedNameConstant`
+  now reject adoption before resolution. These are unresolved compiler/AST
+  placeholders, not completed constant-pool metadata. `UnresolvedNameConstant`
+  also copies caller-provided name arrays because those names participate in
+  temporary hash/equality identity.
 - `CastTypeConstant` now rejects adoption because it is a transient compiler/JIT
   marker and its own `assemble(...)` method already rejects pool storage.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration

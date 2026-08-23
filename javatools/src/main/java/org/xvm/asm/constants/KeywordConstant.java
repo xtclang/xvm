@@ -100,6 +100,13 @@ public class KeywordConstant
     }
 
     @Override
+    protected KeywordConstant copyForAdoption(AdoptionContext context) {
+        // Keyword constants are stateless category singletons within a pool. Rebuild the singleton
+        // shell so this cheap value no longer inherits pseudo-family shallow clone.
+        return new KeywordConstant(context.pool(), f_format);
+    }
+
+    @Override
     protected int compareDetails(Constant that) {
         if (!(that instanceof KeywordConstant)) {
             return -1;

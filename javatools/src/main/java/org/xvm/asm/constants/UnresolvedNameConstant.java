@@ -4,6 +4,7 @@ package org.xvm.asm.constants;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Arrays;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -37,7 +38,7 @@ public class UnresolvedNameConstant
     public UnresolvedNameConstant(ConstantPool pool, String[] names, boolean fExplicitlyNonNarrowing) {
         super(pool);
 
-        m_asName    = names;
+        m_asName    = Arrays.copyOf(names, names.length);
         m_fNoNarrow = fExplicitlyNonNarrowing;
     }
 
@@ -152,6 +153,13 @@ public class UnresolvedNameConstant
     @Override
     public boolean containsUnresolved() {
         return true;
+    }
+
+    @Override
+    protected UnresolvedNameConstant copyForAdoption(AdoptionContext context) {
+        // Unresolved names are mutable compiler placeholders with resolution callbacks. They must be
+        // resolved before a pool-owner transfer can publish completed metadata.
+        throw new IllegalStateException("cannot adopt unresolved name before resolution: " + getName());
     }
 
     @Override

@@ -10,7 +10,7 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import  org.xvm.util.Hash;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
@@ -152,6 +152,15 @@ public class ChildClassConstant
     public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constParent);
         visitor.accept(m_constName);
+    }
+
+    @Override
+    protected ChildClassConstant copyForAdoption(AdoptionContext context) {
+        // Auto-narrowing child-class constants are logical parent+name path records. Rebuild the
+        // path shell with a target-owned parent up front; locator adoption alone does not rewrite
+        // this object's parent field when recursive registration is deferred.
+        var pool = context.pool();
+        return new ChildClassConstant(pool, pool.register(m_constParent), getName());
     }
 
     @Override

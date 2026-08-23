@@ -28,12 +28,15 @@ import org.xvm.asm.constants.BFloat16Constant;
 import org.xvm.asm.constants.ByteConstant;
 import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.CharConstant;
+import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecimalAutoConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DecimalConstant;
+import org.xvm.asm.constants.DeferredValueConstant;
 import org.xvm.asm.constants.DifferenceTypeConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
+import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.FPNConstant;
 import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.FileStoreConstant;
@@ -49,6 +52,7 @@ import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.InnerChildTypeConstant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.ImmutableTypeConstant;
+import org.xvm.asm.constants.KeywordConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MatchAnyConstant;
@@ -57,10 +61,12 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.NotCondition;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
+import org.xvm.asm.constants.ParentClassConstant;
 import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
+import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.RegExConstant;
 import org.xvm.asm.constants.RegisterConstant;
@@ -70,6 +76,7 @@ import org.xvm.asm.constants.ServiceTypeConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TerminalTypeConstant;
+import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.asm.constants.TypeSequenceTypeConstant;
@@ -600,6 +607,94 @@ public class ConstantAdoptionTest {
 
         assertTrue(pendingError.getMessage().contains("pending type"));
         assertTrue(unresolvedError.getMessage().contains("unresolved type"));
+    }
+
+    /**
+     * Auto-narrowing pseudo class constants are logical path records. Adoption must keep the same
+     * path value and destination-pool interning while avoiding pseudo-family shallow clone.
+     */
+    @Test
+    public void pseudoClassPathConstantsAdoptIntoTargetPool() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var owner      = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Owner", null);
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+
+        var sourceThis   = sourcePool.ensureThisClassConstant(classId(owner));
+        var sourceParent = (ParentClassConstant) sourcePool.ensureParentClassConstant(sourceThis);
+        var sourceChild  = (ChildClassConstant) sourcePool.ensureChildClassConstant(
+                sourceThis, "Child");
+
+        var targetThis   = adopt(sourceThis, targetPool);
+        var targetParent = adopt(sourceParent, targetPool);
+        var targetChild  = adopt(sourceChild, targetPool);
+
+        assertSame(targetPool, targetThis.getConstantPool());
+        assertSame(targetPool, targetThis.getDeclarationLevelClass().getConstantPool());
+        assertSame(targetPool, targetParent.getConstantPool());
+        assertSame(targetPool, targetParent.getChildClass().getConstantPool());
+        assertSame(targetPool, targetChild.getConstantPool());
+        assertSame(targetPool, targetChild.getParent().getConstantPool());
+        assertEquals(sourceThis.getValueString(), targetThis.getValueString());
+        assertEquals(sourceParent.getValueString(), targetParent.getValueString());
+        assertEquals(sourceChild.getValueString(), targetChild.getValueString());
+    }
+
+    /**
+     * Keyword pseudo constants are per-pool category singletons. Clone-free reconstruction must keep
+     * the same singleton lookup shape in the destination pool.
+     */
+    @Test
+    public void keywordConstantAdoptionPreservesTargetPoolSingleton() {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var source     = sourcePool.ensureKeywordConstant(Constant.Format.IsClass);
+
+        var registered = targetPool.register(source);
+
+        assertSame(targetPool, registered.getConstantPool());
+        assertSame(registered, targetPool.ensureKeywordConstant(Constant.Format.IsClass));
+        assertEquals(source.getValueString(), registered.getValueString());
+    }
+
+    /**
+     * Deferred, expression, and unresolved-name pseudo constants are mutable compiler placeholders.
+     * Direct owner transfer now fails closed instead of cloning incomplete compiler state.
+     */
+    @Test
+    public void unresolvedPseudoPlaceholdersRejectAdoptionBeforeResolution() {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var deferred   = new DeferredValueConstant(sourcePool);
+        var expression = new ExpressionConstant(sourcePool, null);
+        var unresolved = new UnresolvedNameConstant(sourcePool, "Missing");
+
+        var deferredError = assertThrows(IllegalStateException.class,
+                () -> adopt(deferred, targetPool));
+        var expressionError = assertThrows(IllegalStateException.class,
+                () -> adopt(expression, targetPool));
+        var unresolvedError = assertThrows(IllegalStateException.class,
+                () -> adopt(unresolved, targetPool));
+
+        assertTrue(deferredError.getMessage().contains("deferred value"));
+        assertTrue(expressionError.getMessage().contains("expression constant"));
+        assertTrue(unresolvedError.getMessage().contains("unresolved name"));
+    }
+
+    /**
+     * Unresolved-name text arrays participate in temporary hash/equality identity. The constructor
+     * must copy caller arrays so later caller mutation cannot rewrite the placeholder identity.
+     */
+    @Test
+    public void unresolvedNameInputsAreDefensivelyCopied() {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var names      = new String[] {"pkg", "Name"};
+        var unresolved = new UnresolvedNameConstant(sourcePool, names, false);
+
+        names[1] = "Mutated";
+
+        assertEquals("pkg.Name", unresolved.getName());
     }
 
     /**
@@ -1291,6 +1386,8 @@ public class ConstantAdoptionTest {
         var adoptedBy = Constant.class.getDeclaredMethod("adoptedBy", ConstantPool.class);
 
         assertTrue(Modifier.isFinal(adoptedBy.getModifiers()));
+        assertThrows(NoSuchMethodException.class,
+                () -> PseudoConstant.class.getDeclaredMethod("allowsDefaultAdoptionClone"));
 
         Set.of(Annotation.class,
                AllCondition.class,
@@ -1303,11 +1400,14 @@ public class ConstantAdoptionTest {
                ByteConstant.class,
                CastTypeConstant.class,
                CharConstant.class,
+               ChildClassConstant.class,
                DecimalAutoConstant.class,
                DecimalConstant.class,
+               DeferredValueConstant.class,
                DifferenceTypeConstant.class,
                FSNodeConstant.class,
                DynamicFormalConstant.class,
+               ExpressionConstant.class,
                FPNConstant.class,
                FileStoreConstant.class,
                Float128Constant.class,
@@ -1322,6 +1422,7 @@ public class ConstantAdoptionTest {
                InnerChildTypeConstant.class,
                IntersectionTypeConstant.class,
                ImmutableTypeConstant.class,
+               KeywordConstant.class,
                LiteralConstant.class,
                MapConstant.class,
                MatchAnyConstant.class,
@@ -1330,6 +1431,7 @@ public class ConstantAdoptionTest {
                NamedCondition.class,
                NotCondition.class,
                ParameterizedTypeConstant.class,
+               ParentClassConstant.class,
                PendingTypeConstant.class,
                PresentCondition.class,
                PropertyConstant.class,
@@ -1343,10 +1445,12 @@ public class ConstantAdoptionTest {
                SingletonConstant.class,
                StringConstant.class,
                TerminalTypeConstant.class,
+               ThisClassConstant.class,
                TypeParameterConstant.class,
                TypeSequenceTypeConstant.class,
                UInt8ArrayConstant.class,
                UnionTypeConstant.class,
+               UnresolvedNameConstant.class,
                UnresolvedTypeConstant.class,
                VersionConstant.class,
                VersionMatchesCondition.class,

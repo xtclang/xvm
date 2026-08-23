@@ -375,6 +375,16 @@ cache is dropped and recomputed by the destination owner.
 `TypeSequenceTypeConstant` reconstructs its stateless marker explicitly, while
 `PendingTypeConstant` and `UnresolvedTypeConstant` fail closed because they are
 mutable compiler placeholders rather than completed pool metadata.
+The pseudo family is no longer a default-clone family either. Auto-narrowing
+path constants (`ThisClassConstant`, `ParentClassConstant`, and
+`ChildClassConstant`) reconstruct their logical path shell with target-owned
+child identities before publication. That matters because the registration
+path can install a locator before recursive child registration rewrites fields.
+`KeywordConstant` reconstructs the same per-format singleton shell, while
+`DeferredValueConstant`, `ExpressionConstant`, and `UnresolvedNameConstant`
+fail closed because they are unresolved compiler/AST placeholders.
+`UnresolvedNameConstant` also copies caller name arrays so temporary
+hash/equality identity cannot be mutated by the caller.
 
 Container/ConstantPool/lock/cache impact: `ConstantPool.register(...)` uses this
 path for foreign constants and locator constants. The validator is opt-in through
