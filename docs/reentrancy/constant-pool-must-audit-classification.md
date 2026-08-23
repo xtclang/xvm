@@ -15,8 +15,8 @@ in the API.
 
 | Status | Category | Bottom line |
 | --- | --- | --- |
-| MUST FIX | Base `Constant.adoptedBy(...)` shallow clone contract | The default still shallow-clones arbitrary subclass fields while changing pool owner. The branch fixed known runtime subclasses, but the base contract remains hostile to future constants. |
-| MUST FIX | `ConstantPool.register(...)` publishes before recursive registration completes | The outer constant becomes visible in `f_listConst` and lookup maps before `registerConstants(...)` rewrites child fields. This is unsafe for a runtime-shared pool. |
+| DONE IN THIS BRANCH as a guard; MUST FIX long term with clone-free adoption | Base `Constant.adoptedBy(...)` shallow clone contract | The base path now rejects default shallow-clone adoption unless a constant family explicitly opts in and documents why its copied fields are logical value state. This stops new unsafe constants from silently inheriting `Object.clone()` ownership transfer. The long-term fix is still explicit copy/adoption constructors instead of clone. |
+| DONE IN THIS BRANCH as a guard; MUST FIX long term with transactional registration | `ConstantPool.register(...)` publishes before recursive registration completes | The branch preserves same-thread cycle resolution but marks newly published constants as incomplete and makes other threads wait until recursive `registerConstants(...)` and valid-pool checks finish. The long-term fix is still private transactional registration that does not expose in-progress constants through public pool APIs. |
 | MUST FIX for runtime freeze; DONE IN THIS BRANCH for known first `ClassComposition` access-type prewarm | Runtime-published pool mutation, including first `ClassComposition` construction | Late registration is diagnostic-only, so normal runtime pools can still mutate. The branch now prewarms known access-type constants before the diagnostic publication marker and adds a first-composition test for that narrow subcase. |
 | MUST FIX for runtime-published pools; MUST AUDIT otherwise | `f_listConst`, locator maps, and constant lookup maps | The storage supports single-thread reentrant validation, not arbitrary parallel mutation after publication. |
 | MUST AUDIT, with runtime-published use as MUST FIX | Live `HandleConstant` / `ObjectHandle` state in constants | The second-adoption guard is fixed, but fresh runtime handle constants and filesystem handle caches are still live runtime state reachable from constants. |
@@ -28,7 +28,8 @@ in the API.
 
 ## 1. Base `Constant.adoptedBy(...)` Shallow Clone Contract
 
-Classification: MUST FIX.
+Classification: DONE IN THIS BRANCH as a guard. MUST FIX long term with
+clone-free adoption.
 
 Evidence:
 
@@ -63,6 +64,22 @@ singleton reused another container's initialized handle. The same shape applies
 to future default-cloned constants with `ObjectHandle`, `Container`,
 `TypeComposition`, lock, `ThreadLocal`, or mutable collection fields.
 
+Branch fix:
+
+`Constant.adoptedBy(...)` now fails closed. The base method calls
+`allowsDefaultAdoptionClone()`, which returns `false` by default. Constant
+families that still use the transitional shallow-clone helper must override that
+method and explain why copied fields are logical value state or are cleared by
+owner-change hooks. Special runtime-bearing constants continue to use explicit
+`adoptedBy(...)` overrides.
+
+This turns the old "safe unless somebody remembers a problem" contract into
+"illegal unless the constant family declares the policy". It is still a
+compromise because the opted-in families still use `Object.clone()` internally.
+The helper is now named `cloneForAdoption(...)` and is available only to explicit
+adoption implementations or opted-in families, so future owner-bearing state has
+a review choke point.
+
 Existing reproducer, test, or diagnostic:
 
 - `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java:49` through
@@ -73,6 +90,8 @@ Existing reproducer, test, or diagnostic:
   `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java:284` proves
   the validator catches a bad default clone and rejects bad registration when
   the validation property is enabled.
+- `ConstantAdoptionTest.defaultAdoptionCloneRequiresExplicitPolicy()` proves a
+  new `Constant` subclass cannot silently inherit shallow-clone adoption.
 - `javatools/src/main/java/org/xvm/asm/ConstantAdoptionValidator.java:153`
   through `javatools/src/main/java/org/xvm/asm/ConstantAdoptionValidator.java:170`
   define the current forbidden reference classes.
@@ -103,6 +122,11 @@ stress.
 
 Done in this branch:
 
+- `Constant.adoptedBy(...)` now rejects the default shallow-clone path unless a
+  constant family explicitly opts in with `allowsDefaultAdoptionClone()`.
+- `Constant.cloneForAdoption(...)` isolates the remaining transitional clone
+  helper behind an explicit method name so owner-transfer clone use is searchable
+  and reviewable.
 - `javatools/src/main/java/org/xvm/asm/constants/SingletonConstant.java:262`
   through `javatools/src/main/java/org/xvm/asm/constants/SingletonConstant.java:267`
   constructs a fresh adopted singleton.
@@ -121,7 +145,8 @@ Done in this branch:
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 
-Classification: MUST FIX.
+Classification: DONE IN THIS BRANCH as a guard. MUST FIX long term with
+transactional registration.
 
 Evidence:
 
@@ -164,11 +189,40 @@ depend on timing.
 
 Existing reproducer, test, or diagnostic:
 
-There is no focused reproducer for this publication-order race. The adoption
-validator runs before publication for copied helper references, and the late
-registration diagnostic catches new constants after publication, but neither
-proves that a published constant is recursively complete before another thread
-can observe it.
+- `ConstantPoolDiagnosticsTest.otherThreadsWaitForRecursiveRegistrationCompletion()`
+  creates a synthetic constant whose `registerConstants(...)` blocks after the
+  constant has received a pool index. A second thread attempts to read that index
+  through the normal public API. On the old design, that reader can observe the
+  half-registered constant. In this branch, the read remains blocked until the
+  registration owner releases the recursive phase.
+- `ConstantPoolDiagnosticsTest.registrationOwnerCanResolveInProgressConstant()`
+  proves the reason early publication existed in the first place: the same
+  registration owner can still resolve its own in-progress constant during
+  recursive registration.
+- `ConstantPoolDiagnosticsTest.failedRecursiveRegistrationStaysFailedForReaders()`
+  proves that a failure after early publication remains visible to later public
+  readers instead of returning a partial constant graph.
+- The adoption validator runs before publication for copied helper references,
+  and the late registration diagnostic catches new constants after publication.
+  Those guards are complementary: they do not replace the publication-order
+  guard.
+
+Branch fix:
+
+`ConstantPool.register(...)` now records a `RegistrationCompletion` immediately
+before it assigns a position and inserts a new constant into `f_listConst` and
+the constant lookup map. Same-thread recursive registration can still retrieve
+the in-progress constant, which preserves the legacy cycle-breaking behavior.
+Other threads that reach `getConstant(...)`, `getConstants()`, or
+`getConstant(Constant)` wait for the completion future. If recursive
+registration fails, the completion is failed exceptionally, so a waiting reader
+does not treat a broken partial graph as complete.
+
+This is a defensive bridge, not the final architecture. It still publishes the
+object early for the registration owner because too much legacy code expects
+positions and recursive lookups to exist while `registerConstants(...)` runs.
+The correct architecture is to keep that recursion map private to registration
+and publish only completed constants.
 
 Proper fix:
 
@@ -192,6 +246,21 @@ Create a registration publication-order PR. Add a diagnostic test constant whose
 `registerConstants(...)` blocks or records observation, prove the current
 publish-before-recursion shape, then introduce a two-phase worklist or explicit
 single-owner registration guard.
+
+Done in this branch:
+
+- `ConstantPool.register(...)` marks a newly inserted constant as incomplete
+  until recursive registration and valid-pool checks finish.
+- `getConstant(int)`, `getConstant(int, Class<T>)`, `getConstants()`, and
+  `getConstant(Constant)` wait when they encounter a constant still being
+  completed by another thread.
+- Registration failures complete the in-progress marker exceptionally, so
+  waiting readers do not treat a failed partial graph as stable.
+- A failed marker remains installed because a registration exception after early
+  publication leaves the pool structurally suspect. Later public readers should
+  see the failure, not a half-registered constant.
+- Same-thread recursive lookup still sees the in-progress constant, preserving
+  the cycle-breaking behavior that the old early-publication design relied on.
 
 ## 3. Runtime-Published Pool Mutation And First `ClassComposition` Construction
 

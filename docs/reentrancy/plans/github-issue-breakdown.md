@@ -50,6 +50,7 @@ semantics, and clear owner/performance reasoning.
 | 8 | Add same-JVM stress and ownership diagnostics | Adds the proof harness for repeated direct execution and parallel container validation. | PR 1 through PR 7 |
 | 9 | Remove semantic ambient `ConstantPool` lookup | Replaces `getCurrentPool()` semantic owner selection with explicit owners. | PR 8 useful for stress, otherwise independent |
 | 10 | Harden constant adoption owner transfer | Prevents shallow-cloned constants from carrying runtime/helper state across pools. | PR 5 and PR 8 recommended |
+| 10b | Guard ConstantPool registration publication | Separates same-thread recursive registration from public cross-thread observation while the later transaction design is prepared. | PR 10 recommended |
 | 11 | Fix method, parameter, and handle owner-copy hazards | Repairs method/parameter/delegated copies, constrains direct cross-owner handle masks, and fixes same-owner `GenericHandle` inflated-ref view backing. | PR 10 |
 | 12 | Keep compiler reentrancy cleanup separate | Moves lexer/parser/AST constructor and compiler-owner work out of runtime review. | Independent after shared ASM API changes |
 | 13 | Keep JIT ownership cleanup separate | Keeps JIT lifecycle, generated static fields, and `Ctx.Current` review separate from interpreter runtime. | PR 9/10 for shared ASM safety |
@@ -63,6 +64,7 @@ Use this as the first pass when preparing actual PR branches from `master`.
 | --- | --- | --- |
 | Ambient current-pool removal | `be0270e0d`, `e856d85ce`, `d58ebfea0`, `5d5773979`, `5fce7b9ae`, `4c6521dd9`, `c93b5ad61`, `2716435f1`, `84fa61534` | Constant adoption, clone/copy fixes, JIT `Ctx.Current` policy |
 | Constant adoption hardening | `09f244211`, `e569d27db`, `e6f78a210`, `d1d0683e3`, `a0c1fe936` | Parameter/method clone fixes and `ObjectHandle.cloneAs(...)` design |
+| ConstantPool registration publication guard | Current registration-completion guard wave | Clone-free adoption, runtime pool freeze, and the later private transaction/worklist rewrite |
 | Shared runtime/ASM cache hardening | Runtime op-cache commits, `JumpNFirst` atomic state, `JumpNSample`, guard descriptor/process cleanup, `MethodStructure.Code` first-publication diagnostics, and the `TypeConstant` TypeHandle owner-cache slice | Native-template `INSTANCE` migration, enum lifecycle state, broad ConstantPool freeze, full immutable `ResolvedCode` refactor |
 | Parameter, method, and handle-copy fixes | `7f82e0a1e`, `ed7220bee`, the `GenericHandle.maskAs(...)` cross-owner guard slice, and the same-owner `GenericHandle.cloneAs(...)` inflated-ref backing slice | Constant adoption validator, broad compiler clone cleanup, base `ObjectHandle.cloneAs(...)` subclass audit |
 | Constructor-escape removal in shared ASM/runtime | `1249e2a0f`, `47d7ab30e`, `93189541f`, `16915ebe7`, `7b7fc2036`, `70bf202ef` where source areas match | JIT constructor escapes and compiler/parser-only cleanup |
@@ -1435,7 +1437,7 @@ reuse another container's singleton runtime state.
 
 ### Explicit Out Of Scope
 
-- Full removal of the base shallow clone adoption contract.
+- Full clone-free removal of the transitional default-clone adoption policy.
 - ConstantPool list/map publication atomicity and runtime pool freeze.
 - Runtime creation of genuinely new constants after publication. The
   access-type warmup only handles constants the pool already knows before the
@@ -1538,6 +1540,119 @@ appropriate:
 Should land after PR 5 if enum singleton behavior is split separately, and
 after PR 8 if stress proof is expected in the same PR. This PR should land
 before remaining clone/copy cleanup in PR 11.
+
+## PR 10b: Guard ConstantPool Registration Publication
+
+### PR Title
+
+Guard ConstantPool registration publication
+
+### Reviewer-Facing Problem Statement
+
+`ConstantPool.register(...)` used one public list/map as both:
+
+- the private worklist needed to resolve recursive constant graphs; and
+- the completed public pool storage used by normal readers.
+
+Master assigns a position, appends the constant to `f_listConst`, and inserts it
+into the lookup map before recursive `registerConstants(...)` and valid-pool
+checks finish. That probably made recursive constant graphs easy to implement,
+but it made the public API lie: "registered" could mean "visible but not
+complete."
+
+This is bad even when a single thread happens to drive registration, because
+phase is hidden in mutable object state. It becomes a direct same-JVM runtime
+bug when another execution owner can read the public pool while registration is
+still in the recursive phase.
+
+### Exact Scope Included
+
+- Add an in-progress registration completion marker for newly inserted
+  constants.
+- Preserve same-thread recursive lookup for the registration owner.
+- Make public readers in other threads wait until recursive registration and
+  valid-pool checks complete.
+- Preserve failed registration as failed for later public readers instead of
+  returning a partial constant graph.
+- Keep this as a compatibility guard, not the final transaction design.
+
+### Explicit Out Of Scope
+
+- Full clone-free constant adoption. That is PR 10 / the clone-free adoption
+  plan.
+- Runtime pool freeze and late-registration policy.
+- Rewriting every `registerConstants(...)` implementation.
+- Replacing the guard with a private registration transaction/worklist. That is
+  tracked in
+  [transactional-constant-registration-plan.md](transactional-constant-registration-plan.md).
+
+### Source Areas / Branch Commits
+
+Commits:
+
+- Current registration-completion guard wave.
+
+Primary source areas:
+
+- `ConstantPool`
+- `Constant`
+- `ConstantPoolDiagnosticsTest`
+- `constant-pool-must-audit-classification.md`
+- `bad-design-decisions-reference.md`
+- `plans/transactional-constant-registration-plan.md`
+
+### Tests And Verification Commands
+
+```bash
+./gradlew :javatools:test --tests org.xvm.asm.ConstantPoolDiagnosticsTest \
+  --configuration-cache --console=plain --warning-mode=all
+
+./gradlew :javatools:jar --rerun-tasks \
+  -Porg.xtclang.java.lint=true \
+  -Porg.xtclang.java.warningsAsErrors=false \
+  -Porg.xtclang.java.maxWarnings=10000 \
+  -Porg.xtclang.java.maxErrors=10000 \
+  --configuration-cache --console=plain --warning-mode=all
+```
+
+### Semantic / Performance Equivalence Notes
+
+- Same-thread recursive registration still works. The test
+  `registrationOwnerCanResolveInProgressConstant()` covers the reason early
+  publication existed.
+- Other threads no longer receive a half-registered constant. The test
+  `otherThreadsWaitForRecursiveRegistrationCompletion()` covers the public
+  cross-thread observation path.
+- A failed registration remains failed for public readers. The test
+  `failedRecursiveRegistrationStaysFailedForReaders()` prevents accidentally
+  treating a partial graph as stable.
+- There is no per-constant footprint after successful registration completes.
+  The guard is a volatile fast-path flag plus a temporary completion object while
+  a registration window is open.
+
+### Documentation Updates Included
+
+- Update [../bad-design-decisions-reference.md](../bad-design-decisions-reference.md).
+- Update [../constant-pool-must-audit-classification.md](../constant-pool-must-audit-classification.md).
+- Update [../constant-pool-hostile-state-audit.md](../constant-pool-hostile-state-audit.md).
+- Update [transactional-constant-registration-plan.md](transactional-constant-registration-plan.md).
+
+### Review Checklist / Acceptance Criteria
+
+- The PR must not claim that `ConstantPool` is fully transactional after the
+  guard.
+- The tests must prove same-thread recursion still works.
+- The tests must prove cross-thread public readers do not observe incomplete
+  registration.
+- The PR text must explain why the final target is private transactional
+  registration, not a permanent completion marker.
+
+### Dependency / Order
+
+This should land after or together with the adoption guard PR if the branch is
+split by review size. It should land before any claim that same-JVM runtime
+constant-pool access is safe. The later transaction rewrite should remove the
+guard once public early publication no longer exists.
 
 ## PR 11: Fix Method, Parameter, And Handle Owner-Copy Hazards
 

@@ -33,4 +33,12 @@ public abstract class FrameDependentConstant
      * @return the ObjectHandle (can be a DeferredCallHandle)
      */
     public abstract ObjectHandle getHandle(Frame frame);
+
+    @Override
+    protected boolean allowsDefaultAdoptionClone() {
+        // Transitional policy: RegisterConstant and MethodBindingConstant are serialized
+        // frame-dependent descriptors. HandleConstant is the runtime ObjectHandle exception and
+        // overrides adoptedBy(...) so live handles cannot move between already-owned pools.
+        return true;
+    }
 }

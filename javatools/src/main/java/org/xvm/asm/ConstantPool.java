@@ -26,7 +26,9 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Vector;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 
 import org.xvm.asm.Constant.Format;
 
@@ -81,7 +83,14 @@ public class ConstantPool
      * @return the Constant at that index
      */
     public Constant getConstant(int i) {
-        return i == -1 ? null : f_listConst.get(i);
+        if (i == -1) {
+            return null;
+        }
+
+        Constant constant = m_fCompletingRegistration
+                ? getConstantWhileRegistering(i)
+                : f_listConst.get(i);
+        return awaitRegistrationComplete(constant);
     }
 
     /**
@@ -99,7 +108,10 @@ public class ConstantPool
         if (i == -1) {
             return null;
         }
-        Constant constant = f_listConst.get(i);
+        Constant constant = m_fCompletingRegistration
+                ? getConstantWhileRegistering(i)
+                : f_listConst.get(i);
+        constant = awaitRegistrationComplete(constant);
         try {
             return type.cast(constant);
         } catch (ClassCastException e) {
@@ -129,7 +141,13 @@ public class ConstantPool
      */
     public Constant[] getConstants() {
         // note: this is expensive!!! (but purposeful)
-        return f_listConst.toArray(Constant.NO_CONSTS);
+        Constant[] constants = m_fCompletingRegistration
+                ? getConstantsWhileRegistering()
+                : f_listConst.toArray(Constant.NO_CONSTS);
+        for (Constant constant : constants) {
+            awaitRegistrationComplete(constant);
+        }
+        return constants;
     }
 
     /**
@@ -140,9 +158,11 @@ public class ConstantPool
      * @return the corresponding constant from the pool, it was already present in this pool
      */
     public Constant getConstant(Constant constant) {
-        return constant == null
-                ? null
-                : ensureConstantLookup(constant.getFormat()).get(constant);
+        if (constant == null) {
+            return null;
+        }
+
+        return awaitRegistrationComplete(ensureConstantLookup(constant.getFormat()).get(constant));
     }
 
     /**
@@ -197,6 +217,7 @@ public class ConstantPool
         T constantOld = mapConstants == null ? null : (T) mapConstants.get(constant);
 
         boolean fRegisterRecursively = false;
+        boolean fPublishedIncomplete = false;
         if (constantOld == null) {
             // constants that contain unresolved information need to be resolved before they are
             // registered; note that if m_fRecurseReg is true, we could be in a compile phase that has already
@@ -223,31 +244,41 @@ public class ConstantPool
             }
 
             synchronized (this) {
-                if (mapConstants.containsKey(constant)) {
+                constantOld = (T) mapConstants.get(constant);
+                if (constantOld != null) {
                     // it was concurrently inserted
-                    return (T) mapConstants.get(constant);
+                    return awaitRegistrationComplete(constantOld);
                 }
 
-                constant.setPosition(f_listConst.size());
-                f_listConst.add(constant);
-                mapConstants.put(constant, constant);
+                beginRegistrationCompletion(constant);
+                fPublishedIncomplete = true;
+                try {
+                    constant.setPosition(f_listConst.size());
+                    f_listConst.add(constant);
+                    mapConstants.put(constant, constant);
 
-                // also allow the constant to be looked up by a locator
-                Object oLocator = constant.getLocator();
-                if (oLocator != null) {
-                    if (oLocator instanceof Constant constLocator
-                            && constLocator.getContaining() != this) {
-                        Constant source = constLocator;
-                        constLocator = constLocator.adoptedBy(this);
-                        ConstantAdoptionValidator.assertValidIfEnabled(source, constLocator);
-                        constLocator.registerConstants(this);
-                        oLocator = constLocator;
-                    }
+                    // also allow the constant to be looked up by a locator
+                    Object oLocator = constant.getLocator();
+                    if (oLocator != null) {
+                        if (oLocator instanceof Constant constLocator
+                                && constLocator.getContaining() != this) {
+                            Constant source = constLocator;
+                            constLocator = constLocator.adoptedBy(this);
+                            ConstantAdoptionValidator.assertValidIfEnabled(source, constLocator);
+                            constLocator.registerConstants(this);
+                            oLocator = constLocator;
+                        }
 
-                    Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
-                    if (constOld != null && !constOld.equals(constant)) {
-                        throw new IllegalStateException("locator collision: old=" + constOld + ", new=" + constant);
+                        Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
+                        if (constOld != null && !constOld.equals(constant)) {
+                            throw new IllegalStateException("locator collision: old=" + constOld +
+                                    ", new=" + constant);
+                        }
                     }
+                } catch (RuntimeException | Error e) {
+                    finishRegistrationCompletion(constant, e);
+                    fPublishedIncomplete = false;
+                    throw e;
                 }
             }
 
@@ -255,30 +286,112 @@ public class ConstantPool
             // registered (and that they are aware of their being referenced)
             fRegisterRecursively = true;
         } else {
-            constant = constantOld;
+            constant = awaitRegistrationComplete(constantOld);
         }
 
-        if (m_fRecurseReg) {
-            // this can happen only in a single-thread scenario at the end of the compilation;
-            // the first time that this constant is registered, the constant has to recursively
-            // register any constants that it refers to, and each time the constant is registered
-            // we tally that registration so that we can later order the constants from most to
-            // least referenced
-            fRegisterRecursively = constant.addRef();
-        }
+        Throwable failure = null;
+        try {
+            if (m_fRecurseReg) {
+                // this can happen only in a single-thread scenario at the end of the compilation;
+                // the first time that this constant is registered, the constant has to recursively
+                // register any constants that it refers to, and each time the constant is registered
+                // we tally that registration so that we can later order the constants from most to
+                // least referenced
+                fRegisterRecursively = constant.addRef();
+            }
 
-        if (fRegisterRecursively) {
-            constant.registerConstants(this);
+            if (fRegisterRecursively) {
+                constant.registerConstants(this);
 
-            // once all of the modules are linked together, we know all of the valid upstream
-            // constant pools that we are allowed to refer to from this constant pool, so this
-            // is an assertion to make sure that we don't accidentally refer to a constant pool
-            // that isn't in that set of valid pools
-            constant.checkValidPools(f_setValidPools, new int[] {0});
+                // once all of the modules are linked together, we know all of the valid upstream
+                // constant pools that we are allowed to refer to from this constant pool, so this
+                // is an assertion to make sure that we don't accidentally refer to a constant pool
+                // that isn't in that set of valid pools
+                constant.checkValidPools(f_setValidPools);
+            }
+        } catch (RuntimeException | Error e) {
+            failure = e;
+            throw e;
+        } finally {
+            if (fPublishedIncomplete) {
+                finishRegistrationCompletion(constant, failure);
+            }
         }
 
         return constant;
     }
+
+    private Constant getConstantWhileRegistering(int i) {
+        synchronized (this) {
+            return f_listConst.get(i);
+        }
+    }
+
+    private Constant[] getConstantsWhileRegistering() {
+        synchronized (this) {
+            return f_listConst.toArray(Constant.NO_CONSTS);
+        }
+    }
+
+    private void beginRegistrationCompletion(Constant constant) {
+        assert Thread.holdsLock(this);
+
+        // register(...) has to publish the constant before recursive child registration so cycles
+        // can resolve. That publication is only complete for the owning thread until
+        // registerConstants(...) and valid-pool checks finish; other threads must not observe the
+        // half-registered constant graph.
+        f_mapCompletingRegistration.put(constant,
+                new RegistrationCompletion(Thread.currentThread(), new CompletableFuture<>()));
+        m_fCompletingRegistration = true;
+    }
+
+    private void finishRegistrationCompletion(Constant constant, Throwable failure) {
+        RegistrationCompletion completion;
+        synchronized (this) {
+            completion = f_mapCompletingRegistration.get(constant);
+            if (completion != null && failure == null) {
+                f_mapCompletingRegistration.remove(constant);
+                m_fCompletingRegistration = !f_mapCompletingRegistration.isEmpty();
+            }
+        }
+        if (completion != null) {
+            if (failure == null) {
+                completion.done().complete(null);
+            } else {
+                // Leave the failed marker installed. A registration failure after early
+                // publication leaves the pool structurally suspect; future public readers must see
+                // the failure instead of accepting a partial constant graph.
+                completion.done().completeExceptionally(failure);
+            }
+        }
+    }
+
+    private <T extends Constant> T awaitRegistrationComplete(T constant) {
+        if (constant == null || !m_fCompletingRegistration) {
+            return constant;
+        }
+
+        RegistrationCompletion completion;
+        synchronized (this) {
+            var current = Thread.currentThread();
+            completion = f_mapCompletingRegistration.get(constant);
+            if (completion == null || completion.owner() == current && !completion.done().isDone()) {
+                return constant;
+            }
+        }
+
+        try {
+            completion.done().get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("interrupted while waiting for constant registration", e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException("constant registration failed", e.getCause());
+        }
+        return constant;
+    }
+
+    private record RegistrationCompletion(Thread owner, CompletableFuture<Void> done) {}
 
     /**
      * Mark this pool as published to runtime execution when late-registration diagnostics are
@@ -4123,6 +4236,20 @@ public class ConstantPool
      * Storage of Constant objects by index.
      */
     private final ArrayList<Constant> f_listConst = new ArrayList<>();
+
+    /**
+     * Constants that have been published to lookup structures for same-thread recursion, but have
+     * not finished registerConstants(...) and valid-pool checks yet. Other threads wait for these
+     * constants to finish before observing them.
+     */
+    private final Map<Constant, RegistrationCompletion> f_mapCompletingRegistration =
+            new IdentityHashMap<>();
+
+    /**
+     * Fast-path flag for {@link #f_mapCompletingRegistration}; avoids synchronization when no
+     * registration completion window is open.
+     */
+    private volatile boolean m_fCompletingRegistration;
 
     /**
      * Reverse lookup structure to find a particular constant by constant.

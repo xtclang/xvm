@@ -72,6 +72,14 @@ caches, locks, atomics, thread-local cells, or live handles must either:
   `registerConstants(...)` before the adopted copy is observable through normal
   APIs.
 
+This branch removes the most dangerous part of the old contract: silent default
+adoption. `Constant.adoptedBy(...)` now throws unless the constant family
+overrides `allowsDefaultAdoptionClone()` and documents why its copied fields are
+logical value state, or unless the class provides a dedicated `adoptedBy(...)`
+implementation. The remaining `cloneForAdoption(...)` helper is explicitly
+transitional. It preserves current behavior for reviewed families while making
+future owner-transfer clone use visible in source search and code review.
+
 This is the same root cause as the fixed `SingletonConstant` incident:
 `SingletonConstant.f_state` was final, but the final `AtomicReference` object
 was shallow-copied, so a singleton adopted into a second pool reused the first
@@ -94,11 +102,11 @@ These are the current adoption sites in runtime/asm source.
 | `javatools/src/main/java/org/xvm/asm/constants/TypeParameterConstant.java` | Branch override that reconstructs the logical register type parameter for the target pool. | Fixed hardening site. Keeps the final reentrancy helper owner-local. |
 | `javatools/src/main/java/org/xvm/asm/constants/HandleConstant.java` | Branch guard for live runtime handles. | Fixed must-fix guard. Allows first registration of a fresh unowned runtime handle constant, but rejects moving an already-owned live handle into another pool. |
 
-## Default-Adoption Subclass Inventory
+## Explicit Default-Clone Policy Inventory
 
 This inventory was generated from the current tree by scanning constant
-subclasses and whether they override `adoptedBy(...)`. The exact command shape
-is:
+subclasses and whether they override `adoptedBy(...)` or opt into
+`allowsDefaultAdoptionClone()`. The exact command shape is:
 
 ```bash
 for f in javatools/src/main/java/org/xvm/asm/constants/*.java \
@@ -108,10 +116,10 @@ done
 ```
 
 The important result is not that every default clone is currently a proven
-runtime failure. The important result is that the base contract still makes a
-future subclass unsafe by default. Every class below either relies on
-logical-value-only fields, a common owner-change reset, or a later
-`registerConstants(...)` cleanup.
+runtime failure. The important result is that clone adoption is now an explicit
+policy. Every class below either relies on logical-value-only fields, a common
+owner-change reset, or a later `registerConstants(...)` cleanup, and that
+assumption is now visible in source.
 
 | Group | Classes | Current assessment |
 | --- | --- | --- |
@@ -122,11 +130,14 @@ logical-value-only fields, a common owner-change reset, or a later
 | Frame-dependent constants | `RegisterConstant`, `MethodBindingConstant`, plus guarded `HandleConstant` | `RegisterConstant` and `MethodBindingConstant` are serialized logical frame-dependent forms and do not wrap live runtime handles. `HandleConstant` is the exception; it is guarded because it wraps a live `ObjectHandle`. |
 | Not a constant adoption target | `TypeInfoReal` | It appears in the scan only because it extends `TypeInfo`, not `Constant`. It is tracked in the TypeInfo owner-copy audit instead. |
 
-Proper long-term fix: remove "safe unless proven otherwise" from the adoption
-contract. Either make `Constant.adoptedBy(...)` abstract, or require an
-explicit marker/override for subclasses whose fields are logical-value-only.
-Until then, keep `ConstantAdoptionValidator` in stress/CI and treat every new
-non-logical field on a `Constant` subclass as a mandatory adoption review.
+Proper long-term fix: remove `Object.clone()` from ownership transfer entirely.
+The branch has already removed "safe unless proven otherwise" by requiring an
+explicit policy, but the reviewed default-clone families still rely on a shallow
+copy plus reset hooks. A clone-free API should construct a new target-pool
+constant from listed logical fields and intentionally drop or rebuild every
+helper/cache field. Until then, keep `ConstantAdoptionValidator` in stress/CI
+and treat every new non-logical field on a `Constant` subclass as a mandatory
+adoption review.
 
 ## Runtime-Relevant Adoption Risks
 

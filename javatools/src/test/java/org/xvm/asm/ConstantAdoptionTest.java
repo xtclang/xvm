@@ -208,6 +208,21 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * Base Constant adoption is no longer "clone unless somebody remembered to override it". A new
+     * constant class must either provide an explicit adoption implementation or opt in to the
+     * transitional default-clone policy with a local explanation.
+     */
+    @Test
+    public void defaultAdoptionCloneRequiresExplicitPolicy() {
+        var targetPool = new FileStructure("target").getConstantPool();
+        var source     = new NoPolicyConstant(new FileStructure("source").getConstantPool());
+
+        var error = assertThrows(IllegalStateException.class, () -> adopt(source, targetPool));
+
+        assertTrue(error.getMessage().contains("default adoption-clone policy"));
+    }
+
+    /**
      * The adoption validator must detect the exact bad default-clone shape: a copied helper
      * reference that still belongs to the source constant after ownership changes.
      */
@@ -366,6 +381,11 @@ public class ConstantAdoptionTest {
         protected int computeHashCode() {
             return 1;
         }
+
+        @Override
+        protected boolean allowsDefaultAdoptionClone() {
+            return true;
+        }
     }
 
     private static final class RuntimeHandleConstant
@@ -385,6 +405,43 @@ public class ConstantAdoptionTest {
         @Override
         public String getValueString() {
             return "runtime-handle";
+        }
+
+        @Override
+        public String getDescription() {
+            return getValueString();
+        }
+
+        @Override
+        protected int compareDetails(Constant that) {
+            return 0;
+        }
+
+        @Override
+        protected int computeHashCode() {
+            return 1;
+        }
+
+        @Override
+        protected boolean allowsDefaultAdoptionClone() {
+            return true;
+        }
+    }
+
+    private static final class NoPolicyConstant
+            extends Constant {
+        private NoPolicyConstant(ConstantPool pool) {
+            super(pool);
+        }
+
+        @Override
+        public Format getFormat() {
+            return Format.IntLiteral;
+        }
+
+        @Override
+        public String getValueString() {
+            return "no-policy";
         }
 
         @Override

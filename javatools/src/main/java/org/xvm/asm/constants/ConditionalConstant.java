@@ -99,6 +99,14 @@ public abstract class ConditionalConstant
                 : (n & (1L << iTest)) != 0;
     }
 
+    @Override
+    protected boolean allowsDefaultAdoptionClone() {
+        // Transitional policy: condition constants represent serialized link-time predicates.
+        // They do not carry runtime handles or pool-owner helper cells today. Keep this explicit
+        // until condition constants get clone-free copy constructors.
+        return true;
+    }
+
     /**
      * Determine the set of terminal conditions that make up this ConditionalConstant.
      *

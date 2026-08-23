@@ -280,9 +280,9 @@ update that explains the ownership rule it enforces. Avoid bundling unrelated
 cleanup into these commits; the review needs to be able to answer "which owner
 bug did this commit close?"
 
-The twelve rows below are all real hardening work. The order is about reducing
-risk and making each later fix easier to prove, not about deciding which items
-can be ignored.
+The rows below are all real hardening work. The order is about reducing risk
+and making each later fix easier to prove, not about deciding which items can be
+ignored.
 
 | Order | Commit scope | Why this order | Required test/proof |
 | --- | --- | --- | --- |
@@ -302,6 +302,8 @@ can be ignored.
 | 14 | Cross-owner `GenericHandle` masking | Done for the highest-risk owner-transfer misuse of `ObjectHandle.cloneAs(...)`. `cloneAs(...)` is an access-view operation over live runtime state, not an owner-transfer primitive. `GenericHandle.maskAs(...)` now rejects direct cross-owner masking unless the whole handle graph is already shared with the target container; non-core objects still use the existing proxy path. | `OwnershipDiagnosticsTest.crossOwnerMaskRejectsNonSharedHandleBeforeClone()` constructs a non-shared synthetic handle that throws if `cloneAs(...)` is reached. The fixed path checks sharing and returns `null` before any shallow clone. |
 | 15 | Same-owner `GenericHandle` inflated-ref view backing | Done in this branch wave. The old shallow clone intentionally shared the final field array for regular values, then incorrectly rewired inflated `RefHandle.$outer` entries inside that shared array. Creating a struct/revealed view could mutate refs already visible through the source view. | `GenericHandle.cloneAs(...)` now keeps regular field storage shared and uses sparse copy-on-write view overrides only for inflated refs that need a view-local `$outer`. `GenericHandleCloneAsTest.sameOwnerCloneKeepsInflatedRefOuterViewLocal()` fails on master by observing the source ref holder change to the clone, and passes here while proving referent and regular-field write-through behavior. |
 | 16 | TypeConstant runtime TypeHandle cache | Done in this branch wave. The old `TypeConstant.m_handle` cache stored a container-owned native Type handle on a pool/type object, so two containers sharing one pool could reuse the first container's handle; it was also a plain unsafe lazy write. | `TypeConstant.ensureTypeHandle(Container)` now delegates shared handles to `Container.ensureTypeHandle(TypeConstant)`, which caches by owner/type in a `ConcurrentMap` and rejects types from another pool. `NativeTemplatesTest.typeHandlesAreCachedByContainerOwner()` fails on master because `m_handle` still exists and passes here by verifying the cache moved to `Container`. |
+| 17 | Explicit constant adoption clone policy | Done in this branch wave as a guard. Base `Constant.adoptedBy(...)` no longer lets a new subclass silently inherit shallow `Object.clone()` ownership transfer. This closes the future-regression form of the singleton adoption bug while keeping reviewed logical-value families compatible. | `ConstantAdoptionTest.defaultAdoptionCloneRequiresExplicitPolicy()` proves a no-policy subclass fails adoption. The clone-free architecture remains tracked separately: every opted-in family should eventually move to explicit copy/adoption constructors. |
+| 18 | Constant registration completion publication | Done in this branch wave as a guard. `ConstantPool.register(...)` still publishes early for same-thread recursive cycle resolution, but other threads can no longer observe the public pool entry before recursive `registerConstants(...)` and valid-pool checks finish. | `ConstantPoolDiagnosticsTest.otherThreadsWaitForRecursiveRegistrationCompletion()` blocks inside recursive registration and proves a public reader waits. The final architecture remains a private registration transaction/worklist that publishes only completed constants. |
 
 The compiler/JIT bucket should remain separate unless an interpreter runtime
 path depends on it. The compiler counter atomics belong in their own PR from

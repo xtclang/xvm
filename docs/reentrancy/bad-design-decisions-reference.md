@@ -11,6 +11,23 @@ from day one: explicit owners, final fields, immutable globals, no constructor
 publication, typed APIs, and one synchronization model for mutable lifecycle
 state.
 
+The deeper failure is that the implementation repeatedly hides phase and
+ownership in mutable object state instead of representing them in the API. A
+method that creates a pool-owned constant should say which pool owns it. A
+runtime cache should say which container owns it. An object under construction
+should not be reachable from owner registries. A logical value copy should not
+copy locks, thread locals, runtime handles, or in-progress caches. These rules
+are not "parallel runtime extras"; they are normal Java design hygiene.
+
+The Java Memory Model makes this explicit. Without final-field safe publication,
+volatile/atomic publication, synchronization, or confinement, there is no
+happens-before edge that forces another thread to see a complete object graph or
+a coherent group of related field writes. Functional/reentrant code has the same
+requirement from a different angle: if a helper depends on hidden global owner
+state, mutates a caller-owned object, or caches an owner-derived value in a
+shared object, then the result is not a stable function of its explicit inputs.
+That makes the code brittle even before multiple Java threads enter it.
+
 ## Summary Table
 
 | Design decision | Why it was bad even single-threaded | Why it becomes must-fix | Branch status |
@@ -21,8 +38,8 @@ state.
 | Constructor `this` escape | Constructors registered or cached `this` before subclass fields and invariants were complete. | Reentrant lookup can observe a partially constructed owner/handle/template. | Fixed for native containers, runtime handles, and several ASM/compiler groups; remaining warnings tracked separately. |
 | Ambient `ConstantPool.getCurrentPool()` | Methods had hidden owner preconditions; nested calls could change or clear the current pool. | Constants, metadata, diagnostics, and type helpers could be created in or reported to the wrong pool. | Semantic main-code callers removed; remaining bridge has assertion and `xvm.asm.validateConstantPoolCurrentScope` diagnostics. |
 | Split lifecycle state across several mutable fields | Readers could observe state combinations that were never a real lifecycle state. | Fibers can see mixed initialization/waiter/owner state. | Fixed known `SingletonConstant` case with atomic immutable state. |
-| Shallow `clone()`/`adoptedBy(...)` for owner state | Copying object bits also copied helper locks, lazy cells, runtime handles, and owner-derived caches. | Constants adopted into pool B could retain pool A runtime/helper state. | Several constants hardened; base clone/adoption remains must-audit. |
-| ConstantPool registration before recursive completion | A constant can become discoverable before all child constants and owner-sensitive fields are stable. | Parallel readers can observe partial registration or mutable hash/equality state. | Documented must-audit; guarded in diagnostics. |
+| Shallow `clone()`/`adoptedBy(...)` for owner state | Copying object bits also copied helper locks, lazy cells, runtime handles, and owner-derived caches. | Constants adopted into pool B could retain pool A runtime/helper state. | Runtime/helper subclasses hardened; base default now fails closed unless a family explicitly opts in. Clone-free adoption remains the target. |
+| ConstantPool registration before recursive completion | A constant can become discoverable before all child constants and owner-sensitive fields are stable. | Parallel readers can observe partial registration or mutable hash/equality state. | Guarded in this branch: public readers wait for completion. Transactional registration remains the target. |
 | Manual lazy null caches | `if (field == null) field = ...` has no happens-before edge and hides owner/lifecycle rules. | Shared runtime/compiler paths can duplicate work, publish stale values, or mix owners. | Many runtime startup caches fixed; broad audit remains. |
 | Public/protected mutable fields and arrays | Callers can mutate state without preserving invariants; final-looking arrays still have mutable contents. | Cross-owner mutation and stale cached state become very hard to localize. | Documented should-fix/must-audit category. |
 | Raw or weakly typed APIs | Caller-side casts hide owner and payload expectations. | Wrong-owner values fail late as casts or state-machine errors. | New `generics-api-audit.md`; typed helpers used where practical. |
@@ -192,6 +209,71 @@ parallel execution: constructing one view changed the refs observed through an
 existing view. The branch keeps the shared regular field backing and moves only
 the view-specific inflated refs into sparse per-view overrides.
 
+### ConstantPool Early Public Registration
+
+Bad shape:
+
+```java
+constant.setPosition(f_listConst.size());
+f_listConst.add(constant);
+mapConstants.put(constant, constant);
+constant.registerConstants(this);
+constant.checkValidPools(f_setValidPools);
+```
+
+Why it was bad in a single-threaded world:
+
+- The public pool list/map and the private registration worklist were the same
+  structure.
+- A constant had a public index before its child constants and owner-sensitive
+  fields were fully registered in the destination pool.
+- Subclass `registerConstants(...)` implementations could still rewrite fields
+  that participate in logical identity, locator resolution, or owner validation.
+- Correctness depended on an undocumented phase rule: nobody except the current
+  registration call stack may look at the newly inserted constant yet.
+
+Why it becomes must-fix for same-JVM containers:
+
+- Thread A can publish the outer constant, then block or recurse while adopting
+  children.
+- Thread B can read the public pool index or lookup map and observe a partial
+  graph with source-pool children or incomplete locator state.
+- This is not just a data-race problem. Even with accidental single-thread
+  ordering, the API boundary is wrong because "registered" actually meant
+  "temporarily discoverable but not finished".
+
+Branch replacement:
+
+```java
+beginRegistrationCompletion(constant);
+try {
+    publishForSameThreadRecursion(constant);
+    constant.registerConstants(this);
+    constant.checkValidPools(f_setValidPools);
+} finally {
+    finishRegistrationCompletion(constant, failure);
+}
+```
+
+The actual branch code preserves the old same-thread recursive lookup behavior,
+because recursive constant graphs still need a way to find the in-progress
+constant. The difference is that normal public readers now wait for the
+completion marker before returning a constant published by another thread. If
+recursive registration fails, waiters receive the failure instead of a partial
+object graph.
+
+This is still a compromise. The correct design is a private registration
+transaction or worklist:
+
+- resolve cycles in a private in-progress map;
+- adopt/register child constants against that private state;
+- validate owners and hash/locator stability;
+- publish completed constants to public pool storage once.
+
+That design would not cost more in the steady-state runtime. It would make
+registration phase boundaries explicit and eliminate the need for public APIs to
+understand "in-progress but visible" constants.
+
 ### Manual Lazy Null Caches
 
 Bad shape:
@@ -254,6 +336,8 @@ Must-fix details and branch fixes are tracked in:
 - [fixed-in-this-branch.md](fixed-in-this-branch.md)
 - [must-audit-backlog.md](must-audit-backlog.md)
 - [plans/xvm-memory-model-hygiene.md](plans/xvm-memory-model-hygiene.md)
+- [plans/clone-free-adoption-plan.md](plans/clone-free-adoption-plan.md)
+- [plans/transactional-constant-registration-plan.md](plans/transactional-constant-registration-plan.md)
 
 Supporting audits:
 

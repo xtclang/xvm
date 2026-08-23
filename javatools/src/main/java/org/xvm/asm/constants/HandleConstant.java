@@ -56,7 +56,7 @@ public class HandleConstant
             // Runtime annotation construction creates a fresh, unowned HandleConstant and then
             // registers it in the current pool. Moving an already-owned live ObjectHandle to a
             // different pool would leak frame/container-owned runtime state.
-            return super.adoptedBy(pool);
+            return cloneForAdoption(pool);
         }
 
         throw new IllegalStateException(

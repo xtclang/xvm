@@ -211,6 +211,14 @@ public class Annotation
         return Format.Annotation;
     }
 
+    @Override
+    protected boolean allowsDefaultAdoptionClone() {
+        // Transitional policy: annotations are serialized logical metadata. registerConstants(...)
+        // adopts the class and parameter constants into the target pool. Runtime annotation values
+        // that wrap live handles are guarded separately by HandleConstant.adoptedBy(...).
+        return true;
+    }
+
     /**
      * Helper for Constant.
      *

@@ -126,8 +126,9 @@ Start here:
   state inventory, ambient current-pool lookup sites, must-fix vs should-fix
   classification, and recommended guards.
 - [constant-pool-must-audit-classification.md](constant-pool-must-audit-classification.md):
-  focused classification of remaining `ConstantPool` must-fix/must-audit
-  areas after the current branch fixes.
+  focused classification of `ConstantPool` must-fix/must-audit areas, including
+  the current adoption/registration guards and the remaining clone-free and
+  transactional follow-up work.
 - [test-failure-evidence.md](test-failure-evidence.md): persisted list of
   known master failures, branch-only diagnostics tests, stress failures, and
   guard caveats that support the reentrancy PR split.
@@ -202,6 +203,9 @@ Start here:
 - [plans/clone-free-adoption-plan.md](plans/clone-free-adoption-plan.md):
   long-term plan for replacing `Constant.adoptedBy(...)` shallow clone with
   explicit owner-safe adoption/copy APIs, including risk buckets and PR splits.
+- [plans/transactional-constant-registration-plan.md](plans/transactional-constant-registration-plan.md):
+  long-term plan for replacing `ConstantPool.register(...)` early public
+  publication with a private registration transaction/worklist.
 - [plans/jit-xvm-owner-refactor.md](plans/jit-xvm-owner-refactor.md): separate
   JIT `Xvm` owner-construction refactor plan, intentionally kept out of the
   interpreter runtime PR scope.

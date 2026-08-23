@@ -236,7 +236,7 @@ public class FSNodeConstant
 
     @Override
     protected FSNodeConstant adoptedBy(ConstantPool pool) {
-        FSNodeConstant that = (FSNodeConstant) super.adoptedBy(pool);
+        FSNodeConstant that = (FSNodeConstant) cloneForAdoption(pool);
         // Constant.adoptedBy() shallow-copies transient fields. Runtime handles and the derived
         // path literal are pool-owned state, so an adopted copy must recompute them under the
         // destination pool instead of retaining source-pool cache entries.

@@ -175,6 +175,11 @@ shallow-clone helper state identified by the audit:
 - `HandleConstant.adoptedBy(...)` now allows only the first registration of a
   fresh unowned runtime handle constant. Moving an already-owned live handle
   constant to another pool throws immediately.
+- `Constant.adoptedBy(...)` now rejects the transitional default shallow-clone
+  path unless a constant family explicitly declares
+  `allowsDefaultAdoptionClone()`. Reviewed logical-value families opt in with
+  local comments; runtime/helper-state families keep explicit adoption
+  overrides.
 - `ConstantAdoptionValidator` now treats arbitrary copied runtime handles,
   templates, and type compositions as forbidden shared owner state. The
   existing fresh `HandleConstant` first-registration path remains allowed, but
@@ -193,6 +198,63 @@ The broader owner-transfer audit is documented in
 explains why adoption exists, why it should preserve only logical constant
 value state, and how this branch hardens the remaining runtime-relevant
 shallow-copied helper/runtime fields.
+
+### Constant Registration Publication Guard
+
+Master's `ConstantPool.register(...)` publishes a new constant into
+`f_listConst` and the constant lookup map before recursive
+`registerConstants(...)` and valid-pool checks complete. That was probably done
+to break recursive constant graph cycles: while registering A, recursive
+registration may need to find A by identity or index. The bad part is that the
+same partially registered A was also visible through normal public pool APIs.
+
+Effect:
+
+- a concurrent reader could obtain a constant after it had a position but before
+  child constants were adopted into the destination pool;
+- equality/hash/locator-sensitive fields could still be rewritten after map
+  insertion by subclass `registerConstants(...)` implementations;
+- pool diagnostics could see timing-dependent wrong-owner child graphs rather
+  than a structurally stable constant graph.
+
+Fix:
+
+- `ConstantPool.register(...)` records a `RegistrationCompletion` before
+  publishing a newly inserted constant.
+- The registration owner thread can still observe that in-progress constant, so
+  the old cycle-breaking behavior is preserved.
+- Other threads using `getConstant(int)`, `getConstant(int, Class<T>)`,
+  `getConstants()`, or `getConstant(Constant)` wait until recursive registration
+  and valid-pool checks finish.
+- If recursive registration fails, waiting readers receive an exception instead
+  of treating the partial constant graph as complete.
+- The failed completion marker is intentionally retained. Once registration has
+  thrown after early publication, that pool entry is structurally suspect, and
+  later public readers must see the original failure rather than silently
+  continuing with a partial graph.
+
+Ramifications:
+
+- Constant value semantics, interning keys, locator behavior, and reference-count
+  traversal are intended to remain unchanged.
+- There is no steady-state runtime cost when no registration is in progress; the
+  fast path is one volatile flag check.
+- The guard does not add per-constant footprint after registration completes; the
+  completion record is removed before the constant is considered stable.
+- This is a compatibility guard, not the final architecture. The preferred
+  design is a private registration transaction/worklist that resolves recursive
+  references without exposing in-progress constants through public pool APIs.
+
+The focused regression tests are in `ConstantPoolDiagnosticsTest`:
+
+- `registrationOwnerCanResolveInProgressConstant()` proves the branch keeps the
+  same-thread recursive behavior that motivated early publication.
+- `otherThreadsWaitForRecursiveRegistrationCompletion()` blocks a synthetic constant
+  inside `registerConstants(...)`, starts a reader against the newly assigned
+  index, and verifies that another thread cannot observe the constant until
+  registration is released.
+- `failedRecursiveRegistrationStaysFailedForReaders()` proves a registration
+  failure after early publication remains visible to later public readers.
 
 ### Container-Owned TypeHandle Cache
 

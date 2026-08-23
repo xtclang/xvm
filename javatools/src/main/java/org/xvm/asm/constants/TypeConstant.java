@@ -7916,6 +7916,14 @@ public abstract class TypeConstant
     }
 
     @Override
+    protected boolean allowsDefaultAdoptionClone() {
+        // Transitional policy: type constants still use shallow adoption for logical type shape.
+        // setContaining(...) immediately clears owner-derived TypeInfo, relation, recursion, and
+        // JIT helper state. Clone-free type-copy constructors remain the long-term target.
+        return true;
+    }
+
+    @Override
     protected abstract int compareDetails(Constant that);
 
 

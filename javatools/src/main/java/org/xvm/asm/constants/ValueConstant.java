@@ -38,6 +38,18 @@ public abstract class ValueConstant
     public abstract Object getValue();
 
 
+    // ----- Constant methods ----------------------------------------------------------------------
+
+    @Override
+    protected boolean allowsDefaultAdoptionClone() {
+        // Transitional policy: most ValueConstant subclasses store serialized logical value state.
+        // Known runtime/lifecycle value constants override adoptedBy(...) to clear or rebuild
+        // owner-local state. Long term, replace this family opt-in with explicit copy
+        // constructors for each value format.
+        return true;
+    }
+
+
     // ----- XvmStructure operations ---------------------------------------------------------------
 
     /**

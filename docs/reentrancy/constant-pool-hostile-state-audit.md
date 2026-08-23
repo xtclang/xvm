@@ -322,18 +322,26 @@ References:
   through `javatools/src/main/java/org/xvm/asm/ConstantAdoptionValidator.java:57`
   (opt-in validator)
 
-Cause: base adoption copies every reference, including transient and final
-helper cells, then mutates the owner. The validator is property-gated and does
-not make adoption intrinsically safe.
+Cause: master base adoption copied every reference, including transient and
+final helper cells, then mutated the owner. A property-gated validator helped
+find known bad copies but did not make adoption intrinsically safe.
 
 Effect: owner-local runtime state, locks, thread locals, caches, JIT names, or
 handles can be copied into a destination pool unless every subclass proves that
 its copied fields are logical value only or clears them on owner change.
 
-Recommended guard/fix: replace generic clone adoption with an explicit copy
-contract or generated copy constructors. At minimum, keep a validator enabled
-in CI/stress runs and expand it to cover arrays, `ObjectHandle`, `Component`,
-and other owner-bearing helper objects.
+Branch guard: base `Constant.adoptedBy(...)` now fails closed unless a constant
+family explicitly opts in with `allowsDefaultAdoptionClone()`, and the remaining
+shallow clone helper is named `cloneForAdoption(...)`. This makes reviewed clone
+use searchable and stops a new owner-bearing subclass from silently inheriting
+the old behavior.
+
+Recommended final fix: replace generic clone adoption with explicit copy
+constructors or generated owner-aware copy methods. The copy contract should list
+logical fields and rebuild or drop all helper/cache/runtime fields. Keep the
+validator enabled in CI/stress runs and expand it to cover arrays,
+`ObjectHandle`, `Component`, and other owner-bearing helper objects while the
+transition is incomplete.
 
 ### `register(...)` publishes before recursive registration completes
 
@@ -358,15 +366,21 @@ References:
   through `javatools/src/main/java/org/xvm/asm/constants/MethodConstant.java:631`
   (more registration-time field rewrites)
 
-Cause: the constant is inserted into `f_listConst` and the lookup map before
-its underlying constants are recursively registered and before some subclasses
-finish rewriting owner-sensitive fields.
+Cause: master inserted the constant into `f_listConst` and the lookup map before
+its underlying constants were recursively registered and before some subclasses
+finished rewriting owner-sensitive fields.
 
 Effect: another thread can find a partially registered constant. If any
 registered-as-key field changes equality/hash behavior after map insertion, the
 lookup map can become inconsistent.
 
-Recommended guard/fix: either make registration a single-owner phase, or build
+Branch guard: `ConstantPool.register(...)` now marks a newly inserted constant
+as incomplete. The registration owner can still observe it for same-thread cycle
+resolution, but public readers in other threads wait until recursive
+registration and valid-pool checks complete. A registration failure completes the
+marker exceptionally so waiters do not accept a broken partial graph.
+
+Recommended final fix: either make registration a single-owner phase, or build
 and recursively adopt into a private work item before publishing to list/map.
 Add assertions that `registerConstants(...)` does not change logical hash or
 equality after insertion.

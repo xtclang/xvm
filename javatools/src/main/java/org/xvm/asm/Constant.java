@@ -304,12 +304,40 @@ public abstract class Constant
 
     /**
      * Create a clone of this Constant so that it can be adopted by a different ConstantPool.
+     * <p/>
+     * This is a transitional compatibility path, not the desired long-term architecture. Adoption
+     * changes structural ownership, while {@link Object#clone()} copies every reference field. Each
+     * constant family that still relies on this helper must explicitly declare that its default
+     * cloned fields are logical constant value state, or are reset by owner-change hooks.
      *
      * @param pool  the pool that will hold the clone of this Constant
      *
      * @return the new Constant
      */
     protected Constant adoptedBy(ConstantPool pool) {
+        if (!allowsDefaultAdoptionClone()) {
+            throw new IllegalStateException(getClass().getName()
+                    + " does not declare a default adoption-clone policy");
+        }
+        return cloneForAdoption(pool);
+    }
+
+    /**
+     * @return true iff this class intentionally permits the transitional shallow-clone adoption
+     *         helper in {@link #adoptedBy(ConstantPool)}
+     */
+    protected boolean allowsDefaultAdoptionClone() {
+        return false;
+    }
+
+    /**
+     * Shallow-clone this constant for explicit adoption implementations.
+     *
+     * @param pool  the pool that will hold the adopted constant
+     *
+     * @return the cloned constant with owner/reset metadata updated for {@code pool}
+     */
+    protected final Constant cloneForAdoption(ConstantPool pool) {
         Constant that;
         try {
             that = (Constant) super.clone();
@@ -336,7 +364,11 @@ public abstract class Constant
      *
      * This method is used only as an assertion for debugging purposes.
      */
-    public void checkValidPools(Set<ConstantPool> setValidPools, int[] anDepth) {
+    public void checkValidPools(Set<ConstantPool> setValidPools) {
+        checkValidPools(setValidPools, 0);
+    }
+
+    private void checkValidPools(Set<ConstantPool> setValidPools, int depth) {
         // check this pool
         if (!setValidPools.contains(getConstantPool())) {
             if (setValidPools.isEmpty()) {
@@ -349,14 +381,12 @@ public abstract class Constant
                     "unknown upstream constant pool: " + getConstantPool());
         }
 
-        if (anDepth[0]++ > 100) {
+        if (depth > 100) {
             throw new IllegalStateException("Suspected infinite loop in checkValidPools()");
         }
 
         // check children
-        forEachUnderlying(constant -> constant.checkValidPools(setValidPools, anDepth));
-
-        anDepth[0]--;
+        forEachUnderlying(constant -> constant.checkValidPools(setValidPools, depth + 1));
     }
 
     /**

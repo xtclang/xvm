@@ -60,6 +60,14 @@ public abstract class PseudoConstant
         return super.getLocator();
     }
 
+    @Override
+    protected boolean allowsDefaultAdoptionClone() {
+        // Transitional policy: pseudo constants are serialized indirection records. Any subclass
+        // that adds owner-local helper state must override adoptedBy(...) instead of inheriting
+        // this family-level clone permission.
+        return true;
+    }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

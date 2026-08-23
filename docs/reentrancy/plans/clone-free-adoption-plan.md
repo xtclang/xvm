@@ -45,11 +45,16 @@ The current branch has already found concrete failures in that pattern:
 - `TypeConstant` carries relation/type-info/JIT/recursion helper state that
   must be reset when pool ownership changes.
 
-The branch hardens known runtime-relevant cases, but the base API is still
-unsafe by construction. A new mutable helper field on any `Constant` subclass is
-silently copied across pool ownership unless the author remembers to override
-adoption or reset it during owner change. That is the long-term defect this plan
-removes.
+The branch hardens known runtime-relevant cases and now makes the base API fail
+closed: `Constant.adoptedBy(...)` rejects the default clone path unless a
+constant family explicitly opts in with `allowsDefaultAdoptionClone()` and a
+local comment. That prevents a new mutable helper field from silently inheriting
+owner-transfer clone behavior.
+
+This is still a transitional guard, not the desired architecture. Opted-in
+families still use shallow clone plus reset hooks, which means correctness still
+depends on family-level review. The long-term defect this plan removes is
+`Object.clone()` as an ownership-transfer mechanism at all.
 
 ## Current Mechanism
 
@@ -57,7 +62,8 @@ The adoption entry points are:
 
 | Site | Current role |
 | --- | --- |
-| `Constant.adoptedBy(ConstantPool)` | Base shallow clone, owner reassignment, reference-count reset. |
+| `Constant.adoptedBy(ConstantPool)` | Fails closed unless the constant family declares the transitional default-clone policy. |
+| `Constant.cloneForAdoption(ConstantPool)` | Transitional shallow clone helper used only by explicit adoption implementations or opted-in families. |
 | `ConstantPool.register(T)` | Adopts a foreign constant when `constant.getContaining() != this`. |
 | `ConstantPool.register(T)` locator path | Adopts a foreign locator constant before publishing it in locator lookup maps. |
 | `ConstantAdoptionValidator` | Opt-in diagnostic guard controlled by `xvm.asm.validateConstantAdoption`. |
@@ -66,13 +72,16 @@ The intended semantic contract is:
 
 > Construct an equivalent logical constant in the destination pool.
 
-The current mechanical contract is:
+The remaining transitional mechanical contract is:
 
-> Copy all Java fields, then repair the owner and some known caches.
+> For an explicitly reviewed family, copy all Java fields, then repair the owner
+> and known caches.
 
 Those are not the same contract. The first is safe and reviewable. The second is
-open-ended and fails whenever the subclass contains state that is not serialized
-logical constant value.
+open-ended and fails whenever the reviewed family later grows state that is not
+serialized logical constant value. The current branch narrows the blast radius by
+making the review decision explicit; the clone-free plan removes the mechanical
+hazard.
 
 ## Size Estimate
 
@@ -84,7 +93,7 @@ Current branch inventory:
 | Abstract family bases in that set | 13 |
 | Concrete constant classes in that set | 75 |
 | Classes currently overriding `adoptedBy(...)` | 7 |
-| Classes relying on base/default adoption somewhere in the hierarchy | 81 |
+| Classes relying on an explicit family default-clone policy somewhere in the hierarchy | 81 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
@@ -125,94 +134,94 @@ Risk buckets:
 
 | Class | Parent | Current adoption behavior | Risk |
 | --- | --- | --- | --- |
-| `AbstractDependantChildTypeConstant` | `AbstractDependantTypeConstant` | base/default | P1 type-family cache/reset contract |
-| `AbstractDependantTypeConstant` | `TypeConstant` | base/default | P1 type-family cache/reset contract |
-| `AccessTypeConstant` | `TypeConstant` | base/default | P1 type-family cache/reset contract |
-| `AllCondition` | `MultiCondition` | base/default | P3 logical condition array |
-| `AnnotatedTypeConstant` | `TypeConstant` | base/default | P1 annotation children and type cache reset |
-| `AnonymousClassTypeConstant` | `AbstractDependantChildTypeConstant` | base/default | P1 type-family cache/reset contract |
-| `AnyCondition` | `MultiCondition` | base/default | P3 logical condition array |
-| `ArrayConstant` | `ValueConstant` | base/default | P3 logical value array |
-| `BFloat16Constant` | `ValueConstant` | base/default | P3 primitive/logical value |
-| `ByteConstant` | `ValueConstant` | base/default | P3 primitive/logical value |
-| `CastTypeConstant` | `IntersectionTypeConstant` | base/default | P1 type-family cache/reset contract |
-| `CharConstant` | `ValueConstant` | base/default | P3 primitive/logical value |
-| `ChildClassConstant` | `PseudoConstant` | base/default | P2 logical identity/path |
-| `ClassConstant` | `NamedConstant` | base/default | P2 logical identity/path |
-| `ConditionalConstant` | `Constant` | base/default | P3 condition family base |
-| `DecimalAutoConstant` | `ValueConstant` | base/default | P3 primitive/logical value |
-| `DecimalConstant` | `ValueConstant` | base/default | P3 primitive/logical value |
-| `DecoratedClassConstant` | `IdentityConstant` | base/default | P2 logical identity/path |
-| `DeferredValueConstant` | `PseudoConstant` | base/default | P2 pseudo/logical value |
-| `DifferenceTypeConstant` | `RelationalTypeConstant` | base/default | P1 type-family cache/reset contract |
-| `DynamicFormalConstant` | `FormalConstant` | base/default | P2 formal logical identity |
+| `AbstractDependantChildTypeConstant` | `AbstractDependantTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `AbstractDependantTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `AccessTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `AllCondition` | `MultiCondition` | family default-clone policy | P3 logical condition array |
+| `AnnotatedTypeConstant` | `TypeConstant` | family default-clone policy | P1 annotation children and type cache reset |
+| `AnonymousClassTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `AnyCondition` | `MultiCondition` | family default-clone policy | P3 logical condition array |
+| `ArrayConstant` | `ValueConstant` | family default-clone policy | P3 logical value array |
+| `BFloat16Constant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `ByteConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `CastTypeConstant` | `IntersectionTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `CharConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `ChildClassConstant` | `PseudoConstant` | family default-clone policy | P2 logical identity/path |
+| `ClassConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
+| `ConditionalConstant` | `Constant` | family default-clone policy | P3 condition family base |
+| `DecimalAutoConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `DecimalConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `DecoratedClassConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
+| `DeferredValueConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
+| `DifferenceTypeConstant` | `RelationalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `DynamicFormalConstant` | `FormalConstant` | family default-clone policy | P2 formal logical identity |
 | `EnumValueConstant` | `SingletonConstant` | inherits explicit singleton adoption | P0 singleton runtime-state family |
-| `ExpressionConstant` | `PseudoConstant` | base/default | P2 pseudo/logical value |
-| `FPNConstant` | `ValueConstant` | base/default | P3 primitive/logical value |
+| `ExpressionConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
+| `FPNConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
 | `FSNodeConstant` | `ValueConstant` | explicit override | P0 runtime handle/path cache |
 | `FileStoreConstant` | `ValueConstant` | explicit override | P0 runtime handle |
-| `Float128Constant` | `ValueConstant` | base/default | P3 primitive/logical value |
-| `Float16Constant` | `FloatConstant` | base/default | P3 primitive/logical value |
-| `Float32Constant` | `FloatConstant` | base/default | P3 primitive/logical value |
-| `Float64Constant` | `ValueConstant` | base/default | P3 primitive/logical value |
-| `Float8e4Constant` | `FloatConstant` | base/default | P3 primitive/logical value |
-| `Float8e5Constant` | `FloatConstant` | base/default | P3 primitive/logical value |
-| `FloatConstant` | `ValueConstant` | base/default | P3 float-family base |
-| `FormalConstant` | `NamedConstant` | base/default | P2 formal logical identity |
-| `FormalTypeChildConstant` | `PropertyConstant` | base/default | P2/P1 property metadata cache inheritance |
-| `FrameDependentConstant` | `Constant` | base/default | P4 frame-dependent family base |
+| `Float128Constant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `Float16Constant` | `FloatConstant` | family default-clone policy | P3 primitive/logical value |
+| `Float32Constant` | `FloatConstant` | family default-clone policy | P3 primitive/logical value |
+| `Float64Constant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `Float8e4Constant` | `FloatConstant` | family default-clone policy | P3 primitive/logical value |
+| `Float8e5Constant` | `FloatConstant` | family default-clone policy | P3 primitive/logical value |
+| `FloatConstant` | `ValueConstant` | family default-clone policy | P3 float-family base |
+| `FormalConstant` | `NamedConstant` | family default-clone policy | P2 formal logical identity |
+| `FormalTypeChildConstant` | `PropertyConstant` | family default-clone policy | P2/P1 property metadata cache inheritance |
+| `FrameDependentConstant` | `Constant` | family default-clone policy | P4 frame-dependent family base |
 | `HandleConstant` | `FrameDependentConstant` | explicit guard override | P0 live runtime handle |
-| `IdentityConstant` | `Constant` | base/default | P2 identity-family base |
-| `ImmutableTypeConstant` | `TypeConstant` | base/default | P1 type-family cache/reset contract |
-| `InnerChildTypeConstant` | `AbstractDependantChildTypeConstant` | base/default | P1 type-family cache/reset contract |
-| `IntConstant` | `ValueConstant` | base/default | P3 primitive/logical value |
-| `IntersectionTypeConstant` | `RelationalTypeConstant` | base/default | P1 type-family cache/reset contract |
-| `KeywordConstant` | `PseudoConstant` | base/default | P2 pseudo/logical value |
-| `LiteralConstant` | `ValueConstant` | base/default | P3 logical literal value |
-| `MapConstant` | `ValueConstant` | base/default | P3 logical map arrays |
-| `MatchAnyConstant` | `ValueConstant` | base/default | P3 logical sentinel |
-| `MethodBindingConstant` | `FrameDependentConstant` | base/default | P4 serialized frame-dependent constant |
-| `MethodConstant` | `IdentityConstant` | base/default | P1 JIT-name/type cache owner policy |
-| `ModuleConstant` | `IdentityConstant` | base/default | P2 logical identity/path |
-| `MultiCondition` | `ConditionalConstant` | base/default | P3 condition-family base |
-| `MultiMethodConstant` | `NamedConstant` | base/default | P2 logical identity/path |
-| `NamedCondition` | `ConditionalConstant` | base/default | P3 logical condition |
-| `NamedConstant` | `IdentityConstant` | base/default | P2 named identity-family base |
-| `NativeRebaseConstant` | `ClassConstant` | base/default | P2 logical identity/path |
-| `NotCondition` | `ConditionalConstant` | base/default | P3 logical condition |
-| `PackageConstant` | `NamedConstant` | base/default | P2 logical identity/path |
+| `IdentityConstant` | `Constant` | family default-clone policy | P2 identity-family base |
+| `ImmutableTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `InnerChildTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `IntConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `IntersectionTypeConstant` | `RelationalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `KeywordConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
+| `LiteralConstant` | `ValueConstant` | family default-clone policy | P3 logical literal value |
+| `MapConstant` | `ValueConstant` | family default-clone policy | P3 logical map arrays |
+| `MatchAnyConstant` | `ValueConstant` | family default-clone policy | P3 logical sentinel |
+| `MethodBindingConstant` | `FrameDependentConstant` | family default-clone policy | P4 serialized frame-dependent constant |
+| `MethodConstant` | `IdentityConstant` | family default-clone policy | P1 JIT-name/type cache owner policy |
+| `ModuleConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
+| `MultiCondition` | `ConditionalConstant` | family default-clone policy | P3 condition-family base |
+| `MultiMethodConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
+| `NamedCondition` | `ConditionalConstant` | family default-clone policy | P3 logical condition |
+| `NamedConstant` | `IdentityConstant` | family default-clone policy | P2 named identity-family base |
+| `NativeRebaseConstant` | `ClassConstant` | family default-clone policy | P2 logical identity/path |
+| `NotCondition` | `ConditionalConstant` | family default-clone policy | P3 logical condition |
+| `PackageConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
 | `ParameterizedTypeConstant` | `TypeConstant` | explicit override | P0 helper lock/JIT cache |
-| `ParentClassConstant` | `PseudoConstant` | base/default | P2 pseudo/logical identity |
-| `PendingTypeConstant` | `TypeConstant` | base/default | P1 type-family cache/reset contract |
-| `PresentCondition` | `ConditionalConstant` | base/default | P3 logical condition |
-| `PropertyClassTypeConstant` | `AbstractDependantTypeConstant` | base/default | P1 type-family cache/reset contract |
-| `PropertyConstant` | `FormalConstant` | base/default | P1 JIT-name/type/property-info cache owner policy |
-| `PseudoConstant` | `Constant` | base/default | P2 pseudo-family base |
-| `PureIdentityConstant` | `IdentityConstant` | base/default | P2 logical identity/path |
-| `RangeConstant` | `ValueConstant` | base/default | P3 logical range value |
-| `RecursiveTypeConstant` | `TerminalTypeConstant` | base/default | P1 type-family cache/reset contract |
-| `RegExConstant` | `ValueConstant` | base/default | P3 logical regex string/options |
-| `RegisterConstant` | `FrameDependentConstant` | base/default | P4 serialized frame register constant |
-| `RelationalTypeConstant` | `TypeConstant` | base/default | P1 type-family cache/reset contract |
-| `ServiceTypeConstant` | `TypeConstant` | base/default | P1 type-family cache/reset contract |
+| `ParentClassConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical identity |
+| `PendingTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `PresentCondition` | `ConditionalConstant` | family default-clone policy | P3 logical condition |
+| `PropertyClassTypeConstant` | `AbstractDependantTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `PropertyConstant` | `FormalConstant` | family default-clone policy | P1 JIT-name/type/property-info cache owner policy |
+| `PseudoConstant` | `Constant` | family default-clone policy | P2 pseudo-family base |
+| `PureIdentityConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
+| `RangeConstant` | `ValueConstant` | family default-clone policy | P3 logical range value |
+| `RecursiveTypeConstant` | `TerminalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `RegExConstant` | `ValueConstant` | family default-clone policy | P3 logical regex string/options |
+| `RegisterConstant` | `FrameDependentConstant` | family default-clone policy | P4 serialized frame register constant |
+| `RelationalTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `ServiceTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `SignatureConstant` | `PseudoConstant` | explicit override | P0 helper lock/JIT cache |
 | `SingletonConstant` | `ValueConstant` | explicit override | P0 runtime singleton lifecycle state |
-| `StringConstant` | `ValueConstant` | base/default | P3 immutable logical string |
-| `TerminalTypeConstant` | `TypeConstant` | base/default | P1 type-family cache/reset contract |
-| `ThisClassConstant` | `PseudoConstant` | base/default | P2 pseudo/logical identity |
-| `TypeConstant` | `Constant` | base/default plus owner reset in `setContaining(...)` | P1 type-family base |
+| `StringConstant` | `ValueConstant` | family default-clone policy | P3 immutable logical string |
+| `TerminalTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `ThisClassConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical identity |
+| `TypeConstant` | `Constant` | family default-clone policy plus owner reset in `setContaining(...)` | P1 type-family base |
 | `TypeParameterConstant` | `FormalConstant` | explicit override | P0 reentrancy helper cell |
-| `TypeSequenceTypeConstant` | `TypeConstant` | base/default | P1 type-family cache/reset contract |
-| `TypedefConstant` | `NamedConstant` | base/default | P2 logical identity/path |
-| `UInt8ArrayConstant` | `ValueConstant` | base/default | P3 immutable byte-array value |
-| `UnionTypeConstant` | `RelationalTypeConstant` | base/default | P1 type-family cache/reset contract |
-| `UnresolvedNameConstant` | `PseudoConstant` | base/default | P2 unresolved logical name |
-| `UnresolvedTypeConstant` | `TypeConstant` | base/default | P1 type-family cache/reset contract |
-| `ValueConstant` | `Constant` | base/default | P3 value-family base |
-| `VersionConstant` | `LiteralConstant` | base/default | P3 immutable logical version |
-| `VersionMatchesCondition` | `ConditionalConstant` | base/default | P3 logical condition |
-| `VersionedCondition` | `ConditionalConstant` | base/default | P3 logical condition |
-| `VirtualChildTypeConstant` | `AbstractDependantChildTypeConstant` | base/default | P1 type-family cache/reset contract |
+| `TypeSequenceTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `TypedefConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
+| `UInt8ArrayConstant` | `ValueConstant` | family default-clone policy | P3 immutable byte-array value |
+| `UnionTypeConstant` | `RelationalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `UnresolvedNameConstant` | `PseudoConstant` | family default-clone policy | P2 unresolved logical name |
+| `UnresolvedTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `ValueConstant` | `Constant` | family default-clone policy | P3 value-family base |
+| `VersionConstant` | `LiteralConstant` | family default-clone policy | P3 immutable logical version |
+| `VersionMatchesCondition` | `ConditionalConstant` | family default-clone policy | P3 logical condition |
+| `VersionedCondition` | `ConditionalConstant` | family default-clone policy | P3 logical condition |
+| `VirtualChildTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 
 ## Clone Uses That Are Dangerous For Runtime Reentrancy
 
@@ -628,4 +637,3 @@ The long-term migration is done when:
   runtime ownership validators enabled;
 - constant-pool size, interning behavior, and runtime startup time are equivalent
   to the current branch within expected noise.
-

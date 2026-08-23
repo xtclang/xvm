@@ -13,6 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -250,6 +255,79 @@ public class ConstantPoolDiagnosticsTest {
                 () -> byPath.put("__test__", "__test__"));
     }
 
+    /**
+     * ConstantPool has to publish a newly inserted constant before recursive child registration so
+     * same-thread cycles can resolve. The old design let other threads observe that half-registered
+     * constant. Same-thread access is intentionally allowed and covered by
+     * registrationOwnerCanResolveInProgressConstant(); this test needs a second thread because it
+     * proves the public cross-thread observation path waits until recursive registration finishes.
+     */
+    @Test
+    public void otherThreadsWaitForRecursiveRegistrationCompletion() throws Exception {
+        var pool          = new FileStructure("target").getConstantPool();
+        var started       = new CountDownLatch(1);
+        var release       = new CountDownLatch(1);
+        var readerStarted = new CountDownLatch(1);
+        var index         = new AtomicInteger(-1);
+        var source        = new BlockingRegistrationConstant(
+                new FileStructure("source").getConstantPool(), started, release, index);
+        var executor      = Executors.newFixedThreadPool(2);
+
+        try {
+            var register = executor.submit(() -> pool.register(source));
+            assertTrue(started.await(1, TimeUnit.SECONDS));
+
+            var read = executor.submit(() -> {
+                readerStarted.countDown();
+                return pool.getConstant(index.get());
+            });
+            assertTrue(readerStarted.await(1, TimeUnit.SECONDS));
+            assertFalse(read.isDone(), "reader observed a partially registered constant");
+
+            release.countDown();
+            assertSame(register.get(1, TimeUnit.SECONDS), read.get(1, TimeUnit.SECONDS));
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    /**
+     * Early publication exists to support same-thread recursive constant graphs. The completion
+     * guard must not break that legacy behavior: the registration owner is allowed to resolve its
+     * own in-progress constant while registerConstants(...) is still running.
+     */
+    @Test
+    public void registrationOwnerCanResolveInProgressConstant() {
+        var pool   = new FileStructure("target").getConstantPool();
+        var source = new ReentrantRegistrationConstant(new FileStructure("source").getConstantPool());
+
+        var registered = pool.register(source);
+
+        assertSame(registered, registered.observed);
+    }
+
+    /**
+     * If recursive registration fails after the constant has been assigned a public pool index, the
+     * pool is no longer structurally trustworthy at that index. The guard must keep reporting the
+     * registration failure instead of later returning the partial constant graph.
+     */
+    @Test
+    public void failedRecursiveRegistrationStaysFailedForReaders() {
+        var pool   = new FileStructure("target").getConstantPool();
+        var index  = new AtomicInteger(-1);
+        var source = new FailingRegistrationConstant(
+                new FileStructure("source").getConstantPool(), index);
+
+        var failure = assertThrows(IllegalStateException.class, () -> pool.register(source));
+        assertEquals("registration failure", failure.getMessage());
+
+        var readFailure = assertThrows(IllegalStateException.class,
+                () -> pool.getConstant(index.get()));
+        assertEquals("constant registration failed", readFailure.getMessage());
+        assertSame(failure, readFailure.getCause());
+    }
+
     private static void withLateRegistrationValidation(CheckedRunnable action)
             throws Exception {
         withBooleanProperty(ConstantPool.VALIDATE_LATE_REGISTRATION_PROPERTY, action);
@@ -349,6 +427,157 @@ public class ConstantPoolDiagnosticsTest {
         @Override
         protected int computeHashCode() {
             return 1;
+        }
+    }
+
+    private static final class BlockingRegistrationConstant
+            extends Constant {
+        private final CountDownLatch started;
+        private final CountDownLatch release;
+        private final AtomicInteger  index;
+
+        private BlockingRegistrationConstant(ConstantPool pool, CountDownLatch started,
+                                             CountDownLatch release, AtomicInteger index) {
+            super(pool);
+
+            this.started = started;
+            this.release = release;
+            this.index   = index;
+        }
+
+        @Override
+        public Format getFormat() {
+            return Format.String;
+        }
+
+        @Override
+        public String getValueString() {
+            return "blocking-registration";
+        }
+
+        @Override
+        public String getDescription() {
+            return getValueString();
+        }
+
+        @Override
+        protected boolean allowsDefaultAdoptionClone() {
+            return true;
+        }
+
+        @Override
+        protected void registerConstants(ConstantPool pool) {
+            index.set(getPosition());
+            started.countDown();
+            try {
+                if (!release.await(1, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("registration test was not released");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
+        }
+
+        @Override
+        protected int compareDetails(Constant that) {
+            return that instanceof BlockingRegistrationConstant ? 0 : 1;
+        }
+
+        @Override
+        protected int computeHashCode() {
+            return 1;
+        }
+    }
+
+    private static final class ReentrantRegistrationConstant
+            extends Constant {
+        private Constant observed;
+
+        private ReentrantRegistrationConstant(ConstantPool pool) {
+            super(pool);
+        }
+
+        @Override
+        public Format getFormat() {
+            return Format.String;
+        }
+
+        @Override
+        public String getValueString() {
+            return "reentrant-registration";
+        }
+
+        @Override
+        public String getDescription() {
+            return getValueString();
+        }
+
+        @Override
+        protected boolean allowsDefaultAdoptionClone() {
+            return true;
+        }
+
+        @Override
+        protected void registerConstants(ConstantPool pool) {
+            observed = pool.getConstant(getPosition());
+        }
+
+        @Override
+        protected int compareDetails(Constant that) {
+            return that instanceof ReentrantRegistrationConstant ? 0 : 1;
+        }
+
+        @Override
+        protected int computeHashCode() {
+            return 3;
+        }
+    }
+
+    private static final class FailingRegistrationConstant
+            extends Constant {
+        private final AtomicInteger index;
+
+        private FailingRegistrationConstant(ConstantPool pool, AtomicInteger index) {
+            super(pool);
+
+            this.index = index;
+        }
+
+        @Override
+        public Format getFormat() {
+            return Format.String;
+        }
+
+        @Override
+        public String getValueString() {
+            return "failing-registration";
+        }
+
+        @Override
+        public String getDescription() {
+            return getValueString();
+        }
+
+        @Override
+        protected boolean allowsDefaultAdoptionClone() {
+            return true;
+        }
+
+        @Override
+        protected void registerConstants(ConstantPool pool) {
+            index.set(getPosition());
+            throw new IllegalStateException("registration failure");
+        }
+
+        @Override
+        protected int compareDetails(Constant that) {
+            return that instanceof FailingRegistrationConstant ? 0 : 1;
+        }
+
+        @Override
+        protected int computeHashCode() {
+            return 2;
         }
     }
 }

@@ -121,7 +121,7 @@ public class FileStoreConstant
 
     @Override
     protected FileStoreConstant adoptedBy(ConstantPool pool) {
-        FileStoreConstant that = (FileStoreConstant) super.adoptedBy(pool);
+        FileStoreConstant that = (FileStoreConstant) cloneForAdoption(pool);
         // Runtime handles are owner-local. Constant.adoptedBy() shallow-copies transient fields, so
         // clear any handle copied from the source pool before this constant is registered to a new
         // owner.
