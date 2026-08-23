@@ -75,6 +75,13 @@ public class DecimalConstant
         }
     }
 
+    @Override
+    protected DecimalConstant copyForAdoption(AdoptionContext context) {
+        // Scalar adoption reconstructs logical value only; the clone helper would
+        // silently copy any future owner-local helper field added here.
+        return new DecimalConstant(context.pool(), m_dec);
+    }
+
 
     // ----- type-specific methods -----------------------------------------------------------------
 

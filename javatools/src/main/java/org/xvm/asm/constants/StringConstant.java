@@ -52,6 +52,13 @@ public class StringConstant
         m_sVal  = sVal;
     }
 
+    @Override
+    protected StringConstant copyForAdoption(AdoptionContext context) {
+        // Scalar adoption reconstructs logical value only; the clone helper would
+        // silently copy any future owner-local helper field added here.
+        return new StringConstant(context.pool(), m_sVal);
+    }
+
 
     // ----- type-specific functionality -----------------------------------------------------------
 

@@ -9,6 +9,7 @@ import java.lang.reflect.Modifier;
 import java.nio.file.attribute.FileTime;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -19,14 +20,24 @@ import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnyCondition;
+import org.xvm.asm.constants.BFloat16Constant;
+import org.xvm.asm.constants.ByteConstant;
+import org.xvm.asm.constants.CharConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.DecimalConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FPNConstant;
 import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.FileStoreConstant;
 import org.xvm.asm.constants.Float128Constant;
+import org.xvm.asm.constants.Float16Constant;
+import org.xvm.asm.constants.Float32Constant;
+import org.xvm.asm.constants.Float64Constant;
+import org.xvm.asm.constants.Float8e4Constant;
+import org.xvm.asm.constants.Float8e5Constant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.HandleConstant;
+import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodBindingConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -35,9 +46,11 @@ import org.xvm.asm.constants.NotCondition;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.RegExConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.SingletonConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
@@ -45,6 +58,8 @@ import org.xvm.asm.constants.VersionMatchesCondition;
 import org.xvm.asm.constants.VersionedCondition;
 
 import org.xvm.runtime.ObjectHandle;
+
+import org.xvm.type.Decimal64;
 
 import org.xvm.util.TransientThreadLocal;
 
@@ -497,6 +512,44 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * Immutable scalar values do not need owner-local caches, but they still must not depend on the
+     * base shallow-clone adoption fallback. Explicit reconstruction preserves the old interning and
+     * equality semantics while failing closed if a future scalar grows owner-derived helper state.
+     */
+    @Test
+    public void adoptedImmutableScalarValueConstantsPreserveLogicalValueInTargetPool() {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var scalars    = List.<Constant>of(
+                sourcePool.ensureByteConstant(Constant.Format.Bit, 1),
+                sourcePool.ensureByteConstant(Constant.Format.Nibble, 12),
+                sourcePool.ensureByteConstant(Constant.Format.Int8, -7),
+                sourcePool.ensureByteConstant(Constant.Format.UInt8, 250),
+                sourcePool.ensureCharConstant('X'),
+                sourcePool.ensureIntConstant(123456789L),
+                sourcePool.ensureStringConstant("owner-local"),
+                sourcePool.ensureRegExConstant("a.*b", 3),
+                sourcePool.ensureDecConstant(new Decimal64(123L)),
+                sourcePool.ensureFloat8e4Constant(0.0f),
+                sourcePool.ensureFloat8e5Constant(Float.POSITIVE_INFINITY),
+                sourcePool.ensureBFloat16Constant(1.25f),
+                sourcePool.ensureFloat16Constant(1.5f),
+                sourcePool.ensureFloat32Constant(3.25f),
+                sourcePool.ensureFloat64Constant(6.5d));
+
+        scalars.forEach(source -> {
+            var adopted = adopt(source, targetPool);
+
+            assertNotSame(source, adopted);
+            assertSame(targetPool, adopted.getConstantPool());
+            assertEquals(source.getClass(), adopted.getClass());
+            assertEquals(source.getFormat(), adopted.getFormat());
+            assertEquals(source.getValueString(), adopted.getValueString());
+            assertEquals(source, adopted);
+        });
+    }
+
+    /**
      * A live ObjectHandle is owner-specific runtime state, not logical constant data. Moving an
      * already-owned handle constant to another pool must fail instead of leaking the source owner.
      */
@@ -570,13 +623,23 @@ public class ConstantAdoptionTest {
 
         Set.of(AllCondition.class,
                AnyCondition.class,
+               BFloat16Constant.class,
+               ByteConstant.class,
+               CharConstant.class,
+               DecimalConstant.class,
                FSNodeConstant.class,
                DynamicFormalConstant.class,
                FPNConstant.class,
                FileStoreConstant.class,
                Float128Constant.class,
+               Float16Constant.class,
+               Float32Constant.class,
+               Float64Constant.class,
+               Float8e4Constant.class,
+               Float8e5Constant.class,
                FormalTypeChildConstant.class,
                HandleConstant.class,
+               IntConstant.class,
                MethodBindingConstant.class,
                MethodConstant.class,
                NamedCondition.class,
@@ -584,9 +647,11 @@ public class ConstantAdoptionTest {
                ParameterizedTypeConstant.class,
                PresentCondition.class,
                PropertyConstant.class,
+               RegExConstant.class,
                RegisterConstant.class,
                SignatureConstant.class,
                SingletonConstant.class,
+               StringConstant.class,
                TypeParameterConstant.class,
                UInt8ArrayConstant.class,
                VersionMatchesCondition.class,

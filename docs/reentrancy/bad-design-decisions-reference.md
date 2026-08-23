@@ -210,6 +210,13 @@ letting another owner mutate the backing array. The remaining raw `getValue()`
 array API is tracked as array-immutability design debt, not as proof that adoption
 may share storage.
 
+Immutable scalar values are now explicit too. `ByteConstant`, `IntConstant`,
+`StringConstant`, `RegExConstant`, the fixed decimal value, and the fixed-size
+binary float values do not currently carry owner-local caches. That is exactly
+why they are cheap to fix correctly: reconstructing the logical scalar in the
+target pool preserves semantics and performance while removing the default that
+a future helper field would be copied across owners by `Object.clone()`.
+
 The same rule applies to method/parameter copies. This branch fixed a
 single-threaded bug where `Parameter.cloneBody()` mutated the source parameter
 while copying it, and a separate owner bug where `MethodStructure.cloneBody()`

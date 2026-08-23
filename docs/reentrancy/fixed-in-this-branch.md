@@ -211,6 +211,14 @@ shallow-clone helper state identified by the audit:
   caller-owned or shallow-cloned `byte[]` references. This fixes the
   cross-owner/input-sharing defect without adding a per-read copy on the legacy
   raw `getValue()` path.
+- `BFloat16Constant`, `ByteConstant`, `CharConstant`, `DecimalConstant`,
+  `Float16Constant`, `Float32Constant`, `Float64Constant`, `Float8e4Constant`,
+  `Float8e5Constant`, `IntConstant`, `RegExConstant`, and `StringConstant` now
+  reconstruct immutable scalar logical values during adoption instead of using
+  the family shallow-clone fallback. There is no runtime cache behavior to lose:
+  adoption still creates one target-owned constant and target registration still
+  interns it exactly as before. The change removes the default-clone foot-gun so
+  a future scalar helper/cache field cannot cross pools silently.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws

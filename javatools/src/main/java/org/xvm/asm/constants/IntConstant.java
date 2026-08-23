@@ -138,6 +138,13 @@ public class IntConstant
         m_pint = pint;
     }
 
+    @Override
+    protected IntConstant copyForAdoption(AdoptionContext context) {
+        // Scalar adoption reconstructs logical value only; the clone helper would
+        // silently copy any future owner-local helper field added here.
+        return new IntConstant(context.pool(), m_fmt, m_pint);
+    }
+
 
     // ----- type-specific functionality -----------------------------------------------------------
 

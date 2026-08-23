@@ -45,6 +45,18 @@ public class Float8e5Constant
         m_nBits = toBits(flVal);
     }
 
+    private Float8e5Constant(ConstantPool pool, int nBits) {
+        super(pool);
+        m_nBits = nBits;
+    }
+
+    @Override
+    protected Float8e5Constant copyForAdoption(AdoptionContext context) {
+        // Preserve the raw FP8 encoding. The public float constructor intentionally
+        // does not decode every serialized payload yet; adoption must stay bit-for-bit identical.
+        return new Float8e5Constant(context.pool(), m_nBits);
+    }
+
 
     // ----- ValueConstant methods -----------------------------------------------------------------
 

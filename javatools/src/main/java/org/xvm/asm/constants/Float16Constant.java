@@ -51,6 +51,13 @@ public class Float16Constant
         m_flVal = flVal16;
     }
 
+    @Override
+    protected Float16Constant copyForAdoption(AdoptionContext context) {
+        // Scalar adoption reconstructs logical value only; the clone helper would
+        // silently copy any future owner-local helper field added here.
+        return new Float16Constant(context.pool(), m_flVal);
+    }
+
 
     // ----- type-specific methods -----------------------------------------------------------------
 

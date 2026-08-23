@@ -47,6 +47,13 @@ public class BFloat16Constant
         m_flVal = flVal;
     }
 
+    @Override
+    protected BFloat16Constant copyForAdoption(AdoptionContext context) {
+        // Scalar adoption reconstructs logical value only; the clone helper would
+        // silently copy any future owner-local helper field added here.
+        return new BFloat16Constant(context.pool(), m_flVal);
+    }
+
 
     // ----- type-specific methods -----------------------------------------------------------------
 

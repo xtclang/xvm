@@ -1443,6 +1443,9 @@ separately.
   fresh byte arrays if this slice includes the byte-array-backed value wave.
   Otherwise keep that wave as the array-backed-value part of the later
   value/condition adoption PR.
+- Reconstruct immutable scalar value constants from logical scalar fields if
+  this slice includes the scalar-value wave. Otherwise keep that wave as the
+  scalar-value part of the later value/condition adoption PR.
 - Reject moving an already-owned live `HandleConstant` to another pool.
 - Reject `DynamicFormalConstant` adoption when its register type is not shared
   with the destination pool, because the target pool cannot safely own or share
@@ -1492,6 +1495,7 @@ Commits:
 - `a0c1fe936 Harden constant adoption runtime-state validation`
 - `Make condition adoption clone-free` condition-family wave
 - `Make array-backed value adoption clone-free` byte-array value wave
+- `Make scalar value adoption clone-free` immutable scalar value wave
 
 Primary source areas:
 
@@ -1565,6 +1569,10 @@ appropriate:
   interning behavior. The defensive copy moves from `ensureByteStringConstant(...)`
   into the constructor, so that path still performs one copy; adoption adds the
   copy that shallow clone used to skip.
+- Immutable scalar value constants keep the same logical values and
+  constant-pool interning behavior. Adoption still creates one target-owned
+  constant, just as shallow clone did, but the code path is now explicit and
+  cannot accidentally carry future owner-local scalar caches.
 - The validator is diagnostic coverage, not a complete architectural fix.
 - The validator is off unless explicitly enabled, so normal constant interning
   and runtime cache performance is unchanged.

@@ -90,6 +90,13 @@ public class ByteConstant
         m_nVal   = bVal;
     }
 
+    @Override
+    protected ByteConstant copyForAdoption(AdoptionContext context) {
+        // Scalar adoption reconstructs logical value only; the clone helper would
+        // silently copy any future owner-local helper field added here.
+        return new ByteConstant(context.pool(), m_format, m_nVal);
+    }
+
 
     // ----- type-specific methods -----------------------------------------------------------------
 

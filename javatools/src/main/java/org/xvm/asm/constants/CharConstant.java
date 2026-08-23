@@ -54,6 +54,13 @@ public class CharConstant
         m_chVal = chVal;
     }
 
+    @Override
+    protected CharConstant copyForAdoption(AdoptionContext context) {
+        // Scalar adoption reconstructs logical value only; the clone helper would
+        // silently copy any future owner-local helper field added here.
+        return new CharConstant(context.pool(), m_chVal);
+    }
+
 
     // ----- type-specific functionality -----------------------------------------------------------
 

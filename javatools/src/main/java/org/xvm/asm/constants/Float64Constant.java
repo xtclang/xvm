@@ -44,6 +44,13 @@ public class Float64Constant
         m_dflVal = dflVal;
     }
 
+    @Override
+    protected Float64Constant copyForAdoption(AdoptionContext context) {
+        // Scalar adoption reconstructs logical value only; the clone helper would
+        // silently copy any future owner-local helper field added here.
+        return new Float64Constant(context.pool(), m_dflVal);
+    }
+
 
     // ----- type-specific methods -----------------------------------------------------------------
 

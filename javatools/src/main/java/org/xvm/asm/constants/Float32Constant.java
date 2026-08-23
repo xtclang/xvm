@@ -44,6 +44,13 @@ public class Float32Constant
         m_flVal = flVal;
     }
 
+    @Override
+    protected Float32Constant copyForAdoption(AdoptionContext context) {
+        // Scalar adoption reconstructs logical value only; the clone helper would
+        // silently copy any future owner-local helper field added here.
+        return new Float32Constant(context.pool(), m_flVal);
+    }
+
 
     // ----- type-specific methods -----------------------------------------------------------------
 

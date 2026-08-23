@@ -162,6 +162,10 @@ Done in this branch:
   constructor inputs and reconstruct adopted values with fresh arrays, so caller
   mutation or source-pool mutation cannot rewrite the target-pool constant's
   hash/equality backing bytes.
+- Immutable scalar value constants now reconstruct the same logical value in the
+  destination pool instead of inheriting family shallow clone. This preserves the
+  old allocation/interning behavior and closes the design hole where a future
+  scalar cache/helper field would be owner-leaked by default.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 

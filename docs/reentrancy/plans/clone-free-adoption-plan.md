@@ -98,14 +98,14 @@ Current branch inventory:
 | Abstract family bases in that set | 13 |
 | Concrete constant classes in that set | 75 |
 | Classes currently overriding `adoptedBy(...)` | 0 |
-| Classes currently overriding `copyForAdoption(...)` | 13 |
-| Classes relying on an explicit family default-clone policy somewhere in the hierarchy | 75 |
+| Classes currently overriding `copyForAdoption(...)` | 35 |
+| Concrete classes still relying on an explicit family default-clone policy | 40 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
 
 - `Constant`, `ConstantPool`, and adoption tests;
-- all 13 high-risk hook classes, already converted to `copyForAdoption(...)` in
+- all 35 current hook classes, already converted to `copyForAdoption(...)` in
   this branch;
 - 13 abstract family bases, to place shared family adoption rules where useful;
 - up to 75 concrete leaf constants, either by explicit copy/adoption
@@ -149,15 +149,15 @@ Risk buckets:
 | `AnonymousClassTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `AnyCondition` | `MultiCondition` | explicit clone-free hook | P3 logical condition array; simulation scratch fixed in this branch |
 | `ArrayConstant` | `ValueConstant` | family default-clone policy | P3 logical value array |
-| `BFloat16Constant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
-| `ByteConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `BFloat16Constant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
+| `ByteConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `CastTypeConstant` | `IntersectionTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
-| `CharConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `CharConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `ChildClassConstant` | `PseudoConstant` | family default-clone policy | P2 logical identity/path |
 | `ClassConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
 | `ConditionalConstant` | `Constant` | fails closed; concrete leaves explicit | P3 condition family base; private simulation scratch |
 | `DecimalAutoConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
-| `DecimalConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `DecimalConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `DecoratedClassConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
 | `DeferredValueConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
 | `DifferenceTypeConstant` | `RelationalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
@@ -168,11 +168,11 @@ Risk buckets:
 | `FSNodeConstant` | `ValueConstant` | explicit clone-free override | P0 runtime handle/path cache |
 | `FileStoreConstant` | `ValueConstant` | explicit clone-free override | P0 runtime handle |
 | `Float128Constant` | `ValueConstant` | explicit clone-free hook | P3 byte-array-backed value fixed in this branch |
-| `Float16Constant` | `FloatConstant` | family default-clone policy | P3 primitive/logical value |
-| `Float32Constant` | `FloatConstant` | family default-clone policy | P3 primitive/logical value |
-| `Float64Constant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
-| `Float8e4Constant` | `FloatConstant` | family default-clone policy | P3 primitive/logical value |
-| `Float8e5Constant` | `FloatConstant` | family default-clone policy | P3 primitive/logical value |
+| `Float16Constant` | `FloatConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
+| `Float32Constant` | `FloatConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
+| `Float64Constant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
+| `Float8e4Constant` | `FloatConstant` | explicit clone-free hook | P3 raw-bit scalar value fixed in this branch |
+| `Float8e5Constant` | `FloatConstant` | explicit clone-free hook | P3 raw-bit scalar value fixed in this branch |
 | `FloatConstant` | `ValueConstant` | family default-clone policy | P3 float-family base |
 | `FormalConstant` | `NamedConstant` | family default-clone policy | P2 formal logical identity |
 | `FormalTypeChildConstant` | `PropertyConstant` | explicit clone-free hook | P2/P1 property metadata cache inheritance fixed in this branch |
@@ -181,7 +181,7 @@ Risk buckets:
 | `IdentityConstant` | `Constant` | family default-clone policy | P2 identity-family base |
 | `ImmutableTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `InnerChildTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
-| `IntConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `IntConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `IntersectionTypeConstant` | `RelationalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `KeywordConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
 | `LiteralConstant` | `ValueConstant` | family default-clone policy | P3 logical literal value |
@@ -207,13 +207,13 @@ Risk buckets:
 | `PureIdentityConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
 | `RangeConstant` | `ValueConstant` | family default-clone policy | P3 logical range value |
 | `RecursiveTypeConstant` | `TerminalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
-| `RegExConstant` | `ValueConstant` | family default-clone policy | P3 logical regex string/options |
+| `RegExConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `RegisterConstant` | `FrameDependentConstant` | explicit clone-free hook | P1/P4 compiler register state fixed in this branch |
 | `RelationalTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `ServiceTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `SignatureConstant` | `PseudoConstant` | explicit override | P0 helper lock/JIT cache |
 | `SingletonConstant` | `ValueConstant` | explicit override | P0 runtime singleton lifecycle state |
-| `StringConstant` | `ValueConstant` | family default-clone policy | P3 immutable logical string |
+| `StringConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `TerminalTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `ThisClassConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical identity |
 | `TypeConstant` | `Constant` | family default-clone policy plus owner reset in `setContaining(...)` | P1 type-family base |
@@ -598,15 +598,18 @@ Scope:
   explicit.
 
 Current branch note: condition constants and the byte-array-backed scalar values
-are already converted in the integration branch. `ConditionalConstant` no longer
-opts into default shallow clone, the concrete condition leaves reconstruct
-name/module/version/child predicate state through `copyForAdoption(...)`, and
-`ConstantAdoptionTest` proves warmed `iTest` simulation scratch is not copied
-into a target pool. `UInt8ArrayConstant`, `FPNConstant`, and
-`Float128Constant` also copy constructor/adoption byte arrays so immutable
-hash/equality value is not shared across callers or pool owners. Other value
-constants remain in the transitional default-clone bucket unless they have a
-separate explicit hook.
+are already converted in the integration branch. `ConditionalConstant` no
+longer opts into default shallow clone, the concrete condition leaves
+reconstruct name/module/version/child predicate state through
+`copyForAdoption(...)`, and `ConstantAdoptionTest` proves warmed `iTest`
+simulation scratch is not copied into a target pool. `UInt8ArrayConstant`,
+`FPNConstant`, and `Float128Constant` also copy constructor/adoption byte arrays
+so immutable hash/equality value is not shared across callers or pool owners.
+`BFloat16Constant`, `ByteConstant`, `CharConstant`, `DecimalConstant`,
+`Float16Constant`, `Float32Constant`, `Float64Constant`, `Float8e4Constant`,
+`Float8e5Constant`, `IntConstant`, `RegExConstant`, and `StringConstant`
+reconstruct immutable logical scalar values explicitly. Other mutable-cache or
+composite value constants remain in the transitional default-clone bucket.
 
 Review goal: replace low-risk default clone users with explicit logical-value
 copy code and remove the largest remaining fallback population.
