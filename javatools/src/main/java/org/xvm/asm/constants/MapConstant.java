@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.AbstractMap;
 import java.util.AbstractSet;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -39,7 +40,7 @@ public class MapConstant
      * @param constVal    the constant value of the map value
      */
     public MapConstant(ConstantPool pool, TypeConstant constType, Constant constKey, Constant constVal) {
-        this(pool, Format.MapEntry, constType, new Constant[] {constKey}, new Constant[] {constVal});
+        this(pool, Format.MapEntry, constType, new Constant[] {constKey}, new Constant[] {constVal}, false);
     }
 
     /**
@@ -50,7 +51,8 @@ public class MapConstant
      * @param map         the map of keys to values
      */
     public MapConstant(ConstantPool pool, TypeConstant constType, Map<? extends Constant, ? extends Constant> map) {
-        this(pool, Format.Map, constType, map.keySet().toArray(NO_CONSTS), map.values().toArray(NO_CONSTS));
+        this(pool, Format.Map, constType, map.keySet().toArray(NO_CONSTS),
+                map.values().toArray(NO_CONSTS), false);
     }
 
     /**
@@ -63,6 +65,11 @@ public class MapConstant
      * @param aconstVal   the constant values of the map values
      */
     public MapConstant(ConstantPool pool, Format fmt, TypeConstant constType, Constant[] aconstKey, Constant[] aconstVal) {
+        this(pool, fmt, constType, aconstKey, aconstVal, true);
+    }
+
+    private MapConstant(ConstantPool pool, Format fmt, TypeConstant constType,
+                        Constant[] aconstKey, Constant[] aconstVal, boolean fCopyArrays) {
         super(pool);
 
         if (!(fmt == Format.Map || fmt == Format.MapEntry)) {
@@ -101,8 +108,8 @@ public class MapConstant
 
         m_fmt        = fmt;
         m_constType  = constType;
-        m_aconstKey  = aconstKey;
-        m_aconstVal  = aconstVal;
+        m_aconstKey  = fCopyArrays ? Arrays.copyOf(aconstKey, cEntries) : aconstKey;
+        m_aconstVal  = fCopyArrays ? Arrays.copyOf(aconstVal, cEntries) : aconstVal;
     }
 
     /**
@@ -168,6 +175,13 @@ public class MapConstant
     @Override
     public Map<Constant, Constant> getValue() {
         return new ROMap<>(m_aconstKey, m_aconstVal);
+    }
+
+    @Override
+    protected MapConstant copyForAdoption(AdoptionContext context) {
+        // Copy key/value containers so target registration can rewrite child constants
+        // without mutating the source pool's map value.
+        return new MapConstant(context.pool(), m_fmt, m_constType, m_aconstKey, m_aconstVal);
     }
 
 
@@ -484,8 +498,8 @@ public class MapConstant
         private transient Set<K> setKeys;
         private transient Set<Entry<K,V>> setEntries;
 
-        public K[] ak;
-        public V[] av;
+        private final K[] ak;
+        private final V[] av;
     }
 
 

@@ -1446,6 +1446,10 @@ separately.
 - Reconstruct immutable scalar value constants from logical scalar fields if
   this slice includes the scalar-value wave. Otherwise keep that wave as the
   scalar-value part of the later value/condition adoption PR.
+- Reconstruct `ArrayConstant`, `MapConstant`, and `RangeConstant` from logical
+  value containers/endpoints if this slice includes the composite-value wave.
+  Keep type-family owner conversion separate: array/map type constants and
+  `MatchAnyConstant` still depend on PR 3.
 - Reject moving an already-owned live `HandleConstant` to another pool.
 - Reject `DynamicFormalConstant` adoption when its register type is not shared
   with the destination pool, because the target pool cannot safely own or share
@@ -1496,6 +1500,7 @@ Commits:
 - `Make condition adoption clone-free` condition-family wave
 - `Make array-backed value adoption clone-free` byte-array value wave
 - `Make scalar value adoption clone-free` immutable scalar value wave
+- `Make composite value adoption clone-free` array/map/range value wave
 
 Primary source areas:
 
@@ -1573,6 +1578,12 @@ appropriate:
   constant-pool interning behavior. Adoption still creates one target-owned
   constant, just as shallow clone did, but the code path is now explicit and
   cannot accidentally carry future owner-local scalar caches.
+- Composite value constants keep the same value-child interning behavior.
+  Array/set/tuple factory paths still perform one container copy because the
+  copy moved into `ArrayConstant`; map/entry map construction keeps the arrays it
+  already generated from the input map. Type constants are only asserted for
+  logical type-string preservation here because type-family ownership is split
+  out deliberately.
 - The validator is diagnostic coverage, not a complete architectural fix.
 - The validator is off unless explicitly enabled, so normal constant interning
   and runtime cache performance is unchanged.

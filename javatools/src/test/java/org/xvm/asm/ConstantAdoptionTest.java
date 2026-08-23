@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnyCondition;
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.BFloat16Constant;
 import org.xvm.asm.constants.ByteConstant;
 import org.xvm.asm.constants.CharConstant;
@@ -39,6 +40,7 @@ import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
+import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MethodBindingConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.NamedCondition;
@@ -46,6 +48,7 @@ import org.xvm.asm.constants.NotCondition;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.RegExConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -550,6 +553,86 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * Array and map constants use array elements as immutable hash/equality value. The public
+     * constructors must copy caller arrays immediately; otherwise even single-threaded caller code
+     * can rewrite a constant after construction. The map view must also keep its backing arrays
+     * private so callers cannot cast the read-only wrapper and mutate through public fields.
+     */
+    @Test
+    public void compositeValueConstructorsDefensivelyCopyInputArrays() throws Exception {
+        var pool        = new FileStructure("source").getConstantPool();
+        var original    = pool.ensureStringConstant("original");
+        var replacement = pool.ensureStringConstant("replacement");
+        var value       = pool.ensureIntConstant(1);
+        var valueOther  = pool.ensureIntConstant(2);
+        var arrayType   = pool.ensureArrayType(pool.typeString());
+        var mapType     = pool.ensureMapType(pool.typeString(), pool.typeInt64());
+        var arrayValues = new Constant[] {original};
+        var mapKeys     = new Constant[] {original};
+        var mapValues   = new Constant[] {value};
+
+        var array = new ArrayConstant(pool, Constant.Format.Array, arrayType, arrayValues);
+        var map   = new MapConstant(pool, Constant.Format.Map, mapType, mapKeys, mapValues);
+
+        arrayValues[0] = replacement;
+        mapKeys[0]     = replacement;
+        mapValues[0]   = valueOther;
+
+        assertSame(original, array.getValue()[0]);
+        assertEquals(value, map.getValue().get(original));
+
+        var keysField   = MapConstant.ROMap.class.getDeclaredField("ak");
+        var valuesField = MapConstant.ROMap.class.getDeclaredField("av");
+
+        assertTrue(Modifier.isPrivate(keysField.getModifiers()));
+        assertTrue(Modifier.isFinal(keysField.getModifiers()));
+        assertTrue(Modifier.isPrivate(valuesField.getModifiers()));
+        assertTrue(Modifier.isFinal(valuesField.getModifiers()));
+    }
+
+    /**
+     * Composite value adoption creates a target-owned shell and then lets target registration adopt
+     * child constants through the normal recursive path. This preserves old interning behavior while
+     * avoiding source-owner array/map containers that registration would mutate in place.
+     */
+    @Test
+    public void registeredCompositeValueConstantsAdoptChildrenIntoTargetPool() {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var key        = sourcePool.ensureStringConstant("key");
+        var value      = sourcePool.ensureIntConstant(7);
+        var arrayType  = sourcePool.ensureArrayType(sourcePool.typeString());
+        var mapType    = sourcePool.ensureMapType(sourcePool.typeString(), sourcePool.typeInt64());
+        var array      = sourcePool.ensureArrayConstant(arrayType, new Constant[] {key});
+        var map        = sourcePool.ensureMapConstant(mapType, Map.of(key, value));
+        var range      = sourcePool.ensureRangeConstant(value, true, sourcePool.ensureIntConstant(9), false);
+
+        var registeredArray = targetPool.register(array);
+        var registeredMap   = targetPool.register(map);
+        var registeredRange = targetPool.register(range);
+
+        assertSame(targetPool, registeredArray.getConstantPool());
+        // TypeConstant adoption is a separate family-wide clone-free wave; this test only proves
+        // the array value container and child values are no longer source-owned after registration.
+        assertEquals(array.getType().getValueString(), registeredArray.getType().getValueString());
+        Arrays.stream(registeredArray.getValue())
+                .forEach(constant -> assertSame(targetPool, constant.getConstantPool()));
+
+        assertSame(targetPool, registeredMap.getConstantPool());
+        assertEquals(map.getType().getValueString(), registeredMap.getType().getValueString());
+        registeredMap.getValue().forEach((registeredKey, registeredValue) -> {
+            assertSame(targetPool, registeredKey.getConstantPool());
+            assertSame(targetPool, registeredValue.getConstantPool());
+        });
+
+        assertSame(targetPool, registeredRange.getConstantPool());
+        assertSame(targetPool, registeredRange.getFirst().getConstantPool());
+        assertSame(targetPool, registeredRange.getLast().getConstantPool());
+        assertTrue(registeredRange.isFirstExcluded());
+        assertFalse(registeredRange.isLastExcluded());
+    }
+
+    /**
      * A live ObjectHandle is owner-specific runtime state, not logical constant data. Moving an
      * already-owned handle constant to another pool must fail instead of leaking the source owner.
      */
@@ -623,6 +706,7 @@ public class ConstantAdoptionTest {
 
         Set.of(AllCondition.class,
                AnyCondition.class,
+               ArrayConstant.class,
                BFloat16Constant.class,
                ByteConstant.class,
                CharConstant.class,
@@ -640,6 +724,7 @@ public class ConstantAdoptionTest {
                FormalTypeChildConstant.class,
                HandleConstant.class,
                IntConstant.class,
+               MapConstant.class,
                MethodBindingConstant.class,
                MethodConstant.class,
                NamedCondition.class,
@@ -647,6 +732,7 @@ public class ConstantAdoptionTest {
                ParameterizedTypeConstant.class,
                PresentCondition.class,
                PropertyConstant.class,
+               RangeConstant.class,
                RegExConstant.class,
                RegisterConstant.class,
                SignatureConstant.class,

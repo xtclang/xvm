@@ -97,6 +97,13 @@ public class RangeConstant
         m_const2 = pool.getConstant(m_iVal2);
     }
 
+    @Override
+    protected RangeConstant copyForAdoption(AdoptionContext context) {
+        // The logical value is the two endpoints plus exclusion flags. Target registration
+        // performs recursive endpoint adoption after this owner-local shell is created.
+        return new RangeConstant(context.pool(), m_const1, m_fExclude1, m_const2, m_fExclude2);
+    }
+
 
     // ----- type-specific methods -----------------------------------------------------------------
 

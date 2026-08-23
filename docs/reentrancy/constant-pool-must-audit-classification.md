@@ -166,6 +166,19 @@ Done in this branch:
   destination pool instead of inheriting family shallow clone. This preserves the
   old allocation/interning behavior and closes the design hole where a future
   scalar cache/helper field would be owner-leaked by default.
+- `ArrayConstant`, `MapConstant`, and `RangeConstant` now reconstruct composite
+  value containers explicitly. Array/map constructors copy caller-provided arrays,
+  and target registration still performs recursive child-value adoption. This
+  fixes the container-aliasing part of the bug without claiming type-family
+  adoption is complete.
+
+Remaining linked finding:
+
+- `MatchAnyConstant` cannot be honestly closed with the composite value wave.
+  Its locator is a `TypeConstant`, and registering a match-any value from another
+  standalone pool exposes the unresolved type-family/locator adoption problem.
+  Keep it with the type-family clone-free PR rather than inheriting an implicit
+  default clone.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 

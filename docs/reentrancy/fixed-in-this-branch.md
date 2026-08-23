@@ -219,6 +219,13 @@ shallow-clone helper state identified by the audit:
   adoption still creates one target-owned constant and target registration still
   interns it exactly as before. The change removes the default-clone foot-gun so
   a future scalar helper/cache field cannot cross pools silently.
+- `ArrayConstant`, `MapConstant`, and `RangeConstant` now reconstruct composite
+  value containers during adoption instead of shallow-cloning them. Array/map
+  constructors copy caller-provided arrays, and the `ConstantPool` array/set/tuple
+  factories now rely on that constructor copy so their normal path still performs
+  one container copy, not two. Target registration still adopts child value
+  constants through `registerConstants(...)`; type constants referenced by
+  array/map value types remain part of the separate type-family clone-free work.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws

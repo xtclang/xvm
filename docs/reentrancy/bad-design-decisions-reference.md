@@ -217,6 +217,14 @@ why they are cheap to fix correctly: reconstructing the logical scalar in the
 target pool preserves semantics and performance while removing the default that
 a future helper field would be copied across owners by `Object.clone()`.
 
+Composite values show why array containers are not harmless implementation
+details. `ArrayConstant` and `MapConstant` later rewrite their child arrays
+during recursive registration so the elements point at the registering pool.
+If construction or adoption shares those arrays, one caller or owner can change
+another owner’s logical value. This branch copies array/map containers at the
+constructor and adoption boundaries; it does not claim to solve the separate
+type-family ownership issue for the array/map type constants.
+
 The same rule applies to method/parameter copies. This branch fixed a
 single-threaded bug where `Parameter.cloneBody()` mutated the source parameter
 while copying it, and a separate owner bug where `MethodStructure.cloneBody()`

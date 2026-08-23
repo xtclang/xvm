@@ -1,11 +1,13 @@
 package org.xvm.asm.constants;
 
 
-import java.util.function.Consumer;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import java.util.Arrays;
+
+import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -42,7 +44,7 @@ public class ArrayConstant
 
         f_fmt       = fmt;
         m_constType = constType;
-        m_aconstVal = aconstVal;
+        m_aconstVal = Arrays.copyOf(aconstVal, aconstVal.length);
     }
 
     /**
@@ -130,6 +132,13 @@ public class ArrayConstant
             }
         }
         return null;
+    }
+
+    @Override
+    protected ArrayConstant copyForAdoption(AdoptionContext context) {
+        // Copy the value container so target registration can rewrite child constants
+        // without mutating the source pool's array value.
+        return new ArrayConstant(context.pool(), f_fmt, m_constType, m_aconstVal);
     }
 
 

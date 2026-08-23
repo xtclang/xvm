@@ -988,7 +988,7 @@ public class ConstantPool
     public ArrayConstant ensureArrayConstant(TypeConstant constType, Constant[] aconst) {
         checkElementsNonNull(aconst);
 
-        return register(new ArrayConstant(this, Format.Array, constType, aconst.clone()));
+        return register(new ArrayConstant(this, Format.Array, constType, aconst));
     }
 
     /**
@@ -1002,7 +1002,7 @@ public class ConstantPool
     public ArrayConstant ensureSetConstant(TypeConstant constType, Constant[] aconst) {
         checkElementsNonNull(aconst);
 
-        return register(new ArrayConstant(this, Format.Set, constType, aconst.clone()));
+        return register(new ArrayConstant(this, Format.Set, constType, aconst));
     }
 
     /**
@@ -1016,7 +1016,7 @@ public class ConstantPool
     public ArrayConstant ensureTupleConstant(TypeConstant constType, Constant... aconst) {
         checkElementsNonNull(aconst);
 
-        return register(new ArrayConstant(this, Format.Tuple, constType, aconst.clone()));
+        return register(new ArrayConstant(this, Format.Tuple, constType, aconst));
     }
 
     /**
