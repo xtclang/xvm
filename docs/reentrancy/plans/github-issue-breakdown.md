@@ -2105,7 +2105,7 @@ models together.
 
 ### PR Title
 
-Remove local JIT constructor escapes and plan JIT owner lifecycle work
+Remove local JIT constructor escapes and preserve JIT exception boundaries
 
 ### Reviewer-Facing Problem Statement
 
@@ -2115,8 +2115,9 @@ generated Java statics, and `Ctx.Current`. Interpreter `NativeTemplates` fixes
 do not prove JIT ownership safety.
 
 The branch fixes local JIT constructor warnings whose behavior can be preserved
-mechanically, but leaves `Xvm` startup owner publication for a larger lifecycle
-PR.
+mechanically and fixes two JIT exception-boundary bugs whose behavior is
+independent of the larger owner lifecycle. It still leaves `Xvm` startup owner
+publication for a larger lifecycle PR.
 
 ### Exact Scope Included
 
@@ -2132,6 +2133,13 @@ PR.
 
 - Document the remaining `Xvm.java` constructor escape and the required
   `XvmState` or `XvmServices` shape.
+- Preserve JIT host-boundary failure semantics:
+
+  - generated unhandled XTC exceptions leave a non-zero
+    `JitConnector.join()` result;
+  - `nType` reflective dispatch rethrows invoked `nException` and `Error`
+    instead of converting them to Unsupported.
+
 - Smoke-test launcher JIT path after shared owner API changes.
 
 ### Explicit Out Of Scope
@@ -2148,6 +2156,8 @@ Commits:
 
 - `36c24a974 Document remaining JIT constructor escapes`
 - `cb81116cb Remove local JIT constructor escapes`
+- JIT unhandled-result wave
+- JIT bridge reflective-exception wave
 
 Primary source areas:
 
@@ -2173,6 +2183,7 @@ Future lifecycle source areas:
 
 ```bash
 ./gradlew :javatools:test --tests org.xvm.javajit.JitConstructorEscapeTest \
+  --tests org.xvm.javajit.JitFailurePropagationTest \
   --configuration-cache --console=plain --warning-mode=all
 
 ./gradlew :javatools_jitbridge:compileJava \
@@ -2203,6 +2214,10 @@ xdk/build/install/xdk/bin/xec \
 - Preserve `TypeMatrix` live-context lookup after construction while avoiding
   construction-time observation.
 - Preserve raw-storage array packed size/mutability semantics.
+- Preserve successful JIT execution behavior while making generated unhandled
+  exceptions observable as non-zero connector results.
+- Preserve bridge Unsupported fallback for reflection/access failures while
+  keeping invoked language exceptions as their original `nException`.
 - Future `XvmState` work must preserve native container id `-1`, weak-map
   cleanup, name generation, module loader behavior, and hot generated-code
   performance.
@@ -2221,6 +2236,8 @@ xdk/build/install/xdk/bin/xec \
 - `Xvm.java` startup owner publication remains explicitly documented if not
   fixed.
 - Tests prove descriptor equivalence.
+- Tests prove generated JIT exception boundaries cannot return success or
+  replace invoked natural exceptions with Unsupported.
 - PR does not claim the JIT runtime is fully reentrant-safe.
 - Any future generated static owner claims are tested with multiple JIT
   containers or type systems.

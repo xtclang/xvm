@@ -116,7 +116,7 @@ been logged and the task code treats the non-zero code as failure.
 | Priority | Site | Classification | Risk | Recommended fix |
 | --- | --- | --- | --- | --- |
 | P0 | `javatools/src/main/java/org/xvm/javajit/JitConnector.java:143` | Must-fix, fixed in branch | `InvocationTargetException` for an unhandled XTC exception was printed at `JitConnector.java:150`, but no exception was thrown and `result` could remain zero from a previous successful invocation. JIT/direct execution could report success after an unhandled language exception. | Fixed by explicitly restoring the connector's non-zero failure result in the generated-XTC-exception branch. The printable XTC exception text remains diagnostic, but `join()` no longer reports success after the generated code threw. |
-| P0 | `javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java:130`, `:187`, `:231` | Must-fix | Reflective `equals`, `compare`, and `hashCode` catch `InvocationTargetException` and convert every failure to `$unsupported`. If the invoked method threw an XTC `nException`, the language exception is lost. | Catch `InvocationTargetException`, unwrap `getCause()`, rethrow `nException`, and only translate reflection/signature failures to `$unsupported` or type mismatch. |
+| P0 | `javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java:130`, `:187`, `:231` | Must-fix, fixed in branch | Reflective `equals`, `compare`, and `hashCode` caught `InvocationTargetException` and converted every failure to `$unsupported`. If the invoked method threw an XTC `nException`, the language exception was lost. | Fixed by catching `InvocationTargetException` separately, unwrapping `getCause()`, rethrowing `nException`, rethrowing `Error`, and only translating reflection/access failures to `$unsupported`. |
 | P0 | `javatools/src/main/java/org/xvm/runtime/MainContainer.java:253` | Must-fix, fixed in branch | Startup/invocation setup failures are wrapped as `new RuntimeException("failed to run... Cause: " + e.getMessage())` with no cause. This cuts off module load, injection, owner, and stack information before the launcher sees it. | Fixed by throwing `new RuntimeException("failed to run: " + f_idModule, e)`. The launcher still gets module context, and diagnostics keep the original cause and stack. A typed startup exception remains a later cleanup option. |
 | P0 | `javatools/src/main/java/org/xvm/runtime/Container.java:168` and `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:324` | Must-fix, fixed in branch | Unexpected service scheduling/execution failure was printed and swallowed. Pending work was decremented, the service could be terminated, and `join()` could return normal completion. This hid parallelism, ownership, and runtime defects. | Fixed by adding a container terminal-failure slot observed by `InterpreterConnector.join()`. The first unexpected `Throwable` is stored with safe publication, later failures are suppressed evidence, and stderr remains secondary diagnostics. |
 | P0 | `javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xNanosTimer.java:310` | Must-fix, fixed in branch | `Alarm.start()` registers `nativeCallback` before scheduling the timer, catches `Throwable`, and only calls `cancelTrigger()`. If scheduling fails after registration, the callback count can remain positive and keep the container non-idle forever. | Fixed with an explicit rollback guard: the alarm stores the exact registered container, unregisters it on schedule failure, no longer swallows `Throwable`, and removes the alarm from the set if startup fails. |
@@ -277,7 +277,8 @@ P0:
 
 1. DONE in this branch: fix JIT unhandled XTC exception propagation in
    `JitConnector.invoke0Impl()`.
-2. Unwrap and rethrow `nException` in JIT bridge reflective dispatch (`nType`).
+2. DONE in this branch: unwrap and rethrow `nException` in JIT bridge
+   reflective dispatch (`nType`).
 3. DONE in this branch: preserve cause in `MainContainer.invoke0()`
    startup/invocation failure.
 4. DONE in this branch: add a runtime/container terminal failure channel for
@@ -479,3 +480,40 @@ The fallback catch around exception rendering was also narrowed from
 diagnostic rendering to fail, but it should not swallow arbitrary VM failures.
 `JitFailurePropagationTest` is a red-on-master source-shape guard for both
 properties.
+
+## Fixed In This Branch: JIT Bridge Reflection Exception Unwrapping
+
+`nType.equals$p(...)`, `nType.compare(...)`, and `nType.hashCode$p(...)` call
+generated methods reflectively for non-primitive JIT values. Reflection wraps
+anything thrown by the invoked generated method in
+`InvocationTargetException`. Master caught that together with
+`IllegalAccessException`:
+
+```java
+catch (IllegalAccessException | InvocationTargetException e) {
+    throw Exception.$unsupported($ctx, "Failed to invoke ...");
+}
+```
+
+That collapsed two different failure classes:
+
+- reflection/access/signature failure, which is a bridge implementation problem
+  and can reasonably become Unsupported while the bridge is incomplete;
+- a natural XTC exception thrown by the generated method, represented as
+  `nException`, which must keep its language identity.
+
+Changing an invoked `OutOfBounds`, `TypeMismatch`, `ReadOnly`, or user exception
+into Unsupported is semantically wrong even in a single-threaded JIT run. Under
+same-JVM debugging it is worse because the real failing generated method is
+hidden behind a fabricated bridge exception.
+
+The branch splits the catches and routes `InvocationTargetException` through one
+helper:
+
+- if the cause is `nException`, rethrow it;
+- if the cause is `Error`, rethrow it instead of making it user-catchable;
+- otherwise keep the old `$unsupported` fallback for bridge/reflection defects.
+
+`JitFailurePropagationTest.bridgeReflectionRethrowsNaturalExceptions()` guards
+against the old multi-catch and requires the explicit `nException`/`Error`
+handling.

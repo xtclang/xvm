@@ -308,6 +308,18 @@ that one `JitConnector` instance can safely be reused concurrently for multiple
 modules or containers. Reentrant JIT testing should either use separate
 connector instances or explicitly define connector lifecycle synchronization.
 
+Exception boundary point: generated JIT methods are invoked reflectively.
+Reflection is only the transport; it must not change language failure
+semantics. This branch fixes two local boundary bugs:
+
+- `JitConnector.invoke0Impl(...)` now leaves a non-zero connector result when
+  generated code throws an unhandled natural exception. The existing printed
+  exception text remains diagnostic, but `join()` cannot report success after
+  the generated invocation failed.
+- `nType` bridge dispatch unwraps `InvocationTargetException`, rethrows
+  invoked `nException`, rethrows `Error`, and only keeps the old Unsupported
+  fallback for bridge/reflection access failures.
+
 Branch verification included a launcher-level smoke of this path:
 
 ```bash

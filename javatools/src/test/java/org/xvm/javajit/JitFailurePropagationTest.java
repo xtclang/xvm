@@ -33,11 +33,35 @@ public class JitFailurePropagationTest {
                 "ignored exception variables hide intentional fallback-only catches");
     }
 
+    /**
+     * Reflective bridge calls wrap generated method failures in {@link
+     * java.lang.reflect.InvocationTargetException}. Master converted those wrapped XTC exceptions
+     * into Unsupported, changing the natural exception type and hiding the real failure.
+     */
+    @Test
+    public void bridgeReflectionRethrowsNaturalExceptions() throws IOException {
+        var source = readJitBridgeString("org/xtclang/ecstasy/nType.java");
+
+        assertFalse(source.contains("IllegalAccessException | InvocationTargetException"),
+                "bridge dispatch must distinguish reflection failure from invoked XTC failure");
+        assertTrue(source.contains("cause instanceof nException"),
+                "natural XTC exceptions must be unwrapped and rethrown");
+        assertTrue(source.contains("cause instanceof Error"),
+                "VM errors from generated code must not become user-catchable Unsupported");
+    }
+
     private static String readString(String source) throws IOException {
         var path = Path.of("src/main/java", source);
         return Files.readString(Files.exists(path)
                 ? path
                 : Path.of("javatools/src/main/java", source));
+    }
+
+    private static String readJitBridgeString(String source) throws IOException {
+        var path = Path.of("javatools_jitbridge/src/main/java", source);
+        return Files.readString(Files.exists(path)
+                ? path
+                : Path.of("../javatools_jitbridge/src/main/java", source));
     }
 
     private static String sourceBetween(String source, String start, String end) {

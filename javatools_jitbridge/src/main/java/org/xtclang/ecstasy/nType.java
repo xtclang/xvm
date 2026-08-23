@@ -127,9 +127,10 @@ public class nType
             java.lang.Boolean result = (java.lang.Boolean)
                     equalsMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
             return result.booleanValue();
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            throw Exception.$unsupported($ctx,
-                "Failed to invoke 'equals()` on class " + $dataType.getValueString());
+        } catch (IllegalAccessException e) {
+            throw invocationUnsupported("equals()");
+        } catch (InvocationTargetException e) {
+            throw invocationFailure("equals()", e);
         }
     }
 
@@ -184,9 +185,10 @@ public class nType
 
         try {
             return (Ordered) compareMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            throw Exception.$unsupported($ctx,
-                "Failed to invoke 'compare()` on class " + $dataType.getValueString());
+        } catch (IllegalAccessException e) {
+            throw invocationUnsupported("compare()");
+        } catch (InvocationTargetException e) {
+            throw invocationFailure("compare()", e);
         }
     }
 
@@ -228,11 +230,32 @@ public class nType
 
         try {
             return (long) hashCodeMethod.invoke($xvmClass(ctx), ctx, this, value);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            throw Exception.$unsupported($ctx,
-                    "Failed to invoke 'hashCode$p()` on class " + $dataType.getValueString());
+        } catch (IllegalAccessException e) {
+            throw invocationUnsupported("hashCode$p()");
+        } catch (InvocationTargetException e) {
+            throw invocationFailure("hashCode$p()", e);
         }
 
+    }
+
+    /**
+     * Reflection wraps exceptions thrown by generated XTC methods. Replacing a natural
+     * {@link nException} with Unsupported changes language semantics, so unwrap and rethrow it.
+     */
+    private nException invocationFailure(java.lang.String methodName, InvocationTargetException e) {
+        Throwable cause = e.getCause();
+        if (cause instanceof nException exception) {
+            return exception;
+        }
+        if (cause instanceof Error error) {
+            throw error;
+        }
+        return invocationUnsupported(methodName);
+    }
+
+    private nException invocationUnsupported(java.lang.String methodName) {
+        return Exception.$unsupported($ctx,
+                "Failed to invoke '" + methodName + "' on class " + $dataType.getValueString());
     }
 
     private Method ensureMethod(java.lang.String methodName, int valueCount) {

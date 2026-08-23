@@ -2521,6 +2521,22 @@ not change successful JIT execution or generated class caching. The only changed
 observable behavior is that an unhandled generated XTC exception cannot be
 reported as a successful exit.
 
+### JIT Bridge Preserves Natural Exceptions
+
+`nType` uses reflection to call generated `equals`, `compare`, and `hashCode`
+methods for non-primitive values. Master caught `InvocationTargetException`
+together with `IllegalAccessException` and converted both to Unsupported. That
+was not just weak diagnostics: `InvocationTargetException` is how reflection
+reports the exception thrown by the generated method. If that cause was an XTC
+`nException`, the bridge changed the language exception type.
+
+This branch catches reflection access failures separately from invoked-method
+failures. Invoked `nException` is rethrown, `Error` is rethrown, and only
+remaining bridge/reflection failures keep the old `$unsupported` fallback. This
+preserves successful dispatch and the existing incomplete-bridge fallback while
+preventing real generated-language exceptions from being replaced by an
+unrelated exception.
+
 ### `xOSStorage` Watch Daemon
 
 Master kept one mutable static watcher daemon:

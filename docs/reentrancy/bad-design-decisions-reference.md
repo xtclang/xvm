@@ -48,6 +48,7 @@ That makes the code brittle even before multiple Java threads enter it.
 | Message-only exception wrapping | Code threw new failures using only `e.getMessage()`. | Owner, pool, module, and stack evidence disappears before the launcher or stress harness can report it. | Fixed for `MainContainer.invoke0(...)`; broader exception hygiene remains tracked. |
 | Print-only worker failures | Worker threads caught runtime defects, printed to stderr, and continued. | Host APIs can observe idle state and report success after a scheduler/service runtime defect. | Fixed for `Container.schedule(...)`, `ServiceContext.drainWork()`, and `InterpreterConnector.join()`. |
 | Print-only JIT language failures | JIT detected generated unhandled exceptions, printed them, and returned without setting failure state. | Direct/JIT launch can report success after generated code failed. | Fixed for `JitConnector.invoke0Impl(...)`; broader JIT owner work remains separate. |
+| Collapsed reflective language exceptions | Reflection wrapper exceptions were caught with access failures and converted to generic Unsupported. | A generated XTC `nException` can be replaced by the wrong language exception type. | Fixed for `nType` `equals`, `compare`, and `hashCode` dispatch. |
 
 ## Examples And Replacements
 
@@ -265,6 +266,44 @@ System.out.println("\nUnhandled exception: " + reflectedException);
 The JIT still needs a fuller owner and diagnostics plan, but the host boundary
 must not report success after generated code threw an unhandled natural
 exception.
+
+### Collapsed Reflective Language Exceptions
+
+Bad shape:
+
+```java
+catch (IllegalAccessException | InvocationTargetException e) {
+    throw Exception.$unsupported(ctx, "Failed to invoke ...");
+}
+```
+
+Why it was bad in a single-threaded world:
+
+- `IllegalAccessException` means the bridge could not call the method.
+- `InvocationTargetException` means the generated method was called and threw.
+- Collapsing both into Unsupported changes the language exception if the
+  generated method threw `OutOfBounds`, `TypeMismatch`, `ReadOnly`, or a user
+  exception represented by `nException`.
+- Catching the wrapper without checking `Error` can make VM/linkage failures
+  look like user-catchable language failures.
+
+Replacement:
+
+```java
+catch (InvocationTargetException e) {
+    Throwable cause = e.getCause();
+    if (cause instanceof nException exception) {
+        throw exception;
+    }
+    if (cause instanceof Error error) {
+        throw error;
+    }
+    throw unsupportedBridgeFailure();
+}
+```
+
+The reflection bridge still has an Unsupported fallback while it is incomplete,
+but invoked language exceptions keep their identity.
 
 ### Split Mutable Lifecycle State
 
