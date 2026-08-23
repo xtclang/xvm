@@ -191,17 +191,24 @@ Done in this branch:
   now reconstruct their logical two-child relational shells explicitly. Shared
   child types still register through the destination pool; unrelated foreign
   child types fail before publication.
+- `VirtualChildTypeConstant`, `InnerChildTypeConstant`,
+  `AnonymousClassTypeConstant`, and `PropertyClassTypeConstant` now reconstruct
+  dependant child/property type shells explicitly. Shared parent and child
+  identities still register through the destination pool; resolved child
+  structure and property-info caches are rebuilt locally.
+- `RecursiveTypeConstant` now reconstructs the recursive typedef shell
+  explicitly so clone-free terminal adoption cannot erase the recursive subclass.
 - `CastTypeConstant` now rejects adoption because it is a transient compiler/JIT
   marker and already cannot be assembled into a pool.
 
 Remaining linked finding:
 
 - The `MatchAnyConstant` shell and foreign-key boundary are closed, but its
-  locator is still a `TypeConstant`. Terminal and single-child type wrappers are
-  closed, and the storable relational type shells are closed. Shared/adoptable
-  dependant, annotated, pending, sequence, unresolved, and virtual-child type
-  keys still rely on the remaining type-family default clone. Keep clone-free
-  reconstruction of those type classes with the type-family PR.
+  locator is still a `TypeConstant`. Terminal, single-child type wrappers,
+  storable relational shells, dependant child/property shells, and recursive
+  typedef shells are closed. Shared/adoptable annotated, pending, sequence, and
+  unresolved type keys still rely on the remaining type-family default clone.
+  Keep clone-free reconstruction of those type classes with the type-family PR.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 

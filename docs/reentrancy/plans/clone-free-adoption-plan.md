@@ -98,14 +98,14 @@ Current branch inventory:
 | Abstract family bases in that set | 13 |
 | Concrete constant classes in that set | 75 |
 | Classes currently overriding `adoptedBy(...)` | 0 |
-| Classes currently overriding `copyForAdoption(...)` | 50 |
-| Concrete classes still relying on an explicit family default-clone policy | 25 |
+| Classes currently overriding `copyForAdoption(...)` | 55 |
+| Concrete classes still relying on an explicit family default-clone policy | 20 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
 
 - `Constant`, `ConstantPool`, and adoption tests;
-- all 50 current hook classes, already converted to `copyForAdoption(...)` in
+- all 55 current hook classes, already converted to `copyForAdoption(...)` in
   this branch;
 - 13 abstract family bases, to place shared family adoption rules where useful;
 - up to 75 concrete leaf constants, either by explicit copy/adoption
@@ -146,7 +146,7 @@ Risk buckets:
 | `AccessTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 single-child type wrapper fixed in this branch |
 | `AllCondition` | `MultiCondition` | explicit clone-free hook | P3 logical condition array; simulation scratch fixed in this branch |
 | `AnnotatedTypeConstant` | `TypeConstant` | family default-clone policy | P1 annotation children and type cache reset |
-| `AnonymousClassTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `AnonymousClassTypeConstant` | `AbstractDependantChildTypeConstant` | explicit clone-free hook | P1 dependant child type fixed in this branch |
 | `AnyCondition` | `MultiCondition` | explicit clone-free hook | P3 logical condition array; simulation scratch fixed in this branch |
 | `ArrayConstant` | `ValueConstant` | explicit clone-free hook | P3 composite value container fixed in this branch |
 | `BFloat16Constant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
@@ -180,7 +180,7 @@ Risk buckets:
 | `HandleConstant` | `FrameDependentConstant` | explicit clone-free guard override | P0 live runtime handle |
 | `IdentityConstant` | `Constant` | family default-clone policy | P2 identity-family base |
 | `ImmutableTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 single-child type wrapper fixed in this branch |
-| `InnerChildTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `InnerChildTypeConstant` | `AbstractDependantChildTypeConstant` | explicit clone-free hook | P1 dependant child type fixed in this branch |
 | `IntConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `IntersectionTypeConstant` | `RelationalTypeConstant` | explicit clone-free hook | P1 relational type fixed in this branch |
 | `KeywordConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
@@ -201,12 +201,12 @@ Risk buckets:
 | `ParentClassConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical identity |
 | `PendingTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `PresentCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
-| `PropertyClassTypeConstant` | `AbstractDependantTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `PropertyClassTypeConstant` | `AbstractDependantTypeConstant` | explicit clone-free hook | P1 property type metadata cache fixed in this branch |
 | `PropertyConstant` | `FormalConstant` | explicit clone-free hook | P1 JIT-name/type/property-info cache owner policy fixed in this branch |
 | `PseudoConstant` | `Constant` | family default-clone policy | P2 pseudo-family base |
 | `PureIdentityConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
 | `RangeConstant` | `ValueConstant` | explicit clone-free hook | P3 composite value endpoints fixed in this branch |
-| `RecursiveTypeConstant` | `TerminalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `RecursiveTypeConstant` | `TerminalTypeConstant` | explicit clone-free hook | P1 recursive typedef subclass fixed in this branch |
 | `RegExConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `RegisterConstant` | `FrameDependentConstant` | explicit clone-free hook | P1/P4 compiler register state fixed in this branch |
 | `RelationalTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
@@ -228,7 +228,7 @@ Risk buckets:
 | `VersionConstant` | `LiteralConstant` | explicit clone-free hook | P3 literal subclass fixed in this branch |
 | `VersionMatchesCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
 | `VersionedCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
-| `VirtualChildTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `VirtualChildTypeConstant` | `AbstractDependantChildTypeConstant` | explicit clone-free hook | P1 dependant child type fixed in this branch |
 
 ## Clone Uses That Are Dangerous For Runtime Reentrancy
 
@@ -565,6 +565,13 @@ Scope:
 - keep the `UnionTypeConstant`, `IntersectionTypeConstant`, and
   `DifferenceTypeConstant` branch fixes, which reconstruct logical relational
   type expressions and reject unrelated foreign children;
+- keep the `VirtualChildTypeConstant`, `InnerChildTypeConstant`,
+  `AnonymousClassTypeConstant`, and `PropertyClassTypeConstant` branch fixes,
+  which reconstruct dependant child/property type shells, preserve target-pool
+  interning, and rebuild child-structure or property-info caches locally;
+- keep the `RecursiveTypeConstant` branch fix, which preserves the recursive
+  typedef subclass while still adopting/interning the typedef identity through
+  the destination pool;
 - keep the `CastTypeConstant` branch guard, which rejects adoption because cast
   types are transient compiler/JIT markers that cannot be assembled into a pool;
 - preserve existing cache reset behavior exactly.

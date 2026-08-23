@@ -233,6 +233,19 @@ Branch fix:
 - `MethodBindingConstant.copyForAdoption(...)` reconstructs the serialized
   bind-target descriptor from method identity, and `FrameDependentConstant` no
   longer grants shallow-clone adoption to every frame-dependent subclass.
+- `VirtualChildTypeConstant.copyForAdoption(...)`,
+  `InnerChildTypeConstant.copyForAdoption(...)`,
+  `AnonymousClassTypeConstant.copyForAdoption(...)`, and
+  `PropertyClassTypeConstant.copyForAdoption(...)` reconstruct dependant
+  child/property type shells from parent plus child name/class/property identity.
+  The target pool still interns those constants through normal registration, but
+  resolved child-structure and `PropertyInfo` caches are not copied from the
+  source owner. Transient virtual-origin parent metadata is preserved and guarded
+  so a foreign origin cannot be smuggled into the target pool.
+- `RecursiveTypeConstant.copyForAdoption(...)` reconstructs the recursive typedef
+  subclass explicitly. This avoids the subtle subclass loss that would occur if
+  it inherited terminal-type reconstruction, and rejects unrelated foreign
+  typedefs before publication.
 - `ConditionalConstant` no longer grants shallow-clone adoption to the condition
   family. Each concrete condition reconstructs its logical link-time predicate,
   and the transient `iTest` brute-force simulation slot is private scratch state

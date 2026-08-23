@@ -225,6 +225,15 @@ public class AnonymousClassTypeConstant
     }
 
     @Override
+    protected AnonymousClassTypeConstant copyForAdoption(AdoptionContext context) {
+        var pool = requireSharedAdoptionPool(context, "anonymous class type with foreign parent/child");
+
+        // Rebuild the anonymous-type shell instead of cloning parent/child references. Target
+        // registration still interns both constants, preserving the old lookup behavior.
+        return new AnonymousClassTypeConstant(pool, m_typeParent, m_idAnon);
+    }
+
+    @Override
     protected int compareDetails(Constant obj) {
         int n = super.compareDetails(obj);
         if (n == 0) {

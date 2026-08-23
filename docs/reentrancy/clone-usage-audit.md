@@ -358,6 +358,14 @@ registration adopt both children. `CastTypeConstant` is intentionally different:
 it is a transient compiler/JIT marker whose `assemble(...)` method already
 rejects storage, so adoption now fails closed instead of pretending it can be
 pooled.
+The dependant child/property type shell classes `VirtualChildTypeConstant`,
+`InnerChildTypeConstant`, `AnonymousClassTypeConstant`, and
+`PropertyClassTypeConstant` are also off the default clone path. They reconstruct
+parent plus child name/class/property identity and let target registration intern
+those pieces exactly as before, while child-structure and `PropertyInfo` caches
+start empty in the target owner. `RecursiveTypeConstant` has its own hook because
+it is a `TerminalTypeConstant` subclass whose recursive typedef behavior would be
+lost if terminal adoption rebuilt it as a plain terminal type.
 
 Container/ConstantPool/lock/cache impact: `ConstantPool.register(...)` uses this
 path for foreign constants and locator constants. The validator is opt-in through

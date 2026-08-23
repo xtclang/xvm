@@ -289,6 +289,24 @@ public class VirtualChildTypeConstant
     }
 
     @Override
+    protected VirtualChildTypeConstant copyForAdoption(AdoptionContext context) {
+        var pool  = requireSharedAdoptionPool(context, "virtual child type with foreign parent");
+        var sName = m_constName.getValue();
+
+        // Virtual-child adoption must rebuild the shell so the target owner recomputes child
+        // structure caches. The transient origin-parent form is used by TypeInfo/isA calculations
+        // and is part of the logical in-memory type shape while it exists.
+        if (m_typeParent == m_typeOriginParent) {
+            return new VirtualChildTypeConstant(pool, m_typeParent, sName, m_fThisClass);
+        }
+        if (!m_typeOriginParent.isShared(pool)) {
+            throw new IllegalStateException(
+                    "cannot adopt virtual child type with foreign origin parent: " + this);
+        }
+        return new VirtualChildTypeConstant(pool, m_typeParent, sName, m_typeOriginParent);
+    }
+
+    @Override
     protected int compareDetails(Constant obj) {
         int n = super.compareDetails(obj);
 

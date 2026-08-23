@@ -1471,6 +1471,14 @@ separately.
   includes the relational-type wave. Shared child types keep the same
   destination-pool interning behavior; unrelated foreign child types fail before
   publication.
+- Reconstruct `VirtualChildTypeConstant`, `InnerChildTypeConstant`,
+  `AnonymousClassTypeConstant`, and `PropertyClassTypeConstant` from parent plus
+  child name/class/property identity if this slice includes the dependant-type
+  wave. Preserve the transient virtual-origin parent when present, but reject a
+  foreign origin before publication.
+- Reconstruct `RecursiveTypeConstant` from its typedef identity if this slice
+  includes the recursive-type wave, because inheriting terminal-type adoption
+  would silently lose recursive typedef behavior.
 - Reject `CastTypeConstant` adoption in that wave because it is a transient
   compiler/JIT marker and cannot be assembled into a pool.
 - Reject moving an already-owned live `HandleConstant` to another pool.

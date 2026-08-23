@@ -441,6 +441,15 @@ public class PropertyClassTypeConstant
     }
 
     @Override
+    protected PropertyClassTypeConstant copyForAdoption(AdoptionContext context) {
+        var pool = requireSharedAdoptionPool(context, "property class type with foreign parent/property");
+
+        // PropertyInfo is owner-derived metadata. Constructing a fresh shell preserves the logical
+        // parent+property identity while forcing the target pool to rebuild that cache locally.
+        return new PropertyClassTypeConstant(pool, m_typeParent, m_idProp);
+    }
+
+    @Override
     protected int compareDetails(Constant obj) {
         int n = super.compareDetails(obj);
         if (n == 0) {

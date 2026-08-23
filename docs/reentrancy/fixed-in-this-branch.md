@@ -248,6 +248,19 @@ shallow-clone helper state identified by the audit:
   now reconstruct their two-child relational shells instead of shallow-cloning
   inherited type helper state. Shared child types keep the same target-pool
   interning behavior; unrelated foreign child types fail before publication.
+- `VirtualChildTypeConstant`, `InnerChildTypeConstant`,
+  `AnonymousClassTypeConstant`, and `PropertyClassTypeConstant` now reconstruct
+  their dependant child/property shells instead of shallow-cloning parent,
+  child, and owner-derived cache fields. Target registration still interns the
+  parent type and child name/class/property identity exactly as before. The
+  transient virtual-child origin parent is preserved for TypeInfo/isA use, and
+  resolved child-structure or `PropertyInfo` caches are rebuilt by the target
+  owner.
+- `RecursiveTypeConstant` now reconstructs a recursive typedef shell instead of
+  relying on either shallow clone or the `TerminalTypeConstant` hook. This
+  preserves the concrete recursive subclass behavior while still letting the
+  target pool adopt and intern the typedef identity; unrelated foreign typedefs
+  fail before publication.
 - `CastTypeConstant` now rejects adoption because it is a transient compiler/JIT
   marker and its own `assemble(...)` method already rejects pool storage.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration

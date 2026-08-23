@@ -134,6 +134,15 @@ public class InnerChildTypeConstant
     }
 
     @Override
+    protected InnerChildTypeConstant copyForAdoption(AdoptionContext context) {
+        var pool = requireSharedAdoptionPool(context, "inner child type with foreign parent/child");
+
+        // The child identity remains logical value, but any resolved child structure belongs to the
+        // target owner and must be rediscovered there rather than copied through clone().
+        return new InnerChildTypeConstant(pool, m_typeParent, m_idChild);
+    }
+
+    @Override
     protected int compareDetails(Constant obj) {
         int n = super.compareDetails(obj);
         if (n == 0) {

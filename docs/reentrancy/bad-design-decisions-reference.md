@@ -224,6 +224,13 @@ helper caches. Rebuilding the shell from that identity keeps the same
 constant-pool interning behavior for shared identities and fails closed for
 unrelated foreign identities.
 
+The dependant child/property type shells now follow that rule too. Parent plus
+child name/class/property identity is logical type value; resolved child
+structures and `PropertyInfo` objects are owner-derived metadata and must not be
+copied. `RecursiveTypeConstant` also needs a dedicated hook because a generic
+terminal-type copy would erase the recursive typedef subclass that shallow clone
+used to preserve accidentally.
+
 The same applies to simple type modifiers. `AccessTypeConstant`,
 `ImmutableTypeConstant`, and `ServiceTypeConstant` are one logical child type
 plus one modifier bit of meaning. Rebuilding those wrappers is as cheap as a

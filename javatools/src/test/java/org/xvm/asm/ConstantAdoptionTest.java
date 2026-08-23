@@ -22,10 +22,12 @@ import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnyCondition;
 import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.AnonymousClassTypeConstant;
 import org.xvm.asm.constants.BFloat16Constant;
 import org.xvm.asm.constants.ByteConstant;
 import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.CharConstant;
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecimalAutoConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DecimalConstant;
@@ -43,6 +45,7 @@ import org.xvm.asm.constants.Float8e5Constant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.InnerChildTypeConstant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.ImmutableTypeConstant;
 import org.xvm.asm.constants.LiteralConstant;
@@ -55,9 +58,11 @@ import org.xvm.asm.constants.NotCondition;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.RegExConstant;
 import org.xvm.asm.constants.RegisterConstant;
+import org.xvm.asm.constants.RecursiveTypeConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.ServiceTypeConstant;
 import org.xvm.asm.constants.SingletonConstant;
@@ -65,11 +70,13 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
+import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
 import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.VersionMatchesCondition;
 import org.xvm.asm.constants.VersionedCondition;
+import org.xvm.asm.constants.VirtualChildTypeConstant;
 
 import org.xvm.runtime.ObjectHandle;
 
@@ -300,6 +307,157 @@ public class ConstantAdoptionTest {
         var error = assertThrows(IllegalStateException.class, () -> adopt(source, targetPool));
 
         assertTrue(error.getMessage().contains("transient cast type"));
+    }
+
+    /**
+     * Dependant child types are logical parent+child descriptors. Adoption must rebuild the shell and
+     * let target registration intern parent, child name, and child identity under the destination pool;
+     * cloned child-structure and PropertyInfo caches would be source-owner metadata.
+     */
+    @Test
+    public void registeredDependantChildTypesAdoptSharedChildrenIntoTargetPool()
+            throws Exception {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var parent     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Parent", null);
+        var method     = parent.createMethod(false, Component.Access.PUBLIC, null,
+                Parameter.NO_PARAMS, "makeChild", Parameter.NO_PARAMS, true, true);
+        var virtual    = parent.createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Virtual", null);
+        var inner      = method.createClass(Component.Access.PUBLIC, Component.Format.CLASS,
+                "Inner", null);
+        var anon       = method.createClass(Component.Access.PUBLIC, Component.Format.CLASS,
+                "Anon", null);
+        var prop       = parent.createProperty(false, Component.Access.PUBLIC,
+                Component.Access.PUBLIC, sourcePool.typeString(), "value");
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var parentType = parent.getIdentityConstant().getType();
+
+        anon.setSynthetic(true);
+
+        List.of(sourcePool.ensureVirtualChildTypeConstant(parentType, virtual.getName()),
+                sourcePool.ensureThisVirtualChildTypeConstant(parentType, virtual.getName()),
+                sourcePool.ensureInnerChildTypeConstant(parentType, classId(inner)),
+                sourcePool.ensureAnonymousClassTypeConstant(parentType, classId(anon)),
+                sourcePool.ensurePropertyClassTypeConstant(parentType, prop.getIdentityConstant()))
+                .forEach(source -> {
+                    var registered = targetPool.register(source);
+
+                    assertNotSame(source, registered);
+                    assertSame(targetPool, registered.getConstantPool());
+                    assertSame(targetPool, registered.getParentType().getConstantPool());
+                    assertEquals(source.getFormat(), registered.getFormat());
+                    assertEquals(source.getValueString(), registered.getValueString());
+                });
+    }
+
+    /**
+     * A dependant child type cannot copy unrelated source-owner parent/child references into another
+     * pool. The old clone path had to rely on assertions in setContaining(); direct adoption now fails
+     * in production before publishing an invalid target-owned type shell.
+     */
+    @Test
+    public void dependantChildTypesRejectForeignChildrenDuringAdoption() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var parent     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Parent", null);
+        var method     = parent.createMethod(false, Component.Access.PUBLIC, null,
+                Parameter.NO_PARAMS, "makeChild", Parameter.NO_PARAMS, true, true);
+        var virtual    = parent.createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Virtual", null);
+        var inner      = method.createClass(Component.Access.PUBLIC, Component.Format.CLASS,
+                "Inner", null);
+        var anon       = method.createClass(Component.Access.PUBLIC, Component.Format.CLASS,
+                "Anon", null);
+        var prop       = parent.createProperty(false, Component.Access.PUBLIC,
+                Component.Access.PUBLIC, sourcePool.typeString(), "value");
+        var parentType = parent.getIdentityConstant().getType();
+
+        anon.setSynthetic(true);
+
+        List.of(sourcePool.ensureVirtualChildTypeConstant(parentType, virtual.getName()),
+                sourcePool.ensureThisVirtualChildTypeConstant(parentType, virtual.getName()),
+                sourcePool.ensureInnerChildTypeConstant(parentType, classId(inner)),
+                sourcePool.ensureAnonymousClassTypeConstant(parentType, classId(anon)),
+                sourcePool.ensurePropertyClassTypeConstant(parentType, prop.getIdentityConstant()))
+                .forEach(source -> {
+                    var error = assertThrows(IllegalStateException.class,
+                            () -> adopt(source, targetPool));
+
+                    assertTrue(error.getMessage().contains("foreign"));
+                });
+    }
+
+    /**
+     * Transient virtual-child origin metadata participates in TypeInfo/isA calculations. Adoption must
+     * preserve that in-memory logical type shape while still rebuilding all owner-local caches.
+     */
+    @Test
+    public void adoptedTransientVirtualChildPreservesOriginParent()
+            throws Exception {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var parent     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Parent", null);
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var parentType = parent.getIdentityConstant().getType();
+        var origin     = parentType.ensureAccess(Component.Access.PRIVATE);
+        var source     = new VirtualChildTypeConstant(sourcePool, parentType, "Virtual", origin);
+
+        setField(source, "m_clzChild", parent);
+
+        var adopted = adopt(source, targetPool);
+
+        assertSame(targetPool, adopted.getConstantPool());
+        assertEquals(source.getValueString(), adopted.getValueString());
+        assertNull(fieldValue(adopted, "m_clzChild"));
+        assertEquals(source.getOriginParentType().getValueString(),
+                adopted.getOriginParentType().getValueString());
+    }
+
+    /**
+     * RecursiveTypeConstant is a TerminalTypeConstant subclass. It needs its own adoption hook so a
+     * recursive typedef keeps the concrete recursive type behavior instead of becoming a plain terminal
+     * type during clone-free adoption.
+     */
+    @Test
+    public void registeredRecursiveTypeAdoptsSharedTypedefIntoTargetPool() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var parent     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Parent", null);
+        var typedef    = parent.createTypedef(Component.Access.PUBLIC, sourcePool.typeObject(), "Alias");
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var source     = new RecursiveTypeConstant(sourcePool, typedefId(typedef));
+
+        var registered = targetPool.register(source);
+
+        assertEquals(RecursiveTypeConstant.class, registered.getClass());
+        assertSame(targetPool, registered.getConstantPool());
+        assertSame(targetPool, registered.getTypedef().getConstantPool());
+        assertEquals(source.getValueString(), registered.getValueString());
+    }
+
+    /**
+     * A recursive typedef from an unrelated module cannot be adopted by copying the typedef reference.
+     * Failing closed keeps the target pool from publishing a recursive type backed by foreign metadata.
+     */
+    @Test
+    public void recursiveTypeRejectsForeignTypedefDuringAdoption() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var parent     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Parent", null);
+        var typedef    = parent.createTypedef(Component.Access.PUBLIC, sourcePool.typeObject(), "Alias");
+        var source     = new RecursiveTypeConstant(sourcePool, typedefId(typedef));
+
+        var error = assertThrows(IllegalStateException.class, () -> adopt(source, targetPool));
+
+        assertTrue(error.getMessage().contains("foreign typedef"));
     }
 
     /**
@@ -996,6 +1154,7 @@ public class ConstantAdoptionTest {
                AnyCondition.class,
                AccessTypeConstant.class,
                ArrayConstant.class,
+               AnonymousClassTypeConstant.class,
                BFloat16Constant.class,
                ByteConstant.class,
                CastTypeConstant.class,
@@ -1016,6 +1175,7 @@ public class ConstantAdoptionTest {
                FormalTypeChildConstant.class,
                HandleConstant.class,
                IntConstant.class,
+               InnerChildTypeConstant.class,
                IntersectionTypeConstant.class,
                ImmutableTypeConstant.class,
                LiteralConstant.class,
@@ -1028,9 +1188,11 @@ public class ConstantAdoptionTest {
                ParameterizedTypeConstant.class,
                PresentCondition.class,
                PropertyConstant.class,
+               PropertyClassTypeConstant.class,
                RangeConstant.class,
                RegExConstant.class,
                RegisterConstant.class,
+               RecursiveTypeConstant.class,
                SignatureConstant.class,
                ServiceTypeConstant.class,
                SingletonConstant.class,
@@ -1041,7 +1203,8 @@ public class ConstantAdoptionTest {
                UnionTypeConstant.class,
                VersionConstant.class,
                VersionMatchesCondition.class,
-               VersionedCondition.class)
+               VersionedCondition.class,
+               VirtualChildTypeConstant.class)
                 .forEach(clz -> {
                     assertDoesNotThrow(() -> clz.getDeclaredMethod(
                             "copyForAdoption", Constant.AdoptionContext.class));
@@ -1130,6 +1293,14 @@ public class ConstantAdoptionTest {
     @SuppressWarnings("unchecked")
     private static <T extends Constant> T adopt(T constant, ConstantPool pool) {
         return (T) constant.adoptedBy(pool);
+    }
+
+    private static ClassConstant classId(ClassStructure struct) {
+        return ClassConstant.class.cast(struct.getIdentityConstant());
+    }
+
+    private static TypedefConstant typedefId(TypedefStructure struct) {
+        return TypedefConstant.class.cast(struct.getIdentityConstant());
     }
 
     private static int testIndex(ConditionalConstant condition) {

@@ -4,6 +4,7 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import org.xvm.asm.Component;
@@ -297,6 +298,16 @@ public class RecursiveTypeConstant
     @Override
     public boolean containsUnresolved() {
         return false;
+    }
+
+    @Override
+    protected RecursiveTypeConstant copyForAdoption(AdoptionContext context) {
+        var pool = requireSharedAdoptionPool(context, "recursive type with foreign typedef");
+
+        // RecursiveTypeConstant is a TerminalTypeConstant subclass, but adopting it as a plain
+        // terminal type would lose the recursive typedef behavior. Rebuild the concrete shell.
+        var typedef = Objects.requireNonNull(getTypedef(), "typedef");
+        return new RecursiveTypeConstant(pool, typedef);
     }
 
     @Override
