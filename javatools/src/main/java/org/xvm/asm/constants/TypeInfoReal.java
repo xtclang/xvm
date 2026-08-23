@@ -1388,6 +1388,11 @@ public final class TypeInfoReal
     }
 
     private Map<SignatureConstant, MethodInfo> buildMethodsBySignature() {
+        /*
+         * getMethodBySignature() extends this cache with substitutable/runtime lookup results.
+         * Keep the old HashMap-backed selection shape, but synchronize the map wrapper so those
+         * later writes are safe after the volatile first publication.
+         */
         Map<SignatureConstant, MethodInfo> map = new HashMap<>();
         for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
             MethodConstant idMethod = entry.getKey();
@@ -1398,7 +1403,7 @@ public final class TypeInfoReal
             }
         }
 
-        return Map.copyOf(map);
+        return Collections.synchronizedMap(map);
     }
 
     @Override

@@ -1040,41 +1040,57 @@ public class PropertyInfo
     public Annotation[] getRefAnnotations() {
         Annotation[] aAnnos = m_annotations;
         if (aAnnos == null) {
-            aAnnos = Annotation.NO_ANNOTATIONS;
-
-            List<Annotation> list = null;
-            for (PropertyBody body : m_aBody) {
-                PropertyStructure prop = body.getStructure();
-                if (prop == null) {
-                    continue;
-                }
-                Annotation[] aAdd = prop.getRefAnnotations();
-                if (aAdd.length > 0) {
-                    if (list == null) {
-                        if (aAnnos.length == 0) {
-                            aAnnos = aAdd;
-                        } else {
-                            list = new ArrayList<>();
-                            Collections.addAll(list, aAnnos);
-                        }
-                    }
-
-                    if (list != null) {
-                        // don't add duplicates
-                        for (Annotation anno : aAdd) {
-                            if (!list.contains(anno)) {
-                                list.add(anno);
-                            }
-                        }
-                    }
+            synchronized (this) {
+                aAnnos = m_annotations;
+                if (aAnnos == null) {
+                    /*
+                     * Ref annotations are owner metadata used by runtime field layout and
+                     * reflection. The API still returns Annotation[], so keep the old cached-array
+                     * behavior, but publish one detached snapshot through a volatile field.
+                     */
+                    m_annotations = aAnnos = buildRefAnnotations();
                 }
             }
-
-            if (list != null) {
-                aAnnos = list.toArray(Annotation.NO_ANNOTATIONS);
-            }
-            m_annotations = aAnnos;
         }
+        return aAnnos;
+    }
+
+    private Annotation[] buildRefAnnotations() {
+        Annotation[] aAnnos = Annotation.NO_ANNOTATIONS;
+
+        List<Annotation> list = null;
+        for (PropertyBody body : m_aBody) {
+            PropertyStructure prop = body.getStructure();
+            if (prop == null) {
+                continue;
+            }
+
+            Annotation[] aAdd = prop.getRefAnnotations();
+            if (aAdd.length > 0) {
+                if (list == null) {
+                    if (aAnnos.length == 0) {
+                        aAnnos = Arrays.copyOf(aAdd, aAdd.length);
+                    } else {
+                        list = new ArrayList<>();
+                        Collections.addAll(list, aAnnos);
+                    }
+                }
+
+                if (list != null) {
+                    // don't add duplicates
+                    for (Annotation anno : aAdd) {
+                        if (!list.contains(anno)) {
+                            list.add(anno);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (list != null) {
+            aAnnos = list.toArray(Annotation.NO_ANNOTATIONS);
+        }
+
         return aAnnos;
     }
 
@@ -1101,17 +1117,31 @@ public class PropertyInfo
     public TypeConstant getBaseRefType() {
         TypeConstant typeBaseRef = m_typeBaseRef;
         if (typeBaseRef == null) {
-            TypeConstant typeProp = getType();
-            ConstantPool pool     = typeProp.getConstantPool();
-
-            TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
-                isVar() ? pool.typeVar() : pool.typeRef(), typeProp);
-
-            m_typeBaseRef = typeBaseRef = isRefAnnotated()
-                    ? pool.ensureAnnotatedTypeConstant(typeRef, getRefAnnotations())
-                    : typeRef;
+            synchronized (this) {
+                typeBaseRef = m_typeBaseRef;
+                if (typeBaseRef == null) {
+                    /*
+                     * The helper caches below are owner metadata. Some first builds intern
+                     * constants in this property's pool, so publish exactly one completed value
+                     * through volatile state instead of the old plain lazy writes.
+                     */
+                    m_typeBaseRef = typeBaseRef = buildBaseRefType();
+                }
+            }
         }
         return typeBaseRef;
+    }
+
+    private TypeConstant buildBaseRefType() {
+        TypeConstant typeProp = getType();
+        ConstantPool pool     = typeProp.getConstantPool();
+
+        TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
+            isVar() ? pool.typeVar() : pool.typeRef(), typeProp);
+
+        return isRefAnnotated()
+                ? pool.ensureAnnotatedTypeConstant(typeRef, getRefAnnotations())
+                : typeRef;
     }
 
     /**
@@ -1172,25 +1202,34 @@ public class PropertyInfo
      * @return return true iff this property doesn't need to be implicitly initialized
      */
     public boolean isImplicitlyAssigned() {
-        if (m_FImplicitlyAssigned != null) {
-            return m_FImplicitlyAssigned;
+        Boolean FImplicitlyAssigned = m_FImplicitlyAssigned;
+        if (FImplicitlyAssigned == null) {
+            synchronized (this) {
+                FImplicitlyAssigned = m_FImplicitlyAssigned;
+                if (FImplicitlyAssigned == null) {
+                    m_FImplicitlyAssigned = FImplicitlyAssigned = computeImplicitlyAssigned();
+                }
+            }
         }
+        return FImplicitlyAssigned.booleanValue();
+    }
 
+    private boolean computeImplicitlyAssigned() {
         ConstantPool pool = pool();
         if (containsRefAnnotation(pool.clzFuture()) ||
             containsRefAnnotation(pool.clzUnassigned())) {
-            return m_FImplicitlyAssigned = true;
+            return true;
         }
 
         for (Annotation anno : getRefAnnotations()) {
             if (anno.hasExplicitGetter()) {
-                return m_FImplicitlyAssigned = true;
+                return true;
             }
         }
 
         // if the getter exists and doesn't call "super()" consider the property implicitly assigned
         PropertyBody head = getHead();
-        return m_FImplicitlyAssigned = head.hasGetter() && head.isGetterBlockingSuper();
+        return head.hasGetter() && head.isGetterBlockingSuper();
     }
 
     /**
@@ -1208,10 +1247,19 @@ public class PropertyInfo
     public MethodConstant getGetterId() {
         MethodConstant idGetter = m_idGetter;
         if (idGetter == null) {
-            m_idGetter = idGetter = pool().ensureMethodConstant(getIdentity(), "get",
-                    ConstantPool.NO_TYPES, new TypeConstant[]{getType()});
+            synchronized (this) {
+                idGetter = m_idGetter;
+                if (idGetter == null) {
+                    m_idGetter = idGetter = buildGetterId();
+                }
+            }
         }
         return idGetter;
+    }
+
+    private MethodConstant buildGetterId() {
+        TypeConstant[] aReturns = {getType()};
+        return pool().ensureMethodConstant(getIdentity(), "get", ConstantPool.NO_TYPES, aReturns);
     }
 
     /**
@@ -1255,10 +1303,19 @@ public class PropertyInfo
     public MethodConstant getSetterId() {
         MethodConstant idSetter = m_idSetter;
         if (idSetter == null) {
-            m_idSetter = idSetter = pool().ensureMethodConstant(getIdentity(), "set",
-                    new TypeConstant[]{getType()}, ConstantPool.NO_TYPES);
+            synchronized (this) {
+                idSetter = m_idSetter;
+                if (idSetter == null) {
+                    m_idSetter = idSetter = buildSetterId();
+                }
+            }
         }
         return idSetter;
+    }
+
+    private MethodConstant buildSetterId() {
+        TypeConstant[] aParams = {getType()};
+        return pool().ensureMethodConstant(getIdentity(), "set", aParams, ConstantPool.NO_TYPES);
     }
 
     /**
@@ -1321,7 +1378,12 @@ public class PropertyInfo
     public boolean isInjected() {
         Boolean FInjected = m_FInjected;
         if (FInjected == null) {
-            m_FInjected = FInjected = getHead().isInjected();
+            synchronized (this) {
+                FInjected = m_FInjected;
+                if (FInjected == null) {
+                    m_FInjected = FInjected = getHead().isInjected();
+                }
+            }
         }
         return FInjected.booleanValue();
     }
@@ -1683,32 +1745,32 @@ public class PropertyInfo
     /**
      * Cached "annotation" chain.
      */
-    private Annotation[] m_annotations;
+    private volatile Annotation[] m_annotations;
 
     /**
      * Cached "Injected" flag.
      */
-    private Boolean m_FInjected;
+    private volatile Boolean m_FInjected;
 
     /**
      * Cached "ImplicitlyAssigned" flag.
      */
-    private Boolean m_FImplicitlyAssigned;
+    private volatile Boolean m_FImplicitlyAssigned;
 
     /**
      * Cached base ref type.
      */
-    private TypeConstant m_typeBaseRef;
+    private volatile TypeConstant m_typeBaseRef;
 
     /**
      * Cached getter id.
      */
-    private MethodConstant m_idGetter;
+    private volatile MethodConstant m_idGetter;
 
     /**
      * Cached setter id.
      */
-    private MethodConstant m_idSetter;
+    private volatile MethodConstant m_idSetter;
 
     /**
      * Cached JitMethodDesc for getter.

@@ -1190,8 +1190,10 @@ conversion lookup, `xRTType.isNewable(...)`, and other same-JVM metadata paths.
 On master, the two map caches built mutable `HashMap` instances and assigned
 them to plain fields. That was not safe publication: another thread could see
 the map reference without a happens-before edge for the map's internal table.
-It also let callers receive mutable implementation maps even though no caller
-is supposed to mutate these indexes.
+The two maps do not have identical semantics. The property-name map is a
+read-only index once built. The method-signature map is an expanding lookup
+cache: `getMethodBySignature(...)` adds substitutable/runtime signature
+matches to it with `putIfAbsent(...)`.
 
 `asDelegates()` had the same publication problem for a larger object graph. It
 can construct a delegate-only `TypeInfoReal` that owns copied method/property/
@@ -1220,22 +1222,94 @@ without tripping unrelated placeholder assumptions.
 The performance shape is the same or better:
 
 - one name-index map per `TypeInfoReal`;
-- one signature-index map per `TypeInfoReal`;
+- one expanding signature-index cache per `TypeInfoReal`;
 - one cached delegate view per complete `TypeInfoReal`;
 - one abstractness readiness bit and one successful child-newability bit;
 - no added per-entry wrapper objects or owner maps;
-- steady-state reads are volatile reads and immutable map lookups.
+- steady-state reads are volatile reads plus either immutable property-map
+  lookups or synchronized signature-cache lookups.
 
-The intentional semantic tightening is that callers now receive immutable
-lookup-map snapshots. No production callers mutate the returned maps; source
-scans show read-only use through `get(...)` and `entrySet()` iteration. A caller
-that mutates these maps would be corrupting owner metadata and should fail.
+The intentional semantic tightening is limited to the property-name lookup
+map. Callers now receive an immutable property-name snapshot because no
+production caller mutates that index; mutation would corrupt owner metadata.
+The method-signature cache deliberately remains mutable and is now a
+synchronized `HashMap` wrapper. That preserves master behavior and selection
+shape: first exact signatures are preloaded, and later substitutable/runtime
+signature hits are cached under the same owner without racing a plain
+`HashMap`.
+
+This distinction was found by verification. A short
+`manualTests:runDirectSequenceStress` attempt failed during prerequisite
+`lib-ecstasy` compilation with `UnsupportedOperationException` from
+`TypeInfoReal.getMethodBySignature(...)` when the earlier branch draft returned
+an immutable method-signature map. The final implementation keeps the safe
+volatile first publication but returns a synchronized expanding cache for
+`m_mapMethodsBySignature`. The same stress command then reaches a separate
+`lib-json` accessibility diagnostic that predates this cache wave; that blocker
+is tracked in
+[stress-discovered-runtime-issues.md#typeinforeal-method-signature-cache-mutability](stress-discovered-runtime-issues.md#typeinforeal-method-signature-cache-mutability).
 
 `TypeInfoMemberOwnershipTest.derivedTypeInfoCachesAreSafelyPublishedInParallel()`
 checks the volatile source shape, runs parallel first access to the name map,
 signature map, delegate view, and abstractness cache, verifies that every
-thread observes the same cache identities, and asserts that the returned maps
-are immutable snapshots.
+thread observes the same cache identities, asserts that the property-name map
+is immutable, and asserts that the method-signature cache accepts same-key
+`putIfAbsent(...)` through the synchronized mutable map.
+
+### Safely Published PropertyInfo Helper Caches
+
+This branch also closes the remaining `PropertyInfo` helper-cache cells:
+
+- `m_annotations`;
+- `m_FInjected`;
+- `m_FImplicitlyAssigned`;
+- `m_typeBaseRef`;
+- `m_idGetter`;
+- `m_idSetter`.
+
+These fields looked like ordinary local memoization on master, but they are
+runtime metadata owned by the containing `TypeInfo` and its `ConstantPool`.
+That matters because the first build is not always a pure Java calculation:
+`getBaseRefType()` can intern the property's Ref/Var type in the owner pool,
+and `getGetterId()`/`getSetterId()` intern owner-pool method constants. Plain
+lazy writes had no happens-before edge for either the cache reference or the
+constant-pool side effects that produced it.
+
+`getRefAnnotations()` had a separate API hazard. The public return type is
+`Annotation[]`, so callers still receive the cached array object. Returning a
+fresh clone on every call would be a broader semantic/performance change:
+master cached one array per property, and annotation metadata can be read from
+field-layout and reflection paths. The replacement therefore keeps the old
+cached-array behavior, but the first source annotation array is copied into a
+detached snapshot and that snapshot is published once through a volatile field.
+The remaining array mutability is tracked by the broader array/API backlog; it
+is not silently made worse here.
+
+The fix uses the same small publication mechanism for all six helpers:
+
+- read the volatile field on the hot path;
+- synchronize only first construction;
+- publish exactly one completed value through the volatile field;
+- keep the owner/key/invalidation model as one helper value per owned
+  `PropertyInfo`, invalidated only by rebuilding the containing `TypeInfo`.
+
+Behavior and performance are preserved:
+
+- no helper cache is removed;
+- no per-call annotation-array clone is added;
+- getter/setter/base-ref constants are still interned in the same owner pool;
+- after warmup, each accessor is a volatile read plus the same returned value
+  identity master intended to cache;
+- under a same-owner race, losing threads reuse the winner's completed cache
+  value rather than duplicating owner-pool work or observing a partially
+  visible helper.
+
+`TypeInfoMemberOwnershipTest.propertyHelperCachesAreSafelyPublishedInParallel()`
+guards the field shape and behavior. It checks all six fields are volatile,
+races eight first-access callers, verifies each caller observes the same cached
+annotation array, base-ref type, injected/implicitly-assigned booleans, getter
+id, and setter id, and proves the getter/setter/base-ref values belong to the
+owner pool.
 
 ### ASM Metadata Owner Assembly
 

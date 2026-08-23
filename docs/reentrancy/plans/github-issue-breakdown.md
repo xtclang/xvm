@@ -813,9 +813,12 @@ sets.
   preserving the existing top-level cache shape while preventing partially
   built arrays and nested-property-id cache poisoning.
 - Safely publish `TypeInfoReal` derived runtime metadata caches: immutable
-  property-name and method-signature snapshots, synchronized/volatile delegate
-  view publication, volatile abstractness readiness, and synchronized successful
-  child-newability publication.
+  property-name snapshots, synchronized expanding method-signature caches,
+  synchronized/volatile delegate view publication, volatile abstractness
+  readiness, and synchronized successful child-newability publication.
+- Safely publish `PropertyInfo` helper cells for ref annotations, injected and
+  implicitly-assigned flags, base Ref/Var type, and getter/setter method
+  constants while preserving the old one-helper-per-owned-property cache shape.
 
 ### Explicit Out Of Scope
 
@@ -914,10 +917,20 @@ the hash-contract fixes are gone.
   setter caches with no new map allocation per property. Non-null nested ids no
   longer write into the unkeyed slots; if nested ids become hot, a separate
   keyed owner-local cache is the correct follow-up.
+- `PropertyInfo` helper cells keep the old cached identity behavior: one
+  annotation snapshot, one base-ref type, one getter id, one setter id, and one
+  boxed boolean result per owned property. The branch does not add per-call
+  annotation-array clones or remove owner-pool interning. It only adds the
+  missing publication edge and detaches the cached annotation snapshot from the
+  source property structure array.
 - `TypeInfoReal` keeps the old one-cache-per-type-info shape for name lookups,
   signature lookups, delegate views, abstractness readiness, and successful
-  child-newability validation. The maps become immutable snapshots; callers
-  were read-only already, and mutation would have corrupted owner metadata.
+  child-newability validation. Property-name maps become immutable snapshots
+  because callers were read-only already, and mutation would have corrupted
+  owner metadata. Method-signature maps remain expanding caches because
+  `getMethodBySignature(...)` stores substitutable/runtime lookup hits; the
+  replacement changes the backing from a plain unsynchronized `HashMap` to a
+  safely published synchronized `HashMap` wrapper.
 - Failed virtual-child newability checks remain retryable, matching master.
   Only successful completion is cached and published.
 
@@ -945,8 +958,11 @@ the hash-contract fixes are gone.
 - Constant hash publication is explicit and low footprint.
 - Optimized method/property chain first publication has a Java memory-model
   edge and preserves the old hot cache behavior.
-- `TypeInfoReal` derived caches publish immutable/completed state and keep the
-  old cache identity and retry semantics.
+- `PropertyInfo` helper first publication has a Java memory-model edge and
+  preserves the old helper cache identities without leaking source annotation
+  arrays.
+- `TypeInfoReal` derived caches publish completed state and keep the old cache
+  identity, signature-cache expansion, and retry semantics.
 - Tests would fail or source-shape checks would detect the old cache/write-back
   pattern.
 

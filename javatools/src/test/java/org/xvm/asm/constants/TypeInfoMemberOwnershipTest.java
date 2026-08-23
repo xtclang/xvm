@@ -1,6 +1,7 @@
 package org.xvm.asm.constants;
 
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
@@ -271,10 +272,101 @@ public class TypeInfoMemberOwnershipTest {
     }
 
     /**
+     * PropertyInfo helper cells are runtime metadata, not harmless local memoization. The old
+     * plain lazy fields could publish arrays, owner-pool MethodConstants, and base Ref/Var types
+     * without a memory edge. Parallel first access must keep the same per-owned-property cache
+     * identities while publishing completed values safely.
+     */
+    @Test
+    public void propertyHelperCachesAreSafelyPublishedInParallel() throws Exception {
+        var annotationsField        = volatileField(PropertyInfo.class, "m_annotations");
+        var injectedField           = volatileField(PropertyInfo.class, "m_FInjected");
+        var implicitlyAssignedField = volatileField(PropertyInfo.class, "m_FImplicitlyAssigned");
+        var baseRefField            = volatileField(PropertyInfo.class, "m_typeBaseRef");
+        var getterField             = volatileField(PropertyInfo.class, "m_idGetter");
+        var setterField             = volatileField(PropertyInfo.class, "m_idSetter");
+
+        var file   = new FileStructure("test");
+        var pool   = file.getConstantPool();
+        var struct = file.getModule().createClass(
+                Access.PUBLIC, Format.CLASS, "Test", null);
+
+        var structProperty = struct.createProperty(false, Access.PUBLIC,
+                Access.PUBLIC, struct.getCanonicalType(), "value");
+        var idProperty = structProperty.getIdentityConstant();
+        var body = new PropertyBody(structProperty, Implementation.Native, null,
+                structProperty.getType(), true, false, false, Effect.None, Effect.None,
+                false, false, null, null);
+        var property = createTypeInfo(struct, idProperty, PropertyInfo.create(body, 0), null)
+                .getProperties().get(idProperty);
+        TypeConstant[] getterReturns = {structProperty.getType()};
+        TypeConstant[] setterParams  = {structProperty.getType()};
+        var expectedGetter = pool.ensureMethodConstant(idProperty, "get",
+                ConstantPool.NO_TYPES, getterReturns);
+        var expectedSetter = pool.ensureMethodConstant(idProperty, "set",
+                setterParams, ConstantPool.NO_TYPES);
+        var start = new CountDownLatch(1);
+        record HelperCaches(
+                Annotation[] annotations,
+                TypeConstant baseRef,
+                boolean injected,
+                boolean implicitlyAssigned,
+                MethodConstant getter,
+                MethodConstant setter) {}
+
+        try (var executor = Executors.newFixedThreadPool(8)) {
+            var futures = IntStream.range(0, 8)
+                    .mapToObj(i -> executor.submit(() -> {
+                        start.await();
+                        return new HelperCaches(
+                                property.getRefAnnotations(),
+                                property.getBaseRefType(),
+                                property.isInjected(),
+                                property.isImplicitlyAssigned(),
+                                property.getGetterId(),
+                                property.getSetterId());
+                    }))
+                    .toList();
+
+            start.countDown();
+
+            HelperCaches first = null;
+            for (var future : futures) {
+                var caches = future.get(10, TimeUnit.SECONDS);
+                if (first == null) {
+                    first = caches;
+                } else {
+                    assertSame(first.annotations(), caches.annotations());
+                    assertSame(first.baseRef(), caches.baseRef());
+                    assertEquals(first.injected(), caches.injected());
+                    assertEquals(first.implicitlyAssigned(), caches.implicitlyAssigned());
+                    assertSame(first.getter(), caches.getter());
+                    assertSame(first.setter(), caches.setter());
+                }
+            }
+
+            assertSame(Annotation.NO_ANNOTATIONS, first.annotations());
+            assertSame(pool, first.baseRef().getConstantPool());
+            assertFalse(first.injected());
+            assertFalse(first.implicitlyAssigned());
+            assertSame(expectedGetter, first.getter());
+            assertSame(expectedSetter, first.setter());
+            assertSame(first.annotations(), annotationsField.get(property));
+            assertEquals(first.injected(), injectedField.get(property));
+            assertEquals(first.implicitlyAssigned(), implicitlyAssignedField.get(property));
+            assertSame(first.baseRef(), baseRefField.get(property));
+            assertSame(first.getter(), getterField.get(property));
+            assertSame(first.setter(), setterField.get(property));
+        }
+    }
+
+    /**
      * TypeInfoReal derived lookup caches are runtime metadata. The old implementation published
      * mutable HashMaps, delegate TypeInfo graphs, and readiness booleans through plain fields. The
-     * first parallel lookup must publish immutable snapshots and completed state through a memory
-     * edge while preserving the same per-TypeInfo cache identity.
+     * first parallel lookup must publish completed state through a memory edge while preserving the
+     * same per-TypeInfo cache identity. The signature cache remains mutable because runtime lookup
+     * extends it with substitutable signatures; it must therefore be synchronized rather than an
+     * immutable snapshot or a plain HashMap.
      */
     @Test
     public void derivedTypeInfoCachesAreSafelyPublishedInParallel() throws Exception {
@@ -351,12 +443,12 @@ public class TypeInfoMemberOwnershipTest {
             assertTrue(cacheReady.getBoolean(info));
             assertFalse(childrenReady.getBoolean(info));
             assertSame(info.getProperties().get(idProperty), first.props().get("value"));
-            assertSame(info.getMethods().get(idMethod), first.methods().get(sig));
+            var ownedMethod = info.getMethods().get(idMethod);
+            assertSame(ownedMethod, first.methods().get(sig));
+            assertSame(ownedMethod, first.methods().putIfAbsent(sig, ownedMethod));
             var firstCaches = first;
             assertThrows(UnsupportedOperationException.class,
                     () -> firstCaches.props().put("other", property));
-            assertThrows(UnsupportedOperationException.class,
-                    () -> firstCaches.methods().put(sig, method));
         }
     }
 
@@ -384,6 +476,13 @@ public class TypeInfoMemberOwnershipTest {
         Method method = PropertyInfo.class.getDeclaredMethod("pool");
         method.setAccessible(true);
         return (ConstantPool) method.invoke(property);
+    }
+
+    private static Field volatileField(Class<?> clz, String name) throws Exception {
+        var field = clz.getDeclaredField(name);
+        assertTrue(Modifier.isVolatile(field.getModifiers()), name);
+        field.setAccessible(true);
+        return field;
     }
 
     private TypeInfoReal createTypeInfo(

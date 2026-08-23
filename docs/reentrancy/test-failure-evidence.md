@@ -126,11 +126,29 @@ covers the related `TypeInfoReal` cache wave. It fails the master source-shape
 requirements because `m_mapPropertiesByName`, `m_mapMethodsBySignature`,
 `m_delegates`, `m_fCacheReady`, and `m_fChildrenChecked` are not volatile on
 master. It also proves parallel first access observes one immutable name map,
-one immutable signature map, one delegate view, and one safely published
-abstractness cache. The unit deliberately does not drive the full virtual-child
-`isNewable()` pool-registration path, because a hand-built test `TypeInfoReal`
-is not a registered pool owner. That path remains covered by runtime stress and
-late-registration diagnostics.
+one synchronized expanding signature cache, one delegate view, and one safely
+published abstractness cache. The signature cache distinction is important:
+`getMethodBySignature(...)` caches substitutable/runtime lookup hits with
+`putIfAbsent(...)`, so replacing the old `HashMap` with an immutable snapshot
+was not semantically equivalent. A short `manualTests:runDirectSequenceStress`
+attempt caught that draft bug during `lib-ecstasy` compilation as
+`UnsupportedOperationException` from `TypeInfoReal.getMethodBySignature(...)`.
+The unit deliberately does not drive the full virtual-child `isNewable()` pool
+registration path, because a hand-built test `TypeInfoReal` is not a registered
+pool owner. That path remains covered by runtime stress and late-registration
+diagnostics.
+
+`TypeInfoMemberOwnershipTest.propertyHelperCachesAreSafelyPublishedInParallel()`
+closes the remaining `PropertyInfo` helper-cache source shape. It fails the
+master source-shape requirement because `m_annotations`, `m_FInjected`,
+`m_FImplicitlyAssigned`, `m_typeBaseRef`, `m_idGetter`, and `m_idSetter` are
+plain fields there. The branch test then races first access and proves the
+replacement still returns one cached helper identity per owned property: the
+same cached annotation array, base Ref/Var type, getter id, setter id, and
+boolean helper values are observed by every thread. This is not a heavy
+end-to-end crash reproducer, but it is the right proof for the defect: the old
+code lacked a Java memory-model publication edge around owner-pool helper
+constants and a cached array value.
 
 ## Review Rule
 

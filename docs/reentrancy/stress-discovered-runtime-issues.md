@@ -639,6 +639,77 @@ The stress command that originally exposed the issue also passes after the fix:
   --no-configuration-cache
 ```
 
+## `TypeInfoReal` Method-Signature Cache Mutability
+
+Status: fixed in this branch.
+
+Observed failure:
+
+```text
+CI=true ./gradlew :manualTests:runDirectSequenceStress \
+  -PsameJvmIterations=2 \
+  -PsameJvmModules=TestArray,TestReflection \
+  --configuration-cache \
+  --console=plain \
+  --warning-mode=all \
+  -Dxvm.asm.validateRuntimeCode=true
+
+java.lang.UnsupportedOperationException
+    at java.base/java.util.ImmutableCollections$AbstractImmutableMap.putIfAbsent(...)
+    at org.xvm.asm.constants.TypeInfoReal.getMethodBySignature(TypeInfoReal.java:1498)
+```
+
+The direct sequence runner did not reach manual-test execution. The failure
+happened earlier while Gradle was compiling the XDK `lib-ecstasy` module. That
+still matters for the reentrancy branch because it caught a non-equivalent
+metadata-cache hardening change before it was committed.
+
+### Root Cause
+
+An earlier draft of the `TypeInfoReal` safe-publication wave made both
+`m_mapPropertiesByName` and `m_mapMethodsBySignature` immutable `Map.copyOf(...)`
+snapshots after first construction. That was correct for the property-name
+index, but not for the method-signature index.
+
+`getMethodBySignature(...)` has always used the signature map as an expanding
+cache. It starts with exact top-level signatures, then stores
+substitutable/runtime signature matches with `putIfAbsent(...)`. Making that
+map immutable removed a working cache behavior from master and broke ordinary
+compilation before any parallel runtime stress could start.
+
+### Replacement
+
+`m_mapMethodsBySignature` is still safely first-published through a volatile
+field, but the published value is now a synchronized `HashMap` wrapper. That
+preserves the old cache semantics and selection shape:
+
+- one signature lookup cache per `TypeInfoReal`;
+- exact signatures are preloaded on first construction;
+- later substitutable/runtime lookup hits extend the same cache;
+- concurrent extensions are safe and do not race a plain `HashMap`.
+
+`m_mapPropertiesByName` remains an immutable snapshot because no production
+path mutates it after construction. The focused proof is
+`TypeInfoMemberOwnershipTest.derivedTypeInfoCachesAreSafelyPublishedInParallel()`,
+which now asserts the property-name map is immutable while the signature cache
+is synchronized and accepts same-key `putIfAbsent(...)`.
+
+### Remaining Exposed Blocker
+
+After this fix, the same direct-sequence command gets past `lib-ecstasy`
+compilation but fails later in `lib-json` with:
+
+```text
+COMPILER-177: Method "StringBuffer buildPointer(Int)" on the
+"json:ObjectInputStream.DocInputStream.ParentInput - Nullable" type is not accessible.
+```
+
+The same `lib-json` failure is present at commit
+`8ba3e0184a6b1dcf2d1faaade31728f4577e5fee`, the commit immediately before the
+`TypeInfoReal` safe-publication wave. That makes it a pre-existing branch
+blocker for same-JVM stress verification, not a regression from the final
+`PropertyInfo` helper-cache or `TypeInfoReal` signature-cache correction.
+
 ## `xRTCompiler` Exception Diagnostics List
 
 Status: fixed in this branch.
