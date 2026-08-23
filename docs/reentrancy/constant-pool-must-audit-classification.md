@@ -175,14 +175,17 @@ Done in this branch:
   parsed/delegated values explicitly. Literal adoption drops transient parsed
   helper state, version adoption preserves the concrete subclass, and decimal-auto
   target registration adopts the delegated decimal child.
+- `MatchAnyConstant` now reconstructs the wildcard shell explicitly. This fixes
+  the value-class clone smell, rejects unrelated foreign type keys before the
+  value is published, and keeps clone-free type reconstruction in the
+  type-family work where it belongs.
 
 Remaining linked finding:
 
-- `MatchAnyConstant` cannot be honestly closed with the composite value wave.
-  Its locator is a `TypeConstant`, and registering a match-any value from another
-  standalone pool exposes the unresolved type-family/locator adoption problem.
-  Keep it with the type-family clone-free PR rather than inheriting an implicit
-  default clone.
+- The `MatchAnyConstant` shell and foreign-key boundary are closed, but its
+  locator is still a `TypeConstant`. Shared/adoptable type keys still rely on the
+  type-family default clone, so keep clone-free type reconstruction with the
+  type-family PR.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 

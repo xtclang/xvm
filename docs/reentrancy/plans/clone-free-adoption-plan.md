@@ -98,14 +98,14 @@ Current branch inventory:
 | Abstract family bases in that set | 13 |
 | Concrete constant classes in that set | 75 |
 | Classes currently overriding `adoptedBy(...)` | 0 |
-| Classes currently overriding `copyForAdoption(...)` | 41 |
-| Concrete classes still relying on an explicit family default-clone policy | 34 |
+| Classes currently overriding `copyForAdoption(...)` | 42 |
+| Concrete classes still relying on an explicit family default-clone policy | 33 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
 
 - `Constant`, `ConstantPool`, and adoption tests;
-- all 41 current hook classes, already converted to `copyForAdoption(...)` in
+- all 42 current hook classes, already converted to `copyForAdoption(...)` in
   this branch;
 - 13 abstract family bases, to place shared family adoption rules where useful;
 - up to 75 concrete leaf constants, either by explicit copy/adoption
@@ -186,7 +186,7 @@ Risk buckets:
 | `KeywordConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
 | `LiteralConstant` | `ValueConstant` | explicit clone-free hook | P3 parsed literal cache fixed in this branch |
 | `MapConstant` | `ValueConstant` | explicit clone-free hook | P3 composite value container fixed in this branch |
-| `MatchAnyConstant` | `ValueConstant` | family default-clone policy | P3 logical sentinel |
+| `MatchAnyConstant` | `ValueConstant` | explicit clone-free hook | P3 type-keyed sentinel shell fixed in this branch |
 | `MethodBindingConstant` | `FrameDependentConstant` | explicit clone-free hook | P4 serialized frame-dependent constant fixed in this branch |
 | `MethodConstant` | `IdentityConstant` | explicit clone-free hook | P1 JIT-name/type cache owner policy fixed in this branch |
 | `ModuleConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
@@ -608,17 +608,19 @@ so immutable hash/equality value is not shared across callers or pool owners.
 `BFloat16Constant`, `ByteConstant`, `CharConstant`, `DecimalConstant`,
 `Float16Constant`, `Float32Constant`, `Float64Constant`, `Float8e4Constant`,
 `Float8e5Constant`, `IntConstant`, `RegExConstant`, and `StringConstant`
-reconstruct immutable logical scalar values explicitly. Other mutable-cache or
-type-locator value constants remain in the transitional default-clone bucket.
+reconstruct immutable logical scalar values explicitly. Other mutable-cache
+values remain in the transitional default-clone bucket.
 `ArrayConstant`, `MapConstant`, and `RangeConstant` are also converted for
 value-container ownership: constructor arrays are copied, adoption creates a
 fresh target-owned shell, and target registration still performs recursive
 child-value adoption. The test intentionally does not claim array/map type
 constants become target-owned yet; type-family adoption is a separate PR 3
-problem and `MatchAnyConstant` should stay there because its locator is a
-`TypeConstant`.
-`LiteralConstant`, `VersionConstant`, and `DecimalAutoConstant` are converted as
-the parsed/delegated value wave: literal adoption drops transient parsed caches,
+problem. `MatchAnyConstant` now rebuilds the wildcard shell instead of cloning
+it. It accepts shared type keys through normal target registration and rejects
+unrelated foreign type keys before publication; clone-free reconstruction of the
+shared type key itself remains part of the type-family PR. `LiteralConstant`,
+`VersionConstant`, and `DecimalAutoConstant` are converted as the
+parsed/delegated value wave: literal adoption drops transient parsed caches,
 version adoption preserves the concrete subclass, and decimal-auto target
 registration adopts the delegated decimal child.
 

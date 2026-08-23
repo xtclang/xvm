@@ -210,6 +210,14 @@ letting another owner mutate the backing array. The remaining raw `getValue()`
 array API is tracked as array-immutability design debt, not as proof that adoption
 may share storage.
 
+`MatchAnyConstant` shows why a value shell must not hide an owner decision made
+by one of its children. The wildcard object itself is just logical sentinel
+state and now reconstructs explicitly, but its lookup key is a `TypeConstant`.
+An unrelated foreign type key is now rejected before publication; a shared key
+is still passed through target registration. The remaining type-family work is
+to make that shared/adoptable type reconstruction clone-free too. Shallow clone
+made all of these boundaries invisible.
+
 Immutable scalar values are now explicit too. `ByteConstant`, `IntConstant`,
 `StringConstant`, `RegExConstant`, the fixed decimal value, and the fixed-size
 binary float values do not currently carry owner-local caches. That is exactly

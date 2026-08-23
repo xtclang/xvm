@@ -231,6 +231,11 @@ shallow-clone helper state identified by the audit:
   drops the transient parsed `m_oVal` cache, version adoption preserves the
   concrete `VersionConstant` subclass, and decimal-auto registration adopts the
   delegated `DecimalConstant` child into the target pool.
+- `MatchAnyConstant` now reconstructs the wildcard value shell instead of
+  inheriting default shallow clone. This preserves the old match-any lookup cache
+  shape for shareable types and deliberately tightens unrelated foreign type-key
+  behavior from assertion-only or silent wrong-owner publication to an immediate
+  `IllegalStateException`.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws

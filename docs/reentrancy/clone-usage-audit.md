@@ -337,6 +337,15 @@ already hardens several known owner-local fields and prevents ad-hoc
 family later adds a cache, lock, atomic cell, live handle, thread-local, or
 owner-derived helper field without replacing the fallback.
 
+Current clone-free slices have removed the highest-risk and simplest value
+families from this default: singleton/filesystem/handle guards, method/property
+metadata, frame-dependent constants, conditions, byte-array backed values,
+immutable scalars, composite value containers, parsed/delegated values, and the
+`MatchAnyConstant` wildcard shell. `MatchAnyConstant` still points at the
+separate type-family problem because its lookup key is a `TypeConstant`; the
+shell no longer clones, unrelated foreign type keys are rejected, and shared
+type keys still rely on the remaining type-family clone-free adoption work.
+
 Container/ConstantPool/lock/cache impact: `ConstantPool.register(...)` uses this
 path for foreign constants and locator constants. The validator is opt-in through
 `xvm.asm.validateConstantAdoption`, so normal execution does not fail closed.

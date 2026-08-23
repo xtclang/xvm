@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Objects;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -79,6 +81,19 @@ public class MatchAnyConstant
     @Override
     public Format getFormat() {
         return Format.Any;
+    }
+
+    @Override
+    protected MatchAnyConstant copyForAdoption(AdoptionContext context) {
+        // The wildcard's logical value is its type. Do not shallow-clone the value shell:
+        // a foreign module-local type cannot be smuggled into the target owner through a value
+        // locator, while a shared type is still adopted and interned by target registration.
+        var pool = context.pool();
+        var type = Objects.requireNonNull(m_constType, "match-any type");
+        if (!type.isShared(pool)) {
+            throw new IllegalStateException("cannot adopt match-any with foreign type: " + type);
+        }
+        return new MatchAnyConstant(pool, type);
     }
 
     @Override

@@ -42,6 +42,7 @@ import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MapConstant;
+import org.xvm.asm.constants.MatchAnyConstant;
 import org.xvm.asm.constants.MethodBindingConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.NamedCondition;
@@ -699,6 +700,46 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * Match-any values are keyed by a TypeConstant locator. Adoption must rebuild the wildcard shell
+     * without cloning helper state, then let target registration intern the shareable type key under
+     * the destination pool exactly as the old registration cache expected.
+     */
+    @Test
+    public void registeredMatchAnyConstantAdoptsShareableTypeKeyIntoTargetPool() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var struct     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Owner", null);
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var source     = sourcePool.ensureMatchAnyConstant(struct.getIdentityConstant().getType());
+
+        var registered = targetPool.register(source);
+
+        assertSame(targetPool, registered.getConstantPool());
+        assertSame(targetPool, registered.getType().getConstantPool());
+        assertEquals(source.getValueString(), registered.getValueString());
+        assertSame(registered, targetPool.ensureMatchAnyConstant(registered.getType()));
+    }
+
+    /**
+     * A match-any value whose type belongs to an unrelated module cannot be moved into another pool.
+     * Otherwise the target pool would publish a value key that still names source-owner type state.
+     */
+    @Test
+    public void matchAnyRejectsForeignTypeDuringAdoption() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var struct     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Owner", null);
+        var source     = sourcePool.ensureMatchAnyConstant(struct.getIdentityConstant().getType());
+
+        var error = assertThrows(IllegalStateException.class, () -> targetPool.register(source));
+
+        assertTrue(error.getMessage().contains("foreign type"));
+    }
+
+    /**
      * A live ObjectHandle is owner-specific runtime state, not logical constant data. Moving an
      * already-owned handle constant to another pool must fail instead of leaking the source owner.
      */
@@ -793,6 +834,7 @@ public class ConstantAdoptionTest {
                IntConstant.class,
                LiteralConstant.class,
                MapConstant.class,
+               MatchAnyConstant.class,
                MethodBindingConstant.class,
                MethodConstant.class,
                NamedCondition.class,

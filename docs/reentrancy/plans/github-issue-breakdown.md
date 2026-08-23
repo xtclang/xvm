@@ -1449,10 +1449,14 @@ separately.
 - Reconstruct `ArrayConstant`, `MapConstant`, and `RangeConstant` from logical
   value containers/endpoints if this slice includes the composite-value wave.
   Keep type-family owner conversion separate: array/map type constants and
-  `MatchAnyConstant` still depend on PR 3.
+  the `MatchAnyConstant` type locator still depend on PR 3.
 - Reconstruct `LiteralConstant`, `VersionConstant`, and `DecimalAutoConstant`
   from logical parsed/delegated value state if this slice includes the
   parsed-value wave.
+- Reconstruct the `MatchAnyConstant` wildcard shell from its logical type key if
+  this slice includes the type-keyed sentinel wave. Reject unrelated foreign
+  type keys before the value is published; the shared/adoptable type key's own
+  clone-free reconstruction remains under the type-family PR.
 - Reject moving an already-owned live `HandleConstant` to another pool.
 - Reject `DynamicFormalConstant` adoption when its register type is not shared
   with the destination pool, because the target pool cannot safely own or share
@@ -1593,6 +1597,12 @@ appropriate:
   demand; version adoption preserves the concrete subclass; decimal-auto
   registration still adopts its delegated decimal child through
   `registerConstants(...)`.
+- Match-any sentinels keep the same lookup shape. For shareable types, target
+  registration still interns the type key in the destination pool and
+  `ensureMatchAnyConstant(...)` returns the same cached wildcard value. For
+  non-shared types, this slice intentionally tightens behavior: registration now
+  throws before publication in all modes instead of relying on an assertion-only
+  failure under `-ea` or silent wrong-owner state without assertions.
 - The validator is diagnostic coverage, not a complete architectural fix.
 - The validator is off unless explicitly enabled, so normal constant interning
   and runtime cache performance is unchanged.
