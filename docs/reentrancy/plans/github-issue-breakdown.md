@@ -11,6 +11,7 @@ Primary source documents:
 - [../must-fix-races.md](../must-fix-races.md)
 - [../fixed-in-this-branch.md](../fixed-in-this-branch.md)
 - [../bad-design-decisions-reference.md](../bad-design-decisions-reference.md)
+- [../master-container-isolation-bug-reports.md](../master-container-isolation-bug-reports.md)
 - [../constant-pool-hostile-state-audit.md](../constant-pool-hostile-state-audit.md)
 - [../constant-adoption-clone-audit.md](../constant-adoption-clone-audit.md)
 - [../this-escape-tally.md](../this-escape-tally.md)
@@ -808,6 +809,9 @@ sets.
   names.
 - Replace the `TypeConstant` recursion diagnostic `HashSet` with a concurrent
   process-wide diagnostic set.
+- Safely publish optimized `MethodInfo` and `PropertyInfo` runtime chains,
+  preserving the existing top-level cache shape while preventing partially
+  built arrays and nested-property-id cache poisoning.
 
 ### Explicit Out Of Scope
 
@@ -843,6 +847,7 @@ Primary source areas:
 - `VersionTree`, `Register`, `ChildInfo`
 - `Constant`
 - `TypeConstant`
+- `MethodInfo`, `PropertyInfo`
 
 ### Tests And Verification Commands
 
@@ -861,6 +866,11 @@ Primary source areas:
 
 ./gradlew :javatools:test --tests org.xvm.asm.RegisterHashCodeTest \
   --tests org.xvm.asm.VersionTest \
+  --tests org.xvm.asm.constants.TypeInfoMemberOwnershipTest \
+  --configuration-cache --console=plain --warning-mode=all
+
+./gradlew :javatools:test \
+  --tests org.xvm.asm.constants.MethodInfoTest \
   --tests org.xvm.asm.constants.TypeInfoMemberOwnershipTest \
   --configuration-cache --console=plain --warning-mode=all
 ```
@@ -891,6 +901,14 @@ the hash-contract fixes are gone.
   adding per-constant `AtomicInteger`, `Lazy`, or wrapper allocation.
 - The recursion set remains process-wide diagnostic state; only its collection
   implementation changes.
+- `MethodInfo.m_aBodyResolved` keeps the old one optimized chain per owned
+  method cache. The only added steady-state cost is a volatile read; the
+  synchronized block is first-publication only. Capped-chain redirection stays
+  outside the monitor to avoid recursive cache lock ordering.
+- `PropertyInfo.m_chainGet` and `m_chainSet` keep the old top-level getter and
+  setter caches with no new map allocation per property. Non-null nested ids no
+  longer write into the unkeyed slots; if nested ids become hot, a separate
+  keyed owner-local cache is the correct follow-up.
 
 ### Documentation Updates Included
 
@@ -902,6 +920,8 @@ the hash-contract fixes are gone.
   for hash and lint findings.
 - Update [../constant-pool-hostile-state-audit.md](../constant-pool-hostile-state-audit.md)
   TypeConstant diagnostic status.
+- Update [../runtime-metadata-op-cache-classification.md](../runtime-metadata-op-cache-classification.md)
+  for optimized method/property chain cache publication.
 
 ### Review Checklist / Acceptance Criteria
 
@@ -911,6 +931,8 @@ the hash-contract fixes are gone.
   demand when owner mismatch made caching wrong.
 - Every new `hashCode()` matches the existing `equals(...)` fields.
 - Constant hash publication is explicit and low footprint.
+- Optimized method/property chain first publication has a Java memory-model
+  edge and preserves the old hot cache behavior.
 - Tests would fail or source-shape checks would detect the old cache/write-back
   pattern.
 

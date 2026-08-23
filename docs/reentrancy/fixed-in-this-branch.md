@@ -1126,6 +1126,54 @@ also passes after this fix; before it, parallel connector loading failed in the
 same `MethodInfo.equals(...)` / `MethodBody.equals(...)` / `Handy.equals(...)`
 cycle.
 
+### Safely Published Method And Property Runtime Chains
+
+This branch also fixes the optimized method/property chain caches in
+`MethodInfo` and `PropertyInfo`. These caches are runtime metadata, not pure
+decoded source data. On master, `MethodInfo.m_aBodyResolved` and
+`PropertyInfo.m_chainGet/m_chainSet` were plain lazy fields:
+
+- method-chain optimization can mark bodies native, attach generated delegation
+  `MethodStructure` objects, and replace a body with a native wrapper;
+- property accessor-chain construction can create field-access bodies and
+  generated delegation chains;
+- property getter/setter cache methods accept a nullable `idNested`, but the
+  old implementation had only one unkeyed cache slot per accessor.
+
+The old comments treated the method cache as idempotent. That was not a safe
+publication proof. Even if two threads computed logically equal arrays, there
+was no happens-before edge for the array reference or for the body mutations
+performed while assembling it. The property caches had the additional semantic
+hazard that a non-null nested-id access could populate the same slot later used
+by top-level property access.
+
+The fix keeps the hot-path behavior and footprint of master:
+
+- each owned `MethodInfo` still has at most one cached optimized chain;
+- each owned `PropertyInfo` still has at most one cached top-level getter chain
+  and one cached top-level setter chain;
+- the steady-state read is one volatile field read and no monitor entry;
+- the first top-level build is synchronized and publishes the completed array
+  through a volatile field;
+- capped method-chain redirection happens outside the monitor because capped
+  chains can recurse into another `MethodInfo` cache;
+- non-null nested property ids are computed separately and deliberately do not
+  populate the unkeyed top-level cache.
+
+This does not remove a working cache or add broad map footprint. The only cache
+behavior change is the one that was required for correctness: nested property
+requests can no longer poison the top-level get/set cache. Current runtime call
+sites use the top-level path. If a future runtime path proves that non-null
+nested ids are hot, the correct follow-up is a keyed owner-local cache whose key
+contains `idNested`, not reuse of the top-level slot.
+
+`MethodInfoTest.optimizedMethodChainCacheIsSafelyPublishedInParallel()` proves
+that `m_aBodyResolved` is volatile and that parallel first access publishes one
+fully built optimized chain.
+`TypeInfoMemberOwnershipTest.optimizedPropertyAccessorChainsAreSafelyPublishedInParallel()`
+does the same for `m_chainGet` and `m_chainSet`, while checking that the
+generated field-access body shape is preserved.
+
 ### ASM Metadata Owner Assembly
 
 This branch also removes the remaining ASM metadata constructor escapes in

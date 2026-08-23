@@ -1224,19 +1224,27 @@ public class PropertyInfo
      */
     public MethodBody[] ensureOptimizedGetChain(TypeInfo infoType, PropertyConstant idNested) {
         MethodBody[] chain = m_chainGet;
-        if (chain == null) {
-            MethodConstant idGet = getGetterId();
-            if (idNested != null) {
-                idGet = (MethodConstant) idNested.appendNestedIdentity(pool(), idGet.getSignature());
+        if (idNested == null) {
+            if (chain == null) {
+                synchronized (this) {
+                    chain = m_chainGet;
+                    if (chain == null) {
+                        /*
+                         * Accessor chains are runtime metadata. The old unguarded lazy write could
+                         * expose a partially built array and also used one cache slot for both
+                         * top-level and nested ids. Keep the hot top-level cache and publish it
+                         * once; nested ids are computed separately so they cannot poison this slot.
+                         */
+                        m_chainGet = chain = buildOptimizedGetChain(infoType, null);
+                    }
+                }
             }
-
-            m_chainGet = chain = isDelegating()
-                    ? createDelegatingChain(infoType, idGet)
-                    : augmentPropertyChain(
-                            infoType.getOptimizedMethodChain(idGet), infoType, idGet);
+            return chain;
         }
 
-        return chain;
+        synchronized (this) {
+            return buildOptimizedGetChain(infoType, idNested);
+        }
     }
 
     /**
@@ -1263,19 +1271,26 @@ public class PropertyInfo
      */
     public MethodBody[] ensureOptimizedSetChain(TypeInfo infoType, PropertyConstant idNested) {
         MethodBody[] chain = m_chainSet;
-        if (chain == null) {
-            MethodConstant idSet = getSetterId();
-            if (idNested != null) {
-                idSet = (MethodConstant) idNested.appendNestedIdentity(pool(), idSet.getSignature());
+        if (idNested == null) {
+            if (chain == null) {
+                synchronized (this) {
+                    chain = m_chainSet;
+                    if (chain == null) {
+                        /*
+                         * Same publication and key rule as the getter cache above: top-level
+                         * setter chains keep the old hot cache, while nested ids are never allowed
+                         * to populate this unkeyed slot.
+                         */
+                        m_chainSet = chain = buildOptimizedSetChain(infoType, null);
+                    }
+                }
             }
-
-            m_chainSet = chain = isDelegating()
-                    ? createDelegatingChain(infoType, idSet)
-                    : augmentPropertyChain(
-                            infoType.getOptimizedMethodChain(idSet), infoType, idSet);
+            return chain;
         }
 
-        return chain;
+        synchronized (this) {
+            return buildOptimizedSetChain(infoType, idNested);
+        }
     }
 
     /**
@@ -1414,6 +1429,28 @@ public class PropertyInfo
             }
         }
         return chain;
+    }
+
+    private MethodBody[] buildOptimizedGetChain(TypeInfo infoType, PropertyConstant idNested) {
+        MethodConstant idGet = getGetterId();
+        if (idNested != null) {
+            idGet = (MethodConstant) idNested.appendNestedIdentity(pool(), idGet.getSignature());
+        }
+
+        return isDelegating()
+                ? createDelegatingChain(infoType, idGet)
+                : augmentPropertyChain(infoType.getOptimizedMethodChain(idGet), infoType, idGet);
+    }
+
+    private MethodBody[] buildOptimizedSetChain(TypeInfo infoType, PropertyConstant idNested) {
+        MethodConstant idSet = getSetterId();
+        if (idNested != null) {
+            idSet = (MethodConstant) idNested.appendNestedIdentity(pool(), idSet.getSignature());
+        }
+
+        return isDelegating()
+                ? createDelegatingChain(infoType, idSet)
+                : augmentPropertyChain(infoType.getOptimizedMethodChain(idSet), infoType, idSet);
     }
 
     /**
@@ -1636,12 +1673,12 @@ public class PropertyInfo
     /**
      * Cached "get" chain.
      */
-    private MethodBody[] m_chainGet;
+    private volatile MethodBody[] m_chainGet;
 
     /**
      * Cached "set" chain.
      */
-    private MethodBody[] m_chainSet;
+    private volatile MethodBody[] m_chainSet;
 
     /**
      * Cached "annotation" chain.

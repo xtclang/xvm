@@ -2,6 +2,7 @@ package org.xvm.asm.constants;
 
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -204,6 +205,69 @@ public class TypeInfoMemberOwnershipTest {
 
         assertNull(property.getTypeInfo());
         assertNull(child.getTypeInfo());
+    }
+
+    /**
+     * Optimized property accessor chains are runtime metadata. The old get/set caches were plain
+     * lazy arrays even though building them can create field-access bodies and generated delegation
+     * methods. Parallel first access must publish one complete top-level chain per accessor.
+     */
+    @Test
+    public void optimizedPropertyAccessorChainsAreSafelyPublishedInParallel() throws Exception {
+        var getField = PropertyInfo.class.getDeclaredField("m_chainGet");
+        var setField = PropertyInfo.class.getDeclaredField("m_chainSet");
+        assertTrue(Modifier.isVolatile(getField.getModifiers()));
+        assertTrue(Modifier.isVolatile(setField.getModifiers()));
+        getField.setAccessible(true);
+        setField.setAccessible(true);
+
+        var file = new FileStructure("test");
+        var struct = file.getModule().createClass(
+                Access.PUBLIC, Format.CLASS, "Test", null);
+
+        var structProperty = struct.createProperty(false, Access.PUBLIC,
+                Access.PUBLIC, struct.getCanonicalType(), "value");
+        var idProperty = structProperty.getIdentityConstant();
+        var body = new PropertyBody(structProperty, Implementation.Explicit, null,
+                structProperty.getType(), false, true, false, Effect.None, Effect.None,
+                true, false, null, null);
+        var property = PropertyInfo.create(body, 0);
+        var child = new ChildInfo(struct.createClass(Access.PUBLIC, Format.CLASS, "Child", null));
+        var info = createTypeInfo(struct, idProperty, property, child);
+        var owned = info.getProperties().get(idProperty);
+        var start = new CountDownLatch(1);
+        record AccessorChains(MethodBody[] getter, MethodBody[] setter) {}
+
+        try (var executor = Executors.newFixedThreadPool(8)) {
+            var futures = IntStream.range(0, 8)
+                    .mapToObj(i -> executor.submit(() -> {
+                        start.await();
+                        return new AccessorChains(
+                                owned.ensureOptimizedGetChain(info, null),
+                                owned.ensureOptimizedSetChain(info, null));
+                    }))
+                    .toList();
+
+            start.countDown();
+
+            MethodBody[] getChain = null;
+            MethodBody[] setChain = null;
+            for (var future : futures) {
+                var chains = future.get(10, TimeUnit.SECONDS);
+                if (getChain == null) {
+                    getChain = chains.getter();
+                    setChain = chains.setter();
+                } else {
+                    assertSame(getChain, chains.getter());
+                    assertSame(setChain, chains.setter());
+                }
+            }
+
+            assertSame(getChain, getField.get(owned));
+            assertSame(setChain, setField.get(owned));
+            assertEquals(Implementation.Field, getChain[0].getImplementation());
+            assertEquals(Implementation.Field, setChain[0].getImplementation());
+        }
     }
 
     /**

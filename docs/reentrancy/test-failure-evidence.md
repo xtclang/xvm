@@ -110,6 +110,17 @@ builds the cyclic target shapes directly. The focused
 class-composition access-type slice until the Gradle task can pass runtime-only
 JVM properties to the direct runner.
 
+The optimized method/property chain cache tests are source-shape and
+parallel-publication proofs rather than heavy end-to-end reproducers.
+`MethodInfoTest.optimizedMethodChainCacheIsSafelyPublishedInParallel()` fails
+the master source-shape requirement because `m_aBodyResolved` is not volatile
+there, and it exercises parallel first chain construction. The corresponding
+`TypeInfoMemberOwnershipTest.optimizedPropertyAccessorChainsAreSafelyPublishedInParallel()`
+test does the same for `PropertyInfo.m_chainGet` and `m_chainSet`. These tests
+exist because the old caches looked idempotent but had no Java memory-model
+publication edge, and because `PropertyInfo` accepted nested ids while caching
+only one top-level slot.
+
 ## Review Rule
 
 When splitting this branch into smaller PRs, each PR should cite one of:

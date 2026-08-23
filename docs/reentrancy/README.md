@@ -87,6 +87,10 @@ Start here:
   consolidated list of bad design decisions found in this branch, why each is
   broken even single-threaded, how it becomes a must-fix for reentrancy, and
   what replacement pattern is required.
+- [master-container-isolation-bug-reports.md](master-container-isolation-bug-reports.md):
+  concrete bug reports against master for the process-global, ambient-owner,
+  shallow-adoption, decoded-op, metadata-equality, and JIT owner-state patterns
+  that violate XVM container isolation.
 - [must-fix-races.md](must-fix-races.md): the high-priority inventory of
   patterns that are actually racy or semantically broken under parallel startup.
 - [fixed-in-this-branch.md](fixed-in-this-branch.md): the master-to-branch

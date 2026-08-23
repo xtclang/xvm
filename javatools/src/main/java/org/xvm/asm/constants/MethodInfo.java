@@ -1158,147 +1158,160 @@ public class MethodInfo
     public MethodBody[] ensureOptimizedMethodChain(TypeInfo infoType) {
         MethodBody[] chain = m_aBodyResolved;
         if (chain == null) {
-            // grab the "raw" (unoptimized) chain
-            chain = getChain();
-
-            MethodBody bodyHead = chain[0];
+            MethodBody[] chainRaw = getChain();
+            MethodBody   bodyHead = chainRaw[0];
 
             // first, see if this chain was capped, which means that it (virtually) redirects to
             // a different method chain, which (somewhere at the bottom of that chain) will contain
             // the method bodies that are "hidden" under this chain's cap
             if (bodyHead.getImplementation() == Implementation.Capped) {
-                // note: turtles
+                // note: turtles; do not hold this MethodInfo monitor while redirecting into
+                // another MethodInfo's cache, because capped chains can be recursive.
                 return infoType.getOptimizedMethodChain(bodyHead.getNarrowingNestedIdentity());
             }
 
-            boolean fAnno  = infoType.getFormat() == Component.Format.ANNOTATION;
-            boolean fMixin = infoType.getFormat() == Component.Format.MIXIN;
-
-            // see if the chain will work as-is
-            ArrayList<MethodBody> listNew     = null;
-            ArrayList<MethodBody> listDefault = null;
-            forAll:
-            for (int i = 0, c = chain.length; i < c; ++i) {
-                MethodBody      body   = chain[i];
-                Implementation  impl   = body.getImplementation();
-                if (impl != Implementation.Native) {
-                    MethodStructure method = body.getMethodStructure();
-                    if (method != null && method.isNative()) {
-                        body.markNative();
-                        impl = Implementation.Native;
-                    }
+            synchronized (this) {
+                chain = m_aBodyResolved;
+                if (chain == null) {
+                    /*
+                     * This cache is runtime metadata. The old plain lazy write assumed duplicate
+                     * first builds were harmless, but building the chain can attach delegation
+                     * MethodStructures and replace bodies with native wrappers. Publish exactly one
+                     * fully built array, and use the volatile field to make those writes visible to
+                     * later readers.
+                     */
+                    m_aBodyResolved = chain = buildOptimizedMethodChain(infoType, chainRaw);
                 }
-                switch (impl) {
-                case FromInto:
-                    if (fAnno || fMixin) {
-                        // since annotations and mixins themselves are not concrete
-                        // (instantiatable) we cannot discard the FromInto body; it will be done
-                        // by the concrete types
-                        if (listNew != null) {
-                            listNew.add(body);
-                        }
-                        break;
-                    }
-                    if (listNew == null) {
-                        listNew = startList(chain, i);
-                    }
-                    break;
+            }
+        }
 
-                case Implicit:
-                case Declared:
-                case Abstract:
-                case SansCode:
-                    // this body will be discarded (no code to run), so that alters the chain,
-                    // so start building the optimized chain (if it has not already started)
-                    if (listNew == null) {
-                        listNew = startList(chain, i);
-                    }
-                    break;
+        return chain;
+    }
 
-                case Default:
-                    // all defaults should be placed below any explicit or delegating methods
-                    if (listDefault == null) {
-                        // check if there's anything else below this point
-                        boolean fAllDefaults = true;
-                        for (int j = i + 1; j < c; j++) {
-                            if (chain[j].getImplementation().EXISTS == Existence.Class) {
-                                fAllDefaults = false;
-                                break;
-                            }
-                        }
-                        if (fAllDefaults) {
-                            if (listNew != null) {
-                                appendList(listNew, chain, i, c - i);
-                            }
-                            break forAll;
-                        }
-                        listDefault = new ArrayList<>();
-                    }
-                    // ignore dupes
-                    if (!listDefault.contains(body)) {
-                        listDefault.add(body);
-                    }
-                    if (listNew == null) {
-                        listNew = startList(chain, i);
-                    }
-                    break;
+    private MethodBody[] buildOptimizedMethodChain(TypeInfo infoType, MethodBody[] chain) {
+        boolean fAnno  = infoType.getFormat() == Component.Format.ANNOTATION;
+        boolean fMixin = infoType.getFormat() == Component.Format.MIXIN;
 
-                case Delegating:
-                case Field:
-                case Explicit:
-                    MethodStructure method = body.getMethodStructure();
-                    if (method == null) {
-                        assert impl == Implementation.Delegating;
-
-                        IdentityConstant idHost  = body.getIdentity().getNamespace();
-                        ClassStructure   clzHost = (ClassStructure) idHost.getComponent();
-                        method = clzHost.ensureMethodDelegation(
-                                getTopmostMethodStructure(infoType),
-                                body.getPropertyConstant().getName());
-                        body.setMethodStructure(method);
-                    }
-                    // it's possible the method was marked as "native" after the body
-                    // was constructed; re-check it
-                    else if (method.isNative()) {
-                        if (listNew == null) {
-                            listNew = startList(chain, i);
-                        }
-                        body = new MethodBody(body, Implementation.Native).forMethod(this);
-                    }
+        // see if the chain will work as-is
+        ArrayList<MethodBody> listNew     = null;
+        ArrayList<MethodBody> listDefault = null;
+        forAll:
+        for (int i = 0, c = chain.length; i < c; ++i) {
+            MethodBody      body   = chain[i];
+            Implementation  impl   = body.getImplementation();
+            if (impl != Implementation.Native) {
+                MethodStructure method = body.getMethodStructure();
+                if (method != null && method.isNative()) {
+                    body.markNative();
+                    impl = Implementation.Native;
+                }
+            }
+            switch (impl) {
+            case FromInto:
+                if (fAnno || fMixin) {
+                    // since annotations and mixins themselves are not concrete
+                    // (instantiatable) we cannot discard the FromInto body; it will be done
+                    // by the concrete types
                     if (listNew != null) {
                         listNew.add(body);
                     }
                     break;
+                }
+                if (listNew == null) {
+                    listNew = startList(chain, i);
+                }
+                break;
 
-                case Native:
-                    // interfaces cannot "super" to native implementations; if there are any
-                    // default implementations (interface), we can ignore the native one;
-                    // moreover, native never "supers" either, so it must be the last one
-                    if (listDefault == null && listNew != null) {
-                        listNew.add(body);
+            case Implicit:
+            case Declared:
+            case Abstract:
+            case SansCode:
+                // this body will be discarded (no code to run), so that alters the chain,
+                // so start building the optimized chain (if it has not already started)
+                if (listNew == null) {
+                    listNew = startList(chain, i);
+                }
+                break;
+
+            case Default:
+                // all defaults should be placed below any explicit or delegating methods
+                if (listDefault == null) {
+                    // check if there's anything else below this point
+                    boolean fAllDefaults = true;
+                    for (int j = i + 1; j < c; j++) {
+                        if (chain[j].getImplementation().EXISTS == Existence.Class) {
+                            fAllDefaults = false;
+                            break;
+                        }
+                    }
+                    if (fAllDefaults) {
+                        if (listNew != null) {
+                            appendList(listNew, chain, i, c - i);
+                        }
                         break forAll;
                     }
-                    break;
-
-                case Capped:
-                default:
-                    throw new IllegalStateException();
+                    listDefault = new ArrayList<>();
                 }
-            }
-
-            // see if any changes were made to the chain, which will have been collected in listNew
-            if (listNew != null) {
-                if (listDefault != null) {
-                    listNew.addAll(listDefault);
+                // ignore dupes
+                if (!listDefault.contains(body)) {
+                    listDefault.add(body);
                 }
-                chain = listNew.isEmpty()
-                        ? MethodBody.NO_BODIES
-                        : listNew.toArray(MethodBody.NO_BODIES);
-            }
+                if (listNew == null) {
+                    listNew = startList(chain, i);
+                }
+                break;
 
-            // cache the optimized chain (no worries about race conditions, as the result is
-            // idempotent)
-            m_aBodyResolved = chain;
+            case Delegating:
+            case Field:
+            case Explicit:
+                MethodStructure method = body.getMethodStructure();
+                if (method == null) {
+                    assert impl == Implementation.Delegating;
+
+                    IdentityConstant idHost  = body.getIdentity().getNamespace();
+                    ClassStructure   clzHost = (ClassStructure) idHost.getComponent();
+                    method = clzHost.ensureMethodDelegation(
+                            getTopmostMethodStructure(infoType),
+                            body.getPropertyConstant().getName());
+                    body.setMethodStructure(method);
+                }
+                // it's possible the method was marked as "native" after the body
+                // was constructed; re-check it
+                else if (method.isNative()) {
+                    if (listNew == null) {
+                        listNew = startList(chain, i);
+                    }
+                    body = new MethodBody(body, Implementation.Native).forMethod(this);
+                }
+                if (listNew != null) {
+                    listNew.add(body);
+                }
+                break;
+
+            case Native:
+                // interfaces cannot "super" to native implementations; if there are any
+                // default implementations (interface), we can ignore the native one;
+                // moreover, native never "supers" either, so it must be the last one
+                if (listDefault == null && listNew != null) {
+                    listNew.add(body);
+                    break forAll;
+                }
+                break;
+
+            case Capped:
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+        // see if any changes were made to the chain, which will have been collected in listNew
+        if (listNew != null) {
+            if (listDefault != null) {
+                listNew.addAll(listDefault);
+            }
+            chain = listNew.isEmpty()
+                    ? MethodBody.NO_BODIES
+                    : listNew.toArray(MethodBody.NO_BODIES);
         }
 
         return chain;
@@ -1669,5 +1682,5 @@ public class MethodInfo
     /**
      * The "optimized" (resolved) method chain.
      */
-    private transient MethodBody[] m_aBodyResolved;
+    private transient volatile MethodBody[] m_aBodyResolved;
 }

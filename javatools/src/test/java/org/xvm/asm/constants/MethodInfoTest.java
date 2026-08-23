@@ -3,6 +3,7 @@ package org.xvm.asm.constants;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -203,6 +204,48 @@ public class MethodInfoTest {
 
         assertEquals(implicit1.getHead().hashCode(), implicit2.getHead().hashCode());
         assertTrue(implicit1.equals(implicit2));
+    }
+
+    /**
+     * Optimized method chains are runtime metadata. The old cache was a plain lazy array even
+     * though building it can replace bodies and attach generated delegation methods. Parallel
+     * first access must publish one fully built array through a Java memory-model edge.
+     */
+    @Test
+    public void optimizedMethodChainCacheIsSafelyPublishedInParallel() throws Exception {
+        var field = MethodInfo.class.getDeclaredField("m_aBodyResolved");
+        assertTrue(Modifier.isVolatile(field.getModifiers()));
+        field.setAccessible(true);
+
+        var file = new FileStructure("test");
+        var pool = file.getConstantPool();
+        var struct = file.getModule().createClass(
+                Access.PUBLIC, Format.CLASS, "Test", null);
+
+        var sig = pool.ensureSignatureConstant(
+                "test", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+        var id = pool.ensureMethodConstant(struct.getIdentityConstant(), sig);
+        var method = MethodInfo.create(new MethodBody(id, sig, Implementation.Implicit), 0);
+        var info = createTypeInfo(struct, id, sig, method);
+        var owned = info.getMethods().get(id);
+        var start = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(8)) {
+            var futures = IntStream.range(0, 8)
+                    .mapToObj(i -> executor.submit(() -> {
+                        start.await();
+                        return owned.ensureOptimizedMethodChain(info);
+                    }))
+                    .toList();
+
+            start.countDown();
+
+            for (var future : futures) {
+                assertSame(MethodBody.NO_BODIES, future.get(10, TimeUnit.SECONDS));
+            }
+        }
+
+        assertSame(MethodBody.NO_BODIES, field.get(owned));
     }
 
     private static ConstantPool invokePool(Object target) throws Exception {
