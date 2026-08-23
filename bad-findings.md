@@ -53,13 +53,14 @@ The detailed sources are:
    `ObjectHandle.cloneAs(...)` contract for other subclasses and clone fallback
    paths such as `ConstHeap.relocateConst(...)`.
 
-7. Runtime `Op` address/link and guard descriptor caches
+7. Runtime `Op` address/link lifecycle
 
-   Frame-derived owner caches, owner-bearing switch tables, `JumpNFirst`, and
-   `JumpNSample` runtime operand caching are fixed. Decoded jump/catch/switch
-   address/link fields are still only safe if they are eagerly resolved before
-   runtime publication. That needs proof, diagnostics, or synchronized owner
-   state.
+   Frame-derived owner caches, owner-bearing switch tables, `JumpNFirst`,
+   `JumpNSample`, first decoded-code publication, and guard descriptor runtime
+   writes are fixed. The remaining audit is the broader
+   `MethodStructure.Code` lifecycle: mutable compiler/assembly code should
+   eventually be split from an immutable runtime `ResolvedCode` snapshot or an
+   explicit runtime publication/freeze phase.
 
 8. Owner-bearing metadata caches
 

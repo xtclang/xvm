@@ -115,6 +115,14 @@ public class JumpInt
     }
 
     @Override
+    public void assertReadyForRuntime() {
+        if (m_aOpCase == null || m_opDefault == null
+                || m_acExits == null || m_aOpCase.length != m_acExits.length) {
+            throw new IllegalStateException("JMP_INT reached runtime before address resolution");
+        }
+    }
+
+    @Override
     public int process(Frame frame, int iPC) {
         try {
             ObjectHandle hValue = frame.getArgument(m_nArg);

@@ -76,6 +76,7 @@ public class GuardStart
             op.setTypeId(m_anTypeId[i]);
             m_aOpCatch[i] = op;
         }
+        refreshGuardDescriptor();
     }
 
     @Override
@@ -126,6 +127,7 @@ public class GuardStart
                 m_aofCatch[i] = calcRelativeAddress(m_aOpCatch[i]);
             }
         }
+        refreshGuardDescriptor();
     }
 
     @Override
@@ -141,14 +143,25 @@ public class GuardStart
     @Override
     public int process(Frame frame, int iPC) {
         int iScope = frame.enterScope(m_nNextVar);
+        assert iScope == getDepth();
 
         MultiGuard guard = m_guard;
         if (guard == null) {
-            m_guard = guard = new MultiGuard(iPC, iScope, m_anTypeId, m_anNameId, m_aofCatch);
+            // Runtime must not publish descriptors on shared decoded ops. This fallback preserves
+            // older compiler-owned paths that can execute before write-time catch ids have been
+            // materialized, but it keeps the descriptor local to the current frame execution.
+            guard = new MultiGuard(iPC, iScope, m_anTypeId, m_anNameId, m_aofCatch);
         }
         frame.pushGuard(guard);
 
         return iPC + 1;
+    }
+
+    @Override
+    public void assertReadyForRuntime() {
+        if (m_aOpCatch == null || m_guard == null) {
+            throw new IllegalStateException("GUARD reached runtime before catch resolution");
+        }
     }
 
     @Override
@@ -172,6 +185,12 @@ public class GuardStart
             list.add(i);
         }
         return true;
+    }
+
+    private void refreshGuardDescriptor() {
+        if (m_anTypeId != null && m_anNameId != null && m_aofCatch != null) {
+            m_guard = new MultiGuard(getAddress(), getDepth(), m_anTypeId, m_anNameId, m_aofCatch);
+        }
     }
 
     // ----- JIT support ---------------------------------------------------------------------------

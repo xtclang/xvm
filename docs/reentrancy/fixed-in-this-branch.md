@@ -904,6 +904,46 @@ cached an execution operand, not a decoded bytecode structure or owner-local
 table. `OpRuntimeCacheTest.jumpNSampleDoesNotCacheRuntimeOperandOnDecodedOp()`
 fails on master because `m_nEvery` exists and passes here.
 
+`MethodStructure.Code` and guard descriptors are the final op-cache hardening
+piece in this branch. The address/link fields themselves are method-shape
+metadata, not owner-bearing handles or constants, but master still had two
+unsafe publication shapes:
+
+- `MethodStructure.m_code` was a plain transient field. Parallel first
+  `getOps()` could race duplicate `Code` construction and publish decoded op
+  link state without a Java memory-model happens-before edge.
+- `GuardStart.process(...)` and `GuardAll.process(...)` lazily wrote
+  `m_guard` on the shared decoded op the first time a frame entered the guard.
+
+The replacement keeps the same hot-path behavior without first-frame
+publication:
+
+- `m_code` is volatile and `ensureCode()` synchronizes first construction, so
+  the decoded op graph is safely published.
+- decoded `Code` runs address/scope/link simulation during construction,
+  compiler-owned `Code` runs it through the existing `prepareOps()`/assembly
+  path, and the volatile runtime-linked flag publishes those link writes.
+  `xvm.asm.validateRuntimeCode=true` makes `MethodStructure.getOps()` assert
+  that branch, switch, loop, and guard metadata is ready. `getAssembledOps()`
+  intentionally remains an accessor, not a hidden linker for mutable assembly
+  code.
+- `Code.cloneOnto(...)` copies the runtime-linked flag with the shared op array,
+  so cloned method bodies do not relink already linked decoded ops during
+  connector/module loading.
+- `GuardStart` and `GuardAll` build guard descriptors during address
+  resolution. `process()` only reads the cached descriptor for linked code. The
+  fallback for older compiler-owned paths allocates a descriptor local to that
+  execution and does not write it back to the shared op.
+
+This does not claim that `MethodStructure.Code` is now the ideal runtime
+representation. The long-term cleanup is still to split mutable compiler and
+assembly code from an immutable runtime `ResolvedCode` snapshot. The branch
+does close the concrete JMM first-publication hole and removes the runtime
+guard write. `OpRuntimeCacheTest.methodCodeIsSafelyPublishedAndLinkedBeforeRuntimeAccess()`
+fails on master because `m_code` is not volatile, and
+`OpRuntimeCacheTest.guardDescriptorsAreLinkedBeforeProcessAndNotPublishedByProcess()`
+fails on master because `process()` writes `m_guard`.
+
 ### ASM `Op` Constructor Shape Dispatch
 
 This branch also removes the remaining `Op*.java` constructor-time virtual
@@ -1030,6 +1070,61 @@ owner-attachment path runs during construction. Those tests would fail against
 master. The existing
 `TypeInfoReal.validate()` ownership checks continue to cover real type-info
 graphs during unit tests and stress runs.
+
+### Cycle-Safe MethodBody Equality
+
+The parallel connector test exposed a separate metadata bug in the same
+`MethodInfo`/`MethodBody` area. The old `MethodBody.hashCode()` used only the
+method identity, while `MethodBody.equals(...)` compared `m_target` with
+`Handy.equals(...)`. For `FromInto`, `Implicit`, and `Union` bodies, that target
+is not a simple value: it is another `MethodInfo` or an array of `MethodInfo`
+legs. Those method infos can legitimately point back into the same method-body
+graph.
+
+That was bad even without parallelism. A single-threaded `HashMap` or `HashSet`
+lookup could place many equal-identity bodies in one hash bucket and then enter
+recursive equality:
+
+```text
+MethodInfo.equals(...)
+  -> Arrays.equals(MethodBody[])
+  -> MethodBody.equals(...)
+  -> Handy.equals(m_target)
+  -> MethodInfo.equals(...)
+```
+
+Parallel connector loading made the problem reliable because independent
+containers realize similar type-info graphs at the same time. The lookup that
+should have compared stable method shape instead expanded through cyclic owner
+metadata until it hit `StackOverflowError`.
+
+The fix does not remove the metadata links. `FromInto`, `Implicit`, and `Union`
+bodies still carry the same target method information used by the
+compiler/runtime for dispatch, narrowing, and implicit-body replacement. The
+change is only in object equality and hashing:
+
+- constants and property targets keep their existing value equality;
+- `FromInto` and `Implicit` targets compare by stable method target shape:
+  rank, identity, and signature;
+- `Union` targets compare those stable shapes for both legs;
+- `hashCode()` now uses the same non-recursive target identity, so hash
+  collections do not funnel equal-id bodies into expensive recursive
+  comparisons.
+
+This preserves the old apparent behavior for logically equal method bodies:
+two bodies with the same implementation, method id, signature, and target
+method shape still compare equal. It removes only the accidental graph-walk
+through owner metadata, which was not a useful semantic distinction and could
+never be made safe for cyclic method-target graphs.
+
+`MethodInfoTest.methodInfoEqualityDoesNotRecurseThroughMethodTargets()` builds
+the cycle directly for both `FromInto` and `Implicit` targets and proves both
+equality and hash consistency. On master, the same shape recurses through
+`MethodInfo.equals(...)` and fails with `StackOverflowError`. The broader
+`InterpreterConnectorTest.parallelConnectorsLoadIndependentNativeContainers()`
+also passes after this fix; before it, parallel connector loading failed in the
+same `MethodInfo.equals(...)` / `MethodBody.equals(...)` / `Handy.equals(...)`
+cycle.
 
 ### ASM Metadata Owner Assembly
 

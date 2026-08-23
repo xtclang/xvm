@@ -173,6 +173,14 @@ public abstract class OpCondJump
         m_cExits = calcExits(m_opDest);
     }
 
+    @Override
+    public void assertReadyForRuntime() {
+        if (m_opDest == null) {
+            throw new IllegalStateException(toName(getOpCode())
+                    + " reached runtime before conditional jump destination resolution");
+        }
+    }
+
     /**
      * @return true iff the op is a binary operator
      */

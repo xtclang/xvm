@@ -1,6 +1,7 @@
 package org.xvm.asm.constants;
 
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import java.util.Collections;
@@ -163,10 +164,57 @@ public class MethodInfoTest {
         assertNull(method.getTypeInfo());
     }
 
+    /**
+     * MethodInfo equality must be cycle-safe. FromInto and Implicit bodies can point back into the
+     * MethodInfo graph that owns them, and the old MethodBody.equals() recursively compared that
+     * target with MethodInfo.equals(). That is a single-threaded StackOverflow hazard and a
+     * parallel type-info stress failure when independently owned graphs are compared during map/set
+     * lookup.
+     */
+    @Test
+    public void methodInfoEqualityDoesNotRecurseThroughMethodTargets() throws Exception {
+        FileStructure  file   = new FileStructure("test");
+        ConstantPool   pool   = file.getConstantPool();
+        ClassStructure struct = file.getModule().createClass(
+                Access.PUBLIC, Format.CLASS, "Test", null);
+
+        SignatureConstant sig = pool.ensureSignatureConstant(
+                "test", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+        MethodConstant id = pool.ensureMethodConstant(struct.getIdentityConstant(), sig);
+
+        MethodInfo method1 = MethodInfo.create(
+                new MethodBody(id, sig, Implementation.FromInto, null), 0);
+        MethodInfo method2 = MethodInfo.create(
+                new MethodBody(id, sig, Implementation.FromInto, null), 0);
+
+        setTarget(method1.getHead(), method1);
+        setTarget(method2.getHead(), method2);
+
+        assertEquals(method1.getHead().hashCode(), method2.getHead().hashCode());
+        assertTrue(method1.equals(method2));
+
+        MethodInfo implicit1 = MethodInfo.create(
+                new MethodBody(id, sig, Implementation.Implicit, null), 0);
+        MethodInfo implicit2 = MethodInfo.create(
+                new MethodBody(id, sig, Implementation.Implicit, null), 0);
+
+        setTarget(implicit1.getHead(), implicit1);
+        setTarget(implicit2.getHead(), implicit2);
+
+        assertEquals(implicit1.getHead().hashCode(), implicit2.getHead().hashCode());
+        assertTrue(implicit1.equals(implicit2));
+    }
+
     private static ConstantPool invokePool(Object target) throws Exception {
         Method method = target.getClass().getDeclaredMethod("pool");
         method.setAccessible(true);
         return (ConstantPool) method.invoke(target);
+    }
+
+    private static void setTarget(MethodBody body, MethodInfo target) throws Exception {
+        Field field = MethodBody.class.getDeclaredField("m_target");
+        field.setAccessible(true);
+        field.set(body, target);
     }
 
     private TypeInfo createTypeInfo(

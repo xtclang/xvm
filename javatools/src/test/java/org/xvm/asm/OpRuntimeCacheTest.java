@@ -33,6 +33,8 @@ import org.xvm.asm.op.CatchStart;
 import org.xvm.asm.op.Cmp;
 import org.xvm.asm.op.GP_Add;
 import org.xvm.asm.op.GP_Neg;
+import org.xvm.asm.op.GuardAll;
+import org.xvm.asm.op.GuardStart;
 import org.xvm.asm.op.IIP_Inc;
 import org.xvm.asm.op.IIP_PreInc;
 import org.xvm.asm.op.IsNot;
@@ -45,15 +47,19 @@ import org.xvm.asm.op.JumpNSample;
 import org.xvm.asm.op.JumpType;
 import org.xvm.asm.op.JumpVal;
 import org.xvm.asm.op.JumpVal_N;
+import org.xvm.asm.op.Nop;
 import org.xvm.asm.op.PIP_Inc;
 import org.xvm.asm.op.PIP_PreInc;
+import org.xvm.asm.op.Return_0;
 import org.xvm.asm.op.Var_C;
 import org.xvm.asm.op.Var_I;
 
 import org.xvm.runtime.ObjectHandle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -65,6 +71,7 @@ import static org.xvm.util.Handy.writePackedLong;
 public class OpRuntimeCacheTest {
     private static final Pattern RUNTIME_COMMON_TYPE_WRITE = Pattern.compile(
             "m_typeCommon\\s*=\\s*typeCommon\\s*=\\s*frame\\.getConstant");
+    private static final Pattern RUNTIME_GUARD_WRITE = Pattern.compile("m_guard\\s*=");
 
     /**
      * Conditional jump ops are shared decoded method state. They must not cache frame-owned
@@ -172,6 +179,64 @@ public class OpRuntimeCacheTest {
     }
 
     /**
+     * Method code is the publication cell for decoded op arrays. A frame must receive one fully
+     * linked op graph, not whichever partially decoded graph wins a plain-field race during
+     * parallel first execution.
+     */
+    @Test
+    public void methodCodeIsSafelyPublishedAndLinkedBeforeRuntimeAccess()
+            throws Exception {
+        var field = MethodStructure.class.getDeclaredField("m_code");
+        assertTrue(Modifier.isVolatile(field.getModifiers()),
+                "decoded Code publication must create a happens-before edge");
+        var ready = MethodStructure.Code.class.getDeclaredField("m_fRuntimeLinked");
+        assertTrue(Modifier.isVolatile(ready.getModifiers()),
+                "runtime link readiness must publish op link writes");
+
+        var method = newVoidMethod();
+        var code = method.createCode().add(new Return_0());
+        code.prepareOps();
+
+        var ops = method.getOps();
+        assertEquals(1, ops.length);
+        assertEquals(0, ops[0].getAddress());
+        assertDoesNotThrow(() -> method.ensureCode().assertRuntimeReadyForDiagnostics());
+
+        var clone = method.ensureCode().cloneOnto(newVoidMethod());
+        assertDoesNotThrow(clone::assertRuntimeReadyForDiagnostics);
+    }
+
+    /**
+     * Guard descriptors are decoded method metadata. They may be cached for the hot path, but the
+     * cache must be built during address resolution, not by the first frame that happens to execute
+     * the shared {@code GUARD} or {@code GUARD_ALL} op.
+     */
+    @Test
+    public void guardDescriptorsAreLinkedBeforeProcessAndNotPublishedByProcess()
+            throws Exception {
+        var target   = new Nop();
+        var guardAll = new GuardAll(target);
+        Op[] allOps  = {guardAll, target};
+        initOps(allOps);
+
+        guardAll.resolveAddresses(allOps);
+        assertDoesNotThrow(guardAll::assertReadyForRuntime);
+        assertNotNull(fieldObject(guardAll, "m_guard"));
+
+        var guard = new GuardStart(input(1, 2, 3, 1), Constant.NO_CONSTS);
+        var catchStart = new CatchStart(input(), Constant.NO_CONSTS);
+        Op[] guardOps = {guard, catchStart};
+        initOps(guardOps);
+
+        guard.resolveAddresses(guardOps);
+        assertDoesNotThrow(guard::assertReadyForRuntime);
+        assertNotNull(fieldObject(guard, "m_guard"));
+
+        assertNoRuntimeGuardWrite("org/xvm/asm/op/GuardStart.java");
+        assertNoRuntimeGuardWrite("org/xvm/asm/op/GuardAll.java");
+    }
+
+    /**
      * Constructor cleanup for op-shape classes must preserve the binary-decoded operand layout.
      * This proves the reentrancy fix did not alter instruction semantics.
      */
@@ -244,6 +309,15 @@ public class OpRuntimeCacheTest {
                 source + " must not cache frame constants on runtime Op instances");
     }
 
+    private static void assertNoRuntimeGuardWrite(String source)
+            throws IOException {
+        var text = Files.readString(sourcePath(source));
+        var body = methodBody(text, "public int process(Frame frame, int iPC)");
+
+        assertFalse(RUNTIME_GUARD_WRITE.matcher(body).find(),
+                source + " must not publish guard descriptors during runtime process()");
+    }
+
     private static void assertNoOwnerBearingRuntimeCacheFields(Class<?> clazz) {
         var fields = Arrays.stream(clazz.getDeclaredFields())
                 .filter(field -> !Modifier.isStatic(field.getModifiers()))
@@ -307,7 +381,7 @@ public class OpRuntimeCacheTest {
         Class<?> clazz = op.getClass();
         while (clazz != null) {
             try {
-                Field field = clazz.getDeclaredField(name);
+                var field = clazz.getDeclaredField(name);
                 field.setAccessible(true);
                 return field.getInt(op);
             } catch (NoSuchFieldException _) {
@@ -315,6 +389,39 @@ public class OpRuntimeCacheTest {
             }
         }
         throw new AssertionError("missing field " + name + " on " + op.getClass().getName());
+    }
+
+    private static Object fieldObject(Op op, String name) throws Exception {
+        Class<?> clazz = op.getClass();
+        while (clazz != null) {
+            try {
+                Field field = clazz.getDeclaredField(name);
+                field.setAccessible(true);
+                return field.get(op);
+            } catch (NoSuchFieldException _) {
+                clazz = clazz.getSuperclass();
+            }
+        }
+        throw new AssertionError("missing field " + name + " on " + op.getClass().getName());
+    }
+
+    private static String methodBody(String source, String signature) {
+        int start = source.indexOf(signature);
+        assertTrue(start >= 0, () -> "missing method " + signature);
+
+        int brace = source.indexOf('{', start);
+        assertTrue(brace >= 0, () -> "missing method body " + signature);
+
+        int depth = 0;
+        for (int i = brace, c = source.length(); i < c; i++) {
+            char ch = source.charAt(i);
+            if (ch == '{') {
+                depth++;
+            } else if (ch == '}' && --depth == 0) {
+                return source.substring(brace, i + 1);
+            }
+        }
+        throw new AssertionError("unterminated method body " + signature);
     }
 
     private static void assertNoShapeFields(Class<?> clazz) {
@@ -340,5 +447,19 @@ public class OpRuntimeCacheTest {
         }
         assertTrue(Files.exists(path), () -> "missing source file " + source);
         return path;
+    }
+
+    private static MethodStructure newVoidMethod() {
+        var file = new FileStructure("test");
+        var clz = file.getModule().createClass(
+                Constants.Access.PUBLIC, Component.Format.CLASS, "Test", null);
+        return clz.createMethod(false, Constants.Access.PUBLIC, null,
+                Parameter.NO_PARAMS, "run", Parameter.NO_PARAMS, true, true);
+    }
+
+    private static void initOps(Op[] ops) {
+        for (int i = 0; i < ops.length; i++) {
+            ops[i].initInfo(i, i + 1, 0, 0);
+        }
     }
 }

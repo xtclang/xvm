@@ -75,7 +75,7 @@ cell; builder state should be request-confined and documented.
 | Fixed in this branch | `runtime/template/text/xRegEx.RegExHandle.m_pattern` | `Pattern` is immutable, but the old plain lazy field had no publication edge and could duplicate compilation under concurrent handle use. It did not carry container ownership, so this was a low-risk hardening fix rather than an observed wrong-owner bug. | Replaced by a final `Lazy<Pattern>`. `RegExHandleTest` verifies repeated access returns the same compiled pattern and the old nullable field is gone. |
 | Fixed in this branch | `asm/constants/FSNodeConstant.m_constPath` | The derived path literal is owned by a `ConstantPool`. If the source node computed it before `adoptedBy(...)`, the shallow clone copied a source-pool path constant into the adopted node. | The cache is now a volatile per-node cache and `adoptedBy(...)` clears it on the adopted copy, preserving repeated-call caching while forcing recomputation in the destination pool. `ConstantAdoptionTest` covers the old failure shape. |
 | Fixed in this branch, bridge XTC lazy | `javatools_bridge/src/main/x/_native/fs/OSFileNode.x:created` | The node is owned by the native `OSStorage` service, but the `created` getter can execute in an application container. The old `@Lazy` property cached an application-owned `Time` handle inside the native file-system graph. | Removed `@Lazy` and made `created` a computed getter, matching `modified` and `accessed`. Same-JVM `TestFiles` stress no longer reports the wrong-owner `Time` handle. |
-| Must audit, not yet proven runtime owner bug | `asm/OpJump.m_opDest`, `asm/OpCondJump.m_opDest`, `asm/op/LoopEnd.m_opDest`, `asm/op/OpSwitch.m_aOpCase`, `asm/op/JumpInt.m_aOpCase`, `asm/op/GuardStart.m_aOpCatch` | These mutate decoded op address/link state. They are safe only if address resolution happens before publication or under exclusive ownership. Lazy runtime resolution would be racy. | Verify when `resolveAddresses(...)` runs. Preferred fix is eager linking before code publication, or one synchronized/atomic resolved-address state per method owner. |
+| Done in this branch for first runtime publication; must audit for full frozen-code lifecycle | `asm/OpJump.m_opDest`, `asm/OpCondJump.m_opDest`, `asm/op/LoopEnd.m_opDest`, `asm/op/OpSwitch.m_aOpCase`, `asm/op/JumpInt.m_aOpCase`, `asm/op/GuardStart.m_aOpCatch` | These mutate decoded op address/link state. They are not owner-bearing frame constants, but a plain `MethodStructure.m_code` cell could expose partially linked code during parallel first access. | `m_code` is now volatile, first decode is synchronized, decoded code links during construction, compiler-owned code links through `prepareOps()`/assembly, and runtime diagnostics validate readiness. Follow-up is a frozen `ResolvedCode` or explicit runtime publication phase for the broader mutable `Code` lifecycle. |
 | Should fix / audit during asm cleanup | `asm/Parameter.m_regDeref` | This is an immutable derived value on an ASM object. It is not a known runtime container leak, but the plain lazy field still assumes benign races. | Use final `Lazy` where construction dependencies are available, or synchronize if the value depends on mutable method/register lifecycle. |
 | Safe publication already present | `asm/constants/ChildInfo.m_infoType`, `MethodInfo.m_infoType`, `PropertyInfo.m_infoType`, `MethodBody.m_infoMethod`, `PropertyBody.m_infoProperty` | The association methods are `synchronized` and return a copy when the requested owner differs. This is not an unsynchronized lazy cache. | No PR blocker. Keep as-is unless a later refactor can make ownership explicit at construction. |
 | Thread/service/frame confined lifecycle state | `runtime/Frame.m_continuation`, `Frame.m_debug`, `runtime/DebugConsole.DebugStash.m_mapExpand`, `DebugStash.m_listWatches` | These are mutable frame/debugger lifecycle slots. They are not immutable caches, and `Lazy` would not express append/activation semantics. | No startup-race blocker. Keep private and service-thread confined; document confinement if these objects become cross-thread. |
@@ -184,16 +184,17 @@ Remaining harness backlog is tracked in
 
 The manual lazy-null audit does not currently identify a new native-template
 startup blocker comparable to the old `INSTANCE` fields. The owner-bearing
-runtime `Op` cache slice identified here has been handled in this branch; the
-remaining `Op` address/link fields are tracked separately because they link ops
-inside one decoded method graph rather than caching frame constants.
+runtime `Op` cache slice identified here has been handled in this branch. The
+first-publication hazard for decoded op address/link fields is also fixed here,
+but the larger mutable-code lifecycle remains a follow-up because it needs a
+`ResolvedCode` or explicit runtime publication boundary.
 
 Recommended handling:
 
 1. Keep this PR focused on native-template owner caches, enum publication,
    same-JVM ownership validation, and the owner-bearing runtime `Op` cache fix.
-2. Verify eager link ordering for `Op` address/link fields separately; if any
-   runtime path lazily links after publication, move that state under a
-   synchronized/atomic method-owner policy.
+2. Keep `xvm.asm.validateRuntimeCode=true` in stress runs so any frame-visible
+   unlinked code fails immediately. Split the full immutable `ResolvedCode`
+   cleanup into a later PR.
 3. Treat the remaining immutable ASM derived values as should-fix cleanup unless
    stress testing produces a concrete cross-owner failure.

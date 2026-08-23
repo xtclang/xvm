@@ -262,14 +262,21 @@ Work items:
 Status: must-audit.
 
 The current branch removes the known owner-bearing runtime `Op` caches that
-stored frame-derived constants on shared decoded op objects. Remaining decoded
-op address/link caches appear intended to be resolved during exclusive linking,
-but that needs proof.
+stored frame-derived constants on shared decoded op objects. It also closes the
+first-publication hazard for decoded code by safely publishing `m_code`,
+keeping decoded/prepared code link state explicit, moving guard descriptor
+writes out of `process()`, and adding `xvm.asm.validateRuntimeCode`
+diagnostics.
+
+The remaining design problem is broader: `MethodStructure.Code` is still both
+mutable compiler/assembly state and runtime decoded-code state. A future PR
+should split that into mutable builder state plus an immutable runtime
+`ResolvedCode` snapshot or an explicit publication/freeze phase.
 
 Work items:
 
-- prove decoded jump/catch/switch links are eagerly resolved before method
-  runtime publication, or make the link state method-owner synchronized/atomic;
+- keep runtime-code readiness diagnostics enabled in stress runs and replace
+  mutable runtime `Code` with a frozen `ResolvedCode`/publication boundary;
 - document owner/key/invalidation for `ClassComposition`, `TypeInfoReal`,
   `TypeConstant`, and related runtime metadata caches;
 - convert shared owner-bearing manual lazy null caches to final owner-local

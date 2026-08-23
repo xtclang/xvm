@@ -1,6 +1,10 @@
 package org.xvm.asm.constants;
 
 
+import java.util.Arrays;
+
+import java.util.stream.IntStream;
+
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
@@ -14,6 +18,7 @@ import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 
 import org.xvm.util.Handy;
+import org.xvm.util.Hash;
 
 
 /**
@@ -701,7 +706,7 @@ public class MethodBody {
 
     @Override
     public int hashCode() {
-        return m_id.hashCode();
+        return Hash.of(m_id, Hash.of(m_sig, Hash.of(m_impl, targetHash())));
     }
 
     @Override
@@ -717,7 +722,85 @@ public class MethodBody {
         return this.m_impl == that.m_impl
             && Handy.equals(this.m_id, that.m_id)
             && Handy.equals(this.m_sig, that.m_sig)
-            && Handy.equals(this.m_target, that.m_target);
+            && targetEquals(that);
+    }
+
+    /**
+     * Compare implementation targets without recursively expanding MethodInfo graphs.
+     *
+     * <p>FromInto, Implicit, and Union targets are method metadata links, and those links can
+     * legitimately point back into the MethodInfo graph that owns this body. Calling
+     * MethodInfo.equals() through those links can recurse forever. Compare the stable method
+     * identity shape instead; that is the same distinction MethodInfo maps and caches use to find
+     * these bodies.</p>
+     */
+    private boolean targetEquals(MethodBody that) {
+        return switch (m_impl) {
+        case FromInto,
+             Implicit -> methodTargetEquals((MethodInfo) this.m_target, (MethodInfo) that.m_target);
+
+        case Union -> unionTargetEquals((MethodInfo[]) this.m_target, (MethodInfo[]) that.m_target);
+
+        case Capped,
+             Delegating,
+             Field -> Handy.equals(this.m_target, that.m_target);
+
+        default -> this.m_target == that.m_target;
+        };
+    }
+
+    private int targetHash() {
+        return switch (m_impl) {
+        case FromInto,
+             Implicit -> methodTargetHash((MethodInfo) m_target);
+
+        case Union -> unionTargetHash((MethodInfo[]) m_target);
+
+        case Capped,
+             Delegating,
+             Field -> Hash.of(m_target);
+
+        default -> 0;
+        };
+    }
+
+    private static int unionTargetHash(MethodInfo[] methods) {
+        if (methods == null) {
+            return 0;
+        }
+
+        return Arrays.stream(methods)
+                .mapToInt(MethodBody::methodTargetHash)
+                .reduce(0, (hash, methodHash) -> Hash.of(methodHash, hash));
+    }
+
+    private static int methodTargetHash(MethodInfo info) {
+        return info == null ? 0 : Hash.of(info.getRank(),
+                Hash.of(info.getIdentity(), Hash.of(info.getSignature())));
+    }
+
+    private static boolean unionTargetEquals(MethodInfo[] these, MethodInfo[] those) {
+        if (these == those) {
+            return true;
+        }
+
+        if (these == null || those == null || these.length != those.length) {
+            return false;
+        }
+
+        return IntStream.range(0, these.length)
+                .allMatch(i -> methodTargetEquals(these[i], those[i]));
+    }
+
+    private static boolean methodTargetEquals(MethodInfo info1, MethodInfo info2) {
+        if (info1 == info2) {
+            return true;
+        }
+
+        return info1 != null && info2 != null
+            && info1.getRank() == info2.getRank()
+            && Handy.equals(info1.getIdentity(), info2.getIdentity())
+            && Handy.equals(info1.getSignature(), info2.getSignature());
     }
 
     @Override

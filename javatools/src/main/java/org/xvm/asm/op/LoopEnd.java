@@ -57,6 +57,13 @@ public class LoopEnd
     }
 
     @Override
+    public void assertReadyForRuntime() {
+        if (m_opDest == null) {
+            throw new IllegalStateException("LOOP_END reached runtime before loop resolution");
+        }
+    }
+
+    @Override
     public void markReachable(Op[] aop) {
         super.markReachable(aop);
         assert m_ofJmp < 0;

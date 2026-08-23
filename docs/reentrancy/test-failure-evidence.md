@@ -99,9 +99,14 @@ caveat: passing `-Dxvm.asm.validateConstantPoolLateRegistration=true` to Gradle
 also enables it during XTC compilation. In the audit run, that broad command
 failed earlier in `:xdk:lib-ecstasy:compileXtc` with a stack repeating through
 `MethodInfo.equals(...)`, `MethodBody.equals(...)`, and `Handy.equals(...)`.
-That is a separate compiler/constant-pool recursion finding, not proof that the
-runtime late-registration fix failed. The focused
-`ClassCompositionLateRegistrationTest` tests are the proof for the
+That was a separate metadata equality recursion finding, not proof that the
+runtime late-registration fix failed. This branch now fixes that equality shape:
+`MethodBody.equals(...)` and `MethodBody.hashCode()` compare `FromInto`,
+`Implicit`, and `Union` method targets by stable method identity shape instead
+of recursively walking owner metadata graphs. The focused
+`MethodInfoTest.methodInfoEqualityDoesNotRecurseThroughMethodTargets()` test
+builds the cyclic target shapes directly. The focused
+`ClassCompositionLateRegistrationTest` tests remain the proof for the
 class-composition access-type slice until the Gradle task can pass runtime-only
 JVM properties to the direct runner.
 

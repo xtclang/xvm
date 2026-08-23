@@ -135,6 +135,15 @@ public abstract class OpSwitch
     }
 
     @Override
+    public void assertReadyForRuntime() {
+        if (m_aOpCase == null || m_opDefault == null
+                || m_acExits == null || m_aOpCase.length != m_acExits.length) {
+            throw new IllegalStateException(toName(getOpCode())
+                    + " reached runtime before switch address resolution");
+        }
+    }
+
+    @Override
     public void markReachable(Op[] aop) {
         super.markReachable(aop);
 

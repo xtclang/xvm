@@ -77,6 +77,13 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public class MethodStructure
         extends Component {
+    /**
+     * Enables validation that op arrays exposed to runtime frames have completed address/link
+     * resolution. This is intentionally diagnostics-only; runtime code must already be linked
+     * before a frame receives the op array.
+     */
+    public static final String VALIDATE_RUNTIME_CODE_PROPERTY = "xvm.asm.validateRuntimeCode";
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -612,7 +619,16 @@ public class MethodStructure
 
         Code code = m_code;
         if (code == null) {
-            m_code = code = new Code(this);
+            synchronized (this) {
+                code = m_code;
+                if (code == null) {
+                    // The decoded Code object contains resolved op links. Publish exactly one
+                    // fully constructed instance so parallel first runtime access cannot race two
+                    // decoded op graphs or observe constructor-written link state through a plain
+                    // field.
+                    m_code = code = new Code(this);
+                }
+            }
         }
         return code;
     }
@@ -656,7 +672,11 @@ public class MethodStructure
                 getIdentityConstant().getPathString() + "\" has not been compiled");
         }
 
-        return code.getAssembledOps();
+        var ops = code.getAssembledOps();
+        if (Boolean.getBoolean(VALIDATE_RUNTIME_CODE_PROPERTY)) {
+            code.assertRuntimeReadyForDiagnostics();
+        }
+        return ops;
     }
 
     /**
@@ -2194,6 +2214,7 @@ public class MethodStructure
                     //      (otherwise code read from disk will break when we eliminate dead & redundant code)
                     op.resolveCode(this, aconst);
                 }
+                m_fRuntimeLinked = true;
             }
 //            try
 //                {
@@ -2269,6 +2290,7 @@ public class MethodStructure
 
             m_fTrailingPrefix = op instanceof Prefix;
             m_mapIndex        = null;
+            m_fRuntimeLinked  = false;
 
             return this;
         }
@@ -2339,7 +2361,7 @@ public class MethodStructure
          * @return true iff any of the op codes refer to the "super"
          */
         public boolean usesSuper() {
-            Op[] aop = ensureOps();
+            var aop = ensureOps();
             if (aop != null) {
                 for (Op op : aop) {
                     if (op.usesSuper()) {
@@ -2355,6 +2377,24 @@ public class MethodStructure
          */
         public Op[] getAssembledOps() {
             return ensureOps();
+        }
+
+        /**
+         * Assert that runtime-exposed code has completed address/link resolution.
+         *
+         * <p>This is a diagnostics hook for the reentrancy work. Decoded op objects are shared
+         * method state, so runtime execution must not be the phase that fills in branch targets,
+         * guard descriptors, or scope/finally metadata.</p>
+         */
+        void assertRuntimeReadyForDiagnostics() {
+            if (!m_fRuntimeLinked) {
+                throw new IllegalStateException("Runtime requested unlinked code for "
+                        + f_method.getIdentityConstant().getPathString());
+            }
+
+            for (Op op : ensureOps()) {
+                op.assertReadyForRuntime();
+            }
         }
 
         /**
@@ -2416,6 +2456,7 @@ public class MethodStructure
             that.m_mapIndex        = this.m_mapIndex;
             that.m_fTrailingPrefix = this.m_fTrailingPrefix;
             that.m_aop             = this.m_aop;
+            that.m_fRuntimeLinked  = this.m_fRuntimeLinked;
             that.m_nPrevLine       = this.m_nPrevLine;
             that.m_nCurLine        = this.m_nCurLine;
 
@@ -2557,7 +2598,8 @@ public class MethodStructure
 
             Op[] aopNew = new Op[cNew];
             System.arraycopy(aop, 0, aopNew, 0, cNew);
-            m_aop = aopNew;
+            m_aop            = aopNew;
+            m_fRuntimeLinked = false;
             return true;
         }
 
@@ -2658,7 +2700,8 @@ public class MethodStructure
 
             Op[] aopNew = new Op[cNew];
             System.arraycopy(aop, 0, aopNew, 0, cNew);
-            m_aop = aopNew;
+            m_aop            = aopNew;
+            m_fRuntimeLinked = false;
             return true;
         }
 
@@ -2666,6 +2709,8 @@ public class MethodStructure
          * Mark all the ops with their locations and scope depth.
          */
         private void addressAndSimulateOps() {
+            m_fRuntimeLinked = false;
+
             Op[] aop = ensureOps();
             for (Op op : aop) {
                 op.resetSimulation();
@@ -2684,6 +2729,7 @@ public class MethodStructure
 
             f_method.m_cVars   = scope.getMaxVars();
             f_method.m_cScopes = scope.getMaxDepth();
+            m_fRuntimeLinked   = true;
         }
 
         protected void registerConstants(ConstantRegistry registry) {
@@ -2722,7 +2768,8 @@ public class MethodStructure
                             + f_method.getIdentityConstant().getPathString()
                             + "\" is neither native nor compiled");
                 }
-                m_aop = aop = m_listOps.toArray(Op.NO_OPS);
+                m_aop            = aop = m_listOps.toArray(Op.NO_OPS);
+                m_fRuntimeLinked = false;
             }
             return aop;
         }
@@ -2753,6 +2800,12 @@ public class MethodStructure
          * The array of ops.
          */
         private Op[] m_aop;
+
+        /**
+         * True iff the current op array has completed address, scope, guard, and branch-link
+         * simulation. Reset whenever assembly-time code mutates the op array.
+         */
+        private volatile boolean m_fRuntimeLinked;
 
         /**
          * A coding black hole.
@@ -3114,7 +3167,7 @@ public class MethodStructure
     /**
      * The method's code (for assembling new code).
      */
-    private transient Code m_code;
+    private transient volatile Code m_code;
 
     /**
      * The method's AST.

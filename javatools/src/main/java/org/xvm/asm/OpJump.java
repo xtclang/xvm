@@ -61,6 +61,14 @@ public abstract class OpJump
     }
 
     @Override
+    public void assertReadyForRuntime() {
+        if (m_opDest == null) {
+            throw new IllegalStateException(toName(getOpCode())
+                    + " reached runtime before jump destination resolution");
+        }
+    }
+
+    @Override
     public int process(Frame frame, int iPC) {
         throw new UnsupportedOperationException();
     }

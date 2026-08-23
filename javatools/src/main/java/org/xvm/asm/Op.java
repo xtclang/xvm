@@ -342,6 +342,14 @@ public abstract class Op {
     }
 
     /**
+     * Assert that all runtime-visible links for this op have been resolved before a frame executes
+     * it. Subclasses with decoded branch, guard, switch, or finally metadata override this for the
+     * diagnostics path enabled by {@link MethodStructure#VALIDATE_RUNTIME_CODE_PROPERTY}.
+     */
+    public void assertReadyForRuntime() {
+    }
+
+    /**
      * Adjust the relative offset of a "jump to" op-code in such a way that it (i) takes into
      * account any potential ops elimination, and (ii) if possible, land the jump on a LINE_N
      * op, which makes the console debugger to behave much more natural.

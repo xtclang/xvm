@@ -426,11 +426,30 @@ Completed in this branch:
 - `m_typeCommon` remains as an assembly-time source-op argument field. It is
   encoded to `m_nType` during write/registration; it is not a runtime cache for
   deserialized methods.
+- `MethodStructure.m_code` is now a volatile publication cell, and
+  `ensureCode()` synchronizes the first decoded `Code` construction. A frame
+  calling `MethodStructure.getOps()` therefore receives a single safely
+  published `Code` object rather than racing duplicate decoded op graphs
+  through a plain transient field.
+- `MethodStructure.Code` tracks whether the current op array has completed
+  address, scope, guard, and branch-link simulation. Decoded code links during
+  construction; compiler-owned code links through the existing
+  `prepareOps()`/assembly path. The volatile readiness flag publishes those
+  link writes, and `xvm.asm.validateRuntimeCode=true` makes `getOps()` assert
+  that branch, switch, loop, and guard metadata is ready. `getAssembledOps()`
+  intentionally remains an accessor, not a hidden simulation phase for mutable
+  assembly code.
+- `GuardStart` and `GuardAll` no longer publish `m_guard` from `process()`.
+  Linked code builds the immutable guard descriptor during address resolution.
+  A fallback exists only for older compiler-owned paths that reach `process()`
+  before catch ids are materialized; that fallback allocates a local descriptor
+  and does not write it back to the shared op.
 
 The separate address/link fields (`m_opDest`, `m_aOpCase`, `m_aOpCatch`) are
-not frame-constant caches. They link ops inside one method graph. They remain a
-must-audit category for eager link-before-publication ordering, not a known
-cross-pool owner leak from this wave.
+not frame-constant caches. They link ops inside one method graph. This branch
+fixes the immediate first-publication hazard and adds a runtime readiness
+diagnostic, but the larger architectural cleanup is still to split mutable
+compiler/assembly `Code` from an immutable runtime `ResolvedCode` snapshot.
 
 ### Manual Lazy Null Caches
 

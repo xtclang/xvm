@@ -62,7 +62,7 @@ Use this as the first pass when preparing actual PR branches from `master`.
 | --- | --- | --- |
 | Ambient current-pool removal | `be0270e0d`, `e856d85ce`, `d58ebfea0`, `5d5773979`, `5fce7b9ae`, `4c6521dd9`, `c93b5ad61`, `2716435f1`, `84fa61534` | Constant adoption, clone/copy fixes, JIT `Ctx.Current` policy |
 | Constant adoption hardening | `09f244211`, `e569d27db`, `e6f78a210`, `d1d0683e3`, `a0c1fe936` | Parameter/method clone fixes and `ObjectHandle.cloneAs(...)` design |
-| Shared runtime/ASM cache hardening | Runtime op-cache commits, `JumpNFirst` atomic state, and the `TypeConstant` TypeHandle owner-cache slice | Native-template `INSTANCE` migration, enum lifecycle state, broad ConstantPool freeze |
+| Shared runtime/ASM cache hardening | Runtime op-cache commits, `JumpNFirst` atomic state, `JumpNSample`, guard descriptor/process cleanup, `MethodStructure.Code` first-publication diagnostics, and the `TypeConstant` TypeHandle owner-cache slice | Native-template `INSTANCE` migration, enum lifecycle state, broad ConstantPool freeze, full immutable `ResolvedCode` refactor |
 | Parameter, method, and handle-copy fixes | `7f82e0a1e`, `ed7220bee`, the `GenericHandle.maskAs(...)` cross-owner guard slice, and the same-owner `GenericHandle.cloneAs(...)` inflated-ref backing slice | Constant adoption validator, broad compiler clone cleanup, base `ObjectHandle.cloneAs(...)` subclass audit |
 | Constructor-escape removal in shared ASM/runtime | `1249e2a0f`, `47d7ab30e`, `93189541f`, `16915ebe7`, `7b7fc2036`, `70bf202ef` where source areas match | JIT constructor escapes and compiler/parser-only cleanup |
 | JIT ownership cleanup | `36c24a974`, `cb81116cb` plus the separate JIT plan work | Interpreter runtime template ownership |
@@ -949,6 +949,9 @@ fields and incomplete owner graphs.
   private helpers.
 - Replace `MethodInfo`/`PropertyInfo` body-owner constructor callbacks with
   static factories and non-virtual owned body copies.
+- Make `MethodBody.equals(...)` and `hashCode()` cycle-safe for `FromInto`,
+  `Implicit`, and `Union` targets by comparing stable method target shape
+  instead of recursively walking owner metadata graphs.
 - Remove ASM metadata owner-stealing and constructor hooks in
   `FileStructure`, `ClassStructure`, `MethodStructure`, `PropertyStructure`,
   `VersionTree`, `PropertyConstant`, and `TypeInfoReal`.

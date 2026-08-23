@@ -359,11 +359,14 @@ CI=true ./gradlew :manualTests:runDirectSequenceStress \
 
 failed earlier in `:xdk:lib-ecstasy:compileXtc` with a stack repeating through
 `MethodInfo.equals(...)`, `MethodBody.equals(...)`, and `Handy.equals(...)`.
-That is a separate compiler/constant-pool equality recursion or mutation
-finding. Runtime late-registration stress should either run after required XTC
-artifacts are built without the property, or the Gradle task needs a dedicated
-runtime JVM property so compiler-side findings do not mask runtime ownership
-failures.
+That was a separate metadata equality recursion finding. `FromInto`,
+`Implicit`, and `Union` method bodies can point back into method-info graphs,
+so equality must not recursively compare those target graphs. This branch fixes
+`MethodBody.equals(...)` and `MethodBody.hashCode()` to use stable target method
+shape instead. Runtime late-registration stress should still either run after
+required XTC artifacts are built without the property, or the Gradle task needs
+a dedicated runtime JVM property so compiler-side findings do not mask runtime
+ownership failures.
 
 The same caveat still applies after the access-type prewarm fix. A guarded
 manual stress invocation that passes `-Dxvm.asm.validateConstantPoolLateRegistration=true`

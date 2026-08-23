@@ -66,14 +66,32 @@ public class GuardAll
     @Override
     public int process(Frame frame, int iPC) {
         int iScope = frame.enterScope(m_nNextVar);
+        assert iScope == getDepth();
 
         AllGuard guard = m_guard;
         if (guard == null) {
-            m_guard = guard = new AllGuard(iPC, iScope, m_ofJmp);
+            // Runtime must not publish descriptors on shared decoded ops. The fallback is local to
+            // this execution and exists only for compiler-owned code paths that have not passed
+            // through address resolution.
+            guard = new AllGuard(iPC, iScope, m_ofJmp);
         }
         frame.pushGuard(guard);
 
         return iPC + 1;
+    }
+
+    @Override
+    public void resolveAddresses(Op[] aop) {
+        super.resolveAddresses(aop);
+        m_guard = new AllGuard(getAddress(), getDepth(), m_ofJmp);
+    }
+
+    @Override
+    public void assertReadyForRuntime() {
+        super.assertReadyForRuntime();
+        if (m_guard == null) {
+            throw new IllegalStateException("GUARD_ALL reached runtime before guard resolution");
+        }
     }
 
     @Override
