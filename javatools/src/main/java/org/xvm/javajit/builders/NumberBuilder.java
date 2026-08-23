@@ -137,12 +137,17 @@ public class NumberBuilder extends AugmentingBuilder {
         };
     }
 
-    protected boolean shouldCompileNaturally(MethodInfo method) {
+    /**
+     * Determine whether the specified primitive method is known to compile correctly from its
+     * natural Ecstasy implementation. All Number methods that are not on this list need to
+     * be automatically generated for every concrete Number class.
+     */
+    protected boolean useNaturalImplementation(MethodInfo method) {
         String name = method.getJitIdentity().getName();
-        return name.equals("zero") ||
-               name.equals("one") ||
-               name.equals("fixedBitLength") ||
-               name.equals("range");
+        return name.equals("fixedBitLength") ||
+               name.equals("range")          ||
+               name.equals("one")            ||
+               name.equals("zero");
     }
 
     @Override
@@ -175,7 +180,7 @@ public class NumberBuilder extends AugmentingBuilder {
             return;
         }
 
-        if (shouldCompileNaturally(method)) {
+        if (useNaturalImplementation(method)) {
             super.assembleMethod(classBuilder, method, jitName, jmd);
             return;
         }

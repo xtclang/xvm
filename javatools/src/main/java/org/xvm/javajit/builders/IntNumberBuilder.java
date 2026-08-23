@@ -68,12 +68,16 @@ public class IntNumberBuilder extends NumberBuilder {
     }
 
     @Override
-    protected boolean shouldCompileNaturally(MethodInfo method) {
+    protected boolean useNaturalImplementation(MethodInfo method) {
         String name = method.getJitIdentity().getName();
-        return name.equals("neg") || name.equals("mul") ||
-                name.equals("estimateStringLength") || name.equals("appendTo") ||
-                name.equals("toChar") || name.equals("pow") ||
-                super.shouldCompileNaturally(method);
+        return name.equals("appendTo")             ||
+               name.equals("estimateStringLength") ||
+               name.equals("mul")                  ||
+               name.equals("neg")                  ||
+               name.equals("parse")                ||
+               name.equals("pow")                  ||
+               name.equals("toChar")               ||
+               super.useNaturalImplementation(method);
     }
 
     // ----- properties ----------------------------------------------------------------------------

@@ -4197,9 +4197,6 @@ public class CommonBuilder
                    "converterTo")),
         Map.entry("org.xtclang.ecstasy.numbers.IntNumber",
             Set.of("not")),         // TODO: depends on virtual constructor
-        Map.entry("org.xtclang.ecstasy.numbers.Int64",
-            Set.of("equals",       // TODO: Array<Bit> passed to Array<Object>
-                   "parse")),       // TODO: verifier stack mismatch
         Map.entry("org.xtclang.ecstasy.numbers.UInt16",
             Set.of("parse"))        // TODO: GP_SUB for a formal value
     );

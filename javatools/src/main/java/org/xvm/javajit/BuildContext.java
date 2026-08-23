@@ -1166,10 +1166,10 @@ public class BuildContext {
     }
 
     /**
-     * Adjust the register type based on the type matrix type. This only appies to non-primitive
-     * or boxed registers.
+     * Adjust the register type based on the type matrix type. This applies to non-primitive or
+     * boxed registers, as well as nullable primitives that the type matrix proves to be non-null.
      */
-    protected RegisterInfo adjustRegister(RegisterInfo reg) {
+    protected RegisterInfo adjustRegister(CodeBuilder code, RegisterInfo reg) {
         if (reg.isJavaStack()) {
             return reg;
         }
@@ -1185,7 +1185,13 @@ public class BuildContext {
 
         TypeConstant regType  = reg.type();
         TypeConstant baseType = regType.removeNullable();
-        if (!baseType.isJitPrimitive()) {
+        if (baseType.isJitPrimitive()) {
+            TypeConstant mtxType = typeMatrix.getType(reg.regId(), currOpAddr);
+            if (mtxType != null && !mtxType.equals(regType) && // this check simply an optimization
+                    !mtxType.isEquivalent(regType) && mtxType.isEquivalent(baseType)) {
+                return narrowRegister(code, reg, currOpAddr, mtxType);
+            }
+        } else {
             int          regId   = reg.regId();
             TypeConstant mtxType = typeMatrix.getType(regId, currOpAddr);
 
@@ -1230,7 +1236,7 @@ public class BuildContext {
         if (argId >= 0) {
             RegisterInfo reg = registerInfos.get(argId);
             assert reg != null;
-            return adjustRegister(reg);
+            return adjustRegister(code, reg);
         }
 
         if (argId == Op.A_THIS) {
