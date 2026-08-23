@@ -127,7 +127,7 @@ Start here:
   classification, and recommended guards.
 - [constant-pool-must-audit-classification.md](constant-pool-must-audit-classification.md):
   focused classification of `ConstantPool` must-fix/must-audit areas, including
-  the current adoption/registration guards and the remaining clone-free and
+  completed clone-free constant adoption, the current registration guard, and
   transactional follow-up work.
 - [test-failure-evidence.md](test-failure-evidence.md): persisted list of
   known master failures, branch-only diagnostics tests, stress failures, and

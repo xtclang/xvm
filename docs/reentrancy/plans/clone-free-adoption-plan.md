@@ -239,7 +239,7 @@ owner-bearing object.
 
 | Clone family | Runtime reentrancy classification | Why |
 | --- | --- | --- |
-| `Constant.adoptedBy(...)` | Must fix long term | Changes pool ownership while copying arbitrary subclass references. This is the central adoption bug. |
+| `Constant.adoptedBy(...)` | Done in this branch | In `master`, this changed pool ownership while copying arbitrary subclass references. This branch removes `Cloneable` from `Constant`, deletes the fallback clone helper, and requires explicit `copyForAdoption(...)` hooks or fail-closed behavior. |
 | `ObjectHandle.cloneAs(...)` | Must audit, partly hardened in this branch | Runtime handle view/mask copies can preserve underlying handle and field references. Safe only when the new view composition has the same owner or the code explicitly validates shareability. |
 | `javatools_jitbridge` frozen array clone | Must audit for JIT runtime | JIT bridge objects can copy delegate/context/cache state. This is outside the interpreter adoption PR but relevant if JIT runtime state is shared. |
 | `Component.cloneBody(...)`, `Component.Contribution.clone()`, `MethodStructure.Source.clone()` | Must audit for incremental compiler/linker; not the main runtime-container adoption path | These are structural/module-copy clones and can preserve owner/caches during compiler/linker mutation. They matter for reentrant compilation, but not as the immediate `ConstantPool.register(...)` adoption mechanism. |
