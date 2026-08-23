@@ -10,6 +10,8 @@ package arrayTests {
         testConstStringArray();
         testAnonArrayVar();
         testNamedArrayVar();
+        testPrimitiveArrayVar();
+        testNullablePrimitiveArrayVar();
 //        testDistinct(); // TODO: DeferredCollection compilation fails in assembleCapRouting()
         shouldIterateUsingForLoop();
         shouldBeReadOnly();
@@ -60,6 +62,26 @@ package arrayTests {
         assert c.size == 2;
         assert c[0] == 'a';
         assert c[1] == 'b';
+    }
+
+    void testPrimitiveArrayVar() {
+        Int[] values = makePrimitiveArray(1, 2);
+        assert values[0] == 1;
+        assert values[1] == 2;
+
+        Int[] makePrimitiveArray(Int first, Int second) {
+            return [first, second];
+        }
+    }
+
+    void testNullablePrimitiveArrayVar() {
+        Array<Int?> values = makeNullablePrimitiveArray(1, Null);
+        assert values[0] == 1;
+        assert values[1] == Null;
+
+        Array<Int?> makeNullablePrimitiveArray(Int? first, Int? second) {
+            return [first, second];
+        }
     }
 
     void testDistinct() {
