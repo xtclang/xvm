@@ -69,7 +69,7 @@ Use this as the first pass when preparing actual PR branches from `master`.
 | Shared runtime/ASM cache hardening | Runtime op-cache commits, `JumpNFirst` atomic state, `JumpNSample`, guard descriptor/process cleanup, `MethodStructure.Code` first-publication diagnostics, and the `TypeConstant` TypeHandle owner-cache slice | Native-template `INSTANCE` migration, enum lifecycle state, broad ConstantPool freeze, full immutable `ResolvedCode` refactor |
 | Parameter, method, and handle-copy fixes | `7f82e0a1e`, `ed7220bee`, the `GenericHandle.maskAs(...)` cross-owner guard slice, and the same-owner `GenericHandle.cloneAs(...)` inflated-ref backing slice | Constant adoption validator, broad compiler clone cleanup, base `ObjectHandle.cloneAs(...)` subclass audit |
 | Constructor-escape removal in shared ASM/runtime | `1249e2a0f`, `47d7ab30e`, `93189541f`, `16915ebe7`, `7b7fc2036`, `70bf202ef` where source areas match | JIT constructor escapes and compiler/parser-only cleanup |
-| Runtime failure propagation | MainContainer cause-preservation wave, worker terminal-failure channel, op-loop VM-defect propagation, and `Future.and` completion failure handling | Broad exception hygiene |
+| Runtime failure propagation | MainContainer cause-preservation wave, worker terminal-failure channel, op-loop VM-defect propagation, `Future.and` completion failure handling, and raw file submit failure observation | Broad exception hygiene |
 | JIT ownership cleanup | `36c24a974`, `cb81116cb`, the JIT unhandled-result wave, plus the separate JIT plan work | Interpreter runtime template ownership |
 | Documentation-only hardening studies | `f0a6a71b1` and any uncommitted plan/audit docs | Source changes unless the PR is explicitly mixed for review proof |
 

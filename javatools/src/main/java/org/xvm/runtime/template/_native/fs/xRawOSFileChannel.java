@@ -226,7 +226,17 @@ public class xRawOSFileChannel
 
         Callable<Integer> task = () -> hChannel.f_channel.write(buffer);
 
-        frame.f_context.f_container.scheduleIO(task); // don't wait
+        // RawChannel.submit() is a non-blocking queue operation, so preserve the immediate OK
+        // result. The scheduled write still needs an observer; otherwise an IOException on the IO
+        // thread disappears and join() can report success after a failed native write.
+        var container = frame.container();
+        var cfWrite   = container.scheduleIO(task);
+        cfWrite.whenComplete((_, ex) -> {
+            if (ex != null) {
+                container.recordRuntimeFailure(
+                        "Unexpected RawOSFileChannel write failure: " + hChannel.f_path, ex);
+            }
+        });
 
         return frame.assignValue(iReturn, xInt64.makeHandle(frame, 0)); // OK
     }

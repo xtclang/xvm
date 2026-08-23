@@ -124,7 +124,7 @@ been logged and the task code treats the non-zero code as failure.
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java:280` and `:287` | Must-fix, fixed in branch | Server startup registers a native callback, then creates contexts. If a post-registration startup step throws, the catch terminates the service context but does not unregister the callback. `join()` can hang on callback count. | Fixed by tracking registration and running `rollbackBind(...)` before raising the XTC I/O exception. Rollback unregisters the callback, stops partial Java servers, shuts down the executor, clears routes, and clears the native handle. |
 | P1 | `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Must-fix | Code generation catches `Throwable`, logs, and continues. This can absorb `Error` subclasses and keep compiling after corrupted compiler state. | Catch `RuntimeException` or a compiler-specific exception for recoverable compiler bugs. Rethrow `Error`. Include compiler/module/phase context in the propagated exception. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:556` | Must-fix, fixed in branch | Each op execution caught `Throwable`, printed stack, and raised a generic XTC `"Run-time error"` exception. Java VM defects and ownership assertions could become user-catchable language exceptions. | Fixed by catching only unchecked Java `RuntimeException`/`Error` at the central op boundary. Natural XTC exceptions are returned by op implementations as `R_EXCEPTION`; VM/runtime defects are wrapped with op/frame context and published through the host failure channel. |
-| P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:229` | Must-fix | `scheduleIO(task); // don't wait` discards the returned `CompletableFuture`; any write failure completes an unobserved future while the method returns OK. | Return or store a future, or make the API explicitly fire-and-forget with an error sink. For channel writes, propagate completion/failure to the caller. |
+| P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:229` | Must-fix, fixed in branch | `scheduleIO(task); // don't wait` discarded the returned `CompletableFuture`; any write failure completed an unobserved future while the method returned OK. | Fixed by preserving `submit()` as a non-blocking queue operation while attaching a completion observer. Queued write failures are recorded through the container failure channel instead of being dropped. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:491` and `:497` | Must-fix, fixed in branch | `CompletableFuture.allOf(...).whenComplete` said `cfThis.get()`/`cfThat.get()` "must not happen" and only asserted on `Throwable`. If interruption or an impossible-but-real completion race occurred, `hAnd` could be completed with nulls or never completed correctly. The already-complete fast path also read `cfThis` twice and ignored `cfThat`. | Fixed by reading `cfThat` on the fast path, completing `hAnd` with `Utils.translate(...)` on async get failure, and restoring interrupt status for `InterruptedException`. |
 | P1 | `lib_jsondb/src/main/x/jsondb/Client.x:1425` and `:1430` | Must-fix | Commit failure is logged and downgraded to `DatabaseError`; rollback failure is ignored. A failed rollback after a failed commit is exactly the state that should surface in DB health/recovery. | Log and retain rollback failure as suppressed/secondary failure. Consider returning a richer commit result that carries both commit and rollback exceptions. |
 
@@ -290,7 +290,8 @@ P1:
 
 1. DONE in this branch for op execution: stop catching `Throwable` in the
    runtime op loop. Compiler code generation remains separate.
-2. Fix unobserved async write failure in `xRawOSFileChannel.invokeSubmit()`.
+2. DONE in this branch: fix unobserved async write failure in
+   `xRawOSFileChannel.invokeSubmit()`.
 3. DONE in this branch: complete futures exceptionally instead of asserting in
    `xFuture.and` "must not happen" paths, and fix the fast path to read both
    input futures.
@@ -537,6 +538,47 @@ The branch fixes both without changing successful behavior:
 There is no new cache or persistent footprint. The only added work is on the
 exceptional async path. `FutureCompletionSafetyTest` is the red-on-master guard
 for the fast-path input mixup and the assert-only failure handling.
+
+## Fixed In This Branch: Raw File Submit Observes Queued Write Failure
+
+`RawChannel.submit(...)` is specified as a non-blocking queue operation. It
+reports whether the buffer was accepted for writing; it does not wait for the
+native write itself. `xRawOSFileChannel.invokeSubmit(...)` therefore should not
+block on `FileChannel.write(...)` just to make the Java implementation easier.
+
+Master still had a real failure propagation bug:
+
+```java
+frame.f_context.f_container.scheduleIO(task); // don't wait
+return frame.assignValue(iReturn, xInt64.makeHandle(frame, 0));
+```
+
+The scheduled `CompletableFuture` was discarded. If the Java IO worker later
+failed, the failure completed an unobserved future while the XTC caller had
+already received `0`. Same-JVM tests could then finish successfully after a
+native write failure that only existed inside an abandoned Java future.
+
+The branch keeps the public semantics:
+
+- `submit()` still returns `0` immediately after the write is queued;
+- no caller waits for durable write completion;
+- no new per-channel cache is added.
+
+The difference is that the queued future now has an observer:
+
+```java
+var cfWrite = container.scheduleIO(task);
+cfWrite.whenComplete((_, ex) -> {
+    if (ex != null) {
+        container.recordRuntimeFailure(..., ex);
+    }
+});
+```
+
+That is the smallest safe fix for this PR: the failure is no longer invisible,
+and `join()` can report the container failure through the channel added earlier.
+A fuller `RawChannel` queue implementation may still be needed later to model
+write ordering, back-pressure, and durable completion explicitly.
 
 ## Fixed In This Branch: JIT Unhandled Exception Result
 

@@ -319,6 +319,7 @@ Must-fix exception/logging boundaries:
 | `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Code generation catches `Throwable`, prints, logs, and keeps looping. | A compiler defect can be downgraded to console noise and later phases can run on corrupted state. |
 | `javatools/src/main/java/org/xvm/asm/MethodStructure.java:2077` | Method op assembly failure is printed and the method still writes its op byte count. | This can produce or persist a broken module while the build path only saw stderr. |
 | `javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:497` | Master used a "must not happen" async failure path that only asserted false inside a callback; fixed in this branch. | With assertions disabled, the code could continue with null values or incomplete failure propagation. |
+| `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:229` | Master discarded the `CompletableFuture` returned by `scheduleIO(task)` for queued writes; fixed in this branch. | Async IO failure could disappear after the native method returned OK. |
 | `javatools/src/main/java/org/xvm/asm/FileRepository.java:206` and `DirRepository.java:371` on requested-module paths | Load failure is printed and converted to null. | A concrete repository failure can become indistinguishable from missing module. Best-effort scanning may return null; requested loads need cause. |
 
 Should-fix boundaries:
@@ -489,6 +490,7 @@ after failure, or make ownership/reentrancy bugs unobservable.
 | Compiler codegen boundary | `Compiler.java:471` | Do not continue after `Throwable`. Rethrow fatal errors, preserve cause, and attach compiler/module/phase context. |
 | Method assembly | `MethodStructure.java:2077` | Do not print and assemble through unsupported op generation. Fail the module assembly with method context. |
 | Async future callback | `xFuture.java:497` | Done in this branch for `Future.and`: do not rely on `assert false` for impossible async failure. Complete exceptionally or route through runtime failure diagnostics. |
+| Discarded async IO future | `xRawOSFileChannel.java:229` | Done in this branch for `submit`: retain the scheduled write future and route late failure through the container failure channel. |
 | Requested module load | `FileRepository.java:206`, `DirRepository.java:371` | Preserve cause when the host requested that module. Best-effort scans may continue, but requested loads need typed failure. |
 | Test pass/fail authority | `manualTests/build.gradle.kts:592` to `:594` | Runner paths must not swallow/print exceptions as success. Stress/manual runners need a machine pass/fail channel. |
 

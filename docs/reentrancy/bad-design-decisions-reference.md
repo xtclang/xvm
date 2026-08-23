@@ -49,6 +49,7 @@ That makes the code brittle even before multiple Java threads enter it.
 | Print-only worker failures | Worker threads caught runtime defects, printed to stderr, and continued. | Host APIs can observe idle state and report success after a scheduler/service runtime defect. | Fixed for `Container.schedule(...)`, `ServiceContext.drainWork()`, and `InterpreterConnector.join()`. |
 | VM defects converted to language exceptions | The op loop caught every `Throwable` and raised generic XTC `"Run-time error"`. | Ownership assertions and VM defects become user-catchable and can hide runtime corruption. | Fixed for `ServiceContext.execute(...)` op processing. |
 | Assert-only async failure handling | Async callbacks treated failure as impossible and only used `assert false`. | With assertions disabled, failures can be hidden and completion can continue with invalid values. | Fixed for `Future.and`; broader async audit remains. |
+| Discarded async futures | Code scheduled async work and ignored the returned `CompletableFuture`. | Worker failure disappears after the caller receives success. | Fixed for `RawOSFileChannel.submit`; broader async audit remains. |
 | Print-only JIT language failures | JIT detected generated unhandled exceptions, printed them, and returned without setting failure state. | Direct/JIT launch can report success after generated code failed. | Fixed for `JitConnector.invoke0Impl(...)`; broader JIT owner work remains separate. |
 | Collapsed reflective language exceptions | Reflection wrapper exceptions were caught with access failures and converted to generic Unsupported. | A generated XTC `nException` can be replaced by the wrong language exception type. | Fixed for `nType` `equals`, `compare`, and `hashCode` dispatch. |
 
@@ -306,6 +307,40 @@ try {
 
 The successful async path stays the same. The failure path now completes the
 owner-visible future with an exception instead of relying on a debug-only assert.
+
+### Discarded Async Futures
+
+Bad shape:
+
+```java
+container.scheduleIO(task);
+return ok();
+```
+
+Why it was bad in a single-threaded world:
+
+- The caller receives success for queueing, but the actual worker failure has no
+  observer.
+- Tests and host APIs cannot distinguish successful completion from a late
+  worker failure.
+- The code relies on somebody reading stderr or inspecting an abandoned future,
+  which is not a runtime contract.
+
+Replacement:
+
+```java
+var write = container.scheduleIO(task);
+write.whenComplete((_, ex) -> {
+    if (ex != null) {
+        container.recordRuntimeFailure("queued write failed", ex);
+    }
+});
+return ok();
+```
+
+For non-blocking APIs, this preserves the immediate queueing result while making
+late worker failure visible at the host boundary. A richer API can later expose
+durable completion to the language directly.
 
 ### Print-Only JIT Language Failures
 

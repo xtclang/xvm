@@ -2542,6 +2542,24 @@ completion failures also complete the combined future through
 Successful completed and async combinations keep the same scheduling and cache
 behavior. The change only adds correct exceptional completion.
 
+### Raw File Submit No Longer Drops Queued Write Failure
+
+`RawChannel.submit(...)` is defined as a non-blocking queue operation. Master
+kept that shape in `xRawOSFileChannel.invokeSubmit(...)`, but discarded the
+`CompletableFuture` returned by `scheduleIO(task)`. If the IO worker later
+failed, the native method had already returned `0` and no code observed the
+failure.
+
+This branch keeps the non-blocking API: successful queueing still returns `0`
+immediately and does not wait for durable write completion. The scheduled write
+future now has a completion observer that records any later failure through the
+owning container. That makes `join()` report the failure instead of letting the
+write error disappear inside an abandoned future.
+
+This is intentionally a minimal fix. A future raw-channel queue redesign should
+still address write ordering, back-pressure, and durable completion semantics
+explicitly.
+
 ### JIT Unhandled Exceptions Return Failure
 
 The JIT connector already initialized its `result` field to `1`, matching the
