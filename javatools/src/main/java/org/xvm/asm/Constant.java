@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.util.Comparator;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -314,12 +315,31 @@ public abstract class Constant
      *
      * @return the new Constant
      */
-    protected Constant adoptedBy(ConstantPool pool) {
+    protected final Constant adoptedBy(ConstantPool pool) {
+        Constant that = copyForAdoption(new AdoptionContext(pool));
+        if (that.getContaining() != pool) {
+            throw new IllegalStateException(getClass().getName()
+                    + " produced an adopted constant owned by " + that.getContaining()
+                    + " instead of " + pool);
+        }
+        that.resetRefs();
+        return that;
+    }
+
+    /**
+     * Copy this constant's logical value into the target pool. Implementations must not copy
+     * owner-local runtime state, helper cells, locks, thread locals, or in-progress caches.
+     *
+     * @param context  the adoption context containing the target owner
+     *
+     * @return the adopted constant
+     */
+    protected Constant copyForAdoption(AdoptionContext context) {
         if (!allowsDefaultAdoptionClone()) {
             throw new IllegalStateException(getClass().getName()
                     + " does not declare a default adoption-clone policy");
         }
-        return cloneForAdoption(pool);
+        return cloneForAdoption(context.pool());
     }
 
     /**
@@ -345,8 +365,27 @@ public abstract class Constant
             throw new IllegalStateException(e);
         }
         that.setContaining(pool);
-        that.resetRefs();
         return that;
+    }
+
+    /**
+     * Explicit owner context for constant adoption. Keeping the owner in a small context gives the
+     * clone-free migration one place to add target-pool helper APIs without reopening arbitrary
+     * {@code adoptedBy(...)} overrides.
+     */
+    protected static final class AdoptionContext {
+        private final ConstantPool pool;
+
+        private AdoptionContext(ConstantPool pool) {
+            this.pool = Objects.requireNonNull(pool, "pool");
+        }
+
+        /**
+         * @return the destination pool that will own the adopted constant
+         */
+        public ConstantPool pool() {
+            return pool;
+        }
     }
 
     /**

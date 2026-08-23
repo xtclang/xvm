@@ -1037,11 +1037,11 @@ public class ParameterizedTypeConstant
     }
 
     @Override
-    protected ParameterizedTypeConstant adoptedBy(ConstantPool pool) {
+    protected ParameterizedTypeConstant copyForAdoption(AdoptionContext context) {
         // Do not use Constant's shallow-clone adoption here: the final StampedLock and transient
         // resolver/JIT helpers are owner-local mutable state. Reconstruct the logical value so the
         // target-pool copy is born with fresh helper cells and the same cached type behavior.
-        return new ParameterizedTypeConstant(pool, m_constType,
+        return new ParameterizedTypeConstant(context.pool(), m_constType,
                 Arrays.copyOf(m_atypeParams, m_atypeParams.length));
     }
 

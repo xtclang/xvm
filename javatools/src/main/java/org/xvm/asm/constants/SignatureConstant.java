@@ -747,8 +747,8 @@ public class SignatureConstant
     }
 
     @Override
-    protected SignatureConstant adoptedBy(ConstantPool pool) {
-        SignatureConstant that = new SignatureConstant(pool, getName(),
+    protected SignatureConstant copyForAdoption(AdoptionContext context) {
+        SignatureConstant that = new SignatureConstant(context.pool(), getName(),
                 Arrays.copyOf(m_aconstParams, m_aconstParams.length),
                 Arrays.copyOf(m_aconstReturns, m_aconstReturns.length));
 

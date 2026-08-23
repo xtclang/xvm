@@ -46,10 +46,14 @@ The current branch has already found concrete failures in that pattern:
   must be reset when pool ownership changes.
 
 The branch hardens known runtime-relevant cases and now makes the base API fail
-closed: `Constant.adoptedBy(...)` rejects the default clone path unless a
+closed through one final owner-transfer wrapper: `Constant.adoptedBy(...)`
+constructs an `AdoptionContext`, delegates to `copyForAdoption(...)`, validates
+that the returned constant is owned by the requested pool, and resets reference
+counts. The default `copyForAdoption(...)` path rejects adoption unless a
 constant family explicitly opts in with `allowsDefaultAdoptionClone()` and a
 local comment. That prevents a new mutable helper field from silently inheriting
-owner-transfer clone behavior.
+owner-transfer clone behavior, and it prevents subclasses from bypassing the
+common owner/ref checks with ad-hoc `adoptedBy(...)` overrides.
 
 This is still a transitional guard, not the desired architecture. Opted-in
 families still use shallow clone plus reset hooks, which means correctness still
@@ -62,7 +66,8 @@ The adoption entry points are:
 
 | Site | Current role |
 | --- | --- |
-| `Constant.adoptedBy(ConstantPool)` | Fails closed unless the constant family declares the transitional default-clone policy. |
+| `Constant.adoptedBy(ConstantPool)` | Final owner-transfer wrapper. Creates `AdoptionContext`, delegates to `copyForAdoption(...)`, checks destination ownership, and resets refs. |
+| `Constant.copyForAdoption(AdoptionContext)` | Subclass/family hook for logical copy construction. The default implementation fails closed unless the family declares the transitional default-clone policy. |
 | `Constant.cloneForAdoption(ConstantPool)` | Transitional shallow clone helper used by opted-in default-clone families. The runtime-handle explicit overrides no longer call it. |
 | `ConstantPool.register(T)` | Adopts a foreign constant when `constant.getContaining() != this`. |
 | `ConstantPool.register(T)` locator path | Adopts a foreign locator constant before publishing it in locator lookup maps. |
@@ -92,14 +97,16 @@ Current branch inventory:
 | `Constant` descendants under `org.xvm.asm.constants` | 88 |
 | Abstract family bases in that set | 13 |
 | Concrete constant classes in that set | 75 |
-| Classes currently overriding `adoptedBy(...)` | 7 |
+| Classes currently overriding `adoptedBy(...)` | 0 |
+| Classes currently overriding `copyForAdoption(...)` | 7 |
 | Classes relying on an explicit family default-clone policy somewhere in the hierarchy | 81 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
 
 - `Constant`, `ConstantPool`, and adoption tests;
-- all 7 current override classes, converted to the new API;
+- all 7 high-risk hook classes, already converted to `copyForAdoption(...)` in
+  this branch;
 - 13 abstract family bases, to place shared family adoption rules where useful;
 - up to 75 concrete leaf constants, either by explicit copy/adoption
   implementation or by inheriting a reviewed family implementation;
@@ -504,12 +511,18 @@ Scope:
 
 - add `AdoptionContext`;
 - add `copyForAdoption(AdoptionContext)` or equivalent hook;
+- make `Constant.adoptedBy(...)` the final owner-transfer wrapper;
 - keep legacy fallback temporarily;
-- add source-shape tests that report all classes not yet migrated;
+- add source-shape tests that prove special cases use the hook and the wrapper
+  remains final;
 - keep `ConstantAdoptionValidator`.
 
 Review goal: establish the target architecture without changing all constants at
 once.
+
+Current branch note: the final wrapper, `AdoptionContext`, `copyForAdoption(...)`
+hook, and special-case source-shape test are implemented here. A later standalone
+PR can lift this commit out with no broad family migration.
 
 ### PR 2: Convert Existing High-Risk Overrides
 
@@ -521,9 +534,9 @@ Scope:
 - keep current branch tests as equivalence tests.
 
 Current branch note: `FSNodeConstant`, `FileStoreConstant`, and `HandleConstant`
-already use clone-free construction inside their existing `adoptedBy(...)`
-overrides. The later API migration should preserve that behavior while moving it
-behind the final adoption hook.
+already use clone-free construction inside `copyForAdoption(...)`; the other
+P0 special cases use the same hook for fresh helper/runtime state. The later API
+migration should preserve that behavior while broadening it to family bases.
 
 Review goal: prove the new API expresses already-known fixes without behavior or
 performance regressions.

@@ -308,7 +308,7 @@ field. For immutable value handles and other subclasses, the remaining audit
 must either prove that the shallow view is a pure type relabel or replace it
 with an explicit owner-aware copy/view API.
 
-### 5. Default `Constant.adoptedBy(...)` still shallow-clones across pool ownership
+### 5. Transitional `Constant.copyForAdoption(...)` shallow-clones reviewed families
 
 References:
 
@@ -325,20 +325,25 @@ References:
 - `javatools/src/main/java/org/xvm/asm/ConstantAdoptionValidator.java:21`
 - `javatools/src/main/java/org/xvm/asm/ConstantAdoptionValidator.java:55`
 
-What is cloned: any `Constant` subclass that does not override `adoptedBy(...)`
-is shallow-cloned and then reassigned to the destination `ConstantPool`.
+What is cloned: any `Constant` family that explicitly opts into
+`allowsDefaultAdoptionClone()` is shallow-cloned by the default
+`copyForAdoption(...)` hook and then reassigned to the destination
+`ConstantPool`. `Constant.adoptedBy(...)` is now the final wrapper around that
+hook.
 
-Hazard: this is the central pool-ownership clone. This branch already hardens
-several known owner-local fields, but the default remains dangerous because any
-new cache, lock, atomic cell, live handle, thread-local, or owner-derived helper
-field will be copied unless the subclass opts out.
+Hazard: this is still the central remaining pool-ownership clone. This branch
+already hardens several known owner-local fields and prevents ad-hoc
+`adoptedBy(...)` overrides, but the reviewed default remains dangerous if a
+family later adds a cache, lock, atomic cell, live handle, thread-local, or
+owner-derived helper field without replacing the fallback.
 
 Container/ConstantPool/lock/cache impact: `ConstantPool.register(...)` uses this
 path for foreign constants and locator constants. The validator is opt-in through
 `xvm.asm.validateConstantAdoption`, so normal execution does not fail closed.
 
-Classification: must-audit as a default mechanism; must-fix for any subclass
-with owner-local mutable state that is not already reconstructed or cleared.
+Classification: must-audit as a transitional mechanism; must-fix for any
+subclass with owner-local mutable state that is not already reconstructed or
+cleared.
 
 Minimum replacement: introduce an explicit adoption/copy contract and remove
 the base shallow clone as the default. Until then, keep the validator enabled in

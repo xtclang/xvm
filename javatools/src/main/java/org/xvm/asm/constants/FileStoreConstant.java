@@ -128,11 +128,11 @@ public class FileStoreConstant
     }
 
     @Override
-    protected FileStoreConstant adoptedBy(ConstantPool pool) {
+    protected FileStoreConstant copyForAdoption(AdoptionContext context) {
         // Adoption preserves only the serialized path/root directory metadata. The runtime handle
         // cache is owner-local, so a target-pool copy must start with no handle and let
         // registerConstants(...) adopt the child constants as before.
-        return new FileStoreConstant(pool, m_constPath, m_constDir);
+        return new FileStoreConstant(context.pool(), m_constPath, m_constDir);
     }
 
 

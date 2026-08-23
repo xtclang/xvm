@@ -4,6 +4,7 @@ package org.xvm.asm;
 import java.lang.ref.WeakReference;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
 import java.nio.file.attribute.FileTime;
 
@@ -17,11 +18,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.constants.FSNodeConstant;
+import org.xvm.asm.constants.FileStoreConstant;
 import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
 
@@ -30,6 +33,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.util.TransientThreadLocal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -223,6 +227,34 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * Adoption must go through one owner-transfer wrapper. The old design allowed each subclass to
+     * override {@code adoptedBy(...)} directly, which made it easy to copy runtime/helper state and
+     * forget the common owner/ref checks. The reviewed special cases now implement only the logical
+     * copy hook.
+     */
+    @Test
+    public void adoptionWrapperIsFinalAndSpecialCasesUseCopyHook()
+            throws Exception {
+        var adoptedBy = Constant.class.getDeclaredMethod("adoptedBy", ConstantPool.class);
+
+        assertTrue(Modifier.isFinal(adoptedBy.getModifiers()));
+
+        Set.of(FSNodeConstant.class,
+               FileStoreConstant.class,
+               HandleConstant.class,
+               ParameterizedTypeConstant.class,
+               SignatureConstant.class,
+               SingletonConstant.class,
+               TypeParameterConstant.class)
+                .forEach(clz -> {
+                    assertDoesNotThrow(() -> clz.getDeclaredMethod(
+                            "copyForAdoption", Constant.AdoptionContext.class));
+                    assertThrows(NoSuchMethodException.class,
+                            () -> clz.getDeclaredMethod("adoptedBy", ConstantPool.class));
+                });
+    }
+
+    /**
      * The adoption validator must detect the exact bad default-clone shape: a copied helper
      * reference that still belongs to the source constant after ownership changes.
      */
@@ -266,8 +298,8 @@ public class ConstantAdoptionTest {
 
     /**
      * HandleConstant is the one legacy exception: runtime annotation construction creates a fresh
-     * unowned handle constant and immediately registers that handle in the current pool. The second
-     * adoption of the now-owned constant is still rejected by {@link HandleConstant#adoptedBy}.
+     * unowned handle constant and immediately registers that handle in the current pool. The final
+     * adoption wrapper still rejects second adoption of the now-owned constant.
      */
     @Test
     public void adoptionValidatorAllowsFreshHandleConstantFirstRegistration() {

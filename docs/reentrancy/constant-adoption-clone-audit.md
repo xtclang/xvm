@@ -67,16 +67,18 @@ reference is still shared and mutable.
 That means every constant subclass that contains runtime state, owner-derived
 caches, locks, atomics, thread-local cells, or live handles must either:
 
-- override `adoptedBy(...)` and create a fresh owner-local copy; or
+- implement `copyForAdoption(...)` and create a fresh owner-local copy; or
 - clear all non-logical state during `setContaining(...)` or
   `registerConstants(...)` before the adopted copy is observable through normal
   APIs.
 
 This branch removes the most dangerous part of the old contract: silent default
-adoption. `Constant.adoptedBy(...)` now throws unless the constant family
+adoption. `Constant.adoptedBy(...)` is now the final owner-transfer wrapper.
+It constructs an `AdoptionContext`, delegates to `copyForAdoption(...)`, checks
+that the result is owned by the requested pool, and resets reference counts.
+The default `copyForAdoption(...)` path throws unless the constant family
 overrides `allowsDefaultAdoptionClone()` and documents why its copied fields are
-logical value state, or unless the class provides a dedicated `adoptedBy(...)`
-implementation. The remaining `cloneForAdoption(...)` helper is explicitly
+logical value state. The remaining `cloneForAdoption(...)` helper is explicitly
 transitional. It preserves current behavior for reviewed families while making
 future owner-transfer clone use visible in source search and code review.
 
@@ -91,27 +93,27 @@ These are the current adoption sites in runtime/asm source.
 
 | Site | Purpose | Runtime/container assessment |
 | --- | --- | --- |
-| `javatools/src/main/java/org/xvm/asm/Constant.java:312` | Base adoption by shallow clone, owner reassignment, and reference-count reset. | Central risk. Safe only for subclasses whose copied fields are pure logical value state or are reset after cloning. |
+| `javatools/src/main/java/org/xvm/asm/Constant.java` | Final adoption wrapper that delegates to `copyForAdoption(...)`, checks target ownership, and resets refs. | Central guard. Reviewed default-clone families still use a transitional fallback behind `copyForAdoption(...)`; high-risk classes construct fresh logical copies. |
 | `javatools/src/main/java/org/xvm/asm/ConstantPool.java:199` | Adopt a foreign constant during pool registration. | Expected owner-transfer path. Must not preserve source-pool runtime state. |
 | `javatools/src/main/java/org/xvm/asm/ConstantPool.java:216` | Adopt a foreign locator constant used by the pool lookup table. | Same hazard as normal adoption, but through locators. |
-| `javatools/src/main/java/org/xvm/asm/constants/SingletonConstant.java:262` | Branch override that constructs a fresh singleton constant for the target pool. | Fixed must-fix site. Prevents cross-container singleton handle/lifecycle state sharing. |
-| `javatools/src/main/java/org/xvm/asm/constants/FSNodeConstant.java:238` | Branch override that constructs a fresh target-pool logical file-node constant. | Fixed must-fix site. Prevents copied runtime handles and source-pool path literals from crossing pools without relying on shallow clone cleanup. |
-| `javatools/src/main/java/org/xvm/asm/constants/FileStoreConstant.java:123` | Branch override that constructs a fresh target-pool logical file-store constant. | Fixed must-fix site. Prevents copied runtime handles from crossing pools without relying on shallow clone cleanup. |
-| `javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java` | Branch override that reconstructs the logical parameterized type for the target pool. | Fixed hardening site. Keeps the final helper lock owner-local and drops resolver/JIT helper state. |
-| `javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java` | Branch override that reconstructs the logical signature for the target pool. | Fixed hardening site. Preserves transient property-signature identity while dropping comparison/JIT helper state. |
-| `javatools/src/main/java/org/xvm/asm/constants/TypeParameterConstant.java` | Branch override that reconstructs the logical register type parameter for the target pool. | Fixed hardening site. Keeps the final reentrancy helper owner-local. |
-| `javatools/src/main/java/org/xvm/asm/constants/HandleConstant.java` | Branch guard for live runtime handles. | Fixed must-fix guard. Allows first registration of a fresh unowned runtime handle constant by constructing a target-owned wrapper, but rejects moving an already-owned live handle into another pool. |
+| `javatools/src/main/java/org/xvm/asm/constants/SingletonConstant.java` | Branch `copyForAdoption(...)` hook that constructs a fresh singleton constant for the target pool. | Fixed must-fix site. Prevents cross-container singleton handle/lifecycle state sharing. |
+| `javatools/src/main/java/org/xvm/asm/constants/FSNodeConstant.java` | Branch `copyForAdoption(...)` hook that constructs a fresh target-pool logical file-node constant. | Fixed must-fix site. Prevents copied runtime handles and source-pool path literals from crossing pools without relying on shallow clone cleanup. |
+| `javatools/src/main/java/org/xvm/asm/constants/FileStoreConstant.java` | Branch `copyForAdoption(...)` hook that constructs a fresh target-pool logical file-store constant. | Fixed must-fix site. Prevents copied runtime handles from crossing pools without relying on shallow clone cleanup. |
+| `javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java` | Branch `copyForAdoption(...)` hook that reconstructs the logical parameterized type for the target pool. | Fixed hardening site. Keeps the final helper lock owner-local and drops resolver/JIT helper state. |
+| `javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java` | Branch `copyForAdoption(...)` hook that reconstructs the logical signature for the target pool. | Fixed hardening site. Preserves transient property-signature identity while dropping comparison/JIT helper state. |
+| `javatools/src/main/java/org/xvm/asm/constants/TypeParameterConstant.java` | Branch `copyForAdoption(...)` hook that reconstructs the logical register type parameter for the target pool. | Fixed hardening site. Keeps the final reentrancy helper owner-local. |
+| `javatools/src/main/java/org/xvm/asm/constants/HandleConstant.java` | Branch `copyForAdoption(...)` guard for live runtime handles. | Fixed must-fix guard. Allows first registration of a fresh unowned runtime handle constant by constructing a target-owned wrapper, but rejects moving an already-owned live handle into another pool. |
 
 ## Explicit Default-Clone Policy Inventory
 
 This inventory was generated from the current tree by scanning constant
-subclasses and whether they override `adoptedBy(...)` or opt into
+subclasses and whether they override `copyForAdoption(...)` or opt into
 `allowsDefaultAdoptionClone()`. The exact command shape is:
 
 ```bash
 for f in javatools/src/main/java/org/xvm/asm/constants/*.java \
          javatools/src/main/java/org/xvm/asm/Constant.java; do
-  # strip comments, read "class X extends Y", then check for adoptedBy(...)
+  # strip comments, read "class X extends Y", then check for copyForAdoption(...)
 done
 ```
 
@@ -123,7 +125,7 @@ assumption is now visible in source.
 
 | Group | Classes | Current assessment |
 | --- | --- | --- |
-| Explicit adoption override | `FSNodeConstant`, `FileStoreConstant`, `HandleConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `SingletonConstant`, `TypeParameterConstant` | Fixed or guarded in this branch. These were the known runtime/helper-state cases where base shallow clone was not acceptable. `FSNodeConstant`, `FileStoreConstant`, `HandleConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `SingletonConstant`, and `TypeParameterConstant` now use explicit construction for adoption rather than the transitional clone helper. |
+| Explicit adoption hook | `FSNodeConstant`, `FileStoreConstant`, `HandleConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `SingletonConstant`, `TypeParameterConstant` | Fixed or guarded in this branch. These were the known runtime/helper-state cases where base shallow clone was not acceptable. They now implement `copyForAdoption(...)` under the final wrapper and use explicit construction for adoption rather than the transitional clone helper. |
 | Type constants using common `TypeConstant.setContaining(...)` reset | `AbstractDependantChildTypeConstant`, `AbstractDependantTypeConstant`, `AccessTypeConstant`, `AnnotatedTypeConstant`, `AnonymousClassTypeConstant`, `CastTypeConstant`, `DifferenceTypeConstant`, `ImmutableTypeConstant`, `InnerChildTypeConstant`, `IntersectionTypeConstant`, `PendingTypeConstant`, `PropertyClassTypeConstant`, `RecursiveTypeConstant`, `RelationalTypeConstant`, `ServiceTypeConstant`, `TerminalTypeConstant`, `TypeSequenceTypeConstant`, `UnionTypeConstant`, `UnresolvedTypeConstant`, `VirtualChildTypeConstant` | Common type-info, relation, recursion, normalized-type, and JIT-name caches are cleared by `TypeConstant.setContaining(...)`. Subclass transient fields are mostly disassembly indexes. `AnnotatedTypeConstant.m_typeAnno` is cleared by `registerConstants(...)`, which is acceptable only if registration remains single-owner or becomes transactionally published. |
 | Identity, named, and pseudo constants inheriting base clone | `ChildClassConstant`, `ClassConstant`, `DecoratedClassConstant`, `DeferredValueConstant`, `DynamicFormalConstant`, `ExpressionConstant`, `FormalConstant`, `FormalTypeChildConstant`, `KeywordConstant`, `MethodConstant`, `ModuleConstant`, `MultiMethodConstant`, `NamedConstant`, `NativeRebaseConstant`, `PackageConstant`, `ParentClassConstant`, `PropertyConstant`, `PureIdentityConstant`, `ThisClassConstant`, `TypedefConstant`, `UnresolvedNameConstant` | Mostly logical owner/path identity. `MethodConstant.m_type` and `PropertyConstant` metadata caches are cleared during registration, but `MethodConstant.m_sJitName` and `PropertyConstant.m_sJitName` remain JIT-owner caches that should be cleared or keyed by JIT `TypeSystem` in the JIT ownership PR. |
 | Value and condition constants inheriting base clone | `AllCondition`, `AnyCondition`, `ArrayConstant`, `BFloat16Constant`, `ByteConstant`, `CharConstant`, `ConditionalConstant`, `DecimalAutoConstant`, `DecimalConstant`, `FPNConstant`, `Float128Constant`, `Float16Constant`, `Float32Constant`, `Float64Constant`, `Float8e4Constant`, `Float8e5Constant`, `FloatConstant`, `IntConstant`, `LiteralConstant`, `MapConstant`, `MatchAnyConstant`, `MultiCondition`, `NamedCondition`, `NotCondition`, `PresentCondition`, `RangeConstant`, `RegExConstant`, `StringConstant`, `UInt8ArrayConstant`, `ValueConstant`, `VersionConstant`, `VersionMatchesCondition`, `VersionedCondition` | Current fields are logical values plus transient disassembly indexes or derived primitive arrays. They appear owner-logical under the branch validator, but the default remains brittle because adding one runtime/helper field silently changes adoption behavior. |
@@ -161,8 +163,8 @@ multiple containers in one JVM.
 | `SignatureConstant.m_lockPrev` | Fixed in this branch by reconstructing the adopted signature. The lock remains `final transient`. | Adopted signatures shared source synchronization state. This is not as directly owner-bearing as a handle, but it is still mutable cross-pool state created by shallow clone. | Keep fresh-constructor adoption and preserve only logical signature identity. |
 | `SignatureConstant.m_sJitName` | Fixed in this branch by fresh-constructor adoption. | JIT-generated names are owner/type-system state, not serialized signature value. | Keep fresh-constructor adoption. |
 | `TypeParameterConstant.f_tloReEntry` | Fixed in this branch by reconstructing the adopted type parameter. The helper remains `final transient`. | Shallow clone shared reentrancy tracking between equivalent type-parameter constants in different pools. Same-thread recursive comparison could accidentally suppress parent comparison in the adopted constant. | Keep fresh-constructor adoption. |
-| `AnnotatedTypeConstant` parameters containing `HandleConstant` | Hardened in this branch. Fresh unowned handle constants can still be registered in the current pool; moving an already-owned handle constant to another pool throws. | `HandleConstant` wraps an `ObjectHandle`, starts with `pool == null`, and is not a serialized logical constant. If such an annotated type is adopted again, the live handle can be carried into another pool. | Keep the `HandleConstant.adoptedBy(...)` guard. If runtime annotation values must be shared, they need an owner-local representation or explicit frame-time resolution. |
-| `Constant.m_oValue` | Private transient base field with no current read/write API hits. | If future code uses it for runtime state, base adoption would shallow-copy it. | Leave documented. If revived, either clear it in `adoptedBy(...)` or remove the field. |
+| `AnnotatedTypeConstant` parameters containing `HandleConstant` | Hardened in this branch. Fresh unowned handle constants can still be registered in the current pool; moving an already-owned handle constant to another pool throws. | `HandleConstant` wraps an `ObjectHandle`, starts with `pool == null`, and is not a serialized logical constant. If such an annotated type is adopted again, the live handle can be carried into another pool. | Keep the `HandleConstant.copyForAdoption(...)` guard. If runtime annotation values must be shared, they need an owner-local representation or explicit frame-time resolution. |
+| `Constant.m_oValue` | Private transient base field with no current read/write API hits. | If future code uses it for runtime state, default clone adoption would shallow-copy it. | Leave documented. If revived, either handle it explicitly in `copyForAdoption(...)` or remove the field. |
 
 This branch now fixes the highest-risk small adoption hardening items in this
 table. The common rule is that adoption may preserve logical constant identity,
@@ -292,7 +294,7 @@ boundary instead of letting a wrong handle surface later.
 
 Recommended guards:
 
-- `HandleConstant.adoptedBy(...)` throws when an already-owned live
+- `HandleConstant.copyForAdoption(...)` throws when an already-owned live
   `ObjectHandle` constant is moved to another pool.
 - `ConstantPool.register(...)` now optionally asserts that the adopted copy
   does not retain forbidden runtime-owner fields. The opt-in
@@ -304,7 +306,7 @@ Recommended guards:
   `HandleConstant` remains the one legacy exception: a fresh unowned
   `HandleConstant` can still be registered once in the current pool, while a
   second cross-pool adoption of the already-owned live handle still throws in
-  `HandleConstant.adoptedBy(...)`.
+  `HandleConstant.copyForAdoption(...)`.
 - `OwnershipDiagnostics` should keep validating handles at runtime boundaries
   such as `mgmt.Container.invoke`, because that catches wrong-owner values even
   when the source is not constant adoption.

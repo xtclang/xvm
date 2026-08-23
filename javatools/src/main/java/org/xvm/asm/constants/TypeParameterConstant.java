@@ -226,10 +226,10 @@ public class TypeParameterConstant
     }
 
     @Override
-    protected TypeParameterConstant adoptedBy(ConstantPool pool) {
+    protected TypeParameterConstant copyForAdoption(AdoptionContext context) {
         // Reconstruct the logical value instead of shallow-cloning the final reentrancy marker.
         // The marker is only a recursive-comparison helper, and must be owner-local.
-        return new TypeParameterConstant(pool, getMethod(), getName(), f_iReg);
+        return new TypeParameterConstant(context.pool(), getMethod(), getName(), f_iReg);
     }
 
     @Override

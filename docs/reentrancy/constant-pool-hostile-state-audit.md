@@ -330,11 +330,12 @@ Effect: owner-local runtime state, locks, thread locals, caches, JIT names, or
 handles can be copied into a destination pool unless every subclass proves that
 its copied fields are logical value only or clears them on owner change.
 
-Branch guard: base `Constant.adoptedBy(...)` now fails closed unless a constant
-family explicitly opts in with `allowsDefaultAdoptionClone()`, and the remaining
+Branch guard: `Constant.adoptedBy(...)` is now the final owner-transfer wrapper.
+The default `copyForAdoption(...)` path fails closed unless a constant family
+explicitly opts in with `allowsDefaultAdoptionClone()`, and the remaining
 shallow clone helper is named `cloneForAdoption(...)`. This makes reviewed clone
 use searchable and stops a new owner-bearing subclass from silently inheriting
-the old behavior.
+or bypassing the old behavior.
 
 Recommended final fix: replace generic clone adoption with explicit copy
 constructors or generated owner-aware copy methods. The copy contract should list
@@ -649,7 +650,7 @@ Effect: some caches are reset, but JIT names and metadata caches need an
 explicit proof that copying across pools is harmless. Otherwise a target pool
 can inherit source-owner helper results.
 
-Recommended guard/fix: add `adoptedBy(...)` overrides or shared
+Recommended guard/fix: add `copyForAdoption(...)` hooks or shared
 `setContaining(...)` reset hooks for every owner-derived cache. Treat JIT names
 as runtime/type-system helper state until proven globally stable.
 

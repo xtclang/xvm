@@ -77,12 +77,13 @@ state into a constant registered under a different pool.
 
 ### Replacement
 
-`SingletonConstant.adoptedBy(...)` now constructs a new `SingletonConstant`
-instead of using the base shallow clone:
+`Constant.adoptedBy(...)` is now the final owner-transfer wrapper, and
+`SingletonConstant.copyForAdoption(...)` constructs a new `SingletonConstant`
+instead of using the default shallow clone:
 
 ```java
-protected SingletonConstant adoptedBy(ConstantPool pool) {
-    return new SingletonConstant(pool, f_fmt, m_constClass);
+protected SingletonConstant copyForAdoption(AdoptionContext context) {
+    return new SingletonConstant(context.pool(), f_fmt, m_constClass);
 }
 ```
 
@@ -91,21 +92,19 @@ and normal constant registration still adopts/registers the referenced class
 constant into the target pool. The runtime initialization cell is fresh and
 empty for the target owner.
 
-`FSNodeConstant.adoptedBy(...)` and `FileStoreConstant.adoptedBy(...)` still use
-the legacy clone path for their serialized constant payload, but immediately
-clear cloned owner-local state. `FileStoreConstant` clears its runtime handle;
-`FSNodeConstant` clears its runtime handle and derived path cache:
+`FSNodeConstant.copyForAdoption(...)` and
+`FileStoreConstant.copyForAdoption(...)` construct fresh target-pool logical
+constants. They copy only the serialized path/file-node metadata; the runtime
+handle fields and `FSNodeConstant` path-literal cache are born empty:
 
 ```java
-that.m_handle    = null;
-that.m_constPath = null;
+return new FSNodeConstant(context.pool(), format, name, created, modified, data);
 ```
 
-That containment is not a beautiful API. It is the smallest correct patch for
-the current constant-pool design because adoption is the exact owner boundary
-where runtime state must not cross. A cleaner long-term design would replace
-clone-based adoption with explicit copy/adoption constructors that copy only
-constant-pool value state and never copy transient runtime state.
+That is still a transitional API because reviewed default-clone families remain,
+but the known runtime-handle cases no longer rely on clone-then-clear. Adoption
+is the exact owner boundary where runtime state must not cross, so fresh logical
+construction is the correct shape.
 
 ### Ramifications
 

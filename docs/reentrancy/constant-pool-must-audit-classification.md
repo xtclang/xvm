@@ -15,7 +15,7 @@ in the API.
 
 | Status | Category | Bottom line |
 | --- | --- | --- |
-| DONE IN THIS BRANCH as a guard; MUST FIX long term with clone-free adoption | Base `Constant.adoptedBy(...)` shallow clone contract | The base path now rejects default shallow-clone adoption unless a constant family explicitly opts in and documents why its copied fields are logical value state. This stops new unsafe constants from silently inheriting `Object.clone()` ownership transfer. The long-term fix is still explicit copy/adoption constructors instead of clone. |
+| DONE IN THIS BRANCH as a guard; MUST FIX long term with clone-free adoption | Base `Constant.adoptedBy(...)` shallow clone contract | `Constant.adoptedBy(...)` is now the final owner-transfer wrapper, and the default `copyForAdoption(...)` path rejects shallow-clone adoption unless a constant family explicitly opts in and documents why its copied fields are logical value state. This stops new unsafe constants from silently inheriting `Object.clone()` ownership transfer or bypassing common owner/ref checks. The long-term fix is still explicit copy/adoption constructors instead of clone. |
 | DONE IN THIS BRANCH as a guard; MUST FIX long term with transactional registration | `ConstantPool.register(...)` publishes before recursive registration completes | The branch preserves same-thread cycle resolution but marks newly published constants as incomplete and makes other threads wait until recursive `registerConstants(...)` and valid-pool checks finish. The long-term fix is still private transactional registration that does not expose in-progress constants through public pool APIs. |
 | MUST FIX for runtime freeze; DONE IN THIS BRANCH for known first `ClassComposition` access-type prewarm | Runtime-published pool mutation, including first `ClassComposition` construction | Late registration is diagnostic-only, so normal runtime pools can still mutate. The branch now prewarms known access-type constants before the diagnostic publication marker and adds a first-composition test for that narrow subcase. |
 | MUST FIX for runtime-published pools; MUST AUDIT otherwise | `f_listConst`, locator maps, and constant lookup maps | The storage supports single-thread reentrant validation, not arbitrary parallel mutation after publication. |
@@ -66,19 +66,20 @@ to future default-cloned constants with `ObjectHandle`, `Container`,
 
 Branch fix:
 
-`Constant.adoptedBy(...)` now fails closed. The base method calls
-`allowsDefaultAdoptionClone()`, which returns `false` by default. Constant
-families that still use the transitional shallow-clone helper must override that
-method and explain why copied fields are logical value state or are cleared by
-owner-change hooks. Special runtime-bearing constants continue to use explicit
-`adoptedBy(...)` overrides.
+`Constant.adoptedBy(...)` is now the final owner-transfer wrapper. It constructs
+an `AdoptionContext`, calls `copyForAdoption(...)`, checks that the copy belongs
+to the requested pool, and resets refs. The default `copyForAdoption(...)`
+fails closed by calling `allowsDefaultAdoptionClone()`, which returns `false` by
+default. Constant families that still use the transitional shallow-clone helper
+must override that method and explain why copied fields are logical value state
+or are cleared by owner-change hooks. Special runtime-bearing constants now
+implement `copyForAdoption(...)` under the wrapper.
 
 This turns the old "safe unless somebody remembers a problem" contract into
 "illegal unless the constant family declares the policy". It is still a
 compromise because the opted-in families still use `Object.clone()` internally.
-The helper is now named `cloneForAdoption(...)` and is available only to explicit
-adoption implementations or opted-in families, so future owner-bearing state has
-a review choke point.
+The helper is named `cloneForAdoption(...)` and is available only through
+`copyForAdoption(...)`, so future owner-bearing state has a review choke point.
 
 Existing reproducer, test, or diagnostic:
 
@@ -98,12 +99,12 @@ Existing reproducer, test, or diagnostic:
 
 Proper fix:
 
-Remove shallow clone as the default ownership-transfer mechanism. Either make
-`Constant.adoptedBy(...)` abstract, or make the base method reject adoption
-unless a subclass declares that its fields are logical value only. Each subclass
-that can cross pools should have an explicit owner-aware copy path that lists
-logical fields and intentionally drops, rebuilds, or rejects non-logical state.
-Keep `ConstantAdoptionValidator` enabled in stress/CI while migrating.
+Remove shallow clone as the default ownership-transfer mechanism. Keep
+`Constant.adoptedBy(...)` as the final wrapper, but replace the remaining
+opted-in family default with explicit owner-aware `copyForAdoption(...)`
+implementations that list logical fields and intentionally drop, rebuild, or
+reject non-logical state. Keep `ConstantAdoptionValidator` enabled in stress/CI
+while migrating.
 
 Expected performance and semantic impact:
 
@@ -122,8 +123,9 @@ stress.
 
 Done in this branch:
 
-- `Constant.adoptedBy(...)` now rejects the default shallow-clone path unless a
-  constant family explicitly opts in with `allowsDefaultAdoptionClone()`.
+- `Constant.adoptedBy(...)` is now the final owner-transfer wrapper and the
+  default `copyForAdoption(...)` path rejects shallow clone unless a constant
+  family explicitly opts in with `allowsDefaultAdoptionClone()`.
 - `Constant.cloneForAdoption(...)` isolates the remaining transitional clone
   helper behind an explicit method name so owner-transfer clone use is searchable
   and reviewable.

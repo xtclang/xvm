@@ -194,26 +194,28 @@ Concrete failures/hazards:
 
 Branch fix:
 
-- `SingletonConstant.adoptedBy(...)` constructs a fresh singleton constant for
-  the target pool.
-- `FSNodeConstant.adoptedBy(...)` and `FileStoreConstant.adoptedBy(...)`
-  construct fresh target-pool logical constants instead of shallow-cloning and
-  clearing copied runtime handles. `FSNodeConstant.adoptedBy(...)` also starts
-  with no derived path-literal cache so it is recomputed under the destination
-  pool.
+- `Constant.adoptedBy(...)` is now the final owner-transfer wrapper, so every
+  adoption path gets the same target-owner check and ref reset.
+- `SingletonConstant.copyForAdoption(...)` constructs a fresh singleton
+  constant for the target pool.
+- `FSNodeConstant.copyForAdoption(...)` and
+  `FileStoreConstant.copyForAdoption(...)` construct fresh target-pool logical
+  constants instead of shallow-cloning and clearing copied runtime handles.
+  `FSNodeConstant.copyForAdoption(...)` also starts with no derived path-literal
+  cache so it is recomputed under the destination pool.
 - `TypeConstant.setContaining(...)` clears every non-logical transient helper,
   runtime, and JIT cache on owner change.
-- `ParameterizedTypeConstant.adoptedBy(...)` reconstructs the logical
+- `ParameterizedTypeConstant.copyForAdoption(...)` reconstructs the logical
   parameterized type, keeping its `StampedLock` final and born with the target
   owner.
-- `SignatureConstant.adoptedBy(...)` reconstructs the logical signature,
+- `SignatureConstant.copyForAdoption(...)` reconstructs the logical signature,
   preserves the transient property-signature marker, and drops comparison/JIT
   helpers.
-- `TypeParameterConstant.adoptedBy(...)` reconstructs the logical type
+- `TypeParameterConstant.copyForAdoption(...)` reconstructs the logical type
   parameter, keeping the recursive-comparison helper final and owner-local.
-- `HandleConstant.adoptedBy(...)` allows first registration of a fresh unowned
-  runtime handle constant by constructing a target-owned wrapper, but throws if
-  an already-owned live handle constant is moved to another pool.
+- `HandleConstant.copyForAdoption(...)` allows first registration of a fresh
+  unowned runtime handle constant by constructing a target-owned wrapper, but
+  throws if an already-owned live handle constant is moved to another pool.
 
 Proof/guards:
 
@@ -304,7 +306,7 @@ ignored.
 | 14 | Cross-owner `GenericHandle` masking | Done for the highest-risk owner-transfer misuse of `ObjectHandle.cloneAs(...)`. `cloneAs(...)` is an access-view operation over live runtime state, not an owner-transfer primitive. `GenericHandle.maskAs(...)` now rejects direct cross-owner masking unless the whole handle graph is already shared with the target container; non-core objects still use the existing proxy path. | `OwnershipDiagnosticsTest.crossOwnerMaskRejectsNonSharedHandleBeforeClone()` constructs a non-shared synthetic handle that throws if `cloneAs(...)` is reached. The fixed path checks sharing and returns `null` before any shallow clone. |
 | 15 | Same-owner `GenericHandle` inflated-ref view backing | Done in this branch wave. The old shallow clone intentionally shared the final field array for regular values, then incorrectly rewired inflated `RefHandle.$outer` entries inside that shared array. Creating a struct/revealed view could mutate refs already visible through the source view. | `GenericHandle.cloneAs(...)` now keeps regular field storage shared and uses sparse copy-on-write view overrides only for inflated refs that need a view-local `$outer`. `GenericHandleCloneAsTest.sameOwnerCloneKeepsInflatedRefOuterViewLocal()` fails on master by observing the source ref holder change to the clone, and passes here while proving referent and regular-field write-through behavior. |
 | 16 | TypeConstant runtime TypeHandle cache | Done in this branch wave. The old `TypeConstant.m_handle` cache stored a container-owned native Type handle on a pool/type object, so two containers sharing one pool could reuse the first container's handle; it was also a plain unsafe lazy write. | `TypeConstant.ensureTypeHandle(Container)` now delegates shared handles to `Container.ensureTypeHandle(TypeConstant)`, which caches by owner/type in a `ConcurrentMap` and rejects types from another pool. `NativeTemplatesTest.typeHandlesAreCachedByContainerOwner()` fails on master because `m_handle` still exists and passes here by verifying the cache moved to `Container`. |
-| 17 | Explicit constant adoption clone policy | Done in this branch wave as a guard. Base `Constant.adoptedBy(...)` no longer lets a new subclass silently inherit shallow `Object.clone()` ownership transfer. The first clone-free slice also moves `FSNodeConstant`, `FileStoreConstant`, and fresh `HandleConstant` registration to explicit construction instead of clone-then-clear. | `ConstantAdoptionTest.defaultAdoptionCloneRequiresExplicitPolicy()` proves a no-policy subclass fails adoption, and existing adoption tests prove filesystem and handle behavior is preserved. The clone-free architecture remains tracked separately: every opted-in family should eventually move to explicit copy/adoption constructors. |
+| 17 | Explicit constant adoption clone policy | Done in this branch wave as a guard. Base `Constant.adoptedBy(...)` is now the final owner-transfer wrapper and no longer lets a new subclass silently inherit shallow `Object.clone()` ownership transfer. The first clone-free slice also moves `FSNodeConstant`, `FileStoreConstant`, and fresh `HandleConstant` registration to explicit construction instead of clone-then-clear. | `ConstantAdoptionTest.defaultAdoptionCloneRequiresExplicitPolicy()` proves a no-policy subclass fails adoption, `ConstantAdoptionTest.adoptionWrapperIsFinalAndSpecialCasesUseCopyHook()` proves the high-risk classes use the hook, and existing adoption tests prove filesystem and handle behavior is preserved. The clone-free architecture remains tracked separately: every opted-in family should eventually move to explicit copy/adoption constructors. |
 | 18 | Constant registration completion publication | Done in this branch wave as a guard. `ConstantPool.register(...)` still publishes early for same-thread recursive cycle resolution, but other threads can no longer observe the public pool entry before recursive `registerConstants(...)` and valid-pool checks finish. | `ConstantPoolDiagnosticsTest.otherThreadsWaitForRecursiveRegistrationCompletion()` blocks inside recursive registration and proves a public reader waits. The final architecture remains a private registration transaction/worklist that publishes only completed constants. |
 
 The compiler/JIT bucket should remain separate unless an interpreter runtime
@@ -607,7 +609,7 @@ assertion work should be explicit and opt-in first, then hardened where proven.
 | Reject new mutable runtime-template `INSTANCE` fields | Build/source scan | Prevent returning to constructor-published globals. |
 | Reject `INSTANCE = this` in constructors | Build/source scan and `-Xlint:this-escape` | Prevent early publication of partially constructed templates. |
 | Reject static owner-bearing runtime metadata fields | Build/source scan | Prevent process-global `TypeConstant`, composition, method, handle, or enum caches. |
-| Guard `HandleConstant` cross-pool adoption | `HandleConstant.adoptedBy(...)` | Prevent live runtime handles from becoming shared logical constants. |
+| Guard `HandleConstant` cross-pool adoption | `HandleConstant.copyForAdoption(...)` | Prevent live runtime handles from becoming shared logical constants. |
 | Detect cloned forbidden helper fields | Opt-in `ConstantAdoptionValidator` via `xvm.asm.validateConstantAdoption` | Catch `Atomic*`, locks, references, thread-local cells, owner/runtime references, and mutable collections copied by clone. |
 | Assert scoped pool equals explicit owner | Runtime callback/bridge sites; opt-in hard failure via `xvm.asm.validateConstantPoolCurrentScope` | Catch stale or missing ambient `ConstantPool` context even when Java assertions are disabled. |
 | Assert handle/composition owner at boundaries | `OwnershipDiagnostics` and runtime entry points | Catch cross-container values before they surface as misleading XTC-level failures. |

@@ -262,23 +262,22 @@ replaces or clears it.
 Target shape:
 
 ```java
-protected SingletonConstant adoptedBy(ConstantPool pool) {
-    return new SingletonConstant(pool, format, classConstant);
+protected SingletonConstant copyForAdoption(AdoptionContext context) {
+    return new SingletonConstant(context.pool(), format, classConstant);
 }
 ```
 
-or, for existing clone-based legacy classes:
+or, for existing reviewed clone-based legacy families:
 
 ```java
-var that = (FSNodeConstant) super.adoptedBy(pool);
-that.runtimeHandle = null;
-that.pathConstant  = null;
-return that;
+protected Constant copyForAdoption(AdoptionContext context) {
+    return cloneForAdoption(context.pool());
+}
 ```
 
-Fresh-constructor adoption is preferred. Clearing cloned runtime/helper fields
-is an acceptable small containment fix when replacing the whole adoption model
-would be too broad for the PR.
+Fresh-constructor adoption is preferred. The clone helper is only a transitional
+compatibility path for reviewed logical-only families; runtime/helper fields
+must not rely on clone-then-clear.
 
 ## PR Slice Details
 

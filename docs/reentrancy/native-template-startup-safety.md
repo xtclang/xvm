@@ -491,14 +491,15 @@ means other fibers cannot observe an owner from one transition and a waiter or
 handle from another transition.
 
 There is a separate adoption rule for this state. A final field is not enough
-if a constant is shallow-cloned into another pool. `Constant.adoptedBy(...)`
-uses `Object.clone()` by default, so `SingletonConstant.adoptedBy(...)`
+if a constant is shallow-cloned into another pool. `Constant.adoptedBy(...)` is
+now the final owner-transfer wrapper, and `SingletonConstant.copyForAdoption(...)`
 constructs a fresh constant instead of cloning the final
 `AtomicReference<InitState>`. Otherwise two pools can share one mutable
 singleton state cell and return a module/package/property handle owned by the
 wrong container. Constants with direct transient runtime handles, such as
-`FSNodeConstant` and `FileStoreConstant`, clear those handles in `adoptedBy(...)`
-for the same owner-boundary reason. The concrete `TestProps` failure is
+`FSNodeConstant` and `FileStoreConstant`, also use `copyForAdoption(...)` to
+construct fresh logical copies instead of copying those handles. The concrete
+`TestProps` failure is
 documented in
 [stress-discovered-runtime-issues.md#adopted-singletonconstant-runtime-state-leak](stress-discovered-runtime-issues.md#adopted-singletonconstant-runtime-state-leak).
 

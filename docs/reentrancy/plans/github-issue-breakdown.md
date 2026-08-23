@@ -672,9 +672,9 @@ owned by the wrong runtime.
 
 - Make raw `xEnum` lookup helpers protected/internal and remove public raw
   value-list access.
-- Include `SingletonConstant.adoptedBy(...)` fresh-state handling here only if
-  the PR's tests assert adopted singleton behavior. Otherwise put that method
-  in PR 10 and limit this PR's stress claims accordingly.
+- Include `SingletonConstant.copyForAdoption(...)` fresh-state handling here
+  only if the PR's tests assert adopted singleton behavior. Otherwise put that
+  hook in PR 10 and limit this PR's stress claims accordingly.
 
 ### Explicit Out Of Scope
 
@@ -1407,9 +1407,17 @@ The branch proved the bug with `SingletonConstant`: an adopted constant copied
 the final `AtomicReference<InitState>` from another pool, letting one container
 reuse another container's singleton runtime state.
 
+The integration branch now narrows the API as well: `Constant.adoptedBy(...)`
+is the final owner-transfer wrapper and reviewed special cases implement
+`copyForAdoption(...)`. This keeps target-owner validation and ref reset in one
+place while the broader family-by-family clone-free migration is reviewed
+separately.
+
 ### Exact Scope Included
 
 - Ensure adoption preserves serialized/logical constant value only.
+- Make `Constant.adoptedBy(...)` the final owner-transfer wrapper and add the
+  `copyForAdoption(...)` hook plus `AdoptionContext`.
 - Reconstruct or clear owner-local runtime/helper state for:
 
   - `SingletonConstant` if not included in PR 5;
@@ -1422,6 +1430,8 @@ reuse another container's singleton runtime state.
 
 - Reject moving an already-owned live `HandleConstant` to another pool.
 - Add `ConstantAdoptionValidator` as an opt-in diagnostic at registration.
+- Add source-shape coverage proving the high-risk constants use the hook instead
+  of ad-hoc `adoptedBy(...)` overrides.
 - Add late ConstantPool registration diagnostics as a guard, not as the full
   freeze solution.
 - Prewarm the protected access type for canonical `ClassComposition` objects so
@@ -1437,7 +1447,8 @@ reuse another container's singleton runtime state.
 
 ### Explicit Out Of Scope
 
-- Full clone-free removal of the transitional default-clone adoption policy.
+- Full clone-free removal of the transitional default-clone adoption policy for
+  every constant family.
 - ConstantPool list/map publication atomicity and runtime pool freeze.
 - Runtime creation of genuinely new constants after publication. The
   access-type warmup only handles constants the pool already knows before the

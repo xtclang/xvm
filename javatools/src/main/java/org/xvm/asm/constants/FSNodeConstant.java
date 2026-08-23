@@ -247,12 +247,12 @@ public class FSNodeConstant
     }
 
     @Override
-    protected FSNodeConstant adoptedBy(ConstantPool pool) {
+    protected FSNodeConstant copyForAdoption(AdoptionContext context) {
         // Adoption preserves only serialized logical file-node metadata. Runtime handles and the
         // derived path literal are owner-local caches; constructing a fresh target-pool node keeps
         // those caches empty while registerConstants(...) adopts the child constants as before.
-        return new FSNodeConstant(pool, m_fmt, m_constName, m_constCreated, m_constModified,
-                m_constData);
+        return new FSNodeConstant(context.pool(), m_fmt, m_constName, m_constCreated,
+                m_constModified, m_constData);
     }
 
 

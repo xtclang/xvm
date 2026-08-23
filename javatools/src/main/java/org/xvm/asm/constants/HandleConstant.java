@@ -55,16 +55,17 @@ public class HandleConstant
     }
 
     @Override
-    protected Constant adoptedBy(ConstantPool pool) {
+    protected Constant copyForAdoption(AdoptionContext context) {
         if (getContaining() == null) {
             // Runtime annotation construction creates a fresh, unowned HandleConstant and then
             // registers it in the current pool. Moving an already-owned live ObjectHandle to a
             // different pool would leak frame/container-owned runtime state.
-            return new HandleConstant(pool, m_hValue);
+            return new HandleConstant(context.pool(), m_hValue);
         }
 
         throw new IllegalStateException(
-                "HandleConstant wraps a live ObjectHandle and cannot be adopted into " + pool);
+                "HandleConstant wraps a live ObjectHandle and cannot be adopted into "
+                        + context.pool());
     }
 
     @Override

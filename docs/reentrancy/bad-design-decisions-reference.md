@@ -184,6 +184,8 @@ Why it was bad in a single-threaded world:
 
 Replacement:
 
+- `Constant.adoptedBy(...)` is the final owner-transfer wrapper;
+- special cases implement `copyForAdoption(AdoptionContext)`;
 - subclasses must define which logical constant fields are copied;
 - owner-local helper/runtime fields must be fresh, cleared, or rejected;
 - diagnostics must assert that adopted constants do not carry source-owner

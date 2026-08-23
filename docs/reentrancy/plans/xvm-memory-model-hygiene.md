@@ -175,10 +175,13 @@ Completed wave in this branch:
   current pool. Diagnostics are file-owned unless a listener is explicitly set,
   and `FileStructureTest.errorListenerIgnoresAmbientPool()` covers wrong and
   missing ambient scopes.
-- `Constant.adoptedBy(...)` now requires an explicit
+- `Constant.adoptedBy(...)` is now the final owner-transfer wrapper. Its default
+  `copyForAdoption(...)` path requires an explicit
   `allowsDefaultAdoptionClone()` policy before using the transitional shallow
   clone helper. `ConstantAdoptionTest.defaultAdoptionCloneRequiresExplicitPolicy()`
-  prevents new constants from silently inheriting owner-transfer clone behavior.
+  and `ConstantAdoptionTest.adoptionWrapperIsFinalAndSpecialCasesUseCopyHook()`
+  prevent new constants from silently inheriting owner-transfer clone behavior
+  or bypassing the common wrapper.
 - `ConstantPool.register(...)` now marks newly inserted constants as incomplete
   while recursive registration and valid-pool checks run. Same-thread recursive
   lookup is preserved, but public readers in other threads wait. Focused tests
@@ -193,7 +196,7 @@ Completed wave in this branch:
 | Remove the current-pool compatibility API | Semantic main-code callers have been removed, and `ConstantPool.getCurrentPool()` no longer exists. The remaining risk is the scoped `withPool(...)` bridge. | Keep the no-getter reflection/source-shape tests. Replace `withPool(...)` bridges with explicit owner APIs where practical. |
 | Generic/typed API cleanup | Raw types, broad `Object` returns, and scattered casts make owner/type boundaries invisible and move failures away from the call that selected an owner. | Use existing typed helpers, add typed owner-boundary accessors where missing, and keep unavoidable unchecked casts in small documented helpers. See `generics-api-audit.md`. |
 | Runtime-published pools remain mutable by default | A container-visible pool can keep registering constants unless an opt-in diagnostic property is enabled. Parallel readers can observe growth, invalidation, or partial registration. The known `ClassComposition` access-type subcases are fixed under diagnostics in this branch, but the pool still lacks a structural freeze. | Freeze runtime pools after warmup or split mutable compiler/linker pools from immutable runtime pools. Make post-publication registration fail on runtime paths. |
-| Clone-free `Constant.adoptedBy(...)` architecture | The branch now fails closed unless a family explicitly opts into the transitional shallow-clone helper, but reviewed families still rely on `Object.clone()` plus reset hooks. Final locks, atomics, lazy cells, thread-local cells, handles, and JIT caches remain dangerous if a family grows new state. | Replace the remaining clone helper with explicit copy/adoption contracts by subclass or family. Keep and expand `ConstantAdoptionValidator` in stress/CI until no owner-transfer clone path remains. |
+| Clone-free `Constant.adoptedBy(...)` architecture | The branch now uses a final wrapper and fails closed unless a family explicitly opts into the transitional shallow-clone helper, but reviewed families still rely on `Object.clone()` plus reset hooks. Final locks, atomics, lazy cells, thread-local cells, handles, and JIT caches remain dangerous if a family grows new state. | Replace the remaining clone helper with explicit `copyForAdoption(...)` contracts by subclass or family. Keep and expand `ConstantAdoptionValidator` in stress/CI until no owner-transfer clone path remains. |
 | Transactional `ConstantPool.register(...)` architecture | The branch guards cross-thread readers, but registration still publishes an in-progress constant for same-thread recursion. That is a compatibility bridge, not a clean phase model. | Resolve cycles in a private registration context/worklist, adopt/register children privately, validate hash/locator/owner stability, and publish only completed constants to list/map storage. |
 
 ### Must Audit, Likely Must Fix On Shared Runtime Paths

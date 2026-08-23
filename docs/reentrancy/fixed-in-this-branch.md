@@ -125,14 +125,17 @@ Effect:
 
 Fix:
 
-- `SingletonConstant.adoptedBy(...)` constructs a fresh singleton constant for
-  the target pool, so the adopted constant starts with an empty owner-local
-  `InitState` cell.
-- `FSNodeConstant.adoptedBy(...)` and `FileStoreConstant.adoptedBy(...)` now
-  construct fresh target-pool logical constants instead of shallow-cloning and
-  clearing copied transient runtime handles. `FSNodeConstant` also starts
-  adopted copies without its derived path-literal cache because that literal is
-  owned by the source pool once computed.
+- `Constant.adoptedBy(...)` is now the final owner-transfer wrapper, so every
+  special case goes through the same target-owner check and ref reset.
+- `SingletonConstant.copyForAdoption(...)` constructs a fresh singleton
+  constant for the target pool, so the adopted constant starts with an empty
+  owner-local `InitState` cell.
+- `FSNodeConstant.copyForAdoption(...)` and
+  `FileStoreConstant.copyForAdoption(...)` now construct fresh target-pool
+  logical constants instead of shallow-cloning and clearing copied transient
+  runtime handles. `FSNodeConstant` also starts adopted copies without its
+  derived path-literal cache because that literal is owned by the source pool
+  once computed.
 - `OwnershipDiagnostics.assertHandleValidIfEnabled(...)` is now wired into the
   `mgmt.Container.invoke` module-target boundary used by the parallel stress
   runner, so wrong-owner handles fail structurally instead of surfacing later as
@@ -164,18 +167,18 @@ shallow-clone helper state identified by the audit:
   helper/runtime/JIT cache when a cloned type changes pool owner, including
   recursive-depth, in-progress relation, consumption/production, type-handle,
   JIT-name, and normalization state.
-- `ParameterizedTypeConstant.adoptedBy(...)` reconstructs the logical
+- `ParameterizedTypeConstant.copyForAdoption(...)` reconstructs the logical
   parameterized type for the target pool instead of shallow-cloning the final
   `StampedLock` and resolver/JIT helper state.
-- `SignatureConstant.adoptedBy(...)` reconstructs the logical signature for
+- `SignatureConstant.copyForAdoption(...)` reconstructs the logical signature for
   the target pool, preserves the transient property-signature marker that
   participates in in-memory identity, and drops comparison/JIT helper state.
-- `TypeParameterConstant.adoptedBy(...)` reconstructs the logical register
+- `TypeParameterConstant.copyForAdoption(...)` reconstructs the logical register
   type parameter for the target pool instead of shallow-cloning the final
   recursive-comparison `TransientThreadLocal`.
-- `HandleConstant.adoptedBy(...)` now allows only the first registration of a
-  fresh unowned runtime handle constant by constructing a target-owned wrapper.
-  Moving an already-owned live handle constant to another pool throws
+- `HandleConstant.copyForAdoption(...)` now allows only the first registration
+  of a fresh unowned runtime handle constant by constructing a target-owned
+  wrapper. Moving an already-owned live handle constant to another pool throws
   immediately.
 - `Constant.adoptedBy(...)` now rejects the transitional default shallow-clone
   path unless a constant family explicitly declares
