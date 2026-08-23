@@ -37,6 +37,7 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.util.Lazy;
 import org.xvm.util.ListMap;
 
 
@@ -79,6 +80,8 @@ public class ClassComposition
         f_mapMethods      = new ConcurrentHashMap<>();
         f_mapGetters      = new ConcurrentHashMap<>();
         f_mapSetters      = new ConcurrentHashMap<>();
+        f_fieldNames      = Lazy.ofOwner(ClassComposition::buildFieldNameArray);
+        f_methodInit      = Lazy.ofOwner(ClassComposition::buildAutoInitializer);
     }
 
     /**
@@ -99,6 +102,8 @@ public class ClassComposition
         f_mapMethods      = f_clzInception.f_mapMethods;
         f_mapGetters      = f_clzInception.f_mapGetters;
         f_mapSetters      = f_clzInception.f_mapSetters;
+        f_fieldNames      = f_clzInception.f_fieldNames;
+        f_methodInit      = f_clzInception.f_methodInit;
 
         m_mapFields       = f_clzInception.m_mapFields;
         m_cRegularFields  = f_clzInception.m_cRegularFields;
@@ -268,22 +273,12 @@ public class ClassComposition
             return null;
         }
 
-        MethodStructure method = m_methodInit;
-        if (method == null) {
-            synchronized (this) {
-                method = m_methodInit;
-                if (method == null) {
-                    /*
-                     * The synthetic structure initializer is owner-pool metadata, not decoded
-                     * class identity. All access views share the inception composition's field
-                     * layout, so publish one completed initializer from that owner.
-                     */
-                    ConstantPool pool = getContainer().getConstantPool();
-                    m_methodInit = method = f_template.getStructure().createInitializer(
-                            pool, f_typeStructure, m_mapFields);
-                }
-            }
-        }
+        /*
+         * The synthetic structure initializer is owner-pool metadata, not decoded class identity.
+         * All access views share the inception composition's field layout, so publish one completed
+         * initializer from that owner through a final Lazy.Owner cell instead of a mutable field.
+         */
+        MethodStructure method = f_methodInit.get(this);
         return method.isAbstract() ? null : method;
     }
 
@@ -448,26 +443,22 @@ public class ClassComposition
             return f_clzInception.getFieldNameArray();
         }
 
-        StringHandle[] ashNames = m_ashFieldNames;
-        if (ashNames == null) {
-            synchronized (this) {
-                ashNames = m_ashFieldNames;
-                if (ashNames == null) {
-                    /*
-                     * These StringHandles carry this composition's container. The old plain lazy
-                     * write could publish a partially filled owner-bearing array, and access-view
-                     * clones could race separate duplicate arrays. Keep the API's cached array
-                     * behavior but publish exactly one inception-owned array safely.
-                     */
-                    m_ashFieldNames = ashNames = buildFieldNameArray();
-                }
-            }
-        }
-        return ashNames;
+        return f_fieldNames.get(this);
+    }
+
+    private MethodStructure buildAutoInitializer() {
+        var pool = getContainer().getConstantPool();
+        return f_template.getStructure().createInitializer(pool, f_typeStructure, m_mapFields);
     }
 
     private StringHandle[] buildFieldNameArray() {
-        StringHandle[] ashNames = new StringHandle[m_cRegularFields];
+        /*
+         * These StringHandles carry this composition's container. The old plain lazy write could
+         * publish a partially filled owner-bearing array, and access-view clones could race separate
+         * duplicate arrays. Keep the API's cached array behavior but publish exactly one
+         * inception-owned array safely.
+         */
+        var ashNames = new StringHandle[m_cRegularFields];
 
         int i = 0;
         for (Map.Entry<Object, FieldInfo> entry : getFieldLayout().entrySet()) {
@@ -998,11 +989,15 @@ public class ClassComposition
     // cached property setter call chain by property id (the top-most method first)
     private final Map<PropertyConstant, CallChain> f_mapSetters;
 
-    // cached array of field name handles
-    private volatile StringHandle[] m_ashFieldNames;
+    /**
+     * Cached field-name handles for native Stringable methods.
+     */
+    private final Lazy.Owner<ClassComposition, StringHandle[]> f_fieldNames;
 
-    // cached auto-generated structure initializer
-    private volatile MethodStructure m_methodInit;
+    /**
+     * Cached auto-generated structure initializer.
+     */
+    private final Lazy.Owner<ClassComposition, MethodStructure> f_methodInit;
 
     /**
      * Marker for a cached null {@link CallChain}.

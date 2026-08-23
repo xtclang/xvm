@@ -474,8 +474,10 @@ The replacement makes the inception composition the single cache owner:
 
 - access views delegate `getFieldNameArray()` and `ensureAutoInitializer()` to
   `f_clzInception`;
-- the inception `m_ashFieldNames` and `m_methodInit` cells are `volatile`;
-- first construction is synchronized on the inception composition;
+- the inception `f_fieldNames` and `f_methodInit` cells are final
+  `Lazy.Owner` holders;
+- access-view compositions reuse those final holders instead of allocating
+  unused clone-local lazy cells;
 - classes with no fields still return `null` for the auto initializer without
   allocating anything.
 
@@ -489,6 +491,9 @@ This preserves apparent behavior and performance:
 - access views now share the inception cache consistently instead of sometimes
   duplicating it, so normal footprint is the same or smaller than the old
   timing-dependent behavior;
+- the old two nullable cache references are replaced by two final lazy holders
+  on the inception composition; access views share those holders, so the fix
+  avoids multiplying holder objects across view compositions;
 - no extra constant-pool entries are introduced by this change beyond the same
   field-name handles and initializer constants the old first-access path already
   created.
@@ -497,7 +502,7 @@ This preserves apparent behavior and performance:
 races canonical and protected access views through the two APIs, verifies that
 all callers observe one field-name array identity, verifies that the field-name
 handle belongs to the native container that created it, and checks that the
-initializer cell is volatile and owner-published on the inception composition.
+initializer is computed through the final owner-lazy inception cell.
 
 ### PropertyComposition Struct View Cache
 

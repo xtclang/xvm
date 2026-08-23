@@ -68,8 +68,8 @@ public class ClassCompositionSafePublicationTest {
             installSyntheticFieldLayout(clz, pool.typeObject());
 
             var protectedView   = clz.ensureAccess(Access.PROTECTED);
-            var fieldNamesCell  = volatileField(ClassComposition.class, "m_ashFieldNames");
-            var initializerCell = volatileField(ClassComposition.class, "m_methodInit");
+            var fieldNamesCell  = finalField(ClassComposition.class, "f_fieldNames");
+            var initializerCell = finalField(ClassComposition.class, "f_methodInit");
             var start           = new CountDownLatch(1);
             record Caches(StringHandle[] names, MethodStructure initializer) {}
 
@@ -100,11 +100,16 @@ public class ClassCompositionSafePublicationTest {
                 assertNotNull(first);
                 assertEquals(1, first.names().length);
                 assertSame(container, first.names()[0].getComposition().getContainer());
-                assertSame(first.names(), fieldNamesCell.get(clz));
                 assertSame(first.names(), protectedView.getFieldNameArray());
                 assertSame(first.initializer(), protectedView.ensureAutoInitializer());
 
-                var initializer = initializerCell.get(clz);
+                var fieldNames = (Lazy.Owner<?, ?>) fieldNamesCell.get(clz);
+                assertTrue(fieldNames.isComputed());
+                assertSame(first.names(), fieldNames.get(clz, StringHandle[].class));
+
+                var initializerLazy = (Lazy.Owner<?, ?>) initializerCell.get(clz);
+                assertTrue(initializerLazy.isComputed());
+                var initializer = initializerLazy.get(clz, MethodStructure.class);
                 assertNotNull(initializer);
                 if (first.initializer() != null) {
                     assertSame(first.initializer(), initializer);
@@ -193,9 +198,9 @@ public class ClassCompositionSafePublicationTest {
         regularFieldCount.setInt(clz, fields.size());
     }
 
-    private static Field volatileField(Class<?> clz, String name) throws Exception {
+    private static Field finalField(Class<?> clz, String name) throws Exception {
         var field = clz.getDeclaredField(name);
-        assertTrue(Modifier.isVolatile(field.getModifiers()), name);
+        assertTrue(Modifier.isFinal(field.getModifiers()), name);
         field.setAccessible(true);
         return field;
     }

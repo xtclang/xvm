@@ -481,7 +481,8 @@ Representative examples:
 
 - `ConstantPool.m_typeNakedRef` and the long list of transient
   `m_type*` constants.
-- `ClassComposition.m_methodInit`.
+- Fixed in this branch: former `ClassComposition.m_methodInit` and
+  `m_ashFieldNames`.
 - `NativeContainer.m_hOSStorage`, `m_hFileStore`, `m_hRootDir`, and related
   environment handles.
 - `xRTCertificateManager.m_typeCanonical`, `xRTKeyStore.m_typeCanonical`,

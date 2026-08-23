@@ -821,7 +821,7 @@ sets.
   constants while preserving the old one-helper-per-owned-property cache shape.
 - Safely publish `ClassComposition` field-name and synthetic initializer helper
   cells under the inception composition, so access views share one owner-local
-  cache instead of racing clone-local duplicate lazy cells.
+  final `Lazy.Owner` cache instead of racing clone-local duplicate lazy cells.
 - Replace `PropertyComposition`'s mutable struct-view cache with final
   `Lazy.Owner` state and final role fields, preserving lazy struct-view
   allocation and shared call-chain maps.
@@ -943,13 +943,13 @@ the hash-contract fixes are gone.
   replacement changes the backing from a plain unsynchronized `HashMap` to a
   safely published synchronized `HashMap` wrapper.
 - `ClassComposition` field-name arrays keep the old cached-array API and
-  per-owner `StringHandle` elements. The branch adds one volatile read and
-  first-publication synchronization; it does not add per-call clones or handle
-  allocation. Access views now consistently reuse the inception array instead
-  of timing-dependently duplicating it.
+  per-owner `StringHandle` elements. The branch routes the first access through
+  a final `Lazy.Owner`; it does not add per-call clones or handle allocation.
+  Access views now consistently reuse the inception array instead of
+  timing-dependently duplicating it.
 - `ClassComposition` synthetic auto-initializers remain lazy and are still not
-  allocated for fieldless classes. Access views now delegate to the inception
-  composition, which is equivalent because the field layout and struct type are
+  allocated for fieldless classes. Access views now share the inception
+  `Lazy.Owner`, which is equivalent because the field layout and struct type are
   inception-owned and shared by all views.
 - `PropertyComposition` struct views remain lazy and still share the same
   method/getter/setter call-chain maps as the inception property composition.

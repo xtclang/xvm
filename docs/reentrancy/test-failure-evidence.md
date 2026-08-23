@@ -160,10 +160,10 @@ can allocate unnecessary duplicate owner-bearing `StringHandle[]` arrays or
 duplicate synthetic initializers even though the owner, field layout, and struct
 type are inception-owned. The branch test uses a real native owner, races
 canonical and protected views, and verifies one safely published
-inception-owned field-name array plus a volatile initializer cell. The test is
-not a direct master runner because it uses branch lifecycle helpers, but the
-source-shape defect is explicit in the old `m_ashFieldNames` and `m_methodInit`
-declarations.
+inception-owned field-name array plus a final owner-lazy initializer cell. The
+test is not a direct master runner because it uses branch lifecycle helpers, but
+the source-shape defect is explicit in the old `m_ashFieldNames` and
+`m_methodInit` declarations.
 
 `ClassCompositionSafePublicationTest.propertyCompositionStructViewIsOwnerLazyAndShared()`
 covers the custom-property struct-view cache. On master,
