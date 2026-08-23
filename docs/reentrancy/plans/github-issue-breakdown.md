@@ -48,6 +48,7 @@ semantics, and clear owner/performance reasoning.
 | 6 | Harden shared runtime and ASM caches | Covers small proven cache/hash/op/manual-lazy hazards that are not template `INSTANCE` work. | PR 1 through PR 5 |
 | 7 | Remove runtime and ASM constructor escapes | Removes constructor-time owner publication and virtual constructor dispatch in runtime/ASM/tooling code. | PR 1 through PR 6 |
 | 8 | Add same-JVM stress and ownership diagnostics | Adds the proof harness for repeated direct execution and parallel container validation. | PR 1 through PR 7 |
+| 8b | Preserve runtime failure causes | Keeps owner, pool, module, and stack evidence when startup/runtime setup fails. | Independent; stronger after PR 8 diagnostics |
 | 9 | Remove semantic ambient `ConstantPool` lookup | Replaces `getCurrentPool()` semantic owner selection with explicit owners. | PR 8 useful for stress, otherwise independent |
 | 10 | Harden constant adoption owner transfer | Prevents shallow-cloned constants from carrying runtime/helper state across pools. | PR 5 and PR 8 recommended |
 | 10b | Guard ConstantPool registration publication | Separates same-thread recursive registration from public cross-thread observation while the later transaction design is prepared. | PR 10 recommended |
@@ -68,6 +69,7 @@ Use this as the first pass when preparing actual PR branches from `master`.
 | Shared runtime/ASM cache hardening | Runtime op-cache commits, `JumpNFirst` atomic state, `JumpNSample`, guard descriptor/process cleanup, `MethodStructure.Code` first-publication diagnostics, and the `TypeConstant` TypeHandle owner-cache slice | Native-template `INSTANCE` migration, enum lifecycle state, broad ConstantPool freeze, full immutable `ResolvedCode` refactor |
 | Parameter, method, and handle-copy fixes | `7f82e0a1e`, `ed7220bee`, the `GenericHandle.maskAs(...)` cross-owner guard slice, and the same-owner `GenericHandle.cloneAs(...)` inflated-ref backing slice | Constant adoption validator, broad compiler clone cleanup, base `ObjectHandle.cloneAs(...)` subclass audit |
 | Constructor-escape removal in shared ASM/runtime | `1249e2a0f`, `47d7ab30e`, `93189541f`, `16915ebe7`, `7b7fc2036`, `70bf202ef` where source areas match | JIT constructor escapes and compiler/parser-only cleanup |
+| Runtime failure cause preservation | MainContainer cause-preservation wave | Scheduler terminal-failure channel, JIT exception propagation, and broad exception hygiene |
 | JIT ownership cleanup | `36c24a974`, `cb81116cb` plus the separate JIT plan work | Interpreter runtime template ownership |
 | Documentation-only hardening studies | `f0a6a71b1` and any uncommitted plan/audit docs | Source changes unless the PR is explicitly mixed for review proof |
 

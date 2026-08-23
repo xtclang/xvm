@@ -45,6 +45,7 @@ That makes the code brittle even before multiple Java threads enter it.
 | Raw or weakly typed APIs | Caller-side casts hide owner and payload expectations. | Wrong-owner values fail late as casts or state-machine errors. | New `generics-api-audit.md`; typed helpers used where practical. |
 | Thread-local hidden context | Dependencies are not visible in signatures and depend on cleanup discipline. | Reused workers, callbacks, nested scopes, and parallel containers can observe stale context. | Semantic current-pool use removed; other thread-local contexts remain audited. |
 | Non-transactional keep-alive registration | Code incremented owner-visible callback counts before the operation that made the callback live had completed. | Failed scheduling/startup can strand callback counts and make containers look busy forever. | Fixed for LocalClock, NanoTimer, and xRTServer bind failure paths. |
+| Message-only exception wrapping | Code threw new failures using only `e.getMessage()`. | Owner, pool, module, and stack evidence disappears before the launcher or stress harness can report it. | Fixed for `MainContainer.invoke0(...)`; broader exception hygiene remains tracked. |
 
 ## Examples And Replacements
 
@@ -177,6 +178,30 @@ The successful path is unchanged: the callback still keeps its owner alive while
 pending. The failure path is now transactional: if native startup cannot publish
 a live callback, it releases the exact owner it registered before returning the
 failure.
+
+### Message-Only Exception Wrapping
+
+Bad shape:
+
+```java
+throw new RuntimeException("failed to run: " + module + ". Cause: " + e.getMessage());
+```
+
+Why it was bad in a single-threaded world:
+
+- The wrapper discards the original exception type and stack trace.
+- Suppressed exceptions and nested causes are lost.
+- Diagnostics only see text, so the owner or constant-pool failure site has to
+  be guessed from logs.
+
+Replacement:
+
+```java
+throw new RuntimeException("failed to run: " + module, e);
+```
+
+The outer message still adds module context, but the original failure remains
+available to the launcher, tests, and ownership diagnostics.
 
 ### Split Mutable Lifecycle State
 

@@ -251,7 +251,9 @@ public class MainContainer
 
             m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE);
         } catch (Exception e) {
-            throw new RuntimeException("failed to run: " + f_idModule + ". Cause: " + e.getMessage());
+            // Keep the original startup/invocation cause. Message-only wrappers hide the owner and
+            // module-load failure path that same-JVM diagnostics need.
+            throw new RuntimeException("failed to run: " + f_idModule, e);
         }
     }
 

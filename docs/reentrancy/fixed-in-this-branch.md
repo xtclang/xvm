@@ -2448,6 +2448,33 @@ tests: constructor-time LocalClock registration, NanoTimer's swallowed
 `catch (Throwable)` schedule path, and server bind failure without rollback.
 Those guards fail on master and pass here.
 
+### `MainContainer.invoke0` Failure Cause Preservation
+
+Master wrapped startup and invocation setup failures like this:
+
+```java
+throw new RuntimeException("failed to run: " + f_idModule
+        + ". Cause: " + e.getMessage());
+```
+
+That destroyed the original Java cause at the exact boundary where owner and
+module startup failures need to be preserved. The launcher saw a new exception
+with a partial message but no original stack, type, suppressed failures, or
+cause chain. This is bad even on one thread and especially harmful when
+same-JVM runtime diagnostics are trying to explain stale owner or late
+registration failures.
+
+This branch now throws:
+
+```java
+throw new RuntimeException("failed to run: " + f_idModule, e);
+```
+
+Successful execution is unchanged. Failed execution keeps the same module
+context while preserving the original exception for launcher reporting and
+diagnostics. `RuntimeFailurePropagationTest` guards against returning to the
+message-only wrapper.
+
 ### `xOSStorage` Watch Daemon
 
 Master kept one mutable static watcher daemon:
