@@ -671,24 +671,24 @@ Recommended guard/fix: warm these caches before pool publication, or replace
 hot runtime-visible caches with owner-local `ConcurrentMap.computeIfAbsent`,
 `volatile`, or a small lazy helper.
 
-### Static immutable metadata is stored in mutable collections
+### Static immutable metadata was stored in mutable collections
 
 References:
 
-- `javatools/src/main/java/org/xvm/asm/ConstantPool.java:4002`
-  through `javatools/src/main/java/org/xvm/asm/ConstantPool.java:4017`
-  (`s_implicits`, `s_implicitsByPath`)
-- `javatools/src/main/java/org/xvm/asm/constants/UnionTypeConstant.java:709`
-  (`SpecialFunkies`)
+- Fixed in this branch: former mutable `ConstantPool.s_implicits` and
+  `s_implicitsByPath`.
+- Fixed in this branch: former unused mutable
+  `UnionTypeConstant.SpecialFunkies`.
 
-Cause: static final fields hold mutable `HashMap`/`HashSet` instances after
+Cause: static final fields held mutable `HashMap`/`HashSet` instances after
 class initialization.
 
 Effect: no current code path mutates these after initialization, so this is not
-a proven race, but the type does not communicate immutability.
+a proven race, but the old type did not communicate immutability.
 
-Recommended guard/fix: use `Map.copyOf(...)` and `Set.of(...)`/`Set.copyOf(...)`
-after construction.
+Fix: `ConstantPool` clones the parsed implicit arrays, freezes the maps with
+`Map.copyOf(...)`, and `ConstantPoolDiagnosticsTest` verifies mutation attempts
+fail. The unused union helper set was removed instead of frozen.
 
 ### Adoption validator is useful but not comprehensive
 

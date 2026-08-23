@@ -704,11 +704,6 @@ public class UnionTypeConstant
     }
 
     /**
-     * Internal: a set of "funky" method names for doing a quick check that we need to look closer.
-     */
-    private static final HashSet<String> SpecialFunkies = new HashSet<>(List.of("equals", "hashCode", "compare"));
-
-    /**
      * Internal: allow Java to create an array of TypeConstant without having to type ugly code
      * repeatedly.
      */

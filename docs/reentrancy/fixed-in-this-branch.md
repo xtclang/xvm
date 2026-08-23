@@ -446,6 +446,29 @@ runtime-pool design must still decide what happens to genuinely new constants
 created after publication and must not rely on an opt-in diagnostic property as
 the only guard.
 
+### Static ConstantPool Metadata Maps
+
+This branch freezes the process-wide implicit import metadata built by
+`ConstantPool` class initialization:
+
+- `s_implicits` is now populated from cloned parser path arrays and wrapped in
+  `Map.copyOf(...)`;
+- `s_implicitsByPath` is built in a local map and wrapped in `Map.copyOf(...)`;
+- the unused mutable `UnionTypeConstant.SpecialFunkies` set was removed instead
+  of kept as dead global state.
+
+This is not an owner-bearing runtime cache like the old `INSTANCE` fields, but
+it is still the same global-state hygiene problem: static final protects only
+the Java field reference, not a mutable `HashMap` or `HashSet` stored behind it.
+The old behavior happened not to mutate these maps after class initialization,
+so semantics and lookup performance are unchanged. The fix makes that contract
+true in the type instead of relying on convention. The per-pool
+`f_implicits` identity cache is unchanged.
+
+`ConstantPoolDiagnosticsTest.staticImplicitMetadataMapsAreImmutable()` reflects
+the private static maps and verifies that mutation attempts throw
+`UnsupportedOperationException`.
+
 ### ClassComposition Runtime Field Layout And Helper Caches
 
 This branch also fixes the runtime field-layout group and two owner-bearing

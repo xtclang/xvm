@@ -45,7 +45,7 @@ independent bug.
 | Must audit, must fix when owner-shared | Unsynchronized lazy null caches in shared runtime or compiler state | 91 field-shaped checks; 40 strong same-field lazy-init matches across `javatools/src/main/java`; 20 in runtime/asm | Plain field read/write has no happens-before edge and can publish partial, duplicate, stale, or wrong-owner state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
 | Should fix soon | Non-final static compiler/JIT globals | 4 non-final static fields across runtime/asm/compiler; 8 across all Java sources | The remaining hits are not owner-bearing runtime caches, but plain static mutation is still shared process state with no reset story and weak parallel/incremental compiler semantics | Delete, make `static final` immutable, move to the code/container owner, or guard resettable process state with a lock/atomic holder |
 | Should fix soon | `volatile` as partial synchronization | 21 `volatile` hits in runtime/asm/compiler | `volatile` orders one variable; it does not make a group of fields or mutable map contents atomic | Keep only for independent scalar state; otherwise use immutable state snapshots, `ConcurrentMap`, or synchronized critical sections |
-| Should fix soon | Static mutable collection fields | 11 `static final` collection/resource-like fields; 0 non-final static collection/resource-like fields | `final` protects the reference, not the collection contents; global mutable maps need an update policy | `Map.of`/`Set.of`/`List.of` or `Collections.unmodifiable*` for constants; `ConcurrentMap` with documented key ownership for real caches |
+| Should fix soon | Static mutable collection fields | 11 `static final` collection/resource-like fields in the original scan; this branch freezes the `ConstantPool` implicit maps and removes unused `UnionTypeConstant.SpecialFunkies` | `final` protects the reference, not the collection contents; global mutable maps need an update policy | `Map.of`/`Set.of`/`List.of` or `Collections.unmodifiable*` for constants; `ConcurrentMap` with documented key ownership for real caches |
 | Should fix soon | Public/protected mutable fields | 166 public/protected non-final `m_`, `s_`, or `f_` fields in runtime/asm/compiler | Any caller can mutate state without preserving invariants or synchronization | Private fields plus methods that enforce ownership, synchronization, and lifecycle invariants |
 | Should fix soon | Public/protected static arrays and exposed arrays | 42 public/protected static arrays; 75 public/protected array fields in runtime/asm/compiler | Array elements are mutable shared variables even when the array reference is final | Private `static final` arrays with defensive copies, immutable lists, or package-private documented internal constants |
 | Should fix soon | Thread-local hidden global context | 17 `ThreadLocal`/`TransientThreadLocal` hits in runtime/asm/compiler | Thread locals hide dependencies, can leak scope across pooled threads, and make reentrancy depend on cleanup discipline | Prefer explicit context parameters or owner-scoped stacks; if unavoidable, use scoped `try/finally remove()` wrappers |
@@ -674,10 +674,12 @@ Current counts:
 Representative examples:
 
 - `Token.KEYWORDS`, `ALL_KEYWORDS`, and `PREFIXES`.
-- `ConstantPool.s_implicits` and `s_implicitsByPath`.
+- Fixed in this branch: former mutable `ConstantPool.s_implicits` and
+  `s_implicitsByPath` maps are frozen after class initialization.
 - `BinaryAST.ALREADY_DISPLAYED`.
 - `TypeConstant.s_setRecursions`.
-- `UnionTypeConstant.SpecialFunkies`.
+- Fixed in this branch: unused mutable `UnionTypeConstant.SpecialFunkies` was
+  removed.
 - `xService.ATOMIC_PROPERTIES`.
 - `xLocalClock.TIMER`, which is now private `static final` and reachable only
   through the narrow `scheduleTimer(...)` scheduler API.

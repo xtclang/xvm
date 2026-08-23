@@ -24,7 +24,7 @@ in the API.
 | MUST AUDIT | Owner-derived helper caches on constant subclasses | `TypeConstant`, identity/member constants, and JIT helpers mix concurrent and plain caches. Adoption clears several, but same-owner parallel publication is not fully proven. |
 | MUST AUDIT, MUST FIX if reachable on runtime pools | Destructive `optimize()`, `replaceModule(...)`, and disassembly mutations | These reorder positions, clear maps, and rewrite pool contents. They must remain compiler/serialization-only or be guarded out of runtime pools. |
 | DONE IN THIS BRANCH for semantic getter removal; MUST AUDIT for remaining bridges | Ambient current-pool effects inside constants | `getCurrentPool()` is gone and source-shape tests guard it. Remaining `withPool(...)` scopes are transitional bridge boundaries and must keep explicit owner assertions until they are replaced by explicit owner APIs. |
-| SHOULD FIX | Static mutable metadata maps | Static final `HashMap`/`HashSet` references are initialized safely but remain mutable process-wide state. |
+| DONE IN THIS BRANCH | Static mutable metadata maps | `ConstantPool` implicit maps are now frozen after class initialization, and the unused `UnionTypeConstant.SpecialFunkies` mutable set was removed. |
 
 ## 1. Base `Constant.adoptedBy(...)` Shallow Clone Contract
 
@@ -770,15 +770,16 @@ method/property metadata, and function compatibility have focused tests.
 
 ## 10. Static Mutable Metadata Maps
 
-Classification: SHOULD FIX.
+Classification: DONE IN THIS BRANCH for the audited `ConstantPool` implicit maps
+and unused union helper set.
 
 Evidence:
 
-- `javatools/src/main/java/org/xvm/asm/ConstantPool.java:4040` through
-  `javatools/src/main/java/org/xvm/asm/ConstantPool.java:4068` stores implicit
-  metadata in mutable `HashMap` instances referenced by static final fields.
-- `javatools/src/main/java/org/xvm/asm/constants/UnionTypeConstant.java:709`
-  stores `SpecialFunkies` in a mutable static `HashSet`.
+- Former `javatools/src/main/java/org/xvm/asm/ConstantPool.java` static
+  implicit metadata maps were mutable `HashMap` instances referenced by static
+  final fields.
+- Former `javatools/src/main/java/org/xvm/asm/constants/UnionTypeConstant.java`
+  `SpecialFunkies` was a mutable static `HashSet` and had no current uses.
 - `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8301`
   through `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8310`
   is the fixed contrasting case: a process-wide recursion diagnostic set now
@@ -794,28 +795,33 @@ Practical same-JVM/parallel failure mode:
 
 If a future tool/runtime path mutates these maps, every container and compiler
 request in the JVM sees the change. The current scan did not find such a path,
-so this is cleanup rather than a current runtime blocker.
+so this was cleanup rather than a current runtime blocker. The dead union set
+had no runtime behavior and only preserved a mutable global object.
 
 Existing reproducer, test, or diagnostic:
 
-No focused test exists. The TypeConstant recursion diagnostic fix has a
-concurrency-shaped test in the branch, but the static implicit maps and
-`SpecialFunkies` are not guarded by an immutability test.
+`ConstantPoolDiagnosticsTest.staticImplicitMetadataMapsAreImmutable()` reflects
+the private static maps and verifies that mutating either map fails. `rg` shows
+no remaining `SpecialFunkies` reference because the field was dead and removed.
 
 Proper fix:
 
-Use `Map.copyOf(...)` for implicit metadata and `Set.of(...)` or
-`Set.copyOf(...)` for `SpecialFunkies`.
+Use `Map.copyOf(...)` for implicit metadata after cloning parser-returned
+arrays into the static map. Remove unused mutable static sets instead of
+freezing dead state.
 
 Expected performance and semantic impact:
 
-No semantic change. Lookup performance should be equivalent. It removes a
-future foot-gun and communicates process-wide immutability in the type.
+No semantic change. Lookup performance is equivalent: the same private static
+map lookup remains, with immutable map implementations after class
+initialization. The per-pool `f_implicits` identity cache is unchanged. Removing
+the unused union set removes one allocation and no behavior.
 
 Recommended PR slice:
 
-Fold into the lazy-cache cleanup PR or make a tiny immutable-static-metadata PR
-with one source-shape test if desired.
+This branch folds the small cleanup into the constant-pool hardening set. If
+split later, it can be a tiny immutable-static-metadata PR with the diagnostics
+test above.
 
 ## Suggested PR Order
 
@@ -833,5 +839,5 @@ with one source-shape test if desired.
 6. TypeInfo/ambient bridge cleanup: replace remaining constant-internal
    `withPool(...)` and dynamic relation context dependencies with explicit
    owner/build context APIs.
-7. Cache cleanup: warm or harden per-pool core caches, then make static metadata
-   collections immutable.
+7. Cache cleanup: warm or harden per-pool core caches; the audited static
+   metadata collections are already immutable or removed in this branch.

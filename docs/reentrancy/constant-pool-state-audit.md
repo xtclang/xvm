@@ -65,7 +65,7 @@ expanded catalog to `constant-pool-hostile-state-audit.md`.
 | Must audit | Live runtime handles embedded as constants | `HandleConstant` in `xRTTypeTemplate.resolveFormalType`, used as annotation parameter values | A live `ObjectHandle` is owner-specific and cannot become a pool-shared serialized logical constant. | This branch adds a `HandleConstant.adoptedBy(...)` guard for cross-pool movement. Diagnostics for annotated types carrying live handles remain useful. |
 | Should fix soon | Unsynchronized per-pool lazy implicit caches | `f_implicits`, `m_clz*`, `m_type*`, `m_val*`, `m_sig*`, `m_setJitPrimitives` | These are owner-local, so they are not cross-container globals. They are still plain lazy writes and can duplicate work or race under concurrent use of one pool. | Use owner-local `Lazy` or `ConcurrentMap.computeIfAbsent` for hot/shared runtime caches, or freeze/warm them before parallel runtime execution. |
 | Should fix soon | Ambient `ThreadLocal` implementation | `s_tloPool`, `getCurrentPool`, `withPool` | Raw `ThreadLocal` with mutable holder arrays relies on perfect manual cleanup and does not make ownership visible. This branch removed the raw setter; the remaining bridge is lexical. | Replace with explicit parameters. Where plumbing is too broad, migrate to a small `ScopedValue<RuntimeOwner>` bridge that points to the real owner. |
-| Should fix | Static immutable implicit metadata maps | `s_implicits`, `s_implicitsByPath` | Class-init publication is safe, but the maps are mutable `HashMap`s held in final static fields. No code mutates them today. | Wrap with `Map.copyOf(...)` after construction. This is cleanup, not a runtime PR blocker. |
+| Done in this branch | Static immutable implicit metadata maps | `s_implicits`, `s_implicitsByPath` | Class-init publication was safe, but the old maps were mutable `HashMap`s held in final static fields. No code mutated them today, but process-wide static metadata should not remain accidentally writable. | The static initializer now clones parser-returned path arrays into a private map and freezes both maps with `Map.copyOf(...)`. `ConstantPoolDiagnosticsTest.staticImplicitMetadataMapsAreImmutable()` guards the shape. |
 | Compiler backlog | Destructive pool optimization and module replacement | `optimize()`, `replaceModule(...)`, disassembly/assembly paths | These mutate pool contents, positions, and caches. They are intended for serialization/compiler flows, not concurrent runtime execution. | Keep out of this PR. Incremental compiler work should isolate mutable compiler pools from frozen runtime pools. |
 
 ## Field Inventory
@@ -76,8 +76,8 @@ Current `ConstantPool` fields fall into these groups.
 
 | Field | Classification | Notes |
 | --- | --- | --- |
-| `s_implicits` | Should fix | Parsed once from `implicit.x`. Class initialization safely publishes the reference, but the `HashMap` is mutable. Use `Map.copyOf(...)` as cleanup. |
-| `s_implicitsByPath` | Should fix | Same as `s_implicits`. |
+| `s_implicits` | Done in this branch | Parsed once from `implicit.x`. The static initializer clones parsed path arrays and stores them in an immutable map. |
+| `s_implicitsByPath` | Done in this branch | Same static catalog, now frozen with `Map.copyOf(...)`. |
 | `s_tloPool` | Must audit, runtime-relevant | Ambient owner lookup. The stored value is per thread, but the owner dependency is hidden. This branch removed raw `setCurrentPool(...)` mutation and removed `getCurrentPool()`, leaving only lexical `withPool(...)` scopes. Replace deeper ownerless lookups with explicit parameters where possible; otherwise migrate to `ScopedValue` as a bridge. |
 
 ### Core Pool Storage

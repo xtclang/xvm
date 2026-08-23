@@ -231,6 +231,25 @@ public class ConstantPoolDiagnosticsTest {
                 () -> ConstantPool.class.getDeclaredMethod("getCurrentPool"));
     }
 
+    /**
+     * The implicit import catalog is process-wide metadata parsed at class initialization. It must
+     * be immutable after startup; otherwise unrelated compiler/runtime requests in the same JVM can
+     * corrupt the global name catalog for every later request.
+     */
+    @Test
+    public void staticImplicitMetadataMapsAreImmutable() throws Exception {
+        var implicits = staticMap("s_implicits");
+        var byPath    = staticMap("s_implicitsByPath");
+        String[] parts = {"ecstasy", "text", "String"};
+
+        assertFalse(implicits.isEmpty());
+        assertFalse(byPath.isEmpty());
+        assertThrows(UnsupportedOperationException.class,
+                () -> implicits.put("__test__", parts));
+        assertThrows(UnsupportedOperationException.class,
+                () -> byPath.put("__test__", "__test__"));
+    }
+
     private static void withLateRegistrationValidation(CheckedRunnable action)
             throws Exception {
         withBooleanProperty(ConstantPool.VALIDATE_LATE_REGISTRATION_PROPERTY, action);
@@ -262,6 +281,13 @@ public class ConstantPoolDiagnosticsTest {
         Field field = ConstantPool.class.getDeclaredField("m_mapConstants");
         field.setAccessible(true);
         return (Map<Constant.Format, Map<Constant, Constant>>) field.get(pool);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<Object, Object> staticMap(String name) throws ReflectiveOperationException {
+        var field = ConstantPool.class.getDeclaredField(name);
+        field.setAccessible(true);
+        return (Map<Object, Object>) field.get(null);
     }
 
     private static boolean usesCurrentPoolInCode(Path path) {

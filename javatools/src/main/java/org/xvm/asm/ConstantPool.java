@@ -4077,14 +4077,17 @@ public class ConstantPool
             ErrorList errs   = new ErrorList(1);
             Parser    parser = new Parser(src, errs);
             Map<String, String[]> mapImplicits = parser.parseImplicits();
+            Map<String, String[]> mapFrozen    = new HashMap<>(mapImplicits.size());
+            Map<String, String>   mapByPath    = new HashMap<>();
 
-            s_implicits       = new HashMap<>(mapImplicits);
-            s_implicitsByPath = new HashMap<>();
-
+            // The implicit metadata is static process-wide data. Freeze the map shape after class
+            // initialization so nobody can accidentally mutate the shared catalog at runtime.
             for (Map.Entry<String, String[]> entry : mapImplicits.entrySet()) {
+                String[]      asParts = entry.getValue().clone();
                 StringBuilder sb     = new StringBuilder();
                 boolean       fFirst = true;
-                for (String sPart : entry.getValue()) {
+                mapFrozen.put(entry.getKey(), asParts);
+                for (String sPart : asParts) {
                     if (fFirst) {
                         fFirst = false;
                     } else {
@@ -4092,8 +4095,10 @@ public class ConstantPool
                     }
                     sb.append(sPart);
                 }
-                s_implicitsByPath.putIfAbsent(sb.toString(), entry.getKey());
+                mapByPath.putIfAbsent(sb.toString(), entry.getKey());
             }
+            s_implicits       = Map.copyOf(mapFrozen);
+            s_implicitsByPath = Map.copyOf(mapByPath);
 
             for (ErrorListener.ErrorInfo err : errs.getErrors()) {
                 System.err.println(err);
