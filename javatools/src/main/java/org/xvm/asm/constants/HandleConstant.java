@@ -23,7 +23,11 @@ public class HandleConstant
      * @param hValue  the handle
      */
     public HandleConstant(ObjectHandle hValue) {
-        super(null);
+        this(null, hValue);
+    }
+
+    private HandleConstant(ConstantPool pool, ObjectHandle hValue) {
+        super(pool);
 
         m_hValue = hValue;
     }
@@ -56,7 +60,7 @@ public class HandleConstant
             // Runtime annotation construction creates a fresh, unowned HandleConstant and then
             // registers it in the current pool. Moving an already-owned live ObjectHandle to a
             // different pool would leak frame/container-owned runtime state.
-            return cloneForAdoption(pool);
+            return new HandleConstant(pool, m_hValue);
         }
 
         throw new IllegalStateException(

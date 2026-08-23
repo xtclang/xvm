@@ -139,6 +139,18 @@ public class FSNodeConstant
         m_iData     = readMagnitude(in);
     }
 
+    private FSNodeConstant(ConstantPool pool, Format format, StringConstant constName,
+                           LiteralConstant constCreated, LiteralConstant constModified,
+                           Constant constData) {
+        super(pool);
+
+        m_fmt           = format;
+        m_constName     = constName;
+        m_constCreated  = constCreated;
+        m_constModified = constModified;
+        m_constData     = constData;
+    }
+
     @Override
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
@@ -236,13 +248,11 @@ public class FSNodeConstant
 
     @Override
     protected FSNodeConstant adoptedBy(ConstantPool pool) {
-        FSNodeConstant that = (FSNodeConstant) cloneForAdoption(pool);
-        // Constant.adoptedBy() shallow-copies transient fields. Runtime handles and the derived
-        // path literal are pool-owned state, so an adopted copy must recompute them under the
-        // destination pool instead of retaining source-pool cache entries.
-        that.m_handle    = null;
-        that.m_constPath = null;
-        return that;
+        // Adoption preserves only serialized logical file-node metadata. Runtime handles and the
+        // derived path literal are owner-local caches; constructing a fresh target-pool node keeps
+        // those caches empty while registerConstants(...) adopts the child constants as before.
+        return new FSNodeConstant(pool, m_fmt, m_constName, m_constCreated, m_constModified,
+                m_constData);
     }
 
 
@@ -402,8 +412,8 @@ public class FSNodeConstant
 
     /**
      * The path specified for the node, or null if this node was not specified by path.
-     * This derived constant is still a lazy per-node cache; adopted copies clear it so the value is
-     * recomputed in the destination pool.
+     * This derived constant is still a lazy per-node cache; clone-free adopted copies start without
+     * this cache so the value is recomputed in the destination pool.
      */
     private volatile LiteralConstant m_constPath;
 

@@ -63,6 +63,14 @@ public class FileStoreConstant
         m_iDir  = readMagnitude(in);
     }
 
+    private FileStoreConstant(ConstantPool pool, StringConstant constPath,
+                              FSNodeConstant constDir) {
+        super(pool);
+
+        m_constPath = constPath;
+        m_constDir  = constDir;
+    }
+
     @Override
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
@@ -121,12 +129,10 @@ public class FileStoreConstant
 
     @Override
     protected FileStoreConstant adoptedBy(ConstantPool pool) {
-        FileStoreConstant that = (FileStoreConstant) cloneForAdoption(pool);
-        // Runtime handles are owner-local. Constant.adoptedBy() shallow-copies transient fields, so
-        // clear any handle copied from the source pool before this constant is registered to a new
-        // owner.
-        that.m_handle = null;
-        return that;
+        // Adoption preserves only the serialized path/root directory metadata. The runtime handle
+        // cache is owner-local, so a target-pool copy must start with no handle and let
+        // registerConstants(...) adopt the child constants as before.
+        return new FileStoreConstant(pool, m_constPath, m_constDir);
     }
 
 

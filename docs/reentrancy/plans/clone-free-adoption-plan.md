@@ -63,7 +63,7 @@ The adoption entry points are:
 | Site | Current role |
 | --- | --- |
 | `Constant.adoptedBy(ConstantPool)` | Fails closed unless the constant family declares the transitional default-clone policy. |
-| `Constant.cloneForAdoption(ConstantPool)` | Transitional shallow clone helper used only by explicit adoption implementations or opted-in families. |
+| `Constant.cloneForAdoption(ConstantPool)` | Transitional shallow clone helper used by opted-in default-clone families. The runtime-handle explicit overrides no longer call it. |
 | `ConstantPool.register(T)` | Adopts a foreign constant when `constant.getContaining() != this`. |
 | `ConstantPool.register(T)` locator path | Adopts a foreign locator constant before publishing it in locator lookup maps. |
 | `ConstantAdoptionValidator` | Opt-in diagnostic guard controlled by `xvm.asm.validateConstantAdoption`. |
@@ -158,8 +158,8 @@ Risk buckets:
 | `EnumValueConstant` | `SingletonConstant` | inherits explicit singleton adoption | P0 singleton runtime-state family |
 | `ExpressionConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
 | `FPNConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
-| `FSNodeConstant` | `ValueConstant` | explicit override | P0 runtime handle/path cache |
-| `FileStoreConstant` | `ValueConstant` | explicit override | P0 runtime handle |
+| `FSNodeConstant` | `ValueConstant` | explicit clone-free override | P0 runtime handle/path cache |
+| `FileStoreConstant` | `ValueConstant` | explicit clone-free override | P0 runtime handle |
 | `Float128Constant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
 | `Float16Constant` | `FloatConstant` | family default-clone policy | P3 primitive/logical value |
 | `Float32Constant` | `FloatConstant` | family default-clone policy | P3 primitive/logical value |
@@ -170,7 +170,7 @@ Risk buckets:
 | `FormalConstant` | `NamedConstant` | family default-clone policy | P2 formal logical identity |
 | `FormalTypeChildConstant` | `PropertyConstant` | family default-clone policy | P2/P1 property metadata cache inheritance |
 | `FrameDependentConstant` | `Constant` | family default-clone policy | P4 frame-dependent family base |
-| `HandleConstant` | `FrameDependentConstant` | explicit guard override | P0 live runtime handle |
+| `HandleConstant` | `FrameDependentConstant` | explicit clone-free guard override | P0 live runtime handle |
 | `IdentityConstant` | `Constant` | family default-clone policy | P2 identity-family base |
 | `ImmutableTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `InnerChildTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
@@ -378,8 +378,10 @@ The behavior that intentionally changes:
   fail closed during the transition instead of silently shallow-copying.
 
 The current branch already demonstrates the semantic shape for high-risk cases:
-fresh owner-local singleton state, cleared filesystem runtime handles, fresh
-helper locks/reentrancy cells, and target-owner recomputation of derived caches.
+fresh owner-local singleton state, fresh filesystem logical constants with empty
+runtime/path caches, fresh wrappers for first-registration runtime handles,
+fresh helper locks/reentrancy cells, and target-owner recomputation of derived
+caches.
 
 ## Performance Equivalence
 
@@ -517,6 +519,11 @@ Scope:
   `HandleConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, and
   `TypeParameterConstant` from ad-hoc overrides to the new adoption hook;
 - keep current branch tests as equivalence tests.
+
+Current branch note: `FSNodeConstant`, `FileStoreConstant`, and `HandleConstant`
+already use clone-free construction inside their existing `adoptedBy(...)`
+overrides. The later API migration should preserve that behavior while moving it
+behind the final adoption hook.
 
 Review goal: prove the new API expresses already-known fixes without behavior or
 performance regressions.

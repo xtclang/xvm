@@ -128,10 +128,11 @@ Fix:
 - `SingletonConstant.adoptedBy(...)` constructs a fresh singleton constant for
   the target pool, so the adopted constant starts with an empty owner-local
   `InitState` cell.
-- `FSNodeConstant.adoptedBy(...)` and `FileStoreConstant.adoptedBy(...)` clear
-  cloned transient runtime handles for the same reason. `FSNodeConstant` also
-  clears its derived path-literal cache because that literal is owned by the
-  source pool once computed.
+- `FSNodeConstant.adoptedBy(...)` and `FileStoreConstant.adoptedBy(...)` now
+  construct fresh target-pool logical constants instead of shallow-cloning and
+  clearing copied transient runtime handles. `FSNodeConstant` also starts
+  adopted copies without its derived path-literal cache because that literal is
+  owned by the source pool once computed.
 - `OwnershipDiagnostics.assertHandleValidIfEnabled(...)` is now wired into the
   `mgmt.Container.invoke` module-target boundary used by the parallel stress
   runner, so wrong-owner handles fail structurally instead of surfacing later as
@@ -173,8 +174,9 @@ shallow-clone helper state identified by the audit:
   type parameter for the target pool instead of shallow-cloning the final
   recursive-comparison `TransientThreadLocal`.
 - `HandleConstant.adoptedBy(...)` now allows only the first registration of a
-  fresh unowned runtime handle constant. Moving an already-owned live handle
-  constant to another pool throws immediately.
+  fresh unowned runtime handle constant by constructing a target-owned wrapper.
+  Moving an already-owned live handle constant to another pool throws
+  immediately.
 - `Constant.adoptedBy(...)` now rejects the transitional default shallow-clone
   path unless a constant family explicitly declares
   `allowsDefaultAdoptionClone()`. Reviewed logical-value families opt in with
