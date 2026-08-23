@@ -4175,19 +4175,15 @@ public class CommonBuilder
             Set.of("elementAt")), // TODO: NEWCG_N is not implemented
         Map.entry("org.xtclang.ecstasy.collections.Set",
             Set.of("symmetricDifference")), // TODO: MOV_TYPE for the Replicable virtual constructor
-        Map.entry("org.xtclang.ecstasy.collections.VirtualHasher",
-            Set.of("hashOf")), // TODO: nested method formal has no enclosing MethodStructure
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
-            Set.of("construct", // TODO: specialized constructor chains to unspecialized class
-                   "freeze")),  // TODO: specialized return is incompatible with a conditional mixin
+            Set.of("construct")),  // TODO: specialized return is incompatible with a conditional mixin
         Map.entry("org.xtclang.ecstasy.maps.Map",
             Set.of("defaultCollector", // TODO: virtual constructor method constant
                    "estimateStringLength", // TODO: incompatible formal iterator result types
                    "map",              // TODO: incompatible formal result types in TypeMatrix
                    "removeAll")),      // TODO: key's formal type is tracked as Object
         Map.entry("org.xtclang.ecstasy.maps.deferred.DeferredMap",
-            Set.of("defaultCollector", // TODO: unresolved method formal in specialized class
-                   "fromEntry")),      // TODO: A_SUPER argument for a virtual construction
+            Set.of("fromEntry")),      // TODO: A_SUPER argument for a virtual construction
         Map.entry("org.xtclang.ecstasy.Range",
             Set.of("appendTo", "estimateStringLength")), // TODO: if (Element.is(Type<Stringable>)) does not cast
         Map.entry("org.xtclang.ecstasy.Timeout",
@@ -4196,9 +4192,7 @@ public class CommonBuilder
             Set.of("converterFor",
                    "converterTo")),
         Map.entry("org.xtclang.ecstasy.numbers.IntNumber",
-            Set.of("not")),         // TODO: depends on virtual constructor
-        Map.entry("org.xtclang.ecstasy.numbers.UInt16",
-            Set.of("parse"))        // TODO: GP_SUB for a formal value
+            Set.of("not"))          // TODO: depends on virtual constructor
     );
 
     private final static HashSet<String> SKIP_SET = new HashSet<>();
