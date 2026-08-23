@@ -1994,10 +1994,7 @@ public class TerminalTypeConstant
 
     @Override
     protected TerminalTypeConstant copyForAdoption(AdoptionContext context) {
-        var pool = context.pool();
-        if (!isShared(pool)) {
-            throw new IllegalStateException("cannot adopt terminal type with foreign identity: " + this);
-        }
+        var pool = requireSharedAdoptionPool(context, "terminal type with foreign identity");
 
         // Rebuild the type shell instead of shallow-cloning it. TypeConstant owner caches are not
         // logical type value; the defining identity is registered by the destination pool below.

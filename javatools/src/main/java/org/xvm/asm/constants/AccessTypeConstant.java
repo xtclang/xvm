@@ -225,6 +225,15 @@ public class AccessTypeConstant
     }
 
     @Override
+    protected AccessTypeConstant copyForAdoption(AdoptionContext context) {
+        var pool = requireSharedAdoptionPool(context, "access type with foreign child type");
+
+        // Access is logical modifier state. Rebuild the wrapper so TypeConstant helper caches stay
+        // owner-local, then let registerConstants(...) adopt the child type into the destination pool.
+        return new AccessTypeConstant(pool, m_constType, m_access);
+    }
+
+    @Override
     public boolean containsUnresolved() {
         return !isHashCached() && m_constType.containsUnresolved();
     }

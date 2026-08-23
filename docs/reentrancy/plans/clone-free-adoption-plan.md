@@ -98,14 +98,14 @@ Current branch inventory:
 | Abstract family bases in that set | 13 |
 | Concrete constant classes in that set | 75 |
 | Classes currently overriding `adoptedBy(...)` | 0 |
-| Classes currently overriding `copyForAdoption(...)` | 43 |
-| Concrete classes still relying on an explicit family default-clone policy | 32 |
+| Classes currently overriding `copyForAdoption(...)` | 46 |
+| Concrete classes still relying on an explicit family default-clone policy | 29 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
 
 - `Constant`, `ConstantPool`, and adoption tests;
-- all 43 current hook classes, already converted to `copyForAdoption(...)` in
+- all 46 current hook classes, already converted to `copyForAdoption(...)` in
   this branch;
 - 13 abstract family bases, to place shared family adoption rules where useful;
 - up to 75 concrete leaf constants, either by explicit copy/adoption
@@ -143,7 +143,7 @@ Risk buckets:
 | --- | --- | --- | --- |
 | `AbstractDependantChildTypeConstant` | `AbstractDependantTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `AbstractDependantTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
-| `AccessTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `AccessTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 single-child type wrapper fixed in this branch |
 | `AllCondition` | `MultiCondition` | explicit clone-free hook | P3 logical condition array; simulation scratch fixed in this branch |
 | `AnnotatedTypeConstant` | `TypeConstant` | family default-clone policy | P1 annotation children and type cache reset |
 | `AnonymousClassTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
@@ -179,7 +179,7 @@ Risk buckets:
 | `FrameDependentConstant` | `Constant` | fails closed; no default clone | P4 frame-dependent family base |
 | `HandleConstant` | `FrameDependentConstant` | explicit clone-free guard override | P0 live runtime handle |
 | `IdentityConstant` | `Constant` | family default-clone policy | P2 identity-family base |
-| `ImmutableTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `ImmutableTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 single-child type wrapper fixed in this branch |
 | `InnerChildTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `IntConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `IntersectionTypeConstant` | `RelationalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
@@ -210,7 +210,7 @@ Risk buckets:
 | `RegExConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `RegisterConstant` | `FrameDependentConstant` | explicit clone-free hook | P1/P4 compiler register state fixed in this branch |
 | `RelationalTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
-| `ServiceTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `ServiceTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 single-child type wrapper fixed in this branch |
 | `SignatureConstant` | `PseudoConstant` | explicit override | P0 helper lock/JIT cache |
 | `SingletonConstant` | `ValueConstant` | explicit override | P0 runtime singleton lifecycle state |
 | `StringConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
@@ -553,15 +553,17 @@ Scope:
 - migrate `TypeConstant` owner reset to explicit copy/adoption construction;
 - convert type-family classes:
   `AbstractDependantChildTypeConstant`, `AbstractDependantTypeConstant`,
-  `AccessTypeConstant`, `AnnotatedTypeConstant`, `AnonymousClassTypeConstant`,
-  `CastTypeConstant`, `DifferenceTypeConstant`, `ImmutableTypeConstant`,
+  `AnnotatedTypeConstant`, `AnonymousClassTypeConstant`,
+  `CastTypeConstant`, `DifferenceTypeConstant`,
   `InnerChildTypeConstant`, `IntersectionTypeConstant`, `PendingTypeConstant`,
   `PropertyClassTypeConstant`, `RecursiveTypeConstant`,
-  `RelationalTypeConstant`, `ServiceTypeConstant`, `TypeSequenceTypeConstant`,
-  `UnionTypeConstant`, `UnresolvedTypeConstant`, and
-  `VirtualChildTypeConstant`;
+  `RelationalTypeConstant`, `TypeSequenceTypeConstant`, `UnionTypeConstant`,
+  `UnresolvedTypeConstant`, and `VirtualChildTypeConstant`;
 - keep the `TerminalTypeConstant` branch fix, which reconstructs the type leaf
   from its defining identity and rejects unrelated foreign identities;
+- keep the `AccessTypeConstant`, `ImmutableTypeConstant`, and
+  `ServiceTypeConstant` branch fixes, which reconstruct logical single-child
+  wrappers and reject unrelated foreign child types;
 - preserve existing cache reset behavior exactly.
 
 Review goal: remove the largest owner-cache family from shallow clone fallback.
@@ -625,6 +627,9 @@ remaining composed type keys remains part of the type-family PR. `LiteralConstan
 parsed/delegated value wave: literal adoption drops transient parsed caches,
 version adoption preserves the concrete subclass, and decimal-auto target
 registration adopts the delegated decimal child.
+`AccessTypeConstant`, `ImmutableTypeConstant`, and `ServiceTypeConstant` are
+also converted: each rebuilds one logical modifier around a shared child type,
+and target registration still interns that child exactly as before.
 
 Review goal: replace low-risk default clone users with explicit logical-value
 copy code and remove the largest remaining fallback population.

@@ -348,6 +348,10 @@ type keys still rely on the remaining type-family clone-free adoption work.
 `TerminalTypeConstant` is also no longer on that default path: it reconstructs
 the type leaf from the defining identity, registers shared identities in the
 target owner, and rejects unrelated foreign identities before publication.
+The same rule now applies to the one-child type wrappers
+`AccessTypeConstant`, `ImmutableTypeConstant`, and `ServiceTypeConstant`: the
+logical modifier is reconstructed, the child type is adopted by target
+registration, and unrelated foreign child types fail before publication.
 
 Container/ConstantPool/lock/cache impact: `ConstantPool.register(...)` uses this
 path for foreign constants and locator constants. The validator is opt-in through

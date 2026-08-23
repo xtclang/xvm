@@ -240,6 +240,10 @@ shallow-clone helper state identified by the audit:
   identity instead of shallow-cloning all `TypeConstant` helper state. Shared
   identities are still adopted and interned by the destination pool; unrelated
   foreign identities fail before an adopted type shell can be published.
+- `AccessTypeConstant`, `ImmutableTypeConstant`, and `ServiceTypeConstant` now
+  reconstruct their logical single-child wrappers instead of shallow-cloning
+  inherited type helper state. Shared child types keep the same target-pool
+  interning behavior; unrelated foreign child types fail before publication.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws

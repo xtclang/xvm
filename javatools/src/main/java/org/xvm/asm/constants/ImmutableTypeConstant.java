@@ -191,6 +191,15 @@ public class ImmutableTypeConstant
     }
 
     @Override
+    protected ImmutableTypeConstant copyForAdoption(AdoptionContext context) {
+        var pool = requireSharedAdoptionPool(context, "immutable type with foreign child type");
+
+        // Immutability is logical modifier state. Rebuild the wrapper so TypeConstant helper caches
+        // stay owner-local, then let registerConstants(...) adopt the child type into the target pool.
+        return new ImmutableTypeConstant(pool, m_constType);
+    }
+
+    @Override
     protected Object getLocator() {
         return m_constType;
     }

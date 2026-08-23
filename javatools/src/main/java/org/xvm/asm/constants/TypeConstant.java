@@ -7923,6 +7923,24 @@ public abstract class TypeConstant
         return true;
     }
 
+    /**
+     * Verify that this type is allowed to be represented by the target pool before a clone-free
+     * adoption hook constructs a target-owned shell.
+     *
+     * @param context      the adoption context
+     * @param description  the type-family description to include in the failure
+     *
+     * @return the destination pool
+     */
+    protected final ConstantPool requireSharedAdoptionPool(
+            AdoptionContext context, String description) {
+        var pool = context.pool();
+        if (!isShared(pool)) {
+            throw new IllegalStateException("cannot adopt " + description + ": " + this);
+        }
+        return pool;
+    }
+
     @Override
     protected abstract int compareDetails(Constant that);
 

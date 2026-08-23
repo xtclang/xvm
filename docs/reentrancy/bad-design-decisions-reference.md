@@ -224,6 +224,12 @@ helper caches. Rebuilding the shell from that identity keeps the same
 constant-pool interning behavior for shared identities and fails closed for
 unrelated foreign identities.
 
+The same applies to simple type modifiers. `AccessTypeConstant`,
+`ImmutableTypeConstant`, and `ServiceTypeConstant` are one logical child type
+plus one modifier bit of meaning. Rebuilding those wrappers is as cheap as a
+shallow clone, preserves the same pool lookup behavior, and removes the inherited
+helper-cache copy from the ownership transfer path.
+
 Immutable scalar values are now explicit too. `ByteConstant`, `IntConstant`,
 `StringConstant`, `RegExConstant`, the fixed decimal value, and the fixed-size
 binary float values do not currently carry owner-local caches. That is exactly

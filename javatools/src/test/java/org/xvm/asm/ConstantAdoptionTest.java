@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnyCondition;
+import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.BFloat16Constant;
 import org.xvm.asm.constants.ByteConstant;
@@ -40,6 +41,7 @@ import org.xvm.asm.constants.Float8e5Constant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.ImmutableTypeConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MatchAnyConstant;
@@ -54,6 +56,7 @@ import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.RegExConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.ServiceTypeConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TerminalTypeConstant;
@@ -160,6 +163,58 @@ public class ConstantAdoptionTest {
         var error = assertThrows(IllegalStateException.class, () -> adopt(source, targetPool));
 
         assertTrue(error.getMessage().contains("foreign identity"));
+    }
+
+    /**
+     * Single-child type modifiers are logical wrappers around another TypeConstant. Adoption must
+     * rebuild the wrapper and let target registration intern the child, preserving the old lookup
+     * cache shape without copying inherited TypeConstant helper state.
+     */
+    @Test
+    public void registeredSingleChildTypeModifiersAdoptSharedChildIntoTargetPool() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var struct     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Owner", null);
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var sourceType = struct.getIdentityConstant().getType();
+
+        List.of(sourcePool.ensureAccessTypeConstant(sourceType, Component.Access.PRIVATE),
+                sourcePool.ensureImmutableTypeConstant(sourceType),
+                sourcePool.ensureServiceTypeConstant(sourceType))
+                .forEach(source -> {
+                    var registered = targetPool.register(source);
+
+                    assertNotSame(source, registered);
+                    assertSame(targetPool, registered.getConstantPool());
+                    assertSame(targetPool, registered.getUnderlyingType().getConstantPool());
+                    assertEquals(source.getValueString(), registered.getValueString());
+                });
+    }
+
+    /**
+     * A type modifier cannot make an unrelated source-owner child look target-owned. The old shallow
+     * clone path depended on TypeConstant.setContaining(...) assertions; direct adoption now throws in
+     * production too.
+     */
+    @Test
+    public void singleChildTypeModifiersRejectForeignChildDuringAdoption() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var struct     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Owner", null);
+        var sourceType = struct.getIdentityConstant().getType();
+
+        List.of(sourcePool.ensureAccessTypeConstant(sourceType, Component.Access.PRIVATE),
+                sourcePool.ensureImmutableTypeConstant(sourceType),
+                sourcePool.ensureServiceTypeConstant(sourceType))
+                .forEach(source -> {
+                    var error = assertThrows(IllegalStateException.class,
+                            () -> adopt(source, targetPool));
+
+                    assertTrue(error.getMessage().contains("foreign child type"));
+                });
     }
 
     /**
@@ -854,6 +909,7 @@ public class ConstantAdoptionTest {
 
         Set.of(AllCondition.class,
                AnyCondition.class,
+               AccessTypeConstant.class,
                ArrayConstant.class,
                BFloat16Constant.class,
                ByteConstant.class,
@@ -873,6 +929,7 @@ public class ConstantAdoptionTest {
                FormalTypeChildConstant.class,
                HandleConstant.class,
                IntConstant.class,
+               ImmutableTypeConstant.class,
                LiteralConstant.class,
                MapConstant.class,
                MatchAnyConstant.class,
@@ -887,6 +944,7 @@ public class ConstantAdoptionTest {
                RegExConstant.class,
                RegisterConstant.class,
                SignatureConstant.class,
+               ServiceTypeConstant.class,
                SingletonConstant.class,
                StringConstant.class,
                TerminalTypeConstant.class,

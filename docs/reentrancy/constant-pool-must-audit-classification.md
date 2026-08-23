@@ -183,13 +183,18 @@ Done in this branch:
   defining identity. Shared identities still register through the destination
   pool, while unrelated foreign identities fail in all modes instead of relying
   on `TypeConstant.setContaining(...)` assertions.
+- `AccessTypeConstant`, `ImmutableTypeConstant`, and `ServiceTypeConstant` now
+  reconstruct their logical single-child wrappers explicitly. Shared child types
+  still register through the destination pool; unrelated foreign child types fail
+  before the wrapper can be published.
 
 Remaining linked finding:
 
 - The `MatchAnyConstant` shell and foreign-key boundary are closed, but its
-  locator is still a `TypeConstant`. Shared/adoptable type keys still rely on the
-  remaining type-family default clone for composed type shapes. Keep clone-free
-  reconstruction of those type classes with the type-family PR.
+  locator is still a `TypeConstant`. Terminal and single-child type wrappers are
+  closed, but shared/adoptable composed type keys still rely on the remaining
+  type-family default clone. Keep clone-free reconstruction of those type
+  classes with the type-family PR.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 
