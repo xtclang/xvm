@@ -179,6 +179,11 @@ shallow-clone helper state identified by the audit:
 - `MethodConstant.copyForAdoption(...)` reconstructs method identity from the
   parent, signature, and lambda id, dropping cached method type and JIT method
   name state so those are recomputed by the target owner/type system.
+- `PropertyConstant.copyForAdoption(...)` reconstructs property identity from
+  parent and name, dropping cached property type, synthetic signature,
+  constraint, property info, and JIT property name state.
+- `FormalTypeChildConstant.copyForAdoption(...)` preserves the formal-child
+  format while dropping inherited property metadata/JIT caches.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws

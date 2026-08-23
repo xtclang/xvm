@@ -98,19 +98,20 @@ Current branch inventory:
 | Abstract family bases in that set | 13 |
 | Concrete constant classes in that set | 75 |
 | Classes currently overriding `adoptedBy(...)` | 0 |
-| Classes currently overriding `copyForAdoption(...)` | 8 |
-| Classes relying on an explicit family default-clone policy somewhere in the hierarchy | 80 |
+| Classes currently overriding `copyForAdoption(...)` | 10 |
+| Classes relying on an explicit family default-clone policy somewhere in the hierarchy | 78 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
 
 - `Constant`, `ConstantPool`, and adoption tests;
-- all 8 high-risk hook classes, already converted to `copyForAdoption(...)` in
+- all 10 high-risk hook classes, already converted to `copyForAdoption(...)` in
   this branch;
 - 13 abstract family bases, to place shared family adoption rules where useful;
 - up to 75 concrete leaf constants, either by explicit copy/adoption
   implementation or by inheriting a reviewed family implementation;
-- remaining JIT-name owner cache policy for `PropertyConstant`;
+- remaining identity/formal copy policy, including `DynamicFormalConstant`
+  register state;
 - stress/validator tests and a source-shape test that prevents fallback clone
   from returning.
 
@@ -175,7 +176,7 @@ Risk buckets:
 | `Float8e5Constant` | `FloatConstant` | family default-clone policy | P3 primitive/logical value |
 | `FloatConstant` | `ValueConstant` | family default-clone policy | P3 float-family base |
 | `FormalConstant` | `NamedConstant` | family default-clone policy | P2 formal logical identity |
-| `FormalTypeChildConstant` | `PropertyConstant` | family default-clone policy | P2/P1 property metadata cache inheritance |
+| `FormalTypeChildConstant` | `PropertyConstant` | explicit clone-free hook | P2/P1 property metadata cache inheritance fixed in this branch |
 | `FrameDependentConstant` | `Constant` | family default-clone policy | P4 frame-dependent family base |
 | `HandleConstant` | `FrameDependentConstant` | explicit clone-free guard override | P0 live runtime handle |
 | `IdentityConstant` | `Constant` | family default-clone policy | P2 identity-family base |
@@ -202,7 +203,7 @@ Risk buckets:
 | `PendingTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `PresentCondition` | `ConditionalConstant` | family default-clone policy | P3 logical condition |
 | `PropertyClassTypeConstant` | `AbstractDependantTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
-| `PropertyConstant` | `FormalConstant` | family default-clone policy | P1 JIT-name/type/property-info cache owner policy |
+| `PropertyConstant` | `FormalConstant` | explicit clone-free hook | P1 JIT-name/type/property-info cache owner policy fixed in this branch |
 | `PseudoConstant` | `Constant` | family default-clone policy | P2 pseudo-family base |
 | `PureIdentityConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
 | `RangeConstant` | `ValueConstant` | family default-clone policy | P3 logical range value |
@@ -529,13 +530,14 @@ PR can lift this commit out with no broad family migration.
 Scope:
 
 - migrate `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`,
-  `HandleConstant`, `MethodConstant`, `ParameterizedTypeConstant`,
-  `SignatureConstant`, and `TypeParameterConstant` from ad-hoc overrides to the
-  new adoption hook;
+  `FormalTypeChildConstant`, `HandleConstant`, `MethodConstant`,
+  `ParameterizedTypeConstant`, `PropertyConstant`, `SignatureConstant`, and
+  `TypeParameterConstant` from ad-hoc overrides to the new adoption hook;
 - keep current branch tests as equivalence tests.
 
-Current branch note: `FSNodeConstant`, `FileStoreConstant`, `HandleConstant`,
-and `MethodConstant` already use clone-free construction inside
+Current branch note: `FSNodeConstant`, `FileStoreConstant`,
+`FormalTypeChildConstant`, `HandleConstant`, `MethodConstant`, and
+`PropertyConstant` already use clone-free construction inside
 `copyForAdoption(...)`; the other P0/P1 special cases use the same hook for
 fresh helper/runtime state. The later API migration should preserve that
 behavior while broadening it to family bases.
@@ -569,14 +571,16 @@ Scope:
   `PseudoConstant`, and leaves:
   `ChildClassConstant`, `ClassConstant`, `DecoratedClassConstant`,
   `DeferredValueConstant`, `DynamicFormalConstant`, `ExpressionConstant`,
-  `FormalTypeChildConstant`, `KeywordConstant`, `ModuleConstant`,
-  `MultiMethodConstant`, `NativeRebaseConstant`, `PackageConstant`,
-  `ParentClassConstant`, `PropertyConstant`, `PureIdentityConstant`,
-  `ThisClassConstant`, `TypedefConstant`, and `UnresolvedNameConstant`;
+  `KeywordConstant`, `ModuleConstant`, `MultiMethodConstant`,
+  `NativeRebaseConstant`, `PackageConstant`, `ParentClassConstant`,
+  `PureIdentityConstant`, `ThisClassConstant`, `TypedefConstant`, and
+  `UnresolvedNameConstant`;
 - keep the `MethodConstant.copyForAdoption(...)` branch fix, which already
   drops method type and JIT-name caches;
-- settle `PropertyConstant.m_sJitName` owner policy instead of copying or
-  accidentally preserving JIT names.
+- keep the `PropertyConstant.copyForAdoption(...)` and
+  `FormalTypeChildConstant.copyForAdoption(...)` branch fixes, which already
+  drop property metadata and JIT-name caches while preserving each format;
+- settle `DynamicFormalConstant` register/formal copy policy.
 
 Review goal: make identity/path adoption explicit and remove hidden JIT-name
 owner coupling.

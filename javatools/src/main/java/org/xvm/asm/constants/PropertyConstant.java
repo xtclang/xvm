@@ -411,6 +411,13 @@ public class PropertyConstant
     }
 
     @Override
+    protected PropertyConstant copyForAdoption(AdoptionContext context) {
+        // Property identity is parent + name. Type, signature, PropertyInfo, constraint, and JIT
+        // name caches are owner/type-system helper state and must be recomputed by the target pool.
+        return new PropertyConstant(context.pool(), getParentConstant(), getName());
+    }
+
+    @Override
     public Object getNestedIdentity() {
         // property can be identified with only a name, assuming it is not recursively nested
         return getNamespace().isNested()

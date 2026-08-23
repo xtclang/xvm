@@ -626,7 +626,9 @@ Evidence:
   to the broader JIT audit.
 - `javatools/src/main/java/org/xvm/asm/constants/PropertyConstant.java:367`
   through `javatools/src/main/java/org/xvm/asm/constants/PropertyConstant.java:384`
-  caches JIT property names with synchronization.
+  caches JIT property names with synchronization. Adoption now drops this cache
+  via `PropertyConstant.copyForAdoption(...)`; same-owner JIT ownership still
+  belongs to the broader JIT audit.
 
 Why the old design is bad:
 
@@ -649,6 +651,9 @@ Existing reproducer, test, or diagnostic:
   several adoption-time helper cache resets.
 - `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java` covers
   adoption dropping `MethodConstant` type and JIT-name caches.
+- `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java` covers
+  adoption dropping `PropertyConstant` metadata/JIT caches and preserving
+  `FormalTypeChildConstant` format.
 - `javatools/src/test/java/org/xvm/asm/constants/MethodInfoTest.java:126`
   through `javatools/src/test/java/org/xvm/asm/constants/MethodInfoTest.java:164`
   covers parallel `MethodInfo` ownership construction.
@@ -674,9 +679,10 @@ than per-object `Lazy` where footprint matters.
 Recommended PR slice:
 
 Create a TypeConstant/cache ownership PR after the registration/freeze work.
-The runtime `TypeHandle` cache and MethodConstant adoption cache copy are fixed
-in this branch. Continue with relation caches, then separately audit remaining
-JIT name caches because they involve `TypeSystem` and classloader ownership.
+The runtime `TypeHandle` cache and MethodConstant/PropertyConstant adoption
+cache copies are fixed in this branch. Continue with relation caches, then
+separately audit same-owner JIT name caches because they involve `TypeSystem`
+and classloader ownership.
 
 ## 8. Destructive Pool Optimization, Module Replacement, And Disassembly Mutations
 

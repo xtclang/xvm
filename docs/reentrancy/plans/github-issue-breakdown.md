@@ -1423,8 +1423,10 @@ separately.
   - `SingletonConstant` if not included in PR 5;
   - `FSNodeConstant`;
   - `FileStoreConstant`;
+  - `FormalTypeChildConstant`;
   - `TypeConstant`;
   - `ParameterizedTypeConstant`;
+  - `PropertyConstant`;
   - `SignatureConstant`;
   - `TypeParameterConstant`;
   - `MethodConstant`.

@@ -175,6 +175,13 @@ public class FormalTypeChildConstant
         return false;
     }
 
+    @Override
+    protected FormalTypeChildConstant copyForAdoption(AdoptionContext context) {
+        // Preserve the formal-child format; inherited property caches are owner/type-system helper
+        // state and are intentionally left empty on the adopted copy.
+        return new FormalTypeChildConstant(context.pool(), getParentConstant(), getName());
+    }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

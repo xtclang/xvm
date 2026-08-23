@@ -19,10 +19,12 @@ import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.FileStoreConstant;
+import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -195,6 +197,66 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * PropertyConstant adoption must not carry cached property type, synthetic signature,
+     * constraint, or JIT-name state to another pool. Those values are derived from the target owner
+     * or a future JIT TypeSystem, while the logical property identity is only parent + name.
+     */
+    @Test
+    public void adoptedPropertyConstantDropsMetadataAndJitCaches() throws Exception {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var struct     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Owner", null);
+        var source     = sourcePool.ensurePropertyConstant(struct.getIdentityConstant(), "prop");
+        var sig        = sourcePool.ensureSignatureConstant(
+                "prop", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+
+        setField(source, "m_type", sourcePool.typeString());
+        setField(source, "m_constSig", sig);
+        setField(source, "m_typeConstraint", sourcePool.typeString());
+        setField(source, "m_sJitName", "SourceJitProperty");
+
+        var adopted = adopt(source, targetPool);
+
+        assertSame(targetPool, adopted.getConstantPool());
+        assertEquals(source.getName(), adopted.getName());
+        assertNull(fieldValue(adopted, "m_type"));
+        assertNull(fieldValue(adopted, "m_constSig"));
+        assertNull(fieldValue(adopted, "m_typeConstraint"));
+        assertNull(fieldValue(adopted, "m_sJitName"));
+    }
+
+    /**
+     * FormalTypeChildConstant inherits PropertyConstant cache fields, but its format is different
+     * and must survive adoption. A base property copy hook would silently corrupt this identity.
+     */
+    @Test
+    public void adoptedFormalTypeChildPreservesFormatAndDropsInheritedCaches() throws Exception {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var struct     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Owner", null);
+        var sig        = sourcePool.ensureSignatureConstant(
+                "method", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+        var method     = sourcePool.ensureMethodConstant(struct.getIdentityConstant(), sig);
+        var parent     = sourcePool.ensureRegisterConstant(method, 0, "T");
+        var source     = sourcePool.ensureFormalTypeChildConstant(parent, "Element");
+
+        setField(source, "m_typeConstraint", sourcePool.typeObject());
+        setField(source, "m_sJitName", "SourceFormalChildJitProperty");
+
+        var adopted = adopt(source, targetPool);
+
+        assertSame(Constant.Format.FormalTypeChild, adopted.getFormat());
+        assertSame(targetPool, adopted.getConstantPool());
+        assertEquals(source.getName(), adopted.getName());
+        assertNull(fieldValue(adopted, "m_typeConstraint"));
+        assertNull(fieldValue(adopted, "m_sJitName"));
+    }
+
+    /**
      * A live ObjectHandle is owner-specific runtime state, not logical constant data. Moving an
      * already-owned handle constant to another pool must fail instead of leaking the source owner.
      */
@@ -268,9 +330,11 @@ public class ConstantAdoptionTest {
 
         Set.of(FSNodeConstant.class,
                FileStoreConstant.class,
+               FormalTypeChildConstant.class,
                HandleConstant.class,
                MethodConstant.class,
                ParameterizedTypeConstant.class,
+               PropertyConstant.class,
                SignatureConstant.class,
                SingletonConstant.class,
                TypeParameterConstant.class)
