@@ -26,6 +26,7 @@ import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -316,6 +317,43 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * RegisterConstant serializes the register index, not the compiler Register object. Adoption
+     * must therefore preserve the runtime index while dropping the source compiler register and
+     * its owner/type state.
+     */
+    @Test
+    public void adoptedRegisterConstantDropsCompileTimeRegister() {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var reg        = new Register(sourcePool.typeObject(), "value", 3);
+        var source     = new RegisterConstant(sourcePool, reg);
+
+        var adopted = adopt(source, targetPool);
+
+        assertSame(targetPool, adopted.getConstantPool());
+        assertNull(adopted.getRegister());
+        assertEquals(reg.getIndex(), adopted.getRegisterIndex());
+        assertEquals(targetPool.typeObject(), adopted.getType());
+    }
+
+    /**
+     * An unknown compiler Register can still be assigned later. The old shallow clone copied that
+     * moving object to another pool; dropping it would freeze the wrong index, so adoption now
+     * rejects this shape until allocation has completed.
+     */
+    @Test
+    public void registerConstantRejectsUnknownRegisterAdoption() {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var reg        = new Register(sourcePool.typeObject(), "value", (MethodStructure) null);
+        var source     = new RegisterConstant(sourcePool, reg);
+
+        var error = assertThrows(IllegalStateException.class, () -> adopt(source, targetPool));
+
+        assertTrue(error.getMessage().contains("before register allocation"));
+    }
+
+    /**
      * A live ObjectHandle is owner-specific runtime state, not logical constant data. Moving an
      * already-owned handle constant to another pool must fail instead of leaking the source owner.
      */
@@ -395,6 +433,7 @@ public class ConstantAdoptionTest {
                MethodConstant.class,
                ParameterizedTypeConstant.class,
                PropertyConstant.class,
+               RegisterConstant.class,
                SignatureConstant.class,
                SingletonConstant.class,
                TypeParameterConstant.class)

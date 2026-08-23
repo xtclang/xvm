@@ -98,14 +98,14 @@ Current branch inventory:
 | Abstract family bases in that set | 13 |
 | Concrete constant classes in that set | 75 |
 | Classes currently overriding `adoptedBy(...)` | 0 |
-| Classes currently overriding `copyForAdoption(...)` | 11 |
-| Classes relying on an explicit family default-clone policy somewhere in the hierarchy | 77 |
+| Classes currently overriding `copyForAdoption(...)` | 12 |
+| Classes relying on an explicit family default-clone policy somewhere in the hierarchy | 76 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
 
 - `Constant`, `ConstantPool`, and adoption tests;
-- all 11 high-risk hook classes, already converted to `copyForAdoption(...)` in
+- all 12 high-risk hook classes, already converted to `copyForAdoption(...)` in
   this branch;
 - 13 abstract family bases, to place shared family adoption rules where useful;
 - up to 75 concrete leaf constants, either by explicit copy/adoption
@@ -208,7 +208,7 @@ Risk buckets:
 | `RangeConstant` | `ValueConstant` | family default-clone policy | P3 logical range value |
 | `RecursiveTypeConstant` | `TerminalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `RegExConstant` | `ValueConstant` | family default-clone policy | P3 logical regex string/options |
-| `RegisterConstant` | `FrameDependentConstant` | family default-clone policy | P4 serialized frame register constant |
+| `RegisterConstant` | `FrameDependentConstant` | explicit clone-free hook | P1/P4 compiler register state fixed in this branch |
 | `RelationalTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `ServiceTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `SignatureConstant` | `PseudoConstant` | explicit override | P0 helper lock/JIT cache |
@@ -531,12 +531,14 @@ Scope:
 - migrate `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`,
   `DynamicFormalConstant`, `FormalTypeChildConstant`, `HandleConstant`, `MethodConstant`,
   `ParameterizedTypeConstant`, `PropertyConstant`, `SignatureConstant`, and
-  `TypeParameterConstant` from ad-hoc overrides to the new adoption hook;
+  `TypeParameterConstant`, and `RegisterConstant` from ad-hoc overrides to the
+  new adoption hook;
 - keep current branch tests as equivalence tests.
 
 Current branch note: `FSNodeConstant`, `FileStoreConstant`,
 `DynamicFormalConstant`, `FormalTypeChildConstant`, `HandleConstant`,
-`MethodConstant`, and `PropertyConstant` already use clone-free construction inside
+`MethodConstant`, `PropertyConstant`, and `RegisterConstant` already use
+clone-free construction inside
 `copyForAdoption(...)`; the other P0/P1 special cases use the same hook for
 fresh helper/runtime state. The later API migration should preserve that
 behavior while broadening it to family bases.
@@ -603,8 +605,11 @@ copy code and remove the largest remaining fallback population.
 Scope:
 
 - keep `HandleConstant` as runtime-only and guarded;
-- document/encode why `RegisterConstant` and `MethodBindingConstant` are
-  serialized logical frame-dependent constants, not live runtime handles;
+- keep the `RegisterConstant.copyForAdoption(...)` branch fix, which records
+  serialized register identity, rejects unknown moving compiler registers, and
+  drops the transient compiler `Register`;
+- document/encode why `MethodBindingConstant` is a serialized logical
+  frame-dependent constant, not a live runtime handle;
 - make second adoption of live runtime values impossible without an explicit
   owner-local representation.
 

@@ -190,6 +190,11 @@ shallow-clone helper state identified by the audit:
   rejects adoption when the register type is not shared with the destination
   pool, because the old shallow clone could publish an invalid source-module
   type inside an unrelated target pool.
+- `RegisterConstant.copyForAdoption(...)` reconstructs register identity from
+  the serialized register index while dropping the transient compiler
+  `Register`. Unknown registers are rejected because their index can still move
+  during allocation; cloning that object into another pool would either leak
+  compiler state or freeze the wrong value.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws

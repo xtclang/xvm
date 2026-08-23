@@ -148,6 +148,9 @@ Done in this branch:
   reconstructs adoption from serialized register identity and rejects a
   register type that is not shared with the destination pool, instead of
   shallow-cloning the transient compiler `Register`.
+- `javatools/src/main/java/org/xvm/asm/constants/RegisterConstant.java`
+  reconstructs adoption from serialized register index and rejects unknown
+  registers, instead of shallow-cloning the transient compiler `Register`.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 
@@ -661,6 +664,9 @@ Existing reproducer, test, or diagnostic:
 - `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java` covers
   `DynamicFormalConstant` adoption with a shared module type and proves that
   the illegal foreign register-type case fails at the adoption boundary.
+- `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java` covers
+  `RegisterConstant` adoption for allocated registers and proves that unknown
+  moving registers fail at the adoption boundary.
 - `javatools/src/test/java/org/xvm/asm/constants/MethodInfoTest.java:126`
   through `javatools/src/test/java/org/xvm/asm/constants/MethodInfoTest.java:164`
   covers parallel `MethodInfo` ownership construction.

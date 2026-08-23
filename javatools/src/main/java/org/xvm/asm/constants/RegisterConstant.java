@@ -42,6 +42,16 @@ public class RegisterConstant
     }
 
     /**
+     * Constructor for owner adoption. Register constants serialize only the register index; the
+     * compile-time Register object and its type are source compiler state.
+     */
+    private RegisterConstant(ConstantPool pool, int nReg) {
+        super(pool);
+
+        f_nReg = nReg;
+    }
+
+    /**
      * Constructor used for deserialization.
      *
      * @param pool  the ConstantPool that will contain this Constant
@@ -113,6 +123,23 @@ public class RegisterConstant
     public TypeConstant getType() {
         TypeConstant type = m_reg == null ? null : m_reg.getType();
         return type == null ? getConstantPool().typeObject() : type;
+    }
+
+    @Override
+    protected RegisterConstant copyForAdoption(AdoptionContext context) {
+        var reg = m_reg;
+        if (reg == null) {
+            return new RegisterConstant(context.pool(), f_nReg);
+        }
+
+        if (reg.isUnknown()) {
+            throw new IllegalStateException(
+                    "cannot adopt register constant before register allocation: " + this);
+        }
+
+        // A RegisterConstant's assembled value is just the register index. The live Register is a
+        // compile-time owner object; cloning it into another pool would leak source compiler state.
+        return new RegisterConstant(context.pool(), reg.getIndex());
     }
 
     @Override

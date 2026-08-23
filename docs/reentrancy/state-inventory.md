@@ -278,7 +278,7 @@ javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java:95:        if (m_i
 javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java:114:        if (m_aiTypeParams == null) {
 javatools/src/main/java/org/xvm/asm/constants/PropertyBody.java:168:        if (m_infoProperty == null) {
 javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:117:        if (m_infoType == null) {
-javatools/src/main/java/org/xvm/asm/constants/RegisterConstant.java:133:        if (m_reg == null) {
+javatools/src/main/java/org/xvm/asm/constants/RegisterConstant.java:160:        if (m_reg == null) {
 javatools/src/main/java/org/xvm/asm/constants/TypeCollector.java:363:        if (m_FConditional == null) {
 javatools/src/main/java/org/xvm/asm/op/GuardStart.java:112:        if (m_aOpCatch == null) {
 javatools/src/main/java/org/xvm/asm/op/JumpInt.java:87:        if (m_aOpCase == null) {

@@ -1428,6 +1428,7 @@ separately.
   - `TypeConstant`;
   - `ParameterizedTypeConstant`;
   - `PropertyConstant`;
+  - `RegisterConstant`;
   - `SignatureConstant`;
   - `TypeParameterConstant`;
   - `MethodConstant`.
@@ -1436,6 +1437,9 @@ separately.
 - Reject `DynamicFormalConstant` adoption when its register type is not shared
   with the destination pool, because the target pool cannot safely own or share
   that source-module type.
+- Reject `RegisterConstant` adoption when the compiler register has not been
+  allocated yet; otherwise the target pool would either share a moving source
+  register or freeze an unstable index.
 - Add `ConstantAdoptionValidator` as an opt-in diagnostic at registration.
 - Add source-shape coverage proving the high-risk constants use the hook instead
   of ad-hoc `adoptedBy(...)` overrides.
@@ -1481,7 +1485,7 @@ Primary source areas:
 - `SingletonConstant`
 - `FSNodeConstant`, `FileStoreConstant`
 - `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`,
-  `TypeParameterConstant`, `DynamicFormalConstant`
+  `TypeParameterConstant`, `DynamicFormalConstant`, `RegisterConstant`
 - `HandleConstant`
 - `ClassComposition`
 - `OwnershipDiagnostics` boundary validation where adoption failures surface
@@ -1531,6 +1535,9 @@ appropriate:
 - `DynamicFormalConstant` keeps the same serialized register index/id behavior
   for valid shared/upstream type graphs, but invalid unrelated-pool adoption now
   fails at adoption instead of publishing a bad constant graph.
+- `RegisterConstant` keeps the same runtime/deserialized behavior: adopted
+  constants use the register index only. Compile-time type convenience from the
+  source `Register` is deliberately not copied across pools.
 - The validator is diagnostic coverage, not a complete architectural fix.
 - The validator is off unless explicitly enabled, so normal constant interning
   and runtime cache performance is unchanged.
