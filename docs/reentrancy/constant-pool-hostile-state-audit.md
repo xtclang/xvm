@@ -526,7 +526,8 @@ References:
   (atomic TypeInfo and invalidation updaters)
 - `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:7778`
   through `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:7785`
-  (`m_handle` TypeHandle cache)
+  (former `m_handle` TypeHandle cache; fixed by moving shared handles to
+  `Container.f_mapTypeHandles`)
 - `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:7952`
   through `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:7958`
   (`m_fValidated`)
@@ -541,13 +542,17 @@ Cause: some caches use atomic updaters or `ConcurrentHashMap`, while others are
 plain booleans, plain `HashMap`s, or unsynchronized runtime/JIT helper fields.
 
 Effect: duplicate computation may be benign, but not all fields are published
-or invalidated with the same guarantees. `m_handle` is especially owner
-sensitive because it contains runtime type-handle state.
+or invalidated with the same guarantees. The former `m_handle` was especially
+owner sensitive because it contained runtime type-handle state. This branch
+removes that field and caches shared Type handles in the requesting `Container`
+instead.
 
 Recommended guard/fix: classify each cache as immutable-after-compute,
 duplicate-compute-ok, or single-owner-only. Use `volatile`, `ConcurrentMap`, or
 explicit owner locks for runtime-visible caches, and keep runtime handles keyed
-by container/pool rather than by a potentially shared type object.
+by container/pool rather than by a potentially shared type object. The Type
+handle cache now follows this rule; relation, consumes/produces, normalized, and
+JIT-name helper caches remain separately audited.
 
 ### Live runtime handles are stored in constants
 

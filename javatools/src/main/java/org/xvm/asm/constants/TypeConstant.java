@@ -7784,19 +7784,12 @@ public abstract class TypeConstant
      * @return a handle for the Type object represented by this TypeConstant
      */
     public TypeHandle ensureTypeHandle(Container container) {
-        ConstantPool poolThat = container.getConstantPool();
+        var poolThat = container.getConstantPool();
         if (isShared(poolThat)) {
-            TypeHandle hType = m_handle;
-            if (hType == null) {
-                if (poolThat == this.getConstantPool()) {
-                    hType = m_handle = xRTType.makeHandle(container, this, true);
-                    assert getConstantPool() == hType.getComposition().getConstantPool();
-                } else {
-                    // don't cache a foreign handle
-                    return poolThat.register(this).ensureTypeHandle(container);
-                }
-            }
-            return hType;
+            var typeThat = poolThat == getConstantPool()
+                    ? this
+                    : poolThat.register(this);
+            return container.ensureTypeHandle(typeThat);
         }
 
         // don't cache a "foreign" handle
@@ -7944,7 +7937,6 @@ public abstract class TypeConstant
         m_tloInProgress   = null;
         m_mapConsumes     = null;
         m_mapProduces     = null;
-        m_handle          = null;
         m_sJitName        = null;
         m_typeNormalized  = null;
     }
@@ -8282,11 +8274,6 @@ public abstract class TypeConstant
      * A cache of "produces" responses.
      */
     private transient Map<String, Usage> m_mapProduces;
-
-    /**
-     * Cached TypeHandle.
-     */
-    private transient xRTType.TypeHandle m_handle;
 
     /**
      * Cached JIT class name.

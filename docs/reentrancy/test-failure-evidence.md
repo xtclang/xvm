@@ -43,6 +43,7 @@ smaller PR.
 | `org.xvm.compiler.CompilerThisEscapeConstructionTest` | Lexer/parser/AST constructor shape guards fail. | Compiler constructors called overridable hooks while incompletely constructed. |
 | `org.xvm.javajit.JitConstructorEscapeTest` | JIT descriptor-construction shape guard fails. | Local JIT constructor-time owner/descriptor publication remained. |
 | `org.xvm.runtime.RuntimeThisEscapeConstructionTest` | Runtime constructor shape guards fail. | Container, heap, templates, method handles, and field chains used constructor escapes. |
+| `org.xvm.runtime.NativeTemplatesTest#typeHandlesAreCachedByContainerOwner` | `TypeConstant.m_handle` still exists on master. | Runtime Type handles were cached on a pool/type object instead of under the requesting container owner. |
 | `org.xvm.runtime.GenericHandleCloneAsTest#sameOwnerCloneKeepsInflatedRefOuterViewLocal` | The source inflated ref's `$outer` changes to the cloned access view. | `GenericHandle.cloneAs(...)` shallow-copied the handle, shared the final field array, and then rewrote a view-specific `RefHandle.$outer` inside that shared backing. |
 | `org.xvm.runtime.template.reflect.RefHandleConstructionTest` | Register ref/node handle factory guards fail. | Runtime handle constructors published or mutated visible state before completion. |
 | `org.xvm.runtime.template.text.RegExHandleTest` | Compiled regex cache field shape is the old mutable cache. | Lazy regex cache publication was not final/lazy-safe. |

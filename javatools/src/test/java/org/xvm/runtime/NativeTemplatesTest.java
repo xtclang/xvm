@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.TimerTask;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
@@ -96,6 +97,19 @@ public class NativeTemplatesTest {
     @Test
     public void rejectsNullOwnerAtConstruction() {
         assertThrows(NullPointerException.class, () -> new NativeTemplates(null));
+    }
+
+    /**
+     * A TypeHandle contains container-owned native Type object state. Caching it on TypeConstant
+     * let two containers that share one pool reuse the first container's handle. The cache must live
+     * on Container, where the owner dimension is explicit and publication is concurrent-map safe.
+     */
+    @Test
+    public void typeHandlesAreCachedByContainerOwner() throws Exception {
+        assertThrows(NoSuchFieldException.class, () -> TypeConstant.class.getDeclaredField("m_handle"));
+
+        var field = Container.class.getDeclaredField("f_mapTypeHandles");
+        assertTrue(ConcurrentMap.class.isAssignableFrom(field.getType()));
     }
 
     /**

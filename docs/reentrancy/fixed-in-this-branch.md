@@ -187,6 +187,50 @@ explains why adoption exists, why it should preserve only logical constant
 value state, and how this branch hardens the remaining runtime-relevant
 shallow-copied helper/runtime fields.
 
+### Container-Owned TypeHandle Cache
+
+What was wrong:
+
+- `TypeConstant.ensureTypeHandle(Container)` accepted the caller container, but
+  the shared-handle cache lived on `TypeConstant.m_handle`.
+- A `TypeHandle` is not just a logical constant. `xRTType.makeHandle(...)`
+  creates a native Type object with a `TypeComposition` and helper fields owned
+  by the container that built it.
+- If two containers shared the same constant pool, the first call cached the
+  first container's handle on the `TypeConstant`. A later call with another
+  container returned that first owner handle because the cache key was only the
+  `TypeConstant`.
+- The field was also a plain lazy write, so parallel first use had no
+  happens-before edge.
+
+Replacement:
+
+- `TypeConstant.ensureTypeHandle(Container)` still owns the public type API and
+  still registers shared foreign-pool types into the caller pool before
+  creating a handle.
+- Shared handles are now cached by `Container.ensureTypeHandle(TypeConstant)`
+  in `Container.f_mapTypeHandles`.
+- `Container.ensureTypeHandle(...)` rejects a type from a different pool, so a
+  caller cannot accidentally populate one container's cache with another
+  pool's type.
+- Foreign type handles remain uncached, preserving the old semantics.
+
+Behavior and performance:
+
+- The old intended cache behavior is preserved: after first use, a container
+  reuses one shared `TypeHandle` per registered `TypeConstant`.
+- The cache key now includes the owner container, so two containers sharing one
+  pool no longer share owner-bearing Type handles.
+- `ConcurrentHashMap.computeIfAbsent(...)` gives safe publication and
+  same-owner first-use coalescing without adding locks to the hot read path.
+
+Regression proof:
+
+- `NativeTemplatesTest.typeHandlesAreCachedByContainerOwner()` fails on master
+  because `TypeConstant.m_handle` exists there.
+- The same test verifies that the replacement cache lives on `Container` as a
+  `ConcurrentMap`.
+
 ### Method Parameter Clone Ownership
 
 The clone audit found two separate method-copy bugs that were not

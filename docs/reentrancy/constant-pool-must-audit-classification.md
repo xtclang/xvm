@@ -532,8 +532,9 @@ Evidence:
   uses atomic updaters for TypeInfo and invalidation counts.
 - `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:7786`
   through `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:7803`
-  caches a runtime `TypeHandle` only when the target container shares the
-  constant pool.
+  formerly cached a runtime `TypeHandle` on the type constant. This branch
+  moves that runtime cache to `Container.ensureTypeHandle(TypeConstant)`, so
+  the owner dimension is explicit.
 - `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8015`
   through `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8043`
   lazily allocates relation, consumes, and produces maps with mixed concurrency
@@ -598,7 +599,7 @@ than per-object `Lazy` where footprint matters.
 Recommended PR slice:
 
 Create a TypeConstant/cache ownership PR after the registration/freeze work.
-Start with runtime `TypeHandle` and relation caches, then separately audit JIT
+The runtime `TypeHandle` cache is fixed in this branch. Continue with relation caches, then separately audit JIT
 name caches because they involve `TypeSystem` and classloader ownership.
 
 ## 8. Destructive Pool Optimization, Module Replacement, And Disassembly Mutations

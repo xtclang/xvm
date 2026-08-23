@@ -3,6 +3,7 @@ package org.xvm.runtime;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import java.util.concurrent.Callable;
@@ -46,6 +47,8 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
 
+import org.xvm.runtime.template._native.reflect.xRTType;
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
 
 import org.xvm.util.Lazy;
@@ -99,6 +102,28 @@ public abstract class Container
      */
     public NativeTemplates nativeTemplates() {
         return f_nativeTemplates.get(this);
+    }
+
+    /**
+     * Obtain the owner-local shared Type handle for a type registered in this container's pool.
+     *
+     * A TypeHandle contains native Type object fields and class composition state owned by the
+     * container that creates it. Caching it on TypeConstant looked owner-local when there was only
+     * one container per pool, but it let a second container sharing the same pool reuse the first
+     * container's handle. The cache belongs here because the caller container is the missing owner
+     * dimension.
+     *
+     * @param type  a type registered in this container's pool
+     *
+     * @return the shared Type handle for this container and type
+     */
+    public TypeHandle ensureTypeHandle(TypeConstant type) {
+        Objects.requireNonNull(type, "type");
+        if (type.getConstantPool() != getConstantPool()) {
+            throw new IllegalArgumentException(
+                    "Type handle cache requires a type registered in this container's pool");
+        }
+        return f_mapTypeHandles.computeIfAbsent(type, key -> xRTType.makeHandle(this, key, true));
     }
 
     /**
@@ -817,6 +842,13 @@ public abstract class Container
      * owner state on shared instruction objects.
      */
     private final ConcurrentMap<Op, ConcurrentMap<Enum<?>, Object>> f_mapRuntimeOpCache =
+            new ConcurrentHashMap<>();
+
+    /**
+     * Owner-local cache for shared Type handles. The key is a TypeConstant from this container's
+     * ConstantPool; foreign type handles remain uncached because they represent another type system.
+     */
+    private final ConcurrentMap<TypeConstant, TypeHandle> f_mapTypeHandles =
             new ConcurrentHashMap<>();
 
     /**

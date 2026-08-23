@@ -31,6 +31,12 @@ scope for that one issue, and commit the final result as one reviewable change.
 Keep the original branch commit hashes in the PR body as provenance, but do not
 make reviewers reconstruct the design from discovery-order commits.
 
+This branch should be treated as the integration/proof branch, not as the final
+review unit. The first submission strategy is small, test-backed PRs that each
+explain one broken state model and its replacement. A fork is a fallback only if
+those narrow fixes are rejected despite concrete master failures, preserved
+semantics, and clear owner/performance reasoning.
+
 | Order | PR title | Main reason | Depends on |
 | --- | --- | --- | --- |
 | 1 | Add container-owned native template lookup | Creates the owner lookup surface that removes process-global template pointers. | None |
@@ -56,6 +62,7 @@ Use this as the first pass when preparing actual PR branches from `master`.
 | --- | --- | --- |
 | Ambient current-pool removal | `be0270e0d`, `e856d85ce`, `d58ebfea0`, `5d5773979`, `5fce7b9ae`, `4c6521dd9`, `c93b5ad61`, `2716435f1`, `84fa61534` | Constant adoption, clone/copy fixes, JIT `Ctx.Current` policy |
 | Constant adoption hardening | `09f244211`, `e569d27db`, `e6f78a210`, `d1d0683e3`, `a0c1fe936` | Parameter/method clone fixes and `ObjectHandle.cloneAs(...)` design |
+| Shared runtime/ASM cache hardening | Runtime op-cache commits, `JumpNFirst` atomic state, and the `TypeConstant` TypeHandle owner-cache slice | Native-template `INSTANCE` migration, enum lifecycle state, broad ConstantPool freeze |
 | Parameter, method, and handle-copy fixes | `7f82e0a1e`, `ed7220bee`, the `GenericHandle.maskAs(...)` cross-owner guard slice, and the same-owner `GenericHandle.cloneAs(...)` inflated-ref backing slice | Constant adoption validator, broad compiler clone cleanup, base `ObjectHandle.cloneAs(...)` subclass audit |
 | Constructor-escape removal in shared ASM/runtime | `1249e2a0f`, `47d7ab30e`, `93189541f`, `16915ebe7`, `7b7fc2036`, `70bf202ef` where source areas match | JIT constructor escapes and compiler/parser-only cleanup |
 | JIT ownership cleanup | `36c24a974`, `cb81116cb` plus the separate JIT plan work | Interpreter runtime template ownership |
@@ -66,6 +73,43 @@ name. For example, "explicit receiver pool for semantic type operations" and
 "file-owned diagnostics" are both current-pool work, but they can be separate
 PRs if reviewers want smaller diffs. Do not split a test away from the source
 change it proves.
+
+### Acceptance Proof Standard
+
+The smoke test is necessary, but it is not sufficient proof for reentrancy.
+Each extracted PR should carry the proof appropriate to its failure mode:
+
+- Source-shape proof: tests or lint guards fail if the old unsafe pattern comes
+  back, such as mutable `INSTANCE`, ownerless runtime factories,
+  `ConstantPool.getCurrentPool()` semantic lookup, owner-bearing decoded-op
+  cache fields, `TypeConstant.m_handle`, or constructor `this` escapes.
+- Red-on-master proof: every must-fix should have a behavioral test that fails
+  on master, or a source-shape test that fails on master when reproducing the
+  full runtime failure would require a heavy integration harness.
+- Runtime ownership proof: same-JVM sequence and parallel-container stress must
+  run with ownership diagnostics enabled, and the validator must assert that
+  handles, templates, compositions, Type handles, and runtime caches are owned
+  by the expected container.
+- Late mutation proof: runtime-published pools should run with late-registration
+  diagnostics so cache-looking code cannot grow or rewrite a pool during
+  execution unnoticed.
+- Java memory model proof: every shared state cell must be final immutable
+  state, `AtomicReference`, `ConcurrentMap.computeIfAbsent(...)`,
+  synchronized/volatile publication, or explicitly documented as confined.
+  Plain lazy fields remain must-audit unless confinement is proven.
+- Equivalence/performance proof: document the old cache behavior and show the
+  replacement preserves it per owner. Hot paths must not gain deep graph copies
+  or avoidable locks. Any extra footprint must be owner-local and intentional,
+  such as one cache entry per executing container instead of one unsafe JVM
+  global entry.
+
+Performance validation should compare practical scenarios, not just isolated
+micro timings: same-JVM direct sequence versus forked execution, parallel
+container stress throughput, and focused cache-heavy paths such as native
+template lookup, Type handles, decoded switch caches, and `GenericHandle`
+access-view cloning. A performance regression is acceptable only when it is
+explained as the cost of removing invalid global sharing and there is no
+simpler owner-local representation.
 
 ## Verification Command Conventions
 
