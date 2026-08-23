@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.LinkedList;
+import java.util.Objects;
 
 import java.util.function.Consumer;
 
@@ -54,6 +55,21 @@ public class DynamicFormalConstant
         m_typeReg     = reg.getType();
         m_constFormal = constFormal;
         f_nReg        = reg.getIndex();
+    }
+
+    /**
+     * Constructor for owner adoption. It records the logical serialized register identity but does
+     * not retain the compile-time Register object from the source owner.
+     */
+    private DynamicFormalConstant(ConstantPool pool, MethodConstant idMethod, String sName,
+                                  int nReg, int nRegId, TypeConstant typeReg,
+                                  FormalConstant constFormal) {
+        super(pool, idMethod, sName);
+
+        f_nReg        = nReg;
+        m_nRegId      = nRegId;
+        m_typeReg     = Objects.requireNonNull(typeReg, "typeReg");
+        m_constFormal = Objects.requireNonNull(constFormal, "constFormal");
     }
 
     /**
@@ -199,6 +215,34 @@ public class DynamicFormalConstant
         return !isHashCached() && (super.containsUnresolved()
                                    || m_typeReg.containsUnresolved()
                                    || m_constFormal.containsUnresolved());
+    }
+
+    @Override
+    protected DynamicFormalConstant copyForAdoption(AdoptionContext context) {
+        var pool    = context.pool();
+        var typeReg = Objects.requireNonNull(m_typeReg, "register type");
+        if (!typeReg.isShared(pool)) {
+            throw new IllegalStateException(
+                    "cannot adopt dynamic formal with foreign register type: " + typeReg);
+        }
+        var constFormal = Objects.requireNonNull(m_constFormal, "formal constant");
+
+        var reg = m_reg;
+        if (reg == null) {
+            return new DynamicFormalConstant(pool, getMethod(), getName(),
+                    f_nReg, m_nRegId, typeReg, constFormal);
+        }
+
+        if (reg.isUnknown()) {
+            throw new IllegalStateException(
+                    "cannot adopt dynamic formal before register allocation: " + this);
+        }
+
+        // Dynamic formal identity is serialized as register index/id plus the target register type
+        // and underlying formal. The live Register is compiler-local owner state; adopting it by
+        // reference would make the target pool depend on source compiler mutation.
+        return new DynamicFormalConstant(pool, getMethod(), getName(),
+                reg.getIndex(), reg.getId(), typeReg, constFormal);
     }
 
     @Override

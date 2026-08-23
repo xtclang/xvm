@@ -144,6 +144,10 @@ Done in this branch:
 - `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:7932`
   through `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:7950`
   clears owner-derived type helper caches on owner change.
+- `javatools/src/main/java/org/xvm/asm/constants/DynamicFormalConstant.java`
+  reconstructs adoption from serialized register identity and rejects a
+  register type that is not shared with the destination pool, instead of
+  shallow-cloning the transient compiler `Register`.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 
@@ -654,6 +658,9 @@ Existing reproducer, test, or diagnostic:
 - `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java` covers
   adoption dropping `PropertyConstant` metadata/JIT caches and preserving
   `FormalTypeChildConstant` format.
+- `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java` covers
+  `DynamicFormalConstant` adoption with a shared module type and proves that
+  the illegal foreign register-type case fails at the adoption boundary.
 - `javatools/src/test/java/org/xvm/asm/constants/MethodInfoTest.java:126`
   through `javatools/src/test/java/org/xvm/asm/constants/MethodInfoTest.java:164`
   covers parallel `MethodInfo` ownership construction.

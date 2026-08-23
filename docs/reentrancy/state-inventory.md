@@ -271,8 +271,8 @@ javatools/src/main/java/org/xvm/asm/Scope.java:138:        if (m_scopeChild == n
 javatools/src/main/java/org/xvm/asm/Scope.java:36:        if (m_scopeChild == null) {
 javatools/src/main/java/org/xvm/asm/Scope.java:58:        if (m_scopeChild == null) {
 javatools/src/main/java/org/xvm/asm/constants/ChildInfo.java:65:        if (m_infoType == null) {
-javatools/src/main/java/org/xvm/asm/constants/DynamicFormalConstant.java:230:        if (m_reg == null) {
-javatools/src/main/java/org/xvm/asm/constants/DynamicFormalConstant.java:264:        if (this.m_reg == null) {
+javatools/src/main/java/org/xvm/asm/constants/DynamicFormalConstant.java:273:        if (m_reg == null) {
+javatools/src/main/java/org/xvm/asm/constants/DynamicFormalConstant.java:307:        if (this.m_reg == null) {
 javatools/src/main/java/org/xvm/asm/constants/MethodBody.java:132:        if (m_infoMethod == null) {
 javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java:95:        if (m_infoType == null) {
 javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java:114:        if (m_aiTypeParams == null) {

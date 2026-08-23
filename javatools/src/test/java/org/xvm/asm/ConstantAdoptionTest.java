@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.FileStoreConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
@@ -257,6 +258,64 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * DynamicFormalConstant stores enough logical register identity to assemble and compare after
+     * register allocation. Adoption must copy that stable identity while dropping the transient
+     * compiler Register object, which belongs to the source compiler/method owner. Registered
+     * type constants may still use TypeConstant sharing rules; they just must be valid for the
+     * target pool.
+     */
+    @Test
+    public void adoptedDynamicFormalDropsCompileTimeRegister() throws Exception {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var struct     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Owner", null);
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var sig        = sourcePool.ensureSignatureConstant(
+                "method", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+        var method     = sourcePool.ensureMethodConstant(struct.getIdentityConstant(), sig);
+        var formal     = sourcePool.ensurePropertyConstant(struct.getIdentityConstant(), "Element");
+        var reg        = new Register(struct.getIdentityConstant().getType(), "value", 3);
+        var source     = sourcePool.ensureDynamicFormal(method, reg, formal, "value");
+
+        var adopted = adopt(source, targetPool);
+        var registered = targetPool.register(source);
+
+        assertNull(adopted.getRegister());
+        assertEquals(reg.getIndex(), adopted.getRegisterIndex());
+        assertSame(targetPool, registered.getConstantPool());
+        assertNull(registered.getRegister());
+        assertEquals(reg.getIndex(), registered.getRegisterIndex());
+        assertSame(targetPool, registered.getFormalConstant().getConstantPool());
+        var registeredType = (TypeConstant) fieldValue(registered, "m_typeReg");
+        assertTrue(registeredType.isShared(targetPool));
+    }
+
+    /**
+     * A dynamic formal whose register type names an unrelated module-local class cannot be moved
+     * into another pool by copying references. The old shallow clone allowed that invalid foreign
+     * type to sit inside the target constant until later linkage or runtime code tripped over it.
+     */
+    @Test
+    public void dynamicFormalRejectsForeignRegisterTypeDuringAdoption() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var struct     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Owner", null);
+        var sig        = sourcePool.ensureSignatureConstant(
+                "method", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+        var method     = sourcePool.ensureMethodConstant(struct.getIdentityConstant(), sig);
+        var formal     = sourcePool.ensurePropertyConstant(struct.getIdentityConstant(), "Element");
+        var reg        = new Register(struct.getIdentityConstant().getType(), "value", 3);
+        var source     = sourcePool.ensureDynamicFormal(method, reg, formal, "value");
+
+        var error = assertThrows(IllegalStateException.class, () -> adopt(source, targetPool));
+
+        assertTrue(error.getMessage().contains("foreign register type"));
+    }
+
+    /**
      * A live ObjectHandle is owner-specific runtime state, not logical constant data. Moving an
      * already-owned handle constant to another pool must fail instead of leaking the source owner.
      */
@@ -329,6 +388,7 @@ public class ConstantAdoptionTest {
         assertTrue(Modifier.isFinal(adoptedBy.getModifiers()));
 
         Set.of(FSNodeConstant.class,
+               DynamicFormalConstant.class,
                FileStoreConstant.class,
                FormalTypeChildConstant.class,
                HandleConstant.class,

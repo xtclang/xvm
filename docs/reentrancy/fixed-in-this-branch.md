@@ -184,6 +184,12 @@ shallow-clone helper state identified by the audit:
   constraint, property info, and JIT property name state.
 - `FormalTypeChildConstant.copyForAdoption(...)` preserves the formal-child
   format while dropping inherited property metadata/JIT caches.
+- `DynamicFormalConstant.copyForAdoption(...)` reconstructs dynamic-formal
+  identity from the serialized register index/id, register type, and
+  underlying formal while dropping the transient compiler `Register`. It also
+  rejects adoption when the register type is not shared with the destination
+  pool, because the old shallow clone could publish an invalid source-module
+  type inside an unrelated target pool.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws
@@ -204,7 +210,8 @@ and caches the same values locally after first use, but no owner inherits
 another owner's helper cell or runtime handle through `Object.clone()`. The
 focused regression test is
 `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java`; copied into a
-detached `master` worktree, that test failed all five adoption cases.
+detached `master` worktree, the adoption cases fail by retaining copied helper,
+runtime, compiler-register, or cache state.
 
 The broader owner-transfer audit is documented in
 [constant-adoption-clone-audit.md](constant-adoption-clone-audit.md). That file
