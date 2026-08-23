@@ -28,6 +28,8 @@ import org.xvm.runtime.template.reflect.xVar;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * PropertyComposition represents a "custom" property class.
@@ -53,6 +55,9 @@ public class PropertyComposition
         f_mapMethods = new ConcurrentHashMap<>();
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();
+
+        f_clzInception = this;
+        f_fStruct      = false;
     }
 
     /**
@@ -65,8 +70,8 @@ public class PropertyComposition
         f_mapMethods   = clzInception.f_mapMethods;
         f_mapGetters   = clzInception.f_mapGetters;
         f_mapSetters   = clzInception.f_mapSetters;
-        m_clzInception = clzInception;
-        m_clzStruct    = this;
+        f_clzInception = clzInception;
+        f_fStruct      = true;
     }
 
 
@@ -131,20 +136,18 @@ public class PropertyComposition
     @Override
     public PropertyComposition ensureAccess(Access access) {
         if (access == Access.STRUCT) {
-            PropertyComposition clzStruct = m_clzStruct;
-            if (clzStruct == null) {
-                m_clzStruct = clzStruct = new PropertyComposition(this);
-            }
-            return clzStruct;
+            return isStruct()
+                    ? this
+                    : f_structView.get(this);
         }
 
         // for any other access return the inception composition
-        return isStruct() ? m_clzInception : this;
+        return f_clzInception;
     }
 
     @Override
     public boolean isStruct() {
-        return m_clzStruct == this;
+        return f_fStruct;
     }
 
     @Override
@@ -357,6 +360,15 @@ public class PropertyComposition
         return f_clzParent.getInceptionType().ensureTypeInfo();
     }
 
+    private static PropertyComposition createStructView(PropertyComposition owner) {
+        /*
+         * The struct view is a runtime composition object for this property owner. It shares all
+         * call-chain caches with the inception composition, so Lazy.Owner publishes one completed
+         * view without a constructor-captured `this` supplier or a mutable cache field.
+         */
+        return new PropertyComposition(owner);
+    }
+
 
     // ----- data fields ---------------------------------------------------------------------------
 
@@ -373,9 +385,10 @@ public class PropertyComposition
     // cached property setter call chain by property id (the top-most method first)
     private final Map<PropertyConstant, CallChain> f_mapSetters;
 
-    // cached PropertyComposition for the inception class
-    private PropertyComposition m_clzInception;
+    private final PropertyComposition f_clzInception;
 
-    // cached PropertyComposition for the struct class
-    private PropertyComposition m_clzStruct;
+    private final boolean f_fStruct;
+
+    private final Lazy.Owner<PropertyComposition, PropertyComposition> f_structView =
+            Lazy.ofOwner(PropertyComposition::createStructView);
 }

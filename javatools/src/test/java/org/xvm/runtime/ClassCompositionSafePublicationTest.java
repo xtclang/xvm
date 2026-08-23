@@ -33,6 +33,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.util.Lazy;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -107,6 +109,69 @@ public class ClassCompositionSafePublicationTest {
                 if (first.initializer() != null) {
                     assertSame(first.initializer(), initializer);
                 }
+            }
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    /**
+     * PropertyComposition struct access is also a runtime view cache. The old plain field could
+     * publish duplicate struct view identities under parallel first access. The fixed code uses
+     * Lazy.Owner so the cache stays final, owner-derived, and free of constructor-time `this`
+     * capture while preserving one lazy struct view per property composition.
+     */
+    @Test
+    public void propertyCompositionStructViewIsOwnerLazyAndShared() throws Exception {
+        assumeTrue(systemModulesAvailable(), "compiled XDK system modules are required");
+
+        var runtime = new Runtime();
+        try {
+            var container = NativeContainer.create(runtime, systemRepository());
+            var pool      = container.getConstantPool();
+            var clzString = (ClassComposition) container.resolveClass(pool.typeString());
+            var infoSize  = pool.typeString().ensureTypeInfo().findProperty("size");
+
+            assertNotNull(infoSize);
+
+            var property       = clzString.ensurePropertyComposition(infoSize);
+            var structViewCell = PropertyComposition.class.getDeclaredField("f_structView");
+            assertTrue(Modifier.isFinal(structViewCell.getModifiers()), "f_structView");
+            assertTrue(Modifier.isFinal(PropertyComposition.class
+                    .getDeclaredField("f_fStruct")
+                    .getModifiers()), "f_fStruct");
+            assertTrue(Modifier.isFinal(PropertyComposition.class
+                    .getDeclaredField("f_clzInception")
+                    .getModifiers()), "f_clzInception");
+            structViewCell.setAccessible(true);
+
+            var start = new CountDownLatch(1);
+            try (var executor = Executors.newFixedThreadPool(8)) {
+                var futures = IntStream.range(0, 8)
+                        .mapToObj(i -> executor.submit(() -> {
+                            start.await();
+                            return property.ensureAccess(Access.STRUCT);
+                        }))
+                        .toList();
+
+                start.countDown();
+
+                PropertyComposition first = null;
+                for (var future : futures) {
+                    var struct = future.get(10, TimeUnit.SECONDS);
+                    if (first == null) {
+                        first = struct;
+                    } else {
+                        assertSame(first, struct);
+                    }
+                }
+
+                assertNotNull(first);
+                assertTrue(first.isStruct());
+                assertSame(first, property.ensureAccess(Access.STRUCT));
+                assertSame(property, first.ensureAccess(Access.PUBLIC));
+                var lazy = (Lazy.Owner<?, ?>) structViewCell.get(property);
+                assertTrue(lazy.isComputed());
             }
         } finally {
             runtime.shutdownXVM();

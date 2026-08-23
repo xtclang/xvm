@@ -822,6 +822,9 @@ sets.
 - Safely publish `ClassComposition` field-name and synthetic initializer helper
   cells under the inception composition, so access views share one owner-local
   cache instead of racing clone-local duplicate lazy cells.
+- Replace `PropertyComposition`'s mutable struct-view cache with final
+  `Lazy.Owner` state and final role fields, preserving lazy struct-view
+  allocation and shared call-chain maps.
 
 ### Explicit Out Of Scope
 
@@ -860,6 +863,7 @@ Primary source areas:
 - `MethodInfo`, `PropertyInfo`
 - `TypeInfoReal`
 - `ClassComposition`
+- `PropertyComposition`
 
 ### Tests And Verification Commands
 
@@ -947,6 +951,10 @@ the hash-contract fixes are gone.
   allocated for fieldless classes. Access views now delegate to the inception
   composition, which is equivalent because the field layout and struct type are
   inception-owned and shared by all views.
+- `PropertyComposition` struct views remain lazy and still share the same
+  method/getter/setter call-chain maps as the inception property composition.
+  This is intentionally `Lazy.Owner`, not `Lazy.of(() -> ...)`, so construction
+  does not install a supplier that captures `this` before the owner is complete.
 - Failed virtual-child newability checks remain retryable, matching master.
   Only successful completion is cached and published.
 
@@ -981,6 +989,8 @@ the hash-contract fixes are gone.
   identity, signature-cache expansion, and retry semantics.
 - `ClassComposition` helper caches are inception-owned, safely published, and
   shared by access views without eager allocation.
+- `PropertyComposition` struct-view caching has no mutable nullable cache field
+  and preserves one lazy owner-local struct view.
 - Tests would fail or source-shape checks would detect the old cache/write-back
   pattern.
 

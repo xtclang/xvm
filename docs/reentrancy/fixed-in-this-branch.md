@@ -70,6 +70,13 @@ actually owns the value.
 | Hot per-value memoization | Plain lazy fields on value objects | Usually unchanged in this PR unless it is a real owner/publication bug | Avoid adding per-object `Lazy` footprint for should-fix-only cleanup |
 | Container-owned helper state | Base constructor passes `this` to helpers or runtime registry | Owner-explicit `ConstHeap`, owner-lazy `NativeTemplates`, and post-construction container factories | Same per-container caches and registry membership, with no partially constructed owner publication |
 
+`Lazy.Owner` is preferred when a value is computed once from its completed
+owner, has no key, has no retry/failure semantics, and the holder footprint is
+appropriate for the owning object. It is not a blanket replacement for every
+race fix. Keyed owner caches remain `ConcurrentMap`/immutable maps; intentional
+shared state uses atomics; low-level cells with special publication or retry
+rules use explicit volatile/synchronized code so the invariant is visible.
+
 Passing a `Container` is part of the replacement semantics. A static helper can
 no longer read "the" process-global template or pool; it needs the caller's
 container so it can select the owner-scoped cache. For example,
@@ -491,6 +498,55 @@ races canonical and protected access views through the two APIs, verifies that
 all callers observe one field-name array identity, verifies that the field-name
 handle belongs to the native container that created it, and checks that the
 initializer cell is volatile and owner-published on the inception composition.
+
+### PropertyComposition Struct View Cache
+
+This branch also fixes the corresponding custom-property composition access
+view cache. On master, `PropertyComposition.ensureAccess(STRUCT)` used a
+mutable plain lazy field:
+
+```java
+if (m_clzStruct == null) {
+    m_clzStruct = new PropertyComposition(this);
+}
+```
+
+That field caches runtime `TypeComposition` identity, not a throwaway value. A
+parallel first struct-view access could allocate duplicate
+`PropertyComposition` objects and publish the winner through a plain write. The
+struct view shares the inception composition's method/getter/setter call-chain
+maps, so the intended model is one struct view for one property composition
+owner.
+
+The replacement uses final owner-derived lazy state:
+
+- `f_clzInception` records the canonical property composition;
+- `f_fStruct` records whether the object is the struct view;
+- `f_structView` is a final `Lazy.Owner<PropertyComposition, PropertyComposition>`
+  that creates the struct view from the completed owner on first `STRUCT`
+  access.
+
+This is a better fit than a `volatile` field here because the state is exactly
+one owner-derived value, has no retry/failure semantics, and does not need a
+keyed map. `Lazy.Owner` also avoids `Lazy.of(() -> new PropertyComposition(this))`,
+which would create a constructor-time supplier capturing `this`.
+
+Semantics and performance are preserved:
+
+- the struct view is still lazy and is not allocated unless `STRUCT` access is
+  requested;
+- the struct view still shares the same call-chain maps as the inception
+  composition;
+- non-struct access from a struct view still returns the inception composition;
+- the hot path is a final lazy-holder read instead of a plain nullable field
+  read, which is the cost of getting final owner-derived publication without
+  another custom mutable cell.
+
+`ClassCompositionSafePublicationTest.propertyCompositionStructViewIsOwnerLazyAndShared()`
+uses a real native `String.size` property composition, races eight first
+`STRUCT` accesses, verifies that every caller observes the same struct-view
+identity, verifies that the struct view returns the inception composition for
+public access, and checks that the source shape uses final lazy/role fields.
 
 This branch also narrows ambient `ConstantPool` lookup at runtime boundaries:
 

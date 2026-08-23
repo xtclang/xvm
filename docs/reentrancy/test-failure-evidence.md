@@ -165,6 +165,17 @@ not a direct master runner because it uses branch lifecycle helpers, but the
 source-shape defect is explicit in the old `m_ashFieldNames` and `m_methodInit`
 declarations.
 
+`ClassCompositionSafePublicationTest.propertyCompositionStructViewIsOwnerLazyAndShared()`
+covers the custom-property struct-view cache. On master,
+`PropertyComposition.m_clzStruct` is a plain mutable lazy field that publishes a
+runtime `PropertyComposition` identity without a memory edge. The branch test
+uses a real native `String.size` property composition, races first `STRUCT`
+access, and proves all callers observe the same struct-view identity. It also
+checks the replacement source shape: final `Lazy.Owner` for the struct view and
+final inception/struct role fields. The test is branch-only because master does
+not have this final lazy field shape, but the broken old source pattern is the
+single `if (m_clzStruct == null) m_clzStruct = ...` cache.
+
 ## Review Rule
 
 When splitting this branch into smaller PRs, each PR should cite one of:
