@@ -195,6 +195,9 @@ Start here:
 - [plans/documentation-split-guide.md](plans/documentation-split-guide.md):
   guide for reshaping these broad investigation notes into issue templates and
   PR-specific documentation with short before/after examples.
+- [plans/clone-free-adoption-plan.md](plans/clone-free-adoption-plan.md):
+  long-term plan for replacing `Constant.adoptedBy(...)` shallow clone with
+  explicit owner-safe adoption/copy APIs, including risk buckets and PR splits.
 - [plans/jit-xvm-owner-refactor.md](plans/jit-xvm-owner-refactor.md): separate
   JIT `Xvm` owner-construction refactor plan, intentionally kept out of the
   interpreter runtime PR scope.
