@@ -45,6 +45,13 @@ public class DecimalAutoConstant
         m_dec = dec;
     }
 
+    @Override
+    protected DecimalAutoConstant copyForAdoption(AdoptionContext context) {
+        // The logical value delegates to a DecimalConstant. Target registration adopts that child
+        // through the normal recursive path after this owner-local shell is created.
+        return new DecimalAutoConstant(context.pool(), m_dec);
+    }
+
 
     // ----- type-specific methods -----------------------------------------------------------------
 

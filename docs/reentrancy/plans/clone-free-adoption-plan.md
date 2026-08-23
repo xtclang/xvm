@@ -98,14 +98,14 @@ Current branch inventory:
 | Abstract family bases in that set | 13 |
 | Concrete constant classes in that set | 75 |
 | Classes currently overriding `adoptedBy(...)` | 0 |
-| Classes currently overriding `copyForAdoption(...)` | 38 |
-| Concrete classes still relying on an explicit family default-clone policy | 37 |
+| Classes currently overriding `copyForAdoption(...)` | 41 |
+| Concrete classes still relying on an explicit family default-clone policy | 34 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
 
 - `Constant`, `ConstantPool`, and adoption tests;
-- all 38 current hook classes, already converted to `copyForAdoption(...)` in
+- all 41 current hook classes, already converted to `copyForAdoption(...)` in
   this branch;
 - 13 abstract family bases, to place shared family adoption rules where useful;
 - up to 75 concrete leaf constants, either by explicit copy/adoption
@@ -156,7 +156,7 @@ Risk buckets:
 | `ChildClassConstant` | `PseudoConstant` | family default-clone policy | P2 logical identity/path |
 | `ClassConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
 | `ConditionalConstant` | `Constant` | fails closed; concrete leaves explicit | P3 condition family base; private simulation scratch |
-| `DecimalAutoConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `DecimalAutoConstant` | `ValueConstant` | explicit clone-free hook | P3 delegated decimal value fixed in this branch |
 | `DecimalConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `DecoratedClassConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
 | `DeferredValueConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
@@ -184,7 +184,7 @@ Risk buckets:
 | `IntConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `IntersectionTypeConstant` | `RelationalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `KeywordConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
-| `LiteralConstant` | `ValueConstant` | family default-clone policy | P3 logical literal value |
+| `LiteralConstant` | `ValueConstant` | explicit clone-free hook | P3 parsed literal cache fixed in this branch |
 | `MapConstant` | `ValueConstant` | explicit clone-free hook | P3 composite value container fixed in this branch |
 | `MatchAnyConstant` | `ValueConstant` | family default-clone policy | P3 logical sentinel |
 | `MethodBindingConstant` | `FrameDependentConstant` | explicit clone-free hook | P4 serialized frame-dependent constant fixed in this branch |
@@ -225,7 +225,7 @@ Risk buckets:
 | `UnresolvedNameConstant` | `PseudoConstant` | family default-clone policy | P2 unresolved logical name |
 | `UnresolvedTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `ValueConstant` | `Constant` | family default-clone policy | P3 value-family base |
-| `VersionConstant` | `LiteralConstant` | family default-clone policy | P3 immutable logical version |
+| `VersionConstant` | `LiteralConstant` | explicit clone-free hook | P3 literal subclass fixed in this branch |
 | `VersionMatchesCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
 | `VersionedCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
 | `VirtualChildTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
@@ -617,6 +617,10 @@ child-value adoption. The test intentionally does not claim array/map type
 constants become target-owned yet; type-family adoption is a separate PR 3
 problem and `MatchAnyConstant` should stay there because its locator is a
 `TypeConstant`.
+`LiteralConstant`, `VersionConstant`, and `DecimalAutoConstant` are converted as
+the parsed/delegated value wave: literal adoption drops transient parsed caches,
+version adoption preserves the concrete subclass, and decimal-auto target
+registration adopts the delegated decimal child.
 
 Review goal: replace low-risk default clone users with explicit logical-value
 copy code and remove the largest remaining fallback population.

@@ -1591,6 +1591,13 @@ public class LiteralConstant
     }
 
     @Override
+    protected LiteralConstant copyForAdoption(AdoptionContext context) {
+        // Preserve literal text and format, but do not clone m_oVal. That field is a parsed cache,
+        // not serialized value, and must be recomputed under the destination owner if needed.
+        return new LiteralConstant(context.pool(), m_fmt, getValue(), null);
+    }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constStr);
     }

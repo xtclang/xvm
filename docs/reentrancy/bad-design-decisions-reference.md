@@ -225,6 +225,12 @@ another owner’s logical value. This branch copies array/map containers at the
 constructor and adoption boundaries; it does not claim to solve the separate
 type-family ownership issue for the array/map type constants.
 
+Parsed literals are a smaller version of the same design bug. `LiteralConstant`
+stores literal text as serialized value and `m_oVal` as an on-demand parsed
+helper. Shallow clone copied both. The correct transfer copies the text/format
+and drops the helper cache; if the target needs a `PackedInteger`, `BigDecimal`,
+or parsed float later, it recomputes it from the target-owned literal text.
+
 The same rule applies to method/parameter copies. This branch fixed a
 single-threaded bug where `Parameter.cloneBody()` mutated the source parameter
 while copying it, and a separate owner bug where `MethodStructure.cloneBody()`

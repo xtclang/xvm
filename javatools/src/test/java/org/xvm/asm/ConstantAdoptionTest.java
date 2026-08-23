@@ -24,6 +24,7 @@ import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.BFloat16Constant;
 import org.xvm.asm.constants.ByteConstant;
 import org.xvm.asm.constants.CharConstant;
+import org.xvm.asm.constants.DecimalAutoConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DecimalConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
@@ -57,6 +58,7 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
+import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.VersionMatchesCondition;
 import org.xvm.asm.constants.VersionedCondition;
 
@@ -70,6 +72,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -633,6 +636,69 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * LiteralConstant keeps parsed helper objects such as PackedInteger in m_oVal. Shallow adoption
+     * copied that cache into another pool even though it is not serialized literal value. The
+     * adopted literal keeps the same text/format and recomputes parsed state only if needed.
+     */
+    @Test
+    public void adoptedLiteralConstantsDropParsedCacheAndRetainText() throws Exception {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var literal    = sourcePool.ensureLiteralConstant(Constant.Format.IntLiteral, "123");
+
+        literal.getPackedInteger();
+
+        var adopted   = adopt(literal, targetPool);
+        var registered = targetPool.register(literal);
+
+        assertNotNull(fieldValue(literal, "m_oVal"));
+        assertSame(targetPool, adopted.getConstantPool());
+        assertEquals(literal.getFormat(), adopted.getFormat());
+        assertEquals(literal.getValue(), adopted.getValue());
+        assertNull(fieldValue(adopted, "m_oVal"));
+        assertSame(targetPool, registered.getStringConstant().getConstantPool());
+    }
+
+    /**
+     * VersionConstant is a LiteralConstant subclass. A family-level literal copy would accidentally
+     * return a plain LiteralConstant, so the version subclass must reconstruct itself explicitly.
+     */
+    @Test
+    public void adoptedVersionConstantsPreserveConcreteTypeAndLiteralString() {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var version    = new Version("1.2.3");
+        var source     = sourcePool.ensureVersionConstant(version);
+
+        var adopted    = adopt(source, targetPool);
+        var registered = targetPool.register(source);
+
+        assertEquals(VersionConstant.class, adopted.getClass());
+        assertSame(targetPool, adopted.getConstantPool());
+        assertEquals(version.toString(), adopted.getVersion().toString());
+        assertSame(targetPool, registered.getStringConstant().getConstantPool());
+    }
+
+    /**
+     * DecimalAutoConstant delegates its logical value to a DecimalConstant child. Adoption must not
+     * shallow-copy that child reference as final owner state; target registration has to adopt it
+     * through the normal recursive constant path.
+     */
+    @Test
+    public void registeredDecimalAutoConstantsAdoptDelegateIntoTargetPool() throws Exception {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var source     = sourcePool.ensureDecAConstant(new Decimal64(123L));
+
+        var registered = targetPool.register(source);
+        var delegate   = fieldValue(registered, "m_dec");
+
+        assertSame(targetPool, registered.getConstantPool());
+        assertEquals(source.getValueString(), registered.getValueString());
+        assertSame(targetPool, ((DecimalConstant) delegate).getConstantPool());
+    }
+
+    /**
      * A live ObjectHandle is owner-specific runtime state, not logical constant data. Moving an
      * already-owned handle constant to another pool must fail instead of leaking the source owner.
      */
@@ -710,6 +776,7 @@ public class ConstantAdoptionTest {
                BFloat16Constant.class,
                ByteConstant.class,
                CharConstant.class,
+               DecimalAutoConstant.class,
                DecimalConstant.class,
                FSNodeConstant.class,
                DynamicFormalConstant.class,
@@ -724,6 +791,7 @@ public class ConstantAdoptionTest {
                FormalTypeChildConstant.class,
                HandleConstant.class,
                IntConstant.class,
+               LiteralConstant.class,
                MapConstant.class,
                MethodBindingConstant.class,
                MethodConstant.class,
@@ -740,6 +808,7 @@ public class ConstantAdoptionTest {
                StringConstant.class,
                TypeParameterConstant.class,
                UInt8ArrayConstant.class,
+               VersionConstant.class,
                VersionMatchesCondition.class,
                VersionedCondition.class)
                 .forEach(clz -> {

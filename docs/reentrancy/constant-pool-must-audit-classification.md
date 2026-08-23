@@ -171,6 +171,10 @@ Done in this branch:
   and target registration still performs recursive child-value adoption. This
   fixes the container-aliasing part of the bug without claiming type-family
   adoption is complete.
+- `LiteralConstant`, `VersionConstant`, and `DecimalAutoConstant` now reconstruct
+  parsed/delegated values explicitly. Literal adoption drops transient parsed
+  helper state, version adoption preserves the concrete subclass, and decimal-auto
+  target registration adopts the delegated decimal child.
 
 Remaining linked finding:
 

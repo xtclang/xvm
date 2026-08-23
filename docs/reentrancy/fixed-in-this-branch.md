@@ -226,6 +226,11 @@ shallow-clone helper state identified by the audit:
   one container copy, not two. Target registration still adopts child value
   constants through `registerConstants(...)`; type constants referenced by
   array/map value types remain part of the separate type-family clone-free work.
+- `LiteralConstant`, `VersionConstant`, and `DecimalAutoConstant` now reconstruct
+  parsed/delegated values explicitly. Literal adoption keeps text/format but
+  drops the transient parsed `m_oVal` cache, version adoption preserves the
+  concrete `VersionConstant` subclass, and decimal-auto registration adopts the
+  delegated `DecimalConstant` child into the target pool.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws

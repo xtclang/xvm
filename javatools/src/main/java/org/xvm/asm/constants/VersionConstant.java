@@ -49,6 +49,13 @@ public class VersionConstant
         m_ver = new Version(getValue());
     }
 
+    @Override
+    protected VersionConstant copyForAdoption(AdoptionContext context) {
+        // Version is a LiteralConstant subclass; adoption must preserve that concrete type while
+        // rebuilding the underlying literal string in the destination pool.
+        return new VersionConstant(context.pool(), m_ver == null ? new Version(getValue()) : m_ver);
+    }
+
 
     // ----- ValueConstant methods -----------------------------------------------------------------
 

@@ -501,6 +501,9 @@ clearing copied runtime state.
 
 Hazard: these are positive examples, but they also prove the base clone was
 capable of copying final atomics, locks, handles, and JIT/cache state.
+The branch now extends that pattern to value constants as well: condition
+predicates, byte-array-backed values, immutable scalars, array/map/range
+containers, and parsed/delegated literals all have explicit adoption hooks.
 
 Classification: fixed or hardened in current branch; keep covered by tests and
 validator runs.
