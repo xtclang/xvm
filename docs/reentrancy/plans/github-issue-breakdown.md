@@ -819,9 +819,10 @@ sets.
 - Safely publish `PropertyInfo` helper cells for ref annotations, injected and
   implicitly-assigned flags, base Ref/Var type, and getter/setter method
   constants while preserving the old one-helper-per-owned-property cache shape.
-- Safely publish `ClassComposition` field-name and synthetic initializer helper
-  cells under the inception composition, so access views share one owner-local
-  final `Lazy.Owner` cache instead of racing clone-local duplicate lazy cells.
+- Safely publish `ClassComposition` field layout, field-name, and synthetic
+  initializer helper cells under the inception composition, so access views
+  share owner-local final `Lazy.Owner` caches instead of copying stale layout
+  side fields or racing clone-local duplicate lazy cells.
 - Replace `PropertyComposition`'s mutable struct-view cache with final
   `Lazy.Owner` state and final role fields, preserving lazy struct-view
   allocation and shared call-chain maps.
@@ -947,6 +948,10 @@ the hash-contract fixes are gone.
   a final `Lazy.Owner`; it does not add per-call clones or handle allocation.
   Access views now consistently reuse the inception array instead of
   timing-dependently duplicating it.
+- `ClassComposition` field layout remains lazy and one-per-inception. The field
+  map preserves insertion-order iteration for storage layout, and only the map
+  shape is frozen; `FieldInfo` objects remain the same runtime metadata objects
+  because transient initializer metadata is still recorded there.
 - `ClassComposition` synthetic auto-initializers remain lazy and are still not
   allocated for fieldless classes. Access views now share the inception
   `Lazy.Owner`, which is equivalent because the field layout and struct type are

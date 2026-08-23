@@ -152,18 +152,24 @@ code lacked a Java memory-model publication edge around owner-pool helper
 values.
 
 `ClassCompositionSafePublicationTest.accessViewsShareSafelyPublishedInceptionRuntimeCaches()`
-covers the related runtime composition helper caches. On master, the field-name
-array and auto-initializer cells are plain fields. Access-view field-name arrays
-are clone-local duplicate lazy cells, and access-view initializer cells copied
-whatever inception value existed at clone construction time. That means views
-can allocate unnecessary duplicate owner-bearing `StringHandle[]` arrays or
-duplicate synthetic initializers even though the owner, field layout, and struct
-type are inception-owned. The branch test uses a real native owner, races
-canonical and protected views, and verifies one safely published
-inception-owned field-name array plus a final owner-lazy initializer cell. The
-test is not a direct master runner because it uses branch lifecycle helpers, but
-the source-shape defect is explicit in the old `m_ashFieldNames` and
-`m_methodInit` declarations.
+covers the related runtime composition field-layout and helper caches. On
+master, field layout is a loose group of `m_mapFields`, `m_cRegularFields`,
+`m_fHasOuter`, and `m_fHasSpecial`; access-view constructors copy those values
+at construction time. A view created before field layout exists can therefore
+keep stale null/default layout while the inception composition later builds the
+real layout. On master, the field-name array and auto-initializer cells are also
+plain fields. Access-view field-name arrays are clone-local duplicate lazy
+cells, and access-view initializer cells copied whatever inception value existed
+at clone construction time. That means views can allocate unnecessary duplicate
+owner-bearing `StringHandle[]` arrays or duplicate synthetic initializers even
+though the owner, field layout, and struct type are inception-owned. The branch
+test creates the protected view before installing a synthetic layout, uses a
+real native owner, races canonical and protected views, and verifies one safely
+published inception-owned field-layout map, one field-name array, and a final
+owner-lazy initializer cell. The test is not a direct master runner because it
+uses branch lifecycle helpers, but the source-shape defect is explicit in the
+old field-layout group plus the old `m_ashFieldNames` and `m_methodInit`
+declarations.
 
 `ClassCompositionSafePublicationTest.propertyCompositionStructViewIsOwnerLazyAndShared()`
 covers the custom-property struct-view cache. On master,

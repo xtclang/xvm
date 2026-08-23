@@ -94,7 +94,8 @@ For each container, the dump includes:
   longer retains a constructor-captured container reference,
 - the owner-local `NativeTemplates` table state,
 - computed native-template lookup entries,
-- final `Lazy` fields on `NativeTemplates` and computed template instances,
+- final `Lazy` fields on `NativeTemplates`, computed template instances, and
+  type compositions such as `ClassComposition.f_fieldLayout`,
 - the container's `templatesByType` cache,
 - the container's `compositions` cache,
 - service contexts known to the container,

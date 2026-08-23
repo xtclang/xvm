@@ -72,6 +72,7 @@ public class InterpreterConnectorTest {
             var dump = OwnershipDiagnostics.dump(true, containers.getFirst());
             assertTrue(dump.contains("runtimeRegistry = contains=true"));
             assertTrue(dump.contains("nativeTemplates = Lazy.Owner["));
+            assertTrue(dump.contains("ClassComposition.f_fieldLayout = Lazy.Owner["));
             assertTrue(dump.contains("value = NativeTemplates@"));
         } finally {
             executor.shutdownNow();

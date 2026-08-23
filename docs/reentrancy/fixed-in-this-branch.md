@@ -446,22 +446,35 @@ runtime-pool design must still decide what happens to genuinely new constants
 created after publication and must not rely on an opt-in diagnostic property as
 the only guard.
 
-### ClassComposition Runtime Helper Caches
+### ClassComposition Runtime Field Layout And Helper Caches
 
-This branch also fixes two owner-bearing lazy cells on `ClassComposition`:
+This branch also fixes the runtime field-layout group and two owner-bearing
+lazy cells on `ClassComposition`:
 
+- `m_mapFields`, `m_cRegularFields`, `m_fHasOuter`, and `m_fHasSpecial`, the
+  field-layout group used to allocate structures, initialize refs, enumerate
+  fields, and build native Stringable helpers.
 - `m_ashFieldNames`, the cached `StringHandle[]` used by native Stringable
   support for const classes.
 - `m_methodInit`, the cached synthetic structure initializer created from the
   class field layout.
 
-Both were plain lazy fields on a runtime object that is reachable from handles
-and access-view conversion. The field-name array is not just text metadata: each
-`StringHandle` carries a `TypeComposition` from the owning container. Publishing
-that array with a plain write could expose a partially filled array or an array
-whose element handles had no happens-before edge from the producing thread. The
-auto initializer is owner-pool metadata; racing first access could create
-duplicate transient `MethodStructure` objects and let the last plain write win.
+The field-layout group was not one immutable object. One volatile map write
+published several side fields by convention, and access-view clone constructors
+copied whatever values existed at that instant. A protected/struct view created
+before layout construction could therefore keep stale `null`/default layout
+state even though the inception composition later built the real layout. That is
+bad even without parallelism; parallel first access simply makes the timing
+easier to hit.
+
+The field-name and initializer caches were plain lazy fields on a runtime object
+that is reachable from handles and access-view conversion. The field-name array
+is not just text metadata: each `StringHandle` carries a `TypeComposition` from
+the owning container. Publishing that array with a plain write could expose a
+partially filled array or an array whose element handles had no happens-before
+edge from the producing thread. The auto initializer is owner-pool metadata;
+racing first access could create duplicate transient `MethodStructure` objects
+and let the last plain write win.
 
 Access-view clones made the shape worse. Field-name arrays were clone-local, so
 each view could build a duplicate owner-bearing `StringHandle[]`. The synthetic
@@ -472,9 +485,14 @@ views, so view-local helper caches were unnecessary timing-dependent state.
 
 The replacement makes the inception composition the single cache owner:
 
+- the field-layout map, regular-field count, and flags are stored in one
+  immutable `FieldLayout` record behind final `Lazy.Owner` state;
+- `ensureFieldLayout(Container)` asserts the caller uses the composition's
+  owner container, so the old owner parameter cannot silently build layout
+  against a different container;
 - access views delegate `getFieldNameArray()` and `ensureAutoInitializer()` to
   `f_clzInception`;
-- the inception `f_fieldNames` and `f_methodInit` cells are final
+- the inception `f_fieldLayout`, `f_fieldNames`, and `f_methodInit` cells are final
   `Lazy.Owner` holders;
 - access-view compositions reuse those final holders instead of allocating
   unused clone-local lazy cells;
@@ -483,6 +501,12 @@ The replacement makes the inception composition the single cache owner:
 
 This preserves apparent behavior and performance:
 
+- the field-layout map is still built lazily once per inception composition, and
+  it preserves insertion-order iteration for field storage order;
+- the public `getFieldLayout()` API still returns the same cached map identity,
+  but the map shape is now immutable; the contained `FieldInfo` objects remain
+  the same runtime metadata objects, so the auto-initializer can still record
+  transient initializer metadata on those fields as before;
 - field names are still cached as one `StringHandle[]` and returned by identity
   from the API, so no per-call defensive copy or per-call handle creation was
   added;
@@ -500,8 +524,9 @@ This preserves apparent behavior and performance:
 
 `ClassCompositionSafePublicationTest.accessViewsShareSafelyPublishedInceptionRuntimeCaches()`
 races canonical and protected access views through the two APIs, verifies that
-all callers observe one field-name array identity, verifies that the field-name
-handle belongs to the native container that created it, and checks that the
+all callers observe one field-layout map identity and one field-name array
+identity, verifies that the field-name handle belongs to the native container
+that created it, verifies the map shape is immutable, and checks that the
 initializer is computed through the final owner-lazy inception cell.
 
 ### PropertyComposition Struct View Cache

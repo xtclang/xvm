@@ -9,12 +9,15 @@ import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -38,6 +41,7 @@ import org.xvm.util.Lazy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -48,11 +52,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 public class ClassCompositionSafePublicationTest {
     /**
-     * Field-name handles and synthetic structure initializers belong to the inception
-     * composition's container. The old access-view clones could race separate plain lazy cells,
-     * publish owner-bearing arrays without a memory edge, or create duplicate initializers.
-     * Parallel first access through canonical and protected views must observe one safely
-     * published inception-owned cache identity.
+     * Field layout, field-name handles, and synthetic structure initializers belong to the
+     * inception composition's container. The old access-view clones copied field-layout side fields
+     * at construction time and could race separate plain lazy cells. Parallel first access through
+     * canonical and protected views must observe one safely published inception-owned cache identity.
      */
     @Test
     public void accessViewsShareSafelyPublishedInceptionRuntimeCaches() throws Exception {
@@ -65,9 +68,10 @@ public class ClassCompositionSafePublicationTest {
             var clz       = new ClassComposition(container, container.getTemplate("Object"),
                     pool.typeObject());
 
+            var protectedView   = clz.ensureAccess(Access.PROTECTED);
             installSyntheticFieldLayout(clz, pool.typeObject());
 
-            var protectedView   = clz.ensureAccess(Access.PROTECTED);
+            var fieldLayoutCell = finalField(ClassComposition.class, "f_fieldLayout");
             var fieldNamesCell  = finalField(ClassComposition.class, "f_fieldNames");
             var initializerCell = finalField(ClassComposition.class, "f_methodInit");
             var start           = new CountDownLatch(1);
@@ -100,8 +104,14 @@ public class ClassCompositionSafePublicationTest {
                 assertNotNull(first);
                 assertEquals(1, first.names().length);
                 assertSame(container, first.names()[0].getComposition().getContainer());
+                assertSame(clz.getFieldLayout(), protectedView.getFieldLayout());
                 assertSame(first.names(), protectedView.getFieldNameArray());
                 assertSame(first.initializer(), protectedView.ensureAutoInitializer());
+                assertThrows(UnsupportedOperationException.class, () ->
+                        clz.getFieldLayout().clear());
+
+                var fieldLayout = (Lazy.Owner<?, ?>) fieldLayoutCell.get(clz);
+                assertTrue(fieldLayout.isComputed());
 
                 var fieldNames = (Lazy.Owner<?, ?>) fieldNamesCell.get(clz);
                 assertTrue(fieldNames.isComputed());
@@ -189,13 +199,39 @@ public class ClassCompositionSafePublicationTest {
         fields.put("value", new ClassComposition.FieldInfo(
                 "value", 0, type, null, false, false, false, false));
 
-        var mapFields = ClassComposition.class.getDeclaredField("m_mapFields");
-        mapFields.setAccessible(true);
-        mapFields.set(clz, fields);
+        setOwnerLazyValue(clz, "f_fieldLayout", newFieldLayout(fields));
+    }
 
-        var regularFieldCount = ClassComposition.class.getDeclaredField("m_cRegularFields");
-        regularFieldCount.setAccessible(true);
-        regularFieldCount.setInt(clz, fields.size());
+    private static Object newFieldLayout(
+            LinkedHashMap<Object, ClassComposition.FieldInfo> fields) throws Exception {
+        var layoutClass = Stream.of(ClassComposition.class.getDeclaredClasses())
+                .filter(clz -> clz.getSimpleName().equals("FieldLayout"))
+                .findFirst()
+                .orElseThrow();
+        var constructor = layoutClass.getDeclaredConstructor(
+                Map.class, int.class, boolean.class, boolean.class);
+        constructor.setAccessible(true);
+        return constructor.newInstance(
+                Collections.unmodifiableMap(new LinkedHashMap<>(fields)), fields.size(),
+                false, false);
+    }
+
+    /**
+     * Seed a synthetic layout through the final owner-lazy holder so the test can reproduce the
+     * old stale access-view copy without depending on whichever fields Object happens to expose.
+     */
+    @SuppressWarnings("unchecked")
+    private static void setOwnerLazyValue(ClassComposition clz, String name, Object value)
+            throws Exception {
+        var lazy       = (Lazy.Owner<?, ?>) finalField(ClassComposition.class, name).get(clz);
+        var ownerField = Lazy.Owner.class.getDeclaredField("owner");
+        ownerField.setAccessible(true);
+        ownerField.set(lazy, clz);
+
+        var valueRefField = Lazy.Owner.class.getDeclaredField("valueRef");
+        valueRefField.setAccessible(true);
+        var valueRef = (AtomicReference<Object>) valueRefField.get(lazy);
+        valueRef.set(value);
     }
 
     private static Field finalField(Class<?> clz, String name) throws Exception {

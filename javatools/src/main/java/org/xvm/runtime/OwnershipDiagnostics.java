@@ -276,6 +276,8 @@ public final class OwnershipDiagnostics {
         private final Map<Object, Occurrence> seen = new IdentityHashMap<>();
         private final Set<Object> dumpedTemplateLazy =
                 Collections.newSetFromMap(new IdentityHashMap<>());
+        private final Set<Object> dumpedCompositionLazy =
+                Collections.newSetFromMap(new IdentityHashMap<>());
         private final Set<Object> expandedValues =
                 Collections.newSetFromMap(new IdentityHashMap<>());
 
@@ -430,7 +432,7 @@ public final class OwnershipDiagnostics {
                             lazy, expected, indent + 1, allowNativeOwner);
                 } else if (value instanceof Lazy.Owner<?, ?> lazy) {
                     dumpOwnerLazy(field.getDeclaringClass().getSimpleName() + "." + field.getName(),
-                            lazy, owner, expected, indent + 1, allowNativeOwner);
+                            lazy, lazyOwner(owner, field), expected, indent + 1, allowNativeOwner);
                 }
             }
         }
@@ -548,6 +550,12 @@ public final class OwnershipDiagnostics {
             Container nestedExpected = nestedExpected(expected, value, allowNativeOwner);
             if (value instanceof ClassTemplate template && dumpedTemplateLazy.add(template)) {
                 dumpLazyFields(template, nestedExpected, indent + 1, allowNativeOwner);
+                return;
+            }
+
+            if (value instanceof TypeComposition composition &&
+                    dumpedCompositionLazy.add(composition)) {
+                dumpLazyFields(composition, nestedExpected, indent + 1, allowNativeOwner);
                 return;
             }
 
@@ -784,6 +792,14 @@ public final class OwnershipDiagnostics {
                     || value instanceof ObjectHandle
                     || value instanceof ServiceContext
                     || value instanceof NativeTemplates;
+        }
+
+        private static Object lazyOwner(Object owner, Field field) {
+            if (owner instanceof ClassComposition
+                    && Lazy.Owner.class.isAssignableFrom(field.getType())) {
+                return readField(owner, "f_clzInception");
+            }
+            return owner;
         }
 
         private String describeContainer(Container container) {

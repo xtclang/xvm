@@ -80,6 +80,7 @@ public class ClassComposition
         f_mapMethods      = new ConcurrentHashMap<>();
         f_mapGetters      = new ConcurrentHashMap<>();
         f_mapSetters      = new ConcurrentHashMap<>();
+        f_fieldLayout     = Lazy.ofOwner(ClassComposition::buildFieldLayout);
         f_fieldNames      = Lazy.ofOwner(ClassComposition::buildFieldNameArray);
         f_methodInit      = Lazy.ofOwner(ClassComposition::buildAutoInitializer);
     }
@@ -102,13 +103,9 @@ public class ClassComposition
         f_mapMethods      = f_clzInception.f_mapMethods;
         f_mapGetters      = f_clzInception.f_mapGetters;
         f_mapSetters      = f_clzInception.f_mapSetters;
+        f_fieldLayout     = f_clzInception.f_fieldLayout;
         f_fieldNames      = f_clzInception.f_fieldNames;
         f_methodInit      = f_clzInception.f_methodInit;
-
-        m_mapFields       = f_clzInception.m_mapFields;
-        m_cRegularFields  = f_clzInception.m_cRegularFields;
-        m_fHasOuter       = f_clzInception.m_fHasOuter;
-        m_fHasSpecial     = f_clzInception.m_fHasSpecial;
     }
 
     /**
@@ -269,7 +266,8 @@ public class ClassComposition
             return f_clzInception.ensureAutoInitializer();
         }
 
-        if (m_mapFields.isEmpty()) {
+        var layout = fieldLayout();
+        if (layout.fields().isEmpty()) {
             return null;
         }
 
@@ -434,7 +432,7 @@ public class ClassComposition
 
     @Override
     public Map<Object, FieldInfo> getFieldLayout() {
-        return m_mapFields;
+        return fieldLayout().fields();
     }
 
     @Override
@@ -448,7 +446,8 @@ public class ClassComposition
 
     private MethodStructure buildAutoInitializer() {
         var pool = getContainer().getConstantPool();
-        return f_template.getStructure().createInitializer(pool, f_typeStructure, m_mapFields);
+        return f_template.getStructure().createInitializer(pool, f_typeStructure,
+                fieldLayout().fields());
     }
 
     private StringHandle[] buildFieldNameArray() {
@@ -458,10 +457,11 @@ public class ClassComposition
          * duplicate arrays. Keep the API's cached array behavior but publish exactly one
          * inception-owned array safely.
          */
-        var ashNames = new StringHandle[m_cRegularFields];
+        var layout   = fieldLayout();
+        var ashNames = new StringHandle[layout.regularFieldCount()];
 
         int i = 0;
-        for (Map.Entry<Object, FieldInfo> entry : getFieldLayout().entrySet()) {
+        for (Map.Entry<Object, FieldInfo> entry : layout.fields().entrySet()) {
             Object    enid  = entry.getKey();
             FieldInfo field = entry.getValue();
 
@@ -469,19 +469,20 @@ public class ClassComposition
                 ashNames[i++] = xString.makeHandle(getContainer(), field.getName());
             }
         }
-        assert i == m_cRegularFields;
+        assert i == layout.regularFieldCount();
 
         return ashNames;
     }
 
     @Override
     public ObjectHandle[] getFieldValueArray(Frame frame, GenericHandle hValue) {
-        Map<Object, FieldInfo> mapLayout = getFieldLayout();
+        var                    layout    = fieldLayout();
+        Map<Object, FieldInfo> mapLayout = layout.fields();
         if (mapLayout.isEmpty()) {
             return Utils.OBJECTS_NONE;
         }
 
-        ObjectHandle[] ahFields = new ObjectHandle[m_cRegularFields];
+        ObjectHandle[] ahFields = new ObjectHandle[layout.regularFieldCount()];
 
         int i = 0;
         for (Map.Entry<Object, FieldInfo> entry : mapLayout.entrySet()) {
@@ -492,21 +493,22 @@ public class ClassComposition
                 ahFields[i++] = hValue.getField(frame, field);
             }
         }
-        assert i == m_cRegularFields;
+        assert i == layout.regularFieldCount();
         return ahFields;
     }
 
     @Override
     public ObjectHandle[] initializeStructure() {
-        Map<Object, FieldInfo> mapFields = m_mapFields;
-        int                    cSize     = mapFields.size();
+        var layout    = fieldLayout();
+        var mapFields = layout.fields();
+        int cSize     = mapFields.size();
 
         if (cSize == 0) {
             return Utils.OBJECTS_NONE;
         }
 
         ObjectHandle[] aFields = new ObjectHandle[cSize];
-        if (m_fHasSpecial) {
+        if (layout.hasSpecial()) {
             for (FieldInfo field : mapFields.values()) {
                 if (field.isTransient()) {
                     aFields[field.getIndex()] = new TransientId();
@@ -525,17 +527,17 @@ public class ClassComposition
                 idProp.getComponent().getAccess() != Access.PRIVATE) {
             id = idProp.getNestedIdentity();
         }
-        return m_mapFields.get(id);
+        return fieldLayout().fields().get(id);
     }
 
     @Override
     public boolean hasOuter() {
-        return m_fHasOuter;
+        return fieldLayout().hasOuter();
     }
 
     @Override
     public boolean makeStructureImmutable(ObjectHandle[] ahField) {
-        for (FieldInfo field : m_mapFields.values()) {
+        for (FieldInfo field : fieldLayout().fields().values()) {
             ObjectHandle hValue = ahField[field.getIndex()];
 
             if (hValue != null && hValue.isMutable() && !hValue.isService() &&
@@ -587,39 +589,37 @@ public class ClassComposition
      * Create a map of fields that serves as a prototype for all instances of this class.
      */
     public void ensureFieldLayout(Container container) {
-        if (m_mapFields == null) {
-            ensureFieldLayoutImpl(container);
+        if (container != getContainer()) {
+            throw new IllegalArgumentException("field layout owner mismatch");
         }
+        fieldLayout();
     }
 
-    private synchronized void ensureFieldLayoutImpl(Container container) {
-        if (m_mapFields != null) {
-            return;
-        }
-
+    private FieldLayout buildFieldLayout() {
         if (!f_template.isGenericHandle()) {
-            m_mapFields = Collections.emptyMap();
-            return;
+            return FieldLayout.EMPTY;
         }
 
         TypeConstant typePublic = f_typeInception.getUnderlyingType();
         if (typePublic instanceof PropertyClassTypeConstant) {
-            m_mapFields = Collections.emptyMap();
-            return;
+            return FieldLayout.EMPTY;
         }
 
-        ConstantPool pool       = getContainer().getConstantPool();
+        Container    container  = getContainer();
+        ConstantPool pool       = container.getConstantPool();
         TypeConstant typeStruct = pool.ensureAccessTypeConstant(typePublic, Access.STRUCT);
         TypeInfo     infoStruct = typeStruct.ensureTypeInfo();
 
         Map<Object, FieldInfo> mapFields = new ListMap<>();
-        int cRegular = 0;
-        int nIndex   = 0;
+        int     cRegular  = 0;
+        int     nIndex    = 0;
+        boolean fHasOuter = false;
+        boolean fSpecial  = false;
 
         // create storage for implicit fields
         for (String sField : f_template.getImplicitFields()) {
             if (sField.equals(GenericHandle.OUTER)) {
-                m_fHasOuter = true;
+                fHasOuter = true;
             }
             mapFields.put(sField,
                     new FieldInfo(sField, nIndex++, pool.typeObject(), null,
@@ -699,7 +699,7 @@ public class ClassComposition
                         infoProp.isLazy());
                 mapFields.put(enid, field);
 
-                m_fHasSpecial |= fTransient | clzRef != null;
+                fSpecial |= fTransient | clzRef != null;
 
                 if (!(enid instanceof NestedIdentity) && field.isRegular()) {
                     cRegular++;
@@ -710,12 +710,17 @@ public class ClassComposition
             }
         }
 
-        m_cRegularFields = cRegular;
-        m_mapFields      = mapFields.isEmpty()
+        Map<Object, FieldInfo> mapFrozen = mapFields.isEmpty()
                 ? Collections.emptyMap()
-                : mapFields.size() > 8
+                : Collections.unmodifiableMap(mapFields.size() > 8
                     ? new LinkedHashMap<>(mapFields)
-                    : mapFields;
+                    : mapFields);
+
+        return new FieldLayout(mapFrozen, cRegular, fHasOuter, fSpecial);
+    }
+
+    private FieldLayout fieldLayout() {
+        return f_fieldLayout.get(f_clzInception);
     }
 
     /**
@@ -893,6 +898,12 @@ public class ClassComposition
         public MethodStructure methodInit;
     }
 
+    private record FieldLayout(Map<Object, FieldInfo> fields, int regularFieldCount,
+                               boolean hasOuter, boolean hasSpecial) {
+        private static final FieldLayout EMPTY =
+                new FieldLayout(Collections.emptyMap(), 0, false, false);
+    }
+
 
     // ----- data fields ---------------------------------------------------------------------------
 
@@ -937,26 +948,6 @@ public class ClassComposition
     private final boolean f_fStruct;
 
     /**
-     * {@link FieldInfo}s for class fields keyed by extended nids.
-     */
-    private volatile Map<Object, FieldInfo> m_mapFields;
-
-    /**
-     * The count of non-nested regular fields used for native Stringable methods on a const class.
-     */
-    private int m_cRegularFields;
-
-    /**
-     * True iff this class contains an OUTER field.
-     */
-    private boolean m_fHasOuter;
-
-    /**
-     * True iff this class contains transient or inflated fields.
-     */
-    private boolean m_fHasSpecial;
-
-    /**
      * A cache of derivative TypeCompositions keyed by the "revealed type".
      * <p/>
      * We assume that there will never be two instantiate-able classes with the same inception type,
@@ -988,6 +979,13 @@ public class ClassComposition
 
     // cached property setter call chain by property id (the top-most method first)
     private final Map<PropertyConstant, CallChain> f_mapSetters;
+
+    /**
+     * Inception-owned immutable field layout. Field layout is a group invariant; keep the field map,
+     * regular-field count, and flags in one final lazy holder so access views cannot copy a stale
+     * partial layout.
+     */
+    private final Lazy.Owner<ClassComposition, FieldLayout> f_fieldLayout;
 
     /**
      * Cached field-name handles for native Stringable methods.

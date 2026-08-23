@@ -626,7 +626,8 @@ Current count:
 Representative examples:
 
 - `ConstantPool.m_mapConstants`, `m_mapLocators`, and `m_cInvalidated`.
-- `ClassComposition.m_mapFields`.
+- Fixed in this branch: former `ClassComposition.m_mapFields` plus layout
+  count/flag side fields.
 - `TypeConstant.m_typeinfo`, `m_cInvalidations`, `m_mapRelations`, and
   `m_tloInProgress`.
 - `TypeInfoReal.m_mapOps`.
