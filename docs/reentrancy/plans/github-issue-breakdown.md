@@ -1426,7 +1426,8 @@ separately.
   - `TypeConstant`;
   - `ParameterizedTypeConstant`;
   - `SignatureConstant`;
-  - `TypeParameterConstant`.
+  - `TypeParameterConstant`;
+  - `MethodConstant`.
 
 - Reject moving an already-owned live `HandleConstant` to another pool.
 - Add `ConstantAdoptionValidator` as an opt-in diagnostic at registration.

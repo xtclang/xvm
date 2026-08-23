@@ -168,6 +168,33 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * MethodConstant identity is logical ASM metadata, but its cached type and JIT method name are
+     * owner/type-system helper state. Adoption must preserve parent/signature identity without
+     * carrying those caches to another pool or future JIT TypeSystem.
+     */
+    @Test
+    public void adoptedMethodConstantDropsTypeAndJitCaches() throws Exception {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var struct     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Owner", null);
+        var sig        = sourcePool.ensureSignatureConstant(
+                "method", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+        var source     = sourcePool.ensureMethodConstant(struct.getIdentityConstant(), sig);
+
+        setField(source, "m_type", sourcePool.typeObject());
+        setField(source, "m_sJitName", "SourceJitMethod");
+
+        var adopted = adopt(source, targetPool);
+
+        assertSame(targetPool, adopted.getConstantPool());
+        assertEquals(source.getName(), adopted.getName());
+        assertNull(fieldValue(adopted, "m_type"));
+        assertNull(fieldValue(adopted, "m_sJitName"));
+    }
+
+    /**
      * A live ObjectHandle is owner-specific runtime state, not logical constant data. Moving an
      * already-owned handle constant to another pool must fail instead of leaking the source owner.
      */
@@ -242,6 +269,7 @@ public class ConstantAdoptionTest {
         Set.of(FSNodeConstant.class,
                FileStoreConstant.class,
                HandleConstant.class,
+               MethodConstant.class,
                ParameterizedTypeConstant.class,
                SignatureConstant.class,
                SingletonConstant.class,

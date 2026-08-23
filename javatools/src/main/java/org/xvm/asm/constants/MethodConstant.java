@@ -618,6 +618,18 @@ public class MethodConstant
                 : getPathString();
     }
 
+    @Override
+    protected MethodConstant copyForAdoption(AdoptionContext context) {
+        if (m_constParent == null || (m_constSig == null && m_iLambda == 0)) {
+            throw new IllegalStateException("cannot adopt unresolved method identity: " + this);
+        }
+
+        // Method identity is parent + signature, or parent + lambda id for nascent lambdas.
+        // Cached method types and JIT names are owner/type-system helper state, so adoption must
+        // reconstruct only the logical identity and let the target owner recompute those caches.
+        return new MethodConstant(context.pool(), m_constParent, m_constSig, m_iLambda);
+    }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

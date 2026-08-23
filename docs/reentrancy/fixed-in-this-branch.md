@@ -176,6 +176,9 @@ shallow-clone helper state identified by the audit:
 - `TypeParameterConstant.copyForAdoption(...)` reconstructs the logical register
   type parameter for the target pool instead of shallow-cloning the final
   recursive-comparison `TransientThreadLocal`.
+- `MethodConstant.copyForAdoption(...)` reconstructs method identity from the
+  parent, signature, and lambda id, dropping cached method type and JIT method
+  name state so those are recomputed by the target owner/type system.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws
