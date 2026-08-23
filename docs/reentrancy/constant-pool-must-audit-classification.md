@@ -15,7 +15,7 @@ in the API.
 
 | Status | Category | Bottom line |
 | --- | --- | --- |
-| DONE IN THIS BRANCH as a guard; MUST FIX long term with clone-free adoption | Base `Constant.adoptedBy(...)` shallow clone contract | `Constant.adoptedBy(...)` is now the final owner-transfer wrapper, and the default `copyForAdoption(...)` path rejects shallow-clone adoption unless a constant family explicitly opts in and documents why its copied fields are logical value state. This stops new unsafe constants from silently inheriting `Object.clone()` ownership transfer or bypassing common owner/ref checks. The long-term fix is still explicit copy/adoption constructors instead of clone. |
+| DONE IN THIS BRANCH | Base `Constant.adoptedBy(...)` shallow clone contract | `Constant.adoptedBy(...)` is now the final owner-transfer wrapper, `Constant` no longer implements `Cloneable`, and default `copyForAdoption(...)` fails closed. This stops new unsafe constants from silently inheriting `Object.clone()` ownership transfer or bypassing common owner/ref checks. |
 | DONE IN THIS BRANCH as a guard; MUST FIX long term with transactional registration | `ConstantPool.register(...)` publishes before recursive registration completes | The branch preserves same-thread cycle resolution but marks newly published constants as incomplete and makes other threads wait until recursive `registerConstants(...)` and valid-pool checks finish. The long-term fix is still private transactional registration that does not expose in-progress constants through public pool APIs. |
 | MUST FIX for runtime freeze; DONE IN THIS BRANCH for known first `ClassComposition` access-type prewarm | Runtime-published pool mutation, including first `ClassComposition` construction | Late registration is diagnostic-only, so normal runtime pools can still mutate. The branch now prewarms known access-type constants before the diagnostic publication marker and adds a first-composition test for that narrow subcase. |
 | MUST FIX for runtime-published pools; MUST AUDIT otherwise | `f_listConst`, locator maps, and constant lookup maps | The storage supports single-thread reentrant validation, not arbitrary parallel mutation after publication. |
@@ -28,16 +28,15 @@ in the API.
 
 ## 1. Base `Constant.adoptedBy(...)` Shallow Clone Contract
 
-Classification: DONE IN THIS BRANCH as a guard. MUST FIX long term with
-clone-free adoption.
+Classification: DONE IN THIS BRANCH.
 
 Evidence:
 
-- `javatools/src/main/java/org/xvm/asm/Constant.java:71` declares `Constant`
-  as `Cloneable`.
-- `javatools/src/main/java/org/xvm/asm/Constant.java:312` through
-  `javatools/src/main/java/org/xvm/asm/Constant.java:321` implements base
-  adoption with `super.clone()`, `setContaining(pool)`, and `resetRefs()`.
+- In `master`, `Constant` implemented `Cloneable` and
+  `Constant.adoptedBy(...)` implemented base adoption with `super.clone()`,
+  `setContaining(pool)`, and `resetRefs()`.
+- In this branch, `Constant` no longer implements `Cloneable`, and
+  `adoptedBy(...)` delegates to explicit `copyForAdoption(...)` hooks.
 - `javatools/src/main/java/org/xvm/asm/ConstantPool.java:211` through
   `javatools/src/main/java/org/xvm/asm/ConstantPool.java:214` adopts a foreign
   constant during registration.
@@ -58,10 +57,10 @@ and override adoption or clear state during owner change.
 
 Practical same-JVM/parallel failure mode:
 
-Pool B can receive a constant object that still points at pool A's runtime
+Pool B could receive a constant object that still pointed at pool A's runtime
 state. The proven failure family was singleton lifecycle state: an adopted
-singleton reused another container's initialized handle. The same shape applies
-to future default-cloned constants with `ObjectHandle`, `Container`,
+singleton reused another container's initialized handle. The same shape applied
+in `master` to any default-cloned constant with `ObjectHandle`, `Container`,
 `TypeComposition`, lock, `ThreadLocal`, or mutable collection fields.
 
 Branch fix:
@@ -69,17 +68,13 @@ Branch fix:
 `Constant.adoptedBy(...)` is now the final owner-transfer wrapper. It constructs
 an `AdoptionContext`, calls `copyForAdoption(...)`, checks that the copy belongs
 to the requested pool, and resets refs. The default `copyForAdoption(...)`
-fails closed by calling `allowsDefaultAdoptionClone()`, which returns `false` by
-default. Constant families that still use the transitional shallow-clone helper
-must override that method and explain why copied fields are logical value state
-or are cleared by owner-change hooks. Special runtime-bearing constants now
-implement `copyForAdoption(...)` under the wrapper.
+fails closed, and there is no `allowsDefaultAdoptionClone()` or
+`cloneForAdoption(...)` helper.
 
 This turns the old "safe unless somebody remembers a problem" contract into
-"illegal unless the constant family declares the policy". It is still a
-compromise because the opted-in families still use `Object.clone()` internally.
-The helper is named `cloneForAdoption(...)` and is available only through
-`copyForAdoption(...)`, so future owner-bearing state has a review choke point.
+"illegal unless a class explicitly constructs the target-owned logical value".
+The validator remains useful because a future explicit hook can still be wrong
+by reusing an owner-local helper/runtime reference.
 
 Existing reproducer, test, or diagnostic:
 
@@ -87,24 +82,25 @@ Existing reproducer, test, or diagnostic:
   `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java:183` covers
   fixed adoption subcases for `TypeConstant`, parameterized types, signatures,
   type parameters, `HandleConstant`, and filesystem constants.
-- `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java:211` through
-  `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java:284` proves
-  the validator catches a bad default clone and rejects bad registration when
-  the validation property is enabled.
-- `ConstantAdoptionTest.defaultAdoptionCloneRequiresExplicitPolicy()` proves a
-  new `Constant` subclass cannot silently inherit shallow-clone adoption.
+- `ConstantAdoptionTest.adoptionValidatorReportsBadCopyHookCopiedHelperReference()`
+  and `registerFailsOnBadCopyHookWhenAdoptionValidationIsEnabled()` prove the
+  validator catches a future explicit hook that reuses helper state.
+- `ConstantAdoptionTest.adoptionRequiresExplicitCopyHook()` proves a new
+  `Constant` subclass cannot silently inherit shallow-clone adoption.
+- `ConstantAdoptionTest.adoptionWrapperIsFinalAndSpecialCasesUseCopyHook()`
+  proves `Constant` is no longer `Cloneable`, the fallback clone helpers are
+  gone, and fixed concrete classes expose `copyForAdoption(...)` rather than
+  ad-hoc `adoptedBy(...)` overrides.
 - `javatools/src/main/java/org/xvm/asm/ConstantAdoptionValidator.java:153`
   through `javatools/src/main/java/org/xvm/asm/ConstantAdoptionValidator.java:170`
   define the current forbidden reference classes.
 
 Proper fix:
 
-Remove shallow clone as the default ownership-transfer mechanism. Keep
-`Constant.adoptedBy(...)` as the final wrapper, but replace the remaining
-opted-in family default with explicit owner-aware `copyForAdoption(...)`
-implementations that list logical fields and intentionally drop, rebuild, or
-reject non-logical state. Keep `ConstantAdoptionValidator` enabled in stress/CI
-while migrating.
+Keep shallow clone out of ownership transfer. New constant classes must
+implement owner-aware `copyForAdoption(...)` hooks that list logical fields and
+intentionally drop, rebuild, or reject non-logical state. Keep
+`ConstantAdoptionValidator` enabled in stress/CI to catch future bad hooks.
 
 Expected performance and semantic impact:
 
@@ -115,20 +111,16 @@ pool" while eliminating copied helper/runtime state.
 
 Recommended PR slice:
 
-Create a dedicated constant adoption contract PR. First add a source-shape or
-reflection test that no concrete `Constant` subclass relies on base shallow
-clone without an explicit annotation/override. Then convert subclasses in small
-format families and leave the validator property enabled in direct same-JVM
-stress.
+Create a dedicated constant adoption contract PR from this branch by grouping
+the hook waves, source-shape tests, and docs. Leave the validator property
+enabled in direct same-JVM stress.
 
 Done in this branch:
 
-- `Constant.adoptedBy(...)` is now the final owner-transfer wrapper and the
-  default `copyForAdoption(...)` path rejects shallow clone unless a constant
-  family explicitly opts in with `allowsDefaultAdoptionClone()`.
-- `Constant.cloneForAdoption(...)` isolates the remaining transitional clone
-  helper behind an explicit method name so owner-transfer clone use is searchable
-  and reviewable.
+- `Constant.adoptedBy(...)` is now the final owner-transfer wrapper.
+- `Constant` no longer implements `Cloneable`.
+- `allowsDefaultAdoptionClone()` and `cloneForAdoption(...)` no longer exist.
+- The default `copyForAdoption(...)` path fails closed.
 - `javatools/src/main/java/org/xvm/asm/constants/SingletonConstant.java:262`
   through `javatools/src/main/java/org/xvm/asm/constants/SingletonConstant.java:267`
   constructs a fresh adopted singleton.
@@ -233,10 +225,9 @@ Done in this branch:
 Remaining linked finding:
 
 - The concrete constant leaves in this audit no longer rely on inherited
-  default clone adoption. The remaining clone-free work is the reviewed
-  abstract/base fallback (`IdentityConstant`, `TypeConstant`, and
-  `ValueConstant`) and non-constant clone families such as component/parameter
-  and runtime-handle view copies. Type-keyed value shells such as
+  default clone adoption, and the abstract/base fallback has been removed.
+  Remaining clone-free work is in non-constant clone families such as
+  component/parameter and runtime-handle view copies. Type-keyed value shells such as
   `MatchAnyConstant`, type leaves/wrappers, relational shells, dependant
   child/property shells, recursive typedef shells, annotated type shells,
   pseudo path constants, named/type-backed identities, the stateless sequence

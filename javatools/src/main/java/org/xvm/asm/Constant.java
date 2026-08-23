@@ -71,7 +71,7 @@ import org.xvm.util.PackedInteger;
  */
 public abstract class Constant
         extends XvmStructure
-        implements Comparable<Constant>, Cloneable, Argument {
+        implements Comparable<Constant>, Argument {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -304,16 +304,11 @@ public abstract class Constant
     }
 
     /**
-     * Create a clone of this Constant so that it can be adopted by a different ConstantPool.
-     * <p/>
-     * This is a transitional compatibility path, not the desired long-term architecture. Adoption
-     * changes structural ownership, while {@link Object#clone()} copies every reference field. Each
-     * constant family that still relies on this helper must explicitly declare that its default
-     * cloned fields are logical constant value state, or are reset by owner-change hooks.
+     * Adopt this Constant into a different ConstantPool.
      *
-     * @param pool  the pool that will hold the clone of this Constant
+     * @param pool  the pool that will hold the adopted Constant
      *
-     * @return the new Constant
+     * @return the adopted Constant
      */
     protected final Constant adoptedBy(ConstantPool pool) {
         Constant that = copyForAdoption(new AdoptionContext(pool));
@@ -335,37 +330,8 @@ public abstract class Constant
      * @return the adopted constant
      */
     protected Constant copyForAdoption(AdoptionContext context) {
-        if (!allowsDefaultAdoptionClone()) {
-            throw new IllegalStateException(getClass().getName()
-                    + " does not declare a default adoption-clone policy");
-        }
-        return cloneForAdoption(context.pool());
-    }
-
-    /**
-     * @return true iff this class intentionally permits the transitional shallow-clone adoption
-     *         helper in {@link #adoptedBy(ConstantPool)}
-     */
-    protected boolean allowsDefaultAdoptionClone() {
-        return false;
-    }
-
-    /**
-     * Shallow-clone this constant for explicit adoption implementations.
-     *
-     * @param pool  the pool that will hold the adopted constant
-     *
-     * @return the cloned constant with owner/reset metadata updated for {@code pool}
-     */
-    protected final Constant cloneForAdoption(ConstantPool pool) {
-        Constant that;
-        try {
-            that = (Constant) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
-        that.setContaining(pool);
-        return that;
+        throw new IllegalStateException(getClass().getName()
+                + " does not implement copyForAdoption(...)");
     }
 
     /**

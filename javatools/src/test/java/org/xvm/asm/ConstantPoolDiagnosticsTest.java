@@ -461,11 +461,6 @@ public class ConstantPoolDiagnosticsTest {
         }
 
         @Override
-        protected boolean allowsDefaultAdoptionClone() {
-            return true;
-        }
-
-        @Override
         protected void registerConstants(ConstantPool pool) {
             index.set(getPosition());
             started.countDown();
@@ -477,6 +472,13 @@ public class ConstantPoolDiagnosticsTest {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException(e);
             }
+        }
+
+        @Override
+        protected BlockingRegistrationConstant copyForAdoption(AdoptionContext context) {
+            // Test fixture: adoption must keep the synchronization probes, not any source-pool
+            // ownership. Production constants must make the same explicit logical-state decision.
+            return new BlockingRegistrationConstant(context.pool(), started, release, index);
         }
 
         @Override
@@ -514,13 +516,15 @@ public class ConstantPoolDiagnosticsTest {
         }
 
         @Override
-        protected boolean allowsDefaultAdoptionClone() {
-            return true;
+        protected void registerConstants(ConstantPool pool) {
+            observed = pool.getConstant(getPosition());
         }
 
         @Override
-        protected void registerConstants(ConstantPool pool) {
-            observed = pool.getConstant(getPosition());
+        protected ReentrantRegistrationConstant copyForAdoption(AdoptionContext context) {
+            // Test fixture: the observed constant belongs to registration execution and starts empty
+            // in the adopted copy, matching the no-shared-runtime-state production rule.
+            return new ReentrantRegistrationConstant(context.pool());
         }
 
         @Override
@@ -560,14 +564,15 @@ public class ConstantPoolDiagnosticsTest {
         }
 
         @Override
-        protected boolean allowsDefaultAdoptionClone() {
-            return true;
-        }
-
-        @Override
         protected void registerConstants(ConstantPool pool) {
             index.set(getPosition());
             throw new IllegalStateException("registration failure");
+        }
+
+        @Override
+        protected FailingRegistrationConstant copyForAdoption(AdoptionContext context) {
+            // Test fixture: keep only the index probe used to verify failed-publication behavior.
+            return new FailingRegistrationConstant(context.pool(), index);
         }
 
         @Override

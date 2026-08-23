@@ -778,14 +778,6 @@ public abstract class IdentityConstant
     }
 
     @Override
-    protected boolean allowsDefaultAdoptionClone() {
-        // Transitional policy: identity constants are logical paths into a pool. Owner-derived
-        // component/nested metadata is reset when the containing pool changes. JIT names and other
-        // owner helpers remain tracked for the later clone-free/JIT-owner copy work.
-        return true;
-    }
-
-    @Override
     protected abstract int compareDetails(Constant that);
 
 

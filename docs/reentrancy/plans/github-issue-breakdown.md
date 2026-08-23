@@ -1455,8 +1455,8 @@ separately.
   parsed-value wave.
 - Reconstruct the `MatchAnyConstant` wildcard shell from its logical type key if
   this slice includes the type-keyed sentinel wave. Reject unrelated foreign
-  type keys before the value is published; the shared/adoptable type key's own
-  clone-free reconstruction remains under the type-family PR.
+  type keys before the value is published; shared/adoptable type keys continue
+  through target registration and the clone-free type-family hooks.
 - Reconstruct `TerminalTypeConstant` from its defining identity if this slice
   includes the terminal-type leaf wave. Shared identities keep the same
   destination-pool interning behavior; unrelated foreign identities fail before
@@ -1533,8 +1533,9 @@ separately.
 
 ### Explicit Out Of Scope
 
-- Full clone-free removal of the transitional default-clone adoption policy for
-  every constant family.
+- Non-constant clone removal in compiler/source metadata and runtime handle
+  view code. The constant-family default-clone adoption policy is removed in
+  this branch; those commits can be split as their own clone-free adoption PRs.
 - ConstantPool list/map publication atomicity and runtime pool freeze.
 - Runtime creation of genuinely new constants after publication. The
   access-type warmup only handles constants the pool already knows before the

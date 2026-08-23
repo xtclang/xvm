@@ -7915,14 +7915,6 @@ public abstract class TypeConstant
         return !containsFormalType(true);
     }
 
-    @Override
-    protected boolean allowsDefaultAdoptionClone() {
-        // Transitional policy: type constants still use shallow adoption for logical type shape.
-        // setContaining(...) immediately clears owner-derived TypeInfo, relation, recursion, and
-        // JIT helper state. Clone-free type-copy constructors remain the long-term target.
-        return true;
-    }
-
     /**
      * Verify that this type is allowed to be represented by the target pool before a clone-free
      * adoption hook constructs a target-owned shell.

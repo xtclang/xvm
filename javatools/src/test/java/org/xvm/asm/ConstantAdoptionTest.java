@@ -37,6 +37,7 @@ import org.xvm.asm.constants.DecoratedClassConstant;
 import org.xvm.asm.constants.DeferredValueConstant;
 import org.xvm.asm.constants.DifferenceTypeConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
+import org.xvm.asm.constants.EnumValueConstant;
 import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.FPNConstant;
 import org.xvm.asm.constants.FSNodeConstant;
@@ -49,6 +50,7 @@ import org.xvm.asm.constants.Float8e4Constant;
 import org.xvm.asm.constants.Float8e5Constant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.HandleConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.InnerChildTypeConstant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
@@ -95,6 +97,7 @@ import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.VersionMatchesCondition;
 import org.xvm.asm.constants.VersionedCondition;
 import org.xvm.asm.constants.VirtualChildTypeConstant;
+import org.xvm.asm.constants.ValueConstant;
 
 import org.xvm.runtime.ObjectHandle;
 
@@ -795,6 +798,30 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * Enum values need the singleton fresh-state adoption rule, but inheriting the base singleton
+     * hook would erase the EnumValueConstant subclass and its ordinal/operator behavior.
+     */
+    @Test
+    public void enumValueAdoptionPreservesEnumSubclassAndTargetOwner() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var enumClass  = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.ENUM, "Choice", null);
+        var enumValue  = enumClass.createClass(
+                Component.Access.PUBLIC, Component.Format.ENUMVALUE, "First", null);
+        var source     = (EnumValueConstant) sourcePool.ensureSingletonConstConstant(
+                enumValue.getIdentityConstant());
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+
+        var adopted = adopt(source, targetPool);
+
+        assertSame(targetPool, adopted.getConstantPool());
+        assertSame(targetPool, adopted.getClassConstant().getConstantPool());
+        assertEquals(source.getValueString(), adopted.getValueString());
+        assertEquals(source.getPresumedOrdinal(), adopted.getPresumedOrdinal());
+    }
+
+    /**
      * ParameterizedTypeConstant has subclass helper state in addition to base TypeConstant state.
      * Adoption must give the target pool fresh helpers rather than copied source-owner cells.
      */
@@ -1458,17 +1485,16 @@ public class ConstantAdoptionTest {
 
     /**
      * Base Constant adoption is no longer "clone unless somebody remembered to override it". A new
-     * constant class must either provide an explicit adoption implementation or opt in to the
-     * transitional default-clone policy with a local explanation.
+     * constant class must provide an explicit adoption implementation or fail at the owner boundary.
      */
     @Test
-    public void defaultAdoptionCloneRequiresExplicitPolicy() {
+    public void adoptionRequiresExplicitCopyHook() {
         var targetPool = new FileStructure("target").getConstantPool();
         var source     = new NoPolicyConstant(new FileStructure("source").getConstantPool());
 
         var error = assertThrows(IllegalStateException.class, () -> adopt(source, targetPool));
 
-        assertTrue(error.getMessage().contains("default adoption-clone policy"));
+        assertTrue(error.getMessage().contains("copyForAdoption"));
     }
 
     /**
@@ -1483,8 +1509,19 @@ public class ConstantAdoptionTest {
         var adoptedBy = Constant.class.getDeclaredMethod("adoptedBy", ConstantPool.class);
 
         assertTrue(Modifier.isFinal(adoptedBy.getModifiers()));
+        assertFalse(Arrays.asList(Constant.class.getInterfaces()).contains(Cloneable.class));
+        assertThrows(NoSuchMethodException.class,
+                () -> Constant.class.getDeclaredMethod("allowsDefaultAdoptionClone"));
+        assertThrows(NoSuchMethodException.class,
+                () -> Constant.class.getDeclaredMethod("cloneForAdoption", ConstantPool.class));
+        assertThrows(NoSuchMethodException.class,
+                () -> IdentityConstant.class.getDeclaredMethod("allowsDefaultAdoptionClone"));
         assertThrows(NoSuchMethodException.class,
                 () -> PseudoConstant.class.getDeclaredMethod("allowsDefaultAdoptionClone"));
+        assertThrows(NoSuchMethodException.class,
+                () -> TypeConstant.class.getDeclaredMethod("allowsDefaultAdoptionClone"));
+        assertThrows(NoSuchMethodException.class,
+                () -> ValueConstant.class.getDeclaredMethod("allowsDefaultAdoptionClone"));
 
         Set.of(Annotation.class,
                AllCondition.class,
@@ -1504,6 +1541,7 @@ public class ConstantAdoptionTest {
                DecimalConstant.class,
                DeferredValueConstant.class,
                DifferenceTypeConstant.class,
+               EnumValueConstant.class,
                FSNodeConstant.class,
                DynamicFormalConstant.class,
                ExpressionConstant.class,
@@ -1570,11 +1608,11 @@ public class ConstantAdoptionTest {
     }
 
     /**
-     * The adoption validator must detect the exact bad default-clone shape: a copied helper
+     * The adoption validator must detect the exact bad copy-hook shape: a copied helper
      * reference that still belongs to the source constant after ownership changes.
      */
     @Test
-    public void adoptionValidatorReportsDefaultCloneCopiedHelperReference() {
+    public void adoptionValidatorReportsBadCopyHookCopiedHelperReference() {
         ConstantPool sourcePool = new FileStructure("source").getConstantPool();
         ConstantPool targetPool = new FileStructure("target").getConstantPool();
 
@@ -1591,12 +1629,12 @@ public class ConstantAdoptionTest {
     }
 
     /**
-     * Runtime handles are owner-bearing state. A default-cloned constant that carries an arbitrary
+     * Runtime handles are owner-bearing state. A bad copy hook that carries an arbitrary
      * ObjectHandle would move live runtime state by reference while pretending to only adopt
      * logical constant value into a new pool.
      */
     @Test
-    public void adoptionValidatorRejectsDefaultCloneCopiedRuntimeHandle() {
+    public void adoptionValidatorRejectsBadCopyHookCopiedRuntimeHandle() {
         var sourcePool = new FileStructure("source").getConstantPool();
         var targetPool = new FileStructure("target").getConstantPool();
 
@@ -1629,11 +1667,11 @@ public class ConstantAdoptionTest {
     }
 
     /**
-     * Registration with adoption validation enabled must reject bad default clones before they are
+     * Registration with adoption validation enabled must reject bad copy hooks before they are
      * published into the target pool's lookup structures.
      */
     @Test
-    public void registerFailsOnBadDefaultCloneWhenAdoptionValidationIsEnabled() {
+    public void registerFailsOnBadCopyHookWhenAdoptionValidationIsEnabled() {
         ConstantPool sourcePool = new FileStructure("source").getConstantPool();
         ConstantPool targetPool = new FileStructure("target").getConstantPool();
         DiagnosticConstant source = new DiagnosticConstant(sourcePool);
@@ -1714,10 +1752,15 @@ public class ConstantAdoptionTest {
 
     private static final class DiagnosticConstant
             extends Constant {
-        private final AtomicReference<Object> helper = new AtomicReference<>();
+        private final AtomicReference<Object> helper;
 
         private DiagnosticConstant(ConstantPool pool) {
+            this(pool, new AtomicReference<>());
+        }
+
+        private DiagnosticConstant(ConstantPool pool, AtomicReference<Object> helper) {
             super(pool);
+            this.helper = helper;
         }
 
         @Override
@@ -1746,8 +1789,9 @@ public class ConstantAdoptionTest {
         }
 
         @Override
-        protected boolean allowsDefaultAdoptionClone() {
-            return true;
+        protected DiagnosticConstant copyForAdoption(AdoptionContext context) {
+            // Deliberately bad test fixture: a future copy hook must not reuse helper state.
+            return new DiagnosticConstant(context.pool(), helper);
         }
     }
 
@@ -1786,8 +1830,9 @@ public class ConstantAdoptionTest {
         }
 
         @Override
-        protected boolean allowsDefaultAdoptionClone() {
-            return true;
+        protected RuntimeHandleConstant copyForAdoption(AdoptionContext context) {
+            // Deliberately bad test fixture: a future copy hook must not reuse runtime handles.
+            return new RuntimeHandleConstant(context.pool(), handle);
         }
     }
 

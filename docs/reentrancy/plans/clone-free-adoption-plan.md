@@ -50,15 +50,16 @@ closed through one final owner-transfer wrapper: `Constant.adoptedBy(...)`
 constructs an `AdoptionContext`, delegates to `copyForAdoption(...)`, validates
 that the returned constant is owned by the requested pool, and resets reference
 counts. The default `copyForAdoption(...)` path rejects adoption unless a
-constant family explicitly opts in with `allowsDefaultAdoptionClone()` and a
-local comment. That prevents a new mutable helper field from silently inheriting
-owner-transfer clone behavior, and it prevents subclasses from bypassing the
-common owner/ref checks with ad-hoc `adoptedBy(...)` overrides.
+new subclass implements `copyForAdoption(...)`. `Constant` no longer implements
+`Cloneable`, and there is no `cloneForAdoption(...)` helper. That prevents a
+new mutable helper field from silently inheriting owner-transfer clone behavior,
+and it prevents subclasses from bypassing the common owner/ref checks with
+ad-hoc `adoptedBy(...)` overrides.
 
-This is still a transitional guard, not the desired architecture. Opted-in
-families still use shallow clone plus reset hooks, which means correctness still
-depends on family-level review. The long-term defect this plan removes is
-`Object.clone()` as an ownership-transfer mechanism at all.
+The long-term defect this plan targets is now removed for `Constant` adoption:
+`Object.clone()` is no longer an ownership-transfer mechanism. The remaining
+clone work is in other owner-bearing object families such as component/method
+copying and runtime handle view copies.
 
 ## Current Mechanism
 
@@ -67,8 +68,7 @@ The adoption entry points are:
 | Site | Current role |
 | --- | --- |
 | `Constant.adoptedBy(ConstantPool)` | Final owner-transfer wrapper. Creates `AdoptionContext`, delegates to `copyForAdoption(...)`, checks destination ownership, and resets refs. |
-| `Constant.copyForAdoption(AdoptionContext)` | Subclass/family hook for logical copy construction. The default implementation fails closed unless the family declares the transitional default-clone policy. |
-| `Constant.cloneForAdoption(ConstantPool)` | Transitional shallow clone helper used by opted-in default-clone families. The runtime-handle explicit overrides no longer call it. |
+| `Constant.copyForAdoption(AdoptionContext)` | Subclass/family hook for logical copy construction. The default implementation fails closed. |
 | `ConstantPool.register(T)` | Adopts a foreign constant when `constant.getContaining() != this`. |
 | `ConstantPool.register(T)` locator path | Adopts a foreign locator constant before publishing it in locator lookup maps. |
 | `ConstantAdoptionValidator` | Opt-in diagnostic guard controlled by `xvm.asm.validateConstantAdoption`. |
@@ -99,7 +99,7 @@ Current branch inventory:
 | Concrete constant classes in that set | 75 |
 | Classes currently overriding `adoptedBy(...)` | 0 |
 | Classes currently overriding `copyForAdoption(...)` | 74 |
-| Concrete classes still relying on an explicit family default-clone policy | 0 |
+| Concrete classes still relying on a default-clone policy | 0 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
@@ -112,9 +112,6 @@ for a complete clone-free adoption model is likely:
 - 13 abstract family bases, to place shared family adoption rules where useful;
 - up to 75 concrete leaf constants, either by explicit copy/adoption
   implementation or by inheriting a reviewed family implementation;
-- the three remaining abstract family defaults (`IdentityConstant`,
-  `TypeConstant`, and `ValueConstant`), which are now transitional scaffolding
-  rather than concrete leaf behavior;
 - stress/validator tests and a source-shape test that prevents fallback clone
   from returning.
 
@@ -145,8 +142,8 @@ Risk buckets:
 
 | Class | Parent | Current adoption behavior | Risk |
 | --- | --- | --- | --- |
-| `AbstractDependantChildTypeConstant` | `AbstractDependantTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
-| `AbstractDependantTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `AbstractDependantChildTypeConstant` | `AbstractDependantTypeConstant` | abstract helper; no default clone | P1 concrete dependant children have explicit hooks |
+| `AbstractDependantTypeConstant` | `TypeConstant` | abstract helper; no default clone | P1 concrete dependant types have explicit hooks |
 | `AccessTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 single-child type wrapper fixed in this branch |
 | `AllCondition` | `MultiCondition` | explicit clone-free hook | P3 logical condition array; simulation scratch fixed in this branch |
 | `AnnotatedTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 annotation children and type cache fixed in this branch |
@@ -166,7 +163,7 @@ Risk buckets:
 | `DeferredValueConstant` | `PseudoConstant` | explicit fail-closed hook | P2 unresolved compiler placeholder fixed in this branch |
 | `DifferenceTypeConstant` | `RelationalTypeConstant` | explicit clone-free hook | P1 relational type fixed in this branch |
 | `DynamicFormalConstant` | `FormalConstant` | explicit clone-free hook | P1/P2 compiler register state fixed in this branch |
-| `EnumValueConstant` | `SingletonConstant` | inherits explicit singleton adoption | P0 singleton runtime-state family |
+| `EnumValueConstant` | `SingletonConstant` | explicit clone-free hook | P0 enum singleton runtime-state and subclass preservation fixed in this branch |
 | `ExpressionConstant` | `PseudoConstant` | explicit fail-closed hook | P2 compile-time AST placeholder fixed in this branch |
 | `FPNConstant` | `ValueConstant` | explicit clone-free hook | P3 byte-array-backed value fixed in this branch |
 | `FSNodeConstant` | `ValueConstant` | explicit clone-free override | P0 runtime handle/path cache |
@@ -177,12 +174,12 @@ Risk buckets:
 | `Float64Constant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `Float8e4Constant` | `FloatConstant` | explicit clone-free hook | P3 raw-bit scalar value fixed in this branch |
 | `Float8e5Constant` | `FloatConstant` | explicit clone-free hook | P3 raw-bit scalar value fixed in this branch |
-| `FloatConstant` | `ValueConstant` | family default-clone policy | P3 float-family base |
-| `FormalConstant` | `NamedConstant` | family default-clone policy | P2 formal logical identity |
+| `FloatConstant` | `ValueConstant` | abstract helper; no default clone | P3 concrete float values have explicit hooks |
+| `FormalConstant` | `NamedConstant` | abstract helper; no default clone | P2 concrete formal identities have explicit hooks |
 | `FormalTypeChildConstant` | `PropertyConstant` | explicit clone-free hook | P2/P1 property metadata cache inheritance fixed in this branch |
 | `FrameDependentConstant` | `Constant` | fails closed; no default clone | P4 frame-dependent family base |
 | `HandleConstant` | `FrameDependentConstant` | explicit clone-free guard override | P0 live runtime handle |
-| `IdentityConstant` | `Constant` | family default-clone policy | P2 identity-family base |
+| `IdentityConstant` | `Constant` | abstract helper; no default clone | P2 concrete identities have explicit hooks |
 | `ImmutableTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 single-child type wrapper fixed in this branch |
 | `InnerChildTypeConstant` | `AbstractDependantChildTypeConstant` | explicit clone-free hook | P1 dependant child type fixed in this branch |
 | `IntConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
@@ -197,7 +194,7 @@ Risk buckets:
 | `MultiCondition` | `ConditionalConstant` | abstract helper for explicit condition hooks | P3 condition-family base |
 | `MultiMethodConstant` | `NamedConstant` | explicit clone-free hook | P2 logical identity/path fixed in this branch |
 | `NamedCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
-| `NamedConstant` | `IdentityConstant` | family default-clone policy | P2 named identity-family base |
+| `NamedConstant` | `IdentityConstant` | abstract helper; no default clone | P2 concrete named identities have explicit hooks |
 | `NativeRebaseConstant` | `ClassConstant` | explicit fail-closed hook | P2 runtime-only identity facade fixed in this branch |
 | `NotCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
 | `PackageConstant` | `NamedConstant` | explicit clone-free hook | P2 logical identity/path fixed in this branch |
@@ -213,14 +210,14 @@ Risk buckets:
 | `RecursiveTypeConstant` | `TerminalTypeConstant` | explicit clone-free hook | P1 recursive typedef subclass fixed in this branch |
 | `RegExConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `RegisterConstant` | `FrameDependentConstant` | explicit clone-free hook | P1/P4 compiler register state fixed in this branch |
-| `RelationalTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `RelationalTypeConstant` | `TypeConstant` | abstract helper; no default clone | P1 concrete relational types have explicit hooks |
 | `ServiceTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 single-child type wrapper fixed in this branch |
 | `SignatureConstant` | `PseudoConstant` | explicit override | P0 helper lock/JIT cache |
 | `SingletonConstant` | `ValueConstant` | explicit override | P0 runtime singleton lifecycle state |
 | `StringConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `TerminalTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 type leaf fixed in this branch |
 | `ThisClassConstant` | `PseudoConstant` | explicit clone-free hook | P2 pseudo path fixed in this branch |
-| `TypeConstant` | `Constant` | family default-clone policy plus owner reset in `setContaining(...)` | P1 type-family base |
+| `TypeConstant` | `Constant` | abstract helper; no default clone | P1 type-family base; owner reset remains for other owner-change paths |
 | `TypeParameterConstant` | `FormalConstant` | explicit override | P0 reentrancy helper cell |
 | `TypeSequenceTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 stateless formal marker fixed in this branch |
 | `TypedefConstant` | `NamedConstant` | explicit clone-free hook | P2 logical identity/path plus resolved-state cache fixed in this branch |
@@ -228,7 +225,7 @@ Risk buckets:
 | `UnionTypeConstant` | `RelationalTypeConstant` | explicit clone-free hook | P1 relational type fixed in this branch |
 | `UnresolvedNameConstant` | `PseudoConstant` | explicit fail-closed hook | P2 unresolved compiler placeholder fixed in this branch |
 | `UnresolvedTypeConstant` | `TypeConstant` | explicit fail-closed hook | P1 mutable compiler placeholder fixed in this branch |
-| `ValueConstant` | `Constant` | family default-clone policy | P3 value-family base |
+| `ValueConstant` | `Constant` | abstract helper; no default clone | P3 concrete values have explicit hooks |
 | `VersionConstant` | `LiteralConstant` | explicit clone-free hook | P3 literal subclass fixed in this branch |
 | `VersionMatchesCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
 | `VersionedCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
@@ -396,9 +393,10 @@ caches.
 
 ## Performance Equivalence
 
-Cross-pool adoption already allocates today: `Object.clone()` creates a new
-object and `ConstantPool.register(...)` interns it. Replacing clone with explicit
-construction should not add steady-state runtime cost.
+Cross-pool adoption already allocated in `master`: `Object.clone()` created a
+new object and `ConstantPool.register(...)` interned it. Explicit construction
+keeps the same one-new-object adoption shape and should not add steady-state
+runtime cost.
 
 Expected performance properties:
 
@@ -652,17 +650,15 @@ so immutable hash/equality value is not shared across callers or pool owners.
 `BFloat16Constant`, `ByteConstant`, `CharConstant`, `DecimalConstant`,
 `Float16Constant`, `Float32Constant`, `Float64Constant`, `Float8e4Constant`,
 `Float8e5Constant`, `IntConstant`, `RegExConstant`, and `StringConstant`
-reconstruct immutable logical scalar values explicitly. Other mutable-cache
-values remain in the transitional default-clone bucket.
+reconstruct immutable logical scalar values explicitly. No concrete value
+constant remains in a default-clone bucket.
 `ArrayConstant`, `MapConstant`, and `RangeConstant` are also converted for
 value-container ownership: constructor arrays are copied, adoption creates a
 fresh target-owned shell, and target registration still performs recursive
-child-value adoption. The test intentionally does not claim array/map type
-constants become target-owned yet; type-family adoption is a separate PR 3
-problem. `MatchAnyConstant` now rebuilds the wildcard shell instead of cloning
-it. It accepts shared type keys through normal target registration and rejects
-unrelated foreign type keys before publication; clone-free reconstruction of the
-remaining composed type keys remains part of the type-family PR. `LiteralConstant`,
+child-value adoption. `MatchAnyConstant` now rebuilds the wildcard shell instead
+of cloning it. It accepts shared type keys through normal target registration
+and rejects unrelated foreign type keys before publication; shared/adoptable
+type keys then continue through the clone-free type-family hooks. `LiteralConstant`,
 `VersionConstant`, and `DecimalAutoConstant` are converted as the
 parsed/delegated value wave: literal adoption drops transient parsed caches,
 version adoption preserves the concrete subclass, and decimal-auto target
@@ -676,8 +672,9 @@ registration. `CastTypeConstant` is different: it is documented in source as a
 transient compiler/JIT marker and `assemble(...)` rejects storing it, so adoption
 now fails closed instead of inheriting a storable intersection copy path.
 
-Review goal: replace low-risk default clone users with explicit logical-value
-copy code and remove the largest remaining fallback population.
+Review goal: land the explicit logical-value copies for the remaining
+low-risk value constants and show that constant adoption has no fallback clone
+population left.
 
 ### PR 6: Convert Frame-Dependent Constants
 
@@ -706,6 +703,10 @@ Scope:
 
 Review goal: fail closed forever. New constants must declare adoption semantics
 before compiling.
+
+Status in this branch: done. `Constant` no longer implements `Cloneable`,
+`cloneForAdoption(...)` and `allowsDefaultAdoptionClone()` no longer exist, and
+the source-shape test rejects their reintroduction.
 
 ### PR 8: Registration Publication Follow-Up
 

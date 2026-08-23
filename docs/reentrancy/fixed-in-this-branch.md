@@ -108,10 +108,11 @@ mechanism.
 ### Adopted Constant Runtime State
 
 The parallel `TestProps` stress run exposed another owner bug in the same
-general area: `Constant.adoptedBy(...)` uses `Object.clone()`, and the cloned
-`SingletonConstant` copied the final `AtomicReference<InitState>` that stores
-runtime singleton state. The field was final, but the referenced state cell was
-still mutable and became shared by constants registered in different pools.
+general area: in `master`, `Constant.adoptedBy(...)` used `Object.clone()`, and
+the cloned `SingletonConstant` copied the final `AtomicReference<InitState>`
+that stores runtime singleton state. The field was final, but the referenced
+state cell was still mutable and became shared by constants registered in
+different pools.
 
 Effect:
 
@@ -225,7 +226,7 @@ shallow-clone helper state identified by the audit:
   factories now rely on that constructor copy so their normal path still performs
   one container copy, not two. Target registration still adopts child value
   constants through `registerConstants(...)`; type constants referenced by
-  array/map value types remain part of the separate type-family clone-free work.
+  array/map value types now pass through the clone-free type-family hooks.
 - `LiteralConstant`, `VersionConstant`, and `DecimalAutoConstant` now reconstruct
   parsed/delegated values explicitly. Literal adoption keeps text/format but
   drops the transient parsed `m_oVal` cache, version adoption preserves the
@@ -308,21 +309,25 @@ shallow-clone helper state identified by the audit:
   identity.
 - `NativeRebaseConstant` now rejects adoption because it is a runtime-only
   native facade and is documented as never registered with a `ConstantPool`.
+- `EnumValueConstant` now has its own adoption hook. It keeps the fresh
+  owner-local singleton runtime state rule from `SingletonConstant`, but
+  preserves the enum-value subclass so ordinal/range/operator behavior is not
+  erased during adoption.
 - `CastTypeConstant` now rejects adoption because it is a transient compiler/JIT
   marker and its own `assemble(...)` method already rejects pool storage.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws
   immediately.
-- `Constant.adoptedBy(...)` now rejects the transitional default shallow-clone
-  path unless a constant family explicitly declares
-  `allowsDefaultAdoptionClone()`. Reviewed logical-value families opt in with
-  local comments; runtime/helper-state families keep explicit adoption
-  overrides.
+- `Constant.adoptedBy(...)` no longer has a transitional default shallow-clone
+  path. `Constant` no longer implements `Cloneable`, and
+  `allowsDefaultAdoptionClone()` / `cloneForAdoption(...)` no longer exist.
+  A future constant class must provide a real `copyForAdoption(...)` hook or
+  fail at the owner boundary.
 - `ConstantAdoptionValidator` now treats arbitrary copied runtime handles,
   templates, and type compositions as forbidden shared owner state. The
   existing fresh `HandleConstant` first-registration path remains allowed, but
-  any future default-cloned constant that carries live runtime state fails
+  any future bad copy hook that carries live runtime state fails
   under `-Dxvm.asm.validateConstantAdoption=true`.
 
 These changes preserve the old cache intent: each target owner still computes

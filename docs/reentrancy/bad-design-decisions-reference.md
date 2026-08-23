@@ -225,9 +225,9 @@ hot-path per-read clones while fixing the owner-transfer bug.
 by one of its children. The wildcard object itself is just logical sentinel
 state and now reconstructs explicitly, but its lookup key is a `TypeConstant`.
 An unrelated foreign type key is now rejected before publication; a shared key
-is still passed through target registration. The remaining type-family work is
-to make that shared/adoptable type reconstruction clone-free too. Shallow clone
-made all of these boundaries invisible.
+is still passed through target registration, which now reaches clone-free
+type-family adoption hooks. Shallow clone made all of these boundaries
+invisible.
 
 `TerminalTypeConstant` is the first type leaf moved to the same model. The
 logical value is the defining identity, not the inherited relation/type-info/JIT

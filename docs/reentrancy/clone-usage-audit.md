@@ -325,26 +325,30 @@ References:
 - `javatools/src/main/java/org/xvm/asm/ConstantAdoptionValidator.java:21`
 - `javatools/src/main/java/org/xvm/asm/ConstantAdoptionValidator.java:55`
 
-What is cloned: any `Constant` family that explicitly opts into
-`allowsDefaultAdoptionClone()` is shallow-cloned by the default
-`copyForAdoption(...)` hook and then reassigned to the destination
-`ConstantPool`. `Constant.adoptedBy(...)` is now the final wrapper around that
-hook.
+What used to be cloned: in `master`, `Constant.adoptedBy(...)` shallow-cloned a
+foreign constant with `Object.clone()`, rewrote the containing pool, and then
+relied on later family-specific cleanup to drop copied owner state.
 
-Hazard: this is still the central remaining pool-ownership clone. This branch
-already hardens several known owner-local fields and prevents ad-hoc
-`adoptedBy(...)` overrides, but the reviewed default remains dangerous if a
-family later adds a cache, lock, atomic cell, live handle, thread-local, or
-owner-derived helper field without replacing the fallback.
+Hazard: this was the central pool-ownership clone. It was unsafe because a new
+field on any constant subclass automatically crossed owners unless somebody
+remembered to add cleanup. That copied caches, locks, atomic cells, live
+handles, thread-local helpers, and owner-derived metadata by reference.
+
+Replacement: this branch removes `Cloneable`, `cloneForAdoption(...)`, and
+`allowsDefaultAdoptionClone()` from `Constant`. `Constant.adoptedBy(...)` is the
+final wrapper around explicit `copyForAdoption(...)` hooks. A constant now
+constructs a target-owned logical value, intentionally drops/rebuilds helper
+state, or fails closed at the owner boundary.
 
 Current clone-free slices have removed the highest-risk and simplest value
-families from this default: singleton/filesystem/handle guards, method/property
-metadata, frame-dependent constants, conditions, byte-array backed values,
-immutable scalars, composite value containers, parsed/delegated values, and the
-`MatchAnyConstant` wildcard shell. `MatchAnyConstant` still points at the
-separate type-family problem because its lookup key is a `TypeConstant`; the
-shell no longer clones, unrelated foreign type keys are rejected, and shared
-type keys still rely on the remaining type-family clone-free adoption work.
+families from the old clone path: singleton/filesystem/handle guards,
+method/property metadata, frame-dependent constants, conditions, byte-array
+backed values, immutable scalars, composite value containers, parsed/delegated
+values, and the `MatchAnyConstant` wildcard shell. `MatchAnyConstant` still
+points at the child-owner boundary because its lookup key is a `TypeConstant`;
+the shell no longer clones, unrelated foreign type keys are rejected, and shared
+type keys continue through target registration and the clone-free type-family
+hooks.
 `TerminalTypeConstant` is also no longer on that default path: it reconstructs
 the type leaf from the defining identity, registers shared identities in the
 target owner, and rejects unrelated foreign identities before publication.
@@ -564,9 +568,9 @@ containers, and parsed/delegated literals all have explicit adoption hooks.
 Classification: fixed or hardened in current branch; keep covered by tests and
 validator runs.
 
-Minimum replacement: keep moving subclasses away from default clone adoption and
-toward explicit constructors. Do not add new owner-local fields to constants
-without an adoption decision.
+Minimum replacement: keep `Constant` adoption clone-free. Do not add new
+owner-local fields to constants without an explicit `copyForAdoption(...)`
+decision and validator coverage.
 
 ## Compiler AST Temporary Clone Sites
 

@@ -94,6 +94,14 @@ public class EnumValueConstant
     }
 
     @Override
+    protected EnumValueConstant copyForAdoption(AdoptionContext context) {
+        // Enum values have singleton runtime state like other singleton constants, but the adopted
+        // value must preserve the EnumValueConstant subclass for ordinal/range/operator behavior.
+        var pool = context.pool();
+        return new EnumValueConstant(pool, (ClassConstant) pool.register(getClassConstant()));
+    }
+
+    @Override
     public PackedInteger getIntValue() {
         int iOrdinal = getPresumedOrdinal();
         return iOrdinal >= 0

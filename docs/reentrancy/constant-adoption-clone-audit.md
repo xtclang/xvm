@@ -45,9 +45,9 @@ non-shareable type is returned as-is instead of being adopted, because adopting
 it would claim that a destination pool owns a type graph that is not actually
 visible from that pool.
 
-## Why The Current Mechanism Is Dangerous
+## Why The Master Mechanism Was Dangerous
 
-The base implementation uses `Object.clone()`:
+In `master`, the base implementation used `Object.clone()`:
 
 ```java
 protected Constant adoptedBy(ConstantPool pool) {
@@ -72,15 +72,14 @@ caches, locks, atomics, thread-local cells, or live handles must either:
   `registerConstants(...)` before the adopted copy is observable through normal
   APIs.
 
-This branch removes the most dangerous part of the old contract: silent default
-adoption. `Constant.adoptedBy(...)` is now the final owner-transfer wrapper.
+This branch removes that bad contract. `Constant` no longer implements
+`Cloneable`; `Constant.adoptedBy(...)` is now the final owner-transfer wrapper.
 It constructs an `AdoptionContext`, delegates to `copyForAdoption(...)`, checks
-that the result is owned by the requested pool, and resets reference counts.
-The default `copyForAdoption(...)` path throws unless the constant family
-overrides `allowsDefaultAdoptionClone()` and documents why its copied fields are
-logical value state. The remaining `cloneForAdoption(...)` helper is explicitly
-transitional. It preserves current behavior for reviewed families while making
-future owner-transfer clone use visible in source search and code review.
+that the result is owned by the requested pool, and resets reference counts. The
+default `copyForAdoption(...)` path fails closed. There is no
+`cloneForAdoption(...)` helper and no `allowsDefaultAdoptionClone()` escape
+hatch. Every concrete constant adoption path must explicitly construct the
+target-owned logical value or fail closed.
 
 This is the same root cause as the fixed `SingletonConstant` incident:
 `SingletonConstant.f_state` was final, but the final `AtomicReference` object
@@ -93,7 +92,7 @@ These are the current adoption sites in runtime/asm source.
 
 | Site | Purpose | Runtime/container assessment |
 | --- | --- | --- |
-| `javatools/src/main/java/org/xvm/asm/Constant.java` | Final adoption wrapper that delegates to `copyForAdoption(...)`, checks target ownership, and resets refs. | Central guard. Concrete leaves now construct fresh logical copies or fail closed. Only abstract family defaults remain as transitional scaffolding until the base fallback is removed. |
+| `javatools/src/main/java/org/xvm/asm/Constant.java` | Final adoption wrapper that delegates to `copyForAdoption(...)`, checks target ownership, and resets refs. | Central guard. `Constant` is not `Cloneable`; concrete leaves construct fresh logical copies or fail closed. |
 | `javatools/src/main/java/org/xvm/asm/ConstantPool.java:199` | Adopt a foreign constant during pool registration. | Expected owner-transfer path. Must not preserve source-pool runtime state. |
 | `javatools/src/main/java/org/xvm/asm/ConstantPool.java:216` | Adopt a foreign locator constant used by the pool lookup table. | Same hazard as normal adoption, but through locators. |
 | `javatools/src/main/java/org/xvm/asm/constants/SingletonConstant.java` | Branch `copyForAdoption(...)` hook that constructs a fresh singleton constant for the target pool. | Fixed must-fix site. Prevents cross-container singleton handle/lifecycle state sharing. |
@@ -119,8 +118,8 @@ These are the current adoption sites in runtime/asm source.
 ## Explicit Default-Clone Policy Inventory
 
 This inventory was generated from the current tree by scanning constant
-subclasses and whether they override `copyForAdoption(...)` or opt into
-`allowsDefaultAdoptionClone()`. The exact command shape is:
+subclasses and whether they override `copyForAdoption(...)`. The exact command
+shape is:
 
 ```bash
 for f in javatools/src/main/java/org/xvm/asm/constants/*.java \
@@ -130,34 +129,28 @@ for f in javatools/src/main/java/org/xvm/asm/constants/*.java \
 done
 ```
 
-The important result is not that every default clone is currently a proven
-runtime failure. The important result is that clone adoption is now an explicit
-policy. Every class below either relies on logical-value-only fields, a common
-owner-change reset, or a later `registerConstants(...)` cleanup, and that
-assumption is now visible in source.
+The important result is that adoption is no longer an inherited clone policy.
+Every concrete class below either reconstructs logical value state through an
+explicit hook, inherits a reviewed explicit hook, or fails closed.
 
 | Group | Classes | Current assessment |
 | --- | --- | --- |
 | Explicit adoption hook | `Annotation`, `AccessTypeConstant`, `AllCondition`, `AnnotatedTypeConstant`, `AnonymousClassTypeConstant`, `AnyCondition`, `ArrayConstant`, `BFloat16Constant`, `ByteConstant`, `CastTypeConstant`, `CharConstant`, `ChildClassConstant`, `ClassConstant`, `DecimalAutoConstant`, `DecimalConstant`, `DecoratedClassConstant`, `DeferredValueConstant`, `DifferenceTypeConstant`, `DynamicFormalConstant`, `ExpressionConstant`, `FPNConstant`, `FSNodeConstant`, `FileStoreConstant`, `Float128Constant`, `Float16Constant`, `Float32Constant`, `Float64Constant`, `Float8e4Constant`, `Float8e5Constant`, `FormalTypeChildConstant`, `HandleConstant`, `ImmutableTypeConstant`, `InnerChildTypeConstant`, `IntConstant`, `IntersectionTypeConstant`, `KeywordConstant`, `LiteralConstant`, `MapConstant`, `MatchAnyConstant`, `MethodBindingConstant`, `MethodConstant`, `ModuleConstant`, `MultiMethodConstant`, `NamedCondition`, `NativeRebaseConstant`, `NotCondition`, `PackageConstant`, `ParameterizedTypeConstant`, `ParentClassConstant`, `PendingTypeConstant`, `PresentCondition`, `PropertyClassTypeConstant`, `PropertyConstant`, `PureIdentityConstant`, `RangeConstant`, `RecursiveTypeConstant`, `RegExConstant`, `RegisterConstant`, `ServiceTypeConstant`, `SignatureConstant`, `SingletonConstant`, `StringConstant`, `TerminalTypeConstant`, `ThisClassConstant`, `TypeParameterConstant`, `TypeSequenceTypeConstant`, `TypedefConstant`, `UInt8ArrayConstant`, `UnionTypeConstant`, `UnresolvedNameConstant`, `UnresolvedTypeConstant`, `VersionConstant`, `VersionMatchesCondition`, `VersionedCondition`, `VirtualChildTypeConstant` | Fixed or guarded in this branch. These were known runtime/helper/scratch-state cases, array-backed values, immutable scalar values, composite value containers, parsed-value caches, annotation value containers, named/type-backed identities, pseudo path/placeholder values, type-keyed sentinel shells, type leaves, single-child type wrappers, storable relational types, dependant child/property type shells, recursive typedef shells, or transient type markers where adoption should be explicit rather than inherited from the transitional clone helper. They now implement `copyForAdoption(...)` under the final wrapper and use explicit construction or fail closed. |
-| Type constants using common `TypeConstant.setContaining(...)` reset | `AbstractDependantChildTypeConstant`, `AbstractDependantTypeConstant`, `RelationalTypeConstant` | Common type-info, relation, recursion, normalized-type, and JIT-name caches are cleared by `TypeConstant.setContaining(...)`. Subclass transient fields are mostly disassembly indexes. `AnnotatedTypeConstant`, `PendingTypeConstant`, `TypeSequenceTypeConstant`, `UnresolvedTypeConstant`, `TerminalTypeConstant`, `AccessTypeConstant`, `ImmutableTypeConstant`, `ServiceTypeConstant`, `UnionTypeConstant`, `IntersectionTypeConstant`, `DifferenceTypeConstant`, `CastTypeConstant`, `VirtualChildTypeConstant`, `InnerChildTypeConstant`, `AnonymousClassTypeConstant`, `PropertyClassTypeConstant`, and `RecursiveTypeConstant` have moved to explicit construction or fail-closed adoption. |
-| Abstract family bases still declaring transitional default clone | `IdentityConstant`, `TypeConstant`, `ValueConstant` | No concrete constant leaf currently relies on these defaults without an explicit hook. They remain only as transitional family scaffolding while the base fallback is removed. |
+| Abstract type-family helpers | `AbstractDependantChildTypeConstant`, `AbstractDependantTypeConstant`, `RelationalTypeConstant` | These are not adoption endpoints. Concrete type leaves/wrappers/relations now use explicit construction or fail-closed hooks. `TypeConstant.setContaining(...)` still clears owner-derived helper state for other owner-change paths, but adoption no longer relies on clone-then-reset. |
+| Abstract constant-family bases | `IdentityConstant`, `TypeConstant`, `ValueConstant`, `FloatConstant`, `FormalConstant`, `NamedConstant` | These abstract bases no longer grant adoption by shallow clone. Concrete leaves must provide or inherit an explicit `copyForAdoption(...)` implementation. |
 | Scalar value constants | `BFloat16Constant`, `ByteConstant`, `CharConstant`, `DecimalConstant`, `Float16Constant`, `Float32Constant`, `Float64Constant`, `Float8e4Constant`, `Float8e5Constant`, `IntConstant`, `RegExConstant`, `StringConstant` | Fixed in this branch. Each class reconstructs the same immutable logical scalar value in the destination pool. FP8 constants use private raw-bit adoption constructors so deserialized encodings are preserved even though the public float conversion path is incomplete for some values. |
-| Composite value constants | `ArrayConstant`, `MapConstant`, `RangeConstant` | Fixed in this branch for value-container adoption. Array/map constructors defensively copy caller arrays, adoption creates fresh target-owned shells, and target registration rewrites child value constants without mutating source containers. Type constants referenced by array/map value types still depend on the separate type-family adoption wave. |
+| Composite value constants | `ArrayConstant`, `MapConstant`, `RangeConstant` | Fixed in this branch for value-container adoption. Array/map constructors defensively copy caller arrays, adoption creates fresh target-owned shells, and target registration rewrites child constants without mutating source containers. Type constants referenced by array/map value types now pass through clone-free type-family adoption hooks. |
 | Parsed/delegated value constants | `DecimalAutoConstant`, `LiteralConstant`, `VersionConstant` | Fixed in this branch. `LiteralConstant` reconstructs text/format and drops the transient parsed `m_oVal` cache; `VersionConstant` preserves its subclass instead of becoming a plain literal; `DecimalAutoConstant` keeps its delegated decimal child on the normal recursive registration path. |
-| Value constants still inheriting base clone | `FloatConstant`, `ValueConstant` | Abstract bases only. `MatchAnyConstant` now reconstructs its wildcard shell explicitly, but it still documents the unresolved type-family/locator problem because the wildcard's lookup key is a `TypeConstant`. |
+| Value family bases | `FloatConstant`, `ValueConstant` | Abstract bases only. They do not provide fallback clone adoption. |
 | Condition constants | `AllCondition`, `AnyCondition`, `MultiCondition`, `NamedCondition`, `NotCondition`, `PresentCondition`, `VersionMatchesCondition`, `VersionedCondition` | Fixed in this branch. The family no longer opts into default clone: each concrete condition reconstructs the logical predicate and lets target registration adopt child constants. The base `ConditionalConstant.iTest` simulation slot is private transient scratch state and is not copied. |
 | Frame-dependent constants | explicit `MethodBindingConstant`, explicit `RegisterConstant`, and guarded `HandleConstant` | The frame-dependent family no longer opts into default clone. `MethodBindingConstant` reconstructs the serialized descriptor, `RegisterConstant` drops transient compiler register state, and `HandleConstant` is guarded because it wraps a live `ObjectHandle`. |
 | Not a constant adoption target | `TypeInfoReal` | It appears in the scan only because it extends `TypeInfo`, not `Constant`. It is tracked in the TypeInfo owner-copy audit instead. |
 
-Proper long-term fix: remove `Object.clone()` from ownership transfer entirely.
-The branch has already removed "safe unless proven otherwise" by requiring an
-explicit policy, and no concrete constant leaf currently relies on inherited
-default-clone adoption. The remaining abstract family defaults should still be
-removed so owner transfer is impossible without explicit construction. A
-clone-free API should construct a new target-pool constant from listed logical
-fields and intentionally drop or rebuild every helper/cache field. Until then,
-keep `ConstantAdoptionValidator` in stress/CI and treat every new non-logical
-field on a `Constant` subclass as a mandatory adoption review.
+The long-term adoption rule is now in place for constants: owner transfer must
+construct a new target-pool constant from listed logical fields and
+intentionally drop, rebuild, or reject every helper/cache field. Keep
+`ConstantAdoptionValidator` in stress/CI because a future explicit hook can
+still be written incorrectly by reusing owner-local helper/runtime references.
 
 ## Runtime-Relevant Adoption Risks
 
@@ -190,9 +183,9 @@ multiple containers in one JVM.
 | `ConditionalConstant.iTest` | Fixed in this branch by removing the family default-clone opt-in, adding explicit condition copy hooks, and making the field private. | `terminalInfluences()` writes this field as brute-force simulation scratch on terminal conditions. It is not serialized predicate value. A shallow adoption clone copied whatever previous analysis stored there into another pool, and the old public field made external mutation possible. | Keep explicit copy hooks for all condition leaves. Adoption preserves name/module/version/child predicates and target registration still interns child constants, but simulation scratch starts clean in the destination owner. |
 | Array-backed scalar value constants | Fixed in this branch for `UInt8ArrayConstant`, `FPNConstant`, and `Float128Constant` by defensively copying constructor input arrays and reconstructing adopted values with fresh arrays. | A byte string or encoded floating-point constant participates in hash/equality and pool lookup as immutable logical value, but the old constructors and shallow adoption path could share the same mutable `byte[]` across caller code or pool owners. Mutating the source array after construction or adoption could change another owner's constant value. | Keep constructor/adoption byte copies. The legacy raw `getValue()` API still returns the internal array and remains an array-immutability follow-up; this wave avoids extra per-read allocation and fixes the proven cross-owner/input-sharing hazard. |
 | Immutable scalar value constants | Fixed in this branch for `BFloat16Constant`, `ByteConstant`, `CharConstant`, `DecimalConstant`, `Float16Constant`, `Float32Constant`, `Float64Constant`, `Float8e4Constant`, `Float8e5Constant`, `IntConstant`, `RegExConstant`, and `StringConstant`. | These were not known to carry owner-local state today, but inheriting shallow clone made them one field edit away from copying helper caches or owner references across pools. | Keep explicit scalar reconstruction. It has the same allocation shape as shallow clone, preserves constant-pool interning through registration, and makes future owner-derived fields visible in code review instead of silently inherited. |
-| Composite value containers | Fixed in this branch for `ArrayConstant`, `MapConstant`, and `RangeConstant`. | Array and map constants store `Constant[]` containers used by hash/equality and later mutated by `registerConstants(...)` to hold registered child constants. Default clone and caller-owned constructor arrays let one owner or caller mutate another owner's logical value container. | Keep constructor container copies and explicit copy hooks. Pool factory paths still perform one container copy because copying moved from `ConstantPool.ensure*Constant(...)` into `ArrayConstant`; map/entry map construction keeps its generated arrays without an extra copy. Type-family ownership remains a separate must-fix. |
+| Composite value containers | Fixed in this branch for `ArrayConstant`, `MapConstant`, and `RangeConstant`. | Array and map constants store `Constant[]` containers used by hash/equality and later mutated by `registerConstants(...)` to hold registered child constants. Default clone and caller-owned constructor arrays let one owner or caller mutate another owner's logical value container. | Keep constructor container copies and explicit copy hooks. Pool factory paths still perform one container copy because copying moved from `ConstantPool.ensure*Constant(...)` into `ArrayConstant`; map/entry map construction keeps its generated arrays without an extra copy. Child type constants are adopted through the clone-free type-family hooks. |
 | Parsed and delegated value caches | Fixed in this branch for `LiteralConstant`, `VersionConstant`, and `DecimalAutoConstant`. | `LiteralConstant.m_oVal` is a parsed helper cache, not serialized literal value, and shallow clone copied it. `VersionConstant` must not be copied by a base literal hook that loses the subclass. `DecimalAutoConstant` delegates to a child decimal constant that must be registered in the target pool. | Keep explicit hooks. Literal adoption drops parsed cache, version adoption preserves the concrete subclass, and decimal-auto target registration adopts the delegated decimal child. |
-| `MatchAnyConstant` type-keyed sentinel shell | Fixed in this branch for the value shell and the foreign-key boundary; type-family clone-free reconstruction remains tracked separately. | The wildcard's logical value is a `TypeConstant`. Shallow clone was unnecessary for the shell, and a copied shell could hide whether the type key was actually valid in the destination owner. | Keep `MatchAnyConstant.copyForAdoption(...)`. It rebuilds the shell, rejects unrelated foreign type keys before publication, and lets target registration adopt/intern shared type keys. The separate type-family slice still removes type-constant shallow clone for the shared/adoptable case. |
+| `MatchAnyConstant` type-keyed sentinel shell | Fixed in this branch for the value shell and the foreign-key boundary. | The wildcard's logical value is a `TypeConstant`. Shallow clone was unnecessary for the shell, and a copied shell could hide whether the type key was actually valid in the destination owner. | Keep `MatchAnyConstant.copyForAdoption(...)`. It rebuilds the shell, rejects unrelated foreign type keys before publication, and lets target registration adopt/intern shared type keys through the clone-free type-family hooks. |
 | Dependant child/property type shells | Fixed in this branch for `VirtualChildTypeConstant`, `InnerChildTypeConstant`, `AnonymousClassTypeConstant`, and `PropertyClassTypeConstant`. | These types contain logical parent plus child name/class/property identity, but can also cache resolved child structure or `PropertyInfo` metadata derived from one owner graph. The old shallow clone copied that cache shape and then relied on later mutation/reset. | Keep explicit hooks. They reconstruct the target-owned shell, target registration interns parent and child constants as before, transient virtual-origin parent metadata is preserved when present, and owner-derived caches are rebuilt locally. |
 | `RecursiveTypeConstant` subclass shell | Fixed in this branch by reconstructing the concrete recursive type from its typedef identity. | `RecursiveTypeConstant` extends `TerminalTypeConstant`; without its own hook, clone-free terminal adoption would produce a plain terminal type and lose recursive typedef behavior. The old shallow clone preserved the subclass accidentally. | Keep the subclass hook. Shared typedef identities are adopted/interned by the target pool; unrelated foreign typedefs fail before publication. |
 | `Annotation` parameter arrays and `AnnotatedTypeConstant` shells | Fixed in this branch by defensively copying annotation parameter arrays and reconstructing annotated type shells. | Annotation params are part of immutable logical constant identity, but the old constructor and shallow adoption path could reuse caller/source-owner arrays. The annotated type also carried a derived annotation-type cache that belongs to one pool owner. Runtime `HandleConstant` params are live `ObjectHandle` state and cannot be moved after first registration. | Keep the constructor/adoption array copies, the `AnnotatedTypeConstant.copyForAdoption(...)` hook, and the already-owned handle guard. Target registration still interns annotation class, params, and underlying type exactly as before; the derived annotation-type cache starts empty in the target owner. |
@@ -201,17 +194,17 @@ multiple containers in one JVM.
 | Pseudo class-path constants | Fixed in this branch for `ThisClassConstant`, `ParentClassConstant`, `ChildClassConstant`, and `KeywordConstant`. | These are logical pseudo path/category values, but a family shallow clone would copy any future pseudo helper state. The test also exposed that locator adoption alone does not rewrite child fields when recursive registration is deferred. | Keep explicit reconstruction and pre-register logical child identities in the target pool. Keyword constants still use per-format singleton lookup in each pool. |
 | Pseudo compiler placeholders | Fixed in this branch for `DeferredValueConstant`, `ExpressionConstant`, and `UnresolvedNameConstant`. | These are unresolved compiler/AST placeholders, not completed pool metadata. `UnresolvedNameConstant` also stored a caller-owned `String[]` used by temporary hash/equality. | Keep fail-closed adoption and constructor array copies. Valid runtime pools should see resolved constants, not these placeholders. |
 | Named and type-backed identity constants | Fixed in this branch for `ModuleConstant`, `PackageConstant`, `ClassConstant`, `MultiMethodConstant`, `TypedefConstant`, `DecoratedClassConstant`, `PureIdentityConstant`, and `NativeRebaseConstant`. | Named identities looked low-risk, but default clone still copied identity-family helper fields and any future owner-derived state. `TypedefConstant.m_fInitialized` is resolved recursion state, not logical identity. Type-backed identities can also smuggle a source-owner type key if the key is not target-shareable. `NativeRebaseConstant` is a runtime-only facade and should never become serialized pool metadata. | Keep explicit reconstruction. Named identities register the target-owned parent before publishing the shell. Type-backed identities register a target-owned shared type key or reject a foreign key. Native rebase adoption remains fail-closed. |
-| `Constant.m_oValue` | Private transient base field with no current read/write API hits. | If future code uses it for runtime state, default clone adoption would shallow-copy it. | Leave documented. If revived, either handle it explicitly in `copyForAdoption(...)` or remove the field. |
+| `Constant.m_oValue` | Private transient base field with no current read/write API hits. | Under the old default clone path, any future runtime use would have been shallow-copied across owners. | Leave documented. If revived, either handle it explicitly in `copyForAdoption(...)` or remove the field. |
 
-This branch now fixes the highest-risk small adoption hardening items in this
-table. The common rule is that adoption may preserve logical constant identity,
-but not mutable helper cells, in-progress state, JIT caches, or live runtime
-handles.
+This branch now fixes the constant-adoption hardening items in this table. The
+common rule is that adoption may preserve logical constant identity, but not
+mutable helper cells, in-progress state, JIT caches, or live runtime handles.
 
 ## Frame-Dependent Constants
 
-`FrameDependentConstant` is not automatically illegal, but the family no longer
-opts into default clone. Two subclasses are serialized constant forms:
+`FrameDependentConstant` is not automatically illegal. The family used to hide
+behind inherited clone adoption, but now fails closed unless a concrete
+serialized constant form states its owner-transfer rule:
 
 - `RegisterConstant` represents a frame register and can be serialized as
   `Format.Register`. Its in-memory compile-time form can still carry a
@@ -384,16 +377,21 @@ Already fixed in this branch:
 - `SignatureConstant` comparison/JIT helper state copied by clone adoption;
 - `TypeParameterConstant` recursive-comparison helper state copied by clone
   adoption;
-- cross-pool adoption of already-owned `HandleConstant` live runtime handles.
+- cross-pool adoption of already-owned `HandleConstant` live runtime handles;
 - named and type-backed identity constants that previously inherited the
   family shallow-clone path. Path identities now rebuild with target-owned
   parents, `TypedefConstant` drops resolved-state cache, type-backed identities
   require target-shareable type keys, and `NativeRebaseConstant` fails closed.
+- `EnumValueConstant` now has its own copy hook so enum singleton adoption keeps
+  the enum-value subclass and ordinal/operator behavior while still getting
+  fresh owner-local singleton runtime state.
+- the base `Constant` fallback no longer uses `Object.clone()`, and `Constant`
+  no longer implements `Cloneable`.
 - opt-in adoption validation at `ConstantPool.register(...)`, with a focused
-  regression test that proves a default shallow-cloned helper reference is
-  rejected when diagnostics are enabled. The validator now also rejects default
-  shallow clones that copy arbitrary live `ObjectHandle` references, while
-  preserving the existing first-registration `HandleConstant` behavior.
+  regression test that proves a bad explicit copy hook is rejected when
+  diagnostics are enabled. The validator also rejects explicit copy hooks that
+  reuse arbitrary live `ObjectHandle` references, while preserving the existing
+  first-registration `HandleConstant` behavior.
 
 The focused regression test is
 `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java`. It directly
