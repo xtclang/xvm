@@ -123,9 +123,11 @@ public class InterpreterConnector
             throws InterruptedException {
         // extremely naive; replace
         do  {
+            m_containerMain.throwIfRuntimeFailed();
             Thread.sleep(500);
         } while (!f_runtime.isIdle() || !m_containerMain.isIdle());
 
+        m_containerMain.throwIfRuntimeFailed();
         int nResult = m_containerMain.getResult();
         m_containerLast = m_containerMain;
         m_containerMain = null;

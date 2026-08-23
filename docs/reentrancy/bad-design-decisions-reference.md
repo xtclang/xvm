@@ -46,6 +46,7 @@ That makes the code brittle even before multiple Java threads enter it.
 | Thread-local hidden context | Dependencies are not visible in signatures and depend on cleanup discipline. | Reused workers, callbacks, nested scopes, and parallel containers can observe stale context. | Semantic current-pool use removed; other thread-local contexts remain audited. |
 | Non-transactional keep-alive registration | Code incremented owner-visible callback counts before the operation that made the callback live had completed. | Failed scheduling/startup can strand callback counts and make containers look busy forever. | Fixed for LocalClock, NanoTimer, and xRTServer bind failure paths. |
 | Message-only exception wrapping | Code threw new failures using only `e.getMessage()`. | Owner, pool, module, and stack evidence disappears before the launcher or stress harness can report it. | Fixed for `MainContainer.invoke0(...)`; broader exception hygiene remains tracked. |
+| Print-only worker failures | Worker threads caught runtime defects, printed to stderr, and continued. | Host APIs can observe idle state and report success after a scheduler/service runtime defect. | Fixed for `Container.schedule(...)`, `ServiceContext.drainWork()`, and `InterpreterConnector.join()`. |
 
 ## Examples And Replacements
 
@@ -202,6 +203,39 @@ throw new RuntimeException("failed to run: " + module, e);
 
 The outer message still adds module context, but the original failure remains
 available to the launcher, tests, and ownership diagnostics.
+
+### Print-Only Worker Failures
+
+Bad shape:
+
+```java
+catch (Throwable e) {
+    System.err.println("Unexpected service execution failure: " + f_sName);
+    e.printStackTrace(System.err);
+}
+```
+
+Why it was bad in a single-threaded world:
+
+- The thread that observed the real failure was not necessarily the caller that
+  waited for completion.
+- Stderr output is not an API result, not structured diagnostics, and not a
+  memory-model publication contract.
+- The runtime could decrement pending work or terminate a fiber after the print,
+  allowing `join()` to observe idle state and return success.
+
+Replacement:
+
+```java
+container.recordRuntimeFailure("Unexpected service execution failure: " + service, e);
+...
+container.throwIfRuntimeFailed();
+```
+
+The owner container now owns the failure state. The first unexpected Java
+failure is published through an atomic slot, later failures are retained as
+suppressed evidence, and `join()` checks the slot before reporting completion.
+Natural XTC exceptions still use the normal fiber exception path.
 
 ### Split Mutable Lifecycle State
 

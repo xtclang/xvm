@@ -118,7 +118,7 @@ been logged and the task code treats the non-zero code as failure.
 | P0 | `javatools/src/main/java/org/xvm/javajit/JitConnector.java:143` | Must-fix | `InvocationTargetException` for an unhandled XTC exception is printed at `JitConnector.java:150`, but no exception is thrown and `result` remains the default zero. JIT/direct execution can report success after an unhandled language exception. | Preserve language exception semantics: set a non-zero result or throw a typed `JitUnhandledException`/`LauncherException` with the cause. Keep the printable XTC exception text, but do not let `join()` return success. |
 | P0 | `javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java:130`, `:187`, `:231` | Must-fix | Reflective `equals`, `compare`, and `hashCode` catch `InvocationTargetException` and convert every failure to `$unsupported`. If the invoked method threw an XTC `nException`, the language exception is lost. | Catch `InvocationTargetException`, unwrap `getCause()`, rethrow `nException`, and only translate reflection/signature failures to `$unsupported` or type mismatch. |
 | P0 | `javatools/src/main/java/org/xvm/runtime/MainContainer.java:253` | Must-fix, fixed in branch | Startup/invocation setup failures are wrapped as `new RuntimeException("failed to run... Cause: " + e.getMessage())` with no cause. This cuts off module load, injection, owner, and stack information before the launcher sees it. | Fixed by throwing `new RuntimeException("failed to run: " + f_idModule, e)`. The launcher still gets module context, and diagnostics keep the original cause and stack. A typed startup exception remains a later cleanup option. |
-| P0 | `javatools/src/main/java/org/xvm/runtime/Container.java:168` and `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:324` | Must-fix | Unexpected service scheduling/execution failure is printed and swallowed. Pending work is decremented, the service may be terminated, and `join()` can return normal completion. This hides parallelism, ownership, and runtime defects. | Add a container/runtime terminal failure field observed by `InterpreterConnector.join()`. Store the first unexpected `Throwable`, return non-zero or rethrow through the launcher boundary, and keep stderr as secondary diagnostics. |
+| P0 | `javatools/src/main/java/org/xvm/runtime/Container.java:168` and `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:324` | Must-fix, fixed in branch | Unexpected service scheduling/execution failure was printed and swallowed. Pending work was decremented, the service could be terminated, and `join()` could return normal completion. This hid parallelism, ownership, and runtime defects. | Fixed by adding a container terminal-failure slot observed by `InterpreterConnector.join()`. The first unexpected `Throwable` is stored with safe publication, later failures are suppressed evidence, and stderr remains secondary diagnostics. |
 | P0 | `javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xNanosTimer.java:310` | Must-fix, fixed in branch | `Alarm.start()` registers `nativeCallback` before scheduling the timer, catches `Throwable`, and only calls `cancelTrigger()`. If scheduling fails after registration, the callback count can remain positive and keep the container non-idle forever. | Fixed with an explicit rollback guard: the alarm stores the exact registered container, unregisters it on schedule failure, no longer swallows `Throwable`, and removes the alarm from the set if startup fails. |
 | P0 | `javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xLocalClock.java:121` | Must-fix, fixed in branch | `Alarm` registers keep-alive in the constructor before `scheduleTimer()`. The catch calls `alarm.cancel()`, but an unscheduled trigger may not unregister. Startup/schedule failure can leak callback ownership. | Fixed by moving registration out of construction and adding `cancelAfterScheduleFailure()`, which unregisters from the stored owner independently of `TimerTask.cancel()` result. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java:280` and `:287` | Must-fix, fixed in branch | Server startup registers a native callback, then creates contexts. If a post-registration startup step throws, the catch terminates the service context but does not unregister the callback. `join()` can hang on callback count. | Fixed by tracking registration and running `rollbackBind(...)` before raising the XTC I/O exception. Rollback unregisters the callback, stops partial Java servers, shuts down the executor, clears routes, and clears the native handle. |
@@ -279,8 +279,8 @@ P0:
 2. Unwrap and rethrow `nException` in JIT bridge reflective dispatch (`nType`).
 3. DONE in this branch: preserve cause in `MainContainer.invoke0()`
    startup/invocation failure.
-4. Add a runtime/container terminal failure channel for unexpected service scheduler
-   and drain failures.
+4. DONE in this branch: add a runtime/container terminal failure channel for
+   unexpected service scheduler and drain failures.
 5. DONE in this branch: make native callback registration exception-safe for
    timers and server startup.
 
@@ -404,3 +404,47 @@ Successful execution is unchanged. Failed execution still reports the module
 entry context, but now the top-level launcher and diagnostics can see the
 original exception. `RuntimeFailurePropagationTest` records the old source shape
 as a red-on-master guard.
+
+## Fixed In This Branch: Worker Failure Propagation To `join()`
+
+Two runtime worker paths had a worse failure mode than message-only wrapping:
+
+```java
+catch (Throwable e) {
+    System.err.println("Unexpected service execution failure: " + f_sName);
+    e.printStackTrace(System.err);
+}
+```
+
+`Container.schedule(...)` and `ServiceContext.drainWork()` both ran on runtime
+workers. If either path hit a Java runtime defect, ownership assertion, or
+unexpected scheduler failure, the worker printed to stderr and then let the host
+boundary continue. Pending work could be decremented, a fiber could be
+terminated, and `InterpreterConnector.join()` could later return the normal
+container result because there was no shared failure state to observe.
+
+That is a must-fix reentrancy bug. In same-JVM and parallel-container runs the
+thread that sees the real defect is often not the caller waiting in `join()`.
+Printing on the worker is not a happens-before edge, not an API result, and not a
+testable failure contract.
+
+The branch adds an owner-local terminal failure channel:
+
+- `Container.recordRuntimeFailure(...)` stores the first unexpected Java failure
+  in an `AtomicReference<RuntimeException>`. That gives cross-thread readers a
+  real safe-publication point. Later failures are added as suppressed evidence
+  so the first cause is not overwritten.
+- `Container.schedule(...)` records scheduler failures instead of only printing
+  them.
+- `ServiceContext.drainWork()` records unexpected service execution failures
+  after terminating the current fiber.
+- `InterpreterConnector.join()` checks the container failure slot before waiting
+  and again before returning the result.
+
+Natural XTC exceptions are not changed by this fix; they still flow through
+fibers and language-level exception handling. The new channel is only for Java
+runtime defects that previously escaped the host contract. Stderr remains as a
+secondary diagnostic, but success/failure no longer depends on someone watching
+the terminal output. `RuntimeFailurePropagationTest` guards the source shapes
+that were broken on master: print-only worker catches and a `join()` boundary
+that never observes recorded runtime failures.

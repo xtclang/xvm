@@ -322,12 +322,10 @@ public class ServiceContext {
                 }
             }
         } catch (Throwable e) {
-            // must not happen
             if (frame != null) {
                 terminateFiber(frame.f_fiber, 0);
             }
-            System.err.println("Unexpected service execution failure: " + f_sName);
-            e.printStackTrace(System.err);
+            f_container.recordRuntimeFailure("Unexpected service execution failure: " + f_sName, e);
             return !f_queueSuspended.isReady();
         } finally {
             tloCtx[0] = ctxPrior;

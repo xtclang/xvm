@@ -11,6 +11,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -235,9 +236,7 @@ public abstract class Container
             try {
                 service.execute(true);
             } catch (Throwable e) {
-                // must not happen
-                System.err.println("Unexpected service scheduling failure: " + service.f_sName);
-                e.printStackTrace(System.err);
+                recordRuntimeFailure("Unexpected service scheduling failure: " + service.f_sName, e);
             } finally {
                 f_pendingWorkCount.decrementAndGet();
             }
@@ -659,6 +658,46 @@ public abstract class Container
     }
 
     /**
+     * Record an unexpected Java runtime failure that must be reported through the host boundary.
+     *
+     * Natural XTC exceptions still flow through fibers. This is for VM/runtime defects that would
+     * otherwise be printed on a worker and lost, letting {@code join()} report success.
+     */
+    public void recordRuntimeFailure(String sMessage, Throwable e) {
+        var failure = new IllegalStateException(sMessage, e);
+        if (f_runtimeFailure.compareAndSet(null, failure)) {
+            System.err.println(sMessage);
+            e.printStackTrace(System.err);
+            return;
+        }
+
+        RuntimeException failureRecorded = f_runtimeFailure.get();
+        if (failureRecorded != null) {
+            failureRecorded.addSuppressed(failure);
+        }
+    }
+
+    /**
+     * @return the first unexpected Java runtime failure recorded by this container or an ancestor
+     */
+    public RuntimeException getRuntimeFailure() {
+        RuntimeException failure = f_runtimeFailure.get();
+        return failure == null && f_parent != null
+                ? f_parent.getRuntimeFailure()
+                : failure;
+    }
+
+    /**
+     * Throw if this container or an ancestor recorded an unexpected Java runtime failure.
+     */
+    public void throwIfRuntimeFailed() {
+        RuntimeException failure = getRuntimeFailure();
+        if (failure != null) {
+            throw failure;
+        }
+    }
+
+    /**
      * Ensure a TypeSystem handle for this container.
      *
      * @param frame    the current frame
@@ -890,6 +929,12 @@ public abstract class Container
      * Support for Clock and Timer: the count of native callbacks that should keep the container alive.
      */
     protected final AtomicLong f_callbackCount = new AtomicLong();
+
+    /**
+     * First unexpected Java runtime failure observed on a worker. This gives host join boundaries a
+     * safe publication point for errors that were previously printed and lost.
+     */
+    private final AtomicReference<RuntimeException> f_runtimeFailure = new AtomicReference<>();
 
     /**
      * Set of services that were started by this container (stored as a Map with no values).

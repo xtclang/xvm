@@ -2475,6 +2475,33 @@ context while preserving the original exception for launcher reporting and
 diagnostics. `RuntimeFailurePropagationTest` guards against returning to the
 message-only wrapper.
 
+### Worker Runtime Failures Reach `join`
+
+Master had worker-side catch blocks in `Container.schedule(...)` and
+`ServiceContext.drainWork()` that treated unexpected Java runtime failures as
+stderr diagnostics:
+
+```java
+System.err.println("Unexpected service execution failure: " + f_sName);
+e.printStackTrace(System.err);
+```
+
+After that print, the runtime could still become idle from the host's point of
+view. `InterpreterConnector.join()` only waited for idle queues and read the
+container result, so a worker assertion or scheduler defect could be lost while
+the embedding API reported success.
+
+This branch adds a container-owned terminal failure slot. The first unexpected
+Java failure is safely published through an `AtomicReference`; later failures are
+attached as suppressed exceptions. `InterpreterConnector.join()` checks the slot
+before waiting and before returning. Normal language exceptions still use the
+fiber/XTC exception path; this only makes runtime defects visible at the Java
+host boundary.
+
+The fix does not add hot-path per-op allocation. The slot is one reference per
+container and is only populated on failure. Successful scheduling and service
+draining use the same execution paths as before.
+
 ### `xOSStorage` Watch Daemon
 
 Master kept one mutable static watcher daemon:
