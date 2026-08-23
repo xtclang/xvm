@@ -119,9 +119,9 @@ been logged and the task code treats the non-zero code as failure.
 | P0 | `javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java:130`, `:187`, `:231` | Must-fix | Reflective `equals`, `compare`, and `hashCode` catch `InvocationTargetException` and convert every failure to `$unsupported`. If the invoked method threw an XTC `nException`, the language exception is lost. | Catch `InvocationTargetException`, unwrap `getCause()`, rethrow `nException`, and only translate reflection/signature failures to `$unsupported` or type mismatch. |
 | P0 | `javatools/src/main/java/org/xvm/runtime/MainContainer.java:253` | Must-fix | Startup/invocation setup failures are wrapped as `new RuntimeException("failed to run... Cause: " + e.getMessage())` with no cause. This cuts off module load, injection, owner, and stack information before the launcher sees it. | Throw `new RuntimeException("failed to run: " + f_idModule, e)` or a typed launcher/runtime startup exception. Prefer letting `Runner.process()`/`Launcher` own final formatting. |
 | P0 | `javatools/src/main/java/org/xvm/runtime/Container.java:168` and `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:324` | Must-fix | Unexpected service scheduling/execution failure is printed and swallowed. Pending work is decremented, the service may be terminated, and `join()` can return normal completion. This hides parallelism, ownership, and runtime defects. | Add a container/runtime terminal failure field observed by `InterpreterConnector.join()`. Store the first unexpected `Throwable`, return non-zero or rethrow through the launcher boundary, and keep stderr as secondary diagnostics. |
-| P0 | `javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xNanosTimer.java:310` | Must-fix | `Alarm.start()` registers `nativeCallback` before scheduling the timer, catches `Throwable`, and only calls `cancelTrigger()`. If scheduling fails after registration, the callback count can remain positive and keep the container non-idle forever. | Register after successful scheduling, or use a rollback guard that unregisters when scheduling fails. Do not swallow the failure silently; complete/raise it where the timer API can observe it. |
-| P0 | `javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xLocalClock.java:121` | Must-fix | `Alarm` registers keep-alive in the constructor before `scheduleTimer()`. The catch calls `alarm.cancel()`, but an unscheduled trigger may not unregister. Startup/schedule failure can leak callback ownership. | Move registration after successful `Timer.schedule`, or make cancellation independent of `TimerTask.cancel()` return value for the registration rollback path. |
-| P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java:280` and `:287` | Must-fix | Server startup registers a native callback, then creates contexts. If a post-registration startup step throws, the catch terminates the service context but does not unregister the callback. `join()` can hang on callback count. | Track whether registration occurred and unregister in the catch. Stop both Java servers on partial startup failure. Raise an XTC I/O exception with enough cause detail for launch logs. |
+| P0 | `javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xNanosTimer.java:310` | Must-fix, fixed in branch | `Alarm.start()` registers `nativeCallback` before scheduling the timer, catches `Throwable`, and only calls `cancelTrigger()`. If scheduling fails after registration, the callback count can remain positive and keep the container non-idle forever. | Fixed with an explicit rollback guard: the alarm stores the exact registered container, unregisters it on schedule failure, no longer swallows `Throwable`, and removes the alarm from the set if startup fails. |
+| P0 | `javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xLocalClock.java:121` | Must-fix, fixed in branch | `Alarm` registers keep-alive in the constructor before `scheduleTimer()`. The catch calls `alarm.cancel()`, but an unscheduled trigger may not unregister. Startup/schedule failure can leak callback ownership. | Fixed by moving registration out of construction and adding `cancelAfterScheduleFailure()`, which unregisters from the stored owner independently of `TimerTask.cancel()` result. |
+| P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java:280` and `:287` | Must-fix, fixed in branch | Server startup registers a native callback, then creates contexts. If a post-registration startup step throws, the catch terminates the service context but does not unregister the callback. `join()` can hang on callback count. | Fixed by tracking registration and running `rollbackBind(...)` before raising the XTC I/O exception. Rollback unregisters the callback, stops partial Java servers, shuts down the executor, clears routes, and clears the native handle. |
 | P1 | `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Must-fix | Code generation catches `Throwable`, logs, and continues. This can absorb `Error` subclasses and keep compiling after corrupted compiler state. | Catch `RuntimeException` or a compiler-specific exception for recoverable compiler bugs. Rethrow `Error`. Include compiler/module/phase context in the propagated exception. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:556` | Must-fix | Each op execution catches `Throwable`, prints stack, and raises a generic XTC `"Run-time error"` exception. Java VM defects and ownership assertions can become user-catchable language exceptions. | Rethrow `Error`. For runtime bugs, use a runtime-failure channel or a non-user-catchable fatal path. If translating to XTC, include a diagnostic tag/cause and mark it as native runtime failure. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:229` | Must-fix | `scheduleIO(task); // don't wait` discards the returned `CompletableFuture`; any write failure completes an unobserved future while the method returns OK. | Return or store a future, or make the API explicitly fire-and-forget with an error sink. For channel writes, propagate completion/failure to the caller. |
@@ -280,7 +280,8 @@ P0:
 3. Preserve cause in `MainContainer.invoke0()` startup/invocation failure.
 4. Add a runtime/container terminal failure channel for unexpected service scheduler
    and drain failures.
-5. Make native callback registration exception-safe for timers and server startup.
+5. DONE in this branch: make native callback registration exception-safe for
+   timers and server startup.
 
 P1:
 
@@ -322,4 +323,51 @@ and lost, native callback registration can leak keep-alive counts, startup failu
 lose their cause, and unobserved async I/O can fail after returning OK. Those should be
 fixed before broad stylistic tightening.
 
-No source code was modified by this audit.
+The original audit did not modify source code. The native callback rollback
+rows above are now fixed in this branch and documented below because they were
+real keep-alive leaks.
+
+## Fixed In This Branch: Native Callback Rollback
+
+`Container.registerNativeCallback()` is a keep-alive counter. It is intentionally
+owner-visible: while the count is non-zero, the container is not idle and
+`join()` should not report natural completion. That makes registration a
+transactional operation. Any code path that registers must either publish a
+live native callback that will later unregister, or roll back the count before
+returning failure.
+
+The old timer/server implementations broke that rule:
+
+- `xLocalClock.Alarm` registered from the constructor. If `Timer.schedule(...)`
+  then failed, the catch called `alarm.cancel()`, but an unscheduled
+  `TimerTask.cancel()` can report false and skip unregistering.
+- `xNanosTimer.Alarm.start()` registered, caught `Throwable`, canceled the
+  trigger, and returned as if scheduling had succeeded. If the weak callback was
+  gone or the cancel path did not report success, the callback count stayed
+  registered forever.
+- `xRTServer.invokeBind(...)` registered the callback after starting the Java
+  servers but before creating contexts. A later failure terminated the service
+  context without unregistering the callback or closing partial Java server
+  resources.
+
+This is not primarily a parallel-only bug. A single-threaded failed schedule or
+bind can leave the container permanently non-idle. Parallel and same-JVM stress
+make it easier to notice because a stranded callback count looks like a hang or
+stale runtime state from an unrelated container.
+
+The branch fix keeps successful-path behavior:
+
+- LocalClock and NanoTimer still use the same process-wide daemon `Timer`.
+- Keep-alive callbacks still increment the owning container's callback count
+  while the native alarm is pending.
+- xRTServer still uses the same Java `HttpServer`/`HttpsServer` and executor
+  startup order on success.
+
+The difference is failure handling. Timer alarms now store the exact
+`Container` that was registered, so cleanup does not depend on rediscovering
+the owner through a weak callback. Server bind tracks whether callback
+registration happened and rolls back all native resources before raising the
+same natural I/O failure shape. `NativeCallbackRegistrationTest` source-shape
+guards fail on the master code because the old constructor registration,
+`catch (Throwable)` swallow, and missing server rollback are still present
+there.

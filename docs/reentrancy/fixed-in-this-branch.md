@@ -2404,6 +2404,50 @@ LocalClock, NanoTimer, and service wake-ups share one daemon scheduler while the
 scheduled task itself carries the callback/container owner. The must-fix bug was
 the public non-final global reference, not the use of one scheduler.
 
+### Native Callback Registration Rollback
+
+The `Container.registerNativeCallback()` counter is a keep-alive mechanism. It
+is not advisory metadata. If a native timer or server increments it and then
+fails to publish a live callback that will unregister later, the container can
+remain non-idle forever and `join()` can hang. That is a real bug on one thread
+and becomes much harder to diagnose in same-JVM or parallel container tests.
+
+Master had three broken failure paths:
+
+- `xLocalClock.Alarm` registered keep-alive ownership from the constructor.
+  If `Timer.schedule(...)` failed, the catch called `alarm.cancel()`, but
+  `TimerTask.cancel()` is not a registration rollback API and can return false
+  for an unscheduled task.
+- `xNanosTimer.Alarm.start()` registered keep-alive ownership, caught
+  `Throwable`, canceled the trigger, and returned success. Scheduler failure
+  was both hidden and able to strand the callback count.
+- `xRTServer.invokeBind(...)` registered keep-alive ownership before final
+  context setup. If context creation failed, the catch terminated the service
+  context but did not unregister the callback or close partial Java server
+  resources.
+
+This branch makes registration exception-safe without changing the success
+semantics:
+
+- LocalClock and NanoTimer still share the one process-wide daemon timer.
+- A keep-alive alarm still increments exactly the owning container's callback
+  count while it is pending.
+- xRTServer still starts the same Java HTTP/HTTPS servers and uses the same
+  executor on successful bind.
+
+The new invariant is that registration stores the exact owner until cleanup.
+Timer cleanup no longer rediscovers the owner through a weak callback, because
+that weak reference is allowed to disappear before cleanup. Server bind tracks
+whether registration happened and calls `rollbackBind(...)` before raising the
+same natural I/O error path; rollback unregisters the callback, stops partial
+Java servers, shuts down the executor, clears routes, and clears the native
+handle.
+
+`NativeCallbackRegistrationTest` records the old source shapes as regression
+tests: constructor-time LocalClock registration, NanoTimer's swallowed
+`catch (Throwable)` schedule path, and server bind failure without rollback.
+Those guards fail on master and pass here.
+
 ### `xOSStorage` Watch Daemon
 
 Master kept one mutable static watcher daemon:

@@ -44,6 +44,7 @@ That makes the code brittle even before multiple Java threads enter it.
 | Public/protected mutable fields and arrays | Callers can mutate state without preserving invariants; final-looking arrays still have mutable contents. | Cross-owner mutation and stale cached state become very hard to localize. | Documented should-fix/must-audit category. |
 | Raw or weakly typed APIs | Caller-side casts hide owner and payload expectations. | Wrong-owner values fail late as casts or state-machine errors. | New `generics-api-audit.md`; typed helpers used where practical. |
 | Thread-local hidden context | Dependencies are not visible in signatures and depend on cleanup discipline. | Reused workers, callbacks, nested scopes, and parallel containers can observe stale context. | Semantic current-pool use removed; other thread-local contexts remain audited. |
+| Non-transactional keep-alive registration | Code incremented owner-visible callback counts before the operation that made the callback live had completed. | Failed scheduling/startup can strand callback counts and make containers look busy forever. | Fixed for LocalClock, NanoTimer, and xRTServer bind failure paths. |
 
 ## Examples And Replacements
 
@@ -140,6 +141,42 @@ return ref;
 
 Factory-owned post-construction publication is not slower. It just makes the
 lifecycle visible.
+
+### Non-Transactional Keep-Alive Registration
+
+Bad shape:
+
+```java
+container.registerNativeCallback();
+scheduleTimer(trigger, delay);        // may fail
+```
+
+Why it was bad in a single-threaded world:
+
+- `registerNativeCallback()` changes container liveness. If the callback is not
+  actually scheduled or bound, the container may never become idle again.
+- `TimerTask.cancel()` and Java server cleanup are not semantic rollback APIs for
+  XVM owner state.
+- Weak callbacks can disappear before cleanup. Rediscovering the owner through a
+  weak reference is not reliable after the callback count has already been
+  claimed.
+
+Replacement:
+
+```java
+container.registerNativeCallback();
+try {
+    scheduleTimer(trigger, delay);
+} catch (RuntimeException | Error e) {
+    unregisterRegisteredOwner();
+    throw e;
+}
+```
+
+The successful path is unchanged: the callback still keeps its owner alive while
+pending. The failure path is now transactional: if native startup cannot publish
+a live callback, it releases the exact owner it registered before returning the
+failure.
 
 ### Split Mutable Lifecycle State
 

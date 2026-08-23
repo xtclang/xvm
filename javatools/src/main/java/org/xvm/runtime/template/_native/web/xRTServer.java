@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -245,6 +244,8 @@ public class xRTServer
         int          nHttpPort  = (int) ((JavaLong) ahArg[2]).getValue();
         int          nHttpsPort = (int) ((JavaLong) ahArg[3]).getValue();
 
+        ExecutorService executor            = null;
+        boolean         fCallbackRegistered = false;
         try {
             configureHttpServer (hServer, new InetSocketAddress(sBindAddr, nHttpPort));
             configureHttpsServer(hServer, new InetSocketAddress(sBindAddr, nHttpsPort));
@@ -268,7 +269,7 @@ public class xRTServer
             // (see HttpHandler.x in xenia.xtclang.org module).
             // If necessary, we can change the start() method to take an array of handlers and
             // demultiplex it earlier by the native code
-            Executor executor = Executors.newCachedThreadPool(factory);
+            executor = Executors.newCachedThreadPool(factory);
 
             httpServer.setExecutor(executor);
             httpServer.start();
@@ -278,6 +279,7 @@ public class xRTServer
 
             // prevent the container from being terminated
             hServer.f_context.f_container.registerNativeCallback();
+            fCallbackRegistered = true;
 
             Router router = hServer.getRouter();
             httpServer .createContext("/", router);
@@ -285,6 +287,7 @@ public class xRTServer
 
             return Op.R_NEXT;
         } catch (Exception e) {
+            rollbackBind(hServer, executor, fCallbackRegistered);
             frame.f_context.f_container.terminate(hServer.f_context);
             return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
         }
@@ -326,7 +329,43 @@ public class xRTServer
 
     private void configureBinding(HttpServerHandle hServer, ObjectHandle hBinding) {
         hServer.setBinding(hBinding);
-}
+    }
+
+    private static void rollbackBind(
+            HttpServerHandle hServer, ExecutorService executor, boolean fCallbackRegistered) {
+        if (fCallbackRegistered) {
+            hServer.f_context.f_container.unregisterNativeCallback();
+        }
+
+        closeServerQuietly(hServer.getHttpServer());
+        closeServerQuietly(hServer.getHttpsServer());
+        if (executor != null) {
+            executor.shutdown();
+        }
+
+        Router router = hServer.getRouter();
+        if (router != null) {
+            router.mapRoutes.clear();
+        }
+        hServer.clear();
+    }
+
+    private static void closeServerQuietly(HttpServer server) {
+        if (server == null) {
+            return;
+        }
+
+        try {
+            // Preserve the original bind failure. A partially configured HttpServer may already be
+            // stopped, not yet started, or still need start/stop to close its socket on older JDKs.
+            if (server.getExecutor() == null) {
+                server.start();
+            }
+            server.stop(0);
+        } catch (RuntimeException _) {
+            // Preserve the original bind/startup failure raised to natural code.
+        }
+    }
 
     /**
      * Implementation of "void addRouteImpl(String hostName, UInt16 httpPort, UInt16 httpsPort,

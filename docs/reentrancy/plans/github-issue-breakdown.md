@@ -556,6 +556,9 @@ container while carrying state from another.
 
 - Make the LocalClock scheduler a private final process resource with an
   accessor/scheduling API.
+- Make timer and server native callback registration exception-safe. Keep-alive
+  registration must either publish a live callback that will unregister later or
+  roll back the container callback count on startup/scheduling failure.
 - Keep one OS watch daemon but derive the event owner from the registered
   storage handle for each event.
 - Remove TLS key-manager `ThreadLocal` key-store selection and use explicit
@@ -577,6 +580,8 @@ container while carrying state from another.
 Commits:
 
 - `026713d35 Encapsulate LocalClock scheduler`
+- native callback rollback wave: `xLocalClock`, `xNanosTimer`, and
+  `xRTServer.invokeBind(...)`
 - `f76a4c5a0 Owner-bind OS storage watch events`
 - `2bf17f7e7 Remove TLS key manager thread-local state`
 - `caa26c311 Encapsulate terminal console state`
@@ -608,6 +613,10 @@ Run same-JVM stress with `TestFiles` and service-heavy modules after PR 8.
 ### Semantic / Performance Equivalence Notes
 
 - Keep one daemon `Timer`, not one per container.
+- Keep the old keep-alive semantics on success: pending alarms and bound
+  servers still increment the owning container callback count. The change is
+  rollback symmetry on failed startup/scheduling, not a cache or footprint
+  change.
 - Keep one OS watch daemon holder, not one watch thread per container.
 - Keep terminal/JLine state process-wide because system input/output is
   process-wide.

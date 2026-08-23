@@ -119,9 +119,10 @@ public class xLocalClock
                                FunctionHandle hAlarm, BooleanHandle hKeepAlive, int iReturn) {
         Alarm alarm = new Alarm(new WeakCallback(frame, hAlarm), ldtWakeup, hKeepAlive.get());
         try {
+            alarm.registerKeepAlive();
             scheduleTimer(alarm.getTrigger(), cDelay);
         } catch (Exception e) {
-            alarm.cancel();
+            alarm.cancelAfterScheduleFailure();
             return frame.raiseException(e.getMessage());
         }
 
@@ -192,11 +193,7 @@ public class xLocalClock
             f_refCallback = refCallback;
             f_ldtWakeup   = ldtWakeUp;
             m_trigger     = new Trigger(this);
-            f_Registered  = fKeepAlive;
-
-            if (fKeepAlive) {
-                refCallback.get().f_container.registerNativeCallback();
-            }
+            f_fKeepAlive  = fKeepAlive;
         }
 
         /**
@@ -204,6 +201,33 @@ public class xLocalClock
          */
         public Trigger getTrigger() {
             return m_trigger;
+        }
+
+        /**
+         * Register the keep-alive callback as part of the schedule attempt, not from the
+         * constructor. The old constructor-time registration leaked callback ownership when
+         * Timer.schedule(...) failed before the trigger could be canceled normally.
+         */
+        public void registerKeepAlive() {
+            if (!f_fKeepAlive) {
+                return;
+            }
+
+            ServiceContext context = f_refCallback.get();
+            if (context == null) {
+                return;
+            }
+
+            Container container = context.f_container;
+            synchronized (this) {
+                if (m_fFinished || m_containerRegistered != null) {
+                    return;
+                }
+                // Store the exact owner while the callback is registered. The WeakCallback can
+                // legitimately clear before cleanup, but keep-alive ownership must still unwind.
+                container.registerNativeCallback();
+                m_containerRegistered = container;
+            }
         }
 
         /**
@@ -223,15 +247,20 @@ public class xLocalClock
 
                 long ldtNow = container.currentTimeMillis();
                 if (ldtNow >= f_ldtWakeup) {
-                    WeakCallback.Callback callback = f_refCallback.extractCallback();
-                    context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
-                    if (f_Registered) {
-                        container.unregisterNativeCallback();
+                    Container containerRegistered = finish();
+                    try {
+                        WeakCallback.Callback callback = f_refCallback.extractCallback();
+                        context.callLater(callback.frame(), callback.functionHandle(),
+                                Utils.OBJECTS_NONE);
+                    } finally {
+                        unregister(containerRegistered);
                     }
                 } else {
                     // reschedule
                     scheduleTimer(m_trigger = new Trigger(this), f_ldtWakeup - ldtNow);
                 }
+            } else {
+                unregister(finish());
             }
         }
 
@@ -240,11 +269,33 @@ public class xLocalClock
          */
         public boolean cancel() {
             boolean        fCancelled = m_trigger.cancel();
-            ServiceContext context    = f_refCallback.get();
-            if (context != null && fCancelled && f_Registered) {
-                context.f_container.unregisterNativeCallback();
+            if (fCancelled) {
+                unregister(finish());
             }
             return fCancelled;
+        }
+
+        /**
+         * Roll back a failed schedule attempt. This alarm has not escaped to natural code yet, so
+         * it can be marked finished even if TimerTask.cancel() reports false for an unscheduled
+         * task.
+         */
+        public void cancelAfterScheduleFailure() {
+            m_trigger.cancel();
+            unregister(finish());
+        }
+
+        private synchronized Container finish() {
+            m_fFinished = true;
+            Container container = m_containerRegistered;
+            m_containerRegistered = null;
+            return container;
+        }
+
+        private static void unregister(Container container) {
+            if (container != null) {
+                container.unregisterNativeCallback();
+            }
         }
 
         /**
@@ -266,8 +317,10 @@ public class xLocalClock
 
         private final WeakCallback f_refCallback;
         private final long         f_ldtWakeup;
-        private final boolean      f_Registered;
+        private final boolean      f_fKeepAlive;
         private       Trigger      m_trigger;
+        private       Container    m_containerRegistered;
+        private       boolean      m_fFinished;
     }
 
 
