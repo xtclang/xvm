@@ -125,7 +125,7 @@ been logged and the task code treats the non-zero code as failure.
 | P1 | `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Must-fix | Code generation catches `Throwable`, logs, and continues. This can absorb `Error` subclasses and keep compiling after corrupted compiler state. | Catch `RuntimeException` or a compiler-specific exception for recoverable compiler bugs. Rethrow `Error`. Include compiler/module/phase context in the propagated exception. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:556` | Must-fix, fixed in branch | Each op execution caught `Throwable`, printed stack, and raised a generic XTC `"Run-time error"` exception. Java VM defects and ownership assertions could become user-catchable language exceptions. | Fixed by catching only unchecked Java `RuntimeException`/`Error` at the central op boundary. Natural XTC exceptions are returned by op implementations as `R_EXCEPTION`; VM/runtime defects are wrapped with op/frame context and published through the host failure channel. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:229` | Must-fix | `scheduleIO(task); // don't wait` discards the returned `CompletableFuture`; any write failure completes an unobserved future while the method returns OK. | Return or store a future, or make the API explicitly fire-and-forget with an error sink. For channel writes, propagate completion/failure to the caller. |
-| P1 | `javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:491` and `:497` | Must-fix | `CompletableFuture.allOf(...).whenComplete` says `cfThis.get()`/`cfThat.get()` "must not happen" and only asserts on `Throwable`. If interruption or a race occurs, `hAnd` may be completed with nulls or never completed correctly. | Complete `hAnd` exceptionally through `Utils.translate(...)`, and restore interrupt status for `InterruptedException`. |
+| P1 | `javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:491` and `:497` | Must-fix, fixed in branch | `CompletableFuture.allOf(...).whenComplete` said `cfThis.get()`/`cfThat.get()` "must not happen" and only asserted on `Throwable`. If interruption or an impossible-but-real completion race occurred, `hAnd` could be completed with nulls or never completed correctly. The already-complete fast path also read `cfThis` twice and ignored `cfThat`. | Fixed by reading `cfThat` on the fast path, completing `hAnd` with `Utils.translate(...)` on async get failure, and restoring interrupt status for `InterruptedException`. |
 | P1 | `lib_jsondb/src/main/x/jsondb/Client.x:1425` and `:1430` | Must-fix | Commit failure is logged and downgraded to `DatabaseError`; rollback failure is ignored. A failed rollback after a failed commit is exactly the state that should surface in DB health/recovery. | Log and retain rollback failure as suppressed/secondary failure. Consider returning a richer commit result that carries both commit and rollback exceptions. |
 
 ## Suspicious Sites
@@ -291,8 +291,9 @@ P1:
 1. DONE in this branch for op execution: stop catching `Throwable` in the
    runtime op loop. Compiler code generation remains separate.
 2. Fix unobserved async write failure in `xRawOSFileChannel.invokeSubmit()`.
-3. Complete futures exceptionally instead of asserting in `xFuture.and` "must not
-   happen" paths.
+3. DONE in this branch: complete futures exceptionally instead of asserting in
+   `xFuture.and` "must not happen" paths, and fix the fast path to read both
+   input futures.
 4. Preserve native Java cause/type when translating proxy, reflection, socket, HTTP,
    file, and crypto failures into XTC exceptions.
 5. Log/retain rollback failure after commit failure in `lib_jsondb` client paths.
@@ -490,6 +491,52 @@ then lets `drainWork()` publish the Java failure through
 there is no hot-path allocation beyond one local `op` reference. The only
 behavior change is that Java VM/runtime defects no longer become ordinary
 catchable XTC exceptions.
+
+## Fixed In This Branch: `Future.and` Completion Failure Handling
+
+`xFuture.invokeAndFuture(...)` had two independent problems in the same native
+implementation.
+
+The already-completed fast path read the first future twice:
+
+```java
+ObjectHandle[] ahRThis = extractResult(frame, cfThis);
+ObjectHandle[] ahRThat = extractResult(frame, cfThis);
+```
+
+That is a plain semantic bug. If the second future failed, the method could miss
+that failure. If both futures succeeded with different values, the combiner could
+receive the first value twice.
+
+The async path had a separate failure propagation bug:
+
+```java
+try {
+    ahArg[0] = cfThis.get();
+    ahArg[1] = cfThat.get();
+} catch (Throwable e) {
+    assert false;
+}
+```
+
+`CompletableFuture.allOf(...)` should mean both gets are ready when `ex == null`,
+but `get()` can still be interrupted, and impossible states are exactly where
+runtime hardening must preserve the failure. With assertions disabled, the old
+code could continue with null arguments.
+
+The branch fixes both without changing successful behavior:
+
+- fast path calls `extractResult(frame, cfThat)` for the second future;
+- async path creates the two-argument array only after both `get()` calls
+  succeed;
+- `InterruptedException` restores interrupt status and completes `hAnd` with the
+  translated XTC exception;
+- `ExecutionException` and unexpected runtime completion failures also complete
+  `hAnd` with `Utils.translate(...)`.
+
+There is no new cache or persistent footprint. The only added work is on the
+exceptional async path. `FutureCompletionSafetyTest` is the red-on-master guard
+for the fast-path input mixup and the assert-only failure handling.
 
 ## Fixed In This Branch: JIT Unhandled Exception Result
 

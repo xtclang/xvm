@@ -2,6 +2,7 @@ package org.xvm.runtime.template.annotations;
 
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -457,7 +458,7 @@ public class xFuture
 
         if (cfThis.isDone() && cfThat.isDone()) {
             ObjectHandle[] ahRThis = extractResult(frame, cfThis);
-            ObjectHandle[] ahRThat = extractResult(frame, cfThis);
+            ObjectHandle[] ahRThat = extractResult(frame, cfThat);
 
             if (!xNullable.isNull(ahRThis[1])) {
                 return frame.raiseException((ExceptionHandle) ahRThis[1]);
@@ -490,20 +491,19 @@ public class xFuture
 
             CompletableFuture.allOf(cfThis, cfThat).whenComplete((_null, ex) -> {
                 if (ex == null) {
-                    ObjectHandle[] ahArg = new ObjectHandle[2];
                     try {
-                        ahArg[0] = cfThis.get();
-                        ahArg[1] = cfThat.get();
-                    } catch (Throwable e) {
-                        // must not happen
-                        assert false;
+                        ObjectHandle[] ahArg = {cfThis.get(), cfThat.get()};
+                        CompletableFuture<ObjectHandle> cfAnd =
+                                frame.f_context.postRequest(frame, hCombine, ahArg, 1);
+
+                        cfAnd.whenComplete((hNew, exTrans) ->
+                                hAnd.complete(hNew, Utils.translate(f_container, exTrans)));
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        hAnd.complete(null, Utils.translate(f_container, e));
+                    } catch (ExecutionException | RuntimeException e) {
+                        hAnd.complete(null, Utils.translate(f_container, e));
                     }
-
-                    CompletableFuture<ObjectHandle> cfAnd =
-                            frame.f_context.postRequest(frame, hCombine, ahArg, 1);
-
-                    cfAnd.whenComplete((hNew, exTrans) ->
-                            hAnd.complete(hNew, Utils.translate(f_container, exTrans)));
                 } else {
                     hAnd.complete(null, Utils.translate(f_container, ex));
                 }

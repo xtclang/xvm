@@ -2521,6 +2521,27 @@ Successful execution is unchanged. The loop keeps the same decoded-op execution
 and adds only a local `op` reference so exceptional diagnostics can name the
 failing instruction. No cache behavior or hot-path allocation policy changes.
 
+### `Future.and` Uses Both Inputs And Completes Failure Paths
+
+Master's `xFuture.invokeAndFuture(...)` had a fast-path bug and an async
+failure-handling bug.
+
+On the already-complete path it extracted both results from `cfThis`, so a
+second failed future could be ignored and a combiner could receive the first
+future's value twice. On the async path it treated `get()` failure after
+`CompletableFuture.allOf(...)` as impossible and only used `assert false`; with
+assertions disabled, execution could continue with null arguments.
+
+This branch reads `cfThat` for the second fast-path result. The async path now
+builds the combiner argument array only after both gets succeed. If the callback
+is interrupted, it restores interrupt status and completes the combined future
+with the translated XTC exception; `ExecutionException` and unexpected runtime
+completion failures also complete the combined future through
+`Utils.translate(...)`.
+
+Successful completed and async combinations keep the same scheduling and cache
+behavior. The change only adds correct exceptional completion.
+
 ### JIT Unhandled Exceptions Return Failure
 
 The JIT connector already initialized its `result` field to `1`, matching the

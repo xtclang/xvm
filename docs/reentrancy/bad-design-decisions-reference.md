@@ -48,6 +48,7 @@ That makes the code brittle even before multiple Java threads enter it.
 | Message-only exception wrapping | Code threw new failures using only `e.getMessage()`. | Owner, pool, module, and stack evidence disappears before the launcher or stress harness can report it. | Fixed for `MainContainer.invoke0(...)`; broader exception hygiene remains tracked. |
 | Print-only worker failures | Worker threads caught runtime defects, printed to stderr, and continued. | Host APIs can observe idle state and report success after a scheduler/service runtime defect. | Fixed for `Container.schedule(...)`, `ServiceContext.drainWork()`, and `InterpreterConnector.join()`. |
 | VM defects converted to language exceptions | The op loop caught every `Throwable` and raised generic XTC `"Run-time error"`. | Ownership assertions and VM defects become user-catchable and can hide runtime corruption. | Fixed for `ServiceContext.execute(...)` op processing. |
+| Assert-only async failure handling | Async callbacks treated failure as impossible and only used `assert false`. | With assertions disabled, failures can be hidden and completion can continue with invalid values. | Fixed for `Future.and`; broader async audit remains. |
 | Print-only JIT language failures | JIT detected generated unhandled exceptions, printed them, and returned without setting failure state. | Direct/JIT launch can report success after generated code failed. | Fixed for `JitConnector.invoke0Impl(...)`; broader JIT owner work remains separate. |
 | Collapsed reflective language exceptions | Reflection wrapper exceptions were caught with access failures and converted to generic Unsupported. | A generated XTC `nException` can be replaced by the wrong language exception type. | Fixed for `nType` `equals`, `compare`, and `hashCode` dispatch. |
 
@@ -269,6 +270,42 @@ catch (RuntimeException | Error e) {
 Opcode/native helper implementations already return natural language exceptions
 as `R_EXCEPTION` or deferred calls. VM/runtime defects escaping the central loop
 move to the host failure boundary with op and frame context.
+
+### Assert-Only Async Failure Handling
+
+Bad shape:
+
+```java
+try {
+    value = future.get();
+} catch (Throwable e) {
+    assert false;
+}
+```
+
+Why it was bad in a single-threaded world:
+
+- Assertions are often disabled in normal runs.
+- Async callbacks run after the caller has returned, so the failure must be
+  reflected in the future/result object.
+- Continuing after a failed `get()` can pass null or stale values to user code.
+
+Replacement:
+
+```java
+try {
+    ObjectHandle[] args = {left.get(), right.get()};
+    postCombiner(args);
+} catch (InterruptedException e) {
+    Thread.currentThread().interrupt();
+    result.complete(null, Utils.translate(container, e));
+} catch (ExecutionException | RuntimeException e) {
+    result.complete(null, Utils.translate(container, e));
+}
+```
+
+The successful async path stays the same. The failure path now completes the
+owner-visible future with an exception instead of relying on a debug-only assert.
 
 ### Print-Only JIT Language Failures
 
