@@ -11,7 +11,7 @@ import org.xvm.compiler.Token;
 /**
  * A type expression specifies a module name.
  */
-public class ModuleTypeExpression
+public final class ModuleTypeExpression
     extends NamedTypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 

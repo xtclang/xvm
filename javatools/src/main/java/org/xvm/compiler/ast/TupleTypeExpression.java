@@ -13,7 +13,7 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * A type expression that represents a list of type expressions.
  */
-public class TupleTypeExpression
+public final class TupleTypeExpression
         extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 

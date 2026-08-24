@@ -34,7 +34,7 @@ import org.xvm.util.Severity;
  * A map expression is an expression containing some number (0 or more) entries, each of which has
  * a key and a value.
  */
-public class MapExpression
+public final class MapExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

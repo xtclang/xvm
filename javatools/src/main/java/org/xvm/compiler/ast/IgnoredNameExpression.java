@@ -27,7 +27,7 @@ import org.xvm.compiler.Token;
  * </li><li>an ignored LValue in an assignment, such as: {@code (_, Int x) = foo()}
  * </li></ul>
  */
-public class IgnoredNameExpression
+public final class IgnoredNameExpression
         extends NameExpression {
     // ----- constructors --------------------------------------------------------------------------
 

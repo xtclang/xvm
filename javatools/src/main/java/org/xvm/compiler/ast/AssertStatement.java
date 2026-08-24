@@ -50,7 +50,7 @@ import org.xvm.util.Severity;
 /**
  * An assert statement.
  */
-public class AssertStatement
+public final class AssertStatement
         extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 

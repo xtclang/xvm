@@ -11,8 +11,10 @@ import org.xvm.compiler.Token;
 /**
  * A conditional statement, including "if", "while", etc.
  */
-public abstract class ConditionalStatement
-        extends Statement {
+public abstract sealed class ConditionalStatement
+        extends Statement
+        permits ForEachStatement, ForStatement, IfStatement,
+                SwitchStatement, WhileStatement {
     // ----- constructors --------------------------------------------------------------------------
 
     public ConditionalStatement(Token keyword, List<AstNode> conds) {

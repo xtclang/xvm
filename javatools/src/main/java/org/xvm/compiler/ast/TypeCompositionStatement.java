@@ -121,7 +121,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A type declaration.
  */
-public class TypeCompositionStatement
+public final class TypeCompositionStatement
         extends ComponentStatement {
     // ----- constructors --------------------------------------------------------------------------
 

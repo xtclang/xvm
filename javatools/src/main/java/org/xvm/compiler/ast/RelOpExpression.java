@@ -70,7 +70,7 @@ import org.xvm.util.Severity;
  * <li><tt>DIVREM:     "/%"</tt> - </li>
  * </ul>
  */
-public class RelOpExpression
+public final class RelOpExpression
         extends BiExpression {
     // ----- constructors --------------------------------------------------------------------------
 

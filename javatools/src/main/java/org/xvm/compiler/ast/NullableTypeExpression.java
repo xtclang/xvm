@@ -16,7 +16,7 @@ import org.xvm.util.Severity;
 /**
  * A nullable type expression is a type expression followed by a question mark.
  */
-public class NullableTypeExpression
+public final class NullableTypeExpression
         extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 

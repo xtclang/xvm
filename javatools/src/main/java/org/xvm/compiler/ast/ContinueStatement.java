@@ -17,7 +17,7 @@ import org.xvm.util.Severity;
 /**
  * A continue statement represents the "continue" keyword.
  */
-public class ContinueStatement
+public final class ContinueStatement
         extends GotoStatement {
     // ----- constructors --------------------------------------------------------------------------
 

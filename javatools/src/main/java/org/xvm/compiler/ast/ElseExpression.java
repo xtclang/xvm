@@ -29,7 +29,7 @@ import org.xvm.util.Severity;
  * <li><tt>COLON: ":"</tt> - an "else" for nullability checks</li>
  * </ul>
  */
-public class ElseExpression
+public final class ElseExpression
         extends BiExpression {
     // ----- constructors --------------------------------------------------------------------------
 

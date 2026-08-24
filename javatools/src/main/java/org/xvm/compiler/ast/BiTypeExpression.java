@@ -18,7 +18,7 @@ import org.xvm.util.Severity;
  * A BiType expression is a type expression composed of two type expressions. For example, union
  * or intersection types.
  */
-public class BiTypeExpression
+public final class BiTypeExpression
         extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 

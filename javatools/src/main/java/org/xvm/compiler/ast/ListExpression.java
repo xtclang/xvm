@@ -46,7 +46,7 @@ import org.xvm.util.Severity;
  *     "Set:" "[" ExpressionList-opt "]"
  * </pre>
  */
-public class ListExpression
+public final class ListExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

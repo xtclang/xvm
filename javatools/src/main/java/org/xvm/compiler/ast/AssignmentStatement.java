@@ -54,7 +54,7 @@ import org.xvm.util.Severity;
  *
  * TODO log warning for "a=a;"
  */
-public class AssignmentStatement
+public final class AssignmentStatement
         extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 

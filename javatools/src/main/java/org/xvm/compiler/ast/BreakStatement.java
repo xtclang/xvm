@@ -17,7 +17,7 @@ import org.xvm.util.Severity;
 /**
  * A break statement represents the "break" keyword.
  */
-public class BreakStatement
+public final class BreakStatement
         extends GotoStatement {
     // ----- constructors --------------------------------------------------------------------------
 

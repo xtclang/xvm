@@ -19,7 +19,7 @@ import org.xvm.asm.constants.TypeConstant;
  * type can be used to (e.g.) "new" an array, it also has to support actual index extents, in
  * addition to just supporting the number of dimensions.
  */
-public class ArrayTypeExpression
+public final class ArrayTypeExpression
         extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -13,7 +13,7 @@ import org.xvm.compiler.Token.Id;
  * A right-to-left type inference place-holder, either "var" or "val", for a type expression in a
  * variable declaration.
  */
-public class VariableTypeExpression
+public final class VariableTypeExpression
         extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 

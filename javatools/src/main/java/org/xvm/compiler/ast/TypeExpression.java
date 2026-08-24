@@ -25,8 +25,12 @@ import org.xvm.util.Severity;
  * constant, which will later be replaced with the real ADT information once the type information
  * has been fully resolved.
  */
-public abstract class TypeExpression
-        extends Expression {
+public abstract sealed class TypeExpression
+        extends Expression
+        permits AnnotatedTypeExpression, ArrayTypeExpression, BadTypeExpression,
+                BiTypeExpression, DecoratedTypeExpression, FunctionTypeExpression,
+                KeywordTypeExpression, NamedTypeExpression, NullableTypeExpression,
+                TupleTypeExpression, VariableTypeExpression {
     // ----- type specific functionality -----------------------------------------------------------
 
     @Override

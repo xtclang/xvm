@@ -14,7 +14,7 @@ import org.xvm.util.Severity;
 /**
  * The "+" that precedes a number.
  */
-public class UnaryPlusExpression
+public final class UnaryPlusExpression
         extends PrefixExpression {
     // ----- constructors --------------------------------------------------------------------------
 

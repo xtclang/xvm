@@ -32,7 +32,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * An "if" statement.
  */
-public class IfStatement
+public final class IfStatement
         extends ConditionalStatement {
     // ----- constructors --------------------------------------------------------------------------
 

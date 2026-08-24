@@ -22,7 +22,7 @@ import org.xvm.compiler.Token;
 /**
  * Expression for "expression as type".
  */
-public class AsExpression
+public final class AsExpression
         extends BiExpression {
     // ----- constructors --------------------------------------------------------------------------
 

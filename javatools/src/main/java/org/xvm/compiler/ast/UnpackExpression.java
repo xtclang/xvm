@@ -25,7 +25,7 @@ import org.xvm.asm.op.I_Get;
 /**
  * A tuple un-packing expression. This unpacks the values from the sub-expression tuple.
  */
-public class UnpackExpression
+public final class UnpackExpression
         extends SyntheticExpression {
     // ----- constructors --------------------------------------------------------------------------
 

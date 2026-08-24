@@ -9,7 +9,7 @@ import java.lang.reflect.Field;
 /**
  * A parameter type and name, with an optional default value.
  */
-public class Parameter
+public final class Parameter
         extends AstNode {
     // ----- constructors --------------------------------------------------------------------------
 

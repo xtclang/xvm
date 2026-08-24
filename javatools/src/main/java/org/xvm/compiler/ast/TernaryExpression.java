@@ -25,7 +25,7 @@ import org.xvm.asm.op.Return_N;
 /**
  * A ternary expression is the "a ? b : c" expression.
  */
-public class TernaryExpression
+public final class TernaryExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

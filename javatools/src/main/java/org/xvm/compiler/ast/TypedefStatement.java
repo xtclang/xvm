@@ -21,7 +21,7 @@ import org.xvm.util.Severity;
 /**
  * A typedef statement specifies a type to alias as a simple name.
  */
-public class TypedefStatement
+public final class TypedefStatement
         extends ComponentStatement {
     // ----- constructors --------------------------------------------------------------------------
 

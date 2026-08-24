@@ -20,7 +20,7 @@ import org.xvm.util.Severity;
 /**
  * A type expression for a function. This corresponds to the "function" keyword.
  */
-public class FunctionTypeExpression
+public final class FunctionTypeExpression
         extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 

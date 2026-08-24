@@ -20,8 +20,13 @@ import org.xvm.asm.op.Label;
 /**
  * Base class for all Ecstasy statements.
  */
-public abstract class Statement
-        extends AstNode {
+public abstract sealed class Statement
+        extends AstNode
+        permits AssertStatement, AssignmentStatement, CaseStatement,
+                CatchStatement, ComponentStatement, ConditionalStatement,
+                ExpressionStatement, GotoStatement, ImportStatement,
+                LabeledStatement, MultipleLValueStatement, ReturnStatement,
+                StatementBlock, TryStatement, VariableDeclarationStatement {
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override

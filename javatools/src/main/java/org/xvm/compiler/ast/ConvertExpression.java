@@ -33,7 +33,7 @@ import org.xvm.asm.op.Var;
  * A type conversion expression. This converts values from the sub-expression into values of
  * different types.
  */
-public class ConvertExpression
+public final class ConvertExpression
         extends SyntheticExpression {
     // ----- constructors --------------------------------------------------------------------------
 

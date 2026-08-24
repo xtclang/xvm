@@ -49,7 +49,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A "while" or "do while" statement.
  */
-public class WhileStatement
+public final class WhileStatement
         extends ConditionalStatement
         implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------

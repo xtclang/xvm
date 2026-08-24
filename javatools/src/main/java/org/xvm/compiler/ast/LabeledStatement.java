@@ -17,7 +17,7 @@ import org.xvm.util.Severity;
 /**
  * A labeled statement represents a statement that has a label.
  */
-public class LabeledStatement
+public final class LabeledStatement
         extends Statement
         implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------

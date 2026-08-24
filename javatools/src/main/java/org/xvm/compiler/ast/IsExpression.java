@@ -30,7 +30,7 @@ import org.xvm.util.Severity;
 /**
  * Expression for "expression.is(expression)".
  */
-public class IsExpression
+public final class IsExpression
         extends BiExpression {
     // ----- constructors --------------------------------------------------------------------------
 

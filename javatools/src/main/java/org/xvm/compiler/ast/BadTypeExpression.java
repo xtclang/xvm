@@ -18,7 +18,7 @@ import org.xvm.util.Severity;
  * A type expression that can't figure out how to be a type expression. It pretends to be a type,
  * but it's going to end in misery and compiler errors.
  */
-public class BadTypeExpression
+public final class BadTypeExpression
         extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -45,7 +45,7 @@ import org.xvm.util.Severity;
 /**
  * A type annotation is used for type annotations with an optional argument list.
  */
-public class AnnotationExpression
+public final class AnnotationExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

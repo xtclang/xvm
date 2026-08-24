@@ -9,7 +9,7 @@ import java.lang.reflect.Field;
 /**
  * Used for named arguments.
  */
-public class LabeledExpression
+public final class LabeledExpression
         extends DelegatingExpression {
     // ----- constructors --------------------------------------------------------------------------
 

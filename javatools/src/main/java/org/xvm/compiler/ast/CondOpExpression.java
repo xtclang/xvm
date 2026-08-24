@@ -37,7 +37,7 @@ import org.xvm.util.Severity;
  * <li><tt>COND_AND: "&&"</tt> - logical "and"</li>
  * </ul>
  */
-public class CondOpExpression
+public final class CondOpExpression
         extends BiExpression {
     // ----- constructors --------------------------------------------------------------------------
 

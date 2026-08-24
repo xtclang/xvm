@@ -49,7 +49,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A method declaration.
  */
-public class MethodDeclarationStatement
+public non-sealed class MethodDeclarationStatement
         extends ComponentStatement {
     // ----- constructors --------------------------------------------------------------------------
 

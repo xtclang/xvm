@@ -99,7 +99,7 @@ import org.xvm.util.Severity;
  * @see TypeConstant#callEquals
  * @see TypeConstant#callCompare
  */
-public class CmpExpression
+public final class CmpExpression
         extends BiExpression {
     // ----- constructors --------------------------------------------------------------------------
 

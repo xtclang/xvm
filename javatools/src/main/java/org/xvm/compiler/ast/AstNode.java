@@ -66,8 +66,10 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * Common base class for all statements and expressions.
  */
-public abstract class AstNode
-        implements Cloneable {
+public abstract sealed class AstNode
+        implements Cloneable
+        permits CompositionNode, Expression, Parameter,
+                Statement, VersionOverride {
     // ----- accessors -----------------------------------------------------------------------------
 
     /**

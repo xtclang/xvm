@@ -28,8 +28,10 @@ import org.xvm.util.Severity;
 /**
  * Generic expression for something that follows the pattern "operator expression".
  */
-public abstract class PrefixExpression
-        extends Expression {
+public abstract sealed class PrefixExpression
+        extends Expression
+        permits SequentialAssignExpression, UnaryComplementExpression, UnaryMinusExpression,
+                UnaryPlusExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     protected PrefixExpression(Token operator, Expression expr) {

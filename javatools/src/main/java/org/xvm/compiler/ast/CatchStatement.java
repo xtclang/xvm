@@ -24,7 +24,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A "catch" statement. (Not actually a statement. It only occurs within a try.)
  */
-public class CatchStatement
+public final class CatchStatement
         extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 

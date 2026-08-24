@@ -72,7 +72,7 @@ import static org.xvm.util.Handy.indentLines;
  * Lambda expression is an inlined function. This version uses parameters that are assumed to be
  * names only.
  */
-public class LambdaExpression
+public final class LambdaExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

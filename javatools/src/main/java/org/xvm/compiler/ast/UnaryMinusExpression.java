@@ -16,7 +16,7 @@ import org.xvm.compiler.Token;
 /**
  * The "-" that precedes a number.
  */
-public class UnaryMinusExpression
+public final class UnaryMinusExpression
         extends PrefixExpression {
     // ----- constructors --------------------------------------------------------------------------
 

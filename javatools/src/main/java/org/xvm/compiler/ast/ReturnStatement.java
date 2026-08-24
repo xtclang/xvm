@@ -43,7 +43,7 @@ import org.xvm.util.Severity;
 /**
  * A return statement specifies a return with optional values.
  */
-public class ReturnStatement
+public final class ReturnStatement
         extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 

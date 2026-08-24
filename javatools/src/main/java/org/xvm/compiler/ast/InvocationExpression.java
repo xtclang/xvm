@@ -212,7 +212,7 @@ import org.xvm.util.Severity;
  * <li>There cannot / must not be any redundant returns, so any associated rules are ignored.</li>
  * </ul>
  */
-public class InvocationExpression
+public final class InvocationExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

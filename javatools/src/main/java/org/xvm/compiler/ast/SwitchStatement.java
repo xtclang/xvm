@@ -38,7 +38,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A "switch" statement.
  */
-public class SwitchStatement
+public final class SwitchStatement
         extends ConditionalStatement {
     // ----- constructors --------------------------------------------------------------------------
 

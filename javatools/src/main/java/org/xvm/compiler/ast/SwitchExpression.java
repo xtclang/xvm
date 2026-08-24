@@ -32,7 +32,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A "switch" expression.
  */
-public class SwitchExpression
+public final class SwitchExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

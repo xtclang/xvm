@@ -15,7 +15,7 @@ import org.xvm.compiler.Token.Id;
 /**
  * A version override specifies allowable, avoided, and preferred version information.
  */
-public class VersionOverride
+public final class VersionOverride
         extends AstNode {
     // ----- constructors --------------------------------------------------------------------------
 

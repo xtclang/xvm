@@ -18,7 +18,7 @@ import org.xvm.asm.constants.TypeConstant;
  * This is used to specify an argument ("?") for a function that indicates that the corresponding
  * parameter of the function should remain unbound.
  */
-public class NonBindingExpression
+public final class NonBindingExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

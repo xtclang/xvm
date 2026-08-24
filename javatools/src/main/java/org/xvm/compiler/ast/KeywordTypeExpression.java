@@ -17,7 +17,7 @@ import org.xvm.util.Severity;
  * A keyword type expression is a type expression that is composed of a keyword that identifies an
  * entire type (or composition) category.
  */
-public class KeywordTypeExpression
+public final class KeywordTypeExpression
         extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 

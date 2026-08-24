@@ -17,8 +17,10 @@ import org.xvm.compiler.Compiler.Stage;
  * A synthetic expression is one created as necessary by the compilation process to add
  * common functionality to various nodes of the AST.
  */
-public abstract class SyntheticExpression
-        extends Expression {
+public abstract sealed class SyntheticExpression
+        extends Expression
+        permits ConvertExpression, PackExpression, ToIntExpression,
+                TraceExpression, UnpackExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     public SyntheticExpression(Expression expr) {

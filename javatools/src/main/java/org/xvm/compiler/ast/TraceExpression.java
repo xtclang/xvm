@@ -14,7 +14,7 @@ import org.xvm.asm.constants.TypeConstant;
  * An expression that holds a copy of the result of another expression in order to provide optional
  * traceability.
  */
-public class TraceExpression
+public final class TraceExpression
         extends SyntheticExpression {
     // ----- constructors --------------------------------------------------------------------------
 

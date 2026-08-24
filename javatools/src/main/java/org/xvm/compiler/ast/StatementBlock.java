@@ -84,7 +84,7 @@ import org.xvm.util.Severity;
  *     inside of the StatementBlock.</li>
  * </ol>
  */
-public class StatementBlock
+public final class StatementBlock
         extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 

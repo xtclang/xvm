@@ -26,7 +26,7 @@ import org.xvm.util.Severity;
 /**
  * A literal expression specifies a literal value.
  */
-public class LiteralExpression
+public final class LiteralExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

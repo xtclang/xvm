@@ -92,8 +92,18 @@ import static org.xvm.util.Handy.checkElementsNonNull;
  * 6. An expression that is allowed to short-circuit must be provided with a label to which it can
  *    short-circuit. This also affects the definite assignment rules.
  */
-public abstract class Expression
-        extends AstNode {
+public abstract sealed class Expression
+        extends AstNode
+        permits AnnotationExpression, ArrayAccessExpression, BiExpression,
+                CmpChainExpression, DelegatingExpression, FileExpression,
+                InvocationExpression, LambdaExpression, ListExpression,
+                LiteralExpression, MapExpression,
+                MultipleLValueStatement.MultipleLValueExpression,
+                NameExpression, NewExpression, NonBindingExpression,
+                NotNullExpression, PrefixExpression, StatementExpression,
+                SwitchExpression, SyntheticExpression, TemplateExpression,
+                TernaryExpression, ThrowExpression, TupleExpression,
+                TypeExpression {
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override

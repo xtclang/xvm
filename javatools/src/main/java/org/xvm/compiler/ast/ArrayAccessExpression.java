@@ -50,7 +50,7 @@ import org.xvm.util.Severity;
  * <p/> TODO support tuple of indexes, particularly for multi-dimensional arrays
  * <p/> TODO for multi-dimensional arrays, support partial binding? @Op("[?,_]") / @Op("[_,?]") etc.
  */
-public class ArrayAccessExpression
+public final class ArrayAccessExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

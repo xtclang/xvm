@@ -176,8 +176,9 @@ import org.xvm.util.Severity;
  * on the responsibility of recognizing that there is a name expression, and validating the contents
  * on the name expression's behalf.
  */
-public class NameExpression
-        extends Expression {
+public sealed class NameExpression
+        extends Expression
+        permits IgnoredNameExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

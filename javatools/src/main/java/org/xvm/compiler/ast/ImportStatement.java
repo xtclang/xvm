@@ -25,7 +25,7 @@ import org.xvm.util.Severity;
 /**
  * An import statement specifies a qualified name to alias as a simple name.
  */
-public class ImportStatement
+public final class ImportStatement
         extends Statement
         implements NameResolver.NameResolving {
     // ----- constructors --------------------------------------------------------------------------

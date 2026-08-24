@@ -47,7 +47,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * The traditional "for" statement.
  */
-public class ForStatement
+public final class ForStatement
         extends ConditionalStatement
         implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------

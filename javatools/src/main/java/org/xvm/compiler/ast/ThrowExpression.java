@@ -30,7 +30,7 @@ import org.xvm.util.Severity;
 /**
  * A "throw expression" is a commonly non-completing expression that throws an exception.
  */
-public class ThrowExpression
+public final class ThrowExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

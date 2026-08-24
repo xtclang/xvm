@@ -14,8 +14,10 @@ import org.xvm.compiler.Token;
 /**
  * Represents a statement that corresponds to a Component in an Ecstasy FileStructure.
  */
-public abstract class ComponentStatement
-        extends Statement {
+public abstract sealed class ComponentStatement
+        extends Statement
+        permits MethodDeclarationStatement, PropertyDeclarationStatement, TypeCompositionStatement,
+                TypedefStatement {
     // ----- constructors --------------------------------------------------------------------------
 
     protected ComponentStatement(long lStartPos, long lEndPos) {

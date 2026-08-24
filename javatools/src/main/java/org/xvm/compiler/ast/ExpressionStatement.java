@@ -16,7 +16,7 @@ import org.xvm.util.Severity;
  *
  * <p/>REVIEW what expression types are allowed? is that the parser's job? or validate()'s job?
  */
-public class ExpressionStatement
+public final class ExpressionStatement
         extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 

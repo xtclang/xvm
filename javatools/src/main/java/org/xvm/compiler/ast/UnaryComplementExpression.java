@@ -17,7 +17,7 @@ import org.xvm.compiler.Token.Id;
 /**
  * The "~" that precedes a value (or "!" for a Boolean).
  */
-public class UnaryComplementExpression
+public final class UnaryComplementExpression
         extends PrefixExpression {
     // ----- constructors --------------------------------------------------------------------------
 

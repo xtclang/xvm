@@ -52,7 +52,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A property declaration.
  */
-public class PropertyDeclarationStatement
+public final class PropertyDeclarationStatement
         extends ComponentStatement {
     // ----- constructors --------------------------------------------------------------------------
 

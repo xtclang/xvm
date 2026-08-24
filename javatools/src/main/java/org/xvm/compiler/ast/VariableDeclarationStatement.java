@@ -33,7 +33,7 @@ import org.xvm.util.Severity;
 /**
  * A variable declaration statement specifies a type and a simple name for a variable.
  */
-public class VariableDeclarationStatement
+public final class VariableDeclarationStatement
         extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 

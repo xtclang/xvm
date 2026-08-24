@@ -15,7 +15,7 @@ import org.xvm.asm.constants.UnionTypeConstant;
 /**
  * Used for parenthesized expressions.
  */
-public class ParenthesizedExpression
+public final class ParenthesizedExpression
         extends DelegatingExpression {
     // ----- constructors --------------------------------------------------------------------------
 

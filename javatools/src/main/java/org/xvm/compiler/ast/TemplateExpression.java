@@ -39,7 +39,7 @@ import static org.xvm.asm.Assignment.AssignedOnce;
  *
  * TODO optimize handling for: $.append($"...") for "append()", "add()"/"+", etc.
  */
-public class TemplateExpression
+public final class TemplateExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

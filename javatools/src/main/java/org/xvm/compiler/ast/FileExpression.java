@@ -36,7 +36,7 @@ import org.xvm.util.Severity;
  * a module as a resource, which will be exposed as a FileStore, Directory, or File object to the
  * program.
  */
-public class FileExpression
+public final class FileExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

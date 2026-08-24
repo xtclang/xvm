@@ -15,8 +15,9 @@ import org.xvm.asm.op.Label;
 /**
  * Delegates to an underlying expression.
  */
-public abstract class DelegatingExpression
-        extends Expression {
+public abstract sealed class DelegatingExpression
+        extends Expression
+        permits LabeledExpression, ParenthesizedExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     protected DelegatingExpression(Expression expr) {

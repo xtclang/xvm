@@ -36,7 +36,7 @@ import org.xvm.util.Severity;
 /**
  * A tuple expression is an expression containing some number (0 or more) expressions.
  */
-public class TupleExpression
+public final class TupleExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

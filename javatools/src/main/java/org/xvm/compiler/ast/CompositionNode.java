@@ -21,8 +21,12 @@ import org.xvm.compiler.Token;
 /**
  * A composition step. This defines one of the "building blocks" for a type composition.
  */
-public abstract class CompositionNode
-        extends AstNode {
+public abstract sealed class CompositionNode
+        extends AstNode
+        permits CompositionNode.Annotates, CompositionNode.Default,
+                CompositionNode.Delegates, CompositionNode.Extends,
+                CompositionNode.Implements, CompositionNode.Import,
+                CompositionNode.Incorporates, CompositionNode.Into {
     // ----- constructors --------------------------------------------------------------------------
 
     public CompositionNode(Expression condition, Token keyword, TypeExpression type) {
@@ -135,7 +139,7 @@ public abstract class CompositionNode
 
     // ----- inner class: Extends ------------------------------------------------------------------
 
-    public static class Extends
+    public static final class Extends
             extends CompositionNode {
         public Extends(Expression condition, Token keyword, TypeExpression type) {
             super(condition, keyword, type);
@@ -186,7 +190,7 @@ public abstract class CompositionNode
 
     // ----- inner class: Annotates ----------------------------------------------------------------
 
-    public static class Annotates
+    public static final class Annotates
             extends CompositionNode {
         public Annotates(AnnotationExpression annotation) {
             super(null, new Token(annotation.getStartPosition(), annotation.getStartPosition(),
@@ -246,7 +250,7 @@ public abstract class CompositionNode
 
     // ----- inner class: Incorporates -------------------------------------------------------------
 
-    public static class Incorporates
+    public static final class Incorporates
             extends CompositionNode {
         public Incorporates(Expression condition, Token keyword, TypeExpression type,
                             List<Expression> args, List<Parameter> constraints) {
@@ -332,7 +336,7 @@ public abstract class CompositionNode
 
     // ----- inner class: Implements ---------------------------------------------------------------
 
-    public static class Implements
+    public static final class Implements
             extends CompositionNode {
         public Implements(Expression condition, Token keyword, TypeExpression type) {
             super(condition, keyword, type);
@@ -342,7 +346,7 @@ public abstract class CompositionNode
 
     // ----- inner class: Delegates ----------------------------------------------------------------
 
-    public static class Delegates
+    public static final class Delegates
             extends CompositionNode {
         public Delegates(Expression condition, Token keyword, TypeExpression type,
                          Expression delegatee, long lEndPos) {
@@ -396,7 +400,7 @@ public abstract class CompositionNode
 
     // ----- inner class: Into ---------------------------------------------------------------------
 
-    public static class Into
+    public static final class Into
             extends CompositionNode {
         public Into(Expression condition, Token keyword, TypeExpression type) {
             super(condition, keyword, type);
@@ -409,7 +413,7 @@ public abstract class CompositionNode
     /**
      * Represents a module import on a package declaration.
      */
-    public static class Import
+    public static final class Import
             extends CompositionNode {
         public Import(Expression condition, Token keyword, Token modifier, NamedTypeExpression type,
                       List<VersionOverride> vers, List<Parameter> injects,
@@ -578,7 +582,7 @@ public abstract class CompositionNode
 
     // ----- inner class: Default ------------------------------------------------------------------
 
-    public static class Default
+    public static final class Default
             extends CompositionNode {
         public Default(Expression condition, Token keyword, Expression expr, long lEndPos) {
             super(condition, keyword, null);

@@ -33,7 +33,7 @@ import org.xvm.util.PackedInteger;
  * <li>Convert: If the IntNumber is not an Int, then the IntNumber.toInt() method is applied.</li>
  * </ul>
  */
-public class ToIntExpression
+public final class ToIntExpression
         extends SyntheticExpression {
     // ----- constructors --------------------------------------------------------------------------
 

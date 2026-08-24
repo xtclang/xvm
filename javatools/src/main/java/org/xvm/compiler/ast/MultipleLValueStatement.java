@@ -27,7 +27,7 @@ import org.xvm.compiler.ast.Context.Branch;
 /**
  * This represents multiple variable declarations in a list.
  */
-public class MultipleLValueStatement
+public final class MultipleLValueStatement
         extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -243,7 +243,7 @@ public class MultipleLValueStatement
      * This is a "fake" expression that delegates to the underlying AstNode LValue expressions that
      * are represented by the MultipleLValueStatement.
      */
-    protected class MultipleLValueExpression
+    protected final class MultipleLValueExpression
             extends Expression {
         @Override
         public MultipleLValueStatement getParent() {

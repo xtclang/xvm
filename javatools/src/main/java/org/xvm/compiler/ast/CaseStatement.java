@@ -24,7 +24,7 @@ import org.xvm.compiler.Token;
  * A case statement. This can only occur within a switch statement. (It's not a "real" statement;
  * it's more like a label.)
  */
-public class CaseStatement
+public final class CaseStatement
         extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 

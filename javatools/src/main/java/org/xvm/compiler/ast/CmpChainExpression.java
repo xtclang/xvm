@@ -62,7 +62,7 @@ import org.xvm.util.Severity;
  *
  * @see CmpExpression
  */
-public class CmpChainExpression
+public final class CmpChainExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

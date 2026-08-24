@@ -12,8 +12,9 @@ import org.xvm.compiler.Token;
  * and its use is considered to be harmful; as a result, languages must use terms like "break"
  * and "continue", and allow the use of such terms in a far more limited and predictable manner.
  */
-public abstract class GotoStatement
-        extends Statement {
+public abstract sealed class GotoStatement
+        extends Statement
+        permits BreakStatement, ContinueStatement {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

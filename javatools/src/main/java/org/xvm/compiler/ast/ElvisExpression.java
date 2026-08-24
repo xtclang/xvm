@@ -37,7 +37,7 @@ import org.xvm.util.Severity;
  * <li><tt>COND_ELSE:  "?:"</tt> - the "elvis" operator</li>
  * </ul>
  */
-public class ElvisExpression
+public final class ElvisExpression
         extends BiExpression {
     // ----- constructors --------------------------------------------------------------------------
 

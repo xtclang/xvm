@@ -47,8 +47,11 @@ import org.xvm.compiler.Token;
  * <li><tt>DIVREM:     "/%"</tt> - </li>
  * </ul>
  */
-public abstract class BiExpression
-        extends Expression {
+public abstract sealed class BiExpression
+        extends Expression
+        permits AsExpression, CmpExpression, CondOpExpression,
+                ElseExpression, ElvisExpression, IsExpression,
+                RelOpExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     public BiExpression(Expression expr1, Token operator, Expression expr2) {

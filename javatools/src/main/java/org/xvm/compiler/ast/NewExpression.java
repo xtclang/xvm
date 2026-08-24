@@ -64,7 +64,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * "New object" expression.
  */
-public class NewExpression
+public final class NewExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

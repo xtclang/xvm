@@ -39,7 +39,7 @@ import org.xvm.util.Severity;
  * </pre>
  *
  */
-public class NotNullExpression
+public final class NotNullExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 

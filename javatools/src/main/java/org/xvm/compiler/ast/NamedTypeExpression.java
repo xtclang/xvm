@@ -51,9 +51,10 @@ import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 /**
  * A type expression specifies a named type with optional parameters.
  */
-public class NamedTypeExpression
+public sealed class NamedTypeExpression
         extends TypeExpression
-        implements NameResolver.NameResolving {
+        implements NameResolver.NameResolving
+        permits ModuleTypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

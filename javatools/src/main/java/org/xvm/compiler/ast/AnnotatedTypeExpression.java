@@ -29,7 +29,7 @@ import org.xvm.util.Severity;
 /**
  * An annotated type expression is a type expression preceded with an annotation.
  */
-public class AnnotatedTypeExpression
+public final class AnnotatedTypeExpression
         extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 

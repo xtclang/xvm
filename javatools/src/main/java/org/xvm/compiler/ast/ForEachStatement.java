@@ -56,7 +56,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * An "Iterable"-based "for" statement.
  */
-public class ForEachStatement
+public final class ForEachStatement
         extends ConditionalStatement
         implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------

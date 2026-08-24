@@ -25,7 +25,7 @@ import org.xvm.util.Severity;
 /**
  * The "++" or "--" that precedes or follows an assignable expression of type Sequential.
  */
-public class SequentialAssignExpression
+public final class SequentialAssignExpression
         extends PrefixExpression {
     // ----- constructors --------------------------------------------------------------------------
 

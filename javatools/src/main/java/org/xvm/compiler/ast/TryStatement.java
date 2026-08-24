@@ -54,7 +54,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A "try" or "using" statement.
  */
-public class TryStatement
+public final class TryStatement
         extends Statement
         implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------
