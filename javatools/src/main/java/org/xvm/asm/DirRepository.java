@@ -72,7 +72,44 @@ public class DirRepository
     public ModuleStructure loadModule(String sModule) {
         ensureCache();
         ModuleInfo info = modulesByName.get(sModule);
-        return info == null ? null : info.ensureModule();
+        if (info != null) {
+            ModuleStructure module = info.ensureModule();
+            if (module == null && info.errCause != null) {
+                // a module known by name failed to reload; absence and corruption must not look
+                // the same for a requested load
+                throw new ModuleLoadException(sModule, info.file, info.errCause);
+            }
+            return module;
+        }
+
+        // the module is not known by name; if a broken candidate file carries the requested
+        // module's name, a requested load must surface the retained cause instead of reporting
+        // the module as missing
+        for (ModuleInfo candidate : modulesByFile.values()) {
+            if (candidate.err && isProbableModuleFile(candidate.file, sModule)) {
+                throw new ModuleLoadException(sModule, candidate.file, candidate.errCause);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Determine whether the specified file is, by naming convention, the storage for the specified
+     * module. Used only when the file itself cannot be read, so the actual module name inside the
+     * file is unknown.
+     *
+     * @param file     a module file that failed to load
+     * @param sModule  the requested module name
+     *
+     * @return true iff the file name matches the module's qualified or simple name
+     */
+    private static boolean isProbableModuleFile(File file, String sModule) {
+        String sFile = file.getName();
+        sFile = sFile.endsWith(".xtc") ? sFile.substring(0, sFile.length() - 4) : sFile;
+
+        int    ofDot   = sModule.indexOf('.');
+        String sSimple = ofDot > 0 ? sModule.substring(0, ofDot) : sModule;
+        return sFile.equals(sModule) || sFile.equals(sSimple);
     }
 
     @Override
@@ -383,9 +420,14 @@ public class DirRepository
         ModuleStructure tryLoad() {
             try {
                 FileStructure struct = new FileStructure(file);
+                errCause = null;
                 return struct.getModule();
             } catch (Exception e) {
-                System.out.println("Error loading module from file: " + file + "; " + e.getMessage());
+                // scanning stays best-effort, but the cause is retained so a requested load of
+                // this file's module can fail with evidence instead of reporting "module not
+                // found"
+                errCause = e;
+                System.err.println("Error loading module from file: " + file + "; " + e.getMessage());
             }
 
             return null;
@@ -409,6 +451,13 @@ public class DirRepository
         public final long                 timestamp;
         public final long                 size;
         public final boolean              err;
+
+        /**
+         * The most recent load failure for {@link #file}, retained so requested loads can report
+         * why the module is unavailable. Cleared by a successful load; null for entries restored
+         * from the persistent scan cache, whose original cause belongs to another process.
+         */
+        private transient Throwable       errCause;
 
         /**
          * Cached instance of the module struct. If the caller changes it, we will detect it and

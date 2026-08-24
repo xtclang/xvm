@@ -69,20 +69,43 @@ public class FileRepository
     }
 
     @Override
-    public synchronized ModuleStructure loadModule(String sModule) {
-        ModuleStructure module = null;
-        if (getModuleNames().contains(sModule) && ensureFileStructure()) {
-            if (cachedModuleStructures != null) {
-                module = cachedModuleStructures.get(moduleId(sModule));
+    public ModuleStructure loadModule(String sModule) {
+        ModuleStructure module = checkCache();
+        if (sModule.equals(name)) {
+            module = module == null ? ensureModule() : module;
+            if (module == null && errCause != null) {
+                // the module was scanned by name earlier, so this is a requested load of a module
+                // this file is known to hold; absence and corruption must not look the same
+                throw new ModuleLoadException(sModule, file, errCause);
             }
-            if (module == null) {
-                module = cachedFileStructure.getChild(sModule);
-                if (requiresSeparation(module)) {
-                    module = forceSeparation(moduleId(sModule), module);
-                }
-            }
+            return module;
+        }
+
+        if (err && file.exists() && isProbableModuleFile(sModule)) {
+            // the scan could not read the file, so the module name is unknown; the file name says
+            // this file should hold the requested module, and a requested load must surface the
+            // retained cause instead of reporting the module as missing
+            throw new ModuleLoadException(sModule, file, errCause);
         }
         return module;
+    }
+
+    /**
+     * Determine whether this repository's file is, by naming convention, the storage for the
+     * specified module. Used only when the file itself cannot be read, so the actual module name
+     * inside the file is unknown.
+     *
+     * @param sModule  the requested module name
+     *
+     * @return true iff the file name matches the module's qualified or simple name
+     */
+    private boolean isProbableModuleFile(String sModule) {
+        String sFile = file.getName();
+        sFile = sFile.endsWith(".xtc") ? sFile.substring(0, sFile.length() - 4) : sFile;
+
+        int    ofDot   = sModule.indexOf('.');
+        String sSimple = ofDot > 0 ? sModule.substring(0, ofDot) : sModule;
+        return sFile.equals(sModule) || sFile.equals(sSimple);
     }
 
     @Override
@@ -305,13 +328,14 @@ public class FileRepository
      */
     private FileStructure readFileStructure() {
         try {
-            return new FileStructure(file);
+            FileStructure struct = new FileStructure(file);
+            errCause = null;
+            return struct.getModule();
         } catch (Exception e) {
-            if (!reportedFileInfoError) {
-                reportedFileInfoError = true;
-                System.out.println("Error loading FileStructure from file: " + file + "; " + e.getMessage());
-            }
-            return null;
+            // scanning stays best-effort, but the cause is retained so a requested load of this
+            // file's module can fail with evidence instead of reporting "module not found"
+            errCause = e;
+            System.err.println("Error loading module from file: " + file + "; " + e.getMessage());
         }
     }
 
@@ -353,26 +377,20 @@ public class FileRepository
     private final File    file;
     private final boolean readOnly;
 
-    private long    timestamp;
-    private long    size;
-    private long    lastScan;
-    private boolean cacheOk;
-
-    private boolean reportedFileInfoError;
-    private boolean reportedFileStructureError;
-
-    /**
-     * Cached file contents: module names and versions thereof.
-     */
-    private Map<String, VersionTree<Boolean>> cachedVersionsByName = Map.of();
+    private String               name;
+    private VersionTree<Boolean> versions;
+    private long                 timestamp;
+    private long                 size;
+    private ModuleStructure      module;
+    private long                 lastScan;
+    private boolean              err;
 
     /**
-     * Cached file contents: the entire FileStructure
+     * The most recent load failure for {@link #file}, retained only so requested loads can report
+     * why the module is unavailable. It carries no behavior: it exactly mirrors the lifecycle of
+     * {@link #err} (set by the same failed {@link #tryLoad()}, cleared by the same successful
+     * load/rescan) and shares the same unsynchronized single-user threading model as every other
+     * mutable cache field in this repository.
      */
-    private FileStructure cachedFileStructure;
-
-    /**
-     * Cached ModuleStructures.
-     */
-    private Map<ModuleConstant, ModuleStructure> cachedModuleStructures = null;
+    private Throwable            errCause;
 }

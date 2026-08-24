@@ -168,7 +168,7 @@ been logged and the task code treats the non-zero code as failure.
 | `javatools/src/main/java/org/xvm/asm/ConstantPool.java:317` | Acceptable | Diagnostic `constant.toString()` fallback avoids masking the real late-registration failure. | |
 | `javatools/src/main/java/org/xvm/asm/ConstantPool.java:4039` | Suspicious | `Exception` is converted to `RuntimeException`. If this initialization can fail from I/O/linker causes, callers cannot distinguish setup failure type. | Use a typed initialization exception or include phase/module context. |
 | `javatools/src/main/java/org/xvm/asm/ModuleStructure.java:203` | Suspicious | Digest assembly failure becomes raw `RuntimeException`. | Use `IllegalStateException("failed to assemble module digest", e)` or a typed repository exception. |
-| `javatools/src/main/java/org/xvm/asm/FileRepository.java:205` and `DirRepository.java:370` | Suspicious | Repository load errors are printed and cached as missing/invalid module. This is okay for optional repository scanning but can hide startup failure if the requested module is in that file. | Keep best-effort scanning behavior, but make requested-module load paths surface the cause. |
+| `javatools/src/main/java/org/xvm/asm/FileRepository.java:205` and `DirRepository.java:370` | Fixed in branch | Repository load errors were printed to stdout and cached as missing/invalid module, hiding startup failure when the requested module was in that file. | Fixed: scanning stays best-effort (broken candidates skipped, diagnostic print moved to stderr), the load failure cause is retained, and a requested load of a module whose candidate file is broken throws typed `ModuleLoadException` with the file and cause. `LinkedRepository` searches catch it per child so a broken candidate cannot hide a good copy, and rethrow (with suppressed evidence) only when the whole search fails. |
 | `javatools/src/main/java/org/xvm/asm/DirRepository.java:235`, `:282`, `:306` | Acceptable | Persistent cache read/write/get-cache-file failures are performance-only and safely fall back. | |
 | `javatools/src/main/java/org/xvm/asm/Argument.java:56` and `OpVar.java:121` | Acceptable | Debug string fallback must not throw while rendering ops. | |
 | `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:2133` | Acceptable | Runtime exception is wrapped with the type name, preserving cause. | |
@@ -619,6 +619,56 @@ requires `IllegalStateException` with artifact context and preserved cause. On
 master the same test observes `writeTo` completing without any exception. A
 second source-shape test guards against reintroducing stderr-and-continue in
 the assembly region.
+
+## Fixed In This Branch: Requested Module Loads Preserve Cause
+
+`FileRepository.tryLoad()` and `DirRepository.ModuleInfo.tryLoad()` printed
+`"Error loading module from file..."` to stdout and returned null on any load
+failure. The repository then cached the file as broken and every later
+`loadModule(...)` returned null, so a corrupt module file was indistinguishable
+from a missing module for every caller: the host reported "module not found"
+and the only evidence of corruption was one console line on the wrong stream.
+
+The distinction that master collapsed:
+
+- Scanning (`getModuleNames()`, version enumeration) is best-effort by design.
+  A directory may legitimately contain broken or foreign `.xtc` files, and a
+  scan that throws on the first one is useless. This behavior is preserved:
+  scans still skip broken candidates (the diagnostic print moves to stderr).
+- A requested load is not best-effort. When the caller names a module and the
+  repository's candidate file for that module exists but cannot be read, the
+  answer "null / not found" is a lie. These paths now throw
+  `ModuleLoadException` carrying the module name, the file, and the retained
+  cause.
+
+Whether a broken file is "the candidate for the requested module" is decided
+by the scanned module name when it is known, and by the file-name convention
+(`<module>.xtc` or `<simple-name>.xtc`) when the file is too broken to reveal
+its name — the same convention the tool chain uses to locate module files in
+the first place.
+
+`ModuleLoadException` is unchecked but declared in the `loadModule(...)`
+`throws` clause for contract visibility. Unchecked is deliberate: for nearly
+every caller (container startup, connectors, launcher, compiler library
+resolution) a corrupt module is terminal and must propagate to the host
+boundary with its cause; forcing a checked exception through roughly thirty
+call sites and their constructor chains would invite exactly the catch-and-
+ignore shape this audit removes. The one boundary with a real alternative —
+`LinkedRepository`'s ordered search — handles it explicitly: a broken
+candidate in one child repository must not hide a good copy in a later one,
+so the search catches per child, continues, and rethrows the retained failure
+(with later failures attached as suppressed evidence, the standard
+multi-failure idiom) only when the entire search ends unsatisfied. The
+retained-cause fields (`errCause`) are diagnostic-only state that exactly
+mirrors the existing `err` flag lifecycle and threading model; they carry no
+behavior on the success path.
+
+`ModuleRepositoryLoadFailureTest` proves the boundary: requested loads of a
+corrupt candidate throw with cause for both repository types and through the
+linked search, unrelated names remain plain misses, scans remain silent
+skippers, and a linked search still returns a good later copy despite an
+earlier broken candidate. On master's print-and-null shape the three
+requested-load tests fail because no exception is thrown.
 
 ## Fixed In This Branch: Raw File Submit Observes Queued Write Failure
 

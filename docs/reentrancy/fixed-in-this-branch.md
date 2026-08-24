@@ -2722,6 +2722,40 @@ On master that test fails because `FileStructure.writeTo` completes without
 throwing and quietly writes the zero-op body. A companion source-shape test
 guards against reintroducing stderr-and-continue in the assembly region.
 
+### Requested Module Loads Preserve Cause
+
+Master's `FileRepository.tryLoad()` and `DirRepository.ModuleInfo.tryLoad()`
+printed `"Error loading module from file..."` to stdout and returned null, so
+every later `loadModule(...)` of a corrupt module file reported "module not
+found" with the real cause visible only as console text on the wrong stream.
+
+This branch separates the two contracts that master collapsed:
+
+- Scanning (`getModuleNames()`, version enumeration) stays best-effort:
+  broken candidate files are skipped, and the diagnostic print moves to
+  stderr. A directory may legitimately contain broken or foreign `.xtc`
+  files.
+- Requested loads surface evidence: when the requested module's candidate
+  file (matched by scanned name, or by the `<module>.xtc`/`<simple-name>.xtc`
+  naming convention when the file is too broken to reveal its name) exists
+  but cannot be read, `loadModule(...)` throws `ModuleLoadException` carrying
+  the module name, the file, and the retained cause.
+
+`ModuleLoadException` is unchecked — a corrupt module is terminal for nearly
+every caller and must propagate to the host boundary — but it is declared in
+the `loadModule` throws clause so the contract is visible in the API.
+`LinkedRepository`'s ordered search is the one boundary with an alternative:
+it catches the exception per child, keeps searching so a broken candidate
+cannot hide a good later copy, and rethrows the retained failure (with later
+failures as suppressed evidence) only when the entire search ends
+unsatisfied. The retained `errCause` fields are diagnostic-only and exactly
+mirror the existing `err` flag's lifecycle and unsynchronized threading
+model; the success path is unchanged.
+
+`ModuleRepositoryLoadFailureTest` fails on master's print-and-null shape for
+both repository types and the linked search, and proves that scans and
+unrelated module names keep their best-effort behavior.
+
 ### JIT Unhandled Exceptions Return Failure
 
 The JIT connector already initialized its `result` field to `1`, matching the

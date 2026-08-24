@@ -70,11 +70,22 @@ public interface ModuleRepository {
      * Load the specified module. If the module is loaded from an .xtc bundle, the ModuleStructure
      * may contain multiple versions.
      *
+     * <p>The null return and the exception are deliberately different conditions: null means the
+     * repository does not hold the module ("not found"), while {@link ModuleLoadException} means
+     * the module's storage exists but is broken. The exception is unchecked because for almost
+     * every caller a corrupt module is terminal and must propagate to the host boundary; the
+     * {@code throws} clause is declared for contract visibility. Repository search wrappers such
+     * as {@link LinkedRepository} handle it explicitly so a broken candidate cannot hide a good
+     * copy elsewhere.
+     *
      * @param sModule  a fully qualified module name
      *
-     * @return a ModuleStructure, or null if the specified module is unavailable
+     * @return a ModuleStructure, or null if the specified module is not in this repository
+     *
+     * @throws ModuleLoadException if this repository should hold the requested module but its
+     *         storage cannot be loaded
      */
-    ModuleStructure loadModule(String sModule);
+    ModuleStructure loadModule(String sModule) throws ModuleLoadException;
 
     /**
      * Load the specified version of the specified module.
@@ -84,9 +95,13 @@ public interface ModuleRepository {
      * @param fExact   true to specify that exact version number; false to allow more updated
      *                 versions to be substituted
      *
-     * @return a ModuleStructure, or null if the specified module is unavailable
+     * @return a ModuleStructure, or null if the specified module is not in this repository
+     *
+     * @throws ModuleLoadException if this repository should hold the requested module but its
+     *         storage cannot be loaded
      */
-    default ModuleStructure loadModule(String sModule, Version version, boolean fExact) {
+    default ModuleStructure loadModule(String sModule, Version version, boolean fExact)
+            throws ModuleLoadException {
         ModuleStructure module = loadModule(sModule);
         if (module == null) {
             return null;

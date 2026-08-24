@@ -93,9 +93,22 @@ public class LinkedRepository
 
     @Override
     public ModuleStructure loadModule(String sModule) {
+        ModuleLoadException failure = null;
         for (int i = 0, c = repos.length; i < c; ++i) {
-            ModuleRepository repo   = repos[i];
-            ModuleStructure  module = repo.loadModule(sModule);
+            ModuleRepository repo = repos[i];
+            ModuleStructure  module;
+            try {
+                module = repo.loadModule(sModule);
+            } catch (ModuleLoadException e) {
+                // the chain is a search, so a broken candidate must not hide a good copy in a
+                // later repository; the failure is retained in case the whole search fails
+                if (failure == null) {
+                    failure = e;
+                } else {
+                    failure.addSuppressed(e);
+                }
+                continue;
+            }
             if (module != null) {
                 // technically we could automatically merge this module with all the other versions
                 // found in all of the other repositories; the choice at this point is to defer
@@ -114,14 +127,30 @@ public class LinkedRepository
                 return module;
             }
         }
+        if (failure != null) {
+            // the requested module was not served by any repository, and at least one candidate
+            // file for it was broken; that evidence must not collapse into "module not found"
+            throw failure;
+        }
         return null;
     }
 
     @Override
     public ModuleStructure loadModule(String sModule, Version version, boolean fExact) {
+        ModuleLoadException failure = null;
         for (int i = 0, c = repos.length; i < c; ++i) {
-            ModuleRepository repo   = repos[i];
-            ModuleStructure  module = repo.loadModule(sModule, version, fExact);
+            ModuleRepository repo = repos[i];
+            ModuleStructure  module;
+            try {
+                module = repo.loadModule(sModule, version, fExact);
+            } catch (ModuleLoadException e) {
+                if (failure == null) {
+                    failure = e;
+                } else {
+                    failure.addSuppressed(e);
+                }
+                continue;
+            }
             if (module != null) {
                 if (i > 0 && readThrough) {
                     try {
@@ -134,6 +163,9 @@ public class LinkedRepository
 
                 return module;
             }
+        }
+        if (failure != null) {
+            throw failure;
         }
         return null;
     }
