@@ -5,8 +5,7 @@ const Base64Format(Boolean pad=False, Int? lineLength = Null)
         implements Format<Byte[]> {
 
     @Override
-    String name.get() =
-            $"Base64{pad ? "-padded" : ""}{lineLength == Null ? "" : $"({lineLength})"}";
+    String name.get() = $"Base64{pad ? "-padded" : ""}{lineLength == Null ? "" : $"({lineLength})"}";
 
     /**
      * Default Base64 Format instance: Unpadded, no line length limit.
@@ -15,8 +14,7 @@ const Base64Format(Boolean pad=False, Int? lineLength = Null)
 
     @Override
     Value read(Iterator<Char> stream) {
-        Int    charLen    = 0;
-        charLen := stream.knownSize();
+        Int    charLen    = stream.knownSize() ?: 0;
         Byte[] byteBuf    = new Byte[](charLen * 6 / 8);
         Byte   prevBits   = 0;
         Int    prevCount  = 0;
@@ -33,7 +31,7 @@ const Base64Format(Boolean pad=False, Int? lineLength = Null)
             }
         }
 
-        return byteBuf.freeze(True);
+        return byteBuf.freeze(inPlace=True);
     }
 
     @Override
@@ -55,7 +53,7 @@ const Base64Format(Boolean pad=False, Int? lineLength = Null)
             }
         }
 
-        return byteBuf.freeze(True);
+        return byteBuf.freeze(inPlace=True);
     }
 
     @Override
