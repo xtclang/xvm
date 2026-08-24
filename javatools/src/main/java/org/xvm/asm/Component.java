@@ -1199,6 +1199,39 @@ public abstract class Component
                         fHasCode, fUsesSuper);
     }
 
+    /**
+     * Create a MethodStructure exactly as {@link #createMethod}, but with copies of the supplied
+     * parameter objects. Use this whenever the returns or parameters are borrowed from another
+     * method - typically a super method owned by a different module - so that the new method does
+     * not share the source method's mutable {@link Parameter} elements. Sharing them would let
+     * this method's constant registration rewrite the source module's parameter constants into
+     * this component's pool.
+     *
+     * @param fFunction    true if the method is actually a function (not a method)
+     * @param access       the access flag for the method
+     * @param annotations  an array of annotations, or null
+     * @param aReturns     the return values of the method
+     * @param sName        the method name, or null if the name is unknown
+     * @param aParams      the parameters for the method
+     * @param fHasCode     true indicates that the method is known to have a natural body
+     * @param fUsesSuper   true indicates that the method is known to reference "super"
+     *
+     * @return a new MethodStructure or null if the equivalent method already exists
+     */
+    public MethodStructure createMethodCopyingParameters(
+            boolean fFunction, Access access, Annotation[] annotations,
+            Parameter[] aReturns, String sName, Parameter[] aParams,
+            boolean fHasCode, boolean fUsesSuper) {
+        assert sName != null;
+        assert access != null;
+
+        MultiMethodStructure multimethod = ensureMultiMethodStructure(sName);
+        return multimethod == null
+                ? null
+                : multimethod.createMethodCopyingParameters(fFunction, access, annotations,
+                        aReturns, aParams, fHasCode, fUsesSuper);
+    }
+
     public MultiMethodStructure ensureMultiMethodStructure(String sName) {
         Component sibling = getChildByNameMap().get(sName);
         while (sibling != null) {

@@ -527,9 +527,13 @@ public class MethodDeclarationStatement
                         return;
                     }
 
-                    // the parameters were already matched; no need to re-check
+                    // the parameters were already matched; no need to re-check.
+                    // the returns are borrowed from the super method - usually owned by the
+                    // loaded library module - so the new method must copy the Parameter
+                    // elements instead of sharing them: a shared element would have its
+                    // constants rewritten into this module's pool at assembly
                     Annotation[] annos = new Annotation[] {pool.ensureAnnotation(pool.clzOverride())};
-                    MethodStructure method = container.createMethod(
+                    MethodStructure method = container.createMethodCopyingParameters(
                             false, methodSuper.getAccess(), annos, aReturns, sName, aParams,
                             body != null, usesSuper());
                     if (body != null) {
