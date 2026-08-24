@@ -2318,8 +2318,26 @@ public class NameExpression
         }
 
         Constant constant = (Constant) argRaw;
-        switch (constant.getFormat()) {
-        case ThisClass: {
+        if (!(constant instanceof DefiningConstant defining)) {
+            throw new IllegalStateException("constant=" + constant);
+        }
+        // exhaustive over the sealed defining-constant union; the arms that were the old
+        // format switch's throwing default are the explicit refusal group at the top
+        switch (defining) {
+        case NativeRebaseConstant _:
+        case ChildClassConstant _:
+        case TypeParameterConstant _:
+        case DynamicFormalConstant _:
+        case DecoratedClassConstant _:
+        case PureIdentityConstant _:
+        case KeywordConstant _:
+        case SignatureConstant _:
+        case UnresolvedNameConstant _:
+        case ExpressionConstant _:
+        case DeferredValueConstant _:
+            throw new IllegalStateException("constant=" + constant);
+
+        case ThisClassConstant _: {
             TypeConstant typeThis = pool.ensureAccessTypeConstant(
                     constant.getType().adoptParameters(pool, ctx.getThisType()), Access.PRIVATE);
             if (fSuppressDeref) {
@@ -2331,10 +2349,10 @@ public class NameExpression
             }
         }
 
-        case ParentClass: {
+        case ParentClassConstant constParent: {
             // TODO GG: that needs to be calculated; it can be a VirtualChildTypeConstant
             TypeConstant typeParent = pool.ensureAccessTypeConstant(
-                ((ParentClassConstant) constant).getDeclarationLevelClass().getFormalType(),
+                constParent.getDeclarationLevelClass().getFormalType(),
                 Access.PRIVATE);
 
             NameExpression exprLeft = (NameExpression) left;
@@ -2348,9 +2366,9 @@ public class NameExpression
         }
 
         // class ID
-        case Module:
-        case Package:
-        case Class: {
+        case ModuleConstant _:
+        case PackageConstant _:
+        case ClassConstant _: {
             // if the name could be a singleton, then that is the default, with the other two
             // choices being a type or a class; the presence of type parameters indicates a
             // type or a class
@@ -2436,7 +2454,12 @@ public class NameExpression
             }
         }
 
-        case Property: {
+        case FormalTypeChildConstant idFormal: {
+            m_plan = Plan.TypeOfFormalChild;
+            return idFormal.getType().getType();
+        }
+
+        case PropertyConstant _: {
             if (aTypeParams != null) {
                 log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
             }
@@ -2695,13 +2718,7 @@ public class NameExpression
             }
         }
 
-        case FormalTypeChild: {
-            FormalTypeChildConstant idFormal = (FormalTypeChildConstant) constant;
-            m_plan = Plan.TypeOfFormalChild;
-            return idFormal.getType().getType();
-        }
-
-        case Typedef: {
+        case TypedefConstant idTypedef: {
             if (aTypeParams != null) {
                 // TODO have to incorporate type params
                 throw notImplemented();
@@ -2709,14 +2726,14 @@ public class NameExpression
 
             m_plan = Plan.TypeOfTypedef;
 
-            TypeConstant typeRef = ((TypedefConstant) constant).getReferredToType();
+            TypeConstant typeRef = idTypedef.getReferredToType();
             TypeConstant typeLeft = left == null
                     ? ctx.getThisType()
                     : left.getImplicitType(ctx);
             return typeRef.getType().resolveGenerics(pool, typeLeft);
         }
 
-        case Method: {
+        case MethodConstant _: {
             // the constant refers to a method or function
             MethodConstant  idMethod = (MethodConstant) argRaw;
             MethodStructure method   = (MethodStructure) idMethod.getComponent();
@@ -2830,18 +2847,14 @@ public class NameExpression
             return typeFn;
         }
 
-        case MultiMethod:
+        case MultiMethodConstant idMulti:
             // the constant refers to a method or function
             m_plan = Plan.None;
             if (typeDesired != null) {
                 // TODO: find the match
             }
-            log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS,
-                    ((MultiMethodConstant) constant).getName());
+            log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, idMulti.getName());
             return null;
-
-        default:
-            throw new IllegalStateException("constant=" + constant);
         }
     }
 
