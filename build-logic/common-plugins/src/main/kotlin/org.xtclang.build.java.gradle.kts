@@ -49,6 +49,12 @@ private class JavaCompilerArgsProvider(
 
     override fun asArguments(): Iterable<String> = buildList {
         add("-Xlint:${if (lintSnapshot) "all" else "none"}")
+        // javac lint flags are cumulative, so this re-enables exactly one category on top of the
+        // default "none": constructor this-escape. Combined with the default -Werror below, an
+        // unsuppressed this-escape is a build error everywhere this convention applies. Deliberate
+        // exceptions require a local @SuppressWarnings("this-escape") with an owner/lifetime
+        // comment; see docs/reentrancy/must-audit-backlog.md (build-gate row).
+        add("-Xlint:this-escape")
         if (previewSnapshot) {
             add("--enable-preview")
             if (lintSnapshot) add("-Xlint:preview")

@@ -36,6 +36,13 @@ public class Xvm {
      *
      * @param repo  the {@link ModuleRepository} that the XVM system libraries can be loaded from
      */
+    // Deliberate, tracked exception to the this-escape build gate: startup passes `this` into
+    // NativeTypeSystem.create(...) and container creation before construction completes. Owner:
+    // the JIT facade itself; lifetime: single-threaded startup, no other thread can observe the
+    // instance before the constructor returns it. The real fix is the JIT owner-state shell
+    // (docs/reentrancy/plans/jit-xvm-owner-refactor.md, hardening-ledger JIT rows) and belongs to
+    // the separate JIT ownership PR.
+    @SuppressWarnings("this-escape")
     public Xvm(ModuleRepository repo) {
         for (int i = 0; i < locks.length; ++i) {
             locks[i] = new Object();

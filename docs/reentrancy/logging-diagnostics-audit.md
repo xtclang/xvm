@@ -768,7 +768,7 @@ after failure, or make ownership/reentrancy bugs unobservable.
 | Method assembly | `MethodStructure.java:2077` | Done in this branch: op-assembly failure throws `IllegalStateException` with method and module identity and the `UnsupportedOperationException` cause, instead of printing and serializing a zero-op method body. |
 | Async future callback | `xFuture.java:497` | Done in this branch for `Future.and`: do not rely on `assert false` for impossible async failure. Complete exceptionally or route through runtime failure diagnostics. |
 | Discarded async IO future | `xRawOSFileChannel.java:229` | Done in this branch for `submit`: retain the scheduled write future and route late failure through the container failure channel. |
-| Requested module load | `FileRepository.java:206`, `DirRepository.java:371` | Preserve cause when the host requested that module. Best-effort scans may continue, but requested loads need typed failure. |
+| Requested module load | `FileRepository.java:206`, `DirRepository.java:371` | Done in this branch: requested loads throw typed `ModuleLoadException` with file and retained cause, scans stay best-effort, and `LinkedRepository` searches rethrow only when the whole search fails (`ModuleRepositoryLoadFailureTest`). |
 | Test pass/fail authority | `manualTests/build.gradle.kts:592` to `:594` | Runner paths must not swallow/print exceptions as success. Stress/manual runners need a machine pass/fail channel. |
 
 ### Should-fix
