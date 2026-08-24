@@ -15,7 +15,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * An artificial identity that represents a "pure type", i.e. something that is not a class or other
  * persistent "structure" in the xvm sense of the term.
  */
-public class PureIdentityConstant
+public final class PureIdentityConstant
     extends IdentityConstant {
     // ----- constructors --------------------------------------------------------------------------
 

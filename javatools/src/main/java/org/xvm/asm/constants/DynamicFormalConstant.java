@@ -31,7 +31,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Constant whose purpose is to represent a run-time formal type calculation based on a target
  * register.
  */
-public class DynamicFormalConstant
+public final class DynamicFormalConstant
         extends FormalConstant {
     // ----- constructors --------------------------------------------------------------------------
 

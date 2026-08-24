@@ -17,7 +17,7 @@ import static org.xvm.util.Handy.byteArrayToHexString;
 /**
  * Represent a variable-length floating point constant.
  */
-public class FPNConstant
+public final class FPNConstant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

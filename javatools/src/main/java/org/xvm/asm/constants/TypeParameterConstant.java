@@ -27,7 +27,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Represent a type parameter constant, which specifies a particular virtual machine register.
  */
-public class TypeParameterConstant
+public final class TypeParameterConstant
         extends FormalConstant {
     // ----- constructors --------------------------------------------------------------------------
 

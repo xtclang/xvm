@@ -76,17 +76,63 @@ public class SealedConstantFamiliesTest {
         assertPermits(TerminalTypeConstant.class, RecursiveTypeConstant.class);
     }
 
+    /**
+     * Stage 3: the IdentityConstant tree, with zero non-sealed hatches - the constructor-escape
+     * probe fakes that used to subclass PropertyConstant/FormalTypeChildConstant were retired
+     * because the fatal -Xlint:this-escape gate enforces their property at compile time.
+     */
+    @Test
+    public void identityConstantTreeIsSealed() {
+        assertPermits(IdentityConstant.class,
+                DecoratedClassConstant.class, MethodConstant.class, ModuleConstant.class,
+                NamedConstant.class, PureIdentityConstant.class);
+        assertPermits(NamedConstant.class,
+                ClassConstant.class, FormalConstant.class, MultiMethodConstant.class,
+                PackageConstant.class, TypedefConstant.class);
+        assertPermits(ClassConstant.class, NativeRebaseConstant.class);
+        assertPermits(FormalConstant.class,
+                DynamicFormalConstant.class, PropertyConstant.class, TypeParameterConstant.class);
+        assertPermits(PropertyConstant.class, FormalTypeChildConstant.class);
+    }
+
+    /**
+     * Stage 3: the ValueConstant tree. StringConstant is the one documented non-sealed hatch
+     * (the pool-registration deadlock test latches a StringConstant subclass).
+     */
+    @Test
+    public void valueConstantTreeIsSealed() {
+        assertPermitsWithHatches(ValueConstant.class, setOf(StringConstant.class),
+                ArrayConstant.class, BFloat16Constant.class, ByteConstant.class,
+                CharConstant.class, DecimalAutoConstant.class, DecimalConstant.class,
+                FPNConstant.class, FSNodeConstant.class, FileStoreConstant.class,
+                Float128Constant.class, Float64Constant.class, FloatConstant.class,
+                IntConstant.class, LiteralConstant.class, MapConstant.class,
+                MatchAnyConstant.class, RangeConstant.class, RegExConstant.class,
+                SingletonConstant.class, StringConstant.class, UInt8ArrayConstant.class);
+        assertPermits(FloatConstant.class,
+                Float16Constant.class, Float32Constant.class, Float8e4Constant.class,
+                Float8e5Constant.class);
+        assertPermits(LiteralConstant.class, VersionConstant.class);
+        assertPermits(SingletonConstant.class, EnumValueConstant.class);
+    }
+
     // ----- helpers -------------------------------------------------------------------------------
 
     private static void assertPermits(Class<?> root, Class<?>... leaves) {
+        assertPermitsWithHatches(root, Set.of(), leaves);
+    }
+
+    private static void assertPermitsWithHatches(Class<?> root, Set<String> hatches,
+                                                 Class<?>... leaves) {
         assertTrue(root.isSealed(), root.getSimpleName() + " must be sealed");
         assertEquals(setOf(leaves), setOf(root.getPermittedSubclasses()),
                 root.getSimpleName() + " permits list drifted; update the sealed-hierarchy"
                         + " audit if this is intentional");
         for (Class<?> leaf : leaves) {
-            assertTrue(leaf.isSealed() || Modifier.isFinal(leaf.getModifiers()),
+            assertTrue(leaf.isSealed() || Modifier.isFinal(leaf.getModifiers())
+                            || hatches.contains(leaf.getName()),
                     leaf.getSimpleName() + " must be final or sealed; a non-sealed leaf"
-                            + " reopens the family");
+                            + " reopens the family unless it is a documented test hatch");
         }
     }
 

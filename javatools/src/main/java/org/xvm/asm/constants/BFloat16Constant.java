@@ -14,7 +14,7 @@ import org.xvm.util.Hash;
 /**
  * Represent a 16-bit "brain" binary floating point constant.
  */
-public class BFloat16Constant
+public final class BFloat16Constant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

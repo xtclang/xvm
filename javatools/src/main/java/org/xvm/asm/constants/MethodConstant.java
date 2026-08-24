@@ -31,7 +31,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Represent a Method constant. A method constant uniquely identifies a method structure within a
  * named multi-method structure (a group of methods by the same name).
  */
-public class MethodConstant
+public final class MethodConstant
         extends IdentityConstant
         implements GenericTypeResolver {
     // ----- constructors --------------------------------------------------------------------------

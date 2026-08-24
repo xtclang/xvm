@@ -26,8 +26,9 @@ import static org.xvm.util.Handy.writeMagnitude;
  * Represent a singleton instance of a const (including enum, package, module) or service class as a
  * constant value.
  */
-public class SingletonConstant
-        extends ValueConstant {
+public sealed class SingletonConstant
+        extends ValueConstant
+        permits EnumValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

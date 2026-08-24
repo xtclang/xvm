@@ -18,7 +18,7 @@ import static org.xvm.util.Handy.writeUtf8String;
 /**
  * Represent a regular expression constant.
  */
-public class RegExConstant
+public final class RegExConstant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

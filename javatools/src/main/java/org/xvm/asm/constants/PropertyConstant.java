@@ -25,8 +25,9 @@ import org.xvm.javajit.TypeSystem;
 /**
  * Represent a property constant, which identifies a particular property structure.
  */
-public class PropertyConstant
-        extends FormalConstant {
+public sealed class PropertyConstant
+        extends FormalConstant
+        permits FormalTypeChildConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

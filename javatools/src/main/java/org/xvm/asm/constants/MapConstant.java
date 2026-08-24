@@ -27,7 +27,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Represent a constant value that contains a single map entry or an entire map of keys and values.
  */
-public class MapConstant
+public final class MapConstant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

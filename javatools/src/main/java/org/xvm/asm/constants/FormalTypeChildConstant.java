@@ -18,7 +18,7 @@ import org.xvm.compiler.ast.Context;
 /**
  * Represent a formal child of a generic property, type parameter or formal child constant.
  */
-public class FormalTypeChildConstant
+public final class FormalTypeChildConstant
         extends PropertyConstant {
     // ----- constructors --------------------------------------------------------------------------
 

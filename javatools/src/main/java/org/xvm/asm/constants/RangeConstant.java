@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writeMagnitude;
 /**
  * Represent a range of two constant values.
  */
-public class RangeConstant
+public final class RangeConstant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -24,7 +24,7 @@ import static org.xvm.util.Handy.writeMagnitude;
 /**
  * Represent an entire filing system directory stored in the constant pool.
  */
-public class FSNodeConstant
+public final class FSNodeConstant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

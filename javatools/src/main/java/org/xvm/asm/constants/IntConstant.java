@@ -27,7 +27,7 @@ import org.xvm.util.PackedInteger;
  *
  * @see ByteConstant
  */
-public class IntConstant
+public final class IntConstant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

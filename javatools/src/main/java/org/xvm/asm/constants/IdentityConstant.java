@@ -26,8 +26,10 @@ import static org.xvm.javajit.TypeSystem.escapeJitClassName;
  * An IdentityConstant identifies a Module, Package, Class, Typedef, Property, MultiMethod, or
  * Method structure.
  */
-public abstract class IdentityConstant
-        extends Constant {
+public abstract sealed class IdentityConstant
+        extends Constant
+        permits DecoratedClassConstant, MethodConstant, ModuleConstant, NamedConstant,
+                PureIdentityConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

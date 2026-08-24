@@ -22,7 +22,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Represent a constant value that contains a number of other constant values. Specifically this
  * supports the array, tuple, and set types.
  */
-public class ArrayConstant
+public final class ArrayConstant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

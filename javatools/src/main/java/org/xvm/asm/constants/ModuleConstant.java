@@ -33,7 +33,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * domain name "xtclang.org" can be combined with the simple module name "ecstasy" to create a
  * qualified module name of "ecstasy.xtclang.org".
  */
-public class ModuleConstant
+public final class ModuleConstant
         extends IdentityConstant {
     // ----- constructors --------------------------------------------------------------------------
 

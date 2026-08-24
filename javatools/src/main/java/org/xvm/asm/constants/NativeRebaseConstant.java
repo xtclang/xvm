@@ -17,7 +17,7 @@ import org.xvm.util.Hash;
  * This TypeConstant is *never* registered with the ConstantPool and is intended to be used only
  * by the runtime.
  */
-public class NativeRebaseConstant
+public final class NativeRebaseConstant
         extends ClassConstant {
     /**
      * Construct a {@link NativeRebaseConstant} representing the specified interface.

@@ -19,8 +19,10 @@ import static org.xvm.util.Handy.writeMagnitude;
  * A NamedConstant is a constant whose purpose is to identify a structure of a specified name that
  * exists within its parent structure.
  */
-public abstract class NamedConstant
-        extends IdentityConstant {
+public abstract sealed class NamedConstant
+        extends IdentityConstant
+        permits ClassConstant, FormalConstant, MultiMethodConstant, PackageConstant,
+                TypedefConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

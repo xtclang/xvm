@@ -18,7 +18,7 @@ import static org.xvm.util.Handy.byteArrayToHexString;
 /**
  * Represent a 128-bit binary floating point constant.
  */
-public class Float128Constant
+public final class Float128Constant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

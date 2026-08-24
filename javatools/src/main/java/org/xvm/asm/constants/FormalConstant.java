@@ -16,8 +16,9 @@ import org.xvm.compiler.ast.Context;
  * type parameter, such as Map.Key, a method type parameter (such as Object.equals.CompileType)
  * or a formal type child constant, such as Map.equals.CompileType.Key)
  */
-public abstract class FormalConstant
-        extends NamedConstant {
+public abstract sealed class FormalConstant
+        extends NamedConstant
+        permits DynamicFormalConstant, PropertyConstant, TypeParameterConstant {
     /**
      * Construct a constant whose purpose is to identify a structure of a formal constant
      * of the specified name that exists within its parent structure.

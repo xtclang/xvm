@@ -8,8 +8,14 @@ import org.xvm.asm.ConstantPool;
 /**
  * Represent a constant whose purpose is to represent a constant value.
  */
-public abstract class ValueConstant
-        extends Constant {
+public abstract sealed class ValueConstant
+        extends Constant
+        permits ArrayConstant, BFloat16Constant, ByteConstant, CharConstant,
+                DecimalAutoConstant, DecimalConstant, FPNConstant, FSNodeConstant,
+                FileStoreConstant, Float128Constant, Float64Constant, FloatConstant,
+                IntConstant, LiteralConstant, MapConstant, MatchAnyConstant,
+                RangeConstant, RegExConstant, SingletonConstant, StringConstant,
+                UInt8ArrayConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

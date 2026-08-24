@@ -21,7 +21,7 @@ import static org.xvm.util.Handy.nibbleToChar;
  * Represent any of: a bit (1-bit), nibble (4-bit), and octet (signed or unsigned 8-bit byte)
  * constant.
  */
-public class ByteConstant
+public final class ByteConstant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

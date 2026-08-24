@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writeMagnitude;
 /**
  * Represent a FileStore that was embedded into the constant pool.
  */
-public class FileStoreConstant
+public final class FileStoreConstant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -12,6 +12,7 @@ import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -142,8 +144,13 @@ public class AsmConstructorEscapeTest {
     }
 
     /**
-     * Constant constructors must validate parents without overridable construction callbacks. This
-     * preserves legal property/formal-child behavior while removing `this` escape hazards.
+     * Constant constructors must validate parents without overridable construction callbacks.
+     * The no-overridable-call half is enforced at compile time now: the fatal
+     * {@code -Xlint:this-escape} gate refuses a virtual call during construction, and
+     * {@code PropertyConstant} is sealed with {@code FormalTypeChildConstant} final, so the
+     * hook-counting subclass probes this test used to construct can no longer exist - which is
+     * the point. What remains observable is the surviving half: parent validation still runs,
+     * non-virtually, inside the constructor.
      */
     @Test
     public void propertyConstantConstructorsDoNotCallOverridableParentCheck() {
@@ -152,26 +159,20 @@ public class AsmConstructorEscapeTest {
         var clz  = file.getModule().createClass(
                 Constants.Access.PUBLIC, Component.Format.CLASS, "Test", null);
 
-        var property = new HookDetectingPropertyConstant(
-                pool, clz.getIdentityConstant(), "value");
-
+        var property = new PropertyConstant(pool, clz.getIdentityConstant(), "value");
         assertSame(clz.getIdentityConstant(), property.getParentConstant());
-        assertEquals(0, property.checkParentCalls);
 
-        property.checkAgain(clz.getIdentityConstant());
-
-        assertEquals(1, property.checkParentCalls);
+        // the validation moved into a non-virtual path rather than being deleted: an illegal
+        // parent is still rejected inside the constructor
+        var multi = new MultiMethodConstant(pool, clz.getIdentityConstant(), "mm");
+        assertThrows(IllegalArgumentException.class,
+                () -> new PropertyConstant(pool, multi, "value"),
+                "constructor-time parent validation must survive the de-virtualization");
 
         var formal = (FormalConstant) clz.addTypeParam(
                 "Element", pool.typeObject()).getIdentityConstant();
-        var formalChild = new HookDetectingFormalTypeChildConstant(pool, formal, "Value");
-
+        var formalChild = new FormalTypeChildConstant(pool, formal, "Value");
         assertSame(formal, formalChild.getParentConstant());
-        assertEquals(0, formalChild.checkParentCalls);
-
-        formalChild.checkAgain(formal);
-
-        assertEquals(1, formalChild.checkParentCalls);
     }
 
     /**
@@ -422,58 +423,4 @@ public class AsmConstructorEscapeTest {
         private int setTypeCalls;
     }
 
-    private static final class HookDetectingPropertyConstant extends PropertyConstant {
-        HookDetectingPropertyConstant(
-                ConstantPool      pool,
-                IdentityConstant  parent,
-                String            name) {
-            super(pool, parent, name);
-        }
-
-        void checkAgain(IdentityConstant parent) {
-            checkParent(parent);
-        }
-
-        @Override
-        protected void checkParent(IdentityConstant parent) {
-            if (!constructed) {
-                throw new IllegalStateException(
-                        "checkParent called before subclass construction");
-            }
-
-            ++checkParentCalls;
-            super.checkParent(parent);
-        }
-
-        private boolean constructed = true;
-        private int checkParentCalls;
-    }
-
-    private static final class HookDetectingFormalTypeChildConstant
-            extends FormalTypeChildConstant {
-        HookDetectingFormalTypeChildConstant(
-                ConstantPool    pool,
-                FormalConstant  parent,
-                String          name) {
-            super(pool, parent, name);
-        }
-
-        void checkAgain(IdentityConstant parent) {
-            checkParent(parent);
-        }
-
-        @Override
-        protected void checkParent(IdentityConstant parent) {
-            if (!constructed) {
-                throw new IllegalStateException(
-                        "checkParent called before subclass construction");
-            }
-
-            ++checkParentCalls;
-            super.checkParent(parent);
-        }
-
-        private boolean constructed = true;
-        private int checkParentCalls;
-    }
 }

@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * Represent a decimal value constant that simply delegates to an actual DecimalConstant of 32-bit,
  * 64-bit, or 128-bit. This supports the `Dec` type in Ecstasy.
  */
-public class DecimalAutoConstant
+public final class DecimalAutoConstant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -12,7 +12,7 @@ import org.xvm.asm.Version;
 /**
  * Represent a version number.
  */
-public class VersionConstant
+public final class VersionConstant
         extends LiteralConstant {
     // ----- constructors --------------------------------------------------------------------------
 

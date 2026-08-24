@@ -17,7 +17,7 @@ import org.xvm.util.PackedInteger;
 /**
  * Represent a singleton instance of an enum value class.
  */
-public class EnumValueConstant
+public final class EnumValueConstant
         extends SingletonConstant {
     // ----- constructors --------------------------------------------------------------------------
 

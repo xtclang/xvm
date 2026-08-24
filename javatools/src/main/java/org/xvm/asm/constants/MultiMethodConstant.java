@@ -13,7 +13,7 @@ import org.xvm.asm.MultiMethodStructure;
 /**
  * Represent a collection of methods or functions with the same name.
  */
-public class MultiMethodConstant
+public final class MultiMethodConstant
         extends NamedConstant {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -12,7 +12,7 @@ import org.xvm.asm.ConstantPool;
  * Represent a Package constant. A Package constant is composed of a constant identifying the Module
  * or Package which contains this package, and the unqualified name of this Package.
  */
-public class PackageConstant
+public final class PackageConstant
         extends NamedConstant {
     // ----- constructors --------------------------------------------------------------------------
 

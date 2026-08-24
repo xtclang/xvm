@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writeMagnitude;
 /**
  * Represent the "_" used in a case statement to match any value of a particular type.
  */
-public class MatchAnyConstant
+public final class MatchAnyConstant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

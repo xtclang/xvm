@@ -14,7 +14,7 @@ import org.xvm.util.Hash;
 /**
  * Represent a 64-bit binary floating point constant.
  */
-public class Float64Constant
+public final class Float64Constant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

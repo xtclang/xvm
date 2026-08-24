@@ -19,7 +19,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Represent an octet string (string of unsigned 8-bit bytes) constant.
  */
-public class UInt8ArrayConstant
+public final class UInt8ArrayConstant
         extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  *
  * @see TypeConstant#isDecoratedClass()
  */
-public class DecoratedClassConstant
+public final class DecoratedClassConstant
         extends IdentityConstant {
     // ----- constructors --------------------------------------------------------------------------
 

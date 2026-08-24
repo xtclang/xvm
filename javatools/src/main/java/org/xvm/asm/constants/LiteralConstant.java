@@ -43,8 +43,9 @@ import static org.xvm.util.Handy.writeMagnitude;
  * <li>Version (but via the {@link VersionConstant} sub-class)</li>
  * </ul>
  */
-public class LiteralConstant
-        extends ValueConstant {
+public sealed class LiteralConstant
+        extends ValueConstant
+        permits VersionConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
