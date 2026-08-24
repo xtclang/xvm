@@ -1047,3 +1047,123 @@ Should fix:
    classloader and generated-bytecode constraints.
 5. Move unavoidable unchecked casts into small helpers with owner/type checks
    and comments.
+
+## Must-Audit Row 132 Classification (2026-08-24)
+
+This section closes must-audit backlog row 132 ("Raw/unchecked
+async/service/native-template/JIT metadata paths") by classifying every
+owner-sensitive unchecked/raw site. The closure standard is: prove
+confinement/ownership, or identify the sites that need typed checked
+boundaries with owner assertions.
+
+Enumeration method:
+
+```bash
+./gradlew javatools:compileJava -Porg.xtclang.java.lint=true \
+    -Porg.xtclang.java.warningsAsErrors=false \
+    -Porg.xtclang.java.maxWarnings=100000 --rerun-tasks
+```
+
+The `maxWarnings` override matters: without it, javac's default `-Xmaxwarns
+100` truncates the list and hides roughly two thirds of the warnings. The
+run covers `javatools` and its `javatools_utils` dependency. Suppressed sites
+were enumerated separately with `rg '@SuppressWarnings\("unchecked"\)'`.
+
+### Summary Counts
+
+| Measure | Count |
+| --- | --- |
+| `[unchecked]` warnings | 126 |
+| `[rawtypes]` warnings | 162 |
+| Total unchecked/rawtypes warnings | 288 |
+| `@SuppressWarnings("unchecked")` sites (not in the counts above) | 12 in 6 files |
+| Owner-sensitive site groups examined | 18 (152 of 288 warnings) |
+| Proven confined | 9 site groups |
+| Needs typed checked boundary | 9 site groups |
+| Low-risk local generic plumbing | 136 warnings (compiler AST, `VersionTree`, utils) |
+
+### Confinement Proofs Used Below
+
+Two facts carry most of the "proven confined" verdicts; they were verified by
+reading the producers, not assumed:
+
+1. **Service response completions are scheduling-lock confined.** The only
+   completion sites for `Message.f_future` are
+   `ServiceContext.Response.run()` (`ServiceContext.java:2008`/`:2010`) and
+   the no-caller `CallLaterRequest` continuation
+   (`ServiceContext.java:1964`/`:1968`). `Response.run()` executes only from
+   `processResponses()` inside `nextFiber()`/`drainWork()`
+   (`ServiceContext.java:444`, `:457`, `:312`), and `drainWork()` runs only
+   under the owning context's scheduling lock with the pool asserted
+   (`ServiceContext.java:303-338`, `tryAcquireSchedulingLock` at `:347`). Therefore every `whenComplete` callback that mutates
+   fiber-confined state (`Fiber.m_cPending`, `m_oPendingRequests`,
+   `m_mapPendingUncaptured`) executes on the thread currently holding that
+   context's scheduling lock. The unchecked casts in `Fiber` are shape
+   hazards, not races.
+2. **The switch-op cache already has the typed owner boundary.** `JumpVal`
+   and `JumpVal_N` publish decode caches through
+   `Container.getRuntimeOpCache(op, category, Class<T>)` /
+   `putRuntimeOpCacheIfAbsent`, which is container-scoped and performs
+   `type.cast(...)` at the boundary (`Container.java:143-148`). Owner-bearing
+   `ObjectHandle` keys never land on the shared `Op` instance. This is the
+   model that the remaining sites should converge on.
+
+### Owner-Sensitive Site Classification
+
+Verdicts: `confined` = same-owner proven by reading the producer;
+`confined, needs typed boundary` = no cross-owner path exists today but the
+invariant is maintained by hand and must become a typed checked API;
+`needs typed boundary` = the erased edge is where a wrong owner/payload would
+enter undetected.
+
+| # | Site | What is erased/cast | Producer / owner analysis | Verdict |
+| --- | --- | --- | --- | --- |
+| 1 | `ServiceContext.java:1601`,`:1692` (`Message.f_future` raw); conversions at `:1106`,`:1131`,`:1157`,`:1273`,`:1335`,`:1527`; raw cast `:1341`; `sendResponse` raw param `:1633`; raw `Response` at `:436`,`:445`,`:2126`; `:1964` | One raw future field is re-typed per call site as `CompletableFuture<ObjectHandle>` or `CompletableFuture<ObjectHandle[]>`; payload shape is chosen at response time by `cReturns` (`sendResponse` switch `:1636-1685`) | Completions confined (proof 1). Shape invariant is manual: `:1335` binds the future as `ObjectHandle[]` while the `cReturns == 0` completion delivers a single empty-tuple handle, and the raw cast at `:1341` exists to launder exactly that mismatch. Same-owner today because every conversion site is adjacent to the request it created. | confined, needs typed boundary (`ServiceReturn`/split futures; see must-fix section above) |
+| 2 | `ServiceContext.java:226-244`,`:2192` op-info cache; consumers `OpCallable.java:198`,`:200`,`:253`,`:255`,`:324-325`,`:392`,`:430`,`:473-474`, `OpInvocable.java:131-132`, `OpVar.java:155-156`, `OpIndex.java:173`,`:175` | `Object` values, raw `EnumMap`/`WeakReference`; consumers blind-cast per `Category` | `f_mapOpInfo` is a per-`ServiceContext` instance field; a context has exactly one final container, all stored values are derived from that context's own frames, and access happens only during op execution under the scheduling lock. Cross-container reuse is impossible by construction. Category-to-payload pairing is compile-time unchecked. | confined, needs typed boundary (`OpInfoKey<T>`; see must-fix section above) |
+| 3 | `Fiber.java:358-384` (`m_oPendingRequests` union, unchecked map casts `:367`,`:381`,`:520`), raw `whenComplete` `:344`,`:408`, raw field decls `:698`,`:704` | `Object` holding `Message \| Map<CompletableFuture, Message>`; raw `CompletableFuture` keys | All mutations run under the owning context's scheduling lock (proof 1). The union invariant is re-derived by hand in four readers. | confined, needs typed boundary (sealed/wrapper; see must-fix section above) |
+| 4 | `Frame.java:314-322` (raw `List<CompletableFuture>` in `createWaitFrame`), `:531-532` (`waitForIO` raw param), `:2754` (`WAIT_FOR_IO` poll); `ObjectHandle.java:1215-1226` (`NativeFutureHandle` raw `f_future`); `xOSFile.java:219`,`:302`,`:330`,`:363` | Raw IO futures with per-call payload types (`Void`, `byte[]`) | Producer is `frame.f_context.f_container.scheduleIO(task)` — the frame's own container. Consumer is the same fiber: `WAIT_FOR_IO` only polls `isDone()`; the payload is read by a continuation in the same method that created the task, so payload type is same-method visible. | confined; parameterize as `CompletableFuture<?>`/generic `NativeFutureHandle<T>` as cheap hardening |
+| 5 | `xFuture.java:530-532` (`anyOf` raw + unchecked `makeHandle`), `:816` raw local | `CompletableFuture.anyOf` erases to `Object` payload | Both inputs are `CompletableFuture<ObjectHandle>` belonging to the current service, so the `anyOf` payload is an `ObjectHandle` by construction. | confined; a typed `anyOf` helper would remove the unchecked edge |
+| 6 | `JumpVal.java:121`,`:329`; `JumpVal_N.java:135`,`:465-468`; raw/suppressed generic arrays `JumpVal_N.java:390-512` | Switch decode caches; generic array creation in the builder | Published only through the container-scoped typed cache (proof 2). The raw arrays never escape the builder except inside the immutable `SwitchCache` record handed to that typed API. | confined (typed boundary already exists — model pattern) |
+| 7 | `NativeContainer.java:183`,`:199`,`:214`,`:244`,`:277`,`:288` raw `Class` template maps; reflective construction `:795-796` | Raw `Class` for what must be `Class<? extends ClassTemplate>` | Single-threaded container bootstrap over the fixed native-template package scan; wrong classes are only rejected by late reflective-constructor failure instead of at discovery. | needs typed boundary (`asSubclass(ClassTemplate.class)` in `classForName`; see must-fix section above) |
+| 8 | `NativeContainer.java:543` `(Set<String>) (Set) System.getProperties().keySet()` | Double-cast over JVM-global properties | Read-only scan; produces fresh handles created with `this` container. A non-`String` key would CCE locally at startup. | confined (low) |
+| 9 | `xOSStorage.java:323`,`:365` raw `WatchEvent`/`Kind`; `:397` unchecked `findMethodDeep` | JDK watch API rawness; unchecked from raw `Utils.ANY` | The watcher daemon derives the container from the watched handle and asserts the pool before building handles (`Container container = context.hStorage.f_context.f_container` + `ConstantPool.assertCurrentPool`), then posts via `callLater` into the owning context. Owner-correct cross-thread path, already hardened. | confined; `:397` disappears when `Utils.ANY` is typed (row 10) |
+| 10 | `Utils.java:1900` `public static final Predicate ANY` | Raw `Predicate` constant | Behavior-safe (`t -> true`) but infects every caller with unchecked warnings, masking real ones. | needs typed boundary (trivial: `Predicate<Object>` + `static <T> Predicate<T> any()`) |
+| 11 | `JitConnector.java:93-126` raw `Class`/`Object` over generated classes | Generated module/array/string classes reflected raw | All classes come from `ts.loader` — the connector's own `TypeSystem` loader; a misload fails reflectively rather than delivering a foreign object. The injector load at `:61-63` already shows the correct `asSubclass` pattern. | needs typed boundary (bridge interfaces/`asSubclass`; see JIT section above) |
+| 12 | `Ctx.java:163-165` `inject(...)` via raw `Function`; `Injector.java:39`,`:50`,`:64` `supplierOf` raw `Function` | Injected resource typed only as `Object` | The injector belongs to the parent container and supplies resources into the child container's generated code. `supplier.apply(opts)` performs no type or owner check before the value enters JIT-generated frames. This is the most cross-owner-capable edge in the JIT set. | needs typed boundary + owner assertion (typed supplier checked against the requested `TypeConstant`) |
+| 13 | `ModuleLoader.java:88` raw `Class` local; `Refiner.java:36-48` raw `VersionTree`; `CommonBuilder.java:696` `Map.Entry[]` snapshot | Loader-local raws | `findLoadedClass` result asserted against `this` loader; version selection and constant-emission snapshot are method-local. | confined (low) |
+| 14 | `ConstantPool.java:199-242` `register()` `(T)` casts (suppressed); `Constant.java:743` `registerConstants` (suppressed) | `T`-typed register over erased maps | This is the cross-pool adoption boundary and it is already instrumented: foreign types rejected by `isShared` (`:235-237`), adoption validated by `ConstantAdoptionValidator.assertValidIfEnabled`, runtime publication guarded by `assertRegisterBeforeRuntimePublished`. Equal-key lookups return same-class constants; `adoptedBy` clones preserve the concrete class. `registerConstants` clones the array before mutation because callers may share it across pools. | confined (documented owner boundary with runtime validation) |
+| 15 | `TypeConstant.java:8283` raw `AtomicReferenceFieldUpdater<TypeConstant, TransientThreadLocal>` | Recursion-state payload type erased by the updater | Payload is thread-confined by `TransientThreadLocal` contract; the erased updater lets a future edit swap payload types silently. | needs typed boundary (named holder subclass; see must-audit section above) |
+| 16 | `TypeInfoReal` construction: `TypeConstant.java:2635-2639`,`:5756`; `ConstantPool.java:2669-2676`; `RelationalTypeConstant.java:506-520`; `PropertyClassTypeConstant.java:413-416`; `TypeInfoReal.java:660-679`; `UnionTypeConstant.java:749`; `IntersectionTypeConstant.java:585-586`; `DifferenceTypeConstant.java:386`; `Entry[]`/`toArray` at `TypeInfoReal.java:1070`,`:1362`,`:2017`,`:2399` | Raw `ListMap.EMPTY`, `(ListMap) null`, generic-array creation | All inputs are assembled in-method from the same pool's constants under the TypeInfo build path; the warnings are erased-empty-collection idioms, not owner joints. | confined; a typed `ListMap.empty()` factory would remove ~20 warnings |
+| 17 | `BinaryAST.java:296-298` `readAST` `(N)` cast (also raw `HashSet` `:271`) | Caller-declared `N` vs node type chosen by a stream byte | Deserialization bridge: the expected type is a caller promise the stream can violate; failure is a distant CCE. Compiler-side, per-compilation confined; not a runtime container boundary. | needs typed boundary (`Class<N>` checked parameter), compiler priority |
+| 18 | `Component.java:955-973` raw child map; `ModuleStructure.java:441-443` raw `VersionTree` cache; `ClassStructure.java:550` `ListMap.EMPTY`; `IdentityConstant.java:496` raw `Comparable`; `SwitchAST.java:157-158` raw `Iterator`; `xRTModuleTemplate.java:66` raw `VersionTree` | Structure-local raws | Child-map mutation is structure-lock confined; version trees are module-local caches; the `Comparable` cast deliberately falls back to string comparison on heterogeneous path elements. | confined (low) |
+
+### Low-Risk Bulk (Classified, Not Itemized)
+
+The remaining 136 warnings are single-owner local generic plumbing with no
+service/container/pool crossing: `VersionTree` internal raw `Node` links
+(63), compiler AST and parser code (`AstNode` 17, `Parser` 10, `Lexer` 4,
+`CaseManager`/`Context`/`LambdaExpression`/`NewExpression`/
+`TypeCompositionStatement`/`SwitchStatement`/`ReturnStatement` 29), and
+`javatools_utils` collection internals (13: `ListMap`, `ListSet`,
+`IdentityArrayList`, `TransientThreadLocal` — the last is thread-confined by
+contract, `CooperativelyCleanableReference`). The suppressed sites not
+covered above are the same shape: `MarkAndSweepGcSpace` generic backing
+arrays confined to the space instance, `LauncherOptions` builder `(T) this`
+self-casts, and `JumpVal_N` builder arrays (row 6).
+
+### Row 132 Verdict
+
+Row 132 can be closed as **classified**. No reachable cross-owner delivery
+was found: every owner-sensitive erased path either has a confinement proof
+(scheduling-lock response processing, container-scoped typed op cache,
+validated constant adoption, same-container IO futures) or is same-owner by
+construction at every current call site. Nine site groups need typed checked
+boundaries because their correctness is a hand-maintained invariant that
+erasure hides: rows 1, 2, 3, 7, 11, 15 already carry must-fix/should-fix
+entries earlier in this document; rows 10, 12, and 17 are new findings from
+this pass — `Utils.ANY` (trivial), the JIT injection supplier (typed +
+owner-asserted, highest cross-owner capability), and `BinaryAST.readAST`
+(checked deserialization type). Until those boundaries land, the flagship
+shape hazard to protect in review is `ServiceContext.java:1335`/`:1341`,
+where the erased future's compile-time payload type is already wrong for the
+zero-return path and only the raw cast keeps it compiling.

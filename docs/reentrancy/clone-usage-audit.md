@@ -761,3 +761,167 @@ Should-fix:
 - Replace remaining low-risk `Cloneable` uses with copy constructors over time.
 - Name shallow array container copies clearly and use immutable snapshots where
   callers should not mutate returned arrays.
+
+## Rows 125/161 Completion Sweep
+
+Date: 2026-08-24
+
+This section closes must-audit backlog row 125 (live runtime handles embedded
+in constants) and the remaining half of rows 103/161 (the
+`ObjectHandle.cloneAs(...)` subclass audit and the
+`ConstHeap.relocateConst(...)` clone paths). Scope commands:
+
+```bash
+rg -n "HandleConstant" javatools/src/main/java
+rg -n "cloneAs|relocateConst" javatools/src/main/java
+rg -n -U "class\s+\w+\s*\n?\s*extends\s+[\w.]*Handle\b" javatools/src/main/java
+```
+
+The subclass scan finds 88 `extends *Handle` declarations in the runtime
+`ObjectHandle` tree (11 nested classes in `ObjectHandle.java`, 77 template
+handle classes, 6 of them abstract), plus the anonymous `ObjectHandle.DEFAULT`
+marker. `cloneAs(...)` has exactly three overrides beyond the base shallow
+clone: `GenericHandle` (the fixed view contract), `InitializingHandle`
+(delegates to the initialized singleton handle), and `Proxy.ProxyHandle`
+(delegates to the proxied target). Every other subclass inherits either the
+base clone or `GenericHandle`'s view clone.
+
+### HandleConstant Boundary Paths
+
+`HandleConstant` (`javatools/src/main/java/org/xvm/asm/constants/HandleConstant.java`)
+wraps a live `ObjectHandle` in a final field, reuses `Format.Register`, and is
+created in exactly one place. This table lists every path where the constant,
+or a constant embedding one, can reach a pool/container boundary.
+
+| Path | Boundary | Verdict |
+| --- | --- | --- |
+| Creation: `xRTTypeTemplate.invokeAnnotate(...)` wraps live annotation-argument handles (`runtime/template/_native/reflect/xRTTypeTemplate.java:546`) and registers the resulting `AnnotatedTypeConstant` through `pool.ensureAnnotatedTypeConstant(...)` (`xRTTypeTemplate.java:552`), where `pool` is `frame.poolContext()` (`runtime/Frame.java:1341`). | Live frame handle enters pool metadata. | Same-owner by construction: the wrapped handle came through the executing frame and the target pool is the executing container's own module pool. Residual exposure is the raw-serve row below, not this write. |
+| First registration of an unowned constant: `HandleConstant.copyForAdoption(...)` (`asm/constants/HandleConstant.java:58`) constructs a target-owned wrapper when `getContaining() == null`. | Unowned constant to first pool owner. | Same-owner-proven: reachable only from the single creation site above in the same call; `ConstantAdoptionValidator.isPermittedSharedReference(...)` (`asm/ConstantAdoptionValidator.java:174`) permits the `m_hValue` same-reference for exactly this class/field/unowned shape and nothing else. |
+| Re-adoption of an owned constant into another pool. | Pool-to-pool movement. | Rejected: `HandleConstant.copyForAdoption(...)` throws (`HandleConstant.java:66`); proven by `ConstantAdoptionTest.ownedHandleConstantCannotMoveToAnotherPool`. |
+| `Annotation` embedding: `Annotation.copyForAdoption(...)` (`asm/Annotation.java:238`). | Annotation params carried into a target pool. | Rejected for owned live-handle params; a fresh unowned param exists only inside the single same-pool creation call, so the permitted case is same-owner. |
+| `AnnotatedTypeConstant` embedding: `copyForAdoption(...)` routes the annotation through `pool.register(m_annotation)` (`asm/constants/AnnotatedTypeConstant.java:661`). | Annotated type shell adoption. | Rejected via the annotation hook above; no separate handle path exists. |
+| ConstHeap caching and relocation: `ensureConstHandle(...)` short-circuits every `FrameDependentConstant` before the cache (`runtime/ConstHeap.java:49`). | Container const-heap cache and `relocateConst(...)`. | Unreachable: a `HandleConstant` is never stored in `f_mapConstants`, never `saveConstHandle`d, and can never reach `relocateConst(...)`. `JumpVal`/`JumpVal_N` case constants are serialized code constants, and a runtime-only unassemblable constant can never appear there. |
+| Raw handle serve: the same short-circuit returns `m_hValue` to any frame that resolves the constant (`ConstHeap.java:50`, `HandleConstant.getHandle(...)` at `HandleConstant.java:39`), with no `isShared(frame.container())` check. Consumers: annotation construction (`runtime/Utils.java:1572`), injected-property options (`runtime/ClassTemplate.java:935`), annotation params during composition work (`ClassTemplate.java:2314`). | Constant resolution by any container sharing the pool. | HAZARD (bounded); mechanism below. |
+| `FileStructure.merge(...)` (`asm/FileStructure.java:177`): merge clones module structures and re-registers only the constants those structures reference. | Module merge across FileStructures/pools. | Unreachable/rejected: no `XvmStructure` ever references a `HandleConstant`, so merge does not carry it; if one were ever referenced, registration would route through adoption and fail closed. |
+| Serialization/assembly: pre-assembly registration plus `ConstantPool.optimize()` (`asm/ConstantPool.java:3979`) drop every zero-ref constant, and a `HandleConstant` can only be zero-ref. | Pool assembly to disk. | Unreachable by construction. Latent edge: the class inherits `Constant.assemble(...)` (`asm/Constant.java:548`), which writes only the `Format.Register` ordinal; if the constant ever acquired a structural ref, the stream would be silently corrupt instead of rejected. Should-fix: override `assemble(...)` to throw. |
+| JIT: zero references to `HandleConstant` or `FrameDependentConstant` under `org/xvm/javajit` and `javatools_jitbridge`. | JIT codegen reading pools. | Unreachable today: JIT reads structural constants and never sees runtime-only pool entries. Add a fail-closed branch if JIT ever walks pools wholesale. |
+| Adjacent, not `HandleConstant`: `SingletonConstant` also embeds a live handle, including the `setHandle(...)` write during relocation (`ConstHeap.java:238`). | Singleton handle state on pool-owned constants. | Out of row 125's scope: per-pool adopted `SingletonConstant` copies keep the state per-pool; two containers sharing one pool is the row 108/124 shared-pool family. |
+
+The one remaining live-handle exposure is resolution, not movement. Once a
+`HandleConstant` is registered in a module pool, `ensureConstHandle` serves the
+wrapped `ObjectHandle` raw to any frame whose `poolContext()` can resolve the
+constant. `Container.getConstantPool()` is the module's pool
+(`runtime/Container.java:90`), so two containers loaded over one module - the
+same-JVM reuse scenario this branch targets - share the pool and therefore the
+constant. A sibling container that receives the annotated
+`TypeTemplateHandle` and instantiates the annotated type gets the creating
+container's live handle without passing `maskAs`/proxy/pass-through checks.
+This is bounded today because the only creation site wraps annotation-argument
+values that already crossed service boundaries under normal passing rules when
+the `AnnotationTemplate` was assembled, and because the constant is resolvable
+only through reflection values that name it. The fix shape is one check:
+validate handle/container sharing in `HandleConstant.getHandle(Frame)` or in
+the `ConstHeap.java:49` short-circuit before handing out `m_hValue`.
+
+### cloneAs Callers
+
+The complete runtime caller set, each classified:
+
+- `ClassComposition.ensureOrigin(...)`/`ensureAccess(...)`
+  (`runtime/ClassComposition.java:196`, `:205`),
+  `CanonicalizedTypeComposition.ensureAccess(...)` (`:77`), and
+  `PropertyComposition.ensureAccess(...)` (`:132`): access/origin views; the
+  target composition always comes from the handle's own composition family, so
+  these are same-container by construction.
+- `GenericHandle.maskAs(...)`/`revealAs(...)`/`cloneAs(...)` internal uses
+  (`runtime/ObjectHandle.java:514`, `:604`, `:625`): the fixed view contract;
+  direct cross-owner masking is rejected unless the graph is already shared.
+- `ConstHeap.relocateConst(...)` (`runtime/ConstHeap.java:235`): analyzed
+  below.
+- `xRef.maskClassHandle(...)` (`runtime/template/reflect/xRef.java:242`): runs
+  in the class owner's context - directly when the executing container owns
+  the class type, otherwise via an op sent to the owner
+  (`xRef.java:197`) that returns a proxy - so the clone is same-owner.
+- `Proxy.ProxyHandle.cloneAs(...)` (`runtime/template/Proxy.java:425`):
+  delegates to the target, deliberately unwrapping the proxy. Reachable only
+  through `revealAs(...)`, which is owner-gated in `GenericHandle.revealAs`;
+  `ProxyComposition.maskAs(...)`/`ensureAccess(...)` throw
+  (`runtime/ProxyComposition.java:59`, `:74`), so masking cannot unwrap.
+- `InitializingHandle.cloneAs(...)` (`runtime/ObjectHandle.java:1124`):
+  delegates to the initialized singleton handle; initialization state cannot
+  fork.
+
+### ConstHeap.relocateConst Clone Paths
+
+- The walk-up loop re-checks `hConst.isShared(parent, null)` at every level
+  (`ConstHeap.java:213`), and `GenericHandle.isShared` recurses the whole
+  reachable field graph, so a relocated handle only lands in a container whose
+  type system can see everything it references.
+- The final `cloneAs` (`ConstHeap.java:233`) is a composition relabel of an
+  immutable constant handle: `JumpVal.java:289` asserts `!hCase.isMutable()`
+  before relocation, and the singleton branch stores per-pool handles onto
+  per-pool adopted `SingletonConstant` copies.
+- Two soft notes, neither a current defect: (1) the final placement level does
+  not re-assert `isShared(owner)` before cloning when the walk stops early -
+  today's inputs are handles produced under the owner's own chain (created by
+  `createConstHandle` in that container, or taken from a parent heap through
+  the `isShared` check at `ConstHeap.java:156`) - but a local assert would make
+  the invariant self-contained; (2) the clone shares inner field/delegate
+  handles whose compositions still name a source-chain container, which is
+  correct for immutable type-shared graphs and exactly why the mutable-state
+  fork hazards below must stay out of this path.
+
+Verdict for the relocation half of row 103/161: same-owner/shared-proven for
+every input it can currently receive.
+
+### cloneAs Subclass Table
+
+Question audited per subclass: does the shallow copy share mutable
+owner-bearing state (field arrays, ref outers, native resources, futures,
+services) in a way that `GenericHandle`'s fixed cases (cross-owner `maskAs`
+rejection, view-local inflated-ref outers) do not cover? The recurring failure
+shape is the inverse of sharing: state that must stay canonical for one
+runtime object lives in per-view Java fields, so a view clone forks it.
+
+| Class(es) | Mutable fields beyond base | Shared after shallow clone | Verdict |
+| --- | --- | --- | --- |
+| Immutable value handles: `JavaLong`, `BaseInt128.LongLongHandle`, `BaseBinaryFP.FloatHandle`, `BaseDecFP.DecimalHandle`, `xIntLiteral.IntNHandle`, `xFPLiteral.FPNHandle`, `xString.StringHandle`, `xRegEx.RegExHandle`, `Identity.IdentityHandle`, `ConstantHandle`, `TransientId` | Set-once payloads (`JavaLong.m_lValue`); lazy display/hash caches (`StringHandle.m_hash`/`m_sValue`); `RegExHandle` final `Lazy<Pattern>` cell | Immutable payloads; caches fork per view and merely recompute; the shared `Lazy` cell is a safe publication cell | Safe. |
+| `GenericHandle` const/metadata shells with final-only extras: `ExceptionHandle` (`f_sRTError`), `xOSFileNode.NodeHandle` (`f_path`), `xPackage.PackageHandle`, `xClass.ClassHandle`, `xRTType.TypeHandle` (`f_typeForeign`), `xRTTypeTemplate.TypeTemplateHandle`, `xRTComponentTemplate.ComponentTemplateHandle`, `xRTProperty.PropertyHandle`, `xRTBuffer.RTBufferHandle`, `xEnum.EnumHandle`/`xBoolean.BooleanHandle` (`m_index` set-once) | None mutable beyond the base | `m_aFields` shared by design; `m_aFieldOverrides` copy-on-write per view | Safe under the fixed view contract. |
+| Function/signature metadata: `xRTSignature.SignatureHandle` (abstract: `f_idMethod`/`f_method`/`f_type`/`f_chain`/`f_nDepth` all final), `xRTMethod.MethodHandle`, `xRTFunction.FunctionHandle`, `NativeFunctionHandle` (`f_op`), `AsyncHandle`, `ConstructorHandle`, `FunctionProxyHandle` (`f_ctx`), `NoOpHandle` | None mutable | Final metadata; these are the handles `relocateConst` actually clones for function constants (`xRTFunction.java:121`) | Safe relabel. |
+| Bound-function binders: `SingleBoundHandle` (`m_iArg`, `m_hArg`), `FullyBoundHandle` (`f_ahArg` shared array, `m_next` chain) | Bind slots and chain links are per-instance and mutated after construction | A clone would fork `m_next`/`m_hArg` mid-bind | Unreachable today (never constants, function masking uses the proxy path); rule: bound-function handles must never cross `cloneAs`. |
+| Service/native-resource handles: `xService.ServiceHandle` (`f_context` final), `TimerHandle`, `SocketHandle` (volatile `socket`), `HttpServerHandle` (`f_aoNative`), `RandomHandle`, `KeyStoreHandle` (`f_achPwd`), `ConnectorHandle`, `CompilerHandle`, `xRawChannel.ChannelHandle` (`m_cPreferredBufferSize`) / `xRawOSFileChannel` (`f_channel`), `xRTServiceControl.ControlHandle`, `xContainerControl.ControlHandle`, `CoreRepoHandle`, `HttpContextHandle`, `HashCollectorHandle`, crypto handles (`DigestHandle`, `CipherHandle`, `SignatureHandle`, `MacHandle`, `SecretHandle`, `KeyGenHandle`) | Live Java resources and per-service context | `f_context` sharing across service views is the point of a service view (calls proxy to the one `ServiceContext`); plain native-resource `ObjectHandle`s have no `cloneAs` caller today | Safe for service views; unreachable for the plain resource wrappers. Rule: native-resource handles stay out of the const heap and masking. |
+| Deferred/internal handles: `DeferredCallHandle`, `DeferredPropertyHandle`, `DeferredSingletonHandle`, `DeferredArrayHandle`, `NativeFutureHandle`, `InitializingHandle`, `ObjectHandle.DEFAULT` | Frame-bound control-flow state | Never cached, masked, or relocated; `InitializingHandle` delegates `cloneAs` to the initialized handle | Safe/unreachable. |
+| `xRef.RefHandle` (and `IndexedRefHandle`: `f_lIndex` final, target write-once - safe) | `m_frame`, `m_iVar` (rewritten by `dereference()`, `xRef.java:1079`, called from `Frame.java:2539`), `m_sName` lazy, `m_hReferent` (documented write-once, `xRef.java:1100`) | `$value`/`$outer` shared via field array/overrides per the fixed contract; the delegation-mode fields are NOT shared | HAZARD: a view clone made while the ref is register-delegating keeps `(m_frame, m_iVar)`; scope exit dereferences only the `Frame.VarInfo`-cached instance, so the clone keeps reading the recycled register slot `f_ahVar[iVar]` - a different variable's value once the slot is reused. Reachable via access-view clones of a register-bound `Var` (`Frame.getPrivateThis()` family, `initializeCustomFields` struct clone at `xRef.java:987`). Fix shape: make delegation mode canonical shared state, dereference through all views, or reject `cloneAs` while register-bound. |
+| `xLazy.LazyHandle` | `m_setInitFiber` (`xLazy.java:116`) plus `synchronized (hLazy)` guard (`xLazy.java:88`) | The `$value` slot is shared, but the monitor and the fiber set are per-view | HAZARD: views arise from the inflated-ref clone path (`ObjectHandle.java:508`) on struct/reveal transitions of the holder; two views racing first-get lock different monitors and keep different fiber sets, defeating duplicate-assign detection on immutable holders - the exact multi-service case the set exists for. Fix shape: canonical guard cell shared through the field array. |
+| Lazily installed referent cells: `AtomicJavaLongHandle.m_atomicValue` (`xAtomicIntNumber.java:130`), `AtomicLongLongHandle.m_atomicValue` (`xAtomicInt128.java:119`), `InjectedHandle.m_hReferent` (`xInject.java:174`) | The atomic cell/injected referent installs post-construction into a per-view Java field | A view cloned before install forks the cell: two `AtomicLong`s for one `@Atomic` property break atomicity between views; injected refs can double-inject | HAZARD (narrow: requires a pre-install clone, e.g. the construction-time struct-to-public transition cloning inflated refs). `xAtomic.AtomicHandle` is immune - final `f_atomic` built in the constructor (`xAtomic.java:140`) - and `FutureHandle`/`FutureTupleHandle` are immune for the same reason. Fix shape: install cells in the constructor like `AtomicHandle`, or store them in the shared field array. |
+| Array/delegate storage family: `xArray.ArrayHandle` (`m_mutability`, `m_hDelegate` - swapped by `clear()` at `xArray.java:466` and narrowed by `setMutability` at `xArray.java:394`; `m_hHash` cache), `DelegateHandle` (`m_cSize`, `m_mutability`), `GenericArrayDelegate` (`m_ahValue`), `LongArrayHandle`/`ByteArrayHandle`/`BitArrayHandle`/`CharArrayHandle`/`DoubleArrayHandle`/`StringArrayHandle` (storage pointers reassigned on grow, e.g. `ByteBasedDelegate.java:129`, `LongBasedDelegate.java:172`), `SliceHandle` (`f_hSource` final - shares source by spec), `ViewHandle` leaves | Mutable storage pointers and size/mutability live in per-instance Java fields, unlike `GenericHandle`'s shared field array | A `cloneAs` view forks the storage pointer: after `clear()`/grow through one alias, the other alias still reads the old storage | HAZARD for mutable handles; safe for the immutable const clones `relocateConst` performs (`JumpVal.java:289` asserts immutability). Access-view clones of mutable arrays are producible by `this:<access>` in natural collection code. `xTuple.TupleHandle` is the safe contrast: `m_ahValue` is assigned once and mutated element-wise, so views stay consistent. Fix shape: assert `!isMutable()` in the base `cloneAs` for non-`GenericHandle` subclasses, or move array mutable state behind a shared box. |
+| Base-field caveat, every subclass: `ObjectHandle.m_fMutable` | Copied per view by the shallow clone | `GenericHandle.makeImmutable()` (`ObjectHandle.java:547`) freezes the shared structure but flips only the receiving view's flag | HAZARD (bounded - freeze normally happens before views proliferate): a sibling view of a frozen object still reports `isMutable() == true`, so template-level mutation guards keyed on `hTarget.isMutable()` can permit a write into the frozen shared field array, and `is(immutable)`/pass-through answers disagree between views. Not covered by the two fixed `GenericHandle` cases. Fix shape: share the mutability bit through canonical state, or freeze through the origin handle only. |
+
+### Row Closure Verdicts
+
+Row 125 (live runtime handles embedded in constants): closable. Every
+pool-boundary crossing is rejected (`copyForAdoption` guards on
+`HandleConstant`, `Annotation`, `AnnotatedTypeConstant`; merge/adoption
+fail-closed) or same-owner by construction (single creation site, first
+registration, cache bypass, assembly unreachability). Two narrowed follow-ups
+replace the open-ended row: must-fix - `ConstHeap.ensureConstHandle` serves
+`m_hValue` raw with no handle/container sharing check, which leaks a live
+handle to a sibling container sharing the module pool; should-fix -
+`HandleConstant.assemble(...)` should throw instead of inheriting the
+format-byte-only writer, removing the latent corrupt-serialization edge that
+today is prevented only by `optimize()` dropping zero-ref constants.
+
+Rows 103/161 remainder (`cloneAs` subclasses and `relocateConst` clone paths):
+closable as an audit. The two fixed `GenericHandle` cases stand, and
+`relocateConst` is same-owner/shared-proven for every input it can currently
+receive (immutable constant handles, per-level `isShared` walk, per-pool
+singleton copies). The open-ended "keep auditing other subclasses" is replaced
+by five named mechanisms, each precise enough to become its own backlog row:
+`RefHandle` delegation-mode desync on `dereference()`; `LazyHandle` per-view
+monitor/fiber-set guard split; lazily installed referent cells
+(`AtomicJavaLongHandle`, `AtomicLongLongHandle`, `InjectedHandle`) forked by
+pre-install view clones; mutable array/delegate storage-pointer forking under
+access-view clones; and the base `m_fMutable` per-view freeze split. All five
+are view-lifecycle/single-instance-aliasing gaps inside one container - none
+is cross-owner movement, which remains guarded by the `maskAs` shared-graph
+rejection.

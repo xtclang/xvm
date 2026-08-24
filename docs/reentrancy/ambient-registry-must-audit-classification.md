@@ -1234,3 +1234,118 @@ Recommended PR slice:
    during a single owner phase.
 8. `ambient-registry-source-guard`: keep new ambient/weak/identity state from
    arriving without a classification.
+
+## Row 134 Completion Sweep (2026-08-24)
+
+This section closes must-audit backlog row 134 ("Ambient
+`ThreadLocal`/`TransientThreadLocal`/`ScopedValue` state",
+`must-audit-backlog.md:159`) by re-enumerating every ambient site in the
+`javatools`, `javatools_utils`, and `javatools_jitbridge` main source trees and
+assigning each one a closure category:
+
+- `(a)`: lexical/scoped bridge with bounded lifetime and, where runtime-facing,
+  owner assertions;
+- `(b)`: proven thread-confined; no stale semantic value can be observed by
+  later work on a pooled Java thread;
+- `(c)`: needs explicit owner parameters; the ambient read itself is the
+  defect to remove.
+
+Enumeration command:
+
+```
+rg -n "ThreadLocal|TransientThreadLocal|ScopedValue" \
+    javatools/src/main/java javatools_utils/src/main/java \
+    javatools_jitbridge/src/main/java
+```
+
+plus indirect readers of `Ctx.Current` through `Ctx.get()` and the generated
+`<clinit>` emission in `CommonBuilder`.
+
+### Complete Site Table
+
+| # | Site | Stored value / owner semantics | Set/clear discipline (evidence) | Pooled-thread stale risk | Load-bearing? | Category |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | `ConstantPool.s_tloPool` (`javatools/src/main/java/org/xvm/asm/ConstantPool.java:4318`) | Static per-thread current-pool bridge slot; owner-bearing. | Access only via `withPool(...)` (`:3948`) and `assertCurrentPool*` (`:3910`, `:3929`); no getter exists. All 21 production `withPool(...)` call sites use `try (var _ = ...)`; 9 runtime boundaries also assert the explicit owner (`MainContainer.java:200`, `NativeContainer.java:118,168`, `Container.java:191`, `ServiceContext.java:310`, `InterpreterConnector.java:88`, `xOSStorage.java:337`, `xContainerControl.java:112`, `xRTServer.java:693`). | Only if a future caller skips try-with-resource; the holder array stays per thread but the slot is restored. | Yes: constants intern into whatever pool the slot names. | `(a)` for asserted runtime bridges; `(a)` without assertions for compiler/build scopes; remaining ambient consumers are the `(c)` trail. |
+| 2 | `ConstantPool.f_tlolistDeferred` (`javatools/src/main/java/org/xvm/asm/ConstantPool.java:4292`) | Per-pool deferred TypeInfo work list, per Java thread. | Appended by `addDeferredTypeInfo` (`:3362`); drained by the single top-level driver `TypeConstant.ensureTypeInfo` (`TypeConstant.java:1752-1757`), cleared on `catch (Exception \| Error)` (`:1814-1818`), fail-loud entry guard throws on stale state (`:1737-1740`); `ensureObjectTypeInfo` drains at `:1923`. | Fail-loud: a leaked list makes the next build on the same pool+thread throw at entry rather than silently process stale work. Footprint: `hasDeferredTypeInfo` (`:3374`) probes with `get()`, installing a permanent null map entry per pool per thread. | Yes: deferred TypeInfo completion. | `(b)` |
+| 3 | `ServiceContext.s_tloContext` (`javatools/src/main/java/org/xvm/runtime/ServiceContext.java:2180`) | Static per-thread current service context; owner-bearing. | Single writer `drainWork()` saves prior (`:304-306`) and restores in `finally` (`:331`). Readers: `getCurrentContext()` (`:171`) from `Utils.java:473`, `Argument.java:51`, `OpVar.java:115` only. | No non-`finally` writer exists; non-service threads read `null`. Debug helpers can still read a *different* live service during nested drains, which is why the readers must go. | Readers are diagnostics-only (log timestamps, debug names behind `catch (Throwable)`). | Writer `(a)`; the three ambient readers `(c)`. |
+| 4 | `MultiMethodStructure.s_tloIgnoreNative` (`javatools/src/main/java/org/xvm/asm/MultiMethodStructure.java:428`) | Static Boolean serialization flag; not owner-bearing. | Set `true` at `:66` only when previously `false` (guard `:60`), restored `false` in `finally` (`:70`); readers `:60,86,185` affect serialization traversal only. | None semantic; a `Boolean.FALSE` entry stays installed per thread (harmless). | Load-bearing for serialized shape, not for ownership. | `(b)` |
+| 5 | `TypeConstant.s_context` (`javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8321`) | Static `ScopedValue<TypeConstant>` relation context; pool-owned value, calculation-local binding. | Bound at `:5855` (Null sentinel for context-free probes) and `:6310` (union context); read via `getContext()` (`:5835-5843`) and the cache-bypass guard (`:5940-5945`). `ScopedValue` restores lexically on all paths. | None: a `ScopedValue` binding cannot outlive the call or migrate to another thread. | Yes: relation answers. | `(a)`; the open item is relation-cache context-sensitivity proof, not cleanup. |
+| 6 | `TypeConstant.m_tloInProgress` (`javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8282`) | Per-type recursion set, per Java thread. | Created lazily (`:8028`); set at `:6047`; `finally` removes the type and removes the cell when the set empties (`:6061-6065`) on success and throw (`:6058-6060` rethrows); adoption clears the cell with the other helper caches (`:7951-7959`). | Guaranteed clear via `finally`. Footprint: the probe at `:5948` uses `get()`, installing a null map entry per type per thread. Unproven corner: `setContaining(...)` nulling the cell concurrently with an in-flight `calculateRelation` on another thread. | Yes: recursion detection changes relation answers. | `(b)` |
+| 7 | `TypeParameterConstant.f_tloReEntry` (`javatools/src/main/java/org/xvm/asm/constants/TypeParameterConstant.java:274`) | Per-constant Boolean compare-reentry guard; not owner-bearing. | Probe `get() != null` at `:208`; scoped `push(true)` in try-with-resource at `:212` (prior value null, so the sentry removes the entry); adoption reconstructs the constant (`:229-233`). | Guaranteed removal via sentry. Footprint: the `:208` probe installs a null entry that stays. | Yes for compare correctness, not owner-bearing. | `(b)` |
+| 8 | `TransientThreadLocal` backing map (`javatools_utils/src/main/java/org/xvm/util/TransientThreadLocal.java:138`) | Static per-thread `IdentityHashMap` keyed by `TransientThreadLocal` instances; owner semantics are the callers'. | `get()` installs even a null initial value (`:45-47`); `compute(...)` removes on null (`:75-76`); `computeIfAbsent(...)` never installs null (`:96-104`); `push(...)` restores or removes on close (`:115-133`); the per-thread map itself is never removed. | Infrastructure: risk is per caller, and rows 2, 6, and 7 enumerate every production caller. | Per caller. | Infrastructure; per-caller category. The `get()`-installs-null wart remains `transient-thread-local-cleanup`. |
+| 9 | `Ctx.Current` (`javatools/src/main/java/org/xvm/javajit/Ctx.java:66`) | Static `ScopedValue<Ctx>`; owner-bearing (XVM + container). | Bound only at `JitConnector.invoke0` (`JitConnector.java:82`) for one generated-code invocation; read via `Ctx.get()` (`Ctx.java:74`). | None for the binding itself (lexical); no assertion ties the bound `Ctx` to the type system owning the executing class. | Yes. | Binding `(a)`; readers below decide the rest. |
+| 10 | Static/ambient `Ctx.get()` readers: `Array.eMutability.$INSTANCE` (`javatools_jitbridge/.../ecstasy/collections/Array.java:160`), `FPNumber.eRounding.$INSTANCE` (`.../ecstasy/numbers/FPNumber.java:526`), `TerminalConsole()` (`.../_native/io/TerminalConsole.java:25`), `nObject.$ctx()/$xvm()/$owner()` (`.../ecstasy/nObject.java:26,35,54`), `OpCondJump.buildUnary` (`javatools/src/main/java/org/xvm/asm/OpCondJump.java:522`), generated `<clinit>` (`javatools/src/main/java/org/xvm/javajit/builders/CommonBuilder.java:678`) | First bound `Ctx` captured into classloader-wide statics, or ambient owner recovered inside helpers/build logic. | Static captures have no clear at all: first `<clinit>` wins for the classloader lifetime. Helper/build reads have no local proof of the right binding. | This is not thread-local staleness; it is permanent wrong-owner capture, worse than any row above. | Yes: singleton metadata, injection, owner resolution, dead-code elimination. | `(c)` |
+
+### Non-Owner Noise And Guards
+
+| Site | Note |
+| --- | --- |
+| `javatools_utils/src/main/java/org/xvm/util/WeakHasherMap.java:61,69` | `ThreadLocalRandom` randomness only; no owner state. |
+| `javatools_utils/src/main/java/org/xvm/util/CooperativelyCleanableReference.java:94` | Same. |
+| `javatools/src/main/java/org/xvm/runtime/template/_native/numbers/xRTRandom.java:314` | `ThreadLocalRandom.current()` per call; correct contract. |
+| `javatools/src/main/java/org/xvm/asm/op/JumpNSample.java:67` | Newly noted: `static final ThreadLocalRandom f_rnd = ThreadLocalRandom.current()` captures the instance at class-init, violating the documented `current().nextX(...)` usage pattern. Current OpenJDK keeps seeds on `Thread`, so no cross-thread state leaks; contract/style wart only, not owner state. |
+| `javatools/src/main/java/org/xvm/runtime/ObjectHandle.java:1070` | Comment reference to `ThreadLocal.java` hash constant only. |
+| `javatools/src/main/java/org/xvm/asm/ConstantAdoptionValidator.java:160` | Guard, not a site: adoption validation rejects any `ThreadLocal` instance reachable from copied constant fields. |
+
+### Deltas Versus The Previous Classification
+
+- Newly recorded entries, all non-owner: `JumpNSample.f_rnd` static
+  `ThreadLocalRandom` capture; the `ConstantAdoptionValidator` `ThreadLocal`
+  rejection guard; and the three `ThreadLocalRandom` noise sites previously
+  listed only in `ambient-context-audit.md`. Zero new owner-bearing ambient
+  sites were found.
+- Changed verdict for `ConstantPool.f_tlolistDeferred`: the earlier entry said
+  repeated same-JVM work "can process deferred TypeInfo from a previous
+  operation if the top-level build path misses `takeDeferredTypeInfo()`".
+  Current code shows the sole top-level driver clears the list on the
+  exceptional path (`TypeConstant.java:1814-1818`) and throws on stale state at
+  entry (`:1737-1740`), so a leak is fail-loud, not silently processed.
+  Reclassified `(b)`; the empty-at-boundary diagnostic recommendation stands,
+  but the must-fix promotion trigger described earlier is gone.
+- Refinement for `ServiceContext.s_tloContext`: `drainWork()` is confirmed to
+  be the only writer, so the thread-local discipline itself is `(a)`; the
+  must-audit weight moves entirely onto the three ambient diagnostic readers,
+  which are `(c)`.
+- Per-site footprint caveat made explicit: `hasDeferredTypeInfo()`,
+  `m_tloInProgress.get()` (`TypeConstant.java:5948`), and the
+  `f_tloReEntry.get()` probe (`TypeParameterConstant.java:208`) each install a
+  permanent null entry in the backing per-thread map. This retains keys, not
+  stale semantic values.
+- Line-number refresh: `ConstantPool` bridge now `:3910/:3929/:3948/:4318`;
+  deferred list now `:3362/:3374/:3381/:4292`; `Container.java` bridge now
+  `:190-191`; `xRTServer.java` now `:692-693`; `MethodStructure` decode bridge
+  now `:701`; `MultiMethodStructure` flag now `:428`; `TypeConstant`
+  `s_context` now `:8321`, `m_tloInProgress` now `:8282`, recursion cleanup now
+  `:6061-6065`, adoption clear now `:7951-7959`; `OpCondJump` ambient read now
+  `:522`.
+- Everything else re-verified with unchanged verdicts: all 21 `withPool(...)`
+  sites use try-with-resource, `drainWork()` restores in `finally`,
+  `s_tloIgnoreNative` is `finally`-scoped, and both `ScopedValue` bindings are
+  lexical.
+
+### Closing Verdict
+
+Row 134 can be closed as "all sites classified". The sweep found 10 ambient
+owner-context mechanisms (rows 1-10, including the `TransientThreadLocal`
+infrastructure) and 6 noise/guard hits. No `ThreadLocal` or
+`TransientThreadLocal` site sets a value without a guaranteed clear on a
+pooled thread: every writer runs under try-with-resource, `try`/`finally`, or
+a fail-loud entry guard, and both `ScopedValue` bindings are lexical.
+
+Three groups remain category `(c)` — the ambient read, not the cleanup, is the
+defect — and each is tracked by an existing PR slice in this document:
+
+1. JIT static/ambient `Ctx` capture (bridge singletons, `TerminalConsole`,
+   `nObject` helpers, generated `<clinit>`, `OpCondJump`):
+   `jit-bridge-static-owner-fix`, `jit-generated-static-owner-proof`, and
+   `jit-build-context-owner`.
+2. `ServiceContext` diagnostic ambient readers (`Utils.log`, `Argument`,
+   `OpVar`): `service-context-ambient-debug-cleanup`.
+3. Remaining `withPool(...)` ambient-pool consumers, with compiler/build scopes
+   still unasserted: `constant-pool-bridge-runtime-diagnostics` and
+   `constant-pool-build-bridge-audit`.
+
+The static `Ctx` captures in group 1 are the standing genuinely dangerous
+shape: unlike every thread-local in this table they have no clear at all —
+the first bound `Ctx` wins for the classloader lifetime. They are already
+MUST FIX above; closing row 134 does not soften them.

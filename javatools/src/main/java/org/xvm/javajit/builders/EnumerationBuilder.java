@@ -74,11 +74,11 @@ public class EnumerationBuilder extends CommonBuilder {
     /**
      * The name of the property holding the enum names.
      */
-    public static String NAMES = "$names";
+    public static final String NAMES = "$names";
 
     /**
      * The name of the property holding the enum values.
      */
-    public static String VALUES = "$values";
+    public static final String VALUES = "$values";
 
 }

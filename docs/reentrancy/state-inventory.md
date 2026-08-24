@@ -1079,3 +1079,129 @@ The goal is not "all fields must be final" as dogma. The goal is:
   https://www.jetbrains.com/help/inspectopedia/ThisEscapedInObjectConstruction.html
 - JetBrains Inspectopedia, "Overridable method called during object construction":
   https://www.jetbrains.com/help/inspectopedia/OverridableMethodCallDuringObjectConstruction.html
+
+## Row 160 Weak/Identity Registry Sweep
+
+This sweep was performed on 2026-08-24 on branch `lagergren/lazy-instance` to
+close must-audit backlog row 160 ("weak/identity owner registries"). The
+closure standard is the one the backlog states: for every weak/identity/plain
+registry that can be touched by more than one thread, prove single-owner
+confinement, verify consistent synchronization on every access path, or turn
+the row into a concrete must-fix finding.
+
+Enumeration command:
+
+```bash
+rg -n "WeakHashMap|IdentityHashMap|WeakReference|WeakHasherMap" \
+  javatools/src/main/java javatools_utils/src/main/java
+```
+
+The named row examples (`ServiceContext.m_mapTransient`,
+`ServiceContext.f_mapOpInfo`, `ConstantPool.f_setValidPools`,
+`OwnershipDiagnostics` maps, plus the fixed `Runtime.f_containers`) are all
+covered, and the sweep additionally pulled in the `WeakCallback`/callback-map
+registry, because it is a `WeakReference`-keyed ownership protocol even though
+the backing map is a plain `HashMap`.
+
+### Confinement Arguments Used
+
+Two ownership proofs recur below, so they are stated once:
+
+- Scheduling-lock confinement. A `ServiceContext` executes fibers only inside
+  `drainWork()`, and `drainWork()` runs only while the context's scheduling
+  lock is held. The lock is an atomic `getAndAdd`/CAS protocol on the volatile
+  `m_lLockScheduling` (`ServiceContext.java:373-413`), and lock ownership is
+  either released via CAS or transferred to a rescheduled executor task; both
+  the volatile RMW and the executor submission create happens-before edges
+  between successive owners. Confinement is therefore per logical owner, not
+  per Java thread: inline execution on a foreign thread is still inside the
+  lock. Cross-thread ingress goes through `f_queueMsg`/`f_queueResponse`,
+  which are `ConcurrentLinkedQueue`s (`ServiceContext.java:2121-2126`); state
+  behind the queues is single-owner.
+- Call-stack confinement. Several identity maps are method locals (or created
+  when a null parameter is passed) that never escape the call that allocated
+  them. They are confined by construction; identity keying is deliberate
+  visited-set/copy-map semantics.
+
+### Registry Table
+
+| Field | Structure | Access sites | Owner / synchronization evidence | Weak/identity hazards | Verdict |
+| --- | --- | --- | --- | --- | --- |
+| `Runtime.f_containers` | `WeakHashMap<Container, Object>` (`Runtime.java:149`) | `registerContainer` (`:56-61`), `containers()` snapshot (`:66-70`), `findContainer` iteration (`:75-86`) | Every path holds `synchronized (f_containers)`; the snapshot copies into a `HashSet` before release. This is the row's fixed inconsistent-monitor bug. | Expunge can mutate the map during any operation; the single common monitor makes that safe. Containers vanishing from the debug registry after GC is intended. | SYNCHRONIZED (monitor: the map itself) |
+| `Container.f_setServices` | set over `ConcurrentWeakHasherMap` (`Container.java:942`) | add `createServiceContext` (`:211`), remove `terminate` (`:252`), live-set getter (`:219`) iterated by `DebugConsole.java:1899`, reflective iteration in `OwnershipDiagnostics.java:358` | Backed by `ConcurrentHashMap` storage (`ConcurrentWeakHasherMap.java:27`); debugger/diagnostic iteration is weakly consistent and the key-set iterator filters cleared refs (`WeakHasherMap.java:119-124`). | GC'd services silently leave the set; iteration tolerates it. | SYNCHRONIZED (concurrent structure) |
+| `ServiceContext.f_mapOpInfo` | `WeakHashMap<Op, EnumMap>` with `WeakReference` values (`ServiceContext.java:2192`) | `getOpInfo`/`setOpInfo` (`:226-245`); callers are all op execution paths via `frame.f_context`: `OpIndex.java:173-189`, `OpVar.java:155-165`, `OpInvocable.java:131-190`, `OpCallable.java:198-474` | Scheduling-lock confinement: every caller passes the executing frame's own context, and frames execute only inside `drainWork()`. No cross-service, diagnostic, or shutdown path reads the map. The nested per-op `EnumMap`s are covered by the same ownership. | Keys are shared decoded `Op`s, values are owner-bearing (`CallChain`, `TypeComposition`), but the map itself is per-service, so cached values stay inside one container. Weak values can clear at any read; callers recompute. No path iterates the map, so mid-iteration expunge cannot bite. | CONFINED (service scheduling lock) |
+| `ServiceContext.m_mapTransient` | lazy `WeakHashMap<TransientId, ObjectHandle>` (`ServiceContext.java:2197`) | `getTransientValue`/`setTransientValue`/`ensureTransientMap` (`:250-270`); callers `ObjectHandle.java:444-458`, `ClassTemplate.java:825,851-867,1081` — all through the executing frame | Same scheduling-lock confinement; each service reads its own map even when the same handle (and thus the same `TransientId` key) is visible to several services. The lazy plain-field init is published to successor owners by the lock handoff edge. | `TransientId` has identity semantics by design (`ObjectHandle.java:1065`); the id is strongly held by the handle's field slot, so entries live exactly as long as the owning object. | CONFINED (service scheduling lock) |
+| `ServiceContext.m_mapCallbacks` + `WeakCallback` | lazy plain `HashMap<Long, Callback>` (`ServiceContext.java:2202`, `:280-293`) behind a `WeakReference<ServiceContext>` protocol (`WeakCallback.java`) | put in `WeakCallback` ctor (`WeakCallback.java:23`) on the registering service's owner thread; remove in `extractCallback` (`:32`) and read in `toString` (`:44`) called from `xLocalClock.Alarm.run` (`xLocalClock.java:252`) and `xNanosTimer.Alarm.run` (`xNanosTimer.java:387`) on the process-wide `ecstasy:LocalClock` timer thread (`xLocalClock.java:350`) | No common monitor. The owner mutates the map under its scheduling lock; the timer thread mutates it under no lock at all. | Not weak-keyed itself, but it is the registry half of a weak ownership protocol; a lost entry makes `extractCallback` throw. | NEEDS-FIX (see interleaving below) |
+| `Fiber.f_refCaller` | final `WeakReference<Fiber>` (`Fiber.java:610`) | ctor assigns (`:54,61,86`), `getCaller` (`:102`), `DebugConsole.java:251` | Final field, safely published with the fiber; never reassigned. | Readers already handle a cleared referent (null caller means "inception/collected"). | CONFINED (immutable) |
+| `ConstantPool.f_setValidPools` | identity set (`ConstantPool.java:4277`) | written only by `buildValidPoolSet`/`contributeToValidPoolSet` (`:501-525`) from `TypeCompositionStatement.java:1594` (compiler resolve pass, MODULE format); read by `register(...)` via `Constant.checkValidPools` (`ConstantPool.java:315`, `Constant.java:372-395`) | Mutation is confined to the compiling thread of the module that owns the pool; runtime-loaded pools never call `buildValidPoolSet`, so their set stays empty and `checkValidPools` no-ops (`Constant.java:379-382`). After compile-time linking the set is frozen and read-only; same-JVM compile-then-run readers see it through the runtime-startup executor handoff, the same piggyback-publication story already flagged for `f_listConst` in backlog row 109. | Identity keying is exactly right (pool identity, not equality); not weak. Two residual caveats, both routed to existing rows: the `set.isEmpty()` idempotence guard in `buildValidPoolSet` is not atomic, so parallel compilation of one module would corrupt the `IdentityHashMap` (compiler single-thread assumption, row 157); the runtime read relies on lifecycle publication rather than a JMM contract (frozen-pool split, rows 108/109). | CONFINED (compile-thread build, frozen read-only after) |
+| `ConstantPool.f_mapCompletingRegistration` | `IdentityHashMap<Constant, RegistrationCompletion>` (`ConstantPool.java:4250`) | `beginRegistrationCompletion` (`:341-351`, asserts `Thread.holdsLock(this)`), `finishRegistrationCompletion` (`:353-372`), `awaitRegistrationComplete` (`:374-397`) | Every map touch is inside `synchronized (this)`; the lock-free fast path reads only the volatile `m_fCompletingRegistration` flag, whose flag-before-publish ordering is part of the row-109 registration-completion guard. Waiting happens outside the monitor (deadlock regression covered by `ConstantPoolRegistrationDeadlockTest`). | Identity keying tracks the specific in-flight instance rather than a value-equal twin, which is required. Not weak. | SYNCHRONIZED (pool monitor + volatile fast-path flag) |
+| `SignatureConstant.m_sigPrev` / `m_refSigPrev` / `m_nCmpPrev` | strong/weak previous-comparison cache (`SignatureConstant.java:968-983`) | `compareDetails` (`:653-686`), invalidation (`:771-774`) | Reads validate through `m_lockPrev.tryOptimisticRead()`/`validate`; writes use `tryWriteLock` and skip caching under contention; invalidation takes the full write lock. The plain pre-check at `:653-654` is only a racy hint that gates entry to the validated read. | Same-pool hits are held strongly, cross-pool hits weakly so one pool cannot pin another (the comment at `:647-651` documents this). A cleared weak ref is just a cache miss. | SYNCHRONIZED (`StampedLock m_lockPrev`) |
+| `MethodStructure.Code.m_mapIndex` | `IdentityHashMap<Op, Integer>` (`MethodStructure.java:2797`) | invalidated in `add(...)` (`:2297`), aliased by `cloneOnto` (`:2461`) — no populate or read site exists | Assembly-time `Code` state on the compiling thread; the runtime never touches it. The field is write-only dead state: nothing ever fills or queries it. | None reachable; the `cloneOnto` alias copies only `null` in practice. Should-fix: delete the field in the next compiler cleanup slice. | CONFINED (compile-time; dead field) |
+| `TypeInfoReal` copy/visited maps | method-local `IdentityHashMap`s (`TypeInfoReal.java:123-124,179-180,289`) | built and consumed inside the per-owner copy constructors/helpers | Call-stack confinement; the maps never escape the `forType(...)` copy pass, which itself runs under the row-88/118 ownership model. | Identity keying is the point: per-owner metadata copies are keyed by source instance. | CONFINED (call-stack) |
+| `isShared` visited maps | local/parameter `IdentityHashMap`s (`ObjectHandle.java:629-647`, `xTuple.java:740-747`, `xRTDelegate.java:874-884`) | allocated when the caller passes null, threaded down the recursion only | Call-stack confinement on the thread performing the share check. | Visited-set identity semantics; nothing retains the map. | CONFINED (call-stack) |
+| `OwnershipDiagnostics.Dumper` maps | five `IdentityHashMap`-based structures (`OwnershipDiagnostics.java:275-282`) | populated and read only inside one `dump`/`validate`/`scanHandle` call (`:298-334`) | One `Dumper` per invocation; it never escapes and returns only text/`Validation` records. The sweep does read other containers' live maps reflectively, but those targets are concurrent structures and the identity maps themselves stay call-local. | Identity keying is deliberate (object-identity sharing detection). Not weak. | CONFINED (per-invocation) |
+| `TransientThreadLocal.TRANSIENT_MAP` | `ThreadLocal<IdentityHashMap>` (`TransientThreadLocal.java:138-139`) | all access through the thread's own map | Per-thread by construction. Cleanup discipline across pooled threads is the row-134 ambient-state audit, not a row-160 sharing issue. | Identity keying by `TransientThreadLocal` instance is intended. | CONFINED (per-thread) |
+| `WeakHasherMap` / `ConcurrentWeakHasherMap` infrastructure | weak-key map helpers (`WeakHasherMap.java`, `ConcurrentWeakHasherMap.java`) | `read()`/`write()`/`gc(...)` (`WeakHasherMap.java:59-108`) | Thread safety is delegated to the storage map; the concurrent subclass uses `ConcurrentHashMap` and only sweeps destructively when storage is concurrent. One documented-benign race: `fullGcInterval` (`:32`) is a plain int heuristic mutated by any accessor; it is always a power of two, int writes do not tear, and the worst case is a skewed sweep frequency. | Cleared refs are filtered from iteration; sweep uses `remove(key, ref)` two-arg semantics on the concurrent path. | SYNCHRONIZED (concurrent storage; benign heuristic race noted) |
+| `CooperativelyCleanableReference.KEEP_ALIVE` | `ConcurrentHashMap.newKeySet()` (`CooperativelyCleanableReference.java:64`) | `create` add (`:83`, after the constructor returns, per the PR #539 fix), `clean` remove (`:113`) | Concurrent set; cooperative cleanup can run on any creating thread safely. Currently no production caller in `javatools`. Non-row observation: `clean` can call `KEEP_ALIVE.remove(null)` when the queue is empty, which throws and is swallowed by the catch — noisy, not a concurrency defect. | Weak refs are kept strongly reachable until their cleaner runs; that is the class's purpose. | SYNCHRONIZED (concurrent structure) |
+| `Xvm.containers` | `ConcurrentHashMap<Long, WeakReference<Container>>` (`Xvm.java:117`) | `createContainer` putIfAbsent + periodic `removeIf` sweep (`:319-327`), `getContainer` (`:283-287`) | Concurrent map; ids come from an atomic counter so each key has one writer. | `getContainer` can return null after GC; callers must handle it. JIT lifecycle ownership overall is backlog rows 135/139. | SYNCHRONIZED (concurrent structure) |
+| `Xvm.typeSystems` | `ConcurrentHashMap<String, WeakReference<TypeSystem>>` (`Xvm.java:128`) | `register` putIfAbsent (`:396`) under the per-shape key mutex (`:362`); name generation reads + `tsMapModCount` sweep (`:419-447`) | Concurrent map; `tsMapModCount` is self-documented as a thread-unsafe heuristic counter, which is acceptable for sweep pacing. Flagged to the JIT umbrella: two differently-shaped type systems sharing a first-module name hold different key mutexes, so both can pass the `containsKey` loop with the same candidate name and the `putIfAbsent` loser throws `IllegalStateException` (`:396-398`). | Weak values make `containsKey`/`get().get()` non-atomic; the name loop already re-checks the referent. | SYNCHRONIZED (concurrent structure; name-collision window flagged to rows 135/139) |
+| `Xvm.moduleLoaders` + `packagesByModule` | `ConcurrentHashMap` with weak values (`Xvm.java:141`) plus `ConcurrentHashMap<String, String[]>` index (`:169`) | writes in `registerLoader` (`:522-559`) and `loadersGc` (`:566-603`) under `synchronized (moduleLoaders)`; reads in `ensureTypeSystem` (`:364-379`) under only the per-shape key mutex | Writers share one monitor; readers deliberately do not take it. The sparse `String[]` entries are mutated in place (`:553`, `:594`) while readers scan them, an acknowledged stale-tolerant design (`:161-167`): element reads are atomic reference reads, `String` is safely immutable, and every hit is double-checked against the loader's actual module. Worst case is a missed dedup, i.e. a duplicate identical `TypeSystem`. | Weak loaders can clear between index and map hops; the code null-checks each hop as the field comment requires. | SYNCHRONIZED (writers; documented stale-tolerant reads, routed to rows 135/139) |
+| `BuildContext.unassignedRegisters` | `IdentityHashMap<RegisterInfo, Label>` (`BuildContext.java:297`) | `:1324`, `:1333`, `:1704`, `:1924`, all within one code-generation pass | A `BuildContext` is created per method/property build (`:125`, `:137`, `:3385-3393`) and never escapes the pass. | Register identity keying is intended. | CONFINED (per-codegen pass) |
+
+### Must-Fix Finding: `WeakCallback` Callback Registry
+
+`ServiceContext.m_mapCallbacks` is the one registry in this sweep with a
+concrete broken interleaving. The map is a plain lazily-created `HashMap`
+owned by the service, but the `WeakCallback` protocol mutates it from two
+sides with no common synchronization:
+
+1. Service `S`'s owner thread (holding `S`'s scheduling lock) runs natural
+   code that schedules alarm `A1`: `new WeakCallback(frame, f1)` executes
+   `m_mapCallbacks.put(id1, cb1)` (`WeakCallback.java:23`).
+2. `A1` matures. The process-wide `ecstasy:LocalClock` timer thread runs
+   `Alarm.run()` and calls `extractCallback()`, which executes
+   `m_mapCallbacks.remove(id1)` (`WeakCallback.java:32`) — on the timer
+   thread, outside any lock. `Timer.schedule(...)`'s internal queue lock
+   makes `id1` itself visible, but creates no mutual exclusion.
+3. While step 2 is in flight, `S`'s owner thread schedules alarm `A2` (for
+   example from an unrelated fiber, or from the callback-adjacent natural
+   code path of another alarm): `m_mapCallbacks.put(id2, cb2)` runs
+   concurrently with the `remove`. Two threads now structurally modify one
+   `HashMap`; a put-triggered resize interleaved with the remove can lose
+   entries or corrupt the bucket table.
+4. Failure surfaces in either direction. If the entry is lost, a later
+   `extractCallback()` throws `IllegalStateException`
+   (`WeakCallback.java:37`) on the timer thread; an uncaught exception in a
+   `TimerTask` kills the shared static `Timer` (`xLocalClock.java:350`),
+   silently disabling every clock/timer alarm in every container in the
+   process. If the corruption hits the owner side instead, the service's
+   next `put` misbehaves inside its own lock.
+
+Secondary defect on the same registry: cancelling an alarm
+(`xLocalClock.Alarm.cancel`, `xNanosTimer.Alarm.cancel`) never removes the
+`Callback` entry, so cancelled alarms leak their captured `Frame` and
+`FunctionHandle` in `m_mapCallbacks` for the life of the service.
+
+Proper closure: make the callback registry an owner-owned concurrent
+structure — a final `ConcurrentHashMap<Long, Callback>` created eagerly (the
+keys are unique longs, so no compound check-then-act is needed) — or route
+`extractCallback` through the service's message queue so only the owner
+touches the map. Either shape should also remove the entry on cancel. This
+finding graduates from row 160 into the must-fix list.
+
+### Row-Closure Verdict
+
+The sweep audited 20 registry rows (grouping the per-call visited/copy maps
+by pattern): 10 CONFINED with stated owners, 9 SYNCHRONIZED with named
+monitors or concurrent structures, and 1 NEEDS-FIX. Row 160 can close as an
+audit: every weak/identity registry in `javatools` and `javatools_utils`
+production code now has an evidence-backed owner or synchronization story,
+and the remaining risk is converted into tracked work rather than unknowns —
+the `WeakCallback`/`m_mapCallbacks` race becomes a must-fix item; the
+`f_setValidPools` publication caveat and non-atomic build guard ride the
+existing frozen-pool and parallel-compiler rows (108/109, 157); the ambient
+`ThreadLocal` lifetime questions stay with row 134; and the two flagged
+`Xvm` windows belong to the JIT umbrella rows (135/139). No other row-160
+example produced a defect: `Runtime.f_containers` is verified fixed, and the
+`ServiceContext` op-info/transient maps are proven confined by the scheduling
+lock rather than assumed safe.

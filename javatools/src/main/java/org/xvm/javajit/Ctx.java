@@ -183,6 +183,6 @@ public final class Ctx {
     public static final MethodTypeDesc MD_getConstant = MethodTypeDesc.of(
         ClassDesc.of(Constant.class.getName()), CD_JavaString, CD_int);
 
-    public static MethodTypeDesc MD_inject = MethodTypeDesc.of(
+    public static final MethodTypeDesc MD_inject = MethodTypeDesc.of(
         CD_JavaObject, CD_TypeConstant, CD_JavaString, CD_JavaObject);
 }

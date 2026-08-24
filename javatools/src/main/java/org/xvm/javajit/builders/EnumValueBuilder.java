@@ -87,5 +87,5 @@ public class EnumValueBuilder extends CommonBuilder {
     /**
      * The name of the property holding the enum's name.
      */
-    public static String NAME = "$name";
+    public static final String NAME = "$name";
 }
