@@ -355,7 +355,10 @@ compiler trees can be swept by one mechanism.
    after.diffFrom(before).retained();   // completed-run survivors = leaks
    ```
 2. Execution-state capture: fibers, frames, current op, registers, callback
-   counts; quiesced mode for stress harnesses.
+   counts; quiesced mode for stress harnesses. Issue #541 (the permanent
+   injector deadlock, `541.md`) is this slice's strongest justification: the
+   acceptance test is snapshotting a hung run of the reproducer and having
+   the fiber wait-cycle print itself.
 3. Generic reflective reachability sweep with owner-extractor registry,
    allowlisted terminals, path-to-root findings, and the coverage test.
 4. Snapshot diffing for same-JVM leak detection, wired into
