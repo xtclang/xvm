@@ -52,7 +52,7 @@ import static org.xvm.javajit.Builder.MD_xvmType;
 /**
  * Represent a constant that specifies the union ("|") of two types.
  */
-public class UnionTypeConstant
+public final class UnionTypeConstant
         extends RelationalTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 

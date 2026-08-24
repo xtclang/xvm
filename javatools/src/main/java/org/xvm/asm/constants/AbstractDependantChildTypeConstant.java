@@ -20,8 +20,9 @@ import org.xvm.asm.ConstantPool;
 /**
  * A base class for TypeConstants based on the parent's type and a child class structure.
  */
-public abstract class AbstractDependantChildTypeConstant
-        extends AbstractDependantTypeConstant {
+public abstract sealed class AbstractDependantChildTypeConstant
+        extends AbstractDependantTypeConstant
+        permits AnonymousClassTypeConstant, InnerChildTypeConstant, VirtualChildTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

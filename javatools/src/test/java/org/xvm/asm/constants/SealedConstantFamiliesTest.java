@@ -50,6 +50,32 @@ public class SealedConstantFamiliesTest {
         assertPermits(TypeInfo.class, TypeInfoReal.class);
     }
 
+    /**
+     * Stage 2: the TypeConstant tree - the most instanceof-tested hierarchy in the codebase
+     * (181 occurrences) - is sealed shut: the root permits its eleven direct kinds, every
+     * intermediate is sealed, every leaf final.
+     */
+    @Test
+    public void typeConstantTreeIsSealed() {
+        assertPermits(TypeConstant.class,
+                AbstractDependantTypeConstant.class, AccessTypeConstant.class,
+                AnnotatedTypeConstant.class, ImmutableTypeConstant.class,
+                ParameterizedTypeConstant.class, PendingTypeConstant.class,
+                RelationalTypeConstant.class, ServiceTypeConstant.class,
+                TerminalTypeConstant.class, TypeSequenceTypeConstant.class,
+                UnresolvedTypeConstant.class);
+        assertPermits(AbstractDependantTypeConstant.class,
+                AbstractDependantChildTypeConstant.class, PropertyClassTypeConstant.class);
+        assertPermits(AbstractDependantChildTypeConstant.class,
+                AnonymousClassTypeConstant.class, InnerChildTypeConstant.class,
+                VirtualChildTypeConstant.class);
+        assertPermits(RelationalTypeConstant.class,
+                DifferenceTypeConstant.class, IntersectionTypeConstant.class,
+                UnionTypeConstant.class);
+        assertPermits(IntersectionTypeConstant.class, CastTypeConstant.class);
+        assertPermits(TerminalTypeConstant.class, RecursiveTypeConstant.class);
+    }
+
     // ----- helpers -------------------------------------------------------------------------------
 
     private static void assertPermits(Class<?> root, Class<?>... leaves) {

@@ -42,7 +42,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * <br/>where T2 is {@code ParameterizedTypeConstant(T3, String)},
  * <br/>where T3 is {@code TerminalTypeConstant(Parent)}
  */
-public class VirtualChildTypeConstant
+public final class VirtualChildTypeConstant
         extends AbstractDependantChildTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 

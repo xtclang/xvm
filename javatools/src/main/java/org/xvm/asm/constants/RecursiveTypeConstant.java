@@ -28,7 +28,7 @@ import org.xvm.util.Hash;
 /**
  * Represent a type for a recursive "typedef" constant.
  */
-public class RecursiveTypeConstant
+public final class RecursiveTypeConstant
         extends TerminalTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -18,7 +18,7 @@ import org.xvm.util.Hash;
 /**
  * Represents a formal type parameter constant that has not been determined yet.
  */
-public class PendingTypeConstant
+public final class PendingTypeConstant
         extends TypeConstant {
     /**
      * Construct the type constant.

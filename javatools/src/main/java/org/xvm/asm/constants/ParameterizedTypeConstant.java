@@ -38,7 +38,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A TypeConstant that represents a parameterized type.
  */
-public class ParameterizedTypeConstant
+public final class ParameterizedTypeConstant
         extends TypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -24,8 +24,9 @@ import static org.xvm.util.Handy.writeMagnitude;
 /**
  * A base class for TypeConstants based on the parent's type.
  */
-public abstract class AbstractDependantTypeConstant
-        extends TypeConstant {
+public abstract sealed class AbstractDependantTypeConstant
+        extends TypeConstant
+        permits AbstractDependantChildTypeConstant, PropertyClassTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

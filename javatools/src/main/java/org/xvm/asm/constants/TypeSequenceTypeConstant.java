@@ -23,7 +23,7 @@ import org.xvm.asm.Register;
  * <li>{@code interface Tuple<ElementTypes extends Tuple<ElementTypes>>}</li>
  * <li>{@code interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>}</li>
  */
-public class TypeSequenceTypeConstant
+public final class TypeSequenceTypeConstant
         extends TypeConstant {
     /**
      * Construct the type constant.

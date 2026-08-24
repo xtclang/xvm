@@ -35,8 +35,9 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A common base for relational types.
  */
-public abstract class RelationalTypeConstant
-        extends TypeConstant {
+public abstract sealed class RelationalTypeConstant
+        extends TypeConstant
+        permits DifferenceTypeConstant, IntersectionTypeConstant, UnionTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

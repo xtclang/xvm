@@ -21,7 +21,7 @@ import org.xvm.javajit.TypeSystem;
  * Note: this type is transient in nature; used only by the compiler and cannot be stored in a
  * ConstantPool.
  */
-public class CastTypeConstant
+public final class CastTypeConstant
         extends IntersectionTypeConstant {
     public CastTypeConstant(ConstantPool pool, TypeConstant constType1, TypeConstant constType2) {
         super(pool, constType2.combine(pool, constType1), constType2);

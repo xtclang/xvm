@@ -25,7 +25,7 @@ import org.xvm.util.Severity;
 /**
  * Represent a type constant that will eventually be replaced with a real type constant.
  */
-public class UnresolvedTypeConstant
+public final class UnresolvedTypeConstant
         extends TypeConstant
         implements ResolvableConstant {
     // ----- constructors --------------------------------------------------------------------------

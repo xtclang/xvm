@@ -27,7 +27,7 @@ import org.xvm.util.ListMap;
 /**
  * Represent a constant that specifies the difference (relative complement) ("-") of two types.
  */
-public class DifferenceTypeConstant
+public final class DifferenceTypeConstant
         extends RelationalTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 

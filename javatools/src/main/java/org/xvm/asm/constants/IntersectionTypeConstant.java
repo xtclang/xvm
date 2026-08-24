@@ -27,8 +27,9 @@ import org.xvm.util.Severity;
 /**
  * Represent a constant that specifies the intersection ("+") of two types.
  */
-public class IntersectionTypeConstant
-        extends RelationalTypeConstant {
+public sealed class IntersectionTypeConstant
+        extends RelationalTypeConstant
+        permits CastTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

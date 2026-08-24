@@ -24,7 +24,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Represent a constant that specifies an explicitly immutable form of an underlying type.
  */
-public class ImmutableTypeConstant
+public final class ImmutableTypeConstant
         extends TypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 

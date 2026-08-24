@@ -130,9 +130,13 @@ import static org.xvm.util.Handy.lazyAddAll;
  * the transformed constant doesn't create any new cross-pool dependencies and can be safely placed
  * into the same constant pool.
  */
-public abstract class TypeConstant
+public abstract sealed class TypeConstant
         extends Constant
-        implements GenericTypeResolver {
+        implements GenericTypeResolver
+        permits AbstractDependantTypeConstant, AccessTypeConstant, AnnotatedTypeConstant,
+                ImmutableTypeConstant, ParameterizedTypeConstant, PendingTypeConstant,
+                RelationalTypeConstant, ServiceTypeConstant, TerminalTypeConstant,
+                TypeSequenceTypeConstant, UnresolvedTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

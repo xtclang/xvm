@@ -58,7 +58,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * The run-time type of the variable ref above is {@code PropertyClassType(T1, "prop")}, where T1
  * is TerminalTypeConstant(Outer).
  */
-public class PropertyClassTypeConstant
+public final class PropertyClassTypeConstant
         extends AbstractDependantTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 

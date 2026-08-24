@@ -19,7 +19,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Represent a constant that specifies that the underlying type is a service.
  */
-public class ServiceTypeConstant
+public final class ServiceTypeConstant
         extends TypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 

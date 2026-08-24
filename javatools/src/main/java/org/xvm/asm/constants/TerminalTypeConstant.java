@@ -52,8 +52,9 @@ import static org.xvm.util.Handy.writeMagnitude;
  * <li>{@link UnresolvedNameConstant} for a definition that has not been resolved at this point</li>
  * </ul>
  */
-public class TerminalTypeConstant
-        extends TypeConstant {
+public sealed class TerminalTypeConstant
+        extends TypeConstant
+        permits RecursiveTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

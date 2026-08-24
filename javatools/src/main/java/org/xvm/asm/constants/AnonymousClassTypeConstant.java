@@ -57,7 +57,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * carrying the "parent" type information. In the example above, it would be
  * {@code Map<Key, Value>.iterator().Iterator:1<Map.Key>}.
  */
-public class AnonymousClassTypeConstant
+public final class AnonymousClassTypeConstant
         extends AbstractDependantChildTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 

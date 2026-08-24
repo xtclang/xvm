@@ -29,7 +29,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * A TypeConstant that represents an accessibility constraint for an underlying type that
  * represents module, package, or class.
  */
-public class AccessTypeConstant
+public final class AccessTypeConstant
         extends TypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 
