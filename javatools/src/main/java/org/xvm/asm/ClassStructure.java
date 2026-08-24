@@ -1007,19 +1007,29 @@ public sealed class ClassStructure
         return result;
     }
 
+    /**
+     * Body-copy constructor; see {@link Component#Component(Component)}.
+     */
+    protected ClassStructure(ClassStructure that) {
+        super(that);
+
+        // deep-copy the parameter list information (since the structure is mutable)
+        if (that.m_mapParams != null) {
+            ListMap<StringConstant, TypeConstant> mapParams = new ListMap<>();
+            mapParams.putAll(that.m_mapParams);
+            m_mapParams = mapParams;
+        }
+        m_constPath     = that.m_constPath;
+        m_typeFormal    = that.m_typeFormal;
+        m_typeCanonical = that.m_typeCanonical;
+        m_safety        = that.m_safety;
+        m_aAnnoClass    = that.m_aAnnoClass;
+        m_aAnnoMixin    = that.m_aAnnoMixin;
+    }
+
     @Override
     protected ClassStructure cloneBody() {
-        ClassStructure that = (ClassStructure) super.cloneBody();
-
-        // deep-clone the parameter list information (since the structure is mutable)
-        if (this.m_mapParams != null) {
-            ListMap<StringConstant, TypeConstant> mapThis = this.m_mapParams;
-            ListMap<StringConstant, TypeConstant> mapThat = new ListMap<>();
-            mapThat.putAll(mapThis);
-            that.m_mapParams = mapThat;
-        }
-
-        return that;
+        return new ClassStructure(this);
     }
 
     /**

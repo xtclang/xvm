@@ -29,7 +29,8 @@ public final class CompositeComponent
      * @param siblings  the siblings
      */
     protected CompositeComponent(Component parent, List<Component> siblings) {
-        super(parent);
+        // the cast selects the parent-only constructor, not the body-copy constructor
+        super((XvmStructure) parent);
         f_siblings = siblings;
     }
 

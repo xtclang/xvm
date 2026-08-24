@@ -1044,6 +1044,14 @@ public final class FileStructure
         }
     }
 
+    @Override
+    protected FileStructure cloneBody() {
+        // the file structure is the root of the component hierarchy and is never body-cloned;
+        // module surgery goes through merge/link paths that clone the modules, not the root
+        throw new UnsupportedOperationException();
+    }
+
+
     // ----- Component methods ---------------------------------------------------------------------
 
     @Override

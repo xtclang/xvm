@@ -706,21 +706,34 @@ public final class ModuleStructure
                 : m_moduleActual.resolveName(sName, access, collector);
     }
 
+    /**
+     * Body-copy constructor; see {@link Component#Component(Component)}.
+     */
+    protected ModuleStructure(ModuleStructure that) {
+        super(that);
+
+        m_constDir       = that.m_constDir;
+        m_constTimestamp = that.m_constTimestamp;
+        m_moduletype     = that.m_moduletype;
+        m_constVersion   = that.m_constVersion;
+        if (that.m_vtreeImportAllowVers != null) {
+            m_vtreeImportAllowVers = new VersionTree<>();
+            m_vtreeImportAllowVers.putAll(that.m_vtreeImportAllowVers);
+        }
+        if (that.m_listImportPreferVers != null) {
+            m_listImportPreferVers = new ArrayList<>(that.m_listImportPreferVers);
+        }
+        m_moduleActual    = that.m_moduleActual;
+        m_pkgImport       = that.m_pkgImport;
+        m_abDigest        = that.m_abDigest;
+        m_mapCondNames    = that.m_mapCondNames;
+        m_mapDependencies = that.m_mapDependencies;
+        m_vtree           = that.m_vtree;
+    }
+
     @Override
     protected ModuleStructure cloneBody() {
-        ModuleStructure that = (ModuleStructure) super.cloneBody();
-
-        if (this.m_vtreeImportAllowVers != null) {
-            that.m_vtreeImportAllowVers = new VersionTree<>();
-            that.m_vtreeImportAllowVers.putAll(this.m_vtreeImportAllowVers);
-        }
-
-        if (this.m_listImportPreferVers != null) {
-            that.m_listImportPreferVers = new ArrayList<>();
-            that.m_listImportPreferVers.addAll(this.m_listImportPreferVers);
-        }
-
-        return that;
+        return new ModuleStructure(this);
     }
 
     @Override

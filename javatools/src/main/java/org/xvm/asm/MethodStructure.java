@@ -1762,9 +1762,44 @@ public final class MethodStructure
         return super.resolveName(sName, access, collector);
     }
 
+    /**
+     * Body-copy constructor; see {@link Component#Component(Component)}. The parameter arrays,
+     * the live Code object, and the Source are re-owned by {@link #cloneBody()} after
+     * construction: each stores a reference to its owning method, and handing out {@code this}
+     * during construction would be a constructor escape.
+     */
+    protected MethodStructure(MethodStructure that) {
+        super(that);
+
+        m_aAnnotations   = that.m_aAnnotations;
+        m_idFinally      = that.m_idFinally;
+        m_aReturns       = that.m_aReturns;   // re-owned by cloneBody()
+        m_cTypeParams    = that.m_cTypeParams;
+        m_cDefaultParams = that.m_cDefaultParams;
+        m_aParams        = that.m_aParams;    // re-owned by cloneBody()
+        m_idSuper        = that.m_idSuper;
+        m_aconstSuper    = that.m_aconstSuper;
+        m_abOps          = that.m_abOps;
+        m_abAst          = that.m_abAst;
+        m_aconstLocal    = that.m_aconstLocal == null ? null : that.m_aconstLocal.clone();
+        m_registry       = that.m_registry;
+        m_ast            = that.m_ast;
+        m_aAstParams     = that.m_aAstParams;
+        m_cVars          = that.m_cVars;
+        m_cScopes        = that.m_cScopes;
+        m_fNative        = that.m_fNative;
+        m_fTransient     = that.m_fTransient;
+        m_FHasCode       = that.m_FHasCode;
+        m_FUsesSuper     = that.m_FUsesSuper;
+        m_safety         = that.m_safety;
+        m_fInitialized   = that.m_fInitialized;
+        // m_code and m_source stay null until cloneBody() re-owns them; m_structFinally stays
+        // null to force reloading, exactly as the old clone reset it
+    }
+
     @Override
     protected MethodStructure cloneBody() {
-        MethodStructure that = (MethodStructure) super.cloneBody();
+        MethodStructure that = new MethodStructure(this);
 
         int cReturns = getReturnCount();
         that.m_aReturns = cReturns == 0 ? m_aReturns : copyParametersFor(that, m_aReturns);
@@ -1773,24 +1808,16 @@ public final class MethodStructure
         that.m_aParams = cParams == 0 ? m_aParams : copyParametersFor(that, m_aParams);
 
         if (this.m_abOps == null && this.m_code != null) {
-            // m_code is a mutable object, and tied back to the MethodStructure, so explicitly clone it
+            // m_code is a mutable object, and tied back to the MethodStructure, so explicitly
+            // re-own it onto the copy
             that.m_code = this.m_code.cloneOnto(that);
-        } else {
-            that.m_code = null;
         }
 
         // REVIEW is it necessary to explicitly clone the AST? we treat it as immutable data, but it
         //        will hold references to Constants from the pool -- does that matter?
 
-        if (this.m_aconstLocal != null) {
-            that.m_aconstLocal = this.m_aconstLocal.clone();
-        }
-
-        // force the reloading of the m_structFinally
-        that.m_structFinally = null;
-
         if (this.m_source != null) {
-            // that.new re-binds the inner class's outer reference to the clone; the old
+            // that.new re-binds the inner class's outer reference to the copy; the old
             // Object.clone() left it pointing at this method, so the copied source resolved
             // getConstantPool() through the wrong owner
             that.m_source = that.new Source(this.m_source);

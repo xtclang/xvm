@@ -35,6 +35,21 @@ public final class TypedefStructure
     }
 
 
+    /**
+     * Body-copy constructor; see {@link Component#Component(Component)}.
+     */
+    protected TypedefStructure(TypedefStructure that) {
+        super(that);
+
+        m_type = that.m_type;
+    }
+
+    @Override
+    protected TypedefStructure cloneBody() {
+        return new TypedefStructure(this);
+    }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override

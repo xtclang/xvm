@@ -84,6 +84,26 @@ public final class PropertyStructure
     }
 
 
+    /**
+     * Body-copy constructor; see {@link Component#Component(Component)}.
+     */
+    protected PropertyStructure(PropertyStructure that) {
+        super(that);
+
+        m_accessVar = that.m_accessVar;
+        m_type      = that.m_type;
+        m_constVal  = that.m_constVal;
+        m_fNative   = that.m_fNative;
+        m_aPropAnno = that.m_aPropAnno;
+        m_aRefAnno  = that.m_aRefAnno;
+    }
+
+    @Override
+    protected PropertyStructure cloneBody() {
+        return new PropertyStructure(this);
+    }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override

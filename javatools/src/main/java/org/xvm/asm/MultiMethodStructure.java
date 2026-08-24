@@ -231,13 +231,17 @@ public final class MultiMethodStructure
         return null;
     }
 
+    /**
+     * Body-copy constructor; see {@link Component#Component(Component)}. The method-by-constant
+     * cache is owner-local and stays null in the copy, exactly as the old clone reset it.
+     */
+    protected MultiMethodStructure(MultiMethodStructure that) {
+        super(that);
+    }
+
     @Override
-    protected Component cloneBody() {
-        MultiMethodStructure that = (MultiMethodStructure) super.cloneBody();
-
-        that.m_methodByConstant = null;
-
-        return that;
+    protected MultiMethodStructure cloneBody() {
+        return new MultiMethodStructure(this);
     }
 
 

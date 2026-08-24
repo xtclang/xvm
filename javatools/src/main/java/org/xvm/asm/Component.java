@@ -104,7 +104,7 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public abstract sealed class Component
         extends XvmStructure
-        implements Documentable, Cloneable, ComponentResolver
+        implements Documentable, ComponentResolver
         permits ClassStructure, CompositeComponent, FileStructure, MethodStructure,
                 MultiMethodStructure, PropertyStructure, TypedefStructure {
     // ----- constructors --------------------------------------------------------------------------
@@ -156,14 +156,15 @@ public abstract sealed class Component
     }
 
     /**
-     * Package private constructor used by the CompositeComponent.
+     * Package private constructor used by the CompositeComponent, which is a synthetic view
+     * over sibling components and carries no body state of its own. Declared against
+     * XvmStructure so it cannot collide with the body-copy constructor
+     * {@link #Component(Component)}; the composite's call site selects it by an explicit cast.
      *
-     * @param parent  the parent of the composite component
+     * @param xsParent  the parent of the composite component
      */
-    Component(Component parent) {
-        super(parent);
-        // TODO this constructor is not currently used, but there are fields that need to be copied
-        //      in order for it to be correct
+    Component(XvmStructure xsParent) {
+        super(xsParent);
     }
 
 
@@ -2030,35 +2031,47 @@ public abstract sealed class Component
     }
 
     /**
-     * Clone this component's body, but not its siblings nor its children.
+     * Body-copy constructor, replacing the retired Cloneable mechanism. Copies this component's
+     * body - not its siblings, not its children - exactly as the old Object.clone()-based
+     * cloneBody() did: same parent, same identity/condition/flags/doc state, deep-copied
+     * contribution list, no sibling/child state. One deliberate difference: the contribution
+     * copies are created against the NEW component, so Contribution.getComponent() answers the
+     * copy - the old shallow clone duplicated each contribution's hidden outer reference, so a
+     * cloned component's contributions kept answering with the SOURCE component.
      *
-     * @return a clone of this component, sans siblings and sans children
+     * @param that  the component whose body to copy
      */
-    protected Component cloneBody() {
-        Component that;
-        try {
-            that = (Component) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
+    protected Component(Component that) {
+        super(that.getParent());
 
-        // deep clone the contributions
-        List<Contribution> listContribs = m_listContribs;
+        m_constId   = that.m_constId;
+        m_cond      = that.m_cond;
+        m_nFlags    = that.m_nFlags;
+        m_sDoc      = that.m_sDoc;
+        m_fModified = that.m_fModified;
+        m_FVisited  = that.m_FVisited;
+
+        List<Contribution> listContribs = that.m_listContribs;
         if (listContribs != null) {
             List<Contribution> listClone = new ArrayList<>(listContribs.size());
-
-            for (Contribution listContrib : listContribs) {
-                listClone.add((Contribution) listContrib.clone());
+            for (Contribution contrib : listContribs) {
+                listClone.add(new Contribution(contrib));
             }
-            that.m_listContribs = listClone;
+            m_listContribs = listClone;
         }
-
-        that.m_sibling     = null;
-        that.m_childByName = null;
-        that.m_abChildren  = null;
-
-        return that;
+        // m_sibling, m_childByName, and m_abChildren stay null: a body copy carries no
+        // siblings and no children
     }
+
+    /**
+     * Clone this component's body, but not its siblings nor its children. Abstract over the
+     * sealed tree: every structure kind must supply its body-copy constructor and this hook,
+     * so a new structure kind without a complete copy path is a compile error here instead of
+     * a partially copied structure at runtime.
+     *
+     * @return a copy of this component, sans siblings and sans children
+     */
+    protected abstract Component cloneBody();
 
     /**
      * Clone the passed collection child components onto this component.
@@ -2636,8 +2649,26 @@ public abstract sealed class Component
      * abstract sense, meaning any class, interface, mixin, const, enum, or service) can be composed
      * of any number of contributing components.
      */
-    public class Contribution
-            implements Cloneable {
+    public class Contribution {
+        /**
+         * Body-copy constructor, replacing the retired Cloneable mechanism. Field-for-field
+         * copy, matching the old shallow clone, but created against the enclosing component
+         * that is making the copy: Contribution is an inner class, and Object.clone()
+         * duplicated the hidden outer reference, so a cloned component's contributions kept
+         * answering getComponent() with the SOURCE component.
+         *
+         * @param that  the contribution to copy
+         */
+        protected Contribution(Contribution that) {
+            m_composition   = that.m_composition;
+            m_typeContrib   = that.m_typeContrib;
+            m_constProp     = that.m_constProp;
+            m_annotation    = that.m_annotation;
+            m_mapParams     = that.m_mapParams;
+            m_constInjector = that.m_constInjector;
+            m_listInject    = that.m_listInject;
+        }
+
         /**
          * @see XvmStructure#disassemble(DataInput)
          */

@@ -28,6 +28,19 @@ public final class PackageStructure
     }
 
 
+    /**
+     * Body-copy constructor; see {@link Component#Component(Component)}.
+     */
+    protected PackageStructure(PackageStructure that) {
+        super(that);
+    }
+
+    @Override
+    protected PackageStructure cloneBody() {
+        return new PackageStructure(this);
+    }
+
+
     // ----- accessors --------------------------------------------------------------------------------------
 
     /**
