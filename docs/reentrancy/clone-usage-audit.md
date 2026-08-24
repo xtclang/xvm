@@ -925,3 +925,109 @@ access-view clones; and the base `m_fMutable` per-view freeze split. All five
 are view-lifecycle/single-instance-aliasing gaps inside one container - none
 is cross-owner movement, which remains guarded by the `maskAs` shared-graph
 rejection.
+
+## Clone Eradication Feasibility Study (2026-08-24)
+
+Answers must-audit row 149: should `cloneAs` be restricted to immutable
+handles, with delegating facades replacing mutable views? Method: every class
+transitively extending `ObjectHandle` in main sources (88, nested classes
+included) was enumerated and its *own* instance fields classified; every
+`cloneAs` call site and override was read; identity-sensitive handle uses and
+JIT coupling were swept. Key line numbers were re-verified against the
+working tree on this date.
+
+### Verdict
+
+**Full facade eradication: not needed now.** The per-class discipline -
+shared cells for `GenericHandle` views, fail-loud refusal guards everywhere
+else - has, as of today, closed every gap the sweep found, and the sweep was
+exhaustive over the handle tree. The recommended structural follow-up is the
+cheaper half of this row's title: **default-deny `cloneAs` at the
+`ObjectHandle` base** (refuse `isMutable()` handles unless the subclass
+explicitly opts in; `GenericHandle` opts in because its cells and
+copy-on-write field layer make mutable views safe). That deletes the
+unknown-unknowns category permanently at ~20 lines, subsumes three of the
+five refusal guards, and requires no encapsulation refactor. It should land
+only together with a runtime smoke/stress pass (same-JVM harness backlog),
+because unit coverage of exotic mask/reveal paths is thin and the guard's
+whole point is to fire on paths nobody enumerated.
+
+### What The Sweep Found
+
+Coverage after this branch's guards (all 88 classes classified):
+
+- **Covered by cells (by design):** `GenericHandle` and subclasses - freeze
+  cell, lazy-init guard, atomic/injected referent cells, copy-on-write
+  `m_aFieldOverrides` (the one deliberately per-view mutable layer,
+  `ObjectHandle.java:725-796`).
+- **Covered by refusal guards:** `ArrayHandle` (non-Constant),
+  `TupleHandle`, `FunctionHandle` (mutable), register-bound `RefHandle`
+  (`xRef.java:889`), and - closed by this study - the entire
+  **`DelegateHandle` family** (`xRTDelegate.java`), which carried per-instance
+  `m_cSize`/`m_mutability` over shared storage that six typed subclasses
+  replace wholesale on grow (`ByteArrayHandle.m_abValue`,
+  `LongArrayHandle.m_alValue`, `CharArrayHandle.m_achValue`,
+  `GenericArrayDelegate.m_ahValue`, `DoubleArrayHandle.m_adValue`,
+  `StringArrayHandle.m_asValue`) plus the slice/view/bit-view subtree
+  inheriting the same split. No live clone path existed, so the new guard is
+  a fence, not a behavior change; `ArrayViewGuardTest` pins it.
+- **Graduated to the backlog (real findings, orthogonal to facades):**
+  1. `xRTSocket.SocketHandle` - a **live per-call clone path**: the service
+     handle is constructed masked (`xRTSocket.java:91`), every native entry
+     does `revealOrigin()` (`:417`) which is `cloneAs(f_clzInception)` per
+     call (`ClassComposition.java:196`), and `socket` is the handle's *own*
+     volatile field written at `:256`/`:398` on whichever view the call
+     holds. The per-call-clone mechanism is verified from source; the exact
+     runtime damage (which views circulate, whether the registered service
+     handle ever sees the socket) needs a trace. Must audit, likely must fix
+     by keying the socket off shared state (a field in `m_aFields` or a
+     final cell), not a per-view Java field.
+  2. `xRTFunction.FullyBoundHandle` - claims immutability derived from its
+     bound arguments (`:889-898`) yet mutates `m_next` post-construction in
+     `chain()` (`:939`). An all-immutable-args chain node passes the
+     mutable-view refusal and the immutability claim is wrong-shaped
+     regardless of views. Narrow; must audit.
+- **Benign:** ctor-only fields that should simply be `final`
+  (`JavaLong.m_lValue`, `EnumHandle.m_index`, `ConnectorHandle.f_sslContext`,
+  `LongLongHandle`), and value-identical recomputation caches
+  (`StringHandle.m_hash/m_sValue`, `IntNHandle`, `FPNHandle`,
+  `ArrayHandle.m_hHash`).
+
+### What Facades Would Buy, And What They Would Cost
+
+Deletable machinery if one canonical handle owned all state and views were
+pointer-holding facades: **~370 production lines across 10 files** (the
+freeze cell + updater + reroutes, the lazy-init guard, the atomic/injected
+cells, five refusal guards, four clone-suppressing `revealOrigin`/`cloneAs`
+overrides) plus **~1,120 test lines / 12 tests** (`FreezeViewSharingTest`
+with its 24-write ratchet, `AtomicViewSharingTest`,
+`GenericHandleCloneAsTest`, the three view-guard tests). Identity semantics
+would strictly improve at the four sites where one-object-many-handles is
+visible today: Ecstasy `==` is Java identity (`ClassTemplate.java:1626`),
+function equality is identity (`xRTFunction.java:179` - already patched by a
+`revealOrigin() { return this; }` override), fiber token maps are
+handle-keyed (`Fiber.java:667`), and `Frame.VarInfo` caches a single
+`RefHandle` instance (`Frame.java:2533`).
+
+The costs that flip the verdict:
+
+- The refactor surface is not `cloneAs` itself but **field encapsulation**:
+  views are reached through public fields (`TupleHandle.m_ahValue`,
+  `GenericHandle.m_aFields`, `ArrayHandle.m_hDelegate`) and post-clone
+  concrete-class casts across the template codebase. Facades require every
+  such access behind a method first - a wide, behavior-neutral but
+  high-churn precondition.
+- `GenericHandle` construction *requires* mutable views (struct-access
+  clones during construction); the cell pattern already absorbs exactly
+  this, so facades would re-solve a solved problem there.
+- **JIT coupling is zero** - `org/xvm/javajit` and `javatools_jitbridge`
+  reference no handle internals at all - so the redesign does not get more
+  expensive by waiting. There is no compounding-cost argument for doing it
+  now.
+
+Reopen the facade design only if (a) new per-view mutable state keeps
+accruing on `GenericHandle` views faster than the cell pattern absorbs it,
+or (b) the identity sites above produce a real defect. Until then: land the
+default-deny base guard with the stress harness, finalize the benign
+ctor-only fields opportunistically, and keep the refusal guards as the
+boundary of record.
