@@ -62,6 +62,159 @@ semantics, and clear owner/performance reasoning.
 | 16 | Seal the closed constant, AST, and structure hierarchies | Compile-checked exhaustiveness over hierarchies that are closed in practice; silent dispatch defaults become compile errors. | Independent; before PR 18 |
 | 17 | Guard handle view lifecycles and default-deny mutable view cloning | Closes the freeze-split family structurally: refusal guards, shared cells/holders, and a default-deny base rule replace per-class patching. | PR 1-5 for context; technically independent |
 | 18 | Retire java.lang.Cloneable outside two disciplined islands | Copy constructors replace Object.clone(); fixes two inner-class outer-pointer defects the mechanism itself caused. | PR 16 (sealed tree enforces copy-path completeness); PR 17 recommended first |
+| 19 | Typed dispatch showcase: three exhibits, zero behavior change | The deliberately small opener: stringly-typed dispatch, a tolerant-default format switch, and 26 blind casts each replaced by what the language does for free. Candidate FIRST PR of the series - it sells the whole modernization direction on one screen of diff. | None; strongest with the stage-0 slice of PR 16 folded in (the two sealed families exhibit 2 switches over) |
+
+## PR 19: Typed Dispatch Showcase (Candidate Opener)
+
+DO NOT FILE without explicit approval; this section is the finished description
+for when that decision is made. Branch commit: `86c89e175` (exhibits + tests),
+plus the stage-0 sealing slice of `e59d4f82d` if exhibit 2's two sealed
+families ride along instead of depending on PR 16.
+
+### Why This One First
+
+Every other PR in this sequence asks the reviewer to accept an analysis -
+about ownership, races, lifecycle state. This one asks nothing: it puts the
+old line and the new line side by side and lets javac be the reviewer. It is
+deliberately small (six files, three exhibits, net code *shrinks* while
+javadoc grows), deliberately behavior-identical (full test suite plus a
+complete XDK compile, which executes all three exhibits on every module), and
+deliberately representative: each exhibit is one instance of a pattern the
+codebase repeats at scale, so accepting the exhibit is accepting the
+direction. The measured scale behind the exhibits: 1,549 `instanceof`
+occurrences, 141 `getFormat()` switches (39 of which silently produce a value
+in their default arm), 814 hand-written `IllegalStateException`s, and 63
+"shouldn't happen" comments standing in for checks the compiler performs for
+free since Java 17-21.
+
+### PR Title
+
+Replace stringly and cast-based dispatch with typed dispatch (three exhibits)
+
+### PR Description (ready to paste)
+
+This PR is three small, self-contained rewrites with zero behavior change.
+Each replaces a hand-maintained dispatch convention with the equivalent
+construct the Java language provides, and in each case the compiler now
+checks what previously only review discipline checked. 59 casts are deleted.
+Nothing else is touched; the full test suite and a complete XDK build are
+green, and the rewritten code paths execute on every module compiled.
+
+**Exhibit 1 - dispatch by string concatenation.** `StringConstant.apply` and
+`CharConstant.apply` dispatched binary operators like this:
+
+```java
+switch (op.TEXT + that.getFormat().name()) {
+case "+String":
+    return pool.ensureStringConstant(this.m_sVal + ((StringConstant) that).m_sVal);
+case "+Char":
+    ...
+```
+
+The operand's type is encoded into a string, matched, and then re-derived by
+a blind cast to the class the string just named - fifteen times per method.
+A typo in a case string is a silent non-match; a wrong cast is a
+ClassCastException at fold time; and no tool - not the compiler, not an IDE,
+not grep for the type name - can see the dispatch structure. The rewrite
+switches on the operator enum and pattern-matches the operand:
+
+```java
+case ADD -> switch (that) {
+    case StringConstant str -> pool.ensureStringConstant(this.m_sVal + str.m_sVal);
+    case CharConstant ch    -> ...
+```
+
+Same shape, same fallback to `super.apply` for unclaimed operands, no casts,
+and the binding is compiler-checked. The constant-folding logic also gains
+its first unit tests ever (`ValueConstantFoldingTest`) - previously its only
+verification was whole-compiler runs.
+
+**Exhibit 2 - the tolerant default.** `TerminalTypeConstant.isTuple()` was a
+16-case switch over `constant.getFormat()` with four casts and this default:
+
+```java
+default:
+    // let's be tolerant to unresolved constants
+    return false;
+```
+
+That default does not just tolerate unresolved constants - it answers "not a
+tuple" for every defining-constant kind the switch never listed, including
+all future ones. The defining constant of a terminal type is always an
+identity constant or a pseudo constant, so this PR names that fact once, as
+a type (`sealed interface DefiningConstant permits IdentityConstant,
+PseudoConstant`), and the method becomes eight exhaustive pattern arms:
+
+```java
+return switch (definingConstant()) {
+    case FormalConstant constant      -> constant.getConstraintType().isTuple();
+    case NativeRebaseConstant constant-> isTupleClass(constant.getClassConstant());
+    case ClassConstant constant       -> isTupleClass(constant);
+    case IdentityConstant ignored     -> false; // modules, packages, methods, ...
+    ...
+};
+```
+
+The four formal-constant formats collapse into one arm because the type
+hierarchy already knew they were one category; the format enum forced the
+code to forget it. There is no default arm: add a defining-constant kind and
+javac reports every switch that has not decided what it means -
+
+```
+error: the switch expression does not cover all possible input values
+```
+
+- instead of the old behavior, which was to answer "false" and move on.
+The same union retires the same pattern at 22 further switches in the same
+file (48 casts); this PR converts one method so the mechanism is reviewable
+in isolation.
+
+**Exhibit 3 - the raw map with 26 casts.** ConstantPool's locator cache
+returned `Map<Object, Constant>` and had 26 call sites of the form:
+
+```java
+StringConstant constant = (StringConstant) ensureLocatorLookup(Format.String).get(s);
+```
+
+Every call site re-asserts, by unchecked cast, the pairing between a Format
+and the class its map holds. The pairing is now asserted once, at a checked
+boundary:
+
+```java
+StringConstant constant = findLocated(StringConstant.class, Format.String, s);
+```
+
+`Class.cast` means a poisoned locator map fails immediately, naming both
+classes, instead of throwing a ClassCastException at whichever distant use
+site touches the entry first.
+
+**What this buys beyond these files.** These are exhibits, not the cleanup.
+The same codebase has 1,549 `instanceof` occurrences and 141 format switches
+- 39 of them with silently-answering defaults like exhibit 2's - all
+maintaining by hand the invariants the compiler can carry. Each exhibit
+demonstrates the replacement for one class of those sites; follow-up PRs
+apply them at scale. The point of this PR is that every one of those
+follow-ups looks exactly like this: shorter, cast-free, compiler-checked,
+behavior-identical.
+
+### Equivalence
+
+Behavior-identical by construction: every old arm maps to a pattern arm,
+unclaimed operands fall to `super.apply` exactly as unmatched strings did,
+and exhibit 2's previously-silent default cases are explicit arms returning
+the same values. Verified by the full javatools suite plus `xdk:installDist`
+(constant folding and isTuple run during every module compile), plus the new
+direct unit tests.
+
+### Reviewer Checklist / Acceptance Criteria
+
+- Every deleted cast corresponds to a pattern binding or the single checked
+  boundary; no `@SuppressWarnings` added anywhere.
+- Exhibit 2's switch has no default arm - that absence is the mechanism.
+- `ValueConstantFoldingTest` pins folding behavior including the fallback
+  contract; it is the first direct coverage this logic has had.
+- The diff adds more javadoc than executable code, and executable code net
+  shrinks.
 
 ### 2026-08-24 Wave: Commit-To-PR Map
 
@@ -76,6 +229,7 @@ review story; a PR built from it cherry-picks exactly these commits.
 | PR 16 | `e59d4f82d`, `dc39387bd`, `298067019`, `cace6570a`, `07ed937b3`, `ab5788584`, `78111b85f` | Zero sealed classes to 30 sealed roots over ~150 classes with zero non-sealed hatches; three demonstrator rewrites delete a fallthrough suppression and two silent-default families; three captured javac errors are the review story. |
 | PR 17 | `029ff4138`, `0bbfc98c4`, `db4ae7900`, `3785afdc8`, `c621b1dca` | The freeze-split bug family closed structurally: view-clone refusal for arrays/tuples/functions/delegates, default-deny at the ObjectHandle base with the GenericHandle cells as the one opt-in, the SocketHandle shared holder, and the finalizer chain fix - each with a two-view or shape test that is red on the old shape. |
 | PR 18 | `25371b397`, `0af827c72` | Oracle's own guidance, executed: copy constructors replace Object.clone() everywhere it ever corrupted state. Two defects only the mechanism could cause - inner classes whose clones kept answering with the SOURCE owner (MethodStructure.Source pool binding, Contribution.getComponent()) - are fixed by re-binding constructors that clone() cannot express, with a red-on-master test and a per-structure field ratchet. Depends on PR 16: cloneBody() is abstract over the sealed tree, so a new structure kind without a copy path does not compile. |
+| PR 19 | `86c89e175` | The typed-dispatch showcase and candidate series opener: stringly dispatch, a tolerant-default format switch, and 26 blind casts each replaced by the language-provided construct; 59 casts deleted, zero behavior change, first-ever folding unit tests. Full ready-to-paste description in the PR 19 section above. |
 | PR 8 (existing, extend) | `WorldSnapshotDemoTest` (with slice-1 world snapshot) | Runnable sequential- and multi-container world-dump demos with printed walkthrough output (`-Porg.xtclang.java.test.stdout=true`); shows the snapshot format, the ownership sweep, and the retained-container leak signal. |
 
 ### Commit Folding Guidance
