@@ -981,9 +981,40 @@ the full javatools suite and `xdk:installDist`:
   hand-maintained trailing `IllegalStateException` for nested exhaustive
   switches, behavior preserved arm-for-arm.
 
-Still open from this document's plan: the `DefiningConstant` union that
-retires `TerminalTypeConstant`'s 23 switches and 48 casts (blocked on the
-150-call-site `getDefiningConstant()` return-type change - the right shape,
-scoped as its own wave), opportunistic cascade conversions across the sealed
-families, `Op` (package split), the compiler `AstNode` tree (backlog), and
-`TypeComposition`.
+### Conversion Waves A-E (2026-08-24, same day)
+
+The dispatch-site conversion followed the sealing the same day, in
+partitioned waves, each gated by the full suite and `xdk:installDist`:
+
+- **Flagship file** (`bb72c4b58` + `10ba2869d`): TerminalTypeConstant's 22
+  hierarchy-proxy format switches and all 48 defining-constant casts retired
+  via the shipped `DefiningConstant` union - without the 150-call-site
+  return-type change (a checked union conversion at the file boundary
+  replaced it). The one survivor (`:1547`) is the keyword-kind data switch.
+- **Wave A** (`35eb67527`): ClassStructure's identity-subject sites; the
+  triage recorded that most of that file's switches are own-format DATA (one
+  class spans ten Component formats) and correctly stay.
+- **Wave B** (`1bc765d7d`): fifteen constants-tail sites across
+  IdentityConstant, PropertyConstant, ParameterizedTypeConstant,
+  ConstantPool, and TypeConstant; four silent subtype-dominance traps
+  (formal type children inheriting PropertyConstant arms) made explicit.
+- **Wave C** (`b9b0c48cf`, main session): RegisterInfo sealed over its five
+  kinds; `Builder.checkNull/checkNotNull` and CommonBuilder static-field
+  dispatch exhaustive - the worst-5 assert-guarded-else JIT site closed.
+  17 files, +48/-56.
+- **Wave E** (`2ac9c107c`): the parser `AstNode` tree sealed over all 96
+  classes with exactly one documented hatch (`MethodDeclarationStatement`,
+  for the out-of-package `EvalCompiler.EvalStatement`); pinned by
+  `SealedParserAstTest`.
+
+Census after the waves: **47 sealed declarations** (from zero this morning)
+and **77 format switches remaining of the original 141** - the survivors are
+own-format data switches (ClassStructure, TypeCompositionStatement),
+serialization factories (ConstantPool, Op, Disassembler), value-kind data
+discrimination on multi-format classes, and a handful of loud-default
+resolver switches whose cross-side format comparisons make the enum the
+honest currency (documented per wave).
+
+Still open from this document's plan: opportunistic cascade conversions
+across the sealed families, `Op` (package split), and `TypeComposition`
+(test adapter).
