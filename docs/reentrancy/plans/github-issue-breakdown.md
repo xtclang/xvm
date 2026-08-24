@@ -856,13 +856,16 @@ sets.
 
 - Convert the `AbstractConverterMap` view caching (PR #539's reviewer-requested
   plain private lazy fields, the `java.util.AbstractMap` benign-race idiom) to
-  `Lazy.ofOwner(...)` once this PR has upstreamed `Lazy.Owner`. The plain
-  fields are correct there — the views are per-instance, owner-free, and
-  final-field-only, so racy publication is safe — but converting removes the
-  last documented benign-race special case so every lazy cache in
-  `javatools_utils` reasons through one pattern. Pure uniformity cleanup; do
-  not fold it into PR #539 itself, which targets master before `Lazy.Owner`
-  exists there.
+  `Lazy.ofOwner(...)`. The API itself no longer waits for this PR: PR #539 now
+  carries `Lazy.Owner`/`ofOwner` as a purely additive backport (no master code
+  touches `Lazy`), while deliberately keeping the plain fields during review.
+  The plain fields are correct there — the views are per-instance, owner-free,
+  and final-field-only, so racy publication is safe — but converting turns
+  those manually re-verified facts into type-level guarantees (final holder
+  field, compute-at-most-once, access-time owner passing) and removes the last
+  documented benign-race special case so every lazy cache in `javatools_utils`
+  reasons through one pattern. Pure uniformity cleanup as its own tiny diff,
+  once the PR #539 review has settled.
 
 ### Source Areas / Branch Commits
 
