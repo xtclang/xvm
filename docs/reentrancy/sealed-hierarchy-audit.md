@@ -957,12 +957,18 @@ the full javatools suite and `xdk:installDist`:
   `PropertyConstant`/`FormalTypeChildConstant` were retired because the fatal
   `-Xlint:this-escape` gate enforces their property at compile time, and the
   reworked test pins the surviving half (constructor parent validation still
-  fires, non-virtually). `ValueConstant` sealed with one documented hatch
-  (`StringConstant`, kept open for the pool-registration deadlock latch).
-- **Stage 4** (`07ed937b3`): `Component` sealed; `MethodStructure` and
-  `PropertyStructure` are documented hatches (their fakes exercise cloning
-  and hook-ordering behavior the compile gates do not replace).
+  fires, non-virtually). `ValueConstant` sealed.
+- **Stage 4** (`07ed937b3`): `Component` sealed.
   `TypeComposition` stays unsealed pending its test adapter.
+- **Hatch closure** (`ab5788584`): the remaining three `non-sealed` hatches
+  proved unnecessary and are `final`: the pool-registration deadlock latch
+  extends the (unsealed) `Constant` root directly - the interleaving lives in
+  `register()`/adoption, Constant-level machinery, and the test still
+  reproduces it; the `MethodStructure`/`PropertyStructure` fakes were
+  replaced by same-package access to the protected constructors and
+  `cloneBody()`. Every sealed family is now fully closed: **zero
+  `non-sealed` declarations in main sources**, pinned with no hatch
+  exemptions in the reflection tests.
 - **Payoff rewrites** (`78111b85f`): `ClassConstant.getParentClass()` and
   `getOutermost()` are exhaustive pattern switches over the sealed
   `IdentityConstant` tree - the "any format I never heard of terminates the

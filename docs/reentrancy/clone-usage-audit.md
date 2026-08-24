@@ -1031,3 +1031,29 @@ or (b) the identity sites above produce a real defect. Until then: land the
 default-deny base guard with the stress harness, finalize the benign
 ctor-only fields opportunistically, and keep the refusal guards as the
 boundary of record.
+
+## Retiring java.lang.Cloneable Entirely (2026-08-24)
+
+Follow-up question to the study: Oracle's Secure Coding Guidelines say the
+`Cloneable` mechanism "is problematic and should not be used", recommending
+copy constructors, static `copyOf` factories, or `copy()` on final classes.
+How bad would full removal be here? The surface is exactly four families -
+six `Cloneable` implementors in main sources - and the branch has already
+proven the replacement pattern where it migrated (`Parameter(Parameter,
+MethodStructure)` copy constructor + `copyFor`, `copyForAdoption
+(AdoptionContext)`, `createMethodCopyingParameters`). Per family:
+
+| Family | Cost to retire | Verdict |
+| --- | --- | --- |
+| `Token`, `Source` (compiler) | Trivial: `Token.clone()` is a pure shallow copy of a small value class; `Source.clone()` is shallow + `reset()` (`Token.java:433`, `Source.java:461`). Two copy constructors, one sitting each. | **Retire opportunistically.** |
+| `Component`/`MethodStructure` structure family | Moderate and *newly bounded*: the sealed, all-final tree is exactly nine structures, so the audit's "minimum replacement" above (a construction operation taking target parent and pool up front, declaring value vs owner-cache vs rebuilt-by-registration per field) is nine copy constructors, with `Parameter.copyFor` already done. Bifurcation and adoption tests exist. 1-2 weeks. | **Retire - highest value.** This family produced this branch's real clone bugs (the `Annotation` parameter fossilization and `MethodBody` owned-copy self-target that broke the XDK build), and sealing gives the payoff twist: a static `Component.copyOf` can be an exhaustive pattern switch, so a new structure kind *without a copy constructor refuses to compile*. |
+| Compiler `AstNode` tree | Worst cost/benefit: `Object.clone()`'s automatic subclass-field copy is load-bearing - 96 subclasses, only three override `clone()` to fix fields, 42 call sites in validation/retry paths. Copy-constructor migration means 96 hand-written constructors, each a field-omission hazard: it replaces one systemic risk with 96 local ones. | **Keep as a contained island.** Request-local, single-threaded per compilation, so Oracle's hazards have the least room; revisit as the "validation scratch-copy API" of the compiler-reentrancy backlog, not as a Cloneable purge. |
+| `ObjectHandle.cloneAs` | Post default-deny, clone inputs are terminal-state (immutable) handles plus `GenericHandle` views. For immutable inputs the entire hazard list is inert - constructors are bypassed but the invariants are frozen; shallow copy of frozen state cannot desync. Replacing costs ~90 copy constructors for the already-safe case (ConstHeap relocates arbitrary immutable handle classes). | **Keep behind default-deny.** The guard *is* the Oracle guidance operationalized: clone restricted to objects whose lifecycle is over. Facade-redesign triggers above still apply. |
+
+Bottom line: full eradication is not one decision. Retire it where it has
+actually hurt (the structure family - now cheap thanks to the sealed tree)
+and where it is free (`Token`/`Source`); keep two disciplined islands whose
+discipline is enforced by machinery (`-Xlint:this-escape` + request-locality
+for the AST; default-deny for handles) rather than by convention. Paying
+~186 hand-written copy constructors to delete the last two islands buys no
+safety that the guards have not already bought.
