@@ -392,16 +392,19 @@ public sealed class ClassStructure
 
         Component parent = getParent();
         while (true) {
-            switch (parent.getFormat()) {
-            case MULTIMETHOD, METHOD, PROPERTY:
-                parent = parent.getParent();
-                continue;
+            // exhaustive over the sealed Component tree: the ten class-backed formats are one
+            // arm because they are one class, and the cast the old format switch needed is a
+            // pattern binding
+            switch (parent) {
+            case MultiMethodStructure _,
+                 MethodStructure _,
+                 PropertyStructure _  -> parent = parent.getParent();
 
-            case MODULE, PACKAGE, INTERFACE, CLASS, CONST, SERVICE, ENUM, ENUMVALUE,
-                 ANNOTATION, MIXIN:
-                return (ClassStructure) parent;
+            case ClassStructure clz  -> { return clz; }
 
-            default:
+            case TypedefStructure _,
+                 FileStructure _,
+                 CompositeComponent _ ->
                 throw new IllegalStateException(
                     parent.getIdentityConstant() + " format=" + parent.getFormat());
             }
@@ -2088,16 +2091,19 @@ public sealed class ClassStructure
                 return rel;
             }
         }
-        switch (constIdLeft.getFormat()) {
-        case Module:
-        case Package:
+        if (constIdLeft instanceof NativeRebaseConstant constNative) {
+            constIdLeft = constNative.getClassConstant();
+        }
+        if (!(constIdLeft instanceof DefiningConstant definingLeft)) {
+            throw new IllegalStateException("unexpected constant: " + constIdLeft);
+        }
+        switch (definingLeft) {
+        case ModuleConstant _:
+        case PackageConstant _:
             // modules and packages are never parameterized
             return constIdLeft.equals(idClzRight) ? Relation.IS_A : Relation.INCOMPATIBLE;
 
-        case NativeClass:
-            constIdLeft = ((NativeRebaseConstant) constIdLeft).getClassConstant();
-            // fall through
-        case Class:
+        case ClassConstant _:
             if (constIdLeft.equals(pool.clzObject())) {
                 return Relation.IS_A;
             }
@@ -2162,16 +2168,16 @@ public sealed class ClassStructure
             }
             break;
 
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-            // r-value (this) is a real type; it cannot be assigned to a formal type
-        case UnresolvedName:
+        // r-value (this) is a real type; it cannot be assigned to a formal type. Note:
+        // dynamic formal constants kept the historical refusal in the group below.
+        case PropertyConstant _:
+        case TypeParameterConstant _:
+        case UnresolvedNameConstant _:
             return Relation.INCOMPATIBLE;
 
-        case ThisClass:
-        case ParentClass:
-        case ChildClass: {
+        case ThisClassConstant _:
+        case ParentClassConstant _:
+        case ChildClassConstant _: {
             assert typeLeft.containsAutoNarrowing(false);
             Relation relation = calculateRelationImpl(pool,
                     typeLeft.removeAutoNarrowing(), typeRight, fAllowInto);
@@ -2182,19 +2188,22 @@ public sealed class ClassStructure
             break;
         }
 
-        case Typedef:
+        case TypedefConstant constTypedef:
             return calculateRelationImpl(pool,
-                    ((TypedefConstant) constIdLeft).getReferredToType(), typeRight, fAllowInto);
+                    constTypedef.getReferredToType(), typeRight, fAllowInto);
 
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-        case IsClass:
+        case KeywordConstant constKeyword:
             return calculateRelationImpl(pool,
-                    ((KeywordConstant) constIdLeft).getBaseType(), typeRight, fAllowInto);
+                    constKeyword.getBaseType(), typeRight, fAllowInto);
 
-        default:
+        case DynamicFormalConstant _:
+        case DecoratedClassConstant _:
+        case MethodConstant _:
+        case MultiMethodConstant _:
+        case PureIdentityConstant _:
+        case SignatureConstant _:
+        case ExpressionConstant _:
+        case DeferredValueConstant _:
             throw new IllegalStateException("unexpected constant: " + constIdLeft);
         }
 

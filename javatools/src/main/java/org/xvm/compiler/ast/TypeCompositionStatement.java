@@ -54,14 +54,24 @@ import org.xvm.asm.ast.StmtBlockAST;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.DecoratedClassConstant;
+import org.xvm.asm.constants.DynamicFormalConstant;
+import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.MultiMethodConstant;
+import org.xvm.asm.constants.NativeRebaseConstant;
+import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PureIdentityConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TypeParameterConstant;
+import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
@@ -437,17 +447,19 @@ public class TypeCompositionStatement
 
                 default:
                     IdentityConstant idParent = container.getIdentityConstant();
-                    switch (idParent.getFormat()) {
-                    case Module, Package:
-                        // not a virtual child (it's nested under a module or package)
-                        break;
+                    switch (idParent) {
+                    // not a virtual child when nested under a module or package; native
+                    // rebase and formal type children kept the historical refusal below
+                    case ModuleConstant _, PackageConstant _ -> { }
 
-                    case Method, Property, Class:
-                        fInner = true;
-                        break;
-
-                    default:
+                    case NativeRebaseConstant _, FormalTypeChildConstant _,
+                         DecoratedClassConstant _, MultiMethodConstant _,
+                         TypedefConstant _, TypeParameterConstant _,
+                         DynamicFormalConstant _, PureIdentityConstant _ ->
                         throw new IllegalStateException("idParent=" + idParent);
+
+                    case MethodConstant _, PropertyConstant _, ClassConstant _ ->
+                        fInner = true;
                     }
                     break;
                 }
