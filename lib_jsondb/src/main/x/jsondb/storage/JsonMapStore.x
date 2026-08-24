@@ -454,9 +454,19 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                                 if (modEntry := modEntries.next()) {
                                     break; // do NOT go to NextKey
                                 } else {
-                                    // we have exhausted the transaction's modifications;
-                                    // just break out and drain the remainder of the keys
-                                    // in the map history
+                                    // we have exhausted the transaction's modifications; the
+                                    // current histEntry was already pulled from the iterator
+                                    // this round but was never classified against a mod
+                                    // (unlike the Equal case, where histEntry.key==modEntry.key
+                                    // already covers it) -- classify it here before draining
+                                    // the remainder of history, or it is silently dropped and
+                                    // keys.size ends up one short of size().
+                                    History valueHistory = histEntry.value;
+                                    if (Int txFloor := valueHistory.floor(readId),
+                                            MapValue value := valueHistory.get(txFloor),
+                                            value != Deleted) {
+                                        keys += histEntry.key;
+                                    }
                                     break NextKey;
                                 }
                             }

@@ -11,6 +11,9 @@ import jsondb.Client.DBObjectImpl;
 import jsondb.Client.DBMapImpl;
 import jsondb.TxManager;
 
+import oodb.Connection;
+import oodb.Transaction;
+
 import test_db.*;
 
 import xunit.annotations.RegisterExtension;
@@ -444,5 +447,53 @@ class JsonMapStoreTest {
         assert stored == person;
         // get the value should load it back into memory
         assert store.isValueOffHeap(key) == False;
+    }
+
+    /**
+     * Regression test for a `keys.size == size` desync in `JsonMapStore.keysAt()`.
+     *
+     * `keysAt()` merges two sorted streams -- committed `history` entries and the current
+     * transaction's own pending `mods` -- to build the live key list, while `size` is computed
+     * independently (and correctly) by `sizeAt()`. In the `Greater` case (the current pending
+     * mod's key sorts before the just-pulled `histEntry`), when that mod is the *last* pending
+     * mod, the code took the "mods exhausted" branch and broke out of the merge loop without
+     * ever classifying `histEntry` -- it had already been consumed from the `history` iterator
+     * this round, so it is neither added in the `Greater` branch (which only adds the mod's own
+     * key) nor recoverable by the trailing "drain the remainder of history" loop (the iterator
+     * has already moved past it). That key silently disappears from the result, and
+     * `keys.size` ends up exactly one short of `size`.
+     *
+     * This reproduces deterministically (not key-order-dependent by luck) by seeding two
+     * committed keys ("B", "C") and then, within a single open transaction, inserting one new
+     * key ("A") that sorts before both -- "A" is the only (and therefore last) pending mod, and
+     * "B" is the `histEntry` that gets dropped.
+     */
+    @Test
+    void shouldNotLoseHistoryKeyWhenLastPendingModSortsBeforeIt() {
+        assert TestClient client := clientProvider.getClient();
+        TestSchema        schema = client.testSchema;
+
+        // Seed committed history with keys that sort AFTER the key inserted below.
+        schema.mapData.put("B", "existing-b");
+        schema.mapData.put("C", "existing-c");
+
+        Connection<TestSchema> conn = client.ensureConnection();
+        using (conn.createTransaction()) {
+            // "A" sorts before "B" and "C", and is the only (last) pending mod in this tx.
+            schema.mapData.put("A", "new-a");
+
+            Int      sizeInTx = schema.mapData.size;
+            String[] keysInTx = schema.mapData.keys.toArray();
+
+            assert keysInTx.size == sizeInTx
+                    as $|keysAt() undercounts by one: expected {sizeInTx} keys \
+                        |({keysInTx.size} returned) -- "B" was dropped by the merge walk \
+                        |because it was the histEntry pulled just before the last pending \
+                        |mod ("A") was classified as Greater.
+                        ;
+            assert keysInTx.contains("A");
+            assert keysInTx.contains("B");
+            assert keysInTx.contains("C");
+        }
     }
 }
