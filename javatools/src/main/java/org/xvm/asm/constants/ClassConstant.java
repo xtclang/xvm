@@ -80,19 +80,24 @@ public sealed class ClassConstant
     public ClassConstant getParentClass() {
         IdentityConstant parent = getParentConstant();
         while (true) {
-            switch (parent.getFormat()) {
-            case Class:
-                return (ClassConstant) parent;
-
-            case Property:
-            case Method:
-                // ignored (we'll use its parent)
-                parent = parent.getNamespace();
-                continue;
-
-            // packages and modules "terminate" this search
-            default:
-                return null;
+            // exhaustive over the sealed IdentityConstant tree: the old format switch treated
+            // every kind it had never heard of as a silent terminator; each kind now states
+            // its role, and a new identity kind is a compile error instead of "no parent".
+            // The arms marked "was the silent default" keep the old behavior byte-for-byte.
+            switch (parent) {
+            case NativeRebaseConstant _  -> { return null; }        // was the silent default
+            case ClassConstant clz       -> { return clz; }
+            case FormalTypeChildConstant _ -> { return null; }      // was the silent default
+            case PropertyConstant _,
+                 MethodConstant _        -> parent = parent.getNamespace(); // use its parent
+            case ModuleConstant _,
+                 PackageConstant _       -> { return null; }  // packages/modules terminate
+            case DecoratedClassConstant _,
+                 MultiMethodConstant _,
+                 TypedefConstant _,
+                 TypeParameterConstant _,
+                 DynamicFormalConstant _,
+                 PureIdentityConstant _  -> { return null; }        // was the silent default
             }
         }
     }
@@ -104,19 +109,21 @@ public sealed class ClassConstant
         ClassConstant    outermost = this;
         IdentityConstant parent    = getParentConstant();
         while (true) {
-            switch (parent.getFormat()) {
-            case Class:
-                outermost = (ClassConstant) parent;
-                break;
-
-            case Property:
-            case Method:
-                // ignored (we'll use its parent)
-                break;
-
-            // packages and modules "terminate" this search
-            default:
-                return outermost;
+            // exhaustive over the sealed IdentityConstant tree; see getParentClass()
+            switch (parent) {
+            case NativeRebaseConstant _  -> { return outermost; }   // was the silent default
+            case ClassConstant clz       -> outermost = clz;
+            case FormalTypeChildConstant _ -> { return outermost; } // was the silent default
+            case PropertyConstant _,
+                 MethodConstant _        -> { }               // ignored (we'll use its parent)
+            case ModuleConstant _,
+                 PackageConstant _       -> { return outermost; } // packages/modules terminate
+            case DecoratedClassConstant _,
+                 MultiMethodConstant _,
+                 TypedefConstant _,
+                 TypeParameterConstant _,
+                 DynamicFormalConstant _,
+                 PureIdentityConstant _  -> { return outermost; }   // was the silent default
             }
 
             parent = parent.getNamespace();

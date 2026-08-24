@@ -2923,59 +2923,50 @@ public class NameExpression
      * @return the meaning of the name (after resolveRawArgument has finished), or null if it cannot be
      *         determined
      */
-    @SuppressWarnings("fallthrough")
     protected Meaning getMeaning() {
-        Argument arg = m_arg;
-        switch (arg) {
-        case null:
-            return Meaning.Unknown;
+        return switch (m_arg) {
+            case null               -> Meaning.Unknown;
+            case Register reg       -> reg.isPredefined()
+                                            ? reg.isLabel()
+                                            ? Meaning.Label
+                                            : Meaning.Reserved
+                                            : Meaning.Variable;
+            case TargetInfo ignored -> Meaning.Reserved; // an "outer this"
 
-        case Register reg:
-            return reg.isPredefined()
-                ? reg.isLabel()
-                ? Meaning.Label
-                : Meaning.Reserved
-                : Meaning.Variable;
-
-        case TargetInfo ignored:
-            // this indicates an "outer this"
-            return Meaning.Reserved;
-
-        case Constant constant:
-            switch (constant.getFormat()) {
-            // class ID
-            case Module:
-            case Package:
-                // relative ID
-            case ThisClass:
-            case ParentClass:
-                return Meaning.Class;
-
-            case Class:
-            case DecoratedClass:
-                return m_plan == Plan.TypeOfClass
-                    ? Meaning.Type
-                    : Meaning.Class;
-
-            case Property:
-                return Meaning.Property;
-
-            case FormalTypeChild:
-                return Meaning.FormalChildType;
-
-            case Method:
-            case MultiMethod:
-                return Meaning.Method;
-
-            case Typedef:
-                return Meaning.Type;
-            }
-            // fall through
-
-        default:
-        }
-
-        throw new IllegalStateException("arg=" + arg);
+            // the identity and pseudo constant trees are sealed, so both nested switches are
+            // exhaustive: a new constant kind is a compile error here, where the old format
+            // switch needed @SuppressWarnings("fallthrough") plus a hand-maintained trailing
+            // IllegalStateException to cover whatever it forgot. The throwing arms preserve
+            // the old behavior for kinds the format switch never listed.
+            case IdentityConstant id -> switch (id) {
+                case ModuleConstant ignored          -> Meaning.Class;
+                case PackageConstant ignored         -> Meaning.Class;
+                case NativeRebaseConstant rebase     -> throw new IllegalStateException("arg=" + rebase);
+                case ClassConstant ignored           -> m_plan == Plan.TypeOfClass
+                                                            ? Meaning.Type : Meaning.Class;
+                case DecoratedClassConstant ignored  -> m_plan == Plan.TypeOfClass
+                                                            ? Meaning.Type : Meaning.Class;
+                case FormalTypeChildConstant ignored -> Meaning.FormalChildType;
+                case PropertyConstant ignored        -> Meaning.Property;
+                case MethodConstant ignored          -> Meaning.Method;
+                case MultiMethodConstant ignored     -> Meaning.Method;
+                case TypedefConstant ignored         -> Meaning.Type;
+                case TypeParameterConstant param     -> throw new IllegalStateException("arg=" + param);
+                case DynamicFormalConstant formal    -> throw new IllegalStateException("arg=" + formal);
+                case PureIdentityConstant pure       -> throw new IllegalStateException("arg=" + pure);
+            };
+            case PseudoConstant pseudo -> switch (pseudo) {
+                case ThisClassConstant ignored       -> Meaning.Class;
+                case ParentClassConstant ignored     -> Meaning.Class;
+                case ChildClassConstant child        -> throw new IllegalStateException("arg=" + child);
+                case DeferredValueConstant deferred  -> throw new IllegalStateException("arg=" + deferred);
+                case ExpressionConstant expr         -> throw new IllegalStateException("arg=" + expr);
+                case KeywordConstant keyword         -> throw new IllegalStateException("arg=" + keyword);
+                case SignatureConstant sig           -> throw new IllegalStateException("arg=" + sig);
+                case UnresolvedNameConstant name     -> throw new IllegalStateException("arg=" + name);
+            };
+            default -> throw new IllegalStateException("arg=" + m_arg);
+        };
     }
 
     /**
