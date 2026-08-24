@@ -16,6 +16,26 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
     private final Map<SK, SV> storage;
 
     /**
+     * Lazily created and cached key set view. The view is created on first access rather than
+     * during base construction, because the view factories are overridable and must not run while
+     * a subclass is still initializing. The plain private field is the same benign-race caching
+     * idiom as {@code java.util.AbstractMap}: concurrent first access can at worst create one
+     * duplicate view, and publishing through a data race is safe because the view types keep all
+     * of their state in final fields.
+     */
+    private Set<K> keys;
+
+    /**
+     * Lazily created and cached values view; see {@link #keys} for the caching contract.
+     */
+    private Collection<V> values;
+
+    /**
+     * Lazily created and cached entry set view; see {@link #keys} for the caching contract.
+     */
+    private Set<Entry<K, V>> entries;
+
+    /**
      * Construct a {@link AbstractConverterMap}.
      *
      * @param storage the backing store
@@ -154,17 +174,20 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
 
     @Override
     public Set<K> keySet() {
-        return newKeySet();
+        var keys = this.keys;
+        return keys == null ? this.keys = newKeySet() : keys;
     }
 
     @Override
     public Collection<V> values() {
-        return newValues();
+        var values = this.values;
+        return values == null ? this.values = newValues() : values;
     }
 
     @Override
     public Set<Entry<K, V>> entrySet() {
-        return newEntrySet();
+        var entries = this.entries;
+        return entries == null ? this.entries = newEntrySet() : entries;
     }
 
     @Override

@@ -38,14 +38,15 @@ public class WeakHasherMapTest {
     }
 
     @Test
-    void shouldReturnLiveFreshViews() {
+    void shouldReturnLiveViews() {
         Map<Integer, String> map = new WeakHasherMap<>(Hasher.natural());
 
         var keys = map.keySet();
         var values = map.values();
         var entries = map.entrySet();
 
-        // Don't assert identity; only that the views are live/backed by the map.
+        // assert only that the views are live/backed by the map; whether an
+        // implementation returns cached or fresh view instances is its own business
 
         map.put(1, "hello");
         assertTrue(keys.contains(1));

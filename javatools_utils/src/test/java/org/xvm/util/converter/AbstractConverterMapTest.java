@@ -8,7 +8,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -23,9 +23,12 @@ public class AbstractConverterMapTest {
         Collection<String> values = map.values();
         Set<Entry<String, String>> entries = map.entrySet();
 
-        assertNotSame(keys, map.keySet());
-        assertNotSame(values, map.values());
-        assertNotSame(entries, map.entrySet());
+        // views are created lazily after construction and then cached in private fields, so
+        // repeated accessor calls return the same live view without re-invoking the overridable
+        // factories
+        assertSame(keys, map.keySet());
+        assertSame(values, map.values());
+        assertSame(entries, map.entrySet());
 
         map.put("hello", "world");
         assertTrue(keys.contains("hello"));
