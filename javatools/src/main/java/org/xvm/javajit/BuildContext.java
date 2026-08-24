@@ -634,6 +634,17 @@ public class BuildContext {
     }
 
     /**
+     * @return true iff the register id represents a local property
+     */
+    public boolean isProperty(int regId) {
+        if (regId <= Op.CONSTANT_OFFSET) {
+            assert getConstant(regId) instanceof PropertyConstant;
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Obtain the Constant at the specified index, verifying it is of the expected type.
      *
      * @param argId  the argument id
@@ -1567,10 +1578,9 @@ public class BuildContext {
      * @param type  (optional) the known destination type
      */
     public void storeValue(CodeBuilder code, RegisterInfo reg, TypeConstant type) {
-        int regId = reg.regId();
-        if (regId <= Op.CONSTANT_OFFSET) {
+        if (reg.isProperty()) {
             // the register represents a property that the value(s) on the stack must be stored into
-            buildSetPropertyFromStack(code, regId, reg.type(), reg.flavor());
+            buildSetPropertyFromStack(code, reg.regId(), reg.type(), reg.flavor());
         } else {
             reg.store(this, code, type);
             ensureRegisterScope(code, reg);
@@ -1588,7 +1598,7 @@ public class BuildContext {
      * @param type   (optional) the known destination type
      */
     public void storeValue(CodeBuilder code, int regId, TypeConstant type) {
-        if (regId <= Op.CONSTANT_OFFSET) {
+        if (isProperty(regId)) {
             JitTypeDesc jitDesc = type.getJitDesc(builder);
 
             // the register represents a property that the value(s) on the stack must be stored into
@@ -2050,9 +2060,13 @@ public class BuildContext {
             switch (srcFlavor.name() + "->" + dstFlavor.name()) {
             case "Specific->SpecificWithDefault":
             case "Widened->Specific",
-                 "Widened->SpecificWithDefault",
-                 "Widened->WidenedWithDefault":
-                // nothing to do
+                 "Widened->SpecificWithDefault":
+                if (!srcReg.cd().equals(pd.cd)) {
+                    generateCheckCast(code, pd.type);
+                }
+                continue;
+
+            case "Widened->WidenedWithDefault":
                 continue;
 
             case "Specific->Widened",
@@ -2316,7 +2330,7 @@ public class BuildContext {
                             // reuse the ExtendedSlot
                             return -1;
                         }
-                        case Widened ->
+                        case Specific, Widened ->
                             Builder.loadNull(code);
                         default ->
                             throw new IllegalStateException();
@@ -3018,7 +3032,7 @@ public class BuildContext {
 
         for (int i = 1; i < cReturns; i++) {
             int regId = anVar[i];
-            if (regId == Op.A_IGNORE || regId <= Op.CONSTANT_OFFSET) {
+            if (regId == Op.A_IGNORE || isProperty(regId)) {
                 continue;
             }
 

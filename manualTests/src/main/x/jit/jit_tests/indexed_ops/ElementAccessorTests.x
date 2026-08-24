@@ -17,6 +17,9 @@ class ElementAccessorTests {
         testAccessNonPrimitiveElement();
         testAccessNullableNonPrimitiveElement();
         testNullableArrayGetElement();
+        testNullableArrayTarget();
+        testNullablePrimitiveArrayTarget();
+        testNarrowedArrayTarget();
 
     }
 
@@ -90,6 +93,56 @@ class ElementAccessorTests {
         assert array[0] == "foo";
         array[0] = Null;
         assert array[0] == Null;
+    }
+
+    void testNullableArrayTarget() {
+        String? getFirst(String[]? array) = array?[0] : Null;
+
+        void setFirst(String[]? array, String value) {
+            array?[0] = value;
+        }
+
+        String[] array = new Array();
+        array.add("before");
+        assert getFirst(array) == "before";
+        setFirst(array, "after");
+        assert getFirst(array) == "after";
+
+        assert getFirst(Null) == Null;
+        setFirst(Null, "ignored");
+    }
+
+    void testNullablePrimitiveArrayTarget() {
+//        TODO: the conditional get tries to store a nullable-extension flag that is not on stack
+//        Int? getFirst(Int[]? array) = array?[0] : Null;
+//
+//        void setFirst(Int[]? array, Int value) {
+//            array?[0] = value;
+//        }
+//
+//        Int[] array = [10];
+//        assert getFirst(array) == 10;
+//        setFirst(array, 20);
+//        assert getFirst(array) == 20;
+//
+//        assert getFirst(Null) == Null;
+//        setFirst(Null, 30);
+    }
+
+    void testNarrowedArrayTarget() {
+        void verify(Object array) {
+            if (array.is(Int[])) {
+                assert array[0] == 10;
+                array[0] = 20;
+                assert array[0] == 20;
+            } else {
+                assert;
+            }
+        }
+
+        Int[] ints = new Array();
+        ints.add(10);
+        verify(ints);
     }
 
     static class IndexedHolder<Element>(Element e) {

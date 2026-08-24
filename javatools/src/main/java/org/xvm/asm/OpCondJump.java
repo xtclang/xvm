@@ -530,7 +530,7 @@ public abstract class OpCondJump
             comparePrimitive(code, cds[cds.length-1], lblJump);
         }
 
-        case Widened, Ref -> {
+        case Specific, Widened, Ref -> {
             reg.load(code);
             switch (op) {
             case OP_JMP_NULL:

@@ -129,6 +129,13 @@ public class TypeMatrix {
     public void assign(int currAddr, int nextAddr, int regId, TypeConstant type) {
         assert currAddr >= 0 && type != null;
 
+        if (bctx.isProperty(regId)) {
+            // some ops can store their result directly into a property; its declared type must not
+            // participate in register type flow
+            follow(currAddr, nextAddr, -1);
+            return;
+        }
+
         OpView currView = views[currAddr];
         if (currView.types.get(regId) instanceof UnassignedTypeConstant unassigned) {
             // this assignment makes the register assigned on the incoming op; preserve its

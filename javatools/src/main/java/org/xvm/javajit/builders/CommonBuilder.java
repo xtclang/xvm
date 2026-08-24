@@ -580,7 +580,8 @@ public class CommonBuilder
                     assembleMethod(classBuilder, methodInfo,
                             initializer.ensureJitMethodName(typeSystem), methodInfo.getJitDesc(this));
                 }
-            } else if (prop.isInitialized()) {
+            } else if (prop.isInitialized() ||
+                      !prop.isImplicitlyAssigned() && prop.getType().getDefaultValue() != null) {
                 initProps = lazyAdd(initProps, prop);
             }
         }
@@ -922,12 +923,18 @@ public class CommonBuilder
 
             code.aload(0); // Stack: { this }
 
-            TypeConstant type       = prop.getType();
-            TypeConstant baseType   = type.removeNullable();
-            ClassDesc    cdProp     = type.getCallableClassDesc(typeSystem);
-            RegisterInfo reg        = loadConstant(code, prop.getInitialValue());
-            String       jitName    = prop.getIdentity()
-                                          .ensureJitPropertyName(typeSystem);
+            TypeConstant type      = prop.getType();
+            TypeConstant baseType  = type.removeNullable();
+            ClassDesc    cdProp    = type.getCallableClassDesc(typeSystem);
+            Constant     initValue = prop.getInitialValue();
+
+            if (initValue == null) {
+                initValue = type.getDefaultValue();
+                assert initValue != null;
+            }
+
+            RegisterInfo reg        = loadConstant(code, initValue);
+            String       jitName    = prop.getIdentity().ensureJitPropertyName(typeSystem);
             JitFlavor    regFlavor  = reg.flavor();
             JitFlavor    propFlavor = baseType.isJavaPrimitive()
                                         ? JitFlavor.Primitive
@@ -3399,6 +3406,19 @@ public class CommonBuilder
                     dstIndex++;
                 } else {
                     switch (srcFlavor.name() + "->" + dstFlavor.name()) {
+                    case "Widened->Specific":
+                        code.aload(srcSlot);
+                        generateCheckCast(code, dstType, ctxSlot);
+                        srcIndex++;
+                        dstIndex++;
+                        break;
+
+                    case "Specific->Widened":
+                        code.aload(srcSlot);
+                        srcIndex++;
+                        dstIndex++;
+                        break;
+
                     case "Specific->Primitive",
                          "Specific->XvmPrimitive":
                         code.aload(srcSlot);
@@ -3492,6 +3512,26 @@ public class CommonBuilder
                     }
                 } else {
                     switch (srcFlavor.name() + "->" + dstFlavor.name()) {
+                    case "Widened->Specific":
+                        if (i == 0) {
+                            addReturn(code, srcPd.cd);
+                        } else {
+                            loadFromContext(code, dstPd.cd, dstPd.altIndex, ctxSlot);
+                            storeToContext(code, srcPd.cd, srcPd.altIndex, ctxSlot);
+                        }
+                        break;
+
+                    case "Specific->Widened":
+                        if (i == 0) {
+                            generateCheckCast(code, srcPd.type, ctxSlot);
+                            addReturn(code, srcPd.cd);
+                        } else {
+                            loadFromContext(code, dstPd.cd, dstPd.altIndex, ctxSlot);
+                            generateCheckCast(code, srcPd.type, ctxSlot);
+                            storeToContext(code, srcPd.cd, srcPd.altIndex, ctxSlot);
+                        }
+                        break;
+
                     case "Specific->Primitive":
                         if (i == 0) {
                             box(code, dstPd.type);
@@ -3592,8 +3632,8 @@ public class CommonBuilder
 
             loadCtx(code);
 
-            for (JitParamDesc pd : params) {
-                Builder.load(code, pd.cd, code.parameterSlot(extraCount + pd.index));
+            for (int i = 0; i < params.length; i++) {
+                Builder.load(code, params[i].cd, code.parameterSlot(extraCount + i));
             }
 
             if (dstType.isJitInterface() && dstMethod.isAbstract() && !objectDelegation) {

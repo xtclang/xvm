@@ -8,6 +8,7 @@ package mixinTests {
         test3();
         test4();
         test5();
+        test6();
     }
 
     void test1() {
@@ -39,8 +40,15 @@ package mixinTests {
     }
 
     void test5() {
-        // TODO: Base doesn't implement the Mix Java interface, so Mix.self() cannot return `this`
-//        import t5.*;
+        import t5.*;
+
+        Base base = new Base();
+        assert base.self().value() == 42;
+    }
+
+    void test6() {
+//        TODO: an explicit auto-narrowing mixin return retains the mixin descriptor
+//        import t6.*;
 //
 //        Base base = new Base();
 //        assert base.self().value() == 42;
@@ -128,6 +136,16 @@ package mixinTests {
         mixin Mix into Base {
             @Override
             Mix self() = this;
+        }
+    }
+
+    package t6 {
+        class Base incorporates Mix {
+            Int value() = 42;
+        }
+
+        mixin Mix into Base {
+            Mix! self() = this;
         }
     }
 }

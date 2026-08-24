@@ -6,7 +6,15 @@ package propertyInitTests {
     @Inject static Console console;
 
     void run() {
+        testSimple();
+        testConstructor();
+        testMethodProperty();
+        testMethodResultProperty();
+        testDefaultProperty();
+        testNullablePropertyTarget();
+    }
 
+    void testSimple() {
         Test t = new Test();
 
         assert t.i    == 100;
@@ -23,16 +31,74 @@ package propertyInitTests {
         assert t.x    == 400;
         assert t.nx1  == 500;
         assert t.nx2  == Null;
+    }
 
+    void testConstructor() {
         ConstructorTest withNulls =
                 new ConstructorTest(600, Null, 700, Null, new Derived("hello"));
         ConstructorTest withValues =
                 new ConstructorTest(601, 602, 703, 704, new Derived("hello"));
 
+    }
+
+    void testMethodProperty() {
         MethodPropertyTest counter = new MethodPropertyTest();
         assert counter.first();
         assert !counter.first();
 
+        class MethodPropertyTest {
+            Boolean first() {
+                private Boolean called = False;
+                if (!called) {
+                    called = True;
+                    return True;
+                }
+                return False;
+            }
+        }
+    }
+
+    void testMethodResultProperty() {
+        class Test {
+            String value = "before";
+
+            void update() {
+                value = compute();
+            }
+
+            private String compute() = "after";
+        }
+
+        Test test = new Test();
+        test.update();
+        assert test.value == "after";
+    }
+
+    void testDefaultProperty() {
+        class Test {
+            String?  string;
+            Boolean  bool;
+            Int      int;
+            Int128   int128;
+            Duration duration;
+        }
+
+        Test t = new Test();
+
+        assert t.string == Null;
+        assert t.bool == False;
+        assert t.int == 0;
+        assert t.int128 == 0;
+        assert t.duration == None;
+    }
+
+    void testNullablePropertyTarget() {
+        class Test(String value) {}
+
+        String? read(Test? test) = test?.value : Null;
+
+        assert read(new Test("set")) == "set";
+        assert read(Null) == Null;
     }
 
     class Test() {
@@ -97,17 +163,6 @@ package propertyInitTests {
             void set(String value) {
                 setterCalled = True;
             }
-        }
-    }
-
-    class MethodPropertyTest {
-        Boolean first() {
-            private Boolean called = False;
-            if (!called) {
-                called = True;
-                return True;
-            }
-            return False;
         }
     }
 }
