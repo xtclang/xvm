@@ -12,7 +12,7 @@ import org.xvm.runtime.template.Proxy;
 /**
  * ProxyComposition represents a Proxy object.
  */
-public class ProxyComposition
+public final class ProxyComposition
         extends DelegatingComposition {
     /**
      * Construct the ProxyComposition for a given "inception" composition and a "proxy" type.

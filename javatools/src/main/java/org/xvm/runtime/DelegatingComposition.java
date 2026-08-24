@@ -16,8 +16,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 /**
  * An abstract base for delegating TypeCompositions.
  */
-public abstract class DelegatingComposition
-        implements TypeComposition {
+public abstract sealed class DelegatingComposition
+        implements TypeComposition
+        permits CanonicalizedTypeComposition, ProxyComposition {
     /**
      * Constructor.
      */

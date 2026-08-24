@@ -34,7 +34,7 @@ import org.xvm.util.Lazy;
 /**
  * PropertyComposition represents a "custom" property class.
  */
-public class PropertyComposition
+public final class PropertyComposition
         implements TypeComposition {
     /**
      * Construct the PropertyComposition for a given property of the specified parent.

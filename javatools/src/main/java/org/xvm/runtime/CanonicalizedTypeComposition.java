@@ -16,7 +16,7 @@ import org.xvm.asm.constants.TypeInfo;
  *
  * Note: at the moment it's used only for Class and Type compositions.
  */
-public class CanonicalizedTypeComposition
+public final class CanonicalizedTypeComposition
         extends DelegatingComposition {
     /**
      * Construct a CanonicalizedTypeComposition based on the canonical class and actual type.

@@ -45,7 +45,7 @@ import org.xvm.util.ListMap;
  * TypeComposition represents a fully resolved class (e.g. {@code ArrayList<String>} or
  * {@code @Interval Range<Date>}).
  */
-public class ClassComposition
+public final class ClassComposition
         implements TypeComposition {
     /**
      * Construct the ClassComposition for a given "inception" type.
