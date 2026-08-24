@@ -77,6 +77,7 @@ explicit owner APIs, and typed runtime accessors.
 | `org.xvm.runtime.ClassCompositionLateRegistrationTest` | Late-registration diagnostic API. |
 | `org.xvm.runtime.ClassCompositionSafePublicationTest` | Native-container factory and branch field-publication shape. |
 | `org.xvm.runtime.NativeTemplatesTest` | Owner-local native template table and related runtime helper APIs. |
+| `org.xvm.runtime.HandleConstantOwnerGuardTest` | `HandleConstant.getHandleFor(Container)` guard API (branch-only); master's `getHandle(Frame)` serves the live handle raw with no ownership check. |
 | `org.xvm.runtime.OwnershipDiagnosticsTest` | Runtime ownership diagnostic graph walker/validator. |
 | `org.xvm.runtime.RuntimeTest` | Generic `Runtime.registerContainer(...)` return type. |
 | `org.xvm.runtime.SingletonConstantTest` | Branch helper construction surfaces used by singleton lifecycle tests. |

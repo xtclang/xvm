@@ -2776,6 +2776,37 @@ old adopt-in-place path. `MethodInfoTest.owningFreshBodyDoesNotFabricateSelfTarg
 fails on the broken shape and passes here, `xdk:installDist` builds the full
 XDK again, and the cycle-safe equality tests stay green.
 
+### HandleConstant Does Not Serve Live Handles Raw Across Containers
+
+Found by the row-125 completion sweep; unguarded verbatim on master.
+`HandleConstant` wraps a live `ObjectHandle` - owner-specific runtime state -
+and `getHandle(Frame)` returned it unconditionally to any frame whose pool
+resolved the constant. Containers loaded over one module share that module's
+pool, so a sibling container instantiating the annotated type received the
+creator's live object with no ownership check, bypassing the maskAs/proxy
+isolation machinery entirely. Master reaches this through its own sibling and
+nested containers; same-JVM reuse makes it routine.
+
+The serve is now guarded in `getHandleFor(Container)`:
+
+- the owning container is always served its own handle (including mutable
+  state - that is normal same-owner reuse);
+- any other container only receives what could legally cross a service
+  boundary anyway: a non-service, pass-through (immutable, type-shared)
+  value;
+- anything else fails loudly with both owners named, which the op boundary
+  reports through the runtime defect channel.
+
+`assemble()` is also overridden to throw: the inherited implementation wrote
+only the borrowed Register format byte, so a runtime-only handle constant
+referenced at serialization time would have produced a structurally corrupt
+module silently.
+
+`HandleConstantOwnerGuardTest` proves all three serve behaviors with two real
+native containers over the compiled system modules, and
+`HandleConstantAssembleTest` proves serialization refuses. The guard is
+self-contained and ports to master as a small standalone PR.
+
 ### Alarm Callback Registry Is Concurrent, Timer-Safe, And Leak-Free
 
 Found by the row-160 weak/identity registry audit; the broken shape exists
