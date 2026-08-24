@@ -902,3 +902,38 @@ site that needs a decision, as compile errors with file and line, before
 anything runs. The maintenance cost of divergence drops from "re-audit 1,549
 instanceof sites and 167 switches by memory" to "answer the compiler's list",
 which is the only version of that cost that stays paid.
+
+### Stage 0 Landed (2026-08-24)
+
+Implemented on this branch, same day, as a separately submittable unit: the
+four proof families are sealed - `ConditionalConstant` (permits its six direct
+kinds; `MultiCondition` sealed over `AllCondition`/`AnyCondition`),
+`PseudoConstant` (eight leaves), `FrameDependentConstant` (three leaves), and
+`TypeInfo permits TypeInfoReal` - with every leaf made `final` (23 files, all
+modifier-only). `SimulatedLinkerContext.extractRequiredConditions` is the
+demonstrator rewrite: the four-branch instanceof cascade with four casts and a
+silent drop became an exhaustive pattern switch with no default; the
+previously-invisible `NotCondition`/`MultiCondition` drops are now written
+arms. `SealedConstantFamiliesTest` pins each permits list and the
+final-or-sealed leaf discipline by reflection. Verified: full
+`:javatools:test` suite and `xdk:installDist` green.
+
+What javac now refuses (real output, captured against the sealed classes):
+
+```
+error: class is not allowed to extend sealed class: ConditionalConstant
+    (as it is not listed in its 'permits' clause)
+```
+
+```
+error: cannot inherit from final NotCondition
+```
+
+and removing any arm from the demonstrator switch:
+
+```
+error: the switch expression does not cover all possible input values
+```
+
+Stages 1-4 (BinaryAST, TypeConstant, IdentityConstant/ValueConstant plus the
+`DefiningConstant` union, Component/TypeComposition) remain as scoped above.
