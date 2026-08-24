@@ -981,14 +981,18 @@ public class xArray
 
         @Override
         public ObjectHandle cloneAs(TypeComposition clazz) {
-            if (m_mutability == Mutability.Mutable) {
-                // clear() replaces m_hDelegate wholesale for Mutable arrays (the one in-place
-                // delegate-pointer replacement in the codebase), so a shallow view copy forks the
-                // storage pointer: after one alias clears, the other keeps the old delegate and
-                // the two views silently diverge while natural code believes they are one array.
-                // Fixed/Persistent/Constant arrays never replace the pointer in place - views of
-                // those share one delegate and stay consistent - and immutable arrays are the
-                // proven-safe clone inputs (ConstHeap relocation asserts immutability).
+            if (m_mutability != Mutability.Constant) {
+                // two desync axes make live-lifecycle array views unsafe. First, clear()
+                // replaces m_hDelegate wholesale for Mutable arrays (the one in-place
+                // delegate-pointer replacement in the codebase), so a shallow view copy forks
+                // the storage pointer: after one alias clears, the other keeps the old delegate
+                // and the two views silently diverge. Second, m_mutability and m_fMutable are
+                // per-view fields while the delegate storage is shared: freezing a Fixed or
+                // Persistent array through one view would leave a sibling view still willing to
+                // write into the frozen shared storage, because the write-permission checks in
+                // xArray read the handle's enum, not the delegate's. Only Constant arrays have
+                // a terminal lifecycle that per-view copies cannot split, and immutable arrays
+                // are the proven-safe clone inputs (ConstHeap relocation asserts immutability).
                 throw new IllegalStateException("mutable array cannot be cloned as a view: " + this);
             }
             return super.cloneAs(clazz);
