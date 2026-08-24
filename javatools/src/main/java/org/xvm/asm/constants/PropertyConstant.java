@@ -75,38 +75,38 @@ public sealed class PropertyConstant
      * the protected virtual hook below, so subclass validation remains explicit without exposing a
      * half-constructed PropertyConstant.
      */
-    @SuppressWarnings("fallthrough")
     protected static void validateParent(ParentFormat format, IdentityConstant idParent) {
         switch (format) {
         case PROPERTY:
-            switch (idParent.getFormat()) {
-            case Module:
-            case Package:
-            case Class:
-            case NativeClass:
-            case Property:
-            case Method:
-                return;
-
-            default:
+            // formal type children are not legal property parents even though they subtype
+            // PropertyConstant, so their refusal comes first
+            switch (idParent) {
+            case FormalTypeChildConstant _ ->
+                throw new IllegalArgumentException("invalid parent: " + idParent.getFormat());
+            case ModuleConstant _, PackageConstant _, ClassConstant _,
+                 PropertyConstant _, MethodConstant _ -> { }
+            case DecoratedClassConstant _, MultiMethodConstant _, TypedefConstant _,
+                 TypeParameterConstant _, DynamicFormalConstant _, PureIdentityConstant _ ->
                 throw new IllegalArgumentException("invalid parent: " + idParent.getFormat());
             }
+            break;
 
         case FORMAL_CHILD:
-            switch (idParent.getFormat()) {
-            case FormalTypeChild:
-            case TypeParameter:
-                return;
-
-            case Property:
-                if (((PropertyConstant) idParent).isFormalType()) {
-                    return;
+            switch (idParent) {
+            case FormalTypeChildConstant _, TypeParameterConstant _ -> { }
+            case PropertyConstant constParent -> {
+                if (!constParent.isFormalType()) {
+                    throw new IllegalArgumentException(
+                            "parent does not represent a formal constant: " + idParent);
                 }
-                // fall through
-            default:
+            }
+            case ModuleConstant _, PackageConstant _, ClassConstant _,
+                 DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 TypedefConstant _, DynamicFormalConstant _, PureIdentityConstant _ ->
                 throw new IllegalArgumentException(
                         "parent does not represent a formal constant: " + idParent);
             }
+            break;
         }
     }
 
@@ -486,15 +486,19 @@ public sealed class PropertyConstant
         StringBuilder sb = new StringBuilder().append(getName());
         IdentityConstant idParent = getNamespace();
         while (idParent != null) {
-            switch (idParent.getFormat()) {
-            case Method:
-            case Property:
+            // formal type children stop the walk exactly as the old default did for their
+            // format, even though they subtype PropertyConstant
+            switch (idParent) {
+            case FormalTypeChildConstant _   -> idParent = null;
+            case MethodConstant _,
+                 PropertyConstant _          -> {
                 sb.insert(0, idParent.getName() + '#');
                 idParent = idParent.getNamespace();
-                break;
-
-            default:
-                idParent = null;
+            }
+            case ModuleConstant _, PackageConstant _, ClassConstant _,
+                 DecoratedClassConstant _, MultiMethodConstant _, TypedefConstant _,
+                 TypeParameterConstant _, DynamicFormalConstant _,
+                 PureIdentityConstant _      -> idParent = null;
             }
         }
 

@@ -60,15 +60,16 @@ public final class ParameterizedTypeConstant
             throw new IllegalArgumentException("type is already parameterized");
         }
 
-        switch (constType.getFormat()) {
-        case TerminalType:
-        case VirtualChildType:
-        case InnerChildType:
-        case AnonymousClassType:
-        case UnresolvedType:
-            break;
-
-        default:
+        // exhaustive over the sealed TypeConstant tree (recursive types subtype the
+        // terminal kind and keep the historical refusal, so their arm comes first)
+        switch (constType) {
+        case RecursiveTypeConstant _ ->
+            throw new IllegalArgumentException("Invalid format: " + constType);
+        case TerminalTypeConstant _, VirtualChildTypeConstant _, InnerChildTypeConstant _,
+             AnonymousClassTypeConstant _, UnresolvedTypeConstant _ -> { }
+        case PendingTypeConstant _, AccessTypeConstant _, AnnotatedTypeConstant _,
+             ImmutableTypeConstant _, ParameterizedTypeConstant _, RelationalTypeConstant _,
+             ServiceTypeConstant _, TypeSequenceTypeConstant _, PropertyClassTypeConstant _ ->
             throw new IllegalArgumentException("Invalid format: " + constType);
         }
 
@@ -186,13 +187,11 @@ public final class ParameterizedTypeConstant
 
     @Override
     public TypeConstant resolveFormalType(FormalConstant constFormal) {
-        switch (constFormal.getFormat()) {
-        case Property:
-            return resolveGenericType(constFormal.getName());
-
-        case FormalTypeChild: {
-            FormalTypeChildConstant constChild  = (FormalTypeChildConstant) constFormal;
-            FormalConstant          constParent = constChild.getParentConstant();
+        // exhaustive over the sealed FormalConstant tree (the child kind subtypes the
+        // property kind, so its arm comes first)
+        switch (constFormal) {
+        case FormalTypeChildConstant constChild: {
+            FormalConstant constParent = constChild.getParentConstant();
             TypeConstant            typeParent  = resolveFormalType(constParent);
             if (typeParent != null) {
                 // this could be either resolution of the generic type's constraint (e.g.
@@ -207,15 +206,21 @@ public final class ParameterizedTypeConstant
             break;
         }
 
-        case TypeParameter: {
-            TypeParameterConstant constParam = (TypeParameterConstant) constFormal;
-            MethodConstant        idMethod   = constParam.getMethod();
+        case PropertyConstant _:
+            return resolveGenericType(constFormal.getName());
+
+        case TypeParameterConstant constParam: {
+            MethodConstant idMethod = constParam.getMethod();
             if (idMethod.isLambda()) {
                 // lambdas capture generic types as formal type parameters of the same name
                 return resolveGenericType(constParam.getName());
             }
             break;
         }
+
+        case DynamicFormalConstant _:
+            // previously the silent tail of the format switch
+            break;
         }
         return null;
     }

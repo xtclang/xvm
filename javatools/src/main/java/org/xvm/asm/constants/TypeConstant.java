@@ -5276,30 +5276,35 @@ public abstract sealed class TypeConstant
         IdentityConstant constParent = prop.getIdentityConstant().getParentConstant();
         boolean          fConstant   = prop.isStatic();
         boolean          fLazyConst  = fConstant && prop.isLazy();
-        switch (constParent.getFormat()) {
-        case Property:
+        switch (constParent) {
+        // formal type children kept the historical refusal even though they subtype the
+        // property kind, so their arm comes first
+        case FormalTypeChildConstant _ ->
+            throw new IllegalStateException("a property (" + sName
+                    + ") cannot be nested under a " + constParent.getFormat()
+                    + " (on " + constId.getValueString() + ")");
+
+        case PropertyConstant _ -> {
             if (!fConstant && prop.getParent().isStatic()) {
                 log(errs, Severity.ERROR, VE_CONST_CODE_ILLEGAL,
                         constParent.getValueString(),
                         sName);
             }
-            break;
+        }
 
-        case Method:
+        case MethodConstant _ -> {
             if (!fConstant && prop.getParent().isStatic()) {
                 // a function cannot contain properties
                 log(errs, Severity.ERROR, VE_FUNCTION_CONTAINS_PROPERTY,
                         constParent.getValueString(),
                         sName);
             }
-            break;
+        }
 
-        case Module:
-        case Package:
-        case Class:
-            break;
+        case ModuleConstant _, PackageConstant _, ClassConstant _ -> { }
 
-        default:
+        case DecoratedClassConstant _, MultiMethodConstant _, TypedefConstant _,
+             TypeParameterConstant _, DynamicFormalConstant _, PureIdentityConstant _ ->
             throw new IllegalStateException("a property (" + sName
                     + ") cannot be nested under a " + constParent.getFormat()
                     + " (on " + constId.getValueString() + ")");
@@ -6403,51 +6408,41 @@ public abstract sealed class TypeConstant
         assert !typeRight.isRelationalType() && typeRight.isSingleDefiningConstant();
 
         Constant constIdRight = typeRight.getDefiningConstant();
-        switch (constIdRight.getFormat()) {
-        case Module:
-        case Package:
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-            return Relation.INCOMPATIBLE;
-
-        case Class:
-        case NativeClass: {
-            ClassStructure clzRight = (ClassStructure)
-                    ((IdentityConstant) constIdRight).getComponent();
-
-            // continue recursively with the right side analysis
-            return clzRight.findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
-        }
-
-        case ThisClass:
-        case ParentClass:
-        case ChildClass: {
-            PseudoConstant idRight  = (PseudoConstant) constIdRight;
-            ClassStructure clzRight = (ClassStructure)
-                    idRight.getDeclarationLevelClass().getComponent();
-            return clzRight.findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
-        }
-
-        case Typedef:
-            return ((TypedefConstant) constIdRight).
-                    getReferredToType().findUnionContribution(typeLeft);
-
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-        case IsClass: {
-            TypeConstant   typeBase = ((KeywordConstant) constIdRight).getBaseType();
-            ClassStructure clzRight = (ClassStructure)
-                    typeBase.getSingleUnderlyingClass(true).getComponent();
-            return clzRight.findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
-        }
-
-        default:
+        if (!(constIdRight instanceof DefiningConstant definingRight)) {
             throw new IllegalStateException("unexpected constant: " + constIdRight);
         }
+        return switch (definingRight) {
+            case ModuleConstant _, PackageConstant _, FormalConstant _ ->
+                Relation.INCOMPATIBLE;
+
+            // continue recursively with the right side analysis (the class arm covers the
+            // native rebase, which behaved identically under the old format switch)
+            case ClassConstant constant -> ((ClassStructure) constant.getComponent())
+                    .findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
+
+            case ThisClassConstant idRight ->
+                ((ClassStructure) idRight.getDeclarationLevelClass().getComponent())
+                        .findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
+            case ParentClassConstant idRight ->
+                ((ClassStructure) idRight.getDeclarationLevelClass().getComponent())
+                        .findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
+            case ChildClassConstant idRight ->
+                ((ClassStructure) idRight.getDeclarationLevelClass().getComponent())
+                        .findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
+
+            case TypedefConstant constant ->
+                constant.getReferredToType().findUnionContribution(typeLeft);
+
+            case KeywordConstant constant ->
+                ((ClassStructure) constant.getBaseType().getSingleUnderlyingClass(true)
+                        .getComponent())
+                        .findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
+
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, SignatureConstant _, UnresolvedNameConstant _,
+                 ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected constant: " + constIdRight);
+        };
     }
 
     /**
@@ -6745,17 +6740,14 @@ public abstract sealed class TypeConstant
      * @return true iff the TypeConstant represents a generic type
      */
     public boolean isGenericType() {
-        if (getCategory() == Category.FORMAL) {
-            Constant constant = getDefiningConstant();
-            switch (constant.getFormat()) {
-            case Property:
-                return true;
-
-            case FormalTypeChild:
-                return ((FormalTypeChildConstant) constant).getTopParent().getFormat() == Format.Property;
-            }
-        }
-        return false;
+        // the child kind subtypes the property kind, so its arm comes first
+        return getCategory() == Category.FORMAL
+                && switch (getDefiningConstant()) {
+                    case FormalTypeChildConstant constant ->
+                        constant.getTopParent().getFormat() == Format.Property;
+                    case PropertyConstant _ -> true;
+                    default -> false;
+                };
     }
 
     /**

@@ -212,9 +212,15 @@ public abstract sealed class IdentityConstant
      * @return {@code true} if nested
      */
     private Boolean computeIsNested() {
-        return switch (getFormat()) {
-            case Typedef, Property, MultiMethod, Method -> true;
-            default                                     -> false;
+        // exhaustive over the sealed tree; formal type children are NOT nested members even
+        // though they subtype PropertyConstant, so their arm comes first
+        return switch (this) {
+            case FormalTypeChildConstant _ -> false;
+            case TypedefConstant _, PropertyConstant _, MultiMethodConstant _,
+                 MethodConstant _          -> true;
+            case ModuleConstant _, PackageConstant _, ClassConstant _,
+                 DecoratedClassConstant _, TypeParameterConstant _,
+                 DynamicFormalConstant _, PureIdentityConstant _ -> false;
         };
     }
 
@@ -249,14 +255,19 @@ public abstract sealed class IdentityConstant
      *         null if there is a method interposed between this constant and the containing class
      */
     public String getNestedName() {
-        IdentityConstant idParent = getParentConstant();
-        return switch (idParent.getFormat()) {
-            case Module, Package, Class -> getName();
-            case MultiMethod            -> idParent.getNestedName();
-            case Property               -> idParent.getNestedName() + '.' + getName();
+        // exhaustive over the sealed tree; native rebases and formal type children keep the
+        // old default's null (they subtype the visible kinds, so their arms come first)
+        return switch (getParentConstant()) {
+            case NativeRebaseConstant _    -> null;
+            case ModuleConstant _, PackageConstant _, ClassConstant _ -> getName();
+            case MultiMethodConstant idParent -> idParent.getNestedName();
+            case FormalTypeChildConstant _ -> null;
+            case PropertyConstant idParent -> idParent.getNestedName() + '.' + getName();
 
             // nothing else is supposed to be visible inside a method from the outside
-            default -> null;
+            case MethodConstant _, DecoratedClassConstant _, TypedefConstant _,
+                 TypeParameterConstant _, DynamicFormalConstant _,
+                 PureIdentityConstant _   -> null;
         };
     }
 
@@ -742,11 +753,16 @@ public abstract sealed class IdentityConstant
         IdentityConstant idParent = getParentConstant();
         char    chDelim;
         boolean fUsePosition;
-        switch (idParent.getFormat()) {
-            case Module, Package   -> {chDelim = '.'; fUsePosition = false;}
-            case Class             -> {chDelim = '$'; fUsePosition = false;}
-            case Property, Method  -> {chDelim = '$'; fUsePosition = true; }
-            default ->
+        switch (idParent) {
+            case ModuleConstant _, PackageConstant _ -> {chDelim = '.'; fUsePosition = false;}
+            case NativeRebaseConstant _ ->
+                throw new IllegalStateException("unexpected parent constant: " + idParent);
+            case ClassConstant _                     -> {chDelim = '$'; fUsePosition = false;}
+            case FormalTypeChildConstant _ ->
+                throw new IllegalStateException("unexpected parent constant: " + idParent);
+            case PropertyConstant _, MethodConstant _-> {chDelim = '$'; fUsePosition = true; }
+            case DecoratedClassConstant _, MultiMethodConstant _, TypedefConstant _,
+                 TypeParameterConstant _, DynamicFormalConstant _, PureIdentityConstant _ ->
                 throw new IllegalStateException("unexpected parent constant: " + idParent);
         }
 
@@ -765,10 +781,15 @@ public abstract sealed class IdentityConstant
 
     @Override
     public TypeConstant getType() {
-        return switch (getFormat()) {
-            case Module, Package, Class, Typedef, NativeClass, Property,TypeParameter, FormalTypeChild, DynamicFormal ->
-                    getConstantPool().ensureTerminalTypeConstant(this);
-            default -> throw new IllegalStateException("not a class type: " + this);
+        // exhaustive over the sealed tree: nine format labels collapse to five patterns,
+        // because the class hierarchy already groups what the format enum spelled out
+        // (ClassConstant covers the native rebase; FormalConstant covers all four formal kinds)
+        return switch (this) {
+            case ModuleConstant _, PackageConstant _, ClassConstant _, TypedefConstant _,
+                 FormalConstant _ -> getConstantPool().ensureTerminalTypeConstant(this);
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _ ->
+                throw new IllegalStateException("not a class type: " + this);
         };
     }
 

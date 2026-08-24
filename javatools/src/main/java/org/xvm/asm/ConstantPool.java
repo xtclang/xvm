@@ -1301,9 +1301,14 @@ public class ConstantPool
             throw new IllegalArgumentException("illegal package name: " + sPackage);
         }
 
-        return switch (constParent.getFormat()) {
-            case Module, Package -> register(new PackageConstant(this, constParent, sPackage));
-            default -> throw new IllegalArgumentException("constant " + constParent.getFormat() + " is not a Module or Package");
+        return switch (constParent) {
+            case ModuleConstant _, PackageConstant _ ->
+                register(new PackageConstant(this, constParent, sPackage));
+            case ClassConstant _, DecoratedClassConstant _, MethodConstant _,
+                 MultiMethodConstant _, PropertyConstant _, TypeParameterConstant _,
+                 DynamicFormalConstant _, TypedefConstant _, PureIdentityConstant _ ->
+                throw new IllegalArgumentException("constant " + constParent.getFormat()
+                        + " is not a Module or Package");
         };
     }
 
@@ -1317,10 +1322,19 @@ public class ConstantPool
      * @return the specified class constant
      */
     public ClassConstant ensureClassConstant(IdentityConstant constParent, String sClass) {
-        return switch (constParent.getFormat()) {
-            case Module, Package, Class, Method, Property ->
-                    register(new ClassConstant(this, constParent, sClass));
-            default -> throw new IllegalArgumentException("constant " + constParent.getFormat() + " is not a valid parent");
+        // native rebases and formal type children kept the historical refusal, so their arms
+        // come before the class/property kinds they subtype
+        return switch (constParent) {
+            case NativeRebaseConstant _, FormalTypeChildConstant _ ->
+                throw new IllegalArgumentException("constant " + constParent.getFormat()
+                        + " is not a valid parent");
+            case ModuleConstant _, PackageConstant _, ClassConstant _, MethodConstant _,
+                 PropertyConstant _ ->
+                register(new ClassConstant(this, constParent, sClass));
+            case DecoratedClassConstant _, MultiMethodConstant _, TypeParameterConstant _,
+                 DynamicFormalConstant _, TypedefConstant _, PureIdentityConstant _ ->
+                throw new IllegalArgumentException("constant " + constParent.getFormat()
+                        + " is not a valid parent");
         };
     }
 
@@ -1572,12 +1586,19 @@ public class ConstantPool
             TypeConstant[] aconstParams, TypeConstant[] aconstReturns) {
         assert constParent != null;
 
-        MultiMethodConstant constMultiMethod = switch (constParent.getFormat()) {
-            case MultiMethod -> (MultiMethodConstant) constParent;
-            case Module, Package, Class, Method, Property, PureType, TypeParameter, FormalTypeChild ->
-                    ensureMultiMethodConstant(constParent, sName);
-            default -> throw new IllegalArgumentException("constant " + constParent.getFormat()
-                    + " is not a Module, Package, Class, Method, or Property");
+        // native rebases and dynamic formal constants kept the historical refusal, so their
+        // arms come before the class/formal kinds they subtype
+        MultiMethodConstant constMultiMethod = switch (constParent) {
+            case MultiMethodConstant constant -> constant;
+            case NativeRebaseConstant _, DynamicFormalConstant _ ->
+                throw new IllegalArgumentException("constant " + constParent.getFormat()
+                        + " is not a Module, Package, Class, Method, or Property");
+            case ModuleConstant _, PackageConstant _, ClassConstant _, MethodConstant _,
+                 FormalConstant _, PureIdentityConstant _ ->
+                ensureMultiMethodConstant(constParent, sName);
+            case DecoratedClassConstant _, TypedefConstant _ ->
+                throw new IllegalArgumentException("constant " + constParent.getFormat()
+                        + " is not a Module, Package, Class, Method, or Property");
         };
 
         return register(new MethodConstant(this, constMultiMethod, aconstParams, aconstReturns));
@@ -1595,12 +1616,14 @@ public class ConstantPool
         assert constParent != null;
         assert constSig    != null;
 
-        MultiMethodConstant constMultiMethod = switch (constParent.getFormat()) {
-            case MultiMethod -> (MultiMethodConstant) constParent;
-            case Module, Package, Class, NativeClass, Method, Property, PureType, TypeParameter,
-                 FormalTypeChild, DynamicFormal -> ensureMultiMethodConstant(constParent, constSig.getName());
-            default -> throw new IllegalArgumentException("constant " + constParent.getFormat()
-                    + " is not a Module, Package, Class, Method, or Property");
+        MultiMethodConstant constMultiMethod = switch (constParent) {
+            case MultiMethodConstant constant -> constant;
+            case ModuleConstant _, PackageConstant _, ClassConstant _, MethodConstant _,
+                 FormalConstant _, PureIdentityConstant _ ->
+                ensureMultiMethodConstant(constParent, constSig.getName());
+            case DecoratedClassConstant _, TypedefConstant _ ->
+                throw new IllegalArgumentException("constant " + constParent.getFormat()
+                        + " is not a Module, Package, Class, Method, or Property");
         };
 
         return register(new MethodConstant(this, constMultiMethod, constSig));
@@ -1902,20 +1925,15 @@ public class ConstantPool
         boolean  fAutoNarrow = false;
         boolean  fThisClass  = false;
         Constant constOrig   = constTarget;
-        switch (constTarget.getFormat()) {
-        case ThisClass:
+        switch (constTarget) {
+        case ThisClassConstant constant -> {
             fAutoNarrow = true;
             fThisClass  = true;
-            constTarget = ((ThisClassConstant) constTarget).getDeclarationLevelClass();
-            break;
-
-        case ParentClass:
-            constTarget = ((ParentClassConstant) constTarget).getChildClass();
-            break;
-
-        case ChildClass:
-            constTarget = ((ChildClassConstant) constTarget).getParent();
-            break;
+            constTarget = constant.getDeclarationLevelClass();
+        }
+        case ParentClassConstant constant -> constTarget = constant.getChildClass();
+        case ChildClassConstant constant  -> constTarget = constant.getParent();
+        default -> { } // any other constant passes through unchanged, as before
         }
 
         TypeConstant typeParent;
@@ -2051,26 +2069,15 @@ public class ConstantPool
      *
      * @return an auto-narrowing class type constant that represents the type of "this"
      */
-    @SuppressWarnings("fallthrough")
     public TypeConstant ensureThisTypeConstant(Constant constClass, Access access) {
-        ThisClassConstant constId;
-        switch (constClass.getFormat()) {
-        case ThisClass:
-            constId = (ThisClassConstant) constClass;
-            break;
-
-        case NativeClass:
-            constClass = ((NativeRebaseConstant) constClass).getClassConstant();
-            // fall through;
-        case Module:
-        case Package:
-        case Class:
-            constId = ensureThisClassConstant((IdentityConstant) constClass);
-            break;
-
-        default:
-            throw new IllegalStateException("constant=" + constClass);
-        }
+        ThisClassConstant constId = switch (constClass) {
+            case ThisClassConstant constant    -> constant;
+            case NativeRebaseConstant constant -> ensureThisClassConstant(constant.getClassConstant());
+            case ModuleConstant constant       -> ensureThisClassConstant(constant);
+            case PackageConstant constant      -> ensureThisClassConstant(constant);
+            case ClassConstant constant        -> ensureThisClassConstant(constant);
+            default -> throw new IllegalStateException("constant=" + constClass);
+        };
 
         // get the raw type
         TypeConstant constType = findLocated(TypeConstant.class, Format.TerminalType, constId);
