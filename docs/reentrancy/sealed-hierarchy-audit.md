@@ -935,5 +935,49 @@ and removing any arm from the demonstrator switch:
 error: the switch expression does not cover all possible input values
 ```
 
-Stages 1-4 (BinaryAST, TypeConstant, IdentityConstant/ValueConstant plus the
-`DefiningConstant` union, Component/TypeComposition) remain as scoped above.
+### Stages 1-4 Landed (2026-08-24, same day)
+
+The remaining waves shipped as separate commits the same day, each gated by
+the full javatools suite and `xdk:installDist`:
+
+- **Stage 1** (`dc39387bd`): `BinaryAST`/`ExprAST` sealed over the 52-class
+  tree. `NodeType.instantiate()` lost its default arm - the five
+  unimplemented node types (`ReturnTStmt` among them) are explicit case arms,
+  so a new `NodeType` constant is a compile error at the factory; the
+  `readExprAST` wire boundary reports statement-in-expression-position as a
+  corrupt-stream `IOException`. `SealedAstFamiliesTest` pins the hole set,
+  the `ReturnTStmt` behavior, the 0..31 expression-encoding window, and the
+  53-class sealed closure. Since BAST consumption is dormant upstream, no
+  consumer conversions were done - the wire format got the fence, nothing
+  more.
+- **Stage 2** (`298067019`): `TypeConstant` sealed over its 21-class tree,
+  modifier-only.
+- **Stage 3** (`cace6570a`): `IdentityConstant` sealed with **zero**
+  `non-sealed` hatches - the constructor-escape probe fakes that subclassed
+  `PropertyConstant`/`FormalTypeChildConstant` were retired because the fatal
+  `-Xlint:this-escape` gate enforces their property at compile time, and the
+  reworked test pins the surviving half (constructor parent validation still
+  fires, non-virtually). `ValueConstant` sealed with one documented hatch
+  (`StringConstant`, kept open for the pool-registration deadlock latch).
+- **Stage 4** (`07ed937b3`): `Component` sealed; `MethodStructure` and
+  `PropertyStructure` are documented hatches (their fakes exercise cloning
+  and hook-ordering behavior the compile gates do not replace).
+  `TypeComposition` stays unsealed pending its test adapter.
+- **Payoff rewrites** (`78111b85f`): `ClassConstant.getParentClass()` and
+  `getOutermost()` are exhaustive pattern switches over the sealed
+  `IdentityConstant` tree - the "any format I never heard of terminates the
+  search" default is gone, every silent-terminator arm is explicit and
+  labeled, and javac checks both the coverage and the pattern dominance
+  (`NativeRebaseConstant` before `ClassConstant`, `FormalTypeChildConstant`
+  before `PropertyConstant` - orderings the format switch could not even
+  express). `NameExpression.getMeaning()` dropped its
+  `@SuppressWarnings("fallthrough")`, its empty `default:`, and its
+  hand-maintained trailing `IllegalStateException` for nested exhaustive
+  switches, behavior preserved arm-for-arm.
+
+Still open from this document's plan: the `DefiningConstant` union that
+retires `TerminalTypeConstant`'s 23 switches and 48 casts (blocked on the
+150-call-site `getDefiningConstant()` return-type change - the right shape,
+scoped as its own wave), opportunistic cascade conversions across the sealed
+families, `Op` (package split), the compiler `AstNode` tree (backlog), and
+`TypeComposition`.

@@ -2567,6 +2567,125 @@ red-on-master proof and can be extracted as a smaller slice ahead of this PR:
   stable tests.
 - Tests assert structured values, not free-form console text, wherever possible.
 
+## PR 16: Seal The Closed Constant, AST, And Structure Hierarchies
+
+### PR Title
+
+Seal the closed constant, AST, and structure hierarchies
+
+### Reviewer-Facing Problem Statement
+
+Seven core hierarchies - the `Constant` format families, `TypeConstant`,
+`IdentityConstant`, `ValueConstant`, the serialized `BinaryAST` tree, and the
+`Component` structure tree - are closed in practice: nothing outside this
+repository subclasses them, their subtype sets are mirrored by hand-maintained
+`Format`/`NodeType` discriminator enums, and every dispatch over them is an
+`instanceof` cascade or a discriminator switch. Measured against the tree:
+1,549 `instanceof` occurrences, 167 discriminator switches - of which 102
+throw in their default arm at runtime, 26 have no default at all, and **39
+silently produce a value** when they meet a format they never heard of
+(`TerminalTypeConstant.isTuple()` answers "not a tuple" for any new format;
+the `ClassConstant` namespace walkers treat every unknown identity kind as
+"outermost"). There are 814 hand-written `IllegalStateException` throws and 63
+"shouldn't happen" comments standing in for what the compiler could enforce.
+One site (`NameExpression.getMeaning()`) needed
+`@SuppressWarnings("fallthrough")` purely because the hierarchy was open -
+a direct collision with this build's fatal `-Xlint:fallthrough -Werror` gate.
+
+Sealing is not syntax. It moves "forgot a subtype" and "wrong subtype" from
+runtime failures and review conventions into compile errors, at every dispatch
+site simultaneously, forever. Real captured javac output against the sealed
+classes:
+
+```
+error: class is not allowed to extend sealed class: ConditionalConstant
+    (as it is not listed in its 'permits' clause)
+```
+
+```
+error: cannot inherit from final NotCondition
+```
+
+and deleting any arm of a converted switch:
+
+```
+error: the switch expression does not cover all possible input values
+```
+
+### Exact Scope Included
+
+- Modifier-only sealing of: `ConditionalConstant` (+`MultiCondition`),
+  `PseudoConstant`, `FrameDependentConstant`, `TypeInfo`, `BinaryAST`/
+  `ExprAST` (52 classes), `TypeConstant` (21), `IdentityConstant` (15, zero
+  hatches), `ValueConstant` (27, one hatch), `Component` (9, two hatches).
+- `NodeType.instantiate()` made exhaustive: the five unimplemented node types
+  (`ReturnTStmt` among them) become explicit case arms instead of an
+  invisible default throw; `readExprAST` reports statement-in-expression
+  wire bytes as a corrupt-stream `IOException` instead of an incidental CCE.
+- Three demonstrator rewrites, behavior preserved arm-for-arm:
+  `SimulatedLinkerContext.extractRequiredConditions` (a silent
+  requirement-drop becomes an exhaustive switch), `ClassConstant`'s
+  `getParentClass`/`getOutermost` (silent-terminator defaults become explicit
+  labeled arms with compiler-checked pattern dominance), and
+  `NameExpression.getMeaning` (fallthrough suppression, empty default, and
+  trailing ISE deleted).
+- Retirement of the constructor-escape probe fakes on
+  `PropertyConstant`/`FormalTypeChildConstant`: the fatal `-Xlint:this-escape`
+  gate enforces their property at compile time, and the reworked test pins
+  the surviving half (constructor parent validation still fires).
+- Reflection pins for every permits list and hatch:
+  `SealedConstantFamiliesTest`, `SealedAstFamiliesTest`,
+  `SealedStructureFamiliesTest`.
+
+### Exact Scope Excluded
+
+- `Op` (root in `org.xvm.asm`, 215 leaves in `org.xvm.asm.op`: the unnamed
+  module's same-package rule blocks it, and the byte-indexed factories
+  already fail loudly).
+- The compiler `AstNode` tree, `ObjectHandle`, `ClassTemplate` (deliberately
+  open), `TypeComposition` (needs a test adapter first).
+- The `DefiningConstant` union retiring `TerminalTypeConstant`'s 23 format
+  switches and 48 casts (needs a 150-call-site return-type change; its own
+  follow-up).
+- Bulk conversion of the remaining cascades: sealing makes each one
+  convertible opportunistically; converting them here would bury the
+  modifier-only review.
+
+### Equivalence
+
+Modifier-only except the three demonstrator rewrites, whose old and new arms
+are documented side-by-side in `sealed-hierarchy-audit.md` (the previously
+silent arms are labeled "was the silent default" in the code). Sealing is
+binary-compatible for all callers; the only affected parties are subclassers,
+and the repository sweep (including `lang/`, `manualTests/`, the plugin, and
+the jitbridge) proves none exist outside javatools tests, which were reworked
+or given documented `non-sealed` hatches.
+
+### Verification
+
+- `SealedConstantFamiliesTest`, `SealedAstFamiliesTest`,
+  `SealedStructureFamiliesTest` pin every permits list, the final-or-sealed
+  leaf discipline, and the documented hatches.
+- `SealedAstFamiliesTest` additionally pins the `NodeType` factory hole set,
+  the `ReturnTStmt` behavior, and the 0..31 expression-encoding window.
+- Full `:javatools:test` suite and `xdk:installDist` green after every stage.
+- Branch provenance: `e59d4f82d` (stage 0), `dc39387bd` (stage 1),
+  `298067019` (stage 2), `cace6570a` (stage 3), `07ed937b3` (stage 4),
+  `78111b85f` (payoff rewrites).
+
+### Review Checklist / Acceptance Criteria
+
+- Every sealed root's permits list matches the audited tree in
+  `sealed-hierarchy-audit.md`; every leaf is `final`, `sealed`, or a
+  documented `non-sealed` hatch with a named test that needs it.
+- The demonstrator rewrites preserve behavior arm-for-arm, including the old
+  implicit `IllegalStateException` cases, now explicit.
+- No new `default` arms were introduced in the converted switches - the
+  absence of `default` is the mechanism, not an omission.
+- The serialization factories (`ConstantPool.disassemble`,
+  `NodeType.instantiate`, `Op.instantiate`) remain in sync with the sealed
+  trees; the factory tests prove it.
+
 ## Cross-PR Review Checklist
 
 Use this short checklist on every PR in the sequence:
