@@ -1167,3 +1167,862 @@ owner-asserted, highest cross-owner capability), and `BinaryAST.readAST`
 shape hazard to protect in review is `ServiceContext.java:1335`/`:1341`,
 where the erased future's compile-time payload type is already wrong for the
 zero-return path and only the raw cast keeps it compiling.
+
+## Worked Examples: What Proper Generics Would Have Refused To Compile (2026-08-24)
+
+The classification table above proves confinement; this section proves cost.
+For each of the strongest sites it shows the current code, the concrete
+runtime failure the erased API permits, the typed replacement, and — the
+payoff — the exact wrong call that the typed API makes a javac error instead
+of a latent runtime defect. Line numbers were re-verified against the working
+tree on this date; where they drift from the older sections above, these are
+the current ones.
+
+### Example 1: The Future That Lies About Its Payload (Row 1)
+
+BEFORE. `Message.f_future` is created raw and declared raw
+(`ServiceContext.java:1593`, `:1684`):
+
+```java
+f_future = new CompletableFuture();
+...
+public final CompletableFuture f_future;
+```
+
+Every sender then re-types that one field to whatever shape it wants.
+`sendOp1Request` binds it as `CompletableFuture<ObjectHandle>`
+(`ServiceContext.java:1123` into `Frame.assignFutureResult(int,
+CompletableFuture<ObjectHandle>)`, `Frame.java:1053`), while
+`sendInvokeNRequest` binds the same field as `CompletableFuture<ObjectHandle[]>`
+(`ServiceContext.java:1327`) and then launders it straight back through a raw
+cast for the zero-return path (`ServiceContext.java:1330-1334`):
+
+```java
+CompletableFuture<ObjectHandle[]> future       = request.f_future;
+boolean                           fOverwhelmed = addRequest(request);
+
+if (cReturns == 0) {
+    frame.f_fiber.registerUncapturedRequest(request);
+    return fOverwhelmed || future.isDone()
+            ? frame.assignFutureResult(Op.A_IGNORE, (CompletableFuture) future)
+            : Op.R_NEXT;
+}
+```
+
+The raw cast exists because the completion side breaks the promise the local
+variable just made. `sendResponse` takes the future raw
+(`ServiceContext.java:1625`) and for `cReturns == 0` completes it with a
+*single* empty-tuple handle, not an array (`ServiceContext.java:1629-1632`,
+completed at `Response.run()`, `:2000`):
+
+```java
+protected void sendResponse(Fiber fiberCaller, Frame frame,
+                            CompletableFuture future, int cReturns) {
+    ...
+    case 0:
+        ctxDst.respond(new Response<ObjectHandle>(
+                fiberCaller, xTuple.ensureEmptyTuple(ctxDst.f_container),
+                frame.m_hException, future));
+        break;
+```
+
+So the compile-time type of `future` at `:1327` is already false: for a
+zero-return invoke, the `ObjectHandle[]`-typed future is completed with a
+`TupleHandle`. Nothing fails today only because the raw cast at `:1333`
+routes it into the single-handle consumer, which happens to be what the
+payload really is. The permitted failure: any maintainer who trusts the
+declared type — for example by routing the `cReturns == 0` path through
+`frame.call(frame.createWaitFrame(future, aiReturn))` (`Frame.java:275`) or by
+attaching `future.thenApply(ah -> ah[0])` — compiles cleanly and gets
+
+```
+java.lang.ClassCastException: class xTuple$TupleHandle cannot be cast
+    to class [Lorg.xvm.runtime.ObjectHandle;
+```
+
+inside a `whenComplete`/`thenApply` continuation on the *caller's* service
+thread, an arbitrary number of frames away from `sendResponse`, with no line
+in the stack pointing at the completion that lied.
+
+AFTER. Parameterize the message by its response payload and split the
+response send by shape:
+
+```java
+public abstract static class Message<R> {
+    public final CompletableFuture<R> f_future = new CompletableFuture<>();
+    ...
+}
+
+public static class OpRequest  extends Message<ObjectHandle>   { ... }
+public static class OpNRequest extends Message<ObjectHandle[]> { ... }
+
+protected void sendSingleResponse(Fiber fiberCaller, Frame frame,
+        CompletableFuture<ObjectHandle> future, int cReturns) {
+    // cReturns is 0 (empty tuple), 1, or -1 (tuple); all complete with one handle
+}
+
+protected void sendMultiResponse(Fiber fiberCaller, Frame frame,
+        CompletableFuture<ObjectHandle[]> future) {
+    // cReturns > 1 only
+}
+```
+
+The rewritten call sites lose their conversions and their raw cast:
+
+```java
+// sendOp1Request — was an unchecked conversion, now exact:
+return frame.assignFutureResult(iReturn, request.f_future);
+
+// sendInvokeNRequest, cReturns == 0 — a zero-return call *is* a
+// single-handle protocol, so it creates an OpRequest, and the launder
+// at :1333 becomes a plain typed pass-through:
+return frame.assignFutureResult(Op.A_IGNORE, request.f_future);
+
+// sendInvokeNRequest, cReturns > 1 — OpNRequest, exact match for
+// createWaitFrame(CompletableFuture<ObjectHandle[]>, int[]):
+return frame.call(frame.createWaitFrame(request.f_future, aiReturn));
+```
+
+`Response<T>` (`ServiceContext.java:1978`) is already generic; with a typed
+`f_future` its construction sites at `:1630`, `:1639`, `:1649`, and `:1672`
+stop erasing `T` on the way in, and `Queue<Response>` at `:2118` becomes
+`Queue<Response<?>>`.
+
+WOULD NOT HAVE COMPILED. The current zero-return completion, written against
+a future that keeps its `ObjectHandle[]` promise:
+
+```java
+CompletableFuture<ObjectHandle[]> future = request.f_future;
+...
+ctxDst.respond(new Response<>(fiberCaller,
+        xTuple.ensureEmptyTuple(ctxDst.f_container),   // TupleHandle
+        frame.m_hException, future));
+```
+
+```
+ServiceContext.java: error: incompatible types: cannot infer type
+    arguments for Response<>
+  reason: inference variable T has incompatible bounds
+    equality constraints: ObjectHandle[]
+    lower bounds: TupleHandle
+```
+
+and the direct form is just as dead:
+
+```java
+future.complete(xTuple.ensureEmptyTuple(ctxDst.f_container));
+```
+
+```
+ServiceContext.java: error: incompatible types: TupleHandle cannot be
+    converted to ObjectHandle[]
+```
+
+The launder itself also dies — `assignFutureResult(Op.A_IGNORE, future)` with
+a genuinely `ObjectHandle[]`-typed future is
+`error: incompatible types: CompletableFuture<ObjectHandle[]> cannot be
+converted to CompletableFuture<ObjectHandle>`, and there is no raw
+`(CompletableFuture)` escape hatch left to silence it. The shape lie that the
+Row 132 verdict flags as the flagship review hazard is not reviewable away —
+it is unwritable.
+
+### Example 2: The Op-Info Cache That Trusts The Enum's Name (Row 2)
+
+BEFORE. The cache API is `Object` in, `Object` out, keyed by a bare `Enum`
+(`ServiceContext.java:227-246`, storage `:2184`):
+
+```java
+public Object getOpInfo(Op op, Enum category) {
+    EnumMap mapByCategory = f_mapOpInfo.get(op);
+    if (mapByCategory == null) {
+        return null;
+    }
+    WeakReference ref = (WeakReference) mapByCategory.get(category);
+    return ref == null ? null : ref.get();
+}
+
+public void setOpInfo(Op op, Enum category, Object info) {
+    f_mapOpInfo.computeIfAbsent(op, (op_) -> new EnumMap(category.getClass()))
+               .put(category, new WeakReference(info));
+}
+
+private final Map<Op, EnumMap> f_mapOpInfo = new WeakHashMap<>();
+```
+
+Four op families consume it by blind cast, fifteen casts in all:
+`OpCallable.java:198`, `:200`, `:253`, `:255`, `:324-325`, `:392`, `:430`,
+`:474`; `OpInvocable.java:131-132`; `OpVar.java:155-156`; `OpIndex.java:173`,
+`:175`. Representative (`OpCallable.java:198-200`, write side `:237-238`):
+
+```java
+MethodStructure  constructor = (MethodStructure) context.getOpInfo(this, Category.Constructor);
+if (constructor != null) {
+    IdentityConstant idParent = (IdentityConstant) context.getOpInfo(this, Category.TargetClass);
+    ...
+}
+...
+context.setOpInfo(this, Category.TargetClass, idParentR);
+context.setOpInfo(this, Category.Constructor, constructor);
+```
+
+The write at `:237-238` is two adjacent calls whose second and third
+arguments can be swapped, crossed with the pair at `:281-282`, or crossed
+between `Category.Function` and `Category.Constructor`, and javac says
+nothing. The permitted failure: `setOpInfo(this, Category.TargetClass,
+constructor)` poisons the cache silently; the *next* execution of the same op
+on this service reads it back at `OpCallable.java:200` and dies with
+
+```
+java.lang.ClassCastException: class org.xvm.asm.MethodStructure cannot be
+    cast to class org.xvm.asm.constants.IdentityConstant
+```
+
+on the cache-hit path — that is, only on the second and subsequent runs, the
+classic bug that passes the smoke test and fails in the hot loop. These are
+checked downcasts from `Object`, so they produce no `-Xlint` warning at all:
+the 288-warning inventory cannot even see this family.
+
+AFTER. The typed key pairs the category with its payload class once, and the
+boundary does the single checked cast (the `Container.getRuntimeOpCache`
+model, `Container.java:143-171`):
+
+```java
+public record OpInfoKey<T>(Enum<?> category, Class<T> type) {}
+
+public <T> T getOpInfo(Op op, OpInfoKey<T> key) {
+    EnumMap<?, WeakReference<?>> mapByCategory = f_mapOpInfo.get(op);
+    if (mapByCategory == null) {
+        return null;
+    }
+    WeakReference<?> ref = mapByCategory.get(key.category());
+    return ref == null ? null : key.type().cast(ref.get());
+}
+
+public <T> void setOpInfo(Op op, OpInfoKey<T> key, T info) { ... }
+```
+
+The call sites in `OpCallable` become cast-free:
+
+```java
+private static final OpInfoKey<MethodStructure> CONSTRUCTOR =
+        new OpInfoKey<>(Category.Constructor, MethodStructure.class);
+private static final OpInfoKey<IdentityConstant> TARGET_CLASS =
+        new OpInfoKey<>(Category.TargetClass, IdentityConstant.class);
+
+MethodStructure constructor = context.getOpInfo(this, CONSTRUCTOR);
+if (constructor != null) {
+    IdentityConstant idParent = context.getOpInfo(this, TARGET_CLASS);
+    ...
+}
+...
+context.setOpInfo(this, TARGET_CLASS, idParentR);
+context.setOpInfo(this, CONSTRUCTOR, constructor);
+```
+
+WOULD NOT HAVE COMPILED. The swapped write:
+
+```java
+context.setOpInfo(this, CONSTRUCTOR, idParentR);
+```
+
+```
+OpCallable.java: error: method setOpInfo in class ServiceContext cannot be
+    applied to given types;
+  required: Op,OpInfoKey<T>,T
+  found:    OpCallable,OpInfoKey<MethodStructure>,IdentityConstant
+  reason: inference variable T has incompatible bounds
+    equality constraints: MethodStructure
+    lower bounds: IdentityConstant
+```
+
+and the mis-shaped read:
+
+```java
+IdentityConstant idParent = context.getOpInfo(this, CONSTRUCTOR);
+```
+
+```
+OpCallable.java: error: incompatible types: MethodStructure cannot be
+    converted to IdentityConstant
+```
+
+Fifteen blind casts across four op families collapse into one `type.cast` at
+the owning boundary, and the wrong pairing stops being a second-execution
+runtime surprise.
+
+### Example 3: The Fiber Field That Is Two Types In A Trench Coat (Row 3)
+
+BEFORE. The pending-request set is an undeclared union
+(`Fiber.java:696-698`), and every reader re-proves the invariant by hand with
+an unchecked cast (`Fiber.java:358-369`, `:377-382`, `:507-520`):
+
+```java
+/**
+ * Pending requests: Message | Map<CompletableFuture, Message>.
+ */
+private Object m_oPendingRequests;
+
+// addDependee, Fiber.java:358-369
+Object oPending = m_oPendingRequests;
+if (oPending == null) {
+    m_oPendingRequests = request;
+} else if (oPending instanceof Message requestPrev) {
+    Map<CompletableFuture, Message> mapPending = new HashMap<>();
+    mapPending.put(requestPrev.f_future, requestPrev);
+    mapPending.put(request.f_future, request);
+    m_oPendingRequests = mapPending;
+} else {
+    Map<CompletableFuture, Message> mapPending = (Map<CompletableFuture, Message>) oPending;
+    mapPending.put(request.f_future, request);
+}
+
+// removeDependee, Fiber.java:381
+((Map<CompletableFuture, Message>) oPending).remove(request.f_future);
+
+// reportWaiting, Fiber.java:520
+for (Message request : ((Map<CompletableFuture, Message>) oPending).values()) {
+```
+
+The scheduling-lock proof (proof 1 above) says these are not races, but the
+field type accepts *anything*. The permitted failure: any edit that adds a
+third representation — say an ordered `ArrayList<Message>` for deadlock
+reporting — compiles at the write site, and the crash arrives at
+`removeDependee` (`Fiber.java:381`) as
+
+```
+java.lang.ClassCastException: class java.util.ArrayList cannot be cast to
+    interface java.util.Map
+```
+
+*inside the `whenComplete` callback registered at `Fiber.java:344`*, i.e. on
+the response-processing path under `processResponses()` — a completely
+different stack from the code that wrote the field, and only once a response
+actually arrives.
+
+AFTER. Keep the compact one-or-many representation, but behind a type; the
+union stops leaking:
+
+```java
+private static final class PendingRequests {
+    private Message                            one;
+    private Map<CompletableFuture<?>, Message> many;
+
+    void add(Message request)    { ... } // owns the one->many promotion
+    void remove(Message request) { ... }
+    boolean isEmpty()            { ... }
+    Iterable<Message> values()   { ... }
+}
+
+private final PendingRequests f_pendingRequests = new PendingRequests();
+```
+
+The three readers shrink to intent:
+
+```java
+// addDependee
+f_pendingRequests.add(request);
+
+// removeDependee
+f_pendingRequests.remove(request);
+
+// reportWaiting
+for (Message request : f_pendingRequests.values()) {
+```
+
+WOULD NOT HAVE COMPILED. The third-representation edit, written against the
+typed field:
+
+```java
+f_pendingRequests = new ArrayList<>(listPending);
+```
+
+```
+Fiber.java: error: incompatible types: ArrayList<Message> cannot be
+    converted to Fiber.PendingRequests
+```
+
+(and `f_pendingRequests` is final, so the representation cannot be swapped at
+all outside the class that owns the promotion logic). The equally silent raw
+hazard today — `((Map) oPending).put("oops", request)` type-checks against
+the raw-keyed map — has no typed spelling: `many` is private and keyed
+`CompletableFuture<?>`, so a `String` key is
+`error: incompatible types: String cannot be converted to
+CompletableFuture<?>`.
+
+### Example 4: The Injection Chain That Delivers Whatever It Has (Row 12)
+
+BEFORE. JIT-generated code asks for an injected resource through
+`Ctx.inject` (`Ctx.java:162-166`, generated call descriptor `MD_inject` at
+`:186-187` returning `CD_JavaObject`), which drains a raw `Function` from the
+parent container's injector (`Injector.java:39-41`, `:50-52`, `:63-65`):
+
+```java
+// Ctx.java:162-166
+public Object inject(TypeConstant resourceType, String resourceName, Object opts) {
+    Function supplier = container.injector.supplierOf(resourceType, resourceName);
+
+    return supplier == null ? null : supplier.apply(opts);
+}
+
+// Injector.java:39-41
+public Function supplierOf(Resource res) {
+    return null;
+}
+```
+
+`supplier.apply(opts)` is an unchecked call on a raw type; nothing between
+the supplier registration in the parent container and the generated frame in
+the child container ever compares the produced object against the requested
+`resourceType`. The Row 132 table calls this the most cross-owner-capable
+edge in the JIT set, and it is also the *only* family here where the wrong
+value flows with **no cast anywhere**: a supplier registered for
+`("Console", console-type)` that returns a `java.lang.String`, or a handle
+carried by the wrong generated classloader, is handed straight into generated
+bytecode. The failure is a `ClassCastException` inside a generated class
+body (unmapped back to any `.x` source line), or — if the generated code
+stores it into one of the `Object` return slots `o0..o7`/`oN`
+(`Ctx.java:47-62`) — silent flow until some later consumer casts.
+
+AFTER. The resource identity carries its Java carrier type, the supplier is
+typed against it, and the boundary does one checked, owner-asserting cast
+(the injector-load site at `JitConnector.java:61-63` already proves the
+`asSubclass` half of this pattern):
+
+```java
+public record Resource<R>(TypeConstant type, String name, Class<R> carrier) {}
+
+public <R> Function<Object, ? extends R> supplierOf(Resource<R> res) {
+    return null;
+}
+
+public <R> void register(Resource<R> res, Function<Object, ? extends R> supplier) { ... }
+
+// Ctx
+public <R> R inject(Resource<R> resource, Object opts) {
+    Function<Object, ? extends R> supplier = container.injector.supplierOf(resource);
+    if (supplier == null) {
+        return null;
+    }
+    // one checked boundary: carrier class proves the Java shape, and the
+    // injector can additionally assert the produced value against
+    // resource.type() before it enters child-container frames
+    return resource.carrier().cast(supplier.apply(opts));
+}
+```
+
+WOULD NOT HAVE COMPILED. Registering a supplier that produces the wrong
+resource:
+
+```java
+static final Resource<nConsole> CONSOLE =
+        new Resource<>(typeConsole, "console", nConsole.class);
+
+injector.register(CONSOLE, opts -> new nClock(ctx));
+```
+
+```
+error: incompatible types: bad return type in lambda expression
+    nClock cannot be converted to nConsole
+```
+
+Today that registration compiles without so much as a warning, and the first
+symptom is a `ClassCastException` deep inside generated code in the *child*
+container — the textbook wrong-owner delivery this audit exists to prevent.
+
+### Example 5: The Template Table That Accepts Any Class Named xSomething (Row 7)
+
+BEFORE. Native-template discovery keys classes by name pattern only
+(`NativeContainer.java:183`, `:199`, `:214`, scan methods `:244`/`:288`,
+loader `:277-285`, reflective construction `:795-801`):
+
+```java
+Map<String, Class> mapTemplateClasses = new HashMap<>();
+...
+for (Map.Entry<String, Class> entry : mapTemplateClasses.entrySet()) {
+    ...
+    Class<ClassTemplate> clz = entry.getValue();      // unchecked, proves nothing
+    ...
+}
+
+private static Class classForName(String sFile) {
+    ...
+    return Class.forName(sClz);                        // raw: any class at all
+}
+
+private ClassTemplate instantiateNativeTemplate(
+        Class<ClassTemplate> clz, ClassStructure structClass) throws Exception {
+    return clz.getConstructor(Container.class, ClassStructure.class)
+            .newInstance(this, structClass);
+}
+```
+
+The filter (`isNativeClass`, `:254-259`) checks only "in the template
+package, ends with `.class`, no `$`, simple name starts with `x`". Any
+helper class matching that pattern enters the map; the unchecked
+`Class<ClassTemplate>` assignment at `:214` launders it. The permitted
+failure: a non-template `xSomething` with no
+`(Container, ClassStructure)` constructor dies at `:800` as a
+`NoSuchMethodException` wrapped into `LauncherException("Constructor failed
+for ...")`; one that *does* have such a constructor is instantiated, and the
+`ClassCastException` fires on the erased-return checkcast at `:800` — in both
+cases a late reflective failure instead of "this class is not a native
+template" at discovery time.
+
+AFTER. Prove template-ness once, where the class is loaded:
+
+```java
+Map<String, Class<? extends ClassTemplate>> mapTemplateClasses = new HashMap<>();
+
+private static Class<? extends ClassTemplate> classForName(String sFile) {
+    assert sFile.endsWith(".class");
+    String sClz = sFile.substring(0, sFile.length() - ".class".length()).replace('/', '.');
+    try {
+        return Class.forName(sClz).asSubclass(ClassTemplate.class);
+    } catch (ClassNotFoundException e) {
+        throw new RuntimeException(e);
+    }
+}
+
+private ClassTemplate instantiateNativeTemplate(
+        Class<? extends ClassTemplate> clz, ClassStructure structClass) throws Exception {
+    return clz.getConstructor(Container.class, ClassStructure.class)
+            .newInstance(this, structClass);
+}
+```
+
+The loop body loses its laundering local: `entry.getValue()` is already
+`Class<? extends ClassTemplate>`, and a rogue class in the package is
+rejected by `asSubclass` at scan time with a message naming the class,
+instead of a constructor-failure autopsy later.
+
+WOULD NOT HAVE COMPILED. Putting a non-template into the table:
+
+```java
+// xNativeHelper is a utility class, not a ClassTemplate subclass
+mapTemplateClasses.put("mgmt.NativeHelper", xNativeHelper.class);
+```
+
+```
+NativeContainer.java: error: incompatible types: Class<xNativeHelper>
+    cannot be converted to Class<? extends ClassTemplate>
+```
+
+and inside `classForName`, forgetting the proof no longer compiles either:
+`return Class.forName(sClz);` is
+`error: incompatible types: Class<CAP#1> cannot be converted to
+Class<? extends ClassTemplate>`. The owner boundary that manufactures every
+native template in the container can no longer be entered by name-pattern
+coincidence.
+
+### Example 6: The AST Reader That Believes Whatever The Caller Hoped (Row 17)
+
+BEFORE. `BinaryAST.readAST` lets the caller pick `N` and casts whatever node
+the stream byte selects (`BinaryAST.java:294-303`):
+
+```java
+public static <N extends BinaryAST> N readAST(DataInput in, ConstantResolver res)
+        throws IOException {
+    N node = (N) (NodeType.valueOf(in.readUnsignedByte())).instantiate();
+    if (node == null) {
+        node = (N) new StmtBlockAST(NO_ASTS, false);
+    } else {
+        node.readBody(in, res);
+    }
+    return node;
+}
+```
+
+Both `(N)` casts are erased no-ops; the real checkcast is inserted by javac
+at whichever call site fixed `N`. `readExprAST`'s escape path
+(`BinaryAST.java:379`) infers `N = ExprAST` with zero evidence:
+
+```java
+if (nodeType == NodeType.Escape) {
+    return readAST(in, res); // "escape" for expressions
+}
+```
+
+The permitted failure: a corrupt or version-skewed `.xtc` stream whose
+escape byte is followed by a statement node compiles into
+
+```
+java.lang.ClassCastException: class org.xvm.asm.ast.IfStmtAST cannot be
+    cast to class org.xvm.asm.ast.ExprAST
+```
+
+at whatever call site fixed `N` — and for readers reached through
+`MethodStructure.java:702` (`m_ast = BinaryAST.readAST(in, res)`), the node
+can also survive the read entirely (when `N` is inferred as plain
+`BinaryAST`) and fail later, when a consumer walks a child field that the
+wrong node type filled differently. Either way the diagnostic says nothing
+about stream offset, expected node type, or the fact that the input was
+corrupt rather than the code wrong.
+
+AFTER. The expectation becomes an argument, checked where the stream is
+still in hand:
+
+```java
+public static <N extends BinaryAST> N readAST(DataInput in, ConstantResolver res,
+                                              Class<N> clzNode)
+        throws IOException {
+    NodeType  nodeType = NodeType.valueOf(in.readUnsignedByte());
+    BinaryAST node     = nodeType.instantiate();
+    if (node == null) {
+        node = new StmtBlockAST(NO_ASTS, false);
+    } else {
+        node.readBody(in, res);
+    }
+    if (!clzNode.isInstance(node)) {
+        throw new IOException("corrupt AST stream: expected "
+                + clzNode.getSimpleName() + ", read " + nodeType);
+    }
+    return clzNode.cast(node);
+}
+```
+
+Call sites state what they mean, and the two erased casts disappear:
+
+```java
+// WhileStmtAST.java:55 and friends
+body = readAST(in, res, BinaryAST.class);
+
+// BinaryAST.java:379 — the escape path stops guessing
+return readAST(in, res, ExprAST.class);
+```
+
+WOULD NOT HAVE COMPILED. A caller whose declared type disagrees with its
+expectation token:
+
+```java
+ExprAST cond = readAST(in, res, StmtBlockAST.class);
+```
+
+```
+error: incompatible types: StmtBlockAST cannot be converted to ExprAST
+```
+
+The two failure modes separate cleanly: caller-side type confusion is now a
+javac error, and stream-side corruption is an `IOException` naming the
+expected and actual node types at the exact read — instead of both collapsing
+into one distant `ClassCastException`.
+
+### Example 7 (Bonus): The Raw Predicate That Disables Checking For Everyone (Row 10)
+
+BEFORE. `Utils.java:1901`:
+
+```java
+public static final Predicate          ANY  = t -> true;
+```
+
+Consumed at `xOSStorage.java:396-397` against
+`ClassStructure.findMethodDeep(String, Predicate<MethodStructure>)`
+(`ClassStructure.java:1895`):
+
+```java
+private final Lazy.Owner<xOSStorage, MethodStructure> f_methodOnEvent =
+        Lazy.ofOwner(owner -> owner.getStructure().findMethodDeep("onEvent", Utils.ANY));
+```
+
+`ANY` itself is behavior-safe, but raw. Two costs: the unchecked-conversion
+warning it emits at every consumer buries real warnings (the Row 9 verdict
+notes `xOSStorage.java:397` clears when this is typed); and the pattern it
+licenses is not safe — a raw predicate constant that *does* look inside its
+argument, e.g. `Predicate CONSTRUCTOR_ONLY = m -> ((MethodStructure)
+m).isConstructor()`, is accepted by javac for a `Predicate<PropertyStructure>`
+parameter just as readily, and detonates as a `ClassCastException` inside the
+predicate during someone else's tree walk.
+
+AFTER:
+
+```java
+public static <T> Predicate<T> any() {
+    return t -> true;
+}
+
+// consumer
+Lazy.ofOwner(owner -> owner.getStructure().findMethodDeep("onEvent", Utils.any()));
+```
+
+WOULD NOT HAVE COMPILED. The unsafe cousin, once predicates are typed:
+
+```java
+public static final Predicate<MethodStructure> CONSTRUCTOR_ONLY =
+        MethodStructure::isConstructor;
+
+structure.findChildDeep("x", CONSTRUCTOR_ONLY); // wants Predicate<Component>
+```
+
+```
+error: incompatible types: Predicate<MethodStructure> cannot be converted
+    to Predicate<Component>
+```
+
+One three-line change deletes a whole class of warning noise and closes the
+raw-`Predicate` loophole with it.
+
+### Example 8 (Bonus): The Version Tree That Would Store A Version As Its Own Value (Bulk Row)
+
+BEFORE. `VersionTree<V>` has a properly generic node class
+(`VersionTree.java:419`, `private static class Node<V>`), but the internal
+links are raw at 63 sites — the single largest warning block in the
+inventory (`VersionTree.java:426` raw parent link, raw locals at `:59`,
+`:73`, `:83`, `:190`, `:211`, `:239`, `:325`, and throughout `Node`). The
+write path (`VersionTree.java:239-243`):
+
+```java
+Node node = ensureNode(ver);       // raw local, though ensureNode returns Node<V>
+if (!node.isPresent()) {
+    ++count;
+}
+node.value = value;                // unchecked write through the raw link
+```
+
+Through a raw `Node`, the `value` field is just `Object`, so any edit that
+stores the wrong thing compiles — `node.value = ver;` (the version instead of
+the value) is accepted today. `get()` reads through a typed `Node<V>`
+(`VersionTree.java:141-143`), so the corruption is invisible at the API:
+erasure defers the checkcast to the *caller's* use site, e.g. a
+`VersionTree<ModuleStructure>` consumer doing `tree.get(ver).getName()` gets
+
+```
+java.lang.ClassCastException: class org.xvm.asm.Version cannot be cast to
+    class org.xvm.asm.ModuleStructure
+```
+
+in module-resolution code, with the tree itself never having thrown.
+
+AFTER. Parameterize the links; the one unavoidable erased spot (the
+`Node[] kids` array) gets a single localized suppression inside `Node`:
+
+```java
+private static class Node<V> {
+    Node(Node<V> parent, int part) { ... }
+
+    Node<V>    parent;
+    Node<V>[]  kids;
+    V          value;
+    ...
+}
+
+public void put(Version ver, V value) {
+    ...
+    Node<V> node = ensureNode(ver);
+    if (!node.isPresent()) {
+        ++count;
+    }
+    node.value = value;
+}
+```
+
+WOULD NOT HAVE COMPILED:
+
+```java
+node.value = ver;
+```
+
+```
+VersionTree.java: error: incompatible types: Version cannot be converted to V
+```
+
+Sixty-three warnings disappear, and the value channel of every version tree —
+module version caches included (`ModuleStructure.java:441-443`,
+`xRTModuleTemplate.java:66`, `Refiner.java:36-48`) — becomes writable only
+with a `V`.
+
+### Shorter Code
+
+Counting only what the AFTER shapes above delete, against the numbers already
+established in this document:
+
+- The eight worked families account for roughly **100 raw/unchecked sites**:
+  15 blind op-cache downcasts (`OpCallable`/`OpInvocable`/`OpVar`/`OpIndex`)
+  plus 3 raw cache internals; ~10 raw-future declarations, conversions, and
+  the `:1333` launder in `ServiceContext`/`Fiber`; 3 unchecked union casts
+  plus 2 raw field declarations in `Fiber`; 4 raw-`Function` sites in
+  `Ctx`/`Injector`; 6 raw-`Class` sites in `NativeContainer`; 2 erased casts
+  in `BinaryAST.readAST`; 2 for `Utils.ANY`; 63 raw `Node` links in
+  `VersionTree`.
+- Across the classified inventory, the typed boundaries proposed here plus
+  the cheap hardening already recommended in rows 4-6 and 16 eliminate about
+  **215 of the 288** `unchecked`/`rawtypes` warnings (the 152 warnings in the
+  18 owner-sensitive groups plus the 63-warning `VersionTree` block) — roughly
+  75%. Most of the 12 `@SuppressWarnings("unchecked")` sites are deliberate
+  erasure bridges (GC arrays, builder self-casts, the row 6 model pattern, the
+  row 14 adoption boundary) and correctly stay.
+- Laundering locals disappear outright: the retyped `future` locals in
+  `sendInvokeNRequest`, the three per-reader union re-derivations in `Fiber`
+  (`addDependee`'s three-branch state machine becomes one call), the
+  `Class<ClassTemplate> clz` line in `NativeContainer`.
+- Honest net line count: modest. The typed shapes add roughly 150 lines of
+  records, keys, and wrapper classes and delete roughly 250-300 lines of
+  casts, re-derived state machines, and laundering locals — call it **~100-150
+  net lines saved** across `javatools`. The real reduction is not lines but
+  obligations: each deleted cast was a contract a reviewer had to re-verify by
+  hand, and the 15 op-cache downcasts never appeared in any warning count at
+  all — checked downcasts from `Object` are invisible to `-Xlint`.
+
+### Compile-Time Instead Of Runtime
+
+Six failure classes move left of the run button:
+
+1. **Response shape lies** (Example 1): completing a multi-return future with
+   a single handle, or consuming a zero-return future as an array. Today only
+   the scheduling-lock confinement proof and the adjacency of every conversion
+   site to its request keep this correct.
+2. **Wrong-payload cache hits** (Example 2): a swapped or crossed
+   category/value pair that fails only on the second execution of the op on
+   that service.
+3. **Pending-union corruption** (Example 3): a third representation entering
+   `m_oPendingRequests` and failing inside a response callback.
+4. **Foreign-resource injection** (Example 4): a supplier delivering the
+   wrong type — or the wrong container's object — into JIT-generated frames,
+   currently with no cast anywhere on the path.
+5. **Foreign-template loading** (Example 5): a name-pattern coincidence
+   entering the native template table and failing reflectively at
+   construction.
+6. **Wrong-node AST reads** (Example 6): stream/expectation disagreement
+   surfacing as a distant `ClassCastException` instead of an `IOException` at
+   the read.
+
+Classes 1-3 deserve emphasis: their confinement proofs (proof 1 above) rest
+on the scheduling lock, so when the invariant does break, the symptom
+appears on the response-processing path of another fiber's turn — exactly the
+kind of failure that today is catchable only by the stress and ownership
+diagnostics this branch added, and by nothing in the normal test suite.
+Class 4 is the one edge the Row 132 pass rated most cross-owner-capable;
+typed suppliers make the wrong registration unwritable rather than
+undetectable. Classes 5 and 6 are deterministic once triggered, but the
+typed versions convert an autopsy (constructor failure, distant CCE) into a
+named rejection at the boundary that still has the context — the class name
+being scanned, the stream offset being read.
+
+### Lock-In And Change Resistance
+
+Erased `Object`-union fields and raw containers do not just permit bugs;
+they freeze the protocols they carry. Every reader of `Message.f_future`
+re-derives the `cReturns`-to-payload mapping from folklore; every reader of
+`m_oPendingRequests` re-implements the one-or-many state machine; every op
+family re-states the category-to-payload table as casts. The implicit
+contract lives in N call sites instead of one signature, so changing any
+payload shape — say, moving the zero-return protocol off the empty-tuple
+handle, or adding a payload variant to the op cache — means finding and
+auditing every blind cast by hand. Grep does not even find them all: the
+op-cache consumers are warning-free checked downcasts, and the injection
+chain has no cast at all. That audit cost is precisely how the code in this
+document got hard to change, and it compounds: each new caller copies the
+casts, adding one more site the next change must find.
+
+Typed boundaries invert this. When `f_future` is `CompletableFuture<R>`, a
+payload-shape change is a type change, and javac enumerates every affected
+call site as a build error — the compiler performs the audit that today is a
+manual, easy-to-miss search. The owner-safety angle is the same inversion:
+the `Container.getRuntimeOpCache(op, category, Class<T>)` pattern
+(`Container.java:143-171`), already cited above as the model, keys the cache
+by the owning container and pays one `type.cast` at the boundary, so "wrong
+container's object" and "wrong payload type" both fail immediately, at the
+boundary, with the owner in hand for diagnostics — instead of leaking into
+another container's fiber as a latent value that only the ownership
+instrumentation can trace back. Nine of the eighteen owner-sensitive site
+groups classified above currently maintain such invariants entirely by hand;
+each one converted to a typed, owner-asserting boundary is one less protocol
+that must be re-proved from scratch every time someone touches it.
