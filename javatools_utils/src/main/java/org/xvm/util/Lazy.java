@@ -58,6 +58,14 @@ import static java.util.Objects.requireNonNull;
  * public boolean hasComputedAnnotations() {
  *     return classAnnotations.isComputed();
  * }
+ *
+ * // Owner-derived lazy state can avoid capturing "this" during construction:
+ * private final Lazy.Owner<MyClass, Annotation[]> classAnnotations =
+ *         Lazy.ofOwner(MyClass::collectAnnotations);
+ *
+ * public Annotation[] getClassAnnotations() {
+ *     return classAnnotations.get(this);
+ * }
  * }</pre>
  *
  * @param <T> the type of the lazily computed value
@@ -74,6 +82,20 @@ public abstract class Lazy<T> implements Supplier<T> {
      */
     public static <T> Lazy<T> of(Supplier<T> supplier) {
         return new ThreadSafeLazy<>(supplier);
+    }
+
+    /**
+     * Creates a thread-safe lazy value that receives its owner at access time. Use this for final
+     * owner-derived lazy fields that would otherwise need a supplier capturing {@code this} during
+     * construction.
+     *
+     * @param function the owner-to-value function to compute the value (called at most once)
+     * @param <O> the owner type
+     * @param <T> the value type
+     * @return an owner-passed lazy holder for the value
+     */
+    public static <O, T> Owner<O, T> ofOwner(Function<? super O, ? extends T> function) {
+        return new Owner<>(function);
     }
 
     /**
@@ -272,6 +294,93 @@ public abstract class Lazy<T> implements Supplier<T> {
         @Override
         public boolean isComputed() {
             return valueRef.get() != UNSET;
+        }
+    }
+
+    /**
+     * Thread-safe lazy implementation for values computed from an explicit owner passed at access
+     * time. This preserves final-field lazy caching without constructing a supplier that captures
+     * the owner from its constructor.
+     */
+    public static final class Owner<O, T> {
+        private static final Object UNSET = new Object();
+
+        private final AtomicReference<Object> valueRef = new AtomicReference<>(UNSET);
+        private O owner;
+        private Function<? super O, ? extends T> function;
+
+        Owner(Function<? super O, ? extends T> function) {
+            this.function = requireNonNull(function, "function");
+        }
+
+        /**
+         * Gets the lazily computed value, computing it from the owner if necessary.
+         *
+         * @param owner the owner used to compute the value on first access
+         *
+         * @return the value
+         */
+        @SuppressWarnings("unchecked")
+        public T get(O owner) {
+            requireNonNull(owner, "owner");
+
+            Object value = valueRef.get();
+            if (value != UNSET) {
+                checkOwner(owner);
+                return (T) value;
+            }
+
+            synchronized (this) {
+                value = valueRef.get();
+                if (value != UNSET) {
+                    checkOwner(owner);
+                    return (T) value;
+                }
+
+                value = function.apply(owner);
+                this.owner = owner;
+                valueRef.set(value);
+                function = null; // Allow GC of the function after the value is computed.
+                return (T) value;
+            }
+        }
+
+        /**
+         * Gets the lazily computed value and verifies the result type. This overload is intended
+         * for reflective or wildcard callers that naturally hold a {@code Lazy.Owner<?, ?>}; normal
+         * typed code should prefer {@link #get(Object)}.
+         *
+         * @param owner the owner used to compute the value on first access
+         * @param clz   the expected result type
+         * @param <R>   the requested result type
+         *
+         * @return the value as the requested type
+         */
+        public <R> R get(Object owner, Class<R> clz) {
+            requireNonNull(clz, "clz");
+            return clz.cast(getOwner(owner));
+        }
+
+        /**
+         * Returns true if the value has been computed.
+         *
+         * @return true if already computed, false if still deferred
+         */
+        public boolean isComputed() {
+            return valueRef.get() != UNSET;
+        }
+
+        private void checkOwner(O owner) {
+            O ownerExisting = this.owner;
+            if (ownerExisting != owner) {
+                throw new IllegalArgumentException(
+                        "Owner lazy value already belongs to a different owner");
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        private T getOwner(Object owner) {
+            return get((O) owner);
         }
     }
 
