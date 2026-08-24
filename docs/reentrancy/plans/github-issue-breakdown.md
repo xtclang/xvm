@@ -165,9 +165,14 @@ error: the switch expression does not cover all possible input values
 ```
 
 - instead of the old behavior, which was to answer "false" and move on.
-The same union retires the same pattern at 22 further switches in the same
-file (48 casts); this PR converts one method so the mechanism is reviewable
-in isolation.
+The full flagship-file conversion also exists on the branch (`bb72c4b58`):
+ALL 23 format switches and ALL 48 laundering casts in TerminalTypeConstant
+are gone, every silent default is an explicit labeled arm, two fallthrough
+suppressions died, and a new defining-constant kind now fails compilation
+at 21 switches simultaneously. File it as this PR's second commit for the
+full shock-and-awe diff, or as the immediate follow-up if the opener should
+stay one-method minimal - both shapes are green through the full suite and
+a complete XDK build.
 
 **Exhibit 3 - the raw map with 26 casts.** ConstantPool's locator cache
 returned `Map<Object, Constant>` and had 26 call sites of the form:
