@@ -83,6 +83,72 @@ name. For example, "explicit receiver pool for semantic type operations" and
 PRs if reviewers want smaller diffs. Do not split a test away from the source
 change it proves.
 
+### Master-Bug PRs Versus Reentrancy Enablement
+
+This classification answers one extraction question per item: is it a
+directly fixable bug on master (wrong behavior reachable today, often even
+single-threaded), portable hardening (no behavior change, converts a
+convention into a machine-checked invariant), reentrancy enablement (only
+matters once one JVM runs compilers/runtimes repeatedly or concurrently), or
+a branch-internal repair that must never ship on its own because it fixes a
+regression this branch introduced.
+
+Category A - directly fixable master bugs, each extractable as a small
+standalone PR with its red-on-master test:
+
+| Fix | Single-threaded reachable on master? | Proof |
+| --- | --- | --- |
+| jsondb rollback failure retention (single hunk, applies verbatim) | Yes - any failed commit whose compensation also fails | ledger row 34 |
+| Requested module loads preserve cause (`ModuleLoadException`) | Yes - any corrupt `.xtc` file | `ModuleRepositoryLoadFailureTest` |
+| Method op-assembly failure terminal (no zero-op serialization) | Yes - any compiler defect at emission | `MethodStructureAssemblyFailureTest` |
+| Compiler codegen failure terminal (no catch-Throwable-continue) | Yes | `CompilerCodegenFailureTest` |
+| Raw file submit observes queued write failure | Yes - async I/O exists in single-service programs | `RawOSFileChannelSubmitTest` |
+| `Future.and` fast-path double-read and assert-only failure path | Yes | `FutureCompletionSafetyTest` |
+| JIT connector non-zero result after generated exception; `nType` exception unwrapping | Yes | `JitFailurePropagationTest` |
+| `MainContainer` startup cause preservation | Yes | `RuntimeFailurePropagationTest` |
+| Alarm callback registry race and cancel leak (Timer-killer) | Concurrent, but reachable in ANY timer-using program: the service thread and the shared static Timer thread both exist without parallel containers | `NativeCallbackRegistrationTest.callbackRegistryIsConcurrentTimerSafeAndLeakFree()` |
+| Native callback registration rollback (clock/timer/server schedule-failure leaks) | Yes - schedule/bind failure paths | `NativeCallbackRegistrationTest` |
+| Hash/equality contracts (`Register`, `VersionTree`; cycle-safe `MethodBody` target equality) | Yes for map/set misuse; the MethodBody equality stack overflow needs legal cyclic metadata | `RegisterHashCodeTest`, `VersionTest`, `MethodInfoTest` |
+| OPEN: five handle view-clone lifecycle desyncs (row 161 graduation) | Yes - view/mask lifecycles are single-container, mostly single-threaded (e.g. `makeImmutable` split) | to be written per mechanism |
+| OPEN: `ConstHeap` live `HandleConstant` served across containers (row 125 graduation) | Needs two containers over one module - but master creates sibling/nested containers itself (mgmt, injection), so this is master-reachable, not reuse-only | to be written |
+| Utility constructor this-escape fixes | Yes (latent; class partly unused) | PR #539, already extracted |
+
+Category H - portable hardening, no behavior change, ships as its own small
+PR whenever wanted:
+
+| Item | Note |
+| --- | --- |
+| `-Xlint:this-escape` fatal gate + the `Xvm` suppression | one true escape remains suppressed pending the JIT owner shell |
+| `-Xlint:fallthrough` fatal gate + 35 method suppressions + 4 added markers | the classification found ZERO live fallthrough bugs on the branch or master - this is purely protection against the future forgotten `break`; be explicit about that in the PR description |
+| Build-verification habit: full `xdk:installDist` (or `lib-json` compile) alongside unit suites | four masked compile regressions hid behind unit-green builds on this branch |
+
+Category B - reentrancy/same-JVM enablement. These are not observable bugs
+in one-run-per-process master usage; they are exactly the work that makes
+sequential re-use and parallel containers in one JVM safe, and they are the
+substance of PRs 1-13. Master-parallel caveat: master itself runs parallel
+services and containers, so a subset (worker terminal-failure channel,
+op-loop defect propagation, runtime op caches, recursion-diagnostics set) is
+master-reachable under load and can be argued into category A during review.
+
+| Wave | Why it is reuse-enablement |
+| --- | --- |
+| Native template `INSTANCE` removal, owner-local metadata/caches, enum lifecycle, container-owned TypeHandles | last-writer-wins globals only bite when a second container/run exists in the JVM |
+| Clone-free constant adoption + `ConstantPool` ownership (ambient-pool removal, registration guard, future freeze/transaction rewrite) | pools are per-process-single-use on master; reuse makes late mutation and wrong-owner interning visible |
+| `TypeInfo`/`MethodInfo`/`PropertyInfo` owner copies and safe publication | first-publication races need concurrent first access |
+| Constructor-escape removal waves | correctness hardening whose failure mode is exposure of half-built owners to other threads |
+| Same-JVM stress harness, ownership diagnostics, world-state snapshot plan | the proof infrastructure itself |
+| Compiler request-ownership (PR 12), JIT ownership (PR 13), compiler counters | parallel/incremental compilation enablement |
+
+Category C - branch-internal repairs; never port, they merge into their
+parent waves when those become PRs:
+
+| Repair | Parent wave |
+| --- | --- |
+| `Annotation` constructor param-array aliasing restore | clone-free adoption (PR 10) |
+| `NativeRebaseConstant` / `EnumValueConstant` adoption reconstruction fixes | clone-free adoption (PR 10) |
+| `MethodBody` owned-copy spurious self-target fix | constructor-escape/owner-copy wave (PR 7/11) |
+| Registration-guard concurrent-insert deadlock fix | registration publication guard (PR 10b) |
+
 ### Acceptance Proof Standard
 
 The smoke test is necessary, but it is not sufficient proof for reentrancy.
