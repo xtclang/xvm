@@ -188,7 +188,7 @@ public class TypeSystem {
     public ConstantPool pool() {
         // TODO should there be a separate ConstantPool created for this type system when there are
         //      only shared modules? i.e. is there a FileStructure?
-        return owned.length == 0 ? xvm.ecstasyPool /* <-- TODO wrong */ : owned[0].module.getConstantPool();
+        return owned.length == 0 ? xvm.ecstasyPool() /* <-- TODO wrong */ : owned[0].module.getConstantPool();
     }
 
     /**

@@ -33,7 +33,7 @@ public class Linker {
      */
     protected Linker(Xvm xvm) {
         this.xvm  = xvm;
-        this.repo = xvm.systemRepo;
+        this.repo = xvm.systemRepo();
     }
 
     /**

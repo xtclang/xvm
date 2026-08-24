@@ -27,7 +27,7 @@ public class TerminalConsole
 
     @Override
     public TypeConstant $xvmType(Ctx ctx) {
-        return $xvm().ecstasyPool.ensureEcstasyTypeConstant("io.Console");
+        return $xvm().ecstasyPool().ensureEcstasyTypeConstant("io.Console");
     }
 
     /**

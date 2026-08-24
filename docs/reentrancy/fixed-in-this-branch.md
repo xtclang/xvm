@@ -2776,6 +2776,34 @@ old adopt-in-place path. `MethodInfoTest.owningFreshBodyDoesNotFabricateSelfTarg
 fails on the broken shape and passes here, `xdk:installDist` builds the full
 XDK again, and the cycle-safe equality tests stay green.
 
+### JIT Xvm Boots Through A Factory, Not A Constructor Escape
+
+The `Xvm` constructor was the last `@SuppressWarnings("this-escape")` under
+the fatal gate: it passed partially constructed `this` into
+`NativeTypeSystem.create(...)` (which stores it in the `TypeSystem.xvm`
+facade field read by shared ASM JIT-name helpers) and into native container
+creation, while six `public final` fields were still unassigned. Any callback
+into the facade during startup observed a half-built object; the mutual
+finality of `Xvm` and `TypeSystem.xvm` made the cycle impossible to keep
+fully-final on both sides.
+
+The fix is the same shape as `NativeContainer.create(...)`: a private
+constructor does only self-contained initialization (locks, name counters);
+the static `Xvm.create(repo)` factory hands the reference to startup strictly
+after construction returns; and the six startup results are published as one
+`private volatile` immutable `Boot` record behind accessors. A reader on any
+thread - generated `<clinit>` code, JIT compilation threads - sees either the
+complete boot snapshot (record finals give safe publication of the whole
+graph through the single volatile read) or an immediate
+`IllegalStateException`, never a partially initialized facade. Sixteen
+field-read call sites across `javatools` and `javatools_jitbridge` moved to
+the accessors; JIT codegen does not reference the fields by name, so no
+generated-code contract changes.
+
+`JitConstructorEscapeTest.xvmBootsThroughFactoryWithoutConstructorEscape()`
+guards the factory shape and the dead suppression, and the whole composite
+now builds under the this-escape gate with zero suppressions anywhere.
+
 ### HandleConstant Does Not Serve Live Handles Raw Across Containers
 
 Found by the row-125 completion sweep; unguarded verbatim on master.

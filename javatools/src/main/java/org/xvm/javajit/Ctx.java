@@ -148,7 +148,7 @@ public final class Ctx {
     public Constant getConstant(String className, int index) {
         ModuleLoader loader;
         if (index < 0) {
-            loader = container.xvm.nativeTypeSystem.findOwnerLoader(className);
+            loader = container.xvm.nativeTypeSystem().findOwnerLoader(className);
             index = -index;
         } else {
             loader = container.typeSystem.findOwnerLoader(className);

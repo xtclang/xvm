@@ -22,13 +22,13 @@ public abstract class Boolean
 
     public static class False extends Boolean {
         public False() {
-            super($xvm().ecstasyPool.typeFalse(), false, 0, String.of(null, "False"));
+            super($xvm().ecstasyPool().typeFalse(), false, 0, String.of(null, "False"));
         }
     }
 
     public static class True extends Boolean {
         public True() {
-            super($xvm().ecstasyPool.typeTrue(), true, 1, String.of(null, "True"));
+            super($xvm().ecstasyPool().typeTrue(), true, 1, String.of(null, "True"));
         }
     }
 

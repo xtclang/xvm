@@ -32,29 +32,40 @@ import static org.xvm.util.Handy.sorted;
  */
 public class Xvm {
     /**
-     * Construct an XVM that JITs to Java bytecode.
-     *
-     * @param repo  the {@link ModuleRepository} that the XVM system libraries can be loaded from
+     * Construct the bare XVM facade. Construction does only self-contained initialization; all
+     * startup that needs the facade reference happens in {@link #create}, after construction has
+     * completed, so no code path can ever observe a partially constructed XVM.
      */
-    // Deliberate, tracked exception to the this-escape build gate: startup passes `this` into
-    // NativeTypeSystem.create(...) and container creation before construction completes. Owner:
-    // the JIT facade itself; lifetime: single-threaded startup, no other thread can observe the
-    // instance before the constructor returns it. The real fix is the JIT owner-state shell
-    // (docs/reentrancy/plans/jit-xvm-owner-refactor.md, hardening-ledger JIT rows) and belongs to
-    // the separate JIT ownership PR.
-    @SuppressWarnings("this-escape")
-    public Xvm(ModuleRepository repo) {
+    private Xvm() {
         for (int i = 0; i < locks.length; ++i) {
             locks[i] = new Object();
         }
 
         primeNameCounters();
+    }
 
-        this.systemRepo       = repo;
-        this.nativeTypeSystem = NativeTypeSystem.create(this, repo);
+    /**
+     * Create and boot an XVM that JITs to Java bytecode.
+     *
+     * <p>This is a static factory instead of a public constructor because booting requires
+     * handing the facade to {@link NativeTypeSystem#create} and to native container creation.
+     * Doing that from the constructor published a partially constructed {@code this} - the last
+     * escape suppressed under the this-escape build gate. The factory hands out the reference
+     * only after the constructor has returned, and publishes the boot state as one immutable
+     * record, so a reader on any thread (generated code class initializers, JIT compilation)
+     * sees a complete snapshot or fails loudly.
+     *
+     * @param repo  the {@link ModuleRepository} that the XVM system libraries can be loaded from
+     *
+     * @return the booted XVM
+     */
+    public static Xvm create(ModuleRepository repo) {
+        Xvm xvm = new Xvm();
 
-        register(this.nativeTypeSystem);
-        this.nativeContainer = createContainer(null, nativeTypeSystem, FailEverythingInjector);
+        NativeTypeSystem nativeTypeSystem = NativeTypeSystem.create(xvm, repo);
+        xvm.register(nativeTypeSystem);
+        Container nativeContainer =
+                xvm.createContainer(null, nativeTypeSystem, FailEverythingInjector);
 
         ModuleLoader ecstasy = null;
         ModuleLoader _native = null;
@@ -68,9 +79,10 @@ public class Xvm {
             }
         }
         assert ecstasy != null && _native != null;
-        this.ecstasyLoader = ecstasy;
-        this.bridgeLoader = _native;
-        this.ecstasyPool   = ecstasy.module.getConstantPool();
+
+        xvm.boot = new Boot(repo, nativeTypeSystem, nativeContainer, ecstasy, _native,
+                ecstasy.module.getConstantPool());
+        return xvm;
     }
 
     /**
@@ -80,36 +92,73 @@ public class Xvm {
     private static final Injector FailEverythingInjector = new Injector();
 
     /**
-     * The ModuleRepository that the system modules are loaded from.
+     * The immutable boot state. One volatile holder of a record whose components are final, so a
+     * reader on any thread observes either the complete boot snapshot or null - never a partially
+     * initialized facade.
      */
-    public final ModuleRepository systemRepo;
+    private volatile Boot boot;
 
     /**
-     * The TypeSystem for the invisible "Container -1", which is the only TypeSystem allowed to
-     * contain native code.
+     * The boot snapshot: the ModuleRepository the system modules are loaded from, the TypeSystem
+     * and Container of the invisible native "Container -1", the core and bridge ModuleLoaders,
+     * and the ConstantPool of the Ecstasy module.
      */
-    public final NativeTypeSystem nativeTypeSystem;
+    private record Boot(ModuleRepository systemRepo, NativeTypeSystem nativeTypeSystem,
+                        Container nativeContainer, ModuleLoader ecstasyLoader,
+                        ModuleLoader bridgeLoader, ConstantPool ecstasyPool) {}
+
+    private Boot boot() {
+        Boot boot = this.boot;
+        if (boot == null) {
+            throw new IllegalStateException("the Xvm has not finished booting");
+        }
+        return boot;
+    }
 
     /**
-     * The invisible "Container -1", which provides the interface to the "native" world and loads
-     * all the Ecstasy system modules that require any native support.
+     * @return the ModuleRepository that the system modules are loaded from
      */
-    public final Container nativeContainer;
+    public ModuleRepository systemRepo() {
+        return boot().systemRepo();
+    }
 
     /**
-     * The ModuleLoader for the core Ecstasy library.
+     * @return the TypeSystem for the invisible "Container -1", which is the only TypeSystem
+     *         allowed to contain native code
      */
-    public final ModuleLoader ecstasyLoader;
+    public NativeTypeSystem nativeTypeSystem() {
+        return boot().nativeTypeSystem();
+    }
 
     /**
-     * The ModuleLoader for the "bridge" library (the module that interfaces directly with the JVM).
+     * @return the invisible "Container -1", which provides the interface to the "native" world
+     *         and loads all the Ecstasy system modules that require any native support
      */
-    public final ModuleLoader bridgeLoader;
+    public Container nativeContainer() {
+        return boot().nativeContainer();
+    }
 
     /**
-     * The ConstantPool of the Ecstasy module loader.
+     * @return the ModuleLoader for the core Ecstasy library
      */
-    public final ConstantPool ecstasyPool;
+    public ModuleLoader ecstasyLoader() {
+        return boot().ecstasyLoader();
+    }
+
+    /**
+     * @return the ModuleLoader for the "bridge" library (the module that interfaces directly with
+     *         the JVM)
+     */
+    public ModuleLoader bridgeLoader() {
+        return boot().bridgeLoader();
+    }
+
+    /**
+     * @return the ConstantPool of the Ecstasy module loader
+     */
+    public ConstantPool ecstasyPool() {
+        return boot().ecstasyPool();
+    }
 
     /**
      * All Containers (held only by a weak reference) keyed by id.
@@ -199,7 +248,7 @@ public class Xvm {
      * @return a new Linker
      */
     public Linker createLinker() {
-        return new Linker(this).addSharedModule(ecstasyLoader);
+        return new Linker(this).addSharedModule(ecstasyLoader());
     }
 
     /**
@@ -218,7 +267,7 @@ public class Xvm {
         require("module", module);
 
         if (repo == null) {
-            repo = systemRepo;
+            repo = systemRepo();
         }
 
         ModuleStructure moduleStructure = ver == null
@@ -245,7 +294,7 @@ public class Xvm {
             refiner = Refiner.DefaultRefiner;
         }
 
-        Linker linker = nativeTypeSystem.create();
+        Linker linker = nativeTypeSystem().create();
         if (repo != null) {
             linker = linker.withRepo(repo);
         }
@@ -264,7 +313,7 @@ public class Xvm {
      * @return a new Container
      */
     public Container createContainer(TypeSystem typeSystem, Injector injector) {
-        return createContainer(nativeContainer, typeSystem, injector);
+        return createContainer(nativeContainer(), typeSystem, injector);
     }
 
     /**
@@ -277,7 +326,7 @@ public class Xvm {
     public Container getContainer(long id) {
         if (id < 0) {
             if (id == -1) {
-                return nativeContainer;
+                return nativeContainer();
             }
             throw new IllegalArgumentException("illegal container id: " + id);
         }

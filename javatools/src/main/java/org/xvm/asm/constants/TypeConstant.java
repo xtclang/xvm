@@ -7155,7 +7155,7 @@ public abstract class TypeConstant
     }
 
     protected synchronized String buildJitClassName(TypeSystem ts, ModuleLoader loader) {
-        String name = ts.xvm.nativeTypeSystem.getReservedName(this);
+        String name = ts.xvm.nativeTypeSystem().getReservedName(this);
         if (name != null) {
             return name;
         }

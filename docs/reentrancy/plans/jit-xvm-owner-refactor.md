@@ -1,3 +1,9 @@
+> STATUS 2026-08-24: the constructor escape this plan targets is fixed on the branch
+> (private constructor + static `Xvm.create(repo)` boot factory + volatile immutable `Boot`
+> record; ledger row 37). The three shared ASM JIT-name call sites now route through the
+> `nativeTypeSystem()` accessor. The remaining substance of this plan is the generated-static
+> and bridge ambient-`Ctx` ownership work, not facade construction.
+
 # JIT Xvm Owner Refactor Plan
 
 ## Decision

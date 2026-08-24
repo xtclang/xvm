@@ -118,7 +118,7 @@ PR whenever wanted:
 
 | Item | Note |
 | --- | --- |
-| `-Xlint:this-escape` fatal gate + the `Xvm` suppression | one true escape remains suppressed pending the JIT owner shell |
+| `-Xlint:this-escape` fatal gate | zero suppressions remain; the last one (`Xvm` startup) was eliminated by the boot-factory refactor |
 | `-Xlint:fallthrough` fatal gate + 35 method suppressions + 4 added markers | the classification found ZERO live fallthrough bugs on the branch or master - this is purely protection against the future forgotten `break`; be explicit about that in the PR description |
 | Build-verification habit: full `xdk:installDist` (or `lib-json` compile) alongside unit suites | four masked compile regressions hid behind unit-green builds on this branch |
 

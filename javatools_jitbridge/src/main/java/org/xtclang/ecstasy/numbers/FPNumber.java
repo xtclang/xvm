@@ -449,7 +449,7 @@ public abstract class FPNumber extends Number {
         private final RoundingMode $roundingMode;
 
         @Override public TypeConstant $xvmType(Ctx ctx) {
-            ConstantPool pool = $xvm().ecstasyPool;
+            ConstantPool pool = $xvm().ecstasyPool();
             return switch ((int) $ordinal) {
                 case 0  -> pool.valTiesToEven()    .getType();
                 case 1  -> pool.valTiesToAway()    .getType();

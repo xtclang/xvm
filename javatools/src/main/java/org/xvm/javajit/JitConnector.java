@@ -35,7 +35,7 @@ public class JitConnector
     public JitConnector(ModuleRepository repo) {
         super(repo);
 
-        xvm = new Xvm(repo);
+        xvm = Xvm.create(repo);
     }
 
     @Override
@@ -57,11 +57,11 @@ public class JitConnector
     @Override
     public void start(Map<String, List<String>> mapInjections) {
         try {
-            var loader   = xvm.nativeTypeSystem.loader;
+            var loader   = xvm.nativeTypeSystem().loader;
             var clz      = loader.loadClass("org.xtclang._native.mgmt.nMainInjector")
                                  .asSubclass(Injector.class);
             var injector = clz.getDeclaredConstructor(Xvm.class).newInstance(xvm);
-            try (var _ = ConstantPool.withPool(xvm.nativeTypeSystem.pool())) {
+            try (var _ = ConstantPool.withPool(xvm.nativeTypeSystem().pool())) {
                 clz.getMethod("addNativeResources").invoke(injector);
             }
             container = xvm.createContainer(ts, injector);
@@ -182,7 +182,7 @@ public class JitConnector
             moduleDir.mkdirs();
             loader.dump(moduleDir, filter);
             ecstasyDir.mkdirs();
-            xvm.nativeTypeSystem.loader.dump(ecstasyDir, filter);
+            xvm.nativeTypeSystem().loader.dump(ecstasyDir, filter);
         }
     }
 

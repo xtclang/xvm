@@ -3,6 +3,11 @@ package org.xvm.javajit;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.io.IOException;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
@@ -14,6 +19,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.xvm.javajit.Builder.CD_CtorCtx;
 import static org.xvm.javajit.Builder.CD_Ctx;
@@ -88,6 +94,37 @@ public class JitConstructorEscapeTest {
 
     private static JitParamDesc[] returns(ClassDesc cd) {
         return new JitParamDesc[] {new JitParamDesc(null, Specific, cd, 0, -1, false)};
+    }
+
+    /**
+     * Xvm startup used to publish a partially constructed facade: the public constructor passed
+     * `this` into NativeTypeSystem.create(...) and native container creation before construction
+     * completed, and was the last @SuppressWarnings("this-escape") exception under the fatal
+     * this-escape build gate. Construction and booting are now split: a private constructor does
+     * only self-contained initialization, the static create(...) factory hands out the reference
+     * strictly after construction, and boot state is published as one volatile immutable record.
+     */
+    @Test
+    public void xvmBootsThroughFactoryWithoutConstructorEscape() throws IOException {
+        var source = readString("org/xvm/javajit/Xvm.java");
+
+        assertFalse(source.contains("@SuppressWarnings(\"this-escape\")"),
+                "the Xvm this-escape suppression must stay dead");
+        assertFalse(source.contains("public Xvm("),
+                "Xvm construction must go through the boot factory");
+        assertTrue(source.contains("private Xvm()"),
+                "the bare constructor must be private and self-contained");
+        assertTrue(source.contains("public static Xvm create(ModuleRepository repo)"),
+                "booting must happen after construction, in the static factory");
+        assertTrue(source.contains("private volatile Boot boot;"),
+                "boot state must be published as one volatile immutable record");
+    }
+
+    private static String readString(String source) throws IOException {
+        var path = Path.of("src/main/java", source);
+        return Files.readString(Files.exists(path)
+                ? path
+                : Path.of("javatools/src/main/java", source));
     }
 
     private static JitParamDesc[] params(ClassDesc cd) {

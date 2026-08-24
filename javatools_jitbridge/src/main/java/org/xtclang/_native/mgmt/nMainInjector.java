@@ -47,7 +47,7 @@ public class nMainInjector
      * This method is called by the JitConnector via reflection.
      */
     public void addNativeResources() {
-        ConstantPool pool     = xvm.ecstasyPool;
+        ConstantPool pool     = xvm.ecstasyPool();
         TypeConstant pureType = pool.ensureEcstasyTypeConstant("io.Console");
 
         Class temporaryLoadStringClassToPrimeConstTypeInfo = String.class;
