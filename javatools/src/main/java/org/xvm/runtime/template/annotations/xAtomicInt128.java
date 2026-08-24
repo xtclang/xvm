@@ -46,7 +46,7 @@ public class xAtomicInt128
         case "exchange": {
             AtomicLongLongHandle      hThis  = (AtomicLongLongHandle) hTarget;
             AtomicReference<LongLong> atomic = hThis.m_atomicValue;
-            if (atomic == null) {
+            if (atomic.get() == null) {
                 return frame.raiseException(xException.unassignedReference(frame));
             }
 
@@ -67,7 +67,7 @@ public class xAtomicInt128
         case "replaceFailed": {
             AtomicLongLongHandle      hThis  = (AtomicLongLongHandle) hTarget;
             AtomicReference<LongLong> atomic = hThis.m_atomicValue;
-            if (atomic == null) {
+            if (atomic.get() == null) {
                 return frame.raiseException(xException.unassignedReference(frame));
             }
 
@@ -101,25 +101,18 @@ public class xAtomicInt128
     @Override
     protected int getReferentImpl(Frame frame, RefHandle hTarget, boolean fNative, int iReturn) {
         AtomicLongLongHandle      hThis  = (AtomicLongLongHandle) hTarget;
-        AtomicReference<LongLong> atomic = hThis.m_atomicValue;
+        LongLong                  llCur  = hThis.m_atomicValue.get();
 
-        return atomic == null
+        return llCur == null
             ? frame.raiseException(xException.unassignedReference(frame))
-            : frame.assignValue(iReturn, f_templateReferent.makeHandle(atomic.get()));
+            : frame.assignValue(iReturn, f_templateReferent.makeHandle(llCur));
     }
 
     @Override
     protected int setReferentImpl(Frame frame, RefHandle hTarget, boolean fNative, ObjectHandle hValue) {
-        AtomicLongLongHandle      hThis  = (AtomicLongLongHandle) hTarget;
-        AtomicReference<LongLong> atomic = hThis.m_atomicValue;
+        AtomicLongLongHandle hThis = (AtomicLongLongHandle) hTarget;
 
-        LongLong llValue = ((LongLongHandle) hValue).getValue();
-
-        if (atomic == null) {
-            hThis.m_atomicValue = new AtomicReference<>(llValue);
-        } else {
-            atomic.set(llValue);
-        }
+        hThis.m_atomicValue.set(((LongLongHandle) hValue).getValue());
         return Op.R_NEXT;
     }
 
@@ -128,7 +121,12 @@ public class xAtomicInt128
 
     public static class AtomicLongLongHandle
             extends RefHandle {
-        protected AtomicReference<LongLong> m_atomicValue;
+        /**
+         * The atomic cell, deliberately eager and final: cloneAs views shallow-copy this field, so
+         * every view of one Atomic ref shares one cell (the old lazily installed cell let a
+         * pre-assignment view install its own). A null referent inside the cell means unassigned.
+         */
+        protected final AtomicReference<LongLong> m_atomicValue = new AtomicReference<>();
 
         protected AtomicLongLongHandle(TypeComposition clazz, String sName) {
             super(clazz, sName);
@@ -136,13 +134,13 @@ public class xAtomicInt128
 
         @Override
         public boolean isAssigned() {
-            return m_atomicValue != null;
+            return m_atomicValue.get() != null;
         }
 
         @Override
         public String toString() {
             return "(Atomic " + m_clazz.getTemplate().f_sName + ')' +
-                    (m_atomicValue == null ? "unassigned" : m_atomicValue.get());
+                    (isAssigned() ? m_atomicValue.get() : "unassigned");
         }
     }
 

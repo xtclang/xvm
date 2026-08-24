@@ -1,6 +1,8 @@
 package org.xvm.runtime.template.annotations;
 
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -166,15 +168,23 @@ public class xInject
             return f_sResource;
         }
 
+        /**
+         * The injected referent, in a final shared cell rather than the inherited per-view
+         * {@code m_hReferent} field: a cloneAs view created before the injection resolved would
+         * otherwise carry its own referent slot and resolve the same resource a second time.
+         */
+        private final AtomicReference<ObjectHandle> f_refInjected = new AtomicReference<>();
+
         @Override
         public ObjectHandle getReferent() {
-            return m_hReferent;
+            return f_refInjected.get();
         }
 
         public void setReferent(ObjectHandle hReferent) {
-            assert m_hReferent == null;
-
-            m_hReferent = hReferent;
+            // first resolution wins; a concurrent second resolution (two fibers or two views
+            // racing an unresolved injection) quietly defers to the winner instead of the old
+            // shape's last-writer-wins overwrite behind a disabled-by-default assert
+            f_refInjected.compareAndSet(null, hReferent);
         }
 
         @Override

@@ -2776,6 +2776,47 @@ old adopt-in-place path. `MethodInfoTest.owningFreshBodyDoesNotFabricateSelfTarg
 fails on the broken shape and passes here, `xdk:installDist` builds the full
 XDK again, and the cycle-safe equality tests stay green.
 
+### Atomic And Injected Handle Cells Are Constructor-Final And View-Shared
+
+Row-161 mechanism 3; the lazily installed fields exist verbatim on master.
+`cloneAs(...)` views are shallow copies, so any state that is logically one
+cell per reference must live in a field whose value already exists when the
+first view is cloned. Three handles installed their cell lazily instead:
+
+- `AtomicJavaLongHandle.m_atomicValue` was null until the first assignment
+  installed an `AtomicLong`;
+- `AtomicLongLongHandle.m_atomicValue` likewise for its `AtomicReference`;
+- `InjectedHandle` resolved its injection into the inherited per-view
+  referent slot.
+
+A view cloned before the first assignment therefore carried its own empty
+field, and the first assignment through each view installed an independent
+cell: one `@Atomic` reference silently became two independent atomics
+depending on which view a caller held, and one injection could resolve twice
+(duplicating the injected resource). No parallelism is needed - just a view
+created before first use, single-threaded.
+
+The fix is the constructor-final shared-cell pattern that the row-161 sweep
+proved immune in `AtomicHandle` and `FutureHandle`:
+
+- the long flavor gets an eager `final AtomicLong` plus a monotonic shared
+  `final AtomicBoolean` assigned flag; assignment writes value-then-flag, so
+  any reader observing the flag as true sees the value through the two
+  volatile operations;
+- the 128-bit flavor gets an eager `final AtomicReference` where a null
+  referent means unassigned - no separate flag needed;
+- `InjectedHandle` gets a `final` first-wins CAS cell, which also upgrades
+  the old concurrent-resolution behavior: master overwrote last-writer-wins
+  behind an assert that is disabled by default; now the first resolution
+  stays stable and later attempts are quiet no-ops.
+
+`AtomicViewSharingTest` proves per flavor that a pre-assignment view observes
+an assignment made through the original and shares the identical cell object,
+and that injection resolves exactly once across views. The remaining row-161
+mechanisms (RefHandle dereference desync, LazyHandle guard split, array
+storage-pointer forks, the mutability-freeze split) are tracked in the
+graduated must-fix row.
+
 ### JIT Xvm Boots Through A Factory, Not A Constructor Escape
 
 The `Xvm` constructor was the last `@SuppressWarnings("this-escape")` under

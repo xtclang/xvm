@@ -1,6 +1,7 @@
 package org.xvm.runtime.template.annotations;
 
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.xvm.asm.ClassStructure;
@@ -58,10 +59,10 @@ public class xAtomicIntNumber
 
         switch (method.getName()) {
         case "exchange": {
-            AtomicLong atomic = hThis.m_atomicValue;
-            if (atomic == null) {
+            if (!hThis.m_fAssigned.get()) {
                 return frame.raiseException(xException.unassignedReference(frame));
             }
+            AtomicLong atomic = hThis.m_atomicValue;
 
             long lNew = ((JavaLong) hArg).getValue();
             long lOld = atomic.getAndSet(lNew);
@@ -79,10 +80,10 @@ public class xAtomicIntNumber
         switch (method.getName()) {
         case "replaceFailed": {
             AtomicJavaLongHandle hThis  = (AtomicJavaLongHandle) hTarget;
-            AtomicLong           atomic = hThis.m_atomicValue;
-            if (atomic == null) {
+            if (!hThis.m_fAssigned.get()) {
                 return frame.raiseException(xException.unassignedReference(frame));
             }
+            AtomicLong atomic = hThis.m_atomicValue;
 
             long lExpect = ((JavaLong) ahArg[0]).getValue();
             long lNew    = ((JavaLong) ahArg[1]).getValue();
@@ -113,24 +114,20 @@ public class xAtomicIntNumber
     @Override
     protected int getReferentImpl(Frame frame, RefHandle hTarget, boolean fNative, int iReturn) {
         AtomicJavaLongHandle hAtomic = (AtomicJavaLongHandle) hTarget;
-        AtomicLong         atomic  = hAtomic.m_atomicValue;
 
-        return atomic == null
-            ? frame.raiseException(xException.unassignedReference(frame))
-            : frame.assignValue(iReturn, f_templateReferent.makeJavaLong(atomic.get()));
+        return hAtomic.m_fAssigned.get()
+            ? frame.assignValue(iReturn, f_templateReferent.makeJavaLong(hAtomic.m_atomicValue.get()))
+            : frame.raiseException(xException.unassignedReference(frame));
     }
 
     @Override
     protected int setReferentImpl(Frame frame, RefHandle hTarget, boolean fNative, ObjectHandle hValue) {
         AtomicJavaLongHandle hAtomic = (AtomicJavaLongHandle) hTarget;
-        AtomicLong         atomic  = hAtomic.m_atomicValue;
-        long               lValue  = ((JavaLong) hValue).getValue();
 
-        if (atomic == null) {
-            hAtomic.m_atomicValue = new AtomicLong(lValue);
-        } else {
-            atomic.set(lValue);
-        }
+        // value first, flag second: a reader that observes the flag as true is guaranteed to see
+        // the value through the two volatile operations
+        hAtomic.m_atomicValue.set(((JavaLong) hValue).getValue());
+        hAtomic.m_fAssigned.set(true);
         return Op.R_NEXT;
     }
 
@@ -139,7 +136,19 @@ public class xAtomicIntNumber
 
     public static class AtomicJavaLongHandle
             extends RefHandle {
-        protected AtomicLong m_atomicValue;
+        /**
+         * The atomic cell, deliberately eager and final: cloneAs views shallow-copy this field, so
+         * every view of one Atomic ref shares one cell. The old lazily installed cell let a view
+         * cloned before the first assignment install its own cell, silently splitting one Atomic
+         * into two independent ones between views.
+         */
+        protected final AtomicLong m_atomicValue = new AtomicLong();
+
+        /**
+         * The monotonic assigned flag, final and shared for the same reason. Unassigned state can
+         * no longer ride on cell-null, because the cell must exist before any view is cloned.
+         */
+        protected final AtomicBoolean m_fAssigned = new AtomicBoolean();
 
         protected AtomicJavaLongHandle(TypeComposition clazz, String sName) {
             super(clazz, sName);
@@ -147,13 +156,13 @@ public class xAtomicIntNumber
 
         @Override
         public boolean isAssigned() {
-            return m_atomicValue != null;
+            return m_fAssigned.get();
         }
 
         @Override
         public String toString() {
             return "(AtomicIntNumber) " +
-                    (m_atomicValue == null ? "unassigned" : m_atomicValue.get());
+                    (m_fAssigned.get() ? m_atomicValue.get() : "unassigned");
         }
     }
 
