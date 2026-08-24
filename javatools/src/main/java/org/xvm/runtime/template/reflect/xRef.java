@@ -885,6 +885,23 @@ public class xRef
             return ref;
         }
 
+        @Override
+        public ObjectHandle cloneAs(TypeComposition clazz) {
+            if (m_iVar >= 0) {
+                // A register-bound ref reads and writes through m_frame.f_ahVar[m_iVar], and
+                // Frame.VarInfo.release() dereferences only the single instance it cached. A
+                // shallow view copy would carry its own frame/register binding, miss the
+                // dereference transition at scope exit, and keep reading and writing a recycled
+                // register slot that by then belongs to an unrelated variable - silent value
+                // corruption with no error. The designed mechanism for a second handle onto a
+                // register-bound ref is REF_REF delegation (see createRegisterRef), never a
+                // shallow copy, so a clone request here is a defect and must fail loudly.
+                throw new IllegalStateException(
+                        "register-bound ref cannot be cloned as a view: " + this);
+            }
+            return super.cloneAs(clazz);
+        }
+
         /**
          * Create a RefHandle for a given property.
          *
