@@ -127,7 +127,7 @@ been logged and the task code treats the non-zero code as failure.
 | P1 | `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:556` | Must-fix, fixed in branch | Each op execution caught `Throwable`, printed stack, and raised a generic XTC `"Run-time error"` exception. Java VM defects and ownership assertions could become user-catchable language exceptions. | Fixed by catching only unchecked Java `RuntimeException`/`Error` at the central op boundary. Natural XTC exceptions are returned by op implementations as `R_EXCEPTION`; VM/runtime defects are wrapped with op/frame context and published through the host failure channel. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:229` | Must-fix, fixed in branch | `scheduleIO(task); // don't wait` discarded the returned `CompletableFuture`; any write failure completed an unobserved future while the method returned OK. | Fixed by preserving `submit()` as a non-blocking queue operation while attaching a completion observer. Queued write failures are recorded through the container failure channel instead of being dropped. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:491` and `:497` | Must-fix, fixed in branch | `CompletableFuture.allOf(...).whenComplete` said `cfThis.get()`/`cfThat.get()` "must not happen" and only asserted on `Throwable`. If interruption or an impossible-but-real completion race occurred, `hAnd` could be completed with nulls or never completed correctly. The already-complete fast path also read `cfThis` twice and ignored `cfThat`. | Fixed by reading `cfThat` on the fast path, completing `hAnd` with `Utils.translate(...)` on async get failure, and restoring interrupt status for `InterruptedException`. |
-| P1 | `lib_jsondb/src/main/x/jsondb/Client.x:1425` and `:1430` | Must-fix | Commit failure is logged and downgraded to `DatabaseError`; rollback failure is ignored. A failed rollback after a failed commit is exactly the state that should surface in DB health/recovery. | Log and retain rollback failure as suppressed/secondary failure. Consider returning a richer commit result that carries both commit and rollback exceptions. |
+| P1 | `lib_jsondb/src/main/x/jsondb/Client.x:1425` and `:1430` | Must-fix, fixed in branch | Commit failure was logged and downgraded to `DatabaseError`; the compensating rollback's failure was swallowed by `catch (Exception ignore) {}`. A failed rollback after a failed commit means the client no longer knows the transaction's disposition - exactly the state DB health/recovery needs to see - and its only evidence vanished. | Fixed minimally and standalone-extractable: the rollback failure is logged with the original commit failure as context; the result, close, and rootTx clearing are unchanged. The single hunk applies to master verbatim (no dependency on any branch change). The richer design - a commit result carrying primary and suppressed causes - needs an `oodb` API change and stays on the backlog. |
 
 ## Suspicious Sites
 
@@ -299,7 +299,8 @@ P1:
    input futures.
 4. Preserve native Java cause/type when translating proxy, reflection, socket, HTTP,
    file, and crypto failures into XTC exceptions.
-5. Log/retain rollback failure after commit failure in `lib_jsondb` client paths.
+5. DONE in this branch: log/retain rollback failure after commit failure in
+   `lib_jsondb` client paths (single-hunk, master-applicable).
 6. Convert XUnit discovery/lifecycle hook failures into visible test/discovery
    failures or explicit extension warnings.
 

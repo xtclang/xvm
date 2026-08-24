@@ -1427,7 +1427,13 @@ service Client<Schema extends RootSchema> {
                     result = DatabaseError;
                     try {
                         txManager.rollback(writeId_);
-                    } catch (Exception ignore) {}
+                    } catch (Exception e2) {
+                        // a rollback failure after a commit failure means this client no longer
+                        // knows the transaction's disposition; the TxManager owns recovery, but
+                        // the secondary failure is exactly the evidence that health/recovery
+                        // needs, so it must not disappear into an ignored catch
+                        log($"Exception during rollback after failed commit of {this}: {e2} (commit failure: {e})");
+                    }
                 } finally {
                     // clearing out the transaction reference will "close" the transaction; it
                     // becomes no longer reachable internally
