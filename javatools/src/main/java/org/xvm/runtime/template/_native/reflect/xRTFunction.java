@@ -894,8 +894,11 @@ public class xRTFunction
 
         @Override
         public boolean isMutable() {
+            // f_ahArg is the constructor's register-file-sized array and routinely carries
+            // trailing null padding (see addBoundArguments below); skip the padding instead
+            // of NPE-ing if a freeze or pass-through path ever reaches a finalizer handle
             for (ObjectHandle hArg : f_ahArg) {
-                if (hArg.isMutable()) {
+                if (hArg != null && hArg.isMutable()) {
                     return true;
                 }
             }
@@ -906,7 +909,7 @@ public class xRTFunction
         public boolean makeImmutable() {
             if (isMutable()) {
                 for (ObjectHandle hArg : f_ahArg) {
-                    if (!hArg.makeImmutable()) {
+                    if (hArg != null && !hArg.makeImmutable()) {
                         return false;
                     }
                 }
@@ -917,7 +920,7 @@ public class xRTFunction
         @Override
         protected boolean checkArgumentsPassThrough(Container container) {
             for (ObjectHandle hArg : f_ahArg) {
-                if (!hArg.isPassThrough(container)) {
+                if (hArg != null && !hArg.isPassThrough(container)) {
                     return false;
                 }
             }
@@ -935,8 +938,17 @@ public class xRTFunction
 
         public FullyBoundHandle chain(FullyBoundHandle handle) {
             if (!(handle instanceof NoOpHandle)) {
-                assert m_next == null;
-                m_next = handle;
+                // append at the tail: the old "assert m_next == null" was not a sound
+                // invariant - Frame.chainFinalizer can already have linked a next handle onto
+                // a frame's head finalizer before ClassTemplate's construction epilogue folds
+                // the per-frame finalizers together (reachable when an annotation-mixin
+                // constructor with a finalizer delegates to a super constructor that also has
+                // one), and overwriting would silently drop the linked finalizers
+                FullyBoundHandle tail = this;
+                while (tail.m_next != null) {
+                    tail = tail.m_next;
+                }
+                tail.m_next = handle;
             }
             return this;
         }
