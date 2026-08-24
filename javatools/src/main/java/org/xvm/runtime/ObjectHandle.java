@@ -73,6 +73,16 @@ public abstract class ObjectHandle
      * @return the new handle
      */
     public ObjectHandle cloneAs(TypeComposition clazz) {
+        if (isMutable() && !supportsMutableViews()) {
+            // default-deny (clone-eradication study): a shallow view copy of a handle whose
+            // lifecycle is still live splits per-view state - m_fMutable at minimum - from the
+            // storage every view shares; that is the entire freeze-split bug family. Classes
+            // whose views share all lifecycle state opt in via supportsMutableViews() (see
+            // GenericHandle's freeze/init/referent cells); everything else stays refused until
+            // it earns the opt-in, so an unreviewed future handle class fails loudly here
+            // instead of desyncing silently.
+            throw new IllegalStateException("mutable handle cannot be cloned as a view: " + this);
+        }
         try {
             ObjectHandle handle = (ObjectHandle) super.clone();
             handle.m_clazz = clazz;
@@ -83,15 +93,12 @@ public abstract class ObjectHandle
     }
 
     /**
-     * Cast this handle to the expected Java handle type.
-     *
-     * @param clzHandle  the expected handle type
-     * @param <T>        the handle type
-     *
-     * @return this handle cast to the specified type
+     * @return true iff every view of this handle shares all of its lifecycle state, making a
+     *         mutable view clone safe; the default is false, so mutable handles refuse
+     *         {@link #cloneAs} until their class explicitly earns the opt-in
      */
-    public <T extends ObjectHandle> T as(Class<T> clzHandle) {
-        return clzHandle.cast(this);
+    protected boolean supportsMutableViews() {
+        return false;
     }
 
     /**
@@ -575,6 +582,15 @@ public abstract class ObjectHandle
             if (m_cellFreeze == null) {
                 FREEZE_UPDATER.compareAndSet(this, null, new FreezeCell(rawMutable()));
             }
+        }
+
+        @Override
+        protected boolean supportsMutableViews() {
+            // GenericHandle views share their lifecycle state: the freeze cell, the lazy-init
+            // guard, the atomic/injected referent cells, and the copy-on-write field-override
+            // layer together make mutable access views (struct <-> public during construction,
+            // reveal/mask) safe - this is the one designed-in mutable-view family
+            return true;
         }
 
         @Override
