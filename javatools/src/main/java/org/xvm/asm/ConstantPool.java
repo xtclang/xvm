@@ -245,41 +245,46 @@ public class ConstantPool
 
             synchronized (this) {
                 constantOld = (T) mapConstants.get(constant);
-                if (constantOld != null) {
-                    // it was concurrently inserted
-                    return awaitRegistrationComplete(constantOld);
-                }
+                if (constantOld == null) {
+                    beginRegistrationCompletion(constant);
+                    fPublishedIncomplete = true;
+                    try {
+                        constant.setPosition(f_listConst.size());
+                        f_listConst.add(constant);
+                        mapConstants.put(constant, constant);
 
-                beginRegistrationCompletion(constant);
-                fPublishedIncomplete = true;
-                try {
-                    constant.setPosition(f_listConst.size());
-                    f_listConst.add(constant);
-                    mapConstants.put(constant, constant);
+                        // also allow the constant to be looked up by a locator
+                        Object oLocator = constant.getLocator();
+                        if (oLocator != null) {
+                            if (oLocator instanceof Constant constLocator
+                                    && constLocator.getContaining() != this) {
+                                Constant source = constLocator;
+                                constLocator = constLocator.adoptedBy(this);
+                                ConstantAdoptionValidator.assertValidIfEnabled(source, constLocator);
+                                constLocator.registerConstants(this);
+                                oLocator = constLocator;
+                            }
 
-                    // also allow the constant to be looked up by a locator
-                    Object oLocator = constant.getLocator();
-                    if (oLocator != null) {
-                        if (oLocator instanceof Constant constLocator
-                                && constLocator.getContaining() != this) {
-                            Constant source = constLocator;
-                            constLocator = constLocator.adoptedBy(this);
-                            ConstantAdoptionValidator.assertValidIfEnabled(source, constLocator);
-                            constLocator.registerConstants(this);
-                            oLocator = constLocator;
+                            Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
+                            if (constOld != null && !constOld.equals(constant)) {
+                                throw new IllegalStateException("locator collision: old=" + constOld +
+                                        ", new=" + constant);
+                            }
                         }
-
-                        Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
-                        if (constOld != null && !constOld.equals(constant)) {
-                            throw new IllegalStateException("locator collision: old=" + constOld +
-                                    ", new=" + constant);
-                        }
+                    } catch (RuntimeException | Error e) {
+                        finishRegistrationCompletion(constant, e);
+                        fPublishedIncomplete = false;
+                        throw e;
                     }
-                } catch (RuntimeException | Error e) {
-                    finishRegistrationCompletion(constant, e);
-                    fPublishedIncomplete = false;
-                    throw e;
                 }
+            }
+
+            if (constantOld != null) {
+                // the constant was concurrently inserted by another thread; wait for that
+                // registration to complete OUTSIDE the pool monitor: the registering thread
+                // must reacquire this monitor to publish its completion, so blocking on the
+                // completion future while holding the monitor deadlocks every pool user
+                return awaitRegistrationComplete(constantOld);
             }
 
             // make sure that the recursively referenced constants are all
