@@ -1007,14 +1007,32 @@ partitioned waves, each gated by the full suite and `xdk:installDist`:
   for the out-of-package `EvalCompiler.EvalStatement`); pinned by
   `SealedParserAstTest`.
 
-Census after the waves: **47 sealed declarations** (from zero this morning)
-and **77 format switches remaining of the original 141** - the survivors are
-own-format data switches (ClassStructure, TypeCompositionStatement),
-serialization factories (ConstantPool, Op, Disassembler), value-kind data
-discrimination on multi-format classes, and a handful of loud-default
-resolver switches whose cross-side format comparisons make the enum the
-honest currency (documented per wave).
+- **Composition sealing** (`6ba9dc8a2`, main session): `DelegatingComposition`
+  sealed over `CanonicalizedTypeComposition`/`ProxyComposition`, all concrete
+  composition classes final. The `TypeComposition` ROOT is deliberately left
+  open: `GenericHandleCloneAsTest` and `OwnershipDiagnosticsTest` implement it
+  as synthetic view factories, and reworking those fakes would risk their
+  regression precision (recorded in the commit message).
+- **Wave D - reclassified as STAYS**: the ~35 view-delegate cascades
+  (`ByteView`/`BitView` capability checks in the `xRTViewFrom*` templates)
+  are open-hierarchy capability probes over the deliberately-unsealed
+  `ClassTemplate`/`DelegateHandle` families, already in pattern-bound form;
+  converting them to switches would add lines with no exhaustiveness gain.
+  Their bare `UnsupportedOperationException` tails were instead given
+  subject-naming messages (`dc3e0d90d`): all 61 message-less runtime UOEs now
+  identify the delegate/template/type/method that fell through.
+
+Final census: **48 sealed declarations** (from zero at the start of the day),
+exactly **one `non-sealed` hatch** in main sources (`MethodDeclarationStatement`,
+for the out-of-package `EvalCompiler.EvalStatement`), **77 format switches
+remaining of the original 141**, every survivor categorized as staying for a
+stated reason - own-format data switches (ClassStructure,
+TypeCompositionStatement), serialization factories (ConstantPool, Op,
+Disassembler), value-kind data discrimination on multi-format classes,
+cross-side format comparisons where the enum is the honest currency, and the
+open-hierarchy capability cascades above - and **zero message-less
+UnsupportedOperationExceptions** in the runtime.
 
 Still open from this document's plan: opportunistic cascade conversions
-across the sealed families, `Op` (package split), and `TypeComposition`
-(test adapter).
+across the sealed families, `Op` (package split), and `TypeComposition`'s
+root (see the optional follow-up row in the backlog).
