@@ -704,11 +704,11 @@ public class xRTFunction
 
         @Override
         public boolean makeImmutable() {
-            if (m_fMutable) {
+            if (isMutable()) {
                 if (!m_hDelegate.makeImmutable()) {
                     return false;
                 }
-                m_fMutable = false;
+                setMutable(false);
             }
             return true;
         }
@@ -842,7 +842,7 @@ public class xRTFunction
 
         @Override
         public boolean makeImmutable() {
-            if (m_fMutable) {
+            if (isMutable()) {
                 if (!m_hArg.isService() && !m_hArg.makeImmutable()) {
                     return false;
                 }

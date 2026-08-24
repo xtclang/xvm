@@ -689,7 +689,7 @@ public class xTuple
 
         @Override
         public boolean makeImmutable() {
-            if (m_fMutable) {
+            if (isMutable()) {
                 ObjectHandle[] ahValue = m_ahValue;
                 for (int i = 0, c = ahValue.length; i < c; i++) {
                     ObjectHandle hValue = ahValue[i];

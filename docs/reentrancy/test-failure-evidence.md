@@ -77,6 +77,7 @@ explicit owner APIs, and typed runtime accessors.
 | `org.xvm.runtime.ClassCompositionLateRegistrationTest` | Late-registration diagnostic API. |
 | `org.xvm.runtime.ClassCompositionSafePublicationTest` | Native-container factory and branch field-publication shape. |
 | `org.xvm.runtime.NativeTemplatesTest` | Owner-local native template table and related runtime helper APIs. |
+| `org.xvm.runtime.FreezeViewSharingTest` | `makeImmutable()` through one view leaves the sibling view claiming mutability (verbatim master shape; behavioral red verified by stashing the fix), permitting writes into the frozen shared field array. |
 | `org.xvm.runtime.template.collections.ArrayViewGuardTest` | `cloneAs` of a Mutable array quietly forks the delegate pointer, so a later `clear()` through one alias silently diverges the views; the guard (branch-only) makes it fail loudly while Constant arrays keep cloning. |
 | `org.xvm.runtime.template.reflect.RefViewGuardTest` | `cloneAs` of a register-bound ref quietly produces a view whose frame/register binding survives scope release, reading and writing the recycled slot; the guard (branch-only) makes it fail loudly. |
 | `org.xvm.runtime.template.annotations.AtomicViewSharingTest` | Constructor-final shared cells and the first-wins injected referent (branch-only shapes); master's lazily installed per-view fields split one Atomic into two and can resolve one injection twice. |

@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
+
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.Map;
 
 import java.util.concurrent.CompletableFuture;
@@ -45,6 +47,17 @@ import org.xvm.util.Handy;
 public abstract class ObjectHandle
         implements Cloneable {
     protected TypeComposition m_clazz;
+
+    /**
+     * The mutability flag. Direct writes are permitted ONLY in constructors, where views cannot
+     * exist yet; every post-construction access must go through {@link #isMutable()} and
+     * {@link #setMutable(boolean)}, so GenericHandle can reroute the state into a cell shared by
+     * all cloneAs views. Direct field writes in subclass makeImmutable() overrides were exactly
+     * how a freeze through one view left sibling views claiming mutability. (Constructor writes
+     * stay direct rather than calling a final initializer because javac's conservative
+     * this-escape analysis, fatal under this build's gate, flags even final-method calls from
+     * subclass constructors.)
+     */
     protected boolean m_fMutable;
 
     protected ObjectHandle(TypeComposition clazz) {
@@ -95,12 +108,27 @@ public abstract class ObjectHandle
     }
 
     /**
+     * Post-construction mutability transition. Overridable so GenericHandle can reroute the write
+     * into the freeze cell shared by all of its cloneAs views.
+     */
+    protected void setMutable(boolean fMutable) {
+        m_fMutable = fMutable;
+    }
+
+    /**
+     * @return the raw per-instance flag, ignoring any shared view cell; for storage plumbing only
+     */
+    protected final boolean rawMutable() {
+        return m_fMutable;
+    }
+
+    /**
      * Mark the object as immutable.
      *
      * @return true if the object has been successfully marked as immutable; false otherwise
      */
     public boolean makeImmutable() {
-        m_fMutable = false;
+        setMutable(false);
         return true;
     }
 
@@ -357,7 +385,7 @@ public abstract class ObjectHandle
         TypeComposition clz = getComposition();
 
         // don't add "immutable" for immutable types
-        return "(" + (m_fMutable || clz.getType().isImmutable() ? "" : "immutable ") + clz + ") ";
+        return "(" + (isMutable() || clz.getType().isImmutable() ? "" : "immutable ") + clz + ") ";
     }
 
     public static class GenericHandle
@@ -489,7 +517,7 @@ public abstract class ObjectHandle
 
         @Override
         public boolean isService() {
-            if (m_fMutable && getComposition().isInstanceChild()) {
+            if (isMutable() && getComposition().isInstanceChild()) {
                 ObjectHandle hParent = getField(null, OUTER);
                 return hParent != null && hParent.isService();
             }
@@ -505,8 +533,55 @@ public abstract class ObjectHandle
                 : hParent.getService();
         }
 
+        /**
+         * The freeze state shared by every cloneAs view of this object, installed lazily by the
+         * first view clone. The per-instance flag is a shallow-copied field, but views are views
+         * over ONE shared field array: on the old shape, makeImmutable() through one view left
+         * sibling views claiming mutability and therefore willing to write into the frozen shared
+         * storage. Handles that never have views never pay for the cell, and the CAS install
+         * keeps a racing pair of first clones from forking two cells.
+         */
+        private volatile FreezeCell m_cellFreeze;
+
+        private static final AtomicReferenceFieldUpdater<GenericHandle, FreezeCell> FREEZE_UPDATER =
+                AtomicReferenceFieldUpdater.newUpdater(
+                        GenericHandle.class, FreezeCell.class, "m_cellFreeze");
+
+        private static final class FreezeCell {
+            volatile boolean mutable;
+
+            FreezeCell(boolean fMutable) {
+                mutable = fMutable;
+            }
+        }
+
+        @Override
+        public boolean isMutable() {
+            FreezeCell cell = m_cellFreeze;
+            return cell == null ? rawMutable() : cell.mutable;
+        }
+
+        @Override
+        protected void setMutable(boolean fMutable) {
+            FreezeCell cell = m_cellFreeze;
+            if (cell == null) {
+                super.setMutable(fMutable);
+            } else {
+                cell.mutable = fMutable;
+            }
+        }
+
+        private void ensureSharedFreeze() {
+            if (m_cellFreeze == null) {
+                FREEZE_UPDATER.compareAndSet(this, null, new FreezeCell(rawMutable()));
+            }
+        }
+
         @Override
         public ObjectHandle cloneAs(TypeComposition clazz) {
+            // the freeze state must be shared before the shallow copy below duplicates it
+            ensureSharedFreeze();
+
             // cloneAs() creates another access view of the same object. The field array therefore
             // remains shared for regular values, but inflated RefHandles need a view-local $outer:
             // mutating the shared RefHandle would make the source view suddenly point at the new
@@ -557,14 +632,14 @@ public abstract class ObjectHandle
 
         @Override
         public boolean makeImmutable() {
-            if (m_fMutable) {
+            if (isMutable()) {
                 // mark ourselves as immutable to prevent an infinite recursion
-                m_fMutable = false;
+                setMutable(false);
                 if (getComposition().makeStructureImmutable(fieldView())) {
                     return true;
                 }
                 // the structure could not be made mutable
-                m_fMutable = true;
+                setMutable(true);
                 return false;
             }
             return true;

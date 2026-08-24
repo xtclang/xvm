@@ -981,7 +981,7 @@ public class xRef
 
             if (fDone) {
                 // we cannot call super(), since it will freeze the holder (outer)
-                m_fMutable = false;
+                setMutable(false);
             }
             return fDone;
         }
