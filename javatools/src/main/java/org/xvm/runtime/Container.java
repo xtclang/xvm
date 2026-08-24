@@ -344,7 +344,7 @@ public abstract class Container
                 }
                 f_mapTemplatesByType.put(type, template);
             } else {
-                throw new UnsupportedOperationException();
+                throw new UnsupportedOperationException("no template for type: " + type);
             }
         }
         return template;

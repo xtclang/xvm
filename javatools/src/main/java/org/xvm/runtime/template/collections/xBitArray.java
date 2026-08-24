@@ -177,7 +177,7 @@ public class xBitArray
         if (tDelegate instanceof BitView tView) {
             return tView.getBits(hDelegate, ofStart, cSize, fReverse);
         }
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hDelegate);
     }
 
     /**
@@ -200,7 +200,7 @@ public class xBitArray
             }
             return;
         }
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hDelegate);
     }
 
     public static xBitArray getInstance(Container container) {

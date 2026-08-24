@@ -2375,7 +2375,7 @@ public final class DebugConsole
             switch (form) {
             case EVAL:
                 // TODO not yet implemented
-                throw new UnsupportedOperationException();
+                throw new UnsupportedOperationException("debugger EVAL is not yet implemented: " + sVar);
 
             case OBJ:
                 return hVar;
@@ -2385,7 +2385,7 @@ public final class DebugConsole
 
             case VAR:
                 // not currently used
-                throw new UnsupportedOperationException();
+                throw new UnsupportedOperationException("debugger VAR form is not used: " + sVar);
 
             case ELEM:
                 long cElements = ((ArrayHandle) hVar).m_hDelegate.m_cSize;

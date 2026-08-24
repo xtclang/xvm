@@ -59,7 +59,7 @@ public class xRTViewFromByteToInt16
                     f_container, pool().typeInt16())).packHandle(anValue, mutability);
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -78,7 +78,7 @@ public class xRTViewFromByteToInt16
                     frame.container().nativeTemplates().int16().makeJavaLong(nValue));
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -97,6 +97,6 @@ public class xRTViewFromByteToInt16
             return Op.R_NEXT;
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 }

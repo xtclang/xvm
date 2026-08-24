@@ -111,12 +111,12 @@ public final class PropertyComposition
 
     @Override
     public TypeComposition maskAs(TypeConstant type) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a property composition cannot be masked as " + type);
     }
 
     @Override
     public TypeComposition revealAs(TypeConstant type) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a property composition cannot be revealed as " + type);
     }
 
     @Override

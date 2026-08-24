@@ -43,7 +43,7 @@ public class Proxy
 
     @Override
     public ClassComposition ensureClass(Container container, TypeConstant typeActual) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a proxy class cannot be created for " + typeActual);
     }
 
     @Override

@@ -373,10 +373,10 @@ public class xRTType
                     ConstantPool::ensureIntersectionTypeConstant, iReturn);
         } else if (hArg instanceof MethodHandle) {
             // TODO
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("Type + Method is not yet implemented: " + hArg);
         } else if (hArg instanceof PropertyHandle) {
             // TODO
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("Type + Property is not yet implemented: " + hArg);
         }
 
         return super.invokeAdd(frame, hTarget, hArg, iReturn);
@@ -400,10 +400,10 @@ public class xRTType
                     ConstantPool::ensureDifferenceTypeConstant, iReturn);
         } else if (hArg instanceof MethodHandle) {
             // TODO
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("Type - Method is not yet implemented: " + hArg);
         } else if (hArg instanceof PropertyHandle) {
             // TODO
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("Type - Property is not yet implemented: " + hArg);
         }
 
         return super.invokeSub(frame, hTarget, hArg, iReturn);
@@ -1395,7 +1395,7 @@ public class xRTType
             cFormalTypes  = 0;
         } else {
             // TODO GG return a continuation that turns the sequence into an array and calls this?
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("unsupported formal types argument: " + hArg);
         }
 
         ConstantPool   pool         = frame.poolContext();

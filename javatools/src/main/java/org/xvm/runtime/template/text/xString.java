@@ -245,7 +245,7 @@ public class xString
         if (hDelegate instanceof CharArrayHandle hChars) {
             return xRTCharDelegate.getChars(hChars, 0, (int) hChars.m_cSize, false);
         }
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hDelegate);
     }
 
     private static StringHandle concat(StringHandle h1, StringHandle h2) {

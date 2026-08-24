@@ -638,7 +638,7 @@ public abstract class ClassTemplate
             default:
                 // create a temporary frame with N registers; call invokeNativeNN into it
                 // and then convert the results into a Tuple
-                throw new UnsupportedOperationException();
+                throw new UnsupportedOperationException("multi-return native tuple invocation is not implemented: " + method);
             }
         } else {
             return switch (method.getReturnCount()) {
@@ -671,7 +671,7 @@ public abstract class ClassTemplate
                 default ->
                     // create a temporary frame with N registers; call invokeNativeNN into it
                     // and then convert the results into a Tuple
-                    throw new UnsupportedOperationException();
+                    throw new UnsupportedOperationException("multi-return native tuple invocation is not implemented: " + method);
             };
         }
     }

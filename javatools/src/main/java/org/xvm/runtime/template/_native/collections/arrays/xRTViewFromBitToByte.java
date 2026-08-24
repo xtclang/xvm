@@ -64,7 +64,7 @@ public class xRTViewFromBitToByte
             return new ViewHandle(clzView, hView, hView.m_cSize/8, mutability);
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
 
@@ -84,7 +84,7 @@ public class xRTViewFromBitToByte
                     f_container, pool().typeByte())).makeHandle(abBits, cSize, mutability);
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -100,7 +100,7 @@ public class xRTViewFromBitToByte
                             tView.extractByte(hSource, lIndex)));
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -116,6 +116,6 @@ public class xRTViewFromBitToByte
             return Op.R_NEXT;
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 }

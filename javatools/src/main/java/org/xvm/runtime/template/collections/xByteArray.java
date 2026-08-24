@@ -155,7 +155,7 @@ public class xByteArray
         if (tDelegate instanceof ByteView hView) {
             return hView.getBytes(hDelegate, ofStart, cSize, fReverse);
         }
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hDelegate);
     }
 
     /**
@@ -185,7 +185,7 @@ public class xByteArray
             hDelegate.m_cSize = ofDst + cSize;
             return;
         }
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hDelegate);
     }
 
     private TypeComposition getInt8ArrayComposition() {

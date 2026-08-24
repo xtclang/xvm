@@ -47,7 +47,7 @@ public final class ProxyComposition
 
     @Override
     public TypeConstant getInceptionType() {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a proxy composition has no inception type: " + f_typeProxy);
     }
 
     @Override
@@ -57,7 +57,7 @@ public final class ProxyComposition
 
     @Override
     public ProxyComposition maskAs(TypeConstant type) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a proxy composition cannot be masked as " + type);
     }
 
     @Override
@@ -72,12 +72,12 @@ public final class ProxyComposition
 
     @Override
     public ObjectHandle ensureAccess(ObjectHandle handle, Access access) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a proxy composition cannot change handle access: " + handle);
     }
 
     @Override
     public ProxyComposition ensureAccess(Access access) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a proxy composition cannot change access to " + access);
     }
 
     @Override
@@ -97,7 +97,7 @@ public final class ProxyComposition
 
     @Override
     public MethodStructure ensureAutoInitializer() {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a proxy composition has no auto-initializer: " + f_typeProxy);
     }
 
     @Override

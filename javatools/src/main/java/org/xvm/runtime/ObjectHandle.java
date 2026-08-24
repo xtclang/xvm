@@ -1026,7 +1026,7 @@ public abstract class ObjectHandle
 
         @Override
         public void addContinuation(Frame.Continuation continuation) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("a deferred property access cannot take a continuation: " + f_idProp);
         }
 
         public PropertyConstant getProperty() {
@@ -1080,7 +1080,7 @@ public abstract class ObjectHandle
 
         @Override
         public void addContinuation(Frame.Continuation continuation) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("a deferred singleton cannot take a continuation: " + f_constSingleton);
         }
 
         public SingletonConstant getConstant() {
@@ -1132,7 +1132,7 @@ public abstract class ObjectHandle
 
         @Override
         public void addContinuation(Frame.Continuation continuation) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("a deferred array cannot take a continuation: " + this);
         }
 
         @Override

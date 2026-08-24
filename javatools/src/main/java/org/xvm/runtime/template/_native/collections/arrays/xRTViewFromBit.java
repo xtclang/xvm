@@ -53,7 +53,7 @@ public class xRTViewFromBit
      * @param mutability  the desired mutability
      */
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     /**
@@ -82,7 +82,7 @@ public class xRTViewFromBit
             return tView.getBytes(hSource, ofStart, cBytes, fReverse);
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -95,7 +95,7 @@ public class xRTViewFromBit
             return tView.extractByte(hSource, of);
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -109,7 +109,7 @@ public class xRTViewFromBit
             return;
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     // ----- handle --------------------------------------------------------------------------------

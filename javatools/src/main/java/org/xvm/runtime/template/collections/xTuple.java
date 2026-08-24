@@ -193,7 +193,7 @@ public class xTuple
         case "remove":
         case "removeAll":
             // TODO
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("tuple element removal is not supported: " + hTarget);
 
         case "slice": {
             GenericHandle hInterval = (GenericHandle) hArg;

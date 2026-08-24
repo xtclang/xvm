@@ -59,7 +59,7 @@ public class xRTViewFromByteToInt64
                             alValue, alValue.length, mutability);
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -75,7 +75,7 @@ public class xRTViewFromByteToInt64
             return frame.assignValue(iReturn, xInt64.makeHandle(frame, l));
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -100,6 +100,6 @@ public class xRTViewFromByteToInt64
             return Op.R_NEXT;
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 }

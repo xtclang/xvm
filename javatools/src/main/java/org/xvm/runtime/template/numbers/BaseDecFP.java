@@ -208,7 +208,7 @@ public abstract class BaseDecFP
 
         case "toFloatN":
         case "toDecN":
-            throw new UnsupportedOperationException(); // TODO
+            throw new UnsupportedOperationException("not yet implemented: " + method.getName()); // TODO
 
         case "neg":
             // same as invokeNeg()

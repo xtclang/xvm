@@ -57,7 +57,7 @@ public class xRTViewFromByteToFloat64
                             adValue, adValue.length, mutability);
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -74,7 +74,7 @@ public class xRTViewFromByteToFloat64
                     frame.container().nativeTemplates().float64().makeHandle(d));
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -99,7 +99,7 @@ public class xRTViewFromByteToFloat64
             return Op.R_NEXT;
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
 }

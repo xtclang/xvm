@@ -71,7 +71,7 @@ public class xRTViewFromBitToBoolean
                     f_container, pool().typeBoolean())).makeHandle(abBits, cSize, mutability);
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -86,7 +86,7 @@ public class xRTViewFromBitToBoolean
                     xBoolean.makeHandle(frame, tView.extractBit(hSource, lIndex)));
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -101,6 +101,6 @@ public class xRTViewFromBitToBoolean
             return Op.R_NEXT;
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 }

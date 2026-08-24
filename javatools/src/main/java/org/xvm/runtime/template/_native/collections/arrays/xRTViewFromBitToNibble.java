@@ -68,7 +68,7 @@ public class xRTViewFromBitToNibble
                     f_container, pool().typeNibble())).packHandle(abBits, mutability);
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -89,7 +89,7 @@ public class xRTViewFromBitToNibble
                     frame.container().nativeTemplates().nibble().makeJavaLong(nNibble));
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -113,6 +113,6 @@ public class xRTViewFromBitToNibble
             return Op.R_NEXT;
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 }

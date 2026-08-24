@@ -155,7 +155,7 @@ public class xFPLiteral
         case "toFloat128":
         case "toFloatN":
         case "toDecN":
-            throw new UnsupportedOperationException(); // TODO
+            throw new UnsupportedOperationException("not yet implemented: " + method.getName()); // TODO
         }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }

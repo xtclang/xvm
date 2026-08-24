@@ -743,22 +743,22 @@ public class xRTServer
 
         @Override
         public String[] getClientAliases(String keyType, Principal[] issuers) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("client aliases are not supported for keyType " + keyType);
         }
 
         @Override
         public String chooseEngineClientAlias(String[] asKeyType, Principal[] issuers, SSLEngine engine) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("engine client aliases are not supported for " + String.join(",", asKeyType));
         }
 
         @Override
         public String chooseClientAlias(String[] asKeyType, Principal[] issuers, Socket socket) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("client aliases are not supported for " + String.join(",", asKeyType));
         }
 
         @Override
         public String[] getServerAliases(String keyType, Principal[] issuers) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("server aliases are not supported for keyType " + keyType);
         }
 
         @Override
@@ -792,7 +792,7 @@ public class xRTServer
 
         @Override
         public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("server alias selection by socket is not supported for keyType " + keyType);
         }
 
         @Override

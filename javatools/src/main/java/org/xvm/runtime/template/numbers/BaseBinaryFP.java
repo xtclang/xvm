@@ -175,7 +175,7 @@ public abstract class BaseBinaryFP
 
         case "toFloatN":
         case "toDecN":
-            throw new UnsupportedOperationException(); // TODO
+            throw new UnsupportedOperationException("not yet implemented: " + method.getName()); // TODO
 
         case "neg":
             // same as invokeNeg()

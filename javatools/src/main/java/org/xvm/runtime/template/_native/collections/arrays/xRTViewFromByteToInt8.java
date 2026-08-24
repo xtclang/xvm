@@ -52,7 +52,7 @@ public class xRTViewFromByteToInt8
                     f_container, pool().typeInt8())).makeHandle(abValue, cSize, mutability);
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -68,7 +68,7 @@ public class xRTViewFromByteToInt8
                     frame.container().nativeTemplates().int8().makeJavaLong(bValue));
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 
     @Override
@@ -83,6 +83,6 @@ public class xRTViewFromByteToInt8
             return Op.R_NEXT;
         }
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("unsupported delegate: " + hSource);
     }
 }
