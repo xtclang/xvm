@@ -11,8 +11,9 @@ import org.xvm.runtime.ObjectHandle;
 /**
  * Constant whose purpose is to represent a run-time action based on the current frame.
  */
-public abstract class FrameDependentConstant
-        extends Constant {
+public abstract sealed class FrameDependentConstant
+        extends Constant
+        permits HandleConstant, MethodBindingConstant, RegisterConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

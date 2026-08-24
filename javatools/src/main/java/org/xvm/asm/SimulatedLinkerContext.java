@@ -12,7 +12,9 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.ConditionalConstant.Influence;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.MultiCondition;
 import org.xvm.asm.constants.NamedCondition;
+import org.xvm.asm.constants.NotCondition;
 import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.VersionMatchesCondition;
@@ -80,28 +82,44 @@ public class SimulatedLinkerContext
 
     private void extractRequiredConditions() {
         for (Map.Entry<ConditionalConstant, Influence> entry : influences.entrySet()) {
-            if (entry.getValue().isRequired()) {
-                ConditionalConstant condEach = entry.getKey();
-                if (condEach instanceof NamedCondition) {
-                    if (names.isEmpty()) {
-                        names = new HashSet<>();
-                    }
-                    names.add(((NamedCondition) condEach).getName());
-                } else if (condEach instanceof PresentCondition) {
-                    if (present.isEmpty()) {
-                        present = new HashMap<>();
-                    }
-                    present.put(((PresentCondition) condEach).getPresentConstant(), true);
-                } else if (condEach instanceof VersionMatchesCondition condModuleVer) {
-                    if (modules.isEmpty()) {
-                        modules = new HashMap<>();
-                    }
-                    modules.put(condModuleVer.getModuleConstant(),
-                            condModuleVer.getVersionConstant().getVersion());
-                } else if (condEach instanceof VersionedCondition) {
-                    assert version == null;
-                    version = ((VersionedCondition) condEach).getVersion();
+            if (!entry.getValue().isRequired()) {
+                continue;
+            }
+
+            // exhaustive over the sealed ConditionalConstant tree: adding a condition kind is
+            // a compile error at this switch instead of a silently ignored requirement (the
+            // pre-sealed instanceof cascade dropped every unlisted kind without a trace)
+            switch (entry.getKey()) {
+            case NamedCondition cond -> {
+                if (names.isEmpty()) {
+                    names = new HashSet<>();
                 }
+                names.add(cond.getName());
+            }
+            case PresentCondition cond -> {
+                if (present.isEmpty()) {
+                    present = new HashMap<>();
+                }
+                present.put(cond.getPresentConstant(), true);
+            }
+            case VersionMatchesCondition cond -> {
+                if (modules.isEmpty()) {
+                    modules = new HashMap<>();
+                }
+                modules.put(cond.getModuleConstant(), cond.getVersionConstant().getVersion());
+            }
+            case VersionedCondition cond -> {
+                assert version == null;
+                version = cond.getVersion();
+            }
+            case NotCondition ignored -> {
+                // a negated requirement carries no positive name/presence/version fact to
+                // extract; the pre-sealed cascade dropped it silently, this arm documents it
+            }
+            case MultiCondition ignored -> {
+                // composite requirements are decomposed by the influence calculation before
+                // they reach this map; likewise a documented no-op instead of a silent one
+            }
             }
         }
     }

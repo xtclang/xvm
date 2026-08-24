@@ -18,7 +18,7 @@ import static org.xvm.util.Handy.writeMagnitude;
 /**
  * Represent the auto-narrowing class of <i>this</i>.
  */
-public class ThisClassConstant
+public final class ThisClassConstant
         extends PseudoConstant {
     // ----- constructors --------------------------------------------------------------------------
 

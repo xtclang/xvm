@@ -13,7 +13,7 @@ import org.xvm.util.Hash;
  * Represent a category of keyword classes and/or types: "const", "enum", "module", "package",
  * "service", and "class".
  */
-public class KeywordConstant
+public final class KeywordConstant
         extends PseudoConstant {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -12,7 +12,7 @@ import org.xvm.compiler.Token;
 /**
  * Represent a constant that will eventually be replaced with a value constant.
  */
-public class DeferredValueConstant
+public final class DeferredValueConstant
         extends PseudoConstant {
     // ----- constructors --------------------------------------------------------------------------
 

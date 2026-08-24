@@ -19,7 +19,7 @@ import static org.xvm.util.Handy.writeMagnitude;
 /**
  * Represent an auto-narrowing named child class.
  */
-public class ChildClassConstant
+public final class ChildClassConstant
         extends PseudoConstant {
     // ----- constructors --------------------------------------------------------------------------
 

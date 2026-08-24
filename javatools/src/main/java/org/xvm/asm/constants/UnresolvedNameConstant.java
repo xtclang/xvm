@@ -18,7 +18,7 @@ import org.xvm.util.Hash;
 /**
  * Represent a constant that will eventually be replaced with a real identity constant.
  */
-public class UnresolvedNameConstant
+public final class UnresolvedNameConstant
         extends PseudoConstant
         implements ResolvableConstant {
     // ----- constructors --------------------------------------------------------------------------

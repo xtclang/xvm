@@ -27,7 +27,8 @@ import org.xvm.util.ListMap;
  * <p/>
  * An implementation may fully realize the information or provide a view of another TypeInfo.
  */
-public abstract class TypeInfo {
+public abstract sealed class TypeInfo
+        permits TypeInfoReal {
     /**
      * Create a new TypeInfo that represents a more limited (public or protected) access to the
      * members of this private type.

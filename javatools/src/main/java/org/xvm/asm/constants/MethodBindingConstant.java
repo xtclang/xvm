@@ -31,7 +31,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  *
  * For now, it's only used for property annotation arguments.
  */
-public class MethodBindingConstant
+public final class MethodBindingConstant
         extends FrameDependentConstant {
     // ----- constructors --------------------------------------------------------------------------
 

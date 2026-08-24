@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writeMagnitude;
 /**
  * Evaluates if a named condition is defined.
  */
-public class NamedCondition
+public final class NamedCondition
         extends ConditionalConstant {
     // ----- constructors --------------------------------------------------------------------------
 

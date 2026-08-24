@@ -24,7 +24,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Constant whose purpose is to represent a run-time register.
  */
-public class RegisterConstant
+public final class RegisterConstant
         extends FrameDependentConstant {
     // ----- constructors --------------------------------------------------------------------------
 

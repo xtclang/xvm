@@ -25,7 +25,7 @@ import static org.xvm.util.Handy.writeMagnitude;
 /**
  * Implements the logical "not" of a condition.
  */
-public class NotCondition
+public final class NotCondition
         extends ConditionalConstant {
     // ----- constructors --------------------------------------------------------------------------
 

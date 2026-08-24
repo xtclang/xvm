@@ -11,8 +11,11 @@ import org.xvm.asm.ConstantPool;
 /**
  * Represent a constant whose purpose is to represent a level of indirection.
  */
-public abstract class PseudoConstant
-        extends Constant {
+public abstract sealed class PseudoConstant
+        extends Constant
+        permits ChildClassConstant, DeferredValueConstant, ExpressionConstant,
+                KeywordConstant, ParentClassConstant, SignatureConstant,
+                ThisClassConstant, UnresolvedNameConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

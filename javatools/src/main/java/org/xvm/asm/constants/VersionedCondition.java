@@ -31,7 +31,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * To evaluate if another module (or component thereof) is of a specified version, a {@link
  * PresentCondition} is used.
  */
-public class VersionedCondition
+public final class VersionedCondition
         extends ConditionalConstant {
     // ----- constructors --------------------------------------------------------------------------
 

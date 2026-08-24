@@ -25,8 +25,9 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Implements the logical combination of any number of conditions.
  */
-public abstract class MultiCondition
-        extends ConditionalConstant {
+public abstract sealed class MultiCondition
+        extends ConditionalConstant
+        permits AllCondition, AnyCondition {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

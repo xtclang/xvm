@@ -19,7 +19,7 @@ import org.xvm.asm.Version;
 /**
  * Implements the logical "or" of any number of conditions.
  */
-public class AnyCondition
+public final class AnyCondition
         extends MultiCondition {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * Represent an auto-narrowing class constant for the parent class of a nested non-static
  * ("instance") inner class.
  */
-public class ParentClassConstant
+public final class ParentClassConstant
         extends PseudoConstant {
     // ----- constructors --------------------------------------------------------------------------
 

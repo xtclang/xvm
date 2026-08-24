@@ -16,7 +16,7 @@ import org.xvm.util.Hash;
 /**
  * Constant whose purpose is to represent an object handle (run-time only).
  */
-public class HandleConstant
+public final class HandleConstant
         extends FrameDependentConstant {
     // ----- constructors --------------------------------------------------------------------------
 

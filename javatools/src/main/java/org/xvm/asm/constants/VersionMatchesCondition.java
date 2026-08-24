@@ -23,7 +23,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * Evaluates if a specified VM structure will be available in the container based on the version of
  * a particular module other than the module within which this condition occurs.
  */
-public class VersionMatchesCondition
+public final class VersionMatchesCondition
         extends ConditionalConstant {
     // ----- constructors --------------------------------------------------------------------------
 

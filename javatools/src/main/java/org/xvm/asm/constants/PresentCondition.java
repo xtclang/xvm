@@ -22,7 +22,7 @@ import static org.xvm.util.Handy.writeMagnitude;
 /**
  * Evaluates if a specified VM structure will be available in the container.
  */
-public class PresentCondition
+public final class PresentCondition
         extends ConditionalConstant {
     // ----- constructors --------------------------------------------------------------------------
 

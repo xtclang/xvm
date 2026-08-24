@@ -11,7 +11,7 @@ import org.xvm.util.Hash;
 /**
  * Represent a synthetic compile-time only constant that represents an {@link Expression}.
  */
-public class ExpressionConstant
+public final class ExpressionConstant
         extends PseudoConstant {
     // ----- constructors --------------------------------------------------------------------------
 

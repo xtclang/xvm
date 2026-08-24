@@ -73,7 +73,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * A SignatureConstant can also be used to represent a property, but such a use is never serialized;
  * i.e. it is a transient use case.
  */
-public class SignatureConstant
+public final class SignatureConstant
         extends PseudoConstant {
     // ----- constructors --------------------------------------------------------------------------
 

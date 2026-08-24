@@ -60,8 +60,10 @@ import org.xvm.util.LongList;
  *     evaluate to false, i.e. an "or" condition;</li>
  * </ul>
  */
-public abstract class ConditionalConstant
-        extends Constant {
+public abstract sealed class ConditionalConstant
+        extends Constant
+        permits MultiCondition, NamedCondition, NotCondition, PresentCondition,
+                VersionMatchesCondition, VersionedCondition {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
