@@ -34,6 +34,7 @@ smaller PR.
 | --- | --- | --- |
 | `org.xvm.asm.ConstantHashCodeCacheTest` | `Constant.m_iHash` is not `volatile`. | Cached hash publication was an unexplained plain-field race shape. |
 | `org.xvm.asm.FileStructureTest` | Error listener lookup returns the wrong ambient pool listener. | Diagnostics depended on `ConstantPool.getCurrentPool()` instead of file ownership. |
+| `org.xvm.asm.MethodStructureAssemblyFailureTest` | `FileStructure.writeTo` completes without an exception for a method whose ops cannot be encoded; the method is serialized with zero op bytes after a one-line stderr print. | Method op-assembly failure was non-terminal: a compiler defect could persist a corrupt module that read back as a successful build. |
 | `org.xvm.asm.OpRuntimeCacheTest` | Runtime `Op` condition/common-type cache fields still exist, `JumpVal`/`JumpVal_N` still expose owner-bearing switch-table fields, and `JumpNFirst` still uses a plain boolean for `assert:once` state. | Shared decoded op graphs could retain frame-owned constants, handles, type constants, and maps from one execution/container; parallel `assert:once` execution had no exact one-winner guarantee. |
 | `org.xvm.asm.RegisterHashCodeTest` | Equal register metadata objects have different hashes. | Hash/equality contract was broken for ordinary map/set use. |
 | `org.xvm.asm.VersionTest` | Equal `VersionTree` values have different hashes. | Hash/equality contract was broken for version metadata. |
@@ -68,6 +69,7 @@ explicit owner APIs, and typed runtime accessors.
 | `org.xvm.asm.AsmConstructorEscapeTest` | `MultiMethodStructure.createMethodCopyingParameters(...)`. |
 | `org.xvm.asm.ConstantAdoptionTest` | `ConstantAdoptionValidator` and its validation property. |
 | `org.xvm.asm.ConstantPoolDiagnosticsTest` | Current-pool assertion/removal APIs, `xvm.asm.validateConstantPoolCurrentScope`, and late-registration diagnostics. |
+| `org.xvm.asm.ConstantPoolRegistrationDeadlockTest` | Registration-completion guard (branch-only). Red on the branch's pre-fix guard shape, which awaited another thread's registration completion inside the pool monitor and deadlocked the pool; master has no completion guard to deadlock. |
 | `org.xvm.asm.constants.MethodInfoTest` | `MethodInfo.create(...)` factory and owned-body model. |
 | `org.xvm.asm.constants.TypeConstantOwnerApiTest` | Explicit-pool covariance/contravariance APIs. |
 | `org.xvm.asm.constants.TypeInfoMemberOwnershipTest` | `PropertyInfo.create(...)` factory and owner-copy model. |

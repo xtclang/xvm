@@ -406,6 +406,80 @@ The focused regression tests are in `ConstantPoolDiagnosticsTest`:
 - `failedRecursiveRegistrationStaysFailedForReaders()` proves a registration
   failure after early publication remains visible to later public readers.
 
+### Registration Guard Concurrent-Insert Deadlock
+
+The guard above had its own concurrency defect, found when the full
+`javatools:test` suite hung in
+`MethodInfoTest.typeInfoConstructionCopiesMethodInfoInParallel` with eight
+threads racing `ConstantPool.register(...)` on one pool.
+
+What was wrong (introduced with the guard in this branch, not present on
+master, which has no guard):
+
+```java
+synchronized (this) {
+    constantOld = (T) mapConstants.get(constant);
+    if (constantOld != null) {
+        // it was concurrently inserted
+        return awaitRegistrationComplete(constantOld);   // blocks INSIDE the monitor
+    }
+    beginRegistrationCompletion(constant);
+    ...
+}
+```
+
+When the double-checked lookup found a concurrently inserted constant, the
+losing thread parked on the winner's completion future while still holding the
+pool monitor. The winning thread must reacquire that same monitor in
+`finishRegistrationCompletion(...)` to publish its completion, so the pool
+deadlocked: the waiter held the monitor forever, and every other pool user —
+including the only thread able to complete the awaited future — blocked on
+monitor entry. The thread dump shape was one thread
+`locked <pool>` parked in `CompletableFuture.get()` at
+`awaitRegistrationComplete`, and every other thread `waiting to lock <pool>`.
+
+Why this was bad design: a blocking wait on another thread's progress while
+holding the lock that thread needs is a textbook hold-and-wait cycle. Every
+other `awaitRegistrationComplete(...)` call site (`getConstant(int)`,
+`getConstant(int, Class)`, `getConstants()`, `getConstant(Constant)`, and the
+pre-monitor fast path in `register(...)`) already waited outside the monitor;
+the concurrent-insert branch was the single inconsistent site.
+
+The fix restructures only lock scope: the double-checked lookup and the
+publish body stay inside the monitor byte-for-byte, and the concurrent-insert
+branch exits the monitor first and then waits:
+
+```java
+synchronized (this) {
+    constantOld = (T) mapConstants.get(constant);
+    if (constantOld == null) {
+        beginRegistrationCompletion(constant);
+        ... // unchanged publish + locator body
+    }
+}
+if (constantOld != null) {
+    return awaitRegistrationComplete(constantOld);       // waits OUTSIDE the monitor
+}
+```
+
+Semantic equivalence: the winner's path is unchanged; the loser still returns
+the winner's registered constant after its registration completes, exactly as
+before, and still skips the recursive-registration tail (matching the old
+early return). The only difference is that the wait no longer holds the pool
+monitor, so the winner can finish.
+
+`ConstantPoolRegistrationDeadlockTest` proves it deterministically with latch
+hooks: thread B publishes a constant and stalls incomplete in its recursive
+registration phase; thread A races an equal constant into the double-checked
+lookup and must wait for B; B is only allowed to finish after A has parked in
+`awaitRegistrationComplete`. On the pre-fix shape the test fails by join
+timeout with both threads wedged; with the fix both threads complete and A
+returns B's constant. The known limitation remains documented in the task
+list: two threads whose in-progress registrations mutually reference each
+other's constants can still cross-wait, which is one more reason the
+compatibility guard must eventually be replaced by a private registration
+transaction/worklist.
+
 ### Container-Owned TypeHandle Cache
 
 What was wrong:
@@ -2592,6 +2666,61 @@ The normal successful retry behavior is unchanged. The change only affects a
 path that was already an unchecked compiler defect. `CompilerCodegenFailureTest`
 is the source-shape guard: it fails on master's catch/print/continue pattern and
 passes here by requiring fatal cause-preserving propagation.
+
+### Method Op Assembly Failure Is Terminal
+
+Master's `MethodStructure.assemble(...)` treated a failed op encoding as a
+printable event:
+
+```java
+if (m_abOps == null && m_code != null) {
+    try {
+        m_code.ensureAssembled(m_registry);
+    } catch (UnsupportedOperationException e) {
+        System.err.println("Error in MethodStructure.assemble() of ops for "
+                               + this.getParent().getContainingClass().getName() + "."
+                               + this.getName() + ": " + e);
+    }
+}
+```
+
+`ensureAssembled` throws `UnsupportedOperationException` when the method body
+cannot be encoded: either `ensureOps()` finds a body that is neither native nor
+compiled, or `Op.write(...)` reaches an op with no opcode encoding (a pseudo-op
+that survived into final assembly). Both are compiler defects. After the print,
+`m_abOps` was still null, so the method was serialized with a zero op-byte
+count. The resulting module is structurally valid and deserializes cleanly, so
+the corrupt artifact survives into repositories, caches, and later runs while
+the build reports success. Master was also internally inconsistent: the same
+`ensureAssembled(...)` call in the `forceAssembly(...)` path lets the identical
+exception propagate.
+
+This branch makes the failure terminal with artifact context:
+
+```java
+} catch (UnsupportedOperationException e) {
+    throw new IllegalStateException("op assembly failed for method \""
+            + getIdentityConstant().getPathString() + "\" in module \""
+            + getFileStructure().getModuleId().getName() + '"', e);
+}
+```
+
+The replacement is intentionally different from master, not equivalent: the
+zero-op serialization path is removed because it was the bug. Successful
+assembly is byte-for-byte unchanged. `IllegalStateException` rather than
+`IOException` is deliberate: the emit paths (`Compiler.emitModules`,
+`Compiler.addVersion`, repository `storeModule`) catch `IOException` as an
+environmental I/O condition, and encoding a compiler defect that way would let
+it be swallowed again. The unchecked exception instead propagates through
+`FileStructure.writeTo` to the launcher's terminal `Throwable` boundary with
+the cause intact.
+
+`MethodStructureAssemblyFailureTest` proves it behaviorally: it serializes a
+method containing an op with no encoding and requires `IllegalStateException`
+naming the method and module with the `UnsupportedOperationException` cause.
+On master that test fails because `FileStructure.writeTo` completes without
+throwing and quietly writes the zero-op body. A companion source-shape test
+guards against reintroducing stderr-and-continue in the assembly region.
 
 ### JIT Unhandled Exceptions Return Failure
 

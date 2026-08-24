@@ -246,3 +246,104 @@ The dump also does not enumerate every loaded JVM class or every static field in
 the process. The static-field inventory remains source-scan based in
 [state-inventory.md](state-inventory.md). The dump complements those scans by
 showing the runtime object graph that actually exists during a run.
+
+## World-State Snapshot Plan
+
+The current tool answers "is this pair of containers consistent" for the caches
+it was taught to walk. The verification backbone this branch ultimately needs
+is stronger: a complete world X-ray — every live container, what it is
+executing, and every owner-bearing object in memory at that position — as a
+structured tree that tests sweep for ownership problems the way
+`assertValid(...)` already sweeps its partial graph. This section records the
+gaps and the plan. Implementation is scheduled after the must-fix and
+must-audit work; the task-list row lives in
+[must-audit-backlog.md](must-audit-backlog.md).
+
+### Gap 1: Roots Are Caller-Supplied, Not World-Enumerated
+
+`dump(...)`/`validate(...)` inspect only the containers passed in. A world
+snapshot must start from the `Runtime` container registry and enumerate every
+live container — native parents, main containers, and nested containers —
+plus the bounded recent-container window the direct executor already keeps.
+Nothing should depend on the caller knowing what exists.
+
+### Gap 2: Execution State Is Almost Invisible
+
+The dump lists service contexts but not what they are doing. "What is this
+container doing right now" needs, per service: fiber queue contents and
+status, the current frame chain, and for each frame the method identity, the
+current op/pc, and the register (local variable) handles — each register being
+one more owner-bearing `ObjectHandle` the sweep must validate. Pending
+callbacks and keep-alive counts (timers, IO, servers) belong here too; a
+stuck-non-idle container is an ownership symptom the existing tests already
+hunt by hand. Snapshots of running fibers are best-effort by default; a
+quiesced mode (snapshot after `join()`, or between ops in a harness) gives
+exact trees and is what stress tests should use.
+
+### Gap 3: Output Is Text, Not A Queryable Model
+
+`dump(...)` returns a `String`; `validate(...)` returns pass/fail plus a
+message. Tests cannot ask structured questions. The plan is a snapshot model
+(records) that the text dump becomes a renderer for:
+
+```java
+WorldSnapshot world = OwnershipDiagnostics.snapshotWorld(runtime);
+
+assertTrue(world.violations().isEmpty());
+assertEquals(2, world.containers().size());
+assertTrue(world.container("C1").foreignOwnedHandles().isEmpty());
+```
+
+Structured snapshots are also diffable: snapshot N versus snapshot N-1 in a
+same-JVM stress loop shows exactly which objects from a completed run remain
+reachable in the next run — leak detection that string dumps cannot express.
+
+### Gap 4: Coverage Is Hand-Enumerated
+
+`dumpContainer`/`dumpConstHeap`/`dumpNativeTemplates`/`dumpLazyFields`/
+`dumpMap` walk a curated list of known cache fields. Every new cache added to
+the runtime silently widens the blind spot. The plan is a generic reflective
+reachability sweep for validation: walk all reference fields from the
+container roots with an identity-visited set, classify every reached object
+through a per-class owner-extractor registry (the owner-bearing types list
+above, extended over time), stop at allowlisted terminals (immutable
+constants, strings, boxed values), and record the full reference path from
+root to every finding. Path-to-root evidence turns "wrong owner somewhere"
+into "container C0 → templatesByType[x] → f_fieldLayout → RefHandle@… owned by
+C1", which is the difference between a failing assertion and a fixable bug
+report. The curated walk remains as the readable dump; the reflective sweep
+is the completeness backstop, and a unit test should fail when a new
+runtime-cache field appears that neither the curated walk nor the extractor
+registry classifies.
+
+### Gap 5: The Type-System And ASM Plane Is Separate
+
+`TypeInfoReal.validate()` covers method/property/child back-links at
+construction time, but the world snapshot should also sweep, per pool:
+registered constants whose embedded state is owner-bearing (`HandleConstant`
+live handles, singleton handles), `TypeConstant` caches reachable from the
+pool, and pool-to-pool validity edges (`f_setValidPools`). That closes the
+loop between the runtime object sweep and the constant-pool audits in
+[constant-pool-state-audit.md](constant-pool-state-audit.md).
+
+### Gap 6: The Compiler Plane Has No Snapshot At All
+
+For reentrant LSP/incremental compilation the same X-ray must exist for
+compilation state: active compiler requests, their `FileStructure`s and pools,
+phase, and deferred work. That slice lands with the compiler-reentrancy work,
+but the snapshot model should reserve room for it now (a world snapshot owns a
+list of compilation units next to its list of containers) so runtime and
+compiler trees can be swept by one mechanism.
+
+### Slices
+
+1. Structured snapshot model plus `snapshotWorld(runtime)` rooted at the
+   container registry; text dump becomes a renderer. Existing tests keep
+   passing; new assertions become possible.
+2. Execution-state capture: fibers, frames, current op, registers, callback
+   counts; quiesced mode for stress harnesses.
+3. Generic reflective reachability sweep with owner-extractor registry,
+   allowlisted terminals, path-to-root findings, and the coverage test.
+4. Snapshot diffing for same-JVM leak detection, wired into
+   `runDirectSequenceStress`.
+5. Pool/type-system sweep, then the compiler-plane extension.

@@ -8,14 +8,20 @@ validators.
 
 ## Short Recommendation
 
-Use the existing SLF4J 2.x line from `gradle/libs.versions.toml` as the logging
-API for new runtime/compiler developer diagnostics. Keep standalone
-`javatools` launch classpaths on a no-op provider by default, let embedders
-choose their provider, and make disabled `trace`/`debug` logging on hot paths a
-strictly guarded pattern:
+Give the repo its own minimal logging facade (working names: `XtcLogger`,
+`XtcLogging`, `LogSink` in `javatools_utils`) and make that interface the only
+logging API that runtime/ASM/compiler call sites ever see. No `org.slf4j`
+import appears anywhere outside one sink adapter. SLF4J remains the default
+*sink* wherever a host already has it (LSP, DAP, Gradle), the standalone CLI
+default sink prints WARN/ERROR to stderr so converted sites look like today's
+output, and sinks are composable so more than one destination can be attached.
+See "Repo-Owned Facade And Sinks" below for the contract.
+
+Disabled `trace`/`debug` logging on hot paths is a strictly guarded pattern
+regardless of facade:
 
 ```java
-private static final Logger TYPE_LOG = LoggerFactory.getLogger("org.xvm.asm.type");
+private static final XtcLogger TYPE_LOG = XtcLogging.getLogger("org.xvm.asm.type");
 
 if (TYPE_LOG.isTraceEnabled()) {
     TYPE_LOG.trace("type.relation result={} reason={} right={} left={} rightPool={} leftPool={}",
@@ -39,6 +45,219 @@ The disabled cost target is:
 - no `toString()` or `getValueString()` calls,
 - no MDC/ThreadLocal map mutation,
 - no diagnostic dump construction.
+
+For call sites where even the level check is too much (interpreter op loop,
+relation calculation, constant registration), the section
+"Disabled-Cost Tiers" below documents the two stronger patterns: a JIT
+constant-folded launch-time gate, and JFR events for structured hot-path
+evidence. Both reduce the disabled path to effectively zero instructions.
+
+## Repo-Owned Facade And Sinks
+
+Call sites must not name SLF4J. The decision is deliberate: the repo owns a
+minimal logging interface so that the backend can be swapped, extended to
+structured events, or fanned out to several destinations without touching any
+runtime/compiler call site again. SLF4J is one sink implementation behind that
+interface, not the API.
+
+Two further call-site decisions are recorded here (owner preference):
+
+- no per-class `private static final LOG`-style logger constants scattered
+  through the code base;
+- no `if (isTraceEnabled())` guard ceremony at ordinary call sites.
+
+The call-site surface is one static entry point plus a category enum. The
+disabled-cost story comes from a launch-time constant gate folded by the JIT
+*inside* that entry point (Tier 2 in "Disabled-Cost Tiers" below), not from
+guards written at every site. Explicit guards remain available for the few
+interpreter-grade sites whose argument computation is expensive.
+
+The whole facade is a handful of small types in `javatools_utils`
+(`org.xvm.util.logging`), which every build in the repo already depends on:
+
+```java
+public enum LogLevel { TRACE, DEBUG, INFO, WARN, ERROR }
+
+/** Cross-cutting categories; one enum, not one logger object per class. */
+public enum LogCat { COMPILER, RESOLVE, TYPE, POOL, OWNER, STARTUP, REENTRY, SERVICE, JIT }
+
+public interface LogSink {
+    boolean isEnabled(LogCat cat, LogLevel level);
+    void accept(LogCat cat, LogLevel level, String message, Throwable cause);
+}
+
+public final class XtcLog {
+    /** Developer plane master gate; absent => trace/debug code folds away. */
+    static final boolean DEV = Boolean.getBoolean("xvm.log.dev");
+
+    // developer plane: gated, zero instructions when the gate is off
+    public static void trace(LogCat cat, String format, Object... args) {
+        if (DEV && sink().isEnabled(cat, TRACE)) {
+            sink().accept(cat, TRACE, format(format, args), null);
+        }
+    }
+    public static void debug(LogCat cat, String format, Object... args) { /* same shape */ }
+
+    // reporting plane: always compiled in; these sites are rare and cold
+    public static void info (LogCat cat, String format, Object... args) { /* ungated */ }
+    public static void warn (LogCat cat, String format, Object... args) { /* ungated */ }
+    public static void error(LogCat cat, String message, Throwable cause) { /* ungated */ }
+
+    // for the rare expensive-argument hot site only
+    public static boolean isTraceEnabled(LogCat cat) { return DEV && sink().isEnabled(cat, TRACE); }
+
+    public static void setSink(LogSink sink) { /* host binding */ }
+    public static LogSink compositeOf(LogSink... sinks) { /* fan-out */ }
+}
+```
+
+An ordinary call site is one line, no logger field, no guard:
+
+```java
+XtcLog.trace(POOL, "constant.adopt source={} target={}", poolId(source), poolId(target));
+```
+
+Contract points:
+
+- Two planes. `warn`/`error` (and `info`) are the reporting plane: always
+  compiled in, so converted `System.err.println` sites keep reporting with
+  zero configuration. `trace`/`debug` are the developer plane: behind the
+  `DEV` constant gate, costing zero instructions in a normal run.
+- The active `LogSink` is a single `static volatile` reference. A volatile
+  load is a plain load-acquire on x86/AArch64; it is irrelevant on the
+  developer plane (dead when gated off) and negligible on the cold reporting
+  plane.
+- Formatting (`{}` substitution) happens after the enabled check, inside
+  `XtcLog`, so sinks receive a finished message plus the raw throwable. A
+  future structured variant adds an event-shaped `accept(...)` overload (or a
+  `record LogEvent`) without touching call sites — this is the "change and
+  extend the implementation" seam.
+- Provided sinks: `ConsoleLogSink` (default; WARN/ERROR to stderr as bare
+  `LEVEL: message` lines so converted `System.err.println` sites look
+  unchanged), `Slf4jLogSink` (adapter, the only class in the repo that
+  imports `org.slf4j`), `CompositeLogSink` (fan-out to several sinks), and a
+  test `CapturingLogSink` so tests assert on records instead of parsing
+  console text. A `JfrLogSink` is a possible later addition (see Tier 3).
+- Binding is explicit: the LSP/DAP servers call
+  `XtcLog.setSink(new Slf4jLogSink())` at startup (one line; they already
+  have SLF4J+logback). The Gradle plugin can install a sink that forwards to
+  Gradle's logger. The standalone CLI does nothing and gets the console
+  default. No classpath sniffing, no ServiceLoader magic in the first slice;
+  `ServiceLoader` discovery can be added later if a host cannot make a
+  programmatic call.
+- Dependency shape: `javatools` needs no SLF4J dependency at all with this
+  design — the `Slf4jLogSink` adapter compiles with `compileOnly(slf4j-api)`
+  and is only loaded by hosts that already ship SLF4J. The existing
+  `implementation(libs.slf4j.nop)` in `javatools` can then be dropped once the
+  third-party libraries that triggered the "no provider" warning are checked
+  (that warning was the only reason `slf4j-nop` is there).
+
+JIT note: with exactly one sink class in use, `sink.isEnabled(...)` call sites
+are monomorphic and inline. Installing a composite makes the site polymorphic
+— acceptable, because the developer plane is already dead in normal runs and
+the reporting plane is cold.
+
+Code examples elsewhere in this document were written against an SLF4J-shaped
+logger API with explicit guards. Read them as follows: the message-argument
+discipline and category guidance carry over unchanged; the per-class
+`LoggerFactory` fields become `XtcLog` + `LogCat`; and the explicit guards are
+needed only at expensive-argument hot sites (Tier 1 below), because everywhere
+else the folded `DEV` gate inside `XtcLog` does the same job with no call-site
+ceremony.
+
+## Disabled-Cost Tiers
+
+"Near zero when disabled" has three implementable strengths in modern Java.
+Decision for this repo: Tier 2 is the default mechanism, built into the
+facade; Tier 1 guards are reserved for expensive-argument sites; Tier 3 (JFR)
+is deferred.
+
+### Why Java Cannot Lazily Evaluate Log Arguments
+
+Java has no zero-cost equivalent of a Kotlin `inline` lambda. Arguments are
+evaluated strictly before the callee runs, so a level check inside the log
+method can never prevent argument evaluation at the call site. The available
+workarounds all have costs:
+
+- `Supplier<String>` / lambda arguments defer evaluation, but a lambda that
+  captures locals allocates an object per call even when the level is
+  disabled — the deferral itself is the allocation. Only non-capturing
+  lambdas are allocation-free, and log messages almost always capture.
+- Kotlin's `log.trace { ... }` works because `inline fun` splices the block
+  into the caller and the level check jumps over it. `javac` has no inlining;
+  only the JIT does, and it cannot skip argument evaluation that has visible
+  side effects.
+- The Java answer is therefore the JIT itself: make the level decision a
+  compile-time constant (Tier 2) so the entire call — arguments included —
+  becomes provably dead and is eliminated, or write the guard explicitly
+  (Tier 1) so the arguments are syntactically inside the branch.
+
+### Tier 1: Explicit Dynamic Guard
+
+```java
+if (XtcLog.isTraceEnabled(TYPE)) {
+    XtcLog.trace(TYPE, "relation right={} left={}",
+            typeRight.getValueString(), typeLeft.getValueString());
+}
+```
+
+Disabled cost: a volatile sink read, an inlined `isEnabled`, one predicted
+branch — a few nanoseconds. Runtime-toggleable. In this repo it is required
+only where argument expressions are expensive and not provably side-effect
+free (`getValueString()`, `getDescription()`, dumps), because those cannot be
+dead-code eliminated by Tier 2.
+
+### Tier 2: Launch-Time Constant Gate (chosen default)
+
+A `static final boolean` initialized from a system property is a constant to
+the JIT after class initialization. Once `XtcLog.trace(...)` inlines and
+`DEV == false` folds, the body is empty, the arguments are dead, and the JIT
+removes the varargs `Object[]`, autoboxing, and inlinable pure helper calls
+at the call site. The disabled developer plane costs zero instructions with
+no call-site guard. This is the same pattern the JDK uses
+(`sun.security.util.Debug`-style static final flags) and that
+performance-sensitive libraries (Netty, Agrona/Aeron) rely on.
+
+Preconditions that make the fold trustworthy rather than hopeful:
+
+- the `XtcLog` entry points stay tiny so they always inline;
+- identity helpers used in argument position (`poolId`, `objectId`) are
+  small, static, and side-effect free, so the JIT can prove them dead;
+- anything with real side effects or unprovable purity goes behind a Tier 1
+  guard instead.
+
+The trade: enabling the developer plane requires `-Dxvm.log.dev=true` and a
+restart. That is acceptable because it is a diagnosis tool, not production
+telemetry. Do not simulate this with a mutable static (`Constants.DEBUG`
+style): non-final statics are never folded and are exactly the mutable global
+state this branch is removing. `MethodHandles`/`MutableCallSite` tricks can
+give runtime-mutable constants (with deoptimization on switch) but are not
+worth the complexity here.
+
+### Tier 3: JFR Events (deferred)
+
+JDK Flight Recorder custom events (`jdk.jfr.Event` subclasses) are the
+in-JDK mechanism for always-capable structured diagnostics: the JVM
+instruments event classes as recordings start and stop, a disabled event
+costs roughly a folded flag check with the dead allocation removed by escape
+analysis, fields are typed rather than formatted, and JFR streaming (JEP 349)
+lets tests consume events instead of parsing console output.
+
+Decision: not in the first slice. The facade keeps the door open — a
+`JfrLogSink` or dedicated event types can be added later without touching
+call sites. Revisit when the world-state diagnostics work needs
+high-frequency structured evidence.
+
+A concrete unified design (one emission API feeding both text sinks and typed
+JFR events) is planned in
+[plans/unified-logging-jfr-telemetry.md](plans/unified-logging-jfr-telemetry.md).
+
+### The Reporting Plane Is Never Gated
+
+`warn`/`error` (and `info`) sites converted from `System.err.println` are
+cold, rare, and must keep reporting in a default run with no flags. They are
+always compiled in and their cost is irrelevant. The tiers above apply only
+to the high-frequency developer plane.
 
 Prefer SLF4J over `java.util.logging` for runtime/compiler diagnostics. JUL is
 usable for isolated utility code, and the repo already has one JUL utility
@@ -589,11 +808,13 @@ different audiences, output volume, and compatibility promises.
 
 ## Migration Plan
 
-1. Add an explicit core `slf4j-api` alias in `gradle/libs.versions.toml`.
-2. Change `javatools` from compile-through-provider to an explicit
-   `implementation(libs.slf4j.api)`, with `slf4j-nop` only on standalone
-   launch/test runtime classpaths unless Gradle metadata proves it will not
-   force a provider on embedders.
+1. Add the facade to `javatools_utils` (`LogLevel`, `LogCat`, `XtcLog`,
+   `LogSink`, plus the console, composite, and capturing sinks). No SLF4J
+   dependency is involved at this step.
+2. Add the `Slf4jLogSink` adapter (`compileOnly(slf4j-api)`), bind it with one
+   `XtcLog.setSink(...)` line in LSP/DAP startup, and drop
+   `implementation(libs.slf4j.nop)` from `javatools` after verifying which
+   third-party library produced the original "no provider" startup warning.
 3. Add a small, SLF4J-free identity formatting helper if repeated owner id
    formatting becomes noisy. Keep it side-effect free and call it only inside
    guards.
@@ -679,6 +900,7 @@ bridge for immutable ids when there is a real operation-level need.
 
 ## What Not To Do
 
+- Do not import `org.slf4j` types anywhere except the single sink adapter.
 - Do not replace `ErrorListener` or `Console` with SLF4J.
 - Do not make `--verbose` enable runtime/compiler `trace` logs.
 - Do not add logback as a default `javatools` runtime dependency.
@@ -698,16 +920,25 @@ bridge for immutable ids when there is a real operation-level need.
 
 ## Bottom Line
 
-SLF4J can be integrated with the XVM runtime and compiler in a way that is
-effectively free when disabled, but only with a strict call-site discipline.
-The API choice alone does not provide that property. The required design is:
+Developer logging can be integrated with the XVM runtime and compiler in a
+way that is effectively free when disabled. The chosen design is:
 
-- SLF4J API, with a no-op provider only on standalone default launch paths;
-- explicit guards around all hot `debug`/`trace` logs;
-- helper methods that begin with a level check;
+- a repo-owned facade (`XtcLog` + `LogCat` + `LogSink`) as the only logging
+  API at call sites; SLF4J appears solely inside one optional sink adapter;
+- pluggable, composable sinks (console default, SLF4J, composite, capturing;
+  JFR possible later) so the implementation can change or fan out without
+  touching call sites;
+- an ungated reporting plane (`warn`/`error`) so converted stderr sites keep
+  reporting by default, and a Tier 2 constant-gated developer plane
+  (`trace`/`debug`) that folds to zero instructions in normal runs;
+- explicit Tier 1 guards only at expensive-argument hot sites;
 - no MDC or hidden owner context on hot paths;
 - separate user diagnostics from developer trace logs;
 - keep expensive ownership dumps and invariant checks explicit.
+
+Priority note: this whole strategy is a nice-to-have slice. It lands after
+the must-fix and must-audit work is complete; see the task ordering in the
+reentrancy docs.
 
 That gives the runtime/compiler a practical diagnostic surface for type
 decisions, owner assignment, constant-pool ownership, startup race hunting, and
