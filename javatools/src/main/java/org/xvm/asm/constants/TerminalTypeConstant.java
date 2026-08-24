@@ -1595,54 +1595,54 @@ public sealed class TerminalTypeConstant
             return false;
         }
 
-        switch (constIdBase.getFormat()) {
-        case Module:
-        case Package:
-            return false;
+        // the formats were just checked equal, so the base's kind decides both sides
+        DefiningConstant definingBase = asDefining(constIdBase);
+        return switch (definingBase) {
+            case ModuleConstant _, PackageConstant _ -> false;
 
-        case Class:
-        case NativeClass:
-            return constIdThis.getType().equals(constIdBase.getType());
+            // native rebase and class compare by type on both sides (formats match)
+            case ClassConstant ignored -> constIdThis.getType().equals(constIdBase.getType());
 
-        case Property: {
-            PropertyConstant idBase = (PropertyConstant) constIdBase;
-            return ((PropertyConstant) constIdThis).getName().equals(idBase.getName());
-        }
+            case FormalTypeChildConstant idBase ->
+                ((FormalTypeChildConstant) constIdThis).getName().equals(idBase.getName());
 
-        case TypeParameter: {
-            TypeParameterConstant idBase = (TypeParameterConstant) constIdBase;
-            TypeParameterConstant idThis = (TypeParameterConstant) constIdThis;
+            case PropertyConstant idBase ->
+                ((PropertyConstant) constIdThis).getName().equals(idBase.getName());
 
-            return idThis.getRegister() == idBase.getRegister() ||
-                   idThis.getName().equals(idBase.getName());
-        }
-
-        case FormalTypeChild: {
-            FormalTypeChildConstant idBase = (FormalTypeChildConstant) constIdBase;
-            return ((FormalTypeChildConstant) constIdThis).getName().equals(idBase.getName());
-        }
-
-        case ThisClass:
-        case ParentClass:
-        case ChildClass: {
-            PseudoConstant constBase = (PseudoConstant) constIdBase;
-            PseudoConstant constThis = (PseudoConstant) constIdThis;
-            if (constBase.isCongruentWith(constThis)) {
-                // the declaration types must be compatible
-                TypeConstant typeDeclBase = constBase.getDeclarationLevelClass().getType();
-                TypeConstant typeDeclThis = constThis.getDeclarationLevelClass().getType();
-                return typeDeclBase.isA(typeDeclThis) || typeDeclThis.isA(typeDeclBase);
+            case TypeParameterConstant idBase -> {
+                TypeParameterConstant idThis = (TypeParameterConstant) constIdThis;
+                yield idThis.getRegister() == idBase.getRegister() ||
+                      idThis.getName().equals(idBase.getName());
             }
-            return false;
-        }
 
-        default:
-            throw new IllegalStateException("unexpected constant: " + constIdBase);
+            case ThisClassConstant constBase   -> congruentDeclarations(constBase, constIdThis);
+            case ParentClassConstant constBase -> congruentDeclarations(constBase, constIdThis);
+            case ChildClassConstant constBase  -> congruentDeclarations(constBase, constIdThis);
+
+            case DynamicFormalConstant _, KeywordConstant _, DecoratedClassConstant _,
+                 MethodConstant _, MultiMethodConstant _, PureIdentityConstant _,
+                 TypedefConstant _, SignatureConstant _, UnresolvedNameConstant _,
+                 ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected constant: " + definingBase);
+        };
+    }
+
+    /**
+     * @return true iff the two pseudo constants are congruent and their declaration-level
+     *         classes' types are compatible in either direction
+     */
+    private static boolean congruentDeclarations(PseudoConstant constBase, Constant constIdThis) {
+        PseudoConstant constThis = (PseudoConstant) constIdThis;
+        if (constBase.isCongruentWith(constThis)) {
+            // the declaration types must be compatible
+            TypeConstant typeDeclBase = constBase.getDeclarationLevelClass().getType();
+            TypeConstant typeDeclThis = constThis.getDeclarationLevelClass().getType();
+            return typeDeclBase.isA(typeDeclThis) || typeDeclThis.isA(typeDeclBase);
         }
+        return false;
     }
 
     @Override
-    @SuppressWarnings("fallthrough")
     protected Set<SignatureConstant> isInterfaceAssignableFrom(
             TypeConstant typeRight, Access accessLeft, List<TypeConstant> listLeft) {
         if (!isSingleDefiningConstant()) {
@@ -1651,39 +1651,48 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
         }
 
-        Constant constIdLeft = getDefiningConstant();
-        switch (constIdLeft.getFormat()) {
-        case NativeClass:
-            constIdLeft = ((NativeRebaseConstant) constIdLeft).getClassConstant();
-            // fall through
-        case Class: {
-            IdentityConstant idLeft  = (IdentityConstant) constIdLeft;
-            ClassStructure   clzLeft = (ClassStructure) idLeft.getComponent();
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            case NativeRebaseConstant constant ->
+                interfaceAssignableFrom(constant.getClassConstant(), typeRight, accessLeft, listLeft);
+            case ClassConstant constant ->
+                interfaceAssignableFrom(constant, typeRight, accessLeft, listLeft);
 
-            assert clzLeft.getFormat() == Component.Format.INTERFACE;
-
-            return clzLeft.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
-        }
-
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-            return ((FormalConstant) constIdLeft).getConstraintType().
+            // note: dynamic formal constants kept the historical refusal below
+            case DynamicFormalConstant constant ->
+                throw new IllegalStateException("unexpected constant: " + constant);
+            case FormalConstant constant -> constant.getConstraintType().
                 isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
 
-        case ThisClass:
-        case ParentClass:
-        case ChildClass:
-            return ((PseudoConstant) constIdLeft).getDeclarationLevelClass().getType().
+            case ThisClassConstant constant -> constant.getDeclarationLevelClass().getType().
+                isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+            case ParentClassConstant constant -> constant.getDeclarationLevelClass().getType().
+                isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+            case ChildClassConstant constant -> constant.getDeclarationLevelClass().getType().
                 isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
 
-        default:
-            throw new IllegalStateException("unexpected constant: " + constIdLeft);
-        }
+            case ModuleConstant _, PackageConstant _, KeywordConstant _,
+                 DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
+                 UnresolvedNameConstant _, ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected constant: " + defining);
+        };
+    }
+
+    /**
+     * Delegate interface assignability to the specified interface class.
+     */
+    private static Set<SignatureConstant> interfaceAssignableFrom(
+            IdentityConstant idLeft, TypeConstant typeRight, Access accessLeft,
+            List<TypeConstant> listLeft) {
+        ClassStructure clzLeft = (ClassStructure) idLeft.getComponent();
+
+        assert clzLeft.getFormat() == Component.Format.INTERFACE;
+
+        return clzLeft.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
     }
 
     @Override
-    @SuppressWarnings("fallthrough")
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
                                                boolean fFunction, List<TypeConstant> listParams) {
         if (!isSingleDefiningConstant()) {
@@ -1692,49 +1701,50 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().containsSubstitutableMethod(signature, access, fFunction, listParams);
         }
 
-        Constant constIdThis = getDefiningConstant();
-        switch (constIdThis.getFormat()) {
-        case NativeClass:
-            constIdThis = ((NativeRebaseConstant) constIdThis).getClassConstant();
-            // fall through
-        case Module:
-        case Package:
-        case Class: {
-            IdentityConstant idThis  = (IdentityConstant) constIdThis;
-            ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            case NativeRebaseConstant constant -> classContainsSubstitutableMethod(
+                    constant.getClassConstant(), signature, access, fFunction, listParams);
+            case ModuleConstant constant -> classContainsSubstitutableMethod(
+                    constant, signature, access, fFunction, listParams);
+            case PackageConstant constant -> classContainsSubstitutableMethod(
+                    constant, signature, access, fFunction, listParams);
+            case ClassConstant constant -> classContainsSubstitutableMethod(
+                    constant, signature, access, fFunction, listParams);
 
-            return clzThis.containsSubstitutableMethod(
-                    getConstantPool(), signature, access, fFunction, listParams);
-        }
-
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-            return ((FormalConstant) constIdThis).getConstraintType().
+            case FormalConstant constant -> constant.getConstraintType().
                 containsSubstitutableMethod(signature, access, fFunction, listParams);
 
-        case ThisClass:
-        case ParentClass:
-        case ChildClass:
-            return ((PseudoConstant) constIdThis).getDeclarationLevelClass().getType().
+            case ThisClassConstant constant -> constant.getDeclarationLevelClass().getType().
+                containsSubstitutableMethod(signature, access, fFunction, listParams);
+            case ParentClassConstant constant -> constant.getDeclarationLevelClass().getType().
+                containsSubstitutableMethod(signature, access, fFunction, listParams);
+            case ChildClassConstant constant -> constant.getDeclarationLevelClass().getType().
                 containsSubstitutableMethod(signature, access, fFunction, listParams);
 
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-        case IsClass:
-            return ((KeywordConstant) constIdThis).getBaseType().
+            case KeywordConstant constant -> constant.getBaseType().
                 containsSubstitutableMethod(signature, access, fFunction, listParams);
 
-        default:
-            throw new IllegalStateException("unexpected constant: " + constIdThis);
-        }
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
+                 UnresolvedNameConstant _, ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected constant: " + defining);
+        };
+    }
+
+    /**
+     * Delegate the substitutable-method check to the specified class.
+     */
+    private boolean classContainsSubstitutableMethod(
+            IdentityConstant idThis, SignatureConstant signature, Access access,
+            boolean fFunction, List<TypeConstant> listParams) {
+        ClassStructure clzThis = (ClassStructure) idThis.getComponent();
+
+        return clzThis.containsSubstitutableMethod(
+                getConstantPool(), signature, access, fFunction, listParams);
     }
 
     @Override
-    @SuppressWarnings("fallthrough")
     public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
@@ -1742,73 +1752,84 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().checkConsumption(sTypeName, access, listParams);
         }
 
-        Constant constId = getDefiningConstant();
-        switch (constId.getFormat()) {
-        case Module:
-        case Package:
-        case TypeParameter:
-        case FormalTypeChild:
-        case Property: // formal types do not consume
-        case DynamicFormal:
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-        case IsClass:
-            return Usage.NO;
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            // formal types and keywords do not consume
+            case ModuleConstant _, PackageConstant _, FormalConstant _, KeywordConstant _ ->
+                Usage.NO;
 
-        case NativeClass:
-            constId = ((NativeRebaseConstant) constId).getClassConstant();
-            // fall through
-        case Class:
-            if (isTuple()) {
-                // Tuple consumes and produces every element type
-                for (TypeConstant constParam : listParams) {
-                    if (constParam.consumesFormalType(sTypeName, access)
-                        ||
-                        constParam.producesFormalType(sTypeName, access)) {
-                        return Usage.YES;
-                    }
-                }
-            } else if (!listParams.isEmpty()) {
-                ConstantPool   pool = getConstantPool();
-                ClassStructure clz  = (ClassStructure) ((IdentityConstant) constId).getComponent();
+            case NativeRebaseConstant constant ->
+                checkClassUsage(constant.getClassConstant(), sTypeName, access, listParams, true);
+            case ClassConstant constant ->
+                checkClassUsage(constant, sTypeName, access, listParams, true);
 
-                Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
-
-                listParams = clz.normalizeParameters(pool, listParams);
-
-                Iterator<TypeConstant>   iterParams = listParams.iterator();
-                Iterator<StringConstant> iterNames  = mapFormal.keySet().iterator();
-
-                while (iterParams.hasNext()) {
-                    TypeConstant constParam = iterParams.next();
-                    String       sFormal    = iterNames.next().getValue();
-
-                    if (constParam.consumesFormalType(sTypeName, access)
-                            && clz.producesFormalType(pool, sFormal, access, listParams)
-                        ||
-                        constParam.producesFormalType(sTypeName, access)
-                            && clz.consumesFormalType(pool, sFormal, access, listParams)) {
-                        return Usage.YES;
-                    }
-                }
-            }
-            return Usage.NO;
-
-        case ThisClass:
-        case ParentClass:
-        case ChildClass:
-            return ((PseudoConstant) constId).getDeclarationLevelClass().getType().
+            case ThisClassConstant constant -> constant.getDeclarationLevelClass().getType().
+                checkConsumption(sTypeName, access, listParams);
+            case ParentClassConstant constant -> constant.getDeclarationLevelClass().getType().
+                checkConsumption(sTypeName, access, listParams);
+            case ChildClassConstant constant -> constant.getDeclarationLevelClass().getType().
                 checkConsumption(sTypeName, access, listParams);
 
-        default:
-            throw new IllegalStateException("unexpected constant: " + constId);
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
+                 UnresolvedNameConstant _, ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected constant: " + defining);
+        };
+    }
+
+    /**
+     * The shared class-parameter usage walk behind {@link #checkConsumption} and
+     * {@link #checkProduction}: for a tuple, every element type counts both ways; otherwise
+     * each type parameter is checked against the class's formal-type variance.
+     *
+     * @param fConsumption  true for the consumption check, false for the production check
+     */
+    private Usage checkClassUsage(IdentityConstant idClz, String sTypeName, Access access,
+                                  List<TypeConstant> listParams, boolean fConsumption) {
+        if (isTuple()) {
+            // Tuple consumes and produces every element type
+            for (TypeConstant constParam : listParams) {
+                if (constParam.consumesFormalType(sTypeName, access)
+                    ||
+                    constParam.producesFormalType(sTypeName, access)) {
+                    return Usage.YES;
+                }
+            }
+        } else if (!listParams.isEmpty()) {
+            ConstantPool   pool = getConstantPool();
+            ClassStructure clz  = (ClassStructure) idClz.getComponent();
+
+            Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
+
+            listParams = clz.normalizeParameters(pool, listParams);
+
+            Iterator<TypeConstant>   iterParams = listParams.iterator();
+            Iterator<StringConstant> iterNames  = mapFormal.keySet().iterator();
+
+            while (iterParams.hasNext()) {
+                TypeConstant constParam = iterParams.next();
+                String       sFormal    = iterNames.next().getValue();
+
+                boolean fMatch = fConsumption
+                        ? constParam.consumesFormalType(sTypeName, access)
+                                && clz.producesFormalType(pool, sFormal, access, listParams)
+                            ||
+                          constParam.producesFormalType(sTypeName, access)
+                                && clz.consumesFormalType(pool, sFormal, access, listParams)
+                        : constParam.producesFormalType(sTypeName, access)
+                                && clz.producesFormalType(pool, sFormal, access, listParams)
+                            ||
+                          constParam.consumesFormalType(sTypeName, access)
+                                && clz.consumesFormalType(pool, sFormal, access, listParams);
+                if (fMatch) {
+                    return Usage.YES;
+                }
+            }
         }
+        return Usage.NO;
     }
 
     @Override
-    @SuppressWarnings("fallthrough")
     public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
@@ -1816,76 +1837,38 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().checkProduction(sTypeName, access, listParams);
         }
 
-        Constant constId = getDefiningConstant();
-        switch (constId.getFormat()) {
-        case Module:
-        case Package:
-        case TypeParameter:
-        case FormalTypeChild:
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-        case IsClass:
-            return Usage.NO;
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            case ModuleConstant _, PackageConstant _, KeywordConstant _ -> Usage.NO;
 
-        case Property:
-            return Usage.valueOf(((PropertyConstant) constId).getName().equals(sTypeName));
+            case TypeParameterConstant ignored  -> Usage.NO;
+            case FormalTypeChildConstant ignored-> Usage.NO;
 
-        case DynamicFormal: {
-            FormalConstant constFormal = ((DynamicFormalConstant) constId).getFormalConstant();
-            return Usage.valueOf(constFormal instanceof PropertyConstant &&
-                    constFormal.getName().equals(sTypeName));
-        }
-
-        case NativeClass:
-            constId = ((NativeRebaseConstant) constId).getClassConstant();
-            // fall through
-        case Class:
-            if (isTuple()) {
-                // Tuple consumes and produces every element type
-                for (TypeConstant constParam : listParams) {
-                    if (constParam.producesFormalType(sTypeName, access)
-                        ||
-                        constParam.consumesFormalType(sTypeName, access)) {
-                        return Usage.YES;
-                    }
-                }
-            } else if (!listParams.isEmpty()) {
-                ConstantPool   pool = getConstantPool();
-                ClassStructure clz  = (ClassStructure) ((IdentityConstant) constId).getComponent();
-
-                Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
-
-                listParams = clz.normalizeParameters(pool, listParams);
-
-                Iterator<TypeConstant>   iterParams = listParams.iterator();
-                Iterator<StringConstant> iterNames  = mapFormal.keySet().iterator();
-
-                while (iterParams.hasNext()) {
-                    TypeConstant constParam = iterParams.next();
-                    String       sFormal    = iterNames.next().getValue();
-
-                    if (constParam.producesFormalType(sTypeName, access)
-                            && clz.producesFormalType(pool, sFormal, access, listParams)
-                        ||
-                        constParam.consumesFormalType(sTypeName, access)
-                            && clz.consumesFormalType(pool, sFormal, access, listParams)) {
-                        return Usage.YES;
-                    }
-                }
+            case DynamicFormalConstant constant -> {
+                FormalConstant constFormal = constant.getFormalConstant();
+                yield Usage.valueOf(constFormal instanceof PropertyConstant &&
+                        constFormal.getName().equals(sTypeName));
             }
-            return Usage.NO;
+            case PropertyConstant constant ->
+                Usage.valueOf(constant.getName().equals(sTypeName));
 
-        case ThisClass:
-        case ParentClass:
-        case ChildClass:
-            return ((PseudoConstant) constId).getDeclarationLevelClass().getType().
+            case NativeRebaseConstant constant ->
+                checkClassUsage(constant.getClassConstant(), sTypeName, access, listParams, false);
+            case ClassConstant constant ->
+                checkClassUsage(constant, sTypeName, access, listParams, false);
+
+            case ThisClassConstant constant -> constant.getDeclarationLevelClass().getType().
+                checkProduction(sTypeName, access, listParams);
+            case ParentClassConstant constant -> constant.getDeclarationLevelClass().getType().
+                checkProduction(sTypeName, access, listParams);
+            case ChildClassConstant constant -> constant.getDeclarationLevelClass().getType().
                 checkProduction(sTypeName, access, listParams);
 
-        default:
-            throw new IllegalStateException("unexpected constant: " + constId);
-        }
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
+                 UnresolvedNameConstant _, ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected constant: " + defining);
+        };
     }
 
     // ----- JIT support ---------------------------------------------------------------------------
@@ -1956,15 +1939,26 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().getTemplate(container);
         }
 
-        Constant constIdThis = getDefiningConstant();
-        return switch (constIdThis.getFormat()) {
-            case Module, Package, Class -> container.getTemplate((IdentityConstant) constIdThis);
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            case NativeRebaseConstant constant ->
+                container.getTemplate(constant.getClassConstant());
+            case ModuleConstant constant  -> container.getTemplate(constant);
+            case PackageConstant constant -> container.getTemplate(constant);
+            case ClassConstant constant   -> container.getTemplate(constant);
 
-            case NativeClass -> container.getTemplate(((NativeRebaseConstant) constIdThis).getClassConstant());
+            case ThisClassConstant constant ->
+                container.getTemplate(constant.getDeclarationLevelClass());
+            case ParentClassConstant constant ->
+                container.getTemplate(constant.getDeclarationLevelClass());
+            case ChildClassConstant constant ->
+                container.getTemplate(constant.getDeclarationLevelClass());
 
-            case ThisClass, ParentClass, ChildClass -> container.getTemplate(((PseudoConstant) constIdThis).getDeclarationLevelClass());
-
-            default -> throw new IllegalStateException("unexpected defining constant: " + constIdThis);
+            case FormalConstant _, KeywordConstant _, DecoratedClassConstant _,
+                 MethodConstant _, MultiMethodConstant _, PureIdentityConstant _,
+                 TypedefConstant _, SignatureConstant _, UnresolvedNameConstant _,
+                 ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + defining);
         };
     }
 
