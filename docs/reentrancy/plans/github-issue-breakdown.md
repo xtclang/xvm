@@ -165,11 +165,14 @@ error: the switch expression does not cover all possible input values
 ```
 
 - instead of the old behavior, which was to answer "false" and move on.
-The full flagship-file conversion also exists on the branch (`bb72c4b58`):
-ALL 23 format switches and ALL 48 laundering casts in TerminalTypeConstant
-are gone, every silent default is an explicit labeled arm, two fallthrough
-suppressions died, and a new defining-constant kind now fails compilation
-at 21 switches simultaneously. File it as this PR's second commit for the
+The full flagship-file conversion also exists on the branch (`bb72c4b58` +
+`10ba2869d`): 22 of TerminalTypeConstant's 23 format switches and all 48 of
+its defining-constant laundering casts are gone, every silent default is an
+explicit labeled arm, all six of its fallthrough suppressions died, and a
+new defining-constant kind now fails compilation at 27 switches
+simultaneously. The one surviving format switch (`:1547`) is the
+keyword-kind discrimination - per-instance data on KeywordConstant, not a
+hierarchy proxy - and is the honest final state, verified by broad grep. File it as this PR's second commit for the
 full shock-and-awe diff, or as the immediate follow-up if the opener should
 stay one-method minimal - both shapes are green through the full suite and
 a complete XDK build.
@@ -287,9 +290,12 @@ standalone PR with its red-on-master test:
 | Native callback registration rollback (clock/timer/server schedule-failure leaks) | Yes - schedule/bind failure paths | `NativeCallbackRegistrationTest` |
 | Hash/equality contracts (`Register`, `VersionTree`; cycle-safe `MethodBody` target equality) | Yes for map/set misuse; the MethodBody equality stack overflow needs legal cyclic metadata | `RegisterHashCodeTest`, `VersionTest`, `MethodInfoTest` |
 | Handle view-clone lifecycle desyncs (row 161): mechanism 3 fixed (atomic/injected cells) | Mechanism 3 is a master bug even without views: master's unsynchronized lazy install races two services' first assignments on one shared `@Atomic` instance and loses an update. Mechanism 2 (lazy guard, also fixed) is branch-enablement only - master shared a single inflated-ref instance. Mechanisms 1/4 (RefHandle deref desync, Mutable-array storage-pointer forks) are closed as fail-loud guards - latent, no reachable clone path on master today. Mechanism 5 (`makeImmutable` split) is fixed via the shared freeze cell and is master-shaped: the per-view flag is verbatim master, reachable whenever any view coexists with the object at freeze time. Residuals outside `GenericHandle` (TupleHandle, ArrayHandle's mutability enum, FunctionHandle) are an open must-fix row | `AtomicViewSharingTest`, `RefViewGuardTest`, `ArrayViewGuardTest`, `FreezeViewSharingTest` |
-| OPEN: `ConstHeap` live `HandleConstant` served across containers (row 125 graduation) | Needs two containers over one module - but master creates sibling/nested containers itself (mgmt, injection), so this is master-reachable, not reuse-only | to be written |
-| OPEN: reflection `Method.invoke` aliases the caller's tuple storage into the callee register file (array-audit graduation) | Yes - single-threaded: any reflective invoke whose target needs no extra registers; a parameter reassignment corrupts the caller's tuple, including const-heap-cached ones | to be written with the fix (mirror the xRTFunction.java:254 clone) |
-| OPEN: short-hand property override rewrites the library module's shared `Parameter` constants (array-audit graduation) | Yes - single-threaded compile of a short-hand property override | to be written with the fix (`createMethodCopyingParameters` machinery already in-branch) |
+| `ConstHeap` live `HandleConstant` served across containers (row 125 graduation) - FIXED `632cac927` | Needs two containers over one module - but master creates sibling/nested containers itself (mgmt, injection), so this is master-reachable, not reuse-only | `HandleConstantOwnerGuardTest`, `HandleConstantAssembleTest` |
+| Reflection `Method.invoke` aliases the caller's tuple storage into the callee register file (array-audit graduation) - FIXED `ff8cc479a` | Yes - single-threaded: any reflective invoke whose target needs no extra registers; a parameter reassignment corrupts the caller's tuple, including const-heap-cached ones | `MethodInvokeArgumentAliasingTest` (shape pins red on master; full execution test rides with the stress harness) |
+| Short-hand property override rewrites the library module's shared `Parameter` constants (array-audit graduation) - FIXED `f835b3693` | Yes - single-threaded compile of a short-hand property override | `ComponentMethodParameterCopyTest` (cross-module copy, registration isolation, call-site pin red on master) |
+| `Contribution` inner-class clone kept the hidden outer reference: a cloned component's contributions answered `getComponent()` with the SOURCE component - FIXED `0af827c72` | Yes - single-threaded: any `cloneBody()` path (conditional bifurcation, module link/merge) produces contributions whose `getComponent()` lies | `ComponentBodyCopyTest.contributionsAreReOwnedByBodyCopies` (red on master) |
+| `MethodStructure.Source` inner-class clone kept the hidden outer reference: a cloned method's source resolved `getConstantPool()` through the SOURCE method - FIXED `25371b397` | Structurally yes on every `cloneBody()`, but observably only when the copy crosses pools: same-pool lambda copies masked it because both owners answer the same pool; adoption/multi-module surgery did not | `ComponentBodyCopyTest.methodBodyCopyRebindsSourceOuter` (red on master via the outer reference) |
+| `FullyBoundHandle.chain()` asserted `m_next == null` and overwrote: `-ea` asserts, `-da` silently DROPS already-linked constructor finalizers - FIXED `c621b1dca` (tail-append) | Yes - single-threaded: an annotation-mixin constructor with a finalizer delegating to a super constructor that also has one pre-populates the head finalizer's link before the construction epilogue folds them | `FinalizerChainTest.chainAppendsAtTailInsteadOfDroppingLinkedFinalizers` (red on master under both -ea and -da) |
 | Utility constructor this-escape fixes | Yes (latent; class partly unused) | PR #539, already extracted |
 
 Category H - portable hardening, no behavior change, ships as its own small

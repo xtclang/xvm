@@ -85,6 +85,37 @@ public class ComponentBodyCopyTest {
     }
 
     /**
+     * The method source is a non-static inner class, and Object.clone() copied its hidden
+     * outer reference: a cloned method's source stayed bound to the ORIGINAL method, so its
+     * getConstantPool() calls resolved through the wrong owner. Red on master via the outer
+     * reference (same-pool lambda copies masked it because both owners answered the same
+     * pool; adoption and cross-pool method surgery did not). The copy path now re-binds the
+     * outer via that.new Source(...), which clone() cannot express.
+     */
+    @Test
+    public void methodBodyCopyRebindsSourceOuter() throws Exception {
+        var file   = new FileStructure("test");
+        var clz    = file.getModule().createClass(
+                Constants.Access.PUBLIC, Component.Format.CLASS, "Test", null);
+        var method = clz.createMethod(false, Constants.Access.PUBLIC, null,
+                Parameter.NO_PARAMS, "name", Parameter.NO_PARAMS, true, false);
+        method.configureSource("void name() {}", 1);
+
+        var copy = method.cloneBody();
+
+        var fieldSource = MethodStructure.class.getDeclaredField("m_source");
+        fieldSource.setAccessible(true);
+        var fieldOuter = Class.forName("org.xvm.asm.MethodStructure$Source")
+                .getDeclaredField("this$0");
+        fieldOuter.setAccessible(true);
+
+        assertSame(method, fieldOuter.get(fieldSource.get(method)));
+        assertSame(copy, fieldOuter.get(fieldSource.get(copy)),
+                "the copied source must be owned by the COPY; Object.clone() left the hidden"
+                        + " outer reference pointing at the source method");
+    }
+
+    /**
      * The one hazard hand-written copy constructors introduce is a forgotten field. This
      * ratchet pins every structure's exact instance-field list (authoritative via reflection,
      * identical to what Object.clone() used to copy): adding or removing a field fails here
