@@ -4,8 +4,6 @@ package org.xvm.asm;
 import java.io.File;
 import java.io.IOException;
 
-import java.nio.file.Files;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -24,8 +22,6 @@ import static org.xvm.util.Handy.resolveFile;
  * A simple ModuleRepository for a single file. The file is most commonly a single-module .xtc, but
  * an .xtc file is a module container and may hold multiple modules (a "bundle"), in which case
  * every real (non-fingerprint) module in the container is exposed by this repository.
- *
- * TODO thread safety
  */
 public class FileRepository
         implements ModuleRepository {
@@ -63,17 +59,17 @@ public class FileRepository
     // ----- ModuleRepository API ------------------------------------------------------------------
 
     @Override
-    public Set<String> getModuleNames() {
+    public synchronized Set<String> getModuleNames() {
         return validateCache() ? cachedVersionsByName.keySet() : Set.of();
     }
 
     @Override
-    public VersionTree<Boolean> getAvailableVersions(String sModule) {
+    public synchronized VersionTree<Boolean> getAvailableVersions(String sModule) {
         return validateCache() ? cachedVersionsByName.get(sModule) : null;
     }
 
     @Override
-    public ModuleStructure loadModule(String sModule) {
+    public synchronized ModuleStructure loadModule(String sModule) {
         ModuleStructure module = null;
         if (getModuleNames().contains(sModule) && ensureFileStructure()) {
             if (cachedModuleStructures != null) {
@@ -90,7 +86,7 @@ public class FileRepository
     }
 
     @Override
-    public ModuleStructure loadModule(String sModule, Version version, boolean fExact) {
+    public synchronized ModuleStructure loadModule(String sModule, Version version, boolean fExact) {
         // verify that the module name is known
         if (!getModuleNames().contains(sModule)) {
             return null;
@@ -151,7 +147,7 @@ public class FileRepository
     }
 
     @Override
-    public void storeModule(ModuleStructure module)
+    public synchronized void storeModule(ModuleStructure module)
             throws IOException {
         if (readOnly || file.exists() && !file.isFile()) {
             throw new IOException("repository is read-only: " + this);
