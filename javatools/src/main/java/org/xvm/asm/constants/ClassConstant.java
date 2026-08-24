@@ -134,18 +134,24 @@ public sealed class ClassConstant
         int cLevelsDown = 0;
         IdentityConstant parent = getParentConstant();
         while (true) {
-            switch (parent.getFormat()) {
-            case Class:
-            case Property:
-            case Method:
-            case MultiMethod:
+            // exhaustive over the sealed IdentityConstant tree; see getParentClass()
+            switch (parent) {
+            case NativeRebaseConstant _,
+                 FormalTypeChildConstant _ -> { return cLevelsDown; } // was the silent default
+            case ClassConstant _,
+                 PropertyConstant _,
+                 MethodConstant _,
+                 MultiMethodConstant _   -> {
                 ++cLevelsDown;
                 parent = parent.getParentConstant();
-                continue;
-
-            // packages and modules mean we've passed the outermost
-            default:
-                return cLevelsDown;
+            }
+            case ModuleConstant _,
+                 PackageConstant _       -> { return cLevelsDown; } // passed the outermost
+            case DecoratedClassConstant _,
+                 TypedefConstant _,
+                 TypeParameterConstant _,
+                 DynamicFormalConstant _,
+                 PureIdentityConstant _  -> { return cLevelsDown; } // was the silent default
             }
         }
     }
@@ -160,18 +166,21 @@ public sealed class ClassConstant
         ClassConstant    outermost = this;
         IdentityConstant parent    = outermost.getParentConstant();
         while (true) {
-            switch (parent.getFormat()) {
-            case Class:
-                outermost = (ClassConstant) parent;
-                break;
-
-            case Property:
-                // ignored (we'll use its parent)
-                break;
-
-            // methods, packages, modules all "terminate" this search
-            default:
-                return outermost;
+            // exhaustive over the sealed IdentityConstant tree; see getParentClass()
+            switch (parent) {
+            case NativeRebaseConstant _    -> { return outermost; } // was the silent default
+            case ClassConstant clz         -> outermost = clz;
+            case FormalTypeChildConstant _ -> { return outermost; } // was the silent default
+            case PropertyConstant _        -> { }         // ignored (we'll use its parent)
+            case MethodConstant _,
+                 ModuleConstant _,
+                 PackageConstant _         -> { return outermost; } // terminate this search
+            case DecoratedClassConstant _,
+                 MultiMethodConstant _,
+                 TypedefConstant _,
+                 TypeParameterConstant _,
+                 DynamicFormalConstant _,
+                 PureIdentityConstant _    -> { return outermost; } // was the silent default
             }
 
             parent = parent.getParentConstant();
@@ -182,16 +191,24 @@ public sealed class ClassConstant
         int cLevelsDown = 0;
         IdentityConstant parent = getParentConstant();
         while (true) {
-            switch (parent.getFormat()) {
-            case Class:
-            case Property:
+            // exhaustive over the sealed IdentityConstant tree; see getParentClass()
+            switch (parent) {
+            case NativeRebaseConstant _,
+                 FormalTypeChildConstant _ -> { return cLevelsDown; } // was the silent default
+            case ClassConstant _,
+                 PropertyConstant _      -> {
                 ++cLevelsDown;
                 parent = parent.getParentConstant();
-                continue;
-
-            // methods, packages, modules all mean we've passed the outermost
-            default:
-                return cLevelsDown;
+            }
+            case MethodConstant _,
+                 ModuleConstant _,
+                 PackageConstant _       -> { return cLevelsDown; } // passed the outermost
+            case DecoratedClassConstant _,
+                 MultiMethodConstant _,
+                 TypedefConstant _,
+                 TypeParameterConstant _,
+                 DynamicFormalConstant _,
+                 PureIdentityConstant _  -> { return cLevelsDown; } // was the silent default
             }
         }
     }

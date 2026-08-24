@@ -10,9 +10,15 @@ import java.util.Objects;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.XvmStructure;
 
 import org.xvm.javajit.TypeSystem;
@@ -661,21 +667,31 @@ public abstract sealed class IdentityConstant
             Component    component = getComponent();
             Annotation[] aAnnos;
 
-            switch (component.getFormat()) {
-            case ENUM:
-                return pool.ensureParameterizedTypeConstant(pool.typeEnumeration(), type);
+            // exhaustive over the sealed Component tree: the old format switch's default arm
+            // WAS a blind (ClassStructure) cast, so a non-class component died with a CCE
+            // inside the fallback; the refusal is now explicit and names the component
+            switch (component) {
+            case ClassStructure clz -> {
+                switch (clz.getFormat()) {
+                case ENUM:
+                    return pool.ensureParameterizedTypeConstant(pool.typeEnumeration(), type);
 
-            case ENUMVALUE:
-                return pool.ensureParameterizedTypeConstant(pool.typeEnumValue(), type);
+                case ENUMVALUE:
+                    return pool.ensureParameterizedTypeConstant(pool.typeEnumValue(), type);
 
-            case PROPERTY:
+                default:
+                    aAnnos = clz.collectAnnotations(true);
+                }
+            }
+
+            case PropertyStructure ignored ->
                 // this is a DecoratedClassConstant
                 aAnnos = Annotation.NO_ANNOTATIONS;
-                break;
 
-            default:
-                aAnnos = ((ClassStructure) component).collectAnnotations(true);
-                break;
+            case MethodStructure _, MultiMethodStructure _, TypedefStructure _,
+                 FileStructure _, CompositeComponent _ ->
+                throw new IllegalStateException(
+                        "unexpected component for " + this + ": " + component);
             }
 
             TypeConstant typeClz = pool.ensureParameterizedTypeConstant(pool.typeClass(), type,

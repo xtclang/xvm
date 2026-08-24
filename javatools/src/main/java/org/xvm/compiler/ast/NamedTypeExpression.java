@@ -25,9 +25,13 @@ import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.NativeRebaseConstant;
+import org.xvm.asm.constants.ParentClassConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PseudoConstant;
+import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeParameterConstant;
@@ -752,28 +756,33 @@ public class NamedTypeExpression
             boolean       fParent      = false;
             boolean       fRetainConst = true;
             ClassConstant idTarget;
-            switch (constTarget.getFormat()) {
-            case ParentClass:
+            switch (constTarget) {
+            case ParentClassConstant constant -> {
                 fParent = true;
-                // fall through
-            case ThisClass:
                 // we can only generate an implicit formal type for "this" or "parent"
                 fAllowFormal = true;
-                idTarget     = (ClassConstant) ((PseudoConstant) constTarget).getDeclarationLevelClass();
-                break;
+                idTarget     = (ClassConstant) constant.getDeclarationLevelClass();
+            }
+            case ThisClassConstant constant -> {
+                // we can only generate an implicit formal type for "this" or "parent"
+                fAllowFormal = true;
+                idTarget     = (ClassConstant) constant.getDeclarationLevelClass();
+            }
 
-            case ChildClass:
+            case ChildClassConstant constant -> {
                 // we don't retain the child const unless it's a virtual child
                 fRetainConst = false;
-                idTarget     = (ClassConstant) ((ChildClassConstant) constTarget).getDeclarationLevelClass();
-                break;
+                idTarget     = (ClassConstant) constant.getDeclarationLevelClass();
+            }
 
-            case Class:
-                idTarget = (ClassConstant) constTarget;
-                break;
+            // native rebases and formal type children never named a class target; they fell
+            // into the old silent default and are named here to keep ClassConstant and
+            // PropertyConstant from claiming their subtypes
+            case NativeRebaseConstant ignored    -> idTarget = null;
+            case ClassConstant constant          -> idTarget = constant;
+            case FormalTypeChildConstant ignored -> idTarget = null;
 
-            case Property: {
-                PropertyConstant idProp = (PropertyConstant) constTarget;
+            case PropertyConstant idProp -> {
                 if (idProp.isFormalType()) {
                     if (ctx != null) {
                         // see if the FormalType was narrowed
@@ -792,8 +801,7 @@ public class NamedTypeExpression
                 }
             }
 
-            case Typedef: {
-                TypedefConstant  idTypedef = (TypedefConstant) constTarget;
+            case TypedefConstant idTypedef -> {
                 TypeConstant     typeRef   = idTypedef.getReferredToType();
                 IdentityConstant idFrom    = idTypedef.getParentConstant();
                 IdentityConstant idClass   = getComponent().getContainingClass().getIdentityConstant();
@@ -820,20 +828,19 @@ public class NamedTypeExpression
                 return typeRef;
             }
 
-            case UnresolvedName:
+            case UnresolvedNameConstant constant -> {
                 if (m_exprDynamic != null && ctx != null) {
                     TypeConstant type = m_exprDynamic.getImplicitType(ctx);
                     if (type != null && type.isTypeOfType()) {
                         return type.getParamType(0);
                     }
                 }
-                return m_typeUnresolved =
-                        new UnresolvedTypeConstant(pool, (UnresolvedNameConstant) constTarget);
+                return m_typeUnresolved = new UnresolvedTypeConstant(pool, constant);
+            }
 
-            case TypeParameter:
-            default:
-                idTarget = null;
-                break;
+            // type parameters and every other constant kind name no class target
+            // (was the silent default of the old format switch)
+            default -> idTarget = null;
             }
 
             TypeConstant   typeTarget = null;

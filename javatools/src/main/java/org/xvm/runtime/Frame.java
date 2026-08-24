@@ -19,17 +19,22 @@ import org.xvm.asm.PackageStructure;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.DecoratedClassConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.MultiMethodConstant;
+import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PureIdentityConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
+import org.xvm.asm.constants.TypedefConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.DeferredSingletonHandle;
@@ -2088,41 +2093,46 @@ public class Frame
         }
 
         private boolean buildShortName(IdentityConstant id, StringBuilder sb, boolean fHasName) {
-            switch (id.getFormat()) {
-            case Module:
-                if (!fHasName) {
-                    sb.append(((ModuleConstant) id).getUnqualifiedName());
-                    return true;
-                } else {
-                    return false;
+            // exhaustive over the sealed IdentityConstant tree: the old format switch
+            // silently skipped every kind it never listed via a recursing default
+            return switch (id) {
+                case ModuleConstant constant -> {
+                    if (fHasName) {
+                        yield false;
+                    }
+                    sb.append(constant.getUnqualifiedName());
+                    yield true;
                 }
 
-            case Package:
-                if (!fHasName) {
+                case PackageConstant constant -> {
+                    if (fHasName) {
+                        yield false;
+                    }
+                    sb.append(constant.getName());
+                    yield true;
+                }
+
+                case ClassConstant constant -> {
+                    if (buildShortName(constant.getParentConstant(), sb, true)) {
+                        sb.append('.');
+                    }
+                    sb.append(constant.getName());
+                    yield true;
+                }
+
+                case PropertyConstant _, MethodConstant _ -> {
+                    if (buildShortName(id.getParentConstant(), sb, false)) {
+                        sb.append('.');
+                    }
                     sb.append(id.getName());
-                    return true;
-                } else {
-                    return false;
+                    yield true;
                 }
 
-            case Class:
-                if (buildShortName(id.getParentConstant(), sb, true)) {
-                    sb.append('.');
-                }
-                sb.append(id.getName());
-                return true;
-
-            case Property:
-            case Method:
-                if (buildShortName(id.getParentConstant(), sb, false)) {
-                    sb.append('.');
-                }
-                sb.append(id.getName());
-                return true;
-
-            default:
-                return buildShortName(id.getParentConstant(), sb, fHasName);
-            }
+                // skipped in the short name; recurse to the parent (was the silent default)
+                case DecoratedClassConstant _, MultiMethodConstant _, TypedefConstant _,
+                     TypeParameterConstant _, DynamicFormalConstant _, PureIdentityConstant _ ->
+                    buildShortName(id.getParentConstant(), sb, fHasName);
+            };
         }
     }
 
