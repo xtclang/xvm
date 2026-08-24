@@ -19,7 +19,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A Register (could be unnamed).
  */
-public class RegisterAST
+public final class RegisterAST
         extends ExprAST {
 
     /**

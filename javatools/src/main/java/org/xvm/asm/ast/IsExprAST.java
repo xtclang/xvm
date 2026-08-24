@@ -15,7 +15,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * An "is" expression. It differs from {@link RelOpExprAST} that it may have two return types, where
  * the first one is always Boolean.
  */
-public class IsExprAST
+public final class IsExprAST
         extends BiExprAST {
 
     private TypeConstant typeOfType;   // could be null (TODO CP remove)

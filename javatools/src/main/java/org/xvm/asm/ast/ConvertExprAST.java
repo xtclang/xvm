@@ -17,7 +17,7 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * The Convert expressions.
  */
-public class ConvertExprAST
+public final class ConvertExprAST
         extends DelegatingExprAST {
 
     private TypeConstant[] types;

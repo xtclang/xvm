@@ -15,7 +15,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * A "continue" statement that either "falls through" in a switch/case block, or advances to the
  * start of the next iteration in a loop.
  */
-public class ContinueStmtAST
+public final class ContinueStmtAST
         extends BinaryAST {
 
     private int depth;

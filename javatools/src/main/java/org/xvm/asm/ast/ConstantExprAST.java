@@ -21,7 +21,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * An expression that yields a constant value.
  */
-public class ConstantExprAST
+public final class ConstantExprAST
         extends ExprAST {
 
     private Constant value;

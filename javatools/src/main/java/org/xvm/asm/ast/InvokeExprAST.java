@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Invocation expression for method or "constant" function calls.
  */
-public class InvokeExprAST
+public final class InvokeExprAST
         extends CallableExprAST {
 
     private final NodeType nodeType;

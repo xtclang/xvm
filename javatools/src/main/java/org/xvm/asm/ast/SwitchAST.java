@@ -31,7 +31,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Supports the "switch" statement and expression.
  */
-public class SwitchAST
+public final class SwitchAST
         extends ExprAST {
 
     private ExprAST        cond;

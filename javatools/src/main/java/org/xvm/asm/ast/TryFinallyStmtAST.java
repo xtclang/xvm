@@ -15,7 +15,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A "try..finally" statement (with optional catches).
  */
-public class TryFinallyStmtAST
+public final class TryFinallyStmtAST
         extends TryCatchStmtAST {
 
     private RegAllocAST exception; // optional

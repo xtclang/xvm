@@ -16,8 +16,9 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A "try..catch" or "using" (with optional catches) statement.
  */
-public class TryCatchStmtAST
-        extends BinaryAST {
+public sealed class TryCatchStmtAST
+        extends BinaryAST
+        permits TryFinallyStmtAST {
 
     private ExprAST[]   resources;
     private BinaryAST   body;

@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Note: consider creating a "local property deref" expression that operates on "this" and doesn't
  *       need the underlying expression.
  */
-public class PropertyExprAST
+public final class PropertyExprAST
         extends DelegatingExprAST {
 
     private Constant property;

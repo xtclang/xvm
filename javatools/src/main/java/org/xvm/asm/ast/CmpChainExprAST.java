@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Comparison over a chain of expressions.
  */
-public class CmpChainExprAST
+public final class CmpChainExprAST
         extends ExprAST {
 
     private ExprAST[]      exprs;

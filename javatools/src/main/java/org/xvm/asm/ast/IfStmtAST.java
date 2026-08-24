@@ -14,7 +14,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * Supports the "if..then" and "if..then..else" statements.
  */
-public class IfStmtAST
+public final class IfStmtAST
         extends BinaryAST {
 
     private ExprAST   cond;

@@ -14,7 +14,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A "throw" expression.
  */
-public class ThrowExprAST
+public final class ThrowExprAST
         extends ExprAST {
     private ExprAST throwable;
     private ExprAST message; // could be null

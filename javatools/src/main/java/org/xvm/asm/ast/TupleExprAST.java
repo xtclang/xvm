@@ -9,7 +9,7 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.TupleExpr;
 /**
  * A Tuple expression that is not a constant is structurally identical to the List expression.
  */
-public class TupleExprAST
+public final class TupleExprAST
         extends ListExprAST {
 
     TupleExprAST() {}

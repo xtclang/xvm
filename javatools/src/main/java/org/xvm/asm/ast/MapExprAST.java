@@ -19,7 +19,7 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.MapExpr;
 /**
  * A Map expression that is not a constant.
  */
-public class MapExprAST
+public final class MapExprAST
         extends ExprAST {
 
     private TypeConstant type;

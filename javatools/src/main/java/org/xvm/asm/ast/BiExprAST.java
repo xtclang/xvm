@@ -14,8 +14,9 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A base class for expressions that follow the pattern "expression operator expression".
  */
-public abstract class BiExprAST
-        extends ExprAST {
+public abstract sealed class BiExprAST
+        extends ExprAST
+        permits CondOpExprAST, DivRemExprAST, IsExprAST, RelOpExprAST {
 
     private ExprAST  expr1;
     private Operator op;

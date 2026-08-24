@@ -17,7 +17,7 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.CallExpr;
 /**
  * Call expression for "not constant" function call.
  */
-public class CallExprAST
+public final class CallExprAST
         extends CallableExprAST {
 
     private final NodeType nodeType;

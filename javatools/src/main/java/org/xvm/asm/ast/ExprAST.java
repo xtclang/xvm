@@ -12,8 +12,13 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Class hierarchy root for all expressions.
  */
-public abstract class ExprAST
-        extends BinaryAST {
+public abstract sealed class ExprAST
+        extends BinaryAST
+        permits ArrayAccessExprAST, AssignAST, BiExprAST, BindFunctionAST, BindMethodAST,
+                CallableExprAST, CmpChainExprAST, ConstantExprAST, DelegatingExprAST,
+                ListExprAST, MapExprAST, MultiExprAST, NewExprAST, PoisonAST, RegAllocAST,
+                RegisterAST, StmtExprAST, SwitchAST, TemplateExprAST, TernaryExprAST,
+                ThrowExprAST {
 
     /**
      * @return the number of values yielded by the expression

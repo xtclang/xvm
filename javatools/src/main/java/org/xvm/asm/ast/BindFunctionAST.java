@@ -19,7 +19,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Bind function's arguments.
  */
-public class BindFunctionAST
+public final class BindFunctionAST
         extends ExprAST {
     private ExprAST      target;
     private int[]        indexes;

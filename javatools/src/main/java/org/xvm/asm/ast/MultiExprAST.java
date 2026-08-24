@@ -16,7 +16,7 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.MultiExpr;
 /**
  * A expression that represents multiple expressions.
  */
-public class MultiExprAST
+public final class MultiExprAST
         extends ExprAST {
 
     private ExprAST[] exprs;

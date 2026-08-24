@@ -11,8 +11,10 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * A base class for expressions that delegate to an underlying expression.
  */
-public abstract class DelegatingExprAST
-        extends ExprAST {
+public abstract sealed class DelegatingExprAST
+        extends ExprAST
+        permits ConvertExprAST, OrderedExprAST, PropertyExprAST, UnaryExprAST,
+                UnpackExprAST {
 
     private ExprAST expr;
 

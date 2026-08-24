@@ -14,8 +14,9 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * Base class for Invoke, Call and Construct nodes.
  */
-public abstract class CallableExprAST
-        extends ExprAST {
+public abstract sealed class CallableExprAST
+        extends ExprAST
+        permits CallExprAST, InvokeExprAST {
 
     private TypeConstant[] retTypes;
     private ExprAST[]      args;

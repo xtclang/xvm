@@ -13,7 +13,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * An "assert" statement.
  * REVIEW encode presence of interval and message as part of node type?
  */
-public class AssertStmtAST
+public final class AssertStmtAST
         extends BinaryAST {
     private ExprAST cond;     // could be null
     private ExprAST interval; // could be null

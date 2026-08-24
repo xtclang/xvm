@@ -12,7 +12,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A "while(True){...}" statement.
  */
-public class LoopStmtAST
+public final class LoopStmtAST
         extends BinaryAST {
 
     private ExprAST[] specialRegs; // RegAllocAST[]

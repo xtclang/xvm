@@ -11,7 +11,7 @@ import org.xvm.util.Handy;
 /**
  * A "for(lval : expr){...}" statement.
  */
-public class ForEachStmtAST
+public final class ForEachStmtAST
         extends BinaryAST {
 
     private final NodeType nodeType;

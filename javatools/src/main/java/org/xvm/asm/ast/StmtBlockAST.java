@@ -18,7 +18,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * Zero or more nested statements.
  */
-public class StmtBlockAST
+public final class StmtBlockAST
         extends BinaryAST {
 
     private BinaryAST[] stmts;

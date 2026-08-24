@@ -11,7 +11,7 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * A DivRem (/%) expression. It differs from {@link RelOpExprAST} that it has two return types.
  */
-public class DivRemExprAST
+public final class DivRemExprAST
         extends BiExprAST {
 
     private TypeConstant[] types;

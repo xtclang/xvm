@@ -18,7 +18,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A statement expression.
  */
-public class StmtExprAST
+public final class StmtExprAST
         extends ExprAST {
 
     private BinaryAST      stmt;

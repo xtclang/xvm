@@ -14,7 +14,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * An expressions that follow the pattern "expression operator expression" and could be of any type.
  */
-public class RelOpExprAST
+public final class RelOpExprAST
         extends BiExprAST {
 
     private TypeConstant type;

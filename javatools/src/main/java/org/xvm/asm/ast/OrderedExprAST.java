@@ -16,7 +16,7 @@ import org.xvm.asm.constants.TypeConstant;
  * and an expression "a <= b" will produce
  *      Not(Ordered(Call("compare", [a, b]), Greater))
  */
-public class OrderedExprAST
+public final class OrderedExprAST
         extends DelegatingExprAST {
 
     private final NodeType nodeType;

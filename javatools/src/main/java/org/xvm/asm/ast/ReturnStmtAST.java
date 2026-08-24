@@ -16,7 +16,7 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.ReturnNStmt;
 /**
  * Zero or more nested statements.
  */
-public class ReturnStmtAST
+public final class ReturnStmtAST
         extends BinaryAST {
 
     private final NodeType nodeType;

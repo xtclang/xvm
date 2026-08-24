@@ -14,8 +14,9 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * An expressions that is based solely on the underlying expression, but may change its type.
  */
-public abstract class UnaryExprAST
-        extends DelegatingExprAST {
+public abstract sealed class UnaryExprAST
+        extends DelegatingExprAST
+        permits NarrowedExprAST, NotNullExprAST, OuterExprAST, UnaryOpExprAST {
     private TypeConstant type;
 
     UnaryExprAST() {}

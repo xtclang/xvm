@@ -19,8 +19,9 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.ListExpr;
 /**
  * A List expression that is not a constant.
  */
-public class ListExprAST
-        extends ExprAST {
+public sealed class ListExprAST
+        extends ExprAST
+        permits TupleExprAST {
 
     private TypeConstant  type;
     private ExprAST[]     values;

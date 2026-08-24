@@ -7,7 +7,7 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * A short-circuiting expression for testing if a sub-expression is null.
  */
-public class NotNullExprAST
+public final class NotNullExprAST
         extends UnaryExprAST {
 
     NotNullExprAST() {}

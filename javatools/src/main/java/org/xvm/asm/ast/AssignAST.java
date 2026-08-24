@@ -21,7 +21,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * This AST node is only an "expression" in the sense that the "left hand side" can itself be used
  * as an expression.
  */
-public class AssignAST
+public final class AssignAST
         extends ExprAST {
 
     ExprAST        lhs;

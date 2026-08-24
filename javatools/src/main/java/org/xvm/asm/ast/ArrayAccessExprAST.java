@@ -11,7 +11,7 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * A single dimensional array access expression.
  */
-public class ArrayAccessExprAST
+public final class ArrayAccessExprAST
         extends ExprAST {
 
     private ExprAST array;

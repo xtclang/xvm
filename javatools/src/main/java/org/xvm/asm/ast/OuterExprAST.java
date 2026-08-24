@@ -14,7 +14,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * An outer expression refers to a structural "parent" of the underlying expression.
  */
-public class OuterExprAST
+public final class OuterExprAST
         extends UnaryExprAST {
 
     private int depth;

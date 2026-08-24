@@ -10,7 +10,7 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * Unpack the underlying tuple into a multi-return.
  */
-public class UnpackExprAST
+public final class UnpackExprAST
         extends DelegatingExprAST {
 
     private TypeConstant[] types;

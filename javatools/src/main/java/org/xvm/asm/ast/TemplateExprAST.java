@@ -15,7 +15,7 @@ import org.xvm.asm.constants.TypeConstant;
  * A string literal expression containing expressions that will be evaluated and concatenated with
  * the literal portions to produce a resulting string.
  */
-public class TemplateExprAST
+public final class TemplateExprAST
         extends ExprAST {
 
     private ExprAST[] exprs;

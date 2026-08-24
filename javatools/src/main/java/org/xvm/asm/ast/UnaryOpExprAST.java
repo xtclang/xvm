@@ -15,7 +15,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * An expressions that follows the pattern "operator expression" or "expression operator" and may
  * change the type of the underlying expression.
  */
-public class UnaryOpExprAST
+public final class UnaryOpExprAST
         extends UnaryExprAST {
     private Operator op;
 

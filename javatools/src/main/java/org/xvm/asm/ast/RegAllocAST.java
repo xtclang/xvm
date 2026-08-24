@@ -23,7 +23,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Allocate a register, i.e. declare a local variable. This AST node is only an "expression" in the
  * sense that the variable (the register itself) can be used as an expression.
  */
-public class RegAllocAST
+public final class RegAllocAST
         extends ExprAST {
 
     private final NodeType nodeType;

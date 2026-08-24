@@ -23,7 +23,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A "new ..." expression.
  */
-public class NewExprAST
+public final class NewExprAST
         extends ExprAST {
 
     private final NodeType nodeType;

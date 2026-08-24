@@ -23,7 +23,10 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A serializable AST-like node to be used for an AST interpreter or back end compiler.
  */
-public abstract class BinaryAST {
+public abstract sealed class BinaryAST
+        permits ExprAST, AssertStmtAST, BreakStmtAST, ContinueStmtAST, DoWhileStmtAST,
+                ForEachStmtAST, ForStmtAST, IfStmtAST, InitAST, LoopStmtAST,
+                ReturnStmtAST, StmtBlockAST, TryCatchStmtAST, WhileStmtAST {
 
     /**
      * @return the byte value (as an int in the range 0..255) that indicates the node type
@@ -241,7 +244,16 @@ public abstract class BinaryAST {
                 case TryFinallyStmt     -> new TryFinallyStmtAST();
                 case AssertStmt         -> new AssertStmtAST();
                 case InitAst            -> InitAST.INSTANCE;
-                default -> throw new UnsupportedOperationException("nodeType: " + this);
+                // the unimplemented node types are listed explicitly instead of hiding in a
+                // default arm: this switch is exhaustive over NodeType, so adding an enum
+                // constant without deciding its node class is a compile error here, not a
+                // runtime UnsupportedOperationException during module deserialization
+                case ReturnTStmt,       // TODO return (expr, expr, ...); has no node class yet
+                     NotCond,           // TODO if (!(String s ?= foo())){...}
+                     NotNullCond,       // TODO if (String s ?= foo()){...}
+                     NotFalseCond,      // TODO if (String s := bar()){...}
+                     MatrixAccessExpr   // TODO x[i, j]
+                                        -> throw new UnsupportedOperationException("nodeType: " + this);
             };
         }
 
@@ -379,7 +391,13 @@ public abstract class BinaryAST {
             return readAST(in, res); // "escape" for expressions
         }
 
-        ExprAST node = (ExprAST) nodeType.instantiate();
+        // the stream must encode an expression node here; with the sealed ExprAST tree this is
+        // a checked wire boundary that reports the corrupt stream, instead of an incidental
+        // ClassCastException surfacing from whatever consumed the mis-typed node later
+        if (!(nodeType.instantiate() instanceof ExprAST node)) {
+            throw new IOException(
+                    "corrupt stream: statement node type in expression position: " + nodeType);
+        }
         node.readBody(in, res);
         return node;
     }

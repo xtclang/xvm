@@ -13,7 +13,7 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.ForStmt;
 /**
  * A "for(init;cond;update){...}" statement.
  */
-public class ForStmtAST
+public final class ForStmtAST
         extends BinaryAST {
 
     private ExprAST[] specialRegs; // RegAllocAST[]

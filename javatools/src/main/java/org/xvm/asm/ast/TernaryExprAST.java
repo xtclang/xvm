@@ -11,7 +11,7 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * A base class for expressions that follow the pattern "expression operator expression".
  */
-public class TernaryExprAST
+public final class TernaryExprAST
         extends ExprAST {
 
     private ExprAST        cond;

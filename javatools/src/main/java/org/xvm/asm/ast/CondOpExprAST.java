@@ -11,7 +11,7 @@ import org.xvm.asm.constants.TypeConstant;
  * An expressions that follow the pattern "expression operator expression" and produces a "Boolean"
  * or "Ordered" result.
  */
-public class CondOpExprAST
+public final class CondOpExprAST
         extends BiExprAST {
 
     private transient TypeConstant type;

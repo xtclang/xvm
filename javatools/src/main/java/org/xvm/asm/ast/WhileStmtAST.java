@@ -13,7 +13,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A "while..do" statement.
  */
-public class WhileStmtAST
+public final class WhileStmtAST
         extends BinaryAST {
 
     private ExprAST   cond;
