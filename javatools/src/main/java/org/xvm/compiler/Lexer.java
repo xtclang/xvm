@@ -450,6 +450,7 @@ public class Lexer
      *
      * @return the next Token
      */
+    @SuppressWarnings("fallthrough")
     protected Token eatToken() {
         Source source   = m_source;
         long   lInitPos = source.getPosition();
@@ -1198,6 +1199,7 @@ public class Lexer
      *
      * @return the resulting token
      */
+    @SuppressWarnings("fallthrough")
     protected Token eatStringChars(long lInitPos, boolean fTemplate, boolean fMultiline) {
         Source source = m_source;
 
@@ -1533,6 +1535,7 @@ public class Lexer
      *
      * @return a PackedInteger
      */
+    @SuppressWarnings("fallthrough")
     protected PackedInteger eatIntegerLiteral(int[] otherResults) {
         Source source = m_source;
 
@@ -1646,6 +1649,7 @@ public class Lexer
                         source.rewind();
                         break PossibleSuffix;
                     }
+                    // fall through
                 default:
                     source.rewind();
                     break;

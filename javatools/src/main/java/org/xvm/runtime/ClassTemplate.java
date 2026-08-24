@@ -2271,6 +2271,7 @@ public abstract class ClassTemplate
         }
 
         @Override
+        @SuppressWarnings("fallthrough")
         public int proceed(Frame frameCaller) {
             // assume that we have class D with an auto-generated initializer (AI), a constructor (CD),
             // and a finalizer (FD) that extends B with a constructor (CB) and a finalizer (FB)

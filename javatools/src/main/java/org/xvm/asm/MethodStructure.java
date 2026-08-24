@@ -2412,6 +2412,7 @@ public class MethodStructure
         /**
          * @return true iff the code can be optimized out
          */
+        @SuppressWarnings("fallthrough")
         public boolean isNoOp() {
             if (m_listOps == null && m_aop == null) {
                 // too early to ask

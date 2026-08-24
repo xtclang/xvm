@@ -1366,6 +1366,7 @@ public class LambdaExpression
         }
 
         @Override
+        @SuppressWarnings("fallthrough")
         protected void markVarRead(boolean fNested, String sName, Token tokName, boolean fDeref,
                                    ErrorListener errs) {
             // variable capture will create a parameter (a variable in this scope) for the lambda,

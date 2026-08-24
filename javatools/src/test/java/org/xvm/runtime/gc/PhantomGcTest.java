@@ -23,6 +23,7 @@ class PhantomGcTest {
 
     static List<C> list = null;
 
+    @SuppressWarnings("fallthrough")
     public static void main(String[] args) {
         // we'll need multiple threads
         // with each thread cycling through different container contexts
@@ -70,6 +71,7 @@ class PhantomGcTest {
                     ctx.watch(list = new ArrayList<C>(), listSize);
 
 
+                // fall through: list mode also allocates its first object
                 default:
                     // allocation mode
                     ctx.alloc(objSize);

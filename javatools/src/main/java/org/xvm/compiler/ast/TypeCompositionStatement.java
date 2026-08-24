@@ -402,6 +402,7 @@ public class TypeCompositionStatement
     private final transient Map<Contribution, List<Expression>> m_mapContribArgs = new ListMap<>(2);
 
     @Override
+    @SuppressWarnings("fallthrough")
     protected void registerStructures(StageMgr mgr, ErrorListener errs) {
         if (getComponent() != null) {
             // stage assumed to be complete
@@ -1398,6 +1399,7 @@ public class TypeCompositionStatement
     /**
      * Error reporting helper for "not a class".
      */
+    @SuppressWarnings("fallthrough")
     private void reportRequireClass(ClassStructure component, Contribution contrib,
                                     TypeConstant typeContrib, ErrorListener errs) {
         String sCode;
@@ -2920,6 +2922,7 @@ public class TypeCompositionStatement
      *
      * @return the "body" of the documentation, as LF-delimited lines, without the leading "* "
      */
+    @SuppressWarnings("fallthrough")
     public static String extractDocumentation(Token token) {
         if (token == null) {
             return null;

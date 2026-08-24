@@ -1106,6 +1106,7 @@ public class InvocationExpression
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
         switch (super.mightAffect(exprLeft, arg)) {
         case DefNo:
@@ -1190,6 +1191,7 @@ public class InvocationExpression
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
         ConstantPool pool   = pool();
         int          cLVals = aLVal.length;

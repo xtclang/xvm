@@ -427,6 +427,7 @@ public class ClassStructure
     /**
      * @return true iff this class implements an "immutable X" interface
      */
+    @SuppressWarnings("fallthrough")
     public boolean isImmutable() {
         switch (getFormat()) {
         case MODULE, PACKAGE, CONST, ENUM, ENUMVALUE:
@@ -477,6 +478,7 @@ public class ClassStructure
         return findChildDeep(sName, true);
     }
 
+    @SuppressWarnings("fallthrough")
     private Component findChildDeep(String sName, boolean fAllowInto) {
         Component child = getChild(sName);
         if (child != null) {
@@ -1143,6 +1145,7 @@ public class ClassStructure
      * @return a first (if more than one) contribution matching the specified identity
      *         or null if none found
      */
+    @SuppressWarnings("fallthrough")
     private Contribution findContributionImpl(IdentityConstant idContrib, boolean fAllowInto,
                                               Set<IdentityConstant> setVisited) {
         if (setVisited == null) {
@@ -1268,6 +1271,7 @@ public class ClassStructure
      *
      * @return a type to rebase onto, if rebasing is required by this class; otherwise null
      */
+    @SuppressWarnings("fallthrough")
     public TypeConstant getRebaseType() {
         ConstantPool pool   = getConstantPool();
         Format       format = getFormat();
@@ -1418,6 +1422,7 @@ public class ClassStructure
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     protected Iterator<IdentityConstant> potentialVirtualChildContributors() {
         List<IdentityConstant> list = null;
 
@@ -1516,6 +1521,7 @@ public class ClassStructure
      *
      * @return the corresponding actual type or null if there is no matching formal type
      */
+    @SuppressWarnings("fallthrough")
     protected boolean containsGenericParamTypeImpl(String sName, boolean fAllowInto) {
         int ix = indexOfGenericParameter(sName);
         if (ix >= 0) {
@@ -1589,6 +1595,7 @@ public class ClassStructure
      *
      * @return the corresponding actual type or null if there is no matching formal type
      */
+    @SuppressWarnings("fallthrough")
     protected TypeConstant getGenericParamTypeImpl(ConstantPool pool, String sName,
                                                    TypeConstant typeActual, boolean fAllowInto) {
         int ix = indexOfGenericParameter(sName);
@@ -1884,6 +1891,7 @@ public class ClassStructure
      *
      * @return the specified MethodStructure or null if not found
      */
+    @SuppressWarnings("fallthrough")
     public MethodStructure findMethodDeep(String sName, Predicate<MethodStructure> test) {
         MethodStructure method = findMethod(sName, test);
         if (method == null) {
@@ -1984,6 +1992,7 @@ public class ClassStructure
      *
      * @return the specified PropertyStructure or null if not found
      */
+    @SuppressWarnings("fallthrough")
     public PropertyStructure findPropertyDeep(String sName) {
         Component component = getChild(sName);
         if (component == null) {
@@ -2042,6 +2051,7 @@ public class ClassStructure
      *
      * @param fAllowInto specifies whether the "Into" contribution is to be skipped
      */
+    @SuppressWarnings("fallthrough")
     protected Relation calculateRelationImpl(ConstantPool pool,
                                              TypeConstant typeLeft, TypeConstant typeRight,
                                              boolean fAllowInto) {
@@ -2212,6 +2222,7 @@ public class ClassStructure
                 // break through
             case Incorporates:
                 fAllowInto = false;
+                // break through
             case Extends: {
                 // the identity constant for those contributions is always a class
                 assert typeContrib.isExplicitClassIdentity(true);
@@ -2345,6 +2356,7 @@ public class ClassStructure
                                       String sName, Access access, List<TypeConstant> listActual) {
         return consumesFormalTypeImpl(pool, sName, access, listActual, true);
     }
+    @SuppressWarnings("fallthrough")
 
     protected boolean consumesFormalTypeImpl(ConstantPool pool, String sName, Access access,
                                              List<TypeConstant> listActual, boolean fAllowInto) {
@@ -2471,6 +2483,7 @@ public class ClassStructure
                                       List<TypeConstant> listActual) {
         return producesFormalTypeImpl(pool, sName, access, listActual, true);
     }
+    @SuppressWarnings("fallthrough")
 
     protected boolean producesFormalTypeImpl(ConstantPool pool, String sName, Access access,
                                              List<TypeConstant> listActual, boolean fAllowInto) {
@@ -2705,6 +2718,7 @@ public class ClassStructure
         return containsSubstitutableMethodImpl(pool, signature, access, fFunction,
                 listParams, getIdentityConstant(), true);
     }
+    @SuppressWarnings("fallthrough")
 
     protected boolean containsSubstitutableMethodImpl(ConstantPool pool, SignatureConstant signature,
                                                       Access access, boolean fFunction,

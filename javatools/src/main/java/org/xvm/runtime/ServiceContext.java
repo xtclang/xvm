@@ -504,6 +504,7 @@ public class ServiceContext {
      * @return a frame that has been suspended or null if the fiber associated with this frame has
      *         finished execution or has been terminated due to an exception or any other means
      */
+    @SuppressWarnings("fallthrough")
     public Frame execute(Frame frame) {
         Fiber fiber   = frame.f_fiber;
         int   iPC     = frame.m_iPC;
@@ -750,6 +751,7 @@ public class ServiceContext {
         Op opReset = aOp[iPC];
         aOp[iPC] = new Op() {
             @Override
+            @SuppressWarnings("fallthrough")
             public int process(Frame frame, int iPC) {
                 int nResult = getDebugger().checkBreakPoint(frame, iPC);
                 switch (nResult) {

@@ -532,6 +532,7 @@ public abstract class ConditionalConstant
      *
      * @return a Bifurcation object that indicates how to minimally bifurcate
      */
+    @SuppressWarnings("fallthrough")
     public Bifurcation bifurcate(ConditionalConstant that) {
         // unwrap a single negation of either this or that
         boolean fNegate = false;

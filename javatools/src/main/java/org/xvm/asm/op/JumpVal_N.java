@@ -200,6 +200,7 @@ public class JumpVal_N
                 : findLarge(frame, iPC, ahValue, cache);
     }
 
+    @SuppressWarnings("fallthrough")
     private int findSmall(Frame frame, int iPC, ObjectHandle[] ahValue, SwitchCache cache) {
         Algorithm[]               aAlg   = cache.columnAlgorithms();
         Map<ObjectHandle, Long>[] aMap   = cache.smallJumpMaps();
@@ -282,6 +283,7 @@ public class JumpVal_N
         return findSmallNatural(frame, iPC, ahValue, ixBits, 0, 0, cache);
     }
 
+    @SuppressWarnings("fallthrough")
     private int findSmallNatural(Frame frame, int iPC, ObjectHandle[] ahValue, long ixBits,
                                  int iRow, int iCol, SwitchCache cache) {
         ObjectHandle[][] aahCases = cache.cases();

@@ -561,6 +561,7 @@ public class ParameterizedTypeConstant
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName) {
         typeActual = typeActual.resolveTypedefs();
 

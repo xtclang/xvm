@@ -714,6 +714,7 @@ public class NamedTypeExpression
      *
      * @return a resulting type
      */
+    @SuppressWarnings("fallthrough")
     protected TypeConstant calculateDefaultType(Context ctx, Constant constTarget, ErrorListener errs) {
         ConstantPool pool = pool();
 

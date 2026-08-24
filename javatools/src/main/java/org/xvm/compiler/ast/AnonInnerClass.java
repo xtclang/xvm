@@ -182,6 +182,7 @@ public class AnonInnerClass {
      * @param exprType  the AST type (used primarily for error reporting)
      * @param type      the type of the contribution to add
      */
+    @SuppressWarnings("fallthrough")
     private void addContribution(TypeExpression exprType, TypeConstant type) {
         // this is largely duplicated from what the TypeExpression classes do, primarily in order
         // to handle the situation in which a typedef expands to something that would have been

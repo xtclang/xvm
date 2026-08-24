@@ -51,6 +51,7 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     public boolean assembleClass(ClassBuilder classBuilder) {
         // do not augment Object and since nRef is both Ref and Var, ignore "Var" interface; it
         // causes circular initialization

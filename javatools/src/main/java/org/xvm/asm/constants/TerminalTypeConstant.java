@@ -152,6 +152,7 @@ public class TerminalTypeConstant
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     public boolean isImmutable() {
         TypeConstant type = resolveTypedefs();
         if (type != this) {
@@ -212,6 +213,7 @@ public class TerminalTypeConstant
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     public boolean isService() {
         TypeConstant type = resolveTypedefs();
         if (type != this) {
@@ -458,6 +460,7 @@ public class TerminalTypeConstant
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     public ResolutionResult resolveContributedName(
            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
         if (!isSingleDefiningConstant()) {
@@ -1662,6 +1665,7 @@ public class TerminalTypeConstant
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     protected Set<SignatureConstant> isInterfaceAssignableFrom(
             TypeConstant typeRight, Access accessLeft, List<TypeConstant> listLeft) {
         if (!isSingleDefiningConstant()) {
@@ -1702,6 +1706,7 @@ public class TerminalTypeConstant
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
                                                boolean fFunction, List<TypeConstant> listParams) {
         if (!isSingleDefiningConstant()) {
@@ -1752,6 +1757,7 @@ public class TerminalTypeConstant
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
@@ -1825,6 +1831,7 @@ public class TerminalTypeConstant
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type

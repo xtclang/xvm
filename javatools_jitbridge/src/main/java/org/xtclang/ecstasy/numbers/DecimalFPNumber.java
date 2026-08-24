@@ -352,6 +352,11 @@ public abstract class DecimalFPNumber
      *
      * @return true iff the two values are equal in terms of their sign, significand, and exponent
      */
+    // Deliberate, verified fallthroughs under the fatal fallthrough build gate: each mixed-width
+    // case pair swaps the two local operands and falls into the symmetric comparison. The state is
+    // purely method-local value plumbing; no lifecycle or owner-sensitive stage can be skipped or
+    // repeated. See docs/reentrancy/lint-parallelism-risk-audit.md (fallthrough classification).
+    @SuppressWarnings("fallthrough")
     public boolean $isSameValue(DecimalFPNumber that) {
         if (this == that) {
             return true;

@@ -2051,6 +2051,7 @@ public class ConstantPool
      *
      * @return an auto-narrowing class type constant that represents the type of "this"
      */
+    @SuppressWarnings("fallthrough")
     public TypeConstant ensureThisTypeConstant(Constant constClass, Access access) {
         ThisClassConstant constId;
         switch (constClass.getFormat()) {

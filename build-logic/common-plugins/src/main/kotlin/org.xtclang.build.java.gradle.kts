@@ -49,12 +49,14 @@ private class JavaCompilerArgsProvider(
 
     override fun asArguments(): Iterable<String> = buildList {
         add("-Xlint:${if (lintSnapshot) "all" else "none"}")
-        // javac lint flags are cumulative, so this re-enables exactly one category on top of the
-        // default "none": constructor this-escape. Combined with the default -Werror below, an
-        // unsuppressed this-escape is a build error everywhere this convention applies. Deliberate
-        // exceptions require a local @SuppressWarnings("this-escape") with an owner/lifetime
-        // comment; see docs/reentrancy/must-audit-backlog.md (build-gate row).
+        // javac lint flags are cumulative, so these re-enable exactly two categories on top of the
+        // default "none": constructor this-escape and switch fallthrough. Combined with the default
+        // -Werror below, an unsuppressed hit in either category is a build error everywhere this
+        // convention applies. Deliberate exceptions require a local @SuppressWarnings with a
+        // comment proving why the escape/fallthrough is safe; see
+        // docs/reentrancy/must-audit-backlog.md (build-gate and fallthrough rows).
         add("-Xlint:this-escape")
+        add("-Xlint:fallthrough")
         if (previewSnapshot) {
             add("--enable-preview")
             if (lintSnapshot) add("-Xlint:preview")

@@ -78,6 +78,7 @@ public class xTerminalConsole
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn) {
         switch (method.getName()) {

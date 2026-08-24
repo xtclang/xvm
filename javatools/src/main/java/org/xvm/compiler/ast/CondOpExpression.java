@@ -179,6 +179,7 @@ public class CondOpExpression
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     public Argument generateArgument(
         Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         if (isConstant()) {
@@ -252,6 +253,7 @@ public class CondOpExpression
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     public void generateConditionalJump(Context ctx, Code code, Label label, boolean fWhenTrue,
                                         ErrorListener errs) {
         if (isConstant()) {

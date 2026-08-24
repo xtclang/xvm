@@ -297,3 +297,38 @@ Style-only for this audit unless tied to a concrete owner boundary:
 - `classfile`,
 - `cast`,
 - and test-only `rawtypes`/`unchecked`.
+
+## Row 133 Fallthrough Classification (2026-08-24)
+
+The composite build now compiles with `-Xlint:fallthrough` fatal (cumulative
+with the this-escape gate in the shared Java convention). The full enumeration
+- run with `-Porg.xtclang.java.maxWarnings` raised, because javac's default
+`-Xmaxwarns 100` truncates naive sweeps - found 84 sites: 81 in main sources,
+3 in GC stress tests.
+
+Classification outcome: 84/84 INTENTIONAL, 0 suspicious.
+
+- 79 sites already carried the codebase's explicit `// fall through` /
+  `// break through` marker; 4 got a missing marker added
+  (`Lexer.eatIntegerLiteral`, `Parser.parseTypeCompositionComponent`,
+  `NameExpression.getMeaning`, and the GC stress switch); 1 is an
+  unreachable structural fall (`xTerminalConsole` print/readLine, where the
+  inner switch covers the full result contract - a future explicit `default:`
+  throw would harden it).
+- The sites the audit feared most were all proven documented protocol:
+  `ServiceContext.execute`'s `R_RETURN_CALL -> R_CALL` and
+  `R_RETURN_EXCEPTION -> R_EXCEPTION` implement pop-then-call exactly as
+  `Op` documents; `ClassTemplate.proceed` maintains its `ixStep++` invariant
+  at every fall; `Utils`' stage machines set `stageNext` before every
+  commented fall; `ClassStructure`'s contribution walks toggle only local
+  `fAllowInto`/`fCheck` flags.
+- 35 methods across 33 files carry method-level
+  `@SuppressWarnings("fallthrough")` as the reviewed-and-proven marker.
+  Class-level suppression is banned: it would blind the gate for future
+  edits of exactly the files where a missed `break` is most dangerous.
+
+The gate converts the comment convention into a machine-checked invariant:
+an unsuppressed fall - the actual bug class, the future forgotten `break` -
+is now a build error everywhere the convention applies. The long-term
+reduction is migrating statement switches to arrow form (`case X ->`), which
+cannot fall through; genuine cascades stay as gated statement switches.

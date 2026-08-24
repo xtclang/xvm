@@ -683,6 +683,7 @@ public class Parser {
      *
      * @return a StatementBlock
      */
+    @SuppressWarnings("fallthrough")
     Statement parseTypeCompositionComponent(Expression exprCondition, boolean fInMethod) {
         // if this is inside a method, there shouldn't be a conditional; that would be handled by
         // an enclosing "if" statement instead
@@ -893,6 +894,7 @@ public class Parser {
                 return parseTypeDeclarationStatementAfterModifiers(lStartPos, exprCondition, doc,
                                                                    modifiers, annotations);
             }
+            // fall through
 
         // the following two case options are listed here solely for doc purposes; while they
         // can be "matched", they cannot be "peeked" (because they're context sensitive)
@@ -1301,6 +1303,7 @@ public class Parser {
      *
      * @return a statement
      */
+    @SuppressWarnings("fallthrough")
     Statement parseStatement() {
         switch (peek().getId()) {
         case SEMICOLON:
@@ -1508,6 +1511,7 @@ public class Parser {
      *
      * @return a for statement
      */
+    @SuppressWarnings("fallthrough")
     Statement parseForStatement() {
         Token keyword = expect(Id.FOR);
         expect(Id.L_PAREN);
@@ -3253,6 +3257,7 @@ public class Parser {
      *
      * @return an expression
      */
+    @SuppressWarnings("fallthrough")
     Expression parsePrimaryExpression(boolean fExtended) {
         switch (peek().getId()) {
         case ANY: {
@@ -3697,6 +3702,7 @@ public class Parser {
      *
      * @return  the file or directory name as a literal path token
      */
+    @SuppressWarnings("fallthrough")
     Token parsePath() {
         StringBuilder sb     = new StringBuilder();
         Token         tokDiv = current();
@@ -4269,6 +4275,7 @@ public class Parser {
      *
      * @return a type expression
      */
+    @SuppressWarnings("fallthrough")
     TypeExpression parseNonBiTypeExpression(boolean fExtended) {
         TypeExpression type;
         Token tokAccess = null;

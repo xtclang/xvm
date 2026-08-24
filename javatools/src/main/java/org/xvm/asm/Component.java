@@ -2668,6 +2668,7 @@ public abstract class Component
          *                     Implements, Into, Incorporates, or Enumerates
          * @param constType    specifies the class type being contributed
          */
+        @SuppressWarnings("fallthrough")
         public Contribution(Composition composition, TypeConstant constType) {
             assert composition != null;
 
@@ -2681,7 +2682,7 @@ public abstract class Component
                 if (constType == null) {
                     throw new IllegalArgumentException("type is required");
                 }
-
+                // fall through
             case Equal:
                 break;
 

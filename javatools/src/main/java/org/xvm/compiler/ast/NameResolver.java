@@ -81,6 +81,7 @@ public class NameResolver
      *
      * @return the constant representing the name, or null if the name could not be resolved
      */
+    @SuppressWarnings("fallthrough")
     public Constant forceResolve(ErrorListener errs) {
         switch (resolve(errs)) {
         case RESOLVED:
@@ -113,6 +114,7 @@ public class NameResolver
      *         logged an error to {@code errs} and given up all hope of resolving the name, or
      *         {@link Result#RESOLVED} to indicate that the name has been successfully resolved
      */
+    @SuppressWarnings("fallthrough")
     public Result resolve(ErrorListener errs) {
         // store off the error list for use by call backs
         // (note: there's no attempt to clean this up later)
@@ -514,6 +516,7 @@ public class NameResolver
      *
      * @return the resolution result
      */
+    @SuppressWarnings("fallthrough")
     private Result resolveFormalDotName(TypeConstant typeConstraint, ErrorListener errs) {
         ResolutionResult result = ResolutionResult.UNKNOWN;
         if (typeConstraint.isSingleDefiningConstant()) {

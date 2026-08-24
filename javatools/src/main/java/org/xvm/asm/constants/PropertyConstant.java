@@ -74,6 +74,7 @@ public class PropertyConstant
      * the protected virtual hook below, so subclass validation remains explicit without exposing a
      * half-constructed PropertyConstant.
      */
+    @SuppressWarnings("fallthrough")
     protected static void validateParent(ParentFormat format, IdentityConstant idParent) {
         switch (format) {
         case PROPERTY:
