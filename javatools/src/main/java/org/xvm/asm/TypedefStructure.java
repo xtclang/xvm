@@ -17,7 +17,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * An XVM Structure that represents a "typedef" statement, which acts as a way to name an arbitrary
  * type, by associating a named structure (this) with a type constant.
  */
-public class TypedefStructure
+public final class TypedefStructure
         extends Component {
     // ----- constructors --------------------------------------------------------------------------
 

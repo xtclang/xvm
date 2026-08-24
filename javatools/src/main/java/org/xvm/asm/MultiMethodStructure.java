@@ -30,7 +30,7 @@ import org.xvm.util.ListMap;
  * together methods that share a name into a group, within which they are identified by a more
  * exacting set of attributes, namely their accessibility and their parameter/return types.
  */
-public class MultiMethodStructure
+public final class MultiMethodStructure
         extends Component {
     // ----- constructors --------------------------------------------------------------------------
 

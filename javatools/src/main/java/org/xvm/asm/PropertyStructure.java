@@ -32,7 +32,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * An XVM Structure that represents a property.
  */
-public class PropertyStructure
+public non-sealed class PropertyStructure
         extends Component {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -11,7 +11,7 @@ import org.xvm.asm.constants.SingletonConstant;
 /**
  * An XVM Structure that represents an entire Package.
  */
-public class PackageStructure
+public final class PackageStructure
         extends ClassStructure {
     // ----- constructors --------------------------------------------------------------------------
 

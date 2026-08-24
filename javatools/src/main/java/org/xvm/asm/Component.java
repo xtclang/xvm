@@ -102,9 +102,11 @@ import static org.xvm.util.Handy.writePackedLong;
  * length of 0 indicates that there are no children. The children section is composed of the number
  * of child components, followed by a sequence of that many components.
  */
-public abstract class Component
+public abstract sealed class Component
         extends XvmStructure
-        implements Documentable, Cloneable, ComponentResolver {
+        implements Documentable, Cloneable, ComponentResolver
+        permits ClassStructure, CompositeComponent, FileStructure, MethodStructure,
+                MultiMethodStructure, PropertyStructure, TypedefStructure {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

@@ -18,7 +18,7 @@ import org.xvm.util.IdentityArrayList;
 /**
  * A Component representing more than one sibling by the same name or identity constant.
  */
-public class CompositeComponent
+public final class CompositeComponent
         extends Component {
     // ----- constructors --------------------------------------------------------------------------
 

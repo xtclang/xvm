@@ -55,8 +55,9 @@ import static org.xvm.util.Handy.writePackedLong;
  * An XVM Structure that represents an entire Class. This is also the base class for module and
  * package structures.
  */
-public class ClassStructure
-        extends Component {
+public sealed class ClassStructure
+        extends Component
+        permits ModuleStructure, PackageStructure {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
