@@ -627,15 +627,9 @@ public final class FileStructure
      * @return an unmodifiable set of the module ids contained within this FileStructure
      */
     public Set<ModuleConstant> moduleIds() {
-        return getModuleByIdMap().keySet();
-    }
-
-    /**
-     * @return a read-only map containing ModuleStructure keyed by ModuleConstant
-     */
-    Map<ModuleConstant, ModuleStructure> getModuleByIdMap() {
-        ensureChildren();
-        return m_moduleById;
+        // unconditional wrapper: the read-only contract must not evaporate under -da; the raw
+        // keySet() view would let a caller remove modules from the live module map
+        return Collections.unmodifiableSet(f_moduleById.keySet());
     }
 
     /**

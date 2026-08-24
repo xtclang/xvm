@@ -70,9 +70,9 @@ public class ListMap<K,V>
      * @return the entries of the map in a List
      */
     public List<Entry<K,V>> asList() {
-        List<Entry<K,V>> list = (List) m_list;
-        assert (list = Collections.unmodifiableList(list)) != null;
-        return list;
+        // unconditional wrapper: the read-only contract must not evaporate under -da; the raw
+        // backing list would let a caller mutate the map's entry storage directly
+        return Collections.unmodifiableList((List) m_list);
     }
 
     /**

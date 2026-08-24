@@ -469,8 +469,8 @@ public abstract class Component
         if (list == null) {
             return Collections.emptyList();
         }
-        assert (list = Collections.unmodifiableList(m_listContribs)) != null;
-        return list;
+        // unconditional wrapper: the read-only contract must not evaporate under -da
+        return Collections.unmodifiableList(list);
     }
 
     /**
@@ -1629,6 +1629,8 @@ public abstract class Component
      * @return an immutable collection of the component's children
      */
     public Collection<? extends Component> children() {
+        // unconditional wrapper: the read-only contract must not evaporate under -da; the raw
+        // values() view would let a caller remove children from the live child map
         return Collections.unmodifiableCollection(getChildByNameMap().values());
     }
 
@@ -2960,8 +2962,8 @@ public abstract class Component
             if (map == null) {
                 return null;
             }
-            assert (map = Collections.unmodifiableMap(map)) != null;
-            return map;
+            // unconditional wrapper: the read-only contract must not evaporate under -da
+            return Collections.unmodifiableMap(map);
         }
 
         /**

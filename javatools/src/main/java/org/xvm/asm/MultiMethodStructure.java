@@ -368,10 +368,9 @@ public class MultiMethodStructure
      * Helper method to return a collection of methods.
      */
     public Collection<MethodStructure> methods() {
-        Collection<MethodStructure> methods = getMethodByConstantMap().values();
-
-        assert (methods = Collections.unmodifiableCollection(methods)) != null;
-        return methods;
+        // the wrapper must exist under -da as well: without it the caller receives the live
+        // values() view of the method map and the read-only contract is assertion-dependent
+        return Collections.unmodifiableCollection(getMethodByConstantMap().values());
     }
 
     /**

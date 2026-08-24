@@ -334,6 +334,7 @@ public class ModuleStructure
      */
     public List<Version> getFingerprintVersionPrefs() {
         assert isFingerprint();
+        // unconditional wrapper: the read-only contract must not evaporate under -da
         return Collections.unmodifiableList(m_listImportPreferVers);
     }
 

@@ -40,9 +40,8 @@ public class CompositeComponent
      * @return a read-only list of components that are represented by this composite component
      */
     public List<Component> components() {
-        List<Component> list = f_siblings;
-        assert (list = Collections.unmodifiableList(list)) != null;
-        return list;
+        // unconditional wrapper: the read-only contract must not evaporate under -da
+        return Collections.unmodifiableList(f_siblings);
     }
 
     // ----- Component methods ---------------------------------------------------------------------
