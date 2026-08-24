@@ -15,8 +15,8 @@ import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.RegisterInfo;
 
-import org.xvm.javajit.registers.ExtendedSlot;
-import org.xvm.javajit.registers.MultiSlot;
+import org.xvm.javajit.ExtendedSlot;
+import org.xvm.javajit.MultiSlot;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;

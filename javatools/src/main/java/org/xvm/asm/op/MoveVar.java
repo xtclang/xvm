@@ -16,7 +16,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.RegisterInfo;
 
-import org.xvm.javajit.registers.Ref;
+import org.xvm.javajit.Ref;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;

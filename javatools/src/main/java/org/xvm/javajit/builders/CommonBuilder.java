@@ -58,9 +58,12 @@ import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
-import org.xvm.javajit.registers.ExtendedSlot;
-import org.xvm.javajit.registers.MultiSlot;
-import org.xvm.javajit.registers.SingleSlot;
+import org.xvm.javajit.ExtendedSlot;
+import org.xvm.javajit.MultiSlot;
+import org.xvm.javajit.Narrowed;
+import org.xvm.javajit.Ref;
+import org.xvm.javajit.SingleSlot;
+import org.xvm.javajit.SingleSlot;
 
 import org.xvm.util.ByteHashCollector;
 import org.xvm.util.ShallowSizeOf;
@@ -747,7 +750,10 @@ public class CommonBuilder
                         .putstatic(CD_this, jitName, cd);
                 } else if (prop.getInitializer() == null) {
                     RegisterInfo reg = loadConstant(code, prop.getInitialValue());
-                    if (reg instanceof ExtendedSlot extSlot) {
+                    // exhaustive over the sealed register kinds: a new kind must state its
+                    // static-field store shape here or this stops compiling
+                    switch (reg) {
+                    case ExtendedSlot extSlot -> {
                         assert extSlot.flavor() == NullablePrimitive;
                         // loadConstant() has already loaded the value and the boolean
                         Label ifTrue = code.newLabel();
@@ -759,7 +765,8 @@ public class CommonBuilder
                         pop(code, extSlot.cd());
                         code.putstatic(CD_this, jitName, reg.cd());
                         code.labelBinding(endIf);
-                    } else if (reg instanceof MultiSlot multiSlot) {
+                    }
+                    case MultiSlot multiSlot -> {
                         ClassDesc[] cds = multiSlot.slotCds();
                         for (int i = cds.length - 1; i >= 0; i--) {
                             code.putstatic(CD_this, jitName + "$" + i, cds[i]);
@@ -777,9 +784,11 @@ public class CommonBuilder
                             code.putstatic(CD_this, jitName, reg.cd());
                             code.labelBinding(endIf);
                         }
-                    } else {
+                    }
+                    case SingleSlot _, Narrowed _, Ref _ -> {
                         assert reg.isSingle();
                         code.putstatic(CD_this, jitName, reg.cd());
+                    }
                     }
                 } else {
                     throw new UnsupportedOperationException("TODO: Static field initializer for " +

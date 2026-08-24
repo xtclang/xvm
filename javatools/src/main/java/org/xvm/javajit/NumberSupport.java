@@ -9,7 +9,6 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.javajit.registers.MultiSlot;
 
 import static java.lang.constant.ConstantDescs.CD_Integer;
 import static java.lang.constant.ConstantDescs.CD_Long;

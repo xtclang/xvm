@@ -69,11 +69,6 @@ import org.xvm.asm.op.Nop;
 
 import org.xvm.javajit.Builder.Loader;
 
-import org.xvm.javajit.registers.ExtendedSlot;
-import org.xvm.javajit.registers.MultiSlot;
-import org.xvm.javajit.registers.Narrowed;
-import org.xvm.javajit.registers.Ref;
-import org.xvm.javajit.registers.SingleSlot;
 
 import static java.lang.constant.ConstantDescs.CD_CallSite;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;

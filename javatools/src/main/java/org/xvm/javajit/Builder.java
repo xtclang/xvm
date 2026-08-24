@@ -26,9 +26,6 @@ import org.xvm.asm.constants.*;
 import org.xvm.javajit.TypeSystem.Artifact;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
-import org.xvm.javajit.registers.ExtendedSlot;
-import org.xvm.javajit.registers.MultiSlot;
-import org.xvm.javajit.registers.SingleSlot;
 
 import org.xvm.type.Decimal128;
 import org.xvm.type.Decimal32;
@@ -1016,22 +1013,29 @@ public abstract class Builder {
      * @param lblNull  the label to jump to if the register is "Null".
      */
     public static void checkNull(CodeBuilder code, RegisterInfo reg, Label lblNull) {
-        if (reg instanceof ExtendedSlot extSlot) {
+        // exhaustive over the sealed register kinds: a new kind must state its Null-check
+        // shape here or this stops compiling, instead of silently emitting a reference
+        // comparison for a register that is not a reference
+        switch (reg) {
+        case ExtendedSlot extSlot -> {
             assert reg.cd().isPrimitive();
 
             code.iload(extSlot.extSlot())
                 .ifne(lblNull);
-        } else if (reg instanceof MultiSlot multiSlot) {
+        }
+        case MultiSlot multiSlot -> {
             assert reg.type().removeNullable().isXvmPrimitive();
 
             code.iload(multiSlot.extSlot())
                 .ifne(lblNull);
-        } else {
+        }
+        case SingleSlot _, Narrowed _, Ref _ -> {
             assert !reg.cd().isPrimitive();
 
             reg.load(code);
             loadNull(code);
             code.if_acmpeq(lblNull);
+        }
         }
     }
 
@@ -1041,22 +1045,27 @@ public abstract class Builder {
      * @param lblNotNull  the label to jump to if the register is "not Null".
      */
     public static void checkNotNull(CodeBuilder code, RegisterInfo reg, Label lblNotNull) {
-        if (reg instanceof ExtendedSlot extSlot) {
+        // exhaustive over the sealed register kinds (see checkNull above)
+        switch (reg) {
+        case ExtendedSlot extSlot -> {
             assert reg.cd().isPrimitive();
 
             code.iload(extSlot.extSlot())
                 .ifeq(lblNotNull);
-        } else if (reg instanceof MultiSlot multiSlot) {
+        }
+        case MultiSlot multiSlot -> {
             assert reg.flavor() == NullableXvmPrimitive;
 
             code.iload(multiSlot.extSlot())
                 .ifeq(lblNotNull);
-        } else {
+        }
+        case SingleSlot _, Narrowed _, Ref _ -> {
             assert !reg.cd().isPrimitive();
 
             reg.load(code);
             loadNull(code);
             code.if_acmpne(lblNotNull);
+        }
         }
     }
 

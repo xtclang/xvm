@@ -10,7 +10,8 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * Represents an information about XTC register.
  */
-public interface RegisterInfo {
+public sealed interface RegisterInfo
+        permits ExtendedSlot, MultiSlot, Narrowed, Ref, SingleSlot {
     /**
      * @return the corresponding register id, which could be a negative value - one of the
      *         Op.A_ constants (e.g. {@link Op#A_THIS})

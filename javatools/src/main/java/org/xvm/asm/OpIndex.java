@@ -28,8 +28,8 @@ import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
 
-import org.xvm.javajit.registers.MultiSlot;
-import org.xvm.javajit.registers.SingleSlot;
+import org.xvm.javajit.MultiSlot;
+import org.xvm.javajit.SingleSlot;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
