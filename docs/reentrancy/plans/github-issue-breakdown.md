@@ -123,6 +123,7 @@ PR whenever wanted:
 | `-Xlint:this-escape` fatal gate | zero suppressions remain; the last one (`Xvm` startup) was eliminated by the boot-factory refactor |
 | `-Xlint:fallthrough` fatal gate + 35 method suppressions + 4 added markers | the classification found ZERO live fallthrough bugs on the branch or master - this is purely protection against the future forgotten `break`; be explicit about that in the PR description |
 | Build-verification habit: full `xdk:installDist` (or `lib-json` compile) alongside unit suites | four masked compile regressions hid behind unit-green builds on this branch |
+| Sealed-hierarchy adoption stages 0-1 (ConditionalConstant/PseudoConstant/FrameDependentConstant/TypeInfo, then BinaryAST) | no behavior change today; converts silently-defaulting format switches (39 repo-wide produce a value on an unknown format) toward compile-checked exhaustiveness so a future added format fails the build instead of silently misclassifying - migration study in `sealed-hierarchy-audit.md` |
 
 Category B - reentrancy/same-JVM enablement. These are not observable bugs
 in one-run-per-process master usage; they are exactly the work that makes
