@@ -250,8 +250,10 @@ public class xLocalClock
                     Container containerRegistered = finish();
                     try {
                         WeakCallback.Callback callback = f_refCallback.extractCallback();
-                        context.callLater(callback.frame(), callback.functionHandle(),
-                                Utils.OBJECTS_NONE);
+                        if (callback != null) {
+                            context.callLater(callback.frame(), callback.functionHandle(),
+                                    Utils.OBJECTS_NONE);
+                        }
                     } finally {
                         unregister(containerRegistered);
                     }
@@ -268,8 +270,11 @@ public class xLocalClock
          * Called when the alarm is canceled by the natural code.
          */
         public boolean cancel() {
-            boolean        fCancelled = m_trigger.cancel();
+            boolean fCancelled = m_trigger.cancel();
             if (fCancelled) {
+                // TimerTask.cancel() returned true, so run() will never execute and the callback
+                // entry would otherwise leak in the service registry for the service's lifetime
+                f_refCallback.discard();
                 unregister(finish());
             }
             return fCancelled;
@@ -282,6 +287,7 @@ public class xLocalClock
          */
         public void cancelAfterScheduleFailure() {
             m_trigger.cancel();
+            f_refCallback.discard();
             unregister(finish());
         }
 

@@ -20,21 +20,34 @@ public class WeakCallback
         super(frame.f_context);
 
         f_lCallbackId = frame.f_context.f_container.f_runtime.makeUniqueId();
-        frame.f_context.ensureCallbackMap().put(f_lCallbackId, new Callback(frame, hFunction));
+        frame.f_context.getCallbackMap().put(f_lCallbackId, new Callback(frame, hFunction));
     }
 
     /**
-     * @return the underlying function; never null
+     * Extract the callback data, removing it from the owning service's registry.
+     *
+     * <p>This runs on shared native timer threads. A missing callback is a normal outcome - the
+     * service may have been collected, or the alarm may have been discarded by a racing cancel -
+     * and must never throw here: an exception escaping a {@code TimerTask} kills the shared static
+     * {@code Timer} and silently disables every alarm in every container.
+     *
+     * @return the callback data, or null if the service is gone or the callback was already
+     *         extracted or discarded
      */
     public Callback extractCallback() {
         ServiceContext context = get();
+        return context == null ? null : context.getCallbackMap().remove(f_lCallbackId);
+    }
+
+    /**
+     * Discard the callback data without running it. Called when an alarm is cancelled, so the
+     * registry does not leak the captured frame and function for the lifetime of the service.
+     */
+    public void discard() {
+        ServiceContext context = get();
         if (context != null) {
-            Callback callback = context.getCallbackMap().remove(f_lCallbackId);
-            if (callback != null) {
-                return callback;
-            }
+            context.getCallbackMap().remove(f_lCallbackId);
         }
-        throw new IllegalStateException();
     }
 
     @Override

@@ -77,6 +77,44 @@ public class NativeCallbackRegistrationTest {
                 "server bind rollback must shut down the partially created executor");
     }
 
+    /**
+     * The service alarm-callback registry was a lazily created plain HashMap: the owning service
+     * put entries on its own thread, but alarm maturation removed them on the process-wide static
+     * Timer thread with no common monitor, so a put resize racing a timer-thread remove could
+     * corrupt the map. A lost entry then made WeakCallback.extractCallback() throw
+     * IllegalStateException on the Timer thread, and an exception escaping a TimerTask kills the
+     * shared static Timer, silently disabling every alarm in every container. Alarm cancellation
+     * also never removed its entry, leaking the captured Frame and FunctionHandle for the life of
+     * the service. Found by the weak/identity registry audit (state-inventory.md, row 160).
+     */
+    @Test
+    public void callbackRegistryIsConcurrentTimerSafeAndLeakFree() throws IOException {
+        var svc = readString("org/xvm/runtime/ServiceContext.java");
+        assertTrue(svc.contains(
+                "private final Map<Long, WeakCallback.Callback> f_mapCallbacks = new ConcurrentHashMap<>();"),
+                "the callback registry must be an eager, final, concurrent map");
+        assertFalse(svc.contains("m_mapCallbacks"),
+                "the registry must not be lazily published through a plain field");
+
+        var callback = readString("org/xvm/runtime/WeakCallback.java");
+        assertFalse(callback.contains("IllegalStateException"),
+                "a missing callback must be a normal null result, never a timer-thread throw");
+        assertTrue(callback.contains("public void discard()"),
+                "cancellation must be able to remove the registry entry");
+
+        var clock = readString("org/xvm/runtime/template/_native/temporal/xLocalClock.java");
+        assertTrue(clock.contains("f_refCallback.discard();"),
+                "LocalClock alarm cancellation must discard the callback entry");
+        assertTrue(clock.contains("if (callback != null) {"),
+                "LocalClock alarm firing must tolerate a discarded callback");
+
+        var timer = readString("org/xvm/runtime/template/_native/temporal/xNanosTimer.java");
+        assertTrue(timer.contains("f_refCallback.discard();"),
+                "NanosTimer alarm cancellation must discard the callback entry");
+        assertTrue(timer.contains("if (callback != null) {"),
+                "NanosTimer alarm firing must tolerate a discarded callback");
+    }
+
     private static String readString(String source) throws IOException {
         var path = Path.of("src/main/java", source);
         return Files.readString(Files.exists(path)

@@ -2776,6 +2776,47 @@ old adopt-in-place path. `MethodInfoTest.owningFreshBodyDoesNotFabricateSelfTarg
 fails on the broken shape and passes here, `xdk:installDist` builds the full
 XDK again, and the cycle-safe equality tests stay green.
 
+### Alarm Callback Registry Is Concurrent, Timer-Safe, And Leak-Free
+
+Found by the row-160 weak/identity registry audit; the broken shape exists
+verbatim on master. `ServiceContext.m_mapCallbacks` was a lazily created plain
+`HashMap` mutated from two unrelated threads with no common monitor: the
+owning service `put` entries (WeakCallback construction, on the service's own
+thread), while alarm maturation called `WeakCallback.extractCallback()` ->
+`HashMap.remove` on the process-wide static Timer threads that back
+`xLocalClock` and `xNanosTimer`.
+
+Two failure modes:
+
+- A `put` that resizes the table while a timer-thread `remove` walks it
+  corrupts the map. A subsequently lost entry made `extractCallback()` throw
+  `IllegalStateException` on the timer thread - and `xLocalClock.Alarm.run()`
+  has no catch around it, so the exception escapes the `TimerTask` and kills
+  the shared static `Timer`. From that moment every alarm in every container
+  is silently dead. This does not need parallel containers: any ordinary
+  program using timers has the service thread and the Timer thread.
+- Alarm cancellation never removed its entry, so every cancelled alarm leaked
+  its captured `Frame` and `FunctionHandle` in the registry for the lifetime
+  of the service.
+
+The fix:
+
+- the registry is an eager, final `ConcurrentHashMap` with a comment stating
+  the cross-thread contract (owner puts, timer threads extract, cancel paths
+  discard);
+- `extractCallback()` returns null instead of throwing: a missing callback is
+  a normal outcome (collected service, or a cancel racing the trigger), and
+  the timer thread must never see an exception;
+- both alarm `run()` paths null-check the extracted callback;
+- both cancel paths call the new `WeakCallback.discard()`: `xLocalClock` only
+  when `TimerTask.cancel()` returned true (which guarantees `run()` never
+  executes), `xNanosTimer` inside its existing `m_fDead` monitor (already
+  mutually exclusive with `run()`).
+
+`NativeCallbackRegistrationTest.callbackRegistryIsConcurrentTimerSafeAndLeakFree()`
+guards the fixed shape and fails on master's lazy-HashMap/throwing shape. The
+fix is self-contained and ports to master as a small standalone PR.
+
 ### Requested Module Loads Preserve Cause
 
 Master's `FileRepository.tryLoad()` and `DirRepository.ModuleInfo.tryLoad()`
