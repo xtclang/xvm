@@ -241,9 +241,9 @@ Two production sites are especially dangerous:
 - Master `javatools/src/main/java/org/xvm/tool/Compiler.java:471` caught
   `Throwable`, prints `"Failed to generate code..."`, prints the Java stack,
   logs a formatted message, and continues the retry loop.
-- `javatools/src/main/java/org/xvm/asm/MethodStructure.java:2077` catches
-  `UnsupportedOperationException` from op assembly, prints a method name, and
-  continues to write the method with whatever op bytes are present.
+- Master `javatools/src/main/java/org/xvm/asm/MethodStructure.java:2077` caught
+  `UnsupportedOperationException` from op assembly, printed a method name, and
+  continued to write the method with whatever op bytes were present (none).
 
 These are must-fix because they make failure non-transactional. Code generation
 and method assembly are not optional trace points; they publish artifacts. A
@@ -253,23 +253,32 @@ with a successful build plus stderr. That is bad in one thread and catastrophic
 for same-process incremental compilation, where stale compiler state and stale
 artifacts can be reused for later runs.
 
-This branch fixes the compiler code-generation boundary by rethrowing `Error`
-directly and routing unchecked compiler defects through the fatal launcher path
-with the cause intact. Method assembly remains open because it needs its own
-artifact-assembly exception contract.
-
-Proper shape:
+This branch fixes both boundaries. The compiler code-generation boundary
+rethrows `Error` directly and routes unchecked compiler defects through the
+fatal launcher path with the cause intact. Method op assembly no longer prints
+and serializes a zero-op body; it fails module assembly with the artifact
+identity and the original cause:
 
 ```java
 try {
-    method.code().ensureAssembled(registry);
+    m_code.ensureAssembled(m_registry);
 } catch (UnsupportedOperationException e) {
-    throw new CodeAssemblyException(
-            "failed to assemble method ops",
-            AssemblyContext.of(method, registry),
-            e);
+    throw new IllegalStateException("op assembly failed for method \""
+            + getIdentityConstant().getPathString() + "\" in module \""
+            + getFileStructure().getModuleId().getName() + '"', e);
 }
 ```
+
+`IllegalStateException` is deliberate: op-assembly failure is a compiler
+defect, not an environmental condition, so it must not be encoded as
+`IOException`. The emit path (`Compiler.emitModules`, `Compiler.addVersion`,
+repository `storeModule`) treats `IOException` as an I/O problem to log or
+retry; classifying a defect that way would let a corrupt-artifact bug be
+swallowed as a failed version stamp. The unchecked exception propagates
+through `FileStructure.writeTo` to the launcher's terminal `Throwable`
+handler, so the build fails with the cause intact. A dedicated
+artifact-assembly exception type remains a design option for the diagnostics
+PR, but it is not needed for correctness.
 
 The compiler boundary should decide whether this is a user diagnostic or an
 internal compiler defect. The assembly method itself must not print and then
@@ -536,7 +545,7 @@ still open:
 | `javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java:780`, `:787`, `:880` | TLS/route traces print timestamped strings to stderr. | Trace output is not level-controlled, not routed by host, and not correlated with server/container/route ownership. |
 | `javatools/src/main/java/org/xvm/runtime/template/_native/crypto/xRTCertificateManager.java:151` and `:501` | Temporarily prints stack traces before raising obscure XTC exceptions. | The TODO admits this is temporary; it still loses typed cause and owner context. |
 | `javatools/src/main/java/org/xvm/asm/FileRepository.java:206` and `DirRepository.java:371` | Prints load failure to stdout and returns null. | Repository load failure becomes "module not found" unless the caller already knows this exact stdout text matters. |
-| `javatools/src/main/java/org/xvm/asm/MethodStructure.java:2077` | Catches `UnsupportedOperationException` while assembling ops, prints, and continues. | Assembly can proceed after a code-generation failure; this can hide a corrupt or incomplete method body. |
+| `javatools/src/main/java/org/xvm/asm/MethodStructure.java:2077` | Master caught `UnsupportedOperationException` while assembling ops, printed, and continued to serialize the method with zero op bytes; fixed in this branch. | Assembly could proceed after a code-generation failure, persisting a corrupt method body while the build looked successful. |
 | `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3498` | Prints "Unsupported tuple type..." as a soft assert and returns incompatible. | A type-system invariant failure is a typed diagnostic, not stderr. |
 
 Trace mode should be able to write the book on a failing run. A proper
@@ -585,7 +594,7 @@ Must-fix exception/logging boundaries:
 | `javatools/src/main/java/org/xvm/javajit/JitConnector.java:142` | Master printed unhandled XTC exceptions at `:150`; fixed in this branch by keeping a non-zero result. | A failed program could report success after a printed exception. |
 | `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:554` | Master printed every `Throwable` from op execution and translated it to a generic XTC runtime error; fixed in this branch. | Java `Error`, ownership assertion failures, and runtime defects could become normal language exceptions. |
 | `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Master code generation caught `Throwable`, printed, logged, and kept looping; fixed in this branch. | A compiler defect could be downgraded to console noise and later phases could run on corrupted state. |
-| `javatools/src/main/java/org/xvm/asm/MethodStructure.java:2077` | Method op assembly failure is printed and the method still writes its op byte count. | This can produce or persist a broken module while the build path only saw stderr. |
+| `javatools/src/main/java/org/xvm/asm/MethodStructure.java:2077` | Master printed the op-assembly failure and still wrote the method with zero op bytes; fixed in this branch. | This could produce or persist a broken module while the build path only saw stderr. |
 | `javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:497` | Master used a "must not happen" async failure path that only asserted false inside a callback; fixed in this branch. | With assertions disabled, the code could continue with null values or incomplete failure propagation. |
 | `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:229` | Master discarded the `CompletableFuture` returned by `scheduleIO(task)` for queued writes; fixed in this branch. | Async IO failure could disappear after the native method returned OK. |
 | `javatools/src/main/java/org/xvm/asm/FileRepository.java:206` and `DirRepository.java:371` on requested-module paths | Load failure is printed and converted to null. | A concrete repository failure can become indistinguishable from missing module. Best-effort scanning may return null; requested loads need cause. |
@@ -756,7 +765,7 @@ after failure, or make ownership/reentrancy bugs unobservable.
 | Runtime op boundary | `ServiceContext.java:554` | Done in this branch: do not catch all `Throwable` and translate runtime defects into generic catchable XTC exceptions. Preserve Java cause and owner/frame context. |
 | JIT host boundary | `JitConnector.java:142` | Done in this branch: unhandled XTC exceptions produce a non-zero result. Printing is secondary. |
 | Compiler codegen boundary | `Compiler.java:471` | Done in this branch: do not continue after `Throwable`. Rethrow fatal errors, preserve cause, and attach compiler/module/phase context through the launcher failure path. |
-| Method assembly | `MethodStructure.java:2077` | Do not print and assemble through unsupported op generation. Fail the module assembly with method context. |
+| Method assembly | `MethodStructure.java:2077` | Done in this branch: op-assembly failure throws `IllegalStateException` with method and module identity and the `UnsupportedOperationException` cause, instead of printing and serializing a zero-op method body. |
 | Async future callback | `xFuture.java:497` | Done in this branch for `Future.and`: do not rely on `assert false` for impossible async failure. Complete exceptionally or route through runtime failure diagnostics. |
 | Discarded async IO future | `xRawOSFileChannel.java:229` | Done in this branch for `submit`: retain the scheduled write future and route late failure through the container failure channel. |
 | Requested module load | `FileRepository.java:206`, `DirRepository.java:371` | Preserve cause when the host requested that module. Best-effort scans may continue, but requested loads need typed failure. |

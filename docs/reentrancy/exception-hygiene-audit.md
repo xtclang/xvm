@@ -123,6 +123,7 @@ been logged and the task code treats the non-zero code as failure.
 | P0 | `javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xLocalClock.java:121` | Must-fix, fixed in branch | `Alarm` registers keep-alive in the constructor before `scheduleTimer()`. The catch calls `alarm.cancel()`, but an unscheduled trigger may not unregister. Startup/schedule failure can leak callback ownership. | Fixed by moving registration out of construction and adding `cancelAfterScheduleFailure()`, which unregisters from the stored owner independently of `TimerTask.cancel()` result. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java:280` and `:287` | Must-fix, fixed in branch | Server startup registers a native callback, then creates contexts. If a post-registration startup step throws, the catch terminates the service context but does not unregister the callback. `join()` can hang on callback count. | Fixed by tracking registration and running `rollbackBind(...)` before raising the XTC I/O exception. Rollback unregisters the callback, stops partial Java servers, shuts down the executor, clears routes, and clears the native handle. |
 | P1 | `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Must-fix, fixed in branch | Code generation caught `Throwable`, printed to stderr, logged, and continued. This could absorb `Error` subclasses and keep compiling after corrupted compiler state. | Fixed by rethrowing `Error` directly and treating unchecked code-generation defects as fatal launcher failures with the original cause attached. |
+| P1 | `javatools/src/main/java/org/xvm/asm/MethodStructure.java:2077` | Must-fix, fixed in branch | Method op assembly caught `UnsupportedOperationException` from op encoding, printed one stderr line, and continued serializing the method with zero op bytes. A compiler defect could persist a corrupt module that read back as a successful build. | Fixed by rethrowing as `IllegalStateException` with the method path and module name and the original cause. The unchecked defect propagates through `FileStructure.writeTo` to the launcher's terminal boundary instead of being reclassified as `IOException`, which callers legitimately treat as an environmental I/O condition. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:556` | Must-fix, fixed in branch | Each op execution caught `Throwable`, printed stack, and raised a generic XTC `"Run-time error"` exception. Java VM defects and ownership assertions could become user-catchable language exceptions. | Fixed by catching only unchecked Java `RuntimeException`/`Error` at the central op boundary. Natural XTC exceptions are returned by op implementations as `R_EXCEPTION`; VM/runtime defects are wrapped with op/frame context and published through the host failure channel. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:229` | Must-fix, fixed in branch | `scheduleIO(task); // don't wait` discarded the returned `CompletableFuture`; any write failure completed an unobserved future while the method returned OK. | Fixed by preserving `submit()` as a non-blocking queue operation while attaching a completion observer. Queued write failures are recorded through the container failure channel instead of being dropped. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:491` and `:497` | Must-fix, fixed in branch | `CompletableFuture.allOf(...).whenComplete` said `cfThis.get()`/`cfThat.get()` "must not happen" and only asserted on `Throwable`. If interruption or an impossible-but-real completion race occurred, `hAnd` could be completed with nulls or never completed correctly. The already-complete fast path also read `cfThis` twice and ignored `cfThat`. | Fixed by reading `cfThat` on the fast path, completing `hAnd` with `Utils.translate(...)` on async get failure, and restoring interrupt status for `InterruptedException`. |
@@ -288,8 +289,9 @@ P0:
 
 P1:
 
-1. DONE in this branch for op execution and compiler code generation: stop
-   catching `Throwable` at mutation-heavy execution/codegen boundaries.
+1. DONE in this branch for op execution, compiler code generation, and method
+   op assembly: stop catching and continuing at mutation-heavy
+   execution/codegen/serialization boundaries.
 2. DONE in this branch: fix unobserved async write failure in
    `xRawOSFileChannel.invokeSubmit()`.
 3. DONE in this branch: complete futures exceptionally instead of asserting in
@@ -573,6 +575,50 @@ Successful code generation and normal retry behavior are unchanged. Only the
 previously undefined unchecked-defect path changes. `CompilerCodegenFailureTest`
 guards the source shape that matters for master compatibility: no catch-all
 `Throwable`, no ad hoc stderr reporting, and cause-preserving fatal propagation.
+
+## Fixed In This Branch: Method Op Assembly Failure Is Terminal
+
+`MethodStructure.assemble(...)` produces the serialized method body. When op
+bytes are not yet cached, it calls `Code.ensureAssembled(registry)`, which
+encodes every op via `Op.write(...)`. Master caught the
+`UnsupportedOperationException` that op encoding throws for an unencodable op
+(a pseudo-op that survived into final assembly, or a body that was never
+compiled), printed one line to stderr, and fell through:
+
+```java
+} catch (UnsupportedOperationException e) {
+    System.err.println("Error in MethodStructure.assemble() of ops for "
+                           + this.getParent().getContainingClass().getName() + "."
+                           + this.getName() + ": " + e);
+}
+```
+
+Falling through means `m_abOps` stays null and the very next statements write
+the method with a zero op-byte count. The module file is structurally valid
+and reads back cleanly, so a compiler defect was persisted as a method with an
+empty body while the build reported success. This is the worst failure shape
+for incremental compilation and LSP hosting: the only evidence was stderr text,
+and downstream consumers cached and linked the corrupt artifact. Master was
+also internally inconsistent: the identical `ensureAssembled(...)` call in
+`ensureRuntimeInfo()`/`forceAssembly(...)` let the same exception propagate.
+
+The branch makes op-assembly failure terminal. The catch rethrows
+`IllegalStateException` carrying the method path, the module name, and the
+original `UnsupportedOperationException` cause. `IllegalStateException` is
+deliberate: this is a compiler defect, not an environmental condition, so it
+must not become `IOException` — `Compiler.emitModules`, `Compiler.addVersion`,
+and repository `storeModule` paths catch `IOException` as an ordinary I/O
+problem, which would re-swallow the defect. The unchecked exception propagates
+through `FileStructure.writeTo` to the launcher's terminal `Throwable`
+boundary, so the build fails with the cause intact.
+
+Successful assembly is unchanged; only the previously print-and-continue
+defect path changes. `MethodStructureAssemblyFailureTest` proves the fix
+behaviorally: it serializes a method containing an op with no encoding and
+requires `IllegalStateException` with artifact context and preserved cause. On
+master the same test observes `writeTo` completing without any exception. A
+second source-shape test guards against reintroducing stderr-and-continue in
+the assembly region.
 
 ## Fixed In This Branch: Raw File Submit Observes Queued Write Failure
 

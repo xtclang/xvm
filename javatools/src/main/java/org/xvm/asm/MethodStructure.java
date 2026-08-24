@@ -2073,9 +2073,13 @@ public class MethodStructure
             try {
                 m_code.ensureAssembled(m_registry);
             } catch (UnsupportedOperationException e) {
-                System.err.println("Error in MethodStructure.assemble() of ops for "
-                                       + this.getParent().getContainingClass().getName() + "."
-                                       + this.getName() + ": " + e);
+                // Op encoding failed, so no valid body exists for this method. Serializing the
+                // method with zero op bytes would persist a corrupt module that reads back as a
+                // successful build, so module assembly must fail here, identifying the artifact
+                // and keeping the original cause.
+                throw new IllegalStateException("op assembly failed for method \""
+                        + getIdentityConstant().getPathString() + "\" in module \""
+                        + getFileStructure().getModuleId().getName() + '"', e);
             }
         }
 

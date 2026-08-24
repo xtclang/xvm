@@ -73,6 +73,7 @@ Use this as the first pass when preparing actual PR branches from `master`.
 | Parameter, method, and handle-copy fixes | `7f82e0a1e`, `ed7220bee`, the `GenericHandle.maskAs(...)` cross-owner guard slice, and the same-owner `GenericHandle.cloneAs(...)` inflated-ref backing slice | Constant adoption validator, broad compiler clone cleanup, base `ObjectHandle.cloneAs(...)` subclass audit |
 | Constructor-escape removal in shared ASM/runtime | `1249e2a0f`, `47d7ab30e`, `93189541f`, `16915ebe7`, `7b7fc2036`, `70bf202ef` where source areas match | JIT constructor escapes and compiler/parser-only cleanup |
 | Runtime failure propagation | MainContainer cause-preservation wave, worker terminal-failure channel, op-loop VM-defect propagation, `Future.and` completion failure handling, and raw file submit failure observation | Broad exception hygiene |
+| Compiler/ASM terminal failure boundaries | `b00654356 Make compiler codegen failures terminal` and the method op-assembly terminal-failure slice (`MethodStructure.assemble` with `MethodStructureAssemblyFailureTest`) | PR 15 structured diagnostics, repository requested-load cause preservation |
 | JIT ownership cleanup | `36c24a974`, `cb81116cb`, the JIT unhandled-result wave, plus the separate JIT plan work | Interpreter runtime template ownership |
 | Documentation-only hardening studies | `f0a6a71b1` and any uncommitted plan/audit docs | Source changes unless the PR is explicitly mixed for review proof |
 
@@ -2415,6 +2416,8 @@ Primary source areas:
 - `javatools/src/main/java/org/xvm/asm/ErrorListener.java`
 - `javatools/src/main/java/org/xvm/tool/Launcher.java`
 - `javatools/src/main/java/org/xvm/tool/Compiler.java`
+- `javatools/src/main/java/org/xvm/asm/MethodStructure.java` (op-assembly
+  terminal boundary, already fixed in branch)
 - compiler AST conversion/type-fitting paths
 - runtime/JIT host boundaries that currently print stack traces
 - `manualTests/build.gradle.kts`
@@ -2439,6 +2442,16 @@ Documentation sources:
 Run the production print source-shape test and a focused compiler fixture test
 for any migrated diagnostic site. If the PR changes Gradle logging or
 dependencies, also run the relevant task with `--configuration-cache`.
+
+The terminal failure boundaries already fixed in the branch carry their own
+red-on-master proof and can be extracted as a smaller slice ahead of this PR:
+
+```bash
+./gradlew :javatools:test \
+  --tests 'org.xvm.tool.CompilerCodegenFailureTest' \
+  --tests 'org.xvm.asm.MethodStructureAssemblyFailureTest' \
+  --configuration-cache --console=plain --warning-mode=all
+```
 
 ### Semantic / Performance Equivalence Notes
 
