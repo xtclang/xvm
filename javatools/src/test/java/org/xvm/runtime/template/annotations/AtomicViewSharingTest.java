@@ -27,6 +27,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.annotations.xAtomicInt128.AtomicLongLongHandle;
 import org.xvm.runtime.template.annotations.xAtomicIntNumber.AtomicJavaLongHandle;
 import org.xvm.runtime.template.annotations.xInject.InjectedHandle;
+import org.xvm.runtime.template.annotations.xLazy.LazyHandle;
 
 import org.xvm.runtime.template.numbers.LongLong;
 
@@ -138,6 +139,40 @@ public class AtomicViewSharingTest {
             hView.setReferent(hSecond);
             assertSame(hFirst, hRef.getReferent(),
                     "the first resolution must win; later attempts are quiet no-ops");
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    /**
+     * The lazy initialization guard must be shared by all views. The old shape synchronized on
+     * the handle instance and kept the allowed-to-assign fiber set in a per-view field, so a
+     * fiber registered through one view was invisible through another: the legal lazy recompute
+     * race then raised a spurious immutable-property exception, and two views did not exclude
+     * each other while computing the "at most once" value. This test is red on the old per-view
+     * shape: unregistering through a different view returned false.
+     */
+    @Test
+    public void lazyInitGuardIsSharedAcrossViews() {
+        assumeTrue(systemModulesAvailable(), "compiled XDK system modules are required");
+
+        var runtime = new Runtime();
+        try {
+            var container = NativeContainer.create(runtime, systemRepository());
+            var pool      = container.getConstantPool();
+            var clz       = new ClassComposition(container, container.getTemplate("Object"),
+                    pool.typeObject());
+
+            var hRef  = new LazyHandle(clz, "probe") {};
+            var hView = (LazyHandle) hRef.cloneAs(view(clz));
+            assertNotSame(hRef, hView);
+
+            // the fiber token is opaque to the guard; null suffices to prove set identity
+            hRef.registerAssign(null);
+            assertTrue(hView.unregisterAssign(null),
+                    "a fiber registered through one view must be visible through every view");
+            assertFalse(hRef.unregisterAssign(null),
+                    "unregistration must consume the single shared registration");
         } finally {
             runtime.shutdownXVM();
         }

@@ -85,7 +85,7 @@ public class xLazy
     }
 
     protected int completeInvokeSet(Frame frame, LazyHandle hLazy, ObjectHandle hValue) {
-        synchronized (hLazy) {
+        synchronized (hLazy.f_guard) {
             boolean fAllowDupe = hLazy.unregisterAssign(frame.f_fiber);
             if (hLazy.isAssigned()) {
                 return fAllowDupe
@@ -106,14 +106,18 @@ public class xLazy
     public static class LazyHandle
             extends RefHandle {
         /**
-         * A set of services that have seen this Lazy unassigned. Only used by lazy properties
-         * on immutable objects that could be shared across services.
+         * The initialization guard shared by every cloneAs view of this lazy reference.
          *
-         * In theory, this could leak a service reference in a weird scenario, when some code
-         * arbitrarily checks the "assigned" property on a lazy property ref, but takes no other
-         * action.
+         * <p>The old shape synchronized on the handle instance and kept the allowed-to-assign
+         * fiber set in a per-view field, but cloneAs views are shallow copies: two views of one
+         * lazy property did not exclude each other, so the "compute at most once" value could be
+         * computed and assigned twice, and a fiber registered through one view was invisible
+         * through another, which turned the legal lazy recompute race into a spurious
+         * immutable-property exception. The lazily computed value itself lives in the parent
+         * object's shared field storage, so the guard state must be exactly as shared as the
+         * value it guards. The final field makes every shallow view copy share this one guard.
          */
-        protected Set<Fiber> m_setInitFiber;
+        protected final InitGuard f_guard = new InitGuard();
 
         protected LazyHandle(TypeComposition clazz, String sName) {
             super(clazz, sName);
@@ -131,33 +135,52 @@ public class xLazy
         /**
          * Register the specified fiber as "allowed to assign".
          */
-        protected synchronized void registerAssign(Fiber fiber) {
-            Set<Fiber> setInit = m_setInitFiber;
-            if (setInit == null) {
-                m_setInitFiber = setInit = new HashSet<>();
-            }
-            setInit.add(fiber);
+        protected void registerAssign(Fiber fiber) {
+            f_guard.register(fiber);
         }
 
         /**
-         * Unregister the specified fiber from "allowed to assign" set.
+         * Unregister the specified fiber from the "allowed to assign" set.
          *
-         * This method must be called while holding synchronization on the var.
-         *
-         * @return true iff the specified service has been told that this var is unassigned and
+         * @return true iff the specified fiber has been told that this var is unassigned and
          *              therefore is allowed to set it
          */
         protected boolean unregisterAssign(Fiber fiber) {
-            boolean    fAllow  = false;
-            Set<Fiber> setInit = m_setInitFiber;
-            if (setInit != null) {
-                fAllow = setInit.remove(fiber);
+            return f_guard.unregister(fiber);
+        }
 
-                if (setInit.isEmpty()) {
-                    m_setInitFiber = null;
+        /**
+         * The shared initialization guard: the monitor for compute/assign mutual exclusion across
+         * all views, and the set of fibers that have observed the reference unassigned and are
+         * therefore allowed a duplicate assignment.
+         *
+         * <p>In theory the fiber set could leak a service reference in a weird scenario, when
+         * some code arbitrarily checks the "assigned" property on a lazy property ref but takes
+         * no other action; that pre-existing caveat is unchanged.
+         */
+        protected static class InitGuard {
+            private Set<Fiber> setInitFiber;
+
+            synchronized void register(Fiber fiber) {
+                Set<Fiber> setInit = setInitFiber;
+                if (setInit == null) {
+                    setInitFiber = setInit = new HashSet<>();
                 }
+                setInit.add(fiber);
             }
-            return fAllow;
+
+            synchronized boolean unregister(Fiber fiber) {
+                boolean    fAllow  = false;
+                Set<Fiber> setInit = setInitFiber;
+                if (setInit != null) {
+                    fAllow = setInit.remove(fiber);
+
+                    if (setInit.isEmpty()) {
+                        setInitFiber = null;
+                    }
+                }
+                return fAllow;
+            }
         }
     }
 }
