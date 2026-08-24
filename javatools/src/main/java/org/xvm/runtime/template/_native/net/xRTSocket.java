@@ -253,7 +253,7 @@ public class xRTSocket
             closeQuietly(socket);
             return frame.raiseException(xException.illegalState(frame, "socket construct failed"));
         }
-        hSocket.socket = socket;
+        hSocket.setSocket(socket);
         return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hSocket);
     }
 
@@ -264,7 +264,7 @@ public class xRTSocket
      * Implementation of "immutable Byte[] readBytesImpl(Int count)" method.
      */
     private static int invokeReadBytesImpl(Frame frame, SocketHandle hSocket, int cBytes, int iReturn) {
-        Socket socket = hSocket.socket;
+        Socket socket = hSocket.getSocket();
         if (socket == null || socket.isClosed()) {
             return frame.raiseException(xException.ioException(frame, "socket closed"));
         }
@@ -309,7 +309,7 @@ public class xRTSocket
      * Implementation of "void writeBytesImpl(Byte[] bytes, Int offset, Int count)" method.
      */
     private static int invokeWriteBytesImpl(Frame frame, SocketHandle hSocket, ObjectHandle[] ahArg) {
-        Socket socket = hSocket.socket;
+        Socket socket = hSocket.getSocket();
         if (socket == null || socket.isClosed()) {
             return frame.raiseException(xException.ioException(frame, "socket closed"));
         }
@@ -353,7 +353,7 @@ public class xRTSocket
      * Implementation of "Int availableImpl()" method.
      */
     private static int invokeAvailableImpl(Frame frame, SocketHandle hSocket, int iReturn) {
-        Socket socket = hSocket.socket;
+        Socket socket = hSocket.getSocket();
         if (socket == null || socket.isClosed()) {
             return frame.assignValue(iReturn,
                     frame.container().nativeTemplates().int64().makeJavaLong(0));
@@ -372,7 +372,7 @@ public class xRTSocket
      * Implementation of "void shutdownInputImpl()" and "void shutdownOutputImpl()" methods.
      */
     private static int invokeShutdownImpl(Frame frame, SocketHandle hSocket, boolean fInput) {
-        Socket socket = hSocket.socket;
+        Socket socket = hSocket.getSocket();
         if (socket == null || socket.isClosed()) {
             return Op.R_NEXT;
         }
@@ -394,8 +394,8 @@ public class xRTSocket
      * Implementation of "void closeImpl()" method.
      */
     private static int invokeCloseImpl(Frame frame, SocketHandle hSocket) {
-        closeQuietly(hSocket.socket);
-        hSocket.socket = null;
+        closeQuietly(hSocket.getSocket());
+        hSocket.setSocket(null);
         return Op.R_NEXT;
     }
 
@@ -424,10 +424,28 @@ public class xRTSocket
 
     public static class SocketHandle
             extends ServiceHandle {
-        public volatile Socket socket;
+        /**
+         * The underlying native socket lives in a holder shared by every view of this handle,
+         * so view clones cannot splinter the state (the idiom of
+         * {@code xRTServer.HttpServerHandle}). This handle is created with a masked
+         * composition ({@code getCanonicalType()} is {@code net.Socket}, not the native
+         * class), so {@code revealOrigin()} manufactures a fresh view clone on native
+         * entries; with the old per-view {@code socket} field the registered service handle
+         * kept {@code null} forever, and any additional access view silently dropped the
+         * close-path write.
+         */
+        private final Socket[] f_aoSocket = new Socket[1];
 
         public SocketHandle(TypeComposition clazz, ServiceContext context) {
             super(clazz, context);
+        }
+
+        public Socket getSocket() {
+            return f_aoSocket[0];
+        }
+
+        public void setSocket(Socket socket) {
+            f_aoSocket[0] = socket;
         }
     }
 
