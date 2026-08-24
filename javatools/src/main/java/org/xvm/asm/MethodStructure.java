@@ -1790,7 +1790,10 @@ public final class MethodStructure
         that.m_structFinally = null;
 
         if (this.m_source != null) {
-            that.m_source = this.m_source.clone();
+            // that.new re-binds the inner class's outer reference to the clone; the old
+            // Object.clone() left it pointing at this method, so the copied source resolved
+            // getConstantPool() through the wrong owner
+            that.m_source = that.new Source(this.m_source);
         }
 
         return that;
@@ -2834,8 +2837,7 @@ public final class MethodStructure
     /**
      * The Source class represents the source code that was used to compile the method code.
      */
-    protected class Source
-            implements Cloneable {
+    protected class Source {
         // ----- constructors -----------------------------------------------------------------
 
         /**
@@ -2853,6 +2855,24 @@ public final class MethodStructure
         protected Source(int iLine, String sSrc) {
             m_iFirstLine = iLine;
             m_sSrc       = sSrc;
+        }
+
+        /**
+         * Copy constructor, replacing the retired Cloneable mechanism. Source is an inner
+         * class, and Object.clone() copied the hidden outer reference, so a cloned method's
+         * source stayed bound to the ORIGINAL method - its getConstantPool() calls resolved
+         * through the wrong owner. Constructing the copy from the target method
+         * ({@code that.new Source(...)}) re-binds the outer reference correctly. The line
+         * arrays are shared like the old shallow clone; that is safe because
+         * {@link Constant#registerConstants(ConstantPool, Constant[])} is copy-on-write.
+         *
+         * @param that  the source to copy
+         */
+        protected Source(Source that) {
+            m_iFirstLine = that.m_iFirstLine;
+            m_sSrc       = that.m_sSrc;
+            m_aconstSrc  = that.m_aconstSrc;
+            m_anIndents  = that.m_anIndents;
         }
 
         // ----- fields -----------------------------------------------------------------------
@@ -3021,18 +3041,6 @@ public final class MethodStructure
             }
         }
 
-        /**
-         * Create a clone of this source.
-         *
-         * @return the new Source clone
-         */
-        protected Source clone() {
-            try {
-                return (Source) super.clone();
-            } catch (CloneNotSupportedException e) {
-                throw new IllegalStateException();
-            }
-        }
 
         protected void disassemble(DataInput in)
                 throws IOException {

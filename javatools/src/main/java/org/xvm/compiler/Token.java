@@ -15,8 +15,7 @@ import static org.xvm.util.Handy.appendString;
 /**
  * Representation of a language token.
  */
-public class Token
-        implements Cloneable {
+public final class Token {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -43,6 +42,23 @@ public class Token
         m_lEndPos   = lEndPos;
         m_id        = id;
         m_oValue    = oValue;
+    }
+
+    /**
+     * Copy constructor, replacing the retired Cloneable mechanism. Produces a snapshot of this
+     * token including the in-place mutable identity/position/whitespace state, which is what
+     * {@code Parser.mark()} needs to be able to restore after composite-token peeling mutates
+     * the live token.
+     *
+     * @param that  the token to copy
+     */
+    public Token(Token that) {
+        m_lStartPos           = that.m_lStartPos;
+        m_lEndPos             = that.m_lEndPos;
+        m_id                  = that.m_id;
+        m_oValue              = that.m_oValue;
+        m_fLeadingWhitespace  = that.m_fLeadingWhitespace;
+        m_fTrailingWhitespace = that.m_fTrailingWhitespace;
     }
 
     /**
@@ -431,13 +447,6 @@ public class Token
         return sb.toString();
     }
 
-    public Token clone() {
-        try {
-            return (Token) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
-    }
 
 
     // ----- Token identities ----------------------------------------------------------------------

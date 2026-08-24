@@ -24,8 +24,8 @@ import static org.xvm.util.Handy.readFileChars;
  * A representation of an Ecstasy source code file, handling the first two phases of lexical analysis
  * (line termination, location and Unicode escapes).
  */
-public class Source
-        implements Constants, Cloneable {
+public final class Source
+        implements Constants {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -104,6 +104,24 @@ public class Source
         assert ach != null;
         m_ach = ach;
         m_cch = ach.length;
+    }
+
+    /**
+     * Copy constructor, replacing the retired Cloneable mechanism: same source text and
+     * file/node identity, with the read position at the very beginning of the source code
+     * (the cursor fields default to zero, which is exactly what the old clone-then-reset
+     * produced). The character array is shared, not copied, matching the old shallow copy;
+     * it is treated as read-only by convention.
+     *
+     * @param that  the source to copy
+     */
+    public Source(Source that) {
+        m_ach                 = that.m_ach;
+        m_cch                 = that.m_cch;
+        m_fEscapesEncountered = that.m_fEscapesEncountered;
+        m_node                = that.m_node;
+        m_sFile               = that.m_sFile;
+        m_file                = that.m_file;
     }
 
 
@@ -458,15 +476,6 @@ public class Source
      * @return a clone of this Source, but with the position reset to the beginning of the source
      *         code
      */
-    public Source clone() {
-        try {
-            Source that = (Source) super.clone();
-            that.reset();
-            return that;
-        } catch (CloneNotSupportedException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     /**
      * Reset the position to the very beginning of the source code.
