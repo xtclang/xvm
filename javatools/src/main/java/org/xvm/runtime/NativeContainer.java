@@ -103,7 +103,12 @@ public class NativeContainer
      * preserving the previous "ready before returned to the connector" behavior.
      */
     public static NativeContainer create(Runtime runtime, ModuleRepository repository) {
-        return new NativeContainer(runtime, repository).initializeNativeTemplates();
+        // register only after construction and template initialization complete, matching the
+        // MainContainer/NestedContainer post-construction registration discipline; registration
+        // makes the native parent visible to world-state diagnostics (snapshotWorld), which must
+        // enumerate the WHOLE world from the runtime registry, native parents included
+        return runtime.registerContainer(
+                new NativeContainer(runtime, repository).initializeNativeTemplates());
     }
 
     private NativeContainer(Runtime runtime, ModuleRepository repository) {

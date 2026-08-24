@@ -80,6 +80,7 @@ explicit owner APIs, and typed runtime accessors.
 | `org.xvm.runtime.template.annotations.AtomicViewSharingTest` | Constructor-final shared cells and the first-wins injected referent (branch-only shapes); master's lazily installed per-view fields split one Atomic into two and can resolve one injection twice. |
 | `org.xvm.runtime.HandleConstantOwnerGuardTest` | `HandleConstant.getHandleFor(Container)` guard API (branch-only); master's `getHandle(Frame)` serves the live handle raw with no ownership check. |
 | `org.xvm.runtime.OwnershipDiagnosticsTest` | Runtime ownership diagnostic graph walker/validator. |
+| `org.xvm.runtime.WorldSnapshotTest` | `OwnershipDiagnostics.snapshotWorld(Runtime)`, `WorldSnapshot`/`WorldDiff`, and post-construction native container registration (branch-only world-state slice 1). |
 | `org.xvm.runtime.RuntimeTest` | Generic `Runtime.registerContainer(...)` return type. |
 | `org.xvm.runtime.SingletonConstantTest` | Branch helper construction surfaces used by singleton lifecycle tests. |
 | `org.xvm.runtime.template._native.web.xRTServerTest` | Route/key-manager helper API changes. |

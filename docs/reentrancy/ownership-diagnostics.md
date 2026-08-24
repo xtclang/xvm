@@ -337,9 +337,23 @@ compiler trees can be swept by one mechanism.
 
 ### Slices
 
-1. Structured snapshot model plus `snapshotWorld(runtime)` rooted at the
-   container registry; text dump becomes a renderer. Existing tests keep
-   passing; new assertions become possible.
+1. DONE in this branch: structured snapshot model plus `snapshotWorld(runtime)`
+   rooted at the container registry. `WorldSnapshot` carries every live
+   container's identity row plus the full cross-set `Validation`; `render()`
+   is one textual view of it; `diffFrom(before)` produces a `WorldDiff` whose
+   `retained()` entries are the sequential-run leak signal (the registry holds
+   containers weakly, so a completed run's container appears in a later world
+   only while something still strongly references it). Native containers now
+   register in the runtime registry post-construction like Main/Nested
+   containers, so the world enumeration genuinely covers the whole world.
+   Proven by `WorldSnapshotTest`:
+
+   ```java
+   WorldSnapshot before = OwnershipDiagnostics.snapshotWorld(runtime);
+   // ... run N+1 ...
+   WorldSnapshot after  = OwnershipDiagnostics.snapshotWorld(runtime);
+   after.diffFrom(before).retained();   // completed-run survivors = leaks
+   ```
 2. Execution-state capture: fibers, frames, current op, registers, callback
    counts; quiesced mode for stress harnesses.
 3. Generic reflective reachability sweep with owner-extractor registry,

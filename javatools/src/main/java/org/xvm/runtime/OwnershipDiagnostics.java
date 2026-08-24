@@ -165,6 +165,143 @@ public final class OwnershipDiagnostics {
     }
 
     /**
+     * Capture a structured snapshot of the whole world: every container currently registered with
+     * the runtime, plus the full ownership validation run across that complete set.
+     *
+     * <p>This is slice 1 of the world-state snapshot plan (see
+     * {@code docs/reentrancy/ownership-diagnostics.md}): the snapshot is a queryable value, the
+     * text dump is just one rendering of it, and two snapshots are diffable. The intended
+     * sequential-run usage is: snapshot the world after run N completes, run N+1, snapshot again,
+     * and treat every {@link WorldDiff#retained() retained} container from a completed earlier run
+     * as a liveness leak - the registry only holds containers weakly, so a completed run's
+     * container can appear in a later world only while something still strongly references it.
+     * Execution-state capture (fibers, frames, registers) and the generic reflective reachability
+     * sweep are the next slices.
+     *
+     * @param runtime  the runtime whose registered containers should be captured
+     *
+     * @return the world snapshot
+     */
+    public static WorldSnapshot snapshotWorld(Runtime runtime) {
+        requireNonNull(runtime, "runtime");
+
+        List<Container> containers = new ArrayList<>(runtime.containers());
+        containers.sort(Comparator
+                .comparing((Container container) -> String.valueOf(container))
+                .thenComparingInt(System::identityHashCode));
+
+        List<ContainerInfo> infos = containers.stream()
+                .map(container -> new ContainerInfo(
+                        System.identityHashCode(container),
+                        String.valueOf(container),
+                        Integer.toHexString(System.identityHashCode(container.getConstantPool()))))
+                .toList();
+
+        return new WorldSnapshot(infos, validate(containers.toArray(Container[]::new)));
+    }
+
+    /**
+     * One container's identity row in a {@link WorldSnapshot}. The identity hash is the diff key;
+     * the snapshot deliberately does not retain the container object itself, so holding old
+     * snapshots for comparison cannot itself keep dead worlds alive.
+     */
+    public record ContainerInfo(int identity, String label, String pool) {}
+
+    /**
+     * A structured, diffable capture of every live container and the ownership validation across
+     * the complete set.
+     */
+    public record WorldSnapshot(List<ContainerInfo> containers, Validation validation) {
+        public WorldSnapshot {
+            containers = List.copyOf(containers);
+        }
+
+        /**
+         * @return true iff the captured world has no illegal owner relationship
+         */
+        public boolean isValid() {
+            return validation.isValid();
+        }
+
+        /**
+         * Compare this (later) world against an earlier one by container identity.
+         *
+         * @param before  the earlier world snapshot
+         *
+         * @return the containers added since, retained across, and removed since {@code before}
+         */
+        public WorldDiff diffFrom(WorldSnapshot before) {
+            requireNonNull(before, "before");
+
+            Map<Integer, ContainerInfo> old = before.containers.stream()
+                    .collect(Collectors.toMap(ContainerInfo::identity, info -> info,
+                            (a, b) -> a));
+            Map<Integer, ContainerInfo> now = this.containers.stream()
+                    .collect(Collectors.toMap(ContainerInfo::identity, info -> info,
+                            (a, b) -> a));
+
+            List<ContainerInfo> added    = this.containers.stream()
+                    .filter(info -> !old.containsKey(info.identity())).toList();
+            List<ContainerInfo> retained = this.containers.stream()
+                    .filter(info -> old.containsKey(info.identity())).toList();
+            List<ContainerInfo> removed  = before.containers.stream()
+                    .filter(info -> !now.containsKey(info.identity())).toList();
+            return new WorldDiff(added, retained, removed);
+        }
+
+        /**
+         * @return a multi-line human-readable rendering of the snapshot
+         */
+        public String render() {
+            StringBuilder sb = new StringBuilder("world: ")
+                    .append(containers.size())
+                    .append(" container(s)");
+            for (ContainerInfo info : containers) {
+                sb.append("\n  - ").append(info.label())
+                  .append(" id=").append(Integer.toHexString(info.identity()))
+                  .append(" pool=").append(info.pool());
+            }
+            sb.append('\n')
+              .append(isValid() ? "ownership: valid" : validation.message());
+            return sb.toString();
+        }
+    }
+
+    /**
+     * The identity-keyed difference between two world snapshots. For sequential same-JVM runs,
+     * {@link #retained()} entries that belong to a completed earlier run are liveness leaks.
+     */
+    public record WorldDiff(List<ContainerInfo> added,
+                            List<ContainerInfo> retained,
+                            List<ContainerInfo> removed) {
+        public WorldDiff {
+            added    = List.copyOf(added);
+            retained = List.copyOf(retained);
+            removed  = List.copyOf(removed);
+        }
+
+        /**
+         * @return a multi-line human-readable rendering of the diff
+         */
+        public String render() {
+            StringBuilder sb = new StringBuilder("world diff:");
+            renderSection(sb, "added", added);
+            renderSection(sb, "retained", retained);
+            renderSection(sb, "removed", removed);
+            return sb.toString();
+        }
+
+        private static void renderSection(StringBuilder sb, String label,
+                                          List<ContainerInfo> infos) {
+            sb.append('\n').append(label).append(": ").append(infos.size());
+            for (ContainerInfo info : infos) {
+                sb.append("\n  - ").append(info.label())
+                  .append(" id=").append(Integer.toHexString(info.identity()));
+            }
+        }
+    }
+
+    /**
      * Validate a handle graph as if it were being used by the specified owner.
      *
      * @param expected  the expected owning container
