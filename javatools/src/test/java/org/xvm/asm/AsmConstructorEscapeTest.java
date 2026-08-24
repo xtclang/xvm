@@ -83,17 +83,21 @@ public class AsmConstructorEscapeTest {
         TypeConstant[] returnTypes = {pool.typeBoolean()};
         var sig = pool.ensureSignatureConstant(
                 "conditional", ConstantPool.NO_TYPES, returnTypes);
-        var method = new HookDetectingMethodStructure(mm, Component.Format.METHOD.ordinal()
+        // the protected constructor is same-package accessible, so no subclass probe is
+        // needed; the no-overridable-call-during-construction half is enforced at compile
+        // time by the fatal -Xlint:this-escape gate, which is what lets MethodStructure be
+        // final. What remains observable: the constructor-safe path initializes the
+        // conditional-return metadata, and the mutator still works post-construction.
+        var method = new MethodStructure(mm, Component.Format.METHOD.ordinal()
                 | Constants.Access.PUBLIC.FLAGS, pool.ensureMethodConstant(
-                        mm.getIdentityConstant(), sig), returns);
+                        mm.getIdentityConstant(), sig), null, Annotation.NO_ANNOTATIONS,
+                returns, Parameter.NO_PARAMS, true, false);
 
         assertTrue(method.isConditionalReturn());
-        assertEquals(0, method.conditionalReturnCalls);
 
         method.setConditionalReturn(false);
 
         assertFalse(method.isConditionalReturn());
-        assertEquals(1, method.conditionalReturnCalls);
     }
 
     /**
@@ -124,23 +128,23 @@ public class AsmConstructorEscapeTest {
         var pool = file.getConstantPool();
         var clz  = file.getModule().createClass(
                 Constants.Access.PUBLIC, Component.Format.CLASS, "Test", null);
-        var property = new HookDetectingPropertyStructure(clz,
+        // same-package protected constructor; the no-overridable-call half is enforced by the
+        // fatal -Xlint:this-escape gate (which lets PropertyStructure be final), so what this
+        // pins is the surviving half: construction initializes the metadata directly, and the
+        // public mutators still work after construction
+        var property = new PropertyStructure(clz,
                 Component.Format.PROPERTY.ordinal() | Constants.Access.PUBLIC.FLAGS,
-                pool.ensurePropertyConstant(clz.getIdentityConstant(), "value"),
+                pool.ensurePropertyConstant(clz.getIdentityConstant(), "value"), null,
                 Constants.Access.PRIVATE, pool.typeString());
 
         assertSame(pool.typeString(), property.getType());
         assertEquals(Constants.Access.PRIVATE, property.getVarAccess());
-        assertEquals(0, property.setVarAccessCalls);
-        assertEquals(0, property.setTypeCalls);
 
         property.setVarAccess(Constants.Access.PUBLIC);
         property.setType(pool.typeBoolean());
 
         assertEquals(Constants.Access.PUBLIC, property.getVarAccess());
         assertSame(pool.typeBoolean(), property.getType());
-        assertEquals(1, property.setVarAccessCalls);
-        assertEquals(1, property.setTypeCalls);
     }
 
     /**
@@ -208,7 +212,7 @@ public class AsmConstructorEscapeTest {
 
         Parameter[] params = {param};
         var method     = createCloneableMethod(pool, Parameter.NO_PARAMS, params);
-        var clone      = method.cloneForTest();
+        var clone      = (MethodStructure) method.cloneBody();
         var cloneParam = clone.getParam(0);
 
         assertTrue(param.isImplicitDeref());
@@ -232,7 +236,7 @@ public class AsmConstructorEscapeTest {
                 new Parameter(pool, pool.typeString(), "value", null, false, 0, false)};
         var method = createCloneableMethod(pool, returns, params);
 
-        var clone = method.cloneForTest();
+        var clone = (MethodStructure) method.cloneBody();
 
         assertSame(clone, clone.getReturn(0).getContaining());
         assertSame(clone, clone.getParam(0).getContaining());
@@ -267,14 +271,17 @@ public class AsmConstructorEscapeTest {
         assertSame(sourceDeref, getParameterField(sourceParam, "m_regDeref"));
     }
 
-    private static CloneableMethodStructure createCloneableMethod(
+    private static MethodStructure createCloneableMethod(
             ConstantPool pool, Parameter[] returns, Parameter[] params) {
         var mm  = createMultiMethod(pool, "method");
         var sig = pool.ensureSignatureConstant(
                 "method", toTypes(params), toTypes(returns));
-        return new CloneableMethodStructure(mm, Component.Format.METHOD.ordinal()
+        // the protected constructor and cloneBody() are same-package accessible: no subclass
+        // is needed, which is what lets MethodStructure be final
+        return new MethodStructure(mm, Component.Format.METHOD.ordinal()
                 | Constants.Access.PUBLIC.FLAGS, pool.ensureMethodConstant(
-                        mm.getIdentityConstant(), sig), returns, params);
+                        mm.getIdentityConstant(), sig), null, Annotation.NO_ANNOTATIONS,
+                returns, params, true, false);
     }
 
     private static MultiMethodStructure createMultiMethod(ConstantPool pool, String name) {
@@ -308,22 +315,6 @@ public class AsmConstructorEscapeTest {
             return field.get(param);
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException(e);
-        }
-    }
-
-    private static final class CloneableMethodStructure extends MethodStructure {
-        CloneableMethodStructure(
-                XvmStructure    parent,
-                int             flags,
-                MethodConstant  id,
-                Parameter[]     returns,
-                Parameter[]     params) {
-            super(parent, flags, id, null, Annotation.NO_ANNOTATIONS, returns, params,
-                    true, false);
-        }
-
-        MethodStructure cloneForTest() {
-            return (MethodStructure) cloneBody();
         }
     }
 
@@ -361,66 +352,5 @@ public class AsmConstructorEscapeTest {
         private int clearCalls;
     }
 
-    private static final class HookDetectingMethodStructure extends MethodStructure {
-        HookDetectingMethodStructure(
-                XvmStructure    parent,
-                int             flags,
-                MethodConstant  id,
-                Parameter[]     returns) {
-            super(parent, flags, id, null, Annotation.NO_ANNOTATIONS, returns,
-                    Parameter.NO_PARAMS, true, false);
-        }
-
-        @Override
-        public void setConditionalReturn(boolean conditional) {
-            if (!constructed) {
-                throw new IllegalStateException(
-                        "setConditionalReturn called before subclass construction");
-            }
-
-            ++conditionalReturnCalls;
-            super.setConditionalReturn(conditional);
-        }
-
-        private boolean constructed = true;
-        private int conditionalReturnCalls;
-    }
-
-    private static final class HookDetectingPropertyStructure extends PropertyStructure {
-        HookDetectingPropertyStructure(
-                XvmStructure       parent,
-                int                flags,
-                PropertyConstant   id,
-                Constants.Access   varAccess,
-                TypeConstant       type) {
-            super(parent, flags, id, null, varAccess, type);
-        }
-
-        @Override
-        public void setVarAccess(Constants.Access access) {
-            if (!constructed) {
-                throw new IllegalStateException(
-                        "setVarAccess called before subclass construction");
-            }
-
-            ++setVarAccessCalls;
-            super.setVarAccess(access);
-        }
-
-        @Override
-        public void setType(TypeConstant type) {
-            if (!constructed) {
-                throw new IllegalStateException(
-                        "setType called before subclass construction");
-            }
-
-            ++setTypeCalls;
-            super.setType(type);
-        }
-
-        private boolean constructed = true;
-        private int setVarAccessCalls;
-        private int setTypeCalls;
-    }
 
 }

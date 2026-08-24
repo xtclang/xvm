@@ -75,7 +75,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * An XVM Structure that represents a method or a function.
  */
-public non-sealed class MethodStructure
+public final class MethodStructure
         extends Component {
     /**
      * Enables validation that op arrays exposed to runtime frames have completed address/link

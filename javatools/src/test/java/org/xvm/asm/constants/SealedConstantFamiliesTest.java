@@ -96,12 +96,12 @@ public class SealedConstantFamiliesTest {
     }
 
     /**
-     * Stage 3: the ValueConstant tree. StringConstant is the one documented non-sealed hatch
-     * (the pool-registration deadlock test latches a StringConstant subclass).
+     * Stage 3: the ValueConstant tree, no hatches - the pool-registration deadlock latch now
+     * extends the (unsealed) Constant root directly, so StringConstant is final.
      */
     @Test
     public void valueConstantTreeIsSealed() {
-        assertPermitsWithHatches(ValueConstant.class, setOf(StringConstant.class),
+        assertPermits(ValueConstant.class,
                 ArrayConstant.class, BFloat16Constant.class, ByteConstant.class,
                 CharConstant.class, DecimalAutoConstant.class, DecimalConstant.class,
                 FPNConstant.class, FSNodeConstant.class, FileStoreConstant.class,
@@ -119,20 +119,14 @@ public class SealedConstantFamiliesTest {
     // ----- helpers -------------------------------------------------------------------------------
 
     private static void assertPermits(Class<?> root, Class<?>... leaves) {
-        assertPermitsWithHatches(root, Set.of(), leaves);
-    }
-
-    private static void assertPermitsWithHatches(Class<?> root, Set<String> hatches,
-                                                 Class<?>... leaves) {
         assertTrue(root.isSealed(), root.getSimpleName() + " must be sealed");
         assertEquals(setOf(leaves), setOf(root.getPermittedSubclasses()),
                 root.getSimpleName() + " permits list drifted; update the sealed-hierarchy"
                         + " audit if this is intentional");
         for (Class<?> leaf : leaves) {
-            assertTrue(leaf.isSealed() || Modifier.isFinal(leaf.getModifiers())
-                            || hatches.contains(leaf.getName()),
+            assertTrue(leaf.isSealed() || Modifier.isFinal(leaf.getModifiers()),
                     leaf.getSimpleName() + " must be final or sealed; a non-sealed leaf"
-                            + " reopens the family unless it is a documented test hatch");
+                            + " reopens the family");
         }
     }
 

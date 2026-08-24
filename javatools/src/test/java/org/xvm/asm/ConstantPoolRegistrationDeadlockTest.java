@@ -6,8 +6,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
-import org.xvm.asm.constants.StringConstant;
-
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -49,8 +47,8 @@ class ConstantPoolRegistrationDeadlockTest {
         var bPublishedIncomplete = new CountDownLatch(1);
         var bMayFinish          = new CountDownLatch(1);
 
-        var xB = new LatchStringConstant(poolTarget, bPublishedIncomplete, bMayFinish, null, null);
-        var xA = new LatchStringConstant(poolOther, null, null, aInsideAdoption, bPublishedIncomplete);
+        var xB = new LatchConstant(poolTarget, bPublishedIncomplete, bMayFinish, null, null);
+        var xA = new LatchConstant(poolOther, null, null, aInsideAdoption, bPublishedIncomplete);
 
         var resultA  = new AtomicReference<Constant>();
         var failureA = new AtomicReference<Throwable>();
@@ -127,23 +125,25 @@ class ConstantPoolRegistrationDeadlockTest {
     }
 
     /**
-     * A string constant with test seams at the two points the deadlock interleaving needs:
-     * the pre-monitor adoption copy (thread A) and the post-publication recursive registration
+     * A constant with test seams at the two points the deadlock interleaving needs: the
+     * pre-monitor adoption copy (thread A) and the post-publication recursive registration
      * phase (thread B). The hooks contain no synchronization on the pool, so they cannot mask or
-     * cause the deadlock themselves.
+     * cause the deadlock themselves. Extends the (unsealed) Constant root directly, like the
+     * other pool-machinery fakes: the interleaving lives in register()/adoption, which is
+     * Constant-level machinery, so no leaf class needs to stay open for this test.
      */
-    private static final class LatchStringConstant extends StringConstant {
+    private static final class LatchConstant extends Constant {
         private final CountDownLatch signalOnRegisterConstants;
         private final CountDownLatch awaitInRegisterConstants;
         private final CountDownLatch signalOnAdoption;
         private final CountDownLatch awaitInAdoption;
 
-        LatchStringConstant(ConstantPool pool,
-                            CountDownLatch signalOnRegisterConstants,
-                            CountDownLatch awaitInRegisterConstants,
-                            CountDownLatch signalOnAdoption,
-                            CountDownLatch awaitInAdoption) {
-            super(pool, VALUE);
+        LatchConstant(ConstantPool pool,
+                      CountDownLatch signalOnRegisterConstants,
+                      CountDownLatch awaitInRegisterConstants,
+                      CountDownLatch signalOnAdoption,
+                      CountDownLatch awaitInAdoption) {
+            super(pool);
             this.signalOnRegisterConstants = signalOnRegisterConstants;
             this.awaitInRegisterConstants  = awaitInRegisterConstants;
             this.signalOnAdoption          = signalOnAdoption;
@@ -151,12 +151,39 @@ class ConstantPoolRegistrationDeadlockTest {
         }
 
         @Override
-        protected StringConstant copyForAdoption(AdoptionContext context) {
+        public Format getFormat() {
+            return Format.IntLiteral;
+        }
+
+        @Override
+        public String getValueString() {
+            return VALUE;
+        }
+
+        @Override
+        public String getDescription() {
+            return VALUE;
+        }
+
+        @Override
+        protected int compareDetails(Constant that) {
+            // every LatchConstant is equal to every other, so thread A's adopted copy finds
+            // thread B's published constant in the double-checked lookup
+            return that instanceof LatchConstant ? 0 : -1;
+        }
+
+        @Override
+        protected int computeHashCode() {
+            return VALUE.hashCode();
+        }
+
+        @Override
+        protected Constant copyForAdoption(AdoptionContext context) {
             if (signalOnAdoption != null) {
                 signalOnAdoption.countDown();
             }
             awaitQuietly(awaitInAdoption, "adoption hook");
-            return new LatchStringConstant(context.pool(), null, null, null, null);
+            return new LatchConstant(context.pool(), null, null, null, null);
         }
 
         @Override

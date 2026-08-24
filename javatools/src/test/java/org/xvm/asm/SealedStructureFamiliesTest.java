@@ -14,10 +14,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Pins the sealed Component tree (sealed-hierarchy audit, stage 4). MethodStructure and
- * PropertyStructure are the two documented non-sealed hatches: the constructor-escape and
- * owned-copy tests subclass them, and unlike the constant-tree probes those fakes exercise
- * behavior (cloning, hook ordering) that the compile-time gates do not fully replace yet.
+ * Pins the sealed Component tree (sealed-hierarchy audit, stage 4), with no hatches: the
+ * structure fakes that subclassed MethodStructure/PropertyStructure were retired - the test
+ * package can reach the protected constructors and cloneBody() directly, and the
+ * no-overridable-call-during-construction property is enforced at compile time by the fatal
+ * -Xlint:this-escape gate.
  */
 public class SealedStructureFamiliesTest {
     @Test
@@ -35,8 +36,8 @@ public class SealedStructureFamiliesTest {
                 setOf(ClassStructure.class.getPermittedSubclasses()));
 
         for (var leaf : new Class<?>[] {CompositeComponent.class, FileStructure.class,
-                MultiMethodStructure.class, TypedefStructure.class, ModuleStructure.class,
-                PackageStructure.class}) {
+                MethodStructure.class, PropertyStructure.class, MultiMethodStructure.class,
+                TypedefStructure.class, ModuleStructure.class, PackageStructure.class}) {
             assertTrue(Modifier.isFinal(leaf.getModifiers()),
                     leaf.getSimpleName() + " must be final");
         }
