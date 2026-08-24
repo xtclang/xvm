@@ -451,22 +451,6 @@ class JsonMapStoreTest {
 
     /**
      * Regression test for a `keys.size == size` desync in `JsonMapStore.keysAt()`.
-     *
-     * `keysAt()` merges two sorted streams -- committed `history` entries and the current
-     * transaction's own pending `mods` -- to build the live key list, while `size` is computed
-     * independently (and correctly) by `sizeAt()`. In the `Greater` case (the current pending
-     * mod's key sorts before the just-pulled `histEntry`), when that mod is the *last* pending
-     * mod, the code took the "mods exhausted" branch and broke out of the merge loop without
-     * ever classifying `histEntry` -- it had already been consumed from the `history` iterator
-     * this round, so it is neither added in the `Greater` branch (which only adds the mod's own
-     * key) nor recoverable by the trailing "drain the remainder of history" loop (the iterator
-     * has already moved past it). That key silently disappears from the result, and
-     * `keys.size` ends up exactly one short of `size`.
-     *
-     * This reproduces deterministically (not key-order-dependent by luck) by seeding two
-     * committed keys ("B", "C") and then, within a single open transaction, inserting one new
-     * key ("A") that sorts before both -- "A" is the only (and therefore last) pending mod, and
-     * "B" is the `histEntry` that gets dropped.
      */
     @Test
     void shouldNotLoseHistoryKeyWhenLastPendingModSortsBeforeIt() {

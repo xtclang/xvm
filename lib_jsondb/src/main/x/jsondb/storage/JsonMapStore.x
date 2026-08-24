@@ -398,10 +398,29 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         switch (model) {
         case Empty:
         case Small..Medium:
+
+            /**
+             * Determine whether the history contains a live value at the specified read point.
+             *
+             * This check applies only when the current transaction has no modification for the
+             * corresponding key; a current modification shadows the historical value.
+             *
+             * @return True iff the history contains a non-deleted value at readId
+             */
+            Boolean isHistoryVisible(History valueHistory, Int readId) {
+                if (Int txFloor := valueHistory.floor(readId),
+                        MapValue value := valueHistory.get(txFloor),
+                        value != Deleted) {
+                    return True;
+                }
+                return False;
+            }
+
             // all the keys and values are in memory; just ship all the keys back in one array
-            Key[]   keys        = new Key[](size);
-            Int     readId      = txId;
-            val     histEntries = history.entries.iterator();
+            Key[] keys        = new Key[](size);
+            Int   readId      = txId;
+            val   histEntries = history.entries.iterator();
+
             WriteTx: if (Changes tx := checkTx(txId)) {
                 readId = tx.readId;
                 if (tx.peekMods().empty) {
@@ -411,38 +430,35 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 // complicated: keep an iterator of the changes to merge into the iterator of
                 // the underlying (readId) transaction version
                 val modEntries = tx.ensureMods().entries.iterator();
-                assert var modEntry := modEntries.next();
+                assert Map.Entry<Key, MapValue> modEntry := modEntries.next();
 
                 // create an iterator of the keys in the history to use as the "main" iterator
-                NextKey: while (True) {
-                    if (val histEntry := histEntries.next()) {
+                // for the "zipper" loop
+                NextHistoryKey: while (True) {
+                    if (Map.Entry<Key, History> histEntry := histEntries.next()) {
                         while (True) {
                             // determine if we are at a junction point between the history and
                             // the transactional modifications
                             switch (histEntry.key <=> modEntry.key) {
                             case Lesser:
-                                // this is the common case: lots more keys in the history
-                                // than in a given transaction
-                                History valueHistory = histEntry.value;
-                                if (Int txFloor := valueHistory.floor(readId),
-                                        MapValue value := valueHistory.get(txFloor),
-                                        value != Deleted) {
+                                // this history entry has no matching transaction modification
+                                if (isHistoryVisible(histEntry.value, readId)) {
                                     keys += histEntry.key;
                                 }
-                                continue NextKey;
+                                continue NextHistoryKey;
 
                             case Equal:
+                                // the current transaction's modification shadows history
                                 if (modEntry.value != Deleted) {
                                     keys += modEntry.key; // i.e. same as histEntry.key
                                 }
 
                                 if (modEntry := modEntries.next()) {
-                                    continue NextKey;
+                                    continue NextHistoryKey;
                                 } else {
                                     // we have exhausted the transaction's modifications;
-                                    // just break out and drain the remainder of the keys
-                                    // in the map history
-                                    break NextKey;
+                                    // just break out and drain the remainder of the history map
+                                    break NextHistoryKey;
                                 }
 
                             case Greater:
@@ -452,22 +468,16 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                                 }
 
                                 if (modEntry := modEntries.next()) {
-                                    break; // do NOT go to NextKey
+                                    break; // do NOT go to NextHistoryKey
                                 } else {
-                                    // we have exhausted the transaction's modifications; the
-                                    // current histEntry was already pulled from the iterator
-                                    // this round but was never classified against a mod
-                                    // (unlike the Equal case, where histEntry.key==modEntry.key
-                                    // already covers it) -- classify it here before draining
-                                    // the remainder of history, or it is silently dropped and
-                                    // keys.size ends up one short of size().
-                                    History valueHistory = histEntry.value;
-                                    if (Int txFloor := valueHistory.floor(readId),
-                                            MapValue value := valueHistory.get(txFloor),
-                                            value != Deleted) {
+                                    // the current history key follows the last modified key from
+                                    // the transaction; the history entry has already been taken
+                                    // from the iterator, so add its key before exiting the "zipper"
+                                    // loop (the rest will be drained below)
+                                    if (isHistoryVisible(histEntry.value, readId)) {
                                         keys += histEntry.key;
                                     }
-                                    break NextKey;
+                                    break NextHistoryKey;
                                 }
                             }
                         }
@@ -479,18 +489,14 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                             }
                         } while (modEntry := modEntries.next());
 
-                        break NextKey;
+                        break NextHistoryKey;
                     }
                 }
             }
 
             // take whatever keys remain in the history iterator
             for (val histEntry : histEntries) {
-                History valueHistory = histEntry.value;
-
-                if (Int txFloor := valueHistory.floor(readId),
-                        MapValue value := valueHistory.get(txFloor),
-                        value != Deleted) {
+                if (isHistoryVisible(histEntry.value, readId)) {
                     keys += histEntry.key;
                 }
             }
