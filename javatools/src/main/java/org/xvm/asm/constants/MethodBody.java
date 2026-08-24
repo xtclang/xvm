@@ -124,7 +124,13 @@ public class MethodBody {
         m_infoMethod   = method;
         m_id           = body.m_id;
         m_sig          = body.m_sig;
-        m_target       = body.m_target == body.m_infoMethod ? method : body.m_target;
+        // rewrite the target only when the source body genuinely targets its own owner; a fresh
+        // unowned body has both fields null, and treating null == null as "self-targeting" would
+        // fabricate a target the source never had, changing the body's equality and corrupting
+        // union/difference TypeInfo merges built from independently owned copies
+        m_target       = body.m_target != null && body.m_target == body.m_infoMethod
+                ? method
+                : body.m_target;
         m_impl         = body.m_impl;
         m_structMethod = body.m_structMethod;
     }

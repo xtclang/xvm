@@ -71,7 +71,7 @@ explicit owner APIs, and typed runtime accessors.
 | `org.xvm.asm.ConstantAdoptionTest` | `ConstantAdoptionValidator` and its validation property. |
 | `org.xvm.asm.ConstantPoolDiagnosticsTest` | Current-pool assertion/removal APIs, `xvm.asm.validateConstantPoolCurrentScope`, and late-registration diagnostics. |
 | `org.xvm.asm.ConstantPoolRegistrationDeadlockTest` | Registration-completion guard (branch-only). Red on the branch's pre-fix guard shape, which awaited another thread's registration completion inside the pool monitor and deadlocked the pool; master has no completion guard to deadlock. |
-| `org.xvm.asm.constants.MethodInfoTest` | `MethodInfo.create(...)` factory and owned-body model. |
+| `org.xvm.asm.constants.MethodInfoTest` | `MethodInfo.create(...)` factory and owned-body model. `owningFreshBodyDoesNotFabricateSelfTarget()` is additionally red on the branch's own broken owned-copy shape (post-`93189541f`), where fresh bodies gained fabricated self targets that corrupted union/difference TypeInfo merges and broke the XDK build at lib_json. |
 | `org.xvm.asm.constants.TypeConstantOwnerApiTest` | Explicit-pool covariance/contravariance APIs. |
 | `org.xvm.asm.constants.TypeInfoMemberOwnershipTest` | `PropertyInfo.create(...)` factory and owner-copy model. |
 | `org.xvm.runtime.ClassCompositionLateRegistrationTest` | Late-registration diagnostic API. |

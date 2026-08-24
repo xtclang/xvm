@@ -77,6 +77,38 @@ public class MethodInfoTest {
     }
 
     /**
+     * Owning a fresh body must not fabricate a self target. The owned-copy constructor rewrote
+     * {@code m_target} whenever {@code body.m_target == body.m_infoMethod}; for a fresh unowned
+     * body both are null, so every owned copy gained a spurious target pointing at its own
+     * MethodInfo. Because body equality compares target shape, logically identical bodies from
+     * independent owners stopped comparing equal, which corrupted union/difference TypeInfo
+     * merges: bisect pinned the lib_json COMPILER-177 access failure on
+     * {@code "ParentInput - Nullable"} (and the MethodInfo/MethodBody equality stack overflow
+     * that was later worked around separately) to the commit that made MethodInfo always copy
+     * bodies through this constructor.
+     */
+    @Test
+    public void owningFreshBodyDoesNotFabricateSelfTarget() {
+        FileStructure  file   = new FileStructure("test");
+        ConstantPool   pool   = file.getConstantPool();
+        ClassStructure struct = file.getModule().createClass(
+                Access.PUBLIC, Format.CLASS, "Test", null);
+
+        SignatureConstant sig = pool.ensureSignatureConstant(
+                "test", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+        MethodConstant id   = pool.ensureMethodConstant(struct.getIdentityConstant(), sig);
+        MethodBody     body = new MethodBody(id, sig, Implementation.Implicit, null);
+
+        MethodInfo method1 = MethodInfo.create(body, 0);
+        MethodInfo method2 = MethodInfo.create(body, 0);
+
+        assertEquals(body, method1.getHead(),
+                "an owned copy of a targetless body must stay equal to its source");
+        assertEquals(method1.getHead(), method2.getHead(),
+                "independently owned copies of one source body must stay equal");
+    }
+
+    /**
      * MethodInfo construction must not call overridable body-attachment hooks before final owner
      * state is assigned. That constructor-time callback is unsafe even in single-threaded code.
      */

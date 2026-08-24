@@ -2730,6 +2730,52 @@ On master that test fails because `FileStructure.writeTo` completes without
 throwing and quietly writes the zero-op body. A companion source-shape test
 guards against reintroducing stderr-and-continue in the assembly region.
 
+### MethodBody Owned Copies Do Not Fabricate Self Targets
+
+The escape-removal wave changed `MethodInfo` construction from adopt-in-place
+(`MethodBody.forMethod`, which took ownership of an unowned body without
+copying) to always copying bodies through the owned-copy constructor. That
+made a previously narrow line load-bearing for a state it was never written
+for:
+
+```java
+m_target = body.m_target == body.m_infoMethod ? method : body.m_target;
+```
+
+The condition means "the source body targets its own owner, so retarget the
+copy at its new owner". Before the wave the constructor only ran for bodies
+that already had an owner, so the comparison was meaningful. After the wave
+it also ran for every fresh unowned body, where both fields are null —
+`null == null` is true — so every owned copy fabricated a target pointing at
+its own `MethodInfo` where the source had none.
+
+Body equality deliberately compares target shape. With fabricated
+self-targets, logically identical bodies from independently constructed
+`MethodInfo` owners stopped comparing equal, and self-referential targets
+created equality cycles. Two independent symptoms followed: the
+MethodInfo/MethodBody equality stack overflow (later handled by the
+cycle-safe target equality wave, which remains correct for legitimate
+cycles), and corrupted union/difference TypeInfo merges
+(`UnionTypeConstant.mergeMethods` via `RelationalTypeConstant.mergeTypeInfo`)
+that made `lib_json` fail with COMPILER-177: `buildPointer(Int)` reported
+inaccessible on the `ParentInput - Nullable` difference type. A two-phase
+bisect (with fix overlays for the other masked breakages) pinned the first
+bad commit and this exact hunk.
+
+The fix requires a non-null source target before rewriting:
+
+```java
+m_target = body.m_target != null && body.m_target == body.m_infoMethod
+        ? method
+        : body.m_target;
+```
+
+Genuine self-targeting bodies are still retargeted at the new owner;
+targetless bodies stay targetless, restoring the information content of the
+old adopt-in-place path. `MethodInfoTest.owningFreshBodyDoesNotFabricateSelfTarget()`
+fails on the broken shape and passes here, `xdk:installDist` builds the full
+XDK again, and the cycle-safe equality tests stay green.
+
 ### Requested Module Loads Preserve Cause
 
 Master's `FileRepository.tryLoad()` and `DirRepository.ModuleInfo.tryLoad()`
