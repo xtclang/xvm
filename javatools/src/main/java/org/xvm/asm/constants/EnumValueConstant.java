@@ -28,9 +28,24 @@ public class EnumValueConstant
      * @param constClass  the class constant for the singleton value
      */
     public EnumValueConstant(ConstantPool pool, ClassConstant constClass) {
+        this(pool, constClass, true);
+    }
+
+    /**
+     * Internal constructor that can skip the enum-value shape check. Owner adoption runs while a
+     * {@code FileStructure.merge(...)} may still be linking the component tree, so
+     * {@code constClass.getComponent()} is not guaranteed to resolve there; the source constant
+     * already proved its shape when it was first constructed or deserialized (the deserialization
+     * constructor never re-checks either).
+     *
+     * @param pool          the ConstantPool that will contain this Constant
+     * @param constClass    the class constant for the singleton value
+     * @param fCheckFormat  true to require that the class resolves to an ENUMVALUE component
+     */
+    private EnumValueConstant(ConstantPool pool, ClassConstant constClass, boolean fCheckFormat) {
         super(pool, Format.EnumValueConst, constClass);
 
-        if (constClass.getComponent().getFormat() != Component.Format.ENUMVALUE) {
+        if (fCheckFormat && constClass.getComponent().getFormat() != Component.Format.ENUMVALUE) {
             throw new IllegalArgumentException("enum value required");
         }
     }
@@ -97,8 +112,10 @@ public class EnumValueConstant
     protected EnumValueConstant copyForAdoption(AdoptionContext context) {
         // Enum values have singleton runtime state like other singleton constants, but the adopted
         // value must preserve the EnumValueConstant subclass for ordinal/range/operator behavior.
+        // The shape check is skipped: adoption can run inside FileStructure.merge(...) before the
+        // component tree is linked, where getComponent() cannot resolve yet.
         var pool = context.pool();
-        return new EnumValueConstant(pool, (ClassConstant) pool.register(getClassConstant()));
+        return new EnumValueConstant(pool, (ClassConstant) pool.register(getClassConstant()), false);
     }
 
     @Override

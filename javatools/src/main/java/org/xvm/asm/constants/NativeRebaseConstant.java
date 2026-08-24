@@ -69,9 +69,14 @@ public class NativeRebaseConstant
 
     @Override
     protected NativeRebaseConstant copyForAdoption(AdoptionContext context) {
-        // Native rebase identities are runtime-only facades over an interface and are documented as
-        // never registered with a ConstantPool. Do not adopt them as serialized identity metadata.
-        throw new IllegalStateException("cannot adopt runtime-only native rebase identity: " + this);
+        // Despite the "runtime-only" class comment, native rebase identities flow through
+        // compile-time TypeInfo and variance computation (for example isContravariantParameter ->
+        // resolveAutoNarrowing -> ensureParameterizedTypeConstant), which re-registers a containing
+        // type graph in the compiling module's pool. Failing closed here broke every downstream
+        // module compile. Adoption reconstructs against the interface identity adopted into the
+        // destination pool, so no source-owner state is carried over; assemble() still rejects any
+        // attempt to persist this pseudo constant.
+        return new NativeRebaseConstant((ClassConstant) context.pool().register(m_constIface));
     }
 
     @Override

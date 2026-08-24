@@ -262,14 +262,22 @@ shallow-clone helper state identified by the audit:
   preserves the concrete recursive subclass behavior while still letting the
   target pool adopt and intern the typedef identity; unrelated foreign typedefs
   fail before publication.
-- `Annotation` now copies parameter arrays at construction and during
-  `resolveParams(...)`, and its adoption hook constructs a fresh target-owned
-  annotation value. The old code treated annotation params as immutable logical
-  value state while storing caller-owned or shallow-copied `Constant[]`
-  containers that could later rewrite hash/equality identity. The branch does
-  not add a per-read clone to the legacy raw `getParams()` API; the extra copy
-  happens at construction/adoption where the old code already allocated the
-  annotation object.
+- `Annotation` copies its parameter array during `resolveParams(...)` and in
+  its adoption hook, which constructs a fresh target-owned annotation value.
+  The constructor deliberately still ALIASES the caller's array: an earlier
+  branch state copied it defensively, which broke the XDK build (verified by
+  bisect down to that single hunk) because the compiler front end builds
+  annotations with placeholder params and back-fills resolved constants
+  through the shared array at emit time (`NewExpression`,
+  `VariableDeclarationStatement`). That back-fill is legal only because a
+  placeholder-bearing annotation contains unresolved state, so the pool
+  refuses to register it and its hash is never cached until resolution
+  completes. Owner isolation is enforced where it matters — at adoption,
+  which detaches the array explicitly — and
+  `ConstantAdoptionTest.annotationConstructionAliasesParamsForCompilerBackfill`
+  guards the aliasing contract while
+  `registeredAnnotationAdoptionDoesNotShareParameterArray` guards the
+  adoption detachment.
 - `AnnotatedTypeConstant` now reconstructs its annotation and underlying type
   shell instead of inheriting the type-family shallow clone. Target registration
   still interns the annotation class, annotation params, and underlying type in

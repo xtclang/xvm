@@ -61,9 +61,14 @@ public class Annotation
         }
 
         m_constClass = constClass;
-        m_aParams    = aconstParam == null
-                ? Constant.NO_CONSTS
-                : Arrays.copyOf(aconstParam, aconstParam.length);
+        // the caller's array is deliberately aliased, not copied: the compiler front end builds
+        // annotations with placeholder params (ExpressionConstant, UnresolvedNameConstant) and
+        // back-fills resolved constants through getParams()/getAnnotationParams() at emit time
+        // (NewExpression.generateDynamicParameters, VariableDeclarationStatement emission). A
+        // defensive copy here fossilizes the placeholders inside every AnnotatedTypeConstant that
+        // wraps this annotation and fails emission with "Unresolved constant". Owner isolation for
+        // pool adoption is handled by copyForAdoption(...), which detaches the array explicitly.
+        m_aParams    = aconstParam == null ? Constant.NO_CONSTS : aconstParam;
     }
 
     /**
@@ -236,7 +241,10 @@ public class Annotation
             }
         }
 
-        return new Annotation(pool, constClass, m_aParams);
+        // detach the param array here, not in the constructor: the adopted owner must not share
+        // the source's mutable array, while ordinary construction relies on the compiler's
+        // emit-time back-fill through the aliased array (see the constructor)
+        return new Annotation(pool, constClass, Arrays.copyOf(m_aParams, m_aParams.length));
     }
 
     /**

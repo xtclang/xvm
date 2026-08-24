@@ -482,11 +482,21 @@ public class ConstantAdoptionTest {
     }
 
     /**
-     * Annotation parameters are part of immutable logical constant identity. Constructors and
-     * resolveParams(...) must not keep caller arrays that can rewrite hash/equality state later.
+     * The Annotation constructor must alias, not copy, the caller's parameter array: the compiler
+     * front end builds annotations with placeholder params and back-fills resolved constants
+     * through the shared array at emit time ({@code NewExpression.generateDynamicParameters},
+     * {@code VariableDeclarationStatement} emission). An earlier branch state copied the array
+     * defensively, which fossilized the placeholders inside every wrapping
+     * {@code AnnotatedTypeConstant} and broke the XDK build with
+     * {@code "Unresolved constant: AnnotatedType{...}"} during ecstasy emission (verified by
+     * bisect; reverting only the constructor copy restored the build). This is legal because an
+     * annotation with placeholder params contains unresolved state, so it is refused by
+     * {@code ConstantPool.register(...)} and its hash is never cached until the back-fill is done.
+     * Owner isolation is instead enforced at adoption, and {@code resolveParams(...)} still
+     * detaches its caller's array.
      */
     @Test
-    public void annotationParameterInputsAreDefensivelyCopied() {
+    public void annotationConstructionAliasesParamsForCompilerBackfill() {
         var sourceFile  = new FileStructure("source");
         var sourcePool  = sourceFile.getConstantPool();
         var annoClass   = sourceFile.getModule().createClass(
@@ -496,16 +506,19 @@ public class ConstantAdoptionTest {
         var params      = new Constant[] {original};
         var annotation  = new Annotation(sourcePool, classId(annoClass), params);
 
+        // the compiler's emit-time back-fill must reach the annotation through the shared array
         params[0] = replacement;
+        assertSame(replacement, annotation.getParams()[0],
+                "constructor must alias the caller's array for the emit-time back-fill protocol");
 
-        assertSame(original, annotation.getParams()[0]);
-
-        var resolvedParams = new Constant[] {replacement};
-        annotation.resolveParams(resolvedParams);
-        resolvedParams[0] = original;
-
-        assertSame(replacement, annotation.getParams()[0]);
+        // resolveParams(...) receives a freshly built array and must detach from it
+        var resolvedParams = new Constant[] {original};
+        var resolved       = annotation.resolveParams(resolvedParams);
+        resolvedParams[0] = replacement;
+        assertSame(original, resolved.getParams()[0],
+                "resolveParams must not retain the caller's array");
     }
+
 
     /**
      * Annotated types carry annotation and underlying type identity. Adoption must register both in
@@ -558,6 +571,30 @@ public class ConstantAdoptionTest {
         assertSame(targetPool, registered.getConstantPool());
         assertSame(targetPool, registered.getParams()[0].getConstantPool());
         assertEquals("original", ((StringConstant) registered.getParams()[0]).getValue());
+    }
+
+    /**
+     * Native rebase identities are not runtime-only: compile-time TypeInfo and variance
+     * computation drags them through {@code ensureParameterizedTypeConstant} into the compiling
+     * module's pool. An earlier branch state failed closed here, which broke the compile of every
+     * module downstream of ecstasy ({@code "cannot adopt runtime-only native rebase identity"}).
+     * Adoption must reconstruct against the interface identity adopted into the destination pool.
+     */
+    @Test
+    public void nativeRebaseAdoptionReconstructsAgainstTargetPool() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var iface      = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.INTERFACE, "Iface", null);
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var source     = new NativeRebaseConstant(classId(iface));
+
+        var adopted = (NativeRebaseConstant) targetPool.register(source);
+
+        assertNotSame(source, adopted);
+        assertSame(targetPool, adopted.getConstantPool());
+        assertSame(targetPool, adopted.getClassConstant().getConstantPool());
+        assertEquals(source.getValueString(), adopted.getValueString());
     }
 
     /**
@@ -776,25 +813,6 @@ public class ConstantAdoptionTest {
         assertSame(targetPool, targetPure.getType().getConstantPool());
         assertEquals(decorated.getValueString(), targetDecorated.getValueString());
         assertEquals(pure.getValueString(), targetPure.getValueString());
-    }
-
-    /**
-     * Native rebase identities are runtime-only facades. They must not be adopted as normal class
-     * identity metadata because that would erase the NativeClass subclass semantics.
-     */
-    @Test
-    public void nativeRebaseIdentityRejectsAdoption() {
-        var sourceFile = new FileStructure("source");
-        var sourcePool = sourceFile.getConstantPool();
-        var iface      = sourceFile.getModule().createClass(
-                Component.Access.PUBLIC, Component.Format.INTERFACE, "Iface", null);
-        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
-        var source     = new NativeRebaseConstant(classId(iface));
-
-        var error = assertThrows(IllegalStateException.class, () -> adopt(source, targetPool));
-
-        assertSame(sourcePool, source.getConstantPool());
-        assertTrue(error.getMessage().contains("runtime-only native rebase"));
     }
 
     /**
