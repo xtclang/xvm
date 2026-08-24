@@ -86,58 +86,65 @@ public final class StringConstant
 
     @Override
     public Constant apply(Token.Id op, Constant that) {
+        // dispatch on the operator and pattern-match the operand; see CharConstant.apply for
+        // the rationale - this replaces dispatch by string concatenation of the operator text
+        // and the operand's format name, with a blind cast in every arm
         ConstantPool pool = getConstantPool();
-        switch (op.TEXT + that.getFormat().name()) {
-        case "+String":
-            return pool.ensureStringConstant(this.m_sVal + ((StringConstant) that).m_sVal);
+        return switch (op) {
+            case ADD -> switch (that) {
+                case StringConstant str -> pool.ensureStringConstant(this.m_sVal + str.m_sVal);
+                case CharConstant ch -> {
+                    assert Character.isValidCodePoint(ch.getValue());
+                    yield pool.ensureStringConstant(this.m_sVal + (char) (int) ch.getValue());
+                }
+                case LiteralConstant lit when lit.getFormat() == Format.IntLiteral
+                                           || lit.getFormat() == Format.FPLiteral ->
+                        pool.ensureStringConstant(this.m_sVal + lit.getValue());
+                case EnumValueConstant enumVal ->
+                        pool.ensureStringConstant(
+                                this.m_sVal + enumVal.getClassConstant().getName());
+                default -> super.apply(op, that);
+            };
 
-        case "+Char":
-            assert Character.isValidCodePoint(((CharConstant) that).getValue());
-            return pool.ensureStringConstant(
-                    this.m_sVal + (char) (int) ((CharConstant) that).getValue());
+            case MUL -> switch (that) {
+                case LiteralConstant lit when lit.getFormat() == Format.IntLiteral ->
+                        repeat(lit.getPackedInteger().getInt());
+                case IntConstant n when n.getFormat() == Format.Int64 ->
+                        repeat(n.getValue().getInt());
+                default -> super.apply(op, that);
+            };
 
-        case "+IntLiteral":
-        case "+FPLiteral":
-            return pool.ensureStringConstant(
-                    this.m_sVal + ((LiteralConstant) that).getValue());
+            case COMP_EQ   -> that instanceof StringConstant str
+                    ? pool.valOf(this.m_sVal.equals(str.m_sVal))         : super.apply(op, that);
+            case COMP_NEQ  -> that instanceof StringConstant str
+                    ? pool.valOf(!this.m_sVal.equals(str.m_sVal))        : super.apply(op, that);
+            case COMP_LT   -> that instanceof StringConstant str
+                    ? pool.valOf(this.m_sVal.compareTo(str.m_sVal) < 0)  : super.apply(op, that);
+            case COMP_LTEQ -> that instanceof StringConstant str
+                    ? pool.valOf(this.m_sVal.compareTo(str.m_sVal) <= 0) : super.apply(op, that);
+            case COMP_GT   -> that instanceof StringConstant str
+                    ? pool.valOf(this.m_sVal.compareTo(str.m_sVal) > 0)  : super.apply(op, that);
+            case COMP_GTEQ -> that instanceof StringConstant str
+                    ? pool.valOf(this.m_sVal.compareTo(str.m_sVal) >= 0) : super.apply(op, that);
+            case COMP_ORD  -> that instanceof StringConstant str
+                    ? pool.valOrd(this.m_sVal.compareTo(str.m_sVal))     : super.apply(op, that);
 
-        case "+EnumValueConst":
-            return pool.ensureStringConstant(
-                    this.m_sVal + ((EnumValueConstant) that).getClassConstant().getName());
+            case I_RANGE_I -> that instanceof StringConstant
+                    ? pool.ensureRangeConstant(this, that)               : super.apply(op, that);
 
-        case "*IntLiteral":
-        case "*Int64": {
-            String s = m_sVal;
-            int n = that.getFormat() == Format.IntLiteral
-                    ? ((LiteralConstant) that).getPackedInteger().getInt()
-                    : ((IntConstant) that).getValue().getInt();
-            assert n >= 0 && n * s.length() < 1000000;
+            default -> super.apply(op, that);
+        };
+    }
 
-            return getConstantPool().ensureStringConstant(s.repeat(n));
-        }
-
-        case "==String":
-            return getConstantPool().valOf(this.m_sVal.equals(((StringConstant) that).m_sVal));
-        case "!=String":
-            return getConstantPool().valOf(!this.m_sVal.equals(((StringConstant) that).m_sVal));
-        case "<String":
-            return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) < 0);
-        case "<=String":
-            return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) <= 0);
-        case ">String":
-            return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) > 0);
-        case ">=String":
-            return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) >= 0);
-
-        case "<=>String":
-            return getConstantPool().valOrd(this.m_sVal.compareTo(((StringConstant) that).m_sVal));
-
-        case "..String":
-            return getConstantPool().ensureRangeConstant(this, that);
-
-        default:
-            return super.apply(op, that);
-        }
+    /**
+     * @param n  the repetition count
+     *
+     * @return a string constant repeating this string {@code n} times
+     */
+    private StringConstant repeat(int n) {
+        String s = m_sVal;
+        assert n >= 0 && n * s.length() < 1000000;
+        return getConstantPool().ensureStringConstant(s.repeat(n));
     }
 
     @Override

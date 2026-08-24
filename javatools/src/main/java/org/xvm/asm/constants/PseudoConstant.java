@@ -13,6 +13,7 @@ import org.xvm.asm.ConstantPool;
  */
 public abstract sealed class PseudoConstant
         extends Constant
+        implements DefiningConstant
         permits ChildClassConstant, DeferredValueConstant, ExpressionConstant,
                 KeywordConstant, ParentClassConstant, SignatureConstant,
                 ThisClassConstant, UnresolvedNameConstant {

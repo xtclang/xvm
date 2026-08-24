@@ -545,7 +545,7 @@ public class ConstantPool
     public CharConstant ensureCharConstant(int ch) {
         // check the cache
         if (ch <= 0x7F) {
-            CharConstant constant = (CharConstant) ensureLocatorLookup(Format.Char).get((char) ch);
+            CharConstant constant = findLocated(CharConstant.class, Format.Char, (char) ch);
             if (constant != null) {
                 return constant;
             }
@@ -566,7 +566,7 @@ public class ConstantPool
     public RegExConstant ensureRegExConstant(String expression, int nFlags) {
         // check the pre-existing constants first (only for default flags)
         RegExConstant constant = nFlags == 0
-                ? (RegExConstant) ensureLocatorLookup(Format.RegEx).get(expression)
+                ? findLocated(RegExConstant.class, Format.RegEx, expression)
                 : null;
         if (constant == null) {
             constant = register(new RegExConstant(this, expression, nFlags));
@@ -583,7 +583,7 @@ public class ConstantPool
      */
     public StringConstant ensureStringConstant(String s) {
         // check the pre-existing constants first
-        StringConstant constant = (StringConstant) ensureLocatorLookup(Format.String).get(s);
+        StringConstant constant = findLocated(StringConstant.class, Format.String, s);
         if (constant == null) {
             constant = register(new StringConstant(this, s));
         }
@@ -604,7 +604,7 @@ public class ConstantPool
         case Duration:
         case Path:
         case RegEx: {
-            LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(format).get(s);
+            LiteralConstant constant = findLocated(LiteralConstant.class, format, s);
             if (constant == null) {
                 constant = register(new LiteralConstant(this, format, s, oValue));
             }
@@ -623,7 +623,7 @@ public class ConstantPool
         case Float64:
         case Float128:
         case FloatN: {
-            LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(Format.FPLiteral).get(s);
+            LiteralConstant constant = findLocated(LiteralConstant.class, Format.FPLiteral, s);
             if (constant == null) {
                 constant = new LiteralConstant(this, Format.FPLiteral, s, oValue);
             }
@@ -699,7 +699,7 @@ public class ConstantPool
         case Nibble:
         case Int8:
         case UInt8:
-            ByteConstant constant = (ByteConstant) ensureLocatorLookup(format).get(n);
+            ByteConstant constant = findLocated(ByteConstant.class, format, n);
             if (constant == null) {
                 constant = register(new ByteConstant(this, format, n));
             }
@@ -760,7 +760,7 @@ public class ConstantPool
         case UInt128:
         case UIntN:
             // check the pre-existing constants first
-            IntConstant constant = (IntConstant) ensureLocatorLookup(format).get(pint);
+            IntConstant constant = findLocated(IntConstant.class, format, pint);
             if (constant == null) {
                 constant = register(new IntConstant(this, format, pint));
             }
@@ -787,7 +787,7 @@ public class ConstantPool
                             "unsupported decimal type: " + dec.getClass().getSimpleName());
         };
 
-        DecimalConstant constant = (DecimalConstant) ensureLocatorLookup(format).get(dec);
+        DecimalConstant constant = findLocated(DecimalConstant.class, format, dec);
         if (constant == null) {
             constant = register(new DecimalConstant(this, dec));
         }
@@ -802,7 +802,7 @@ public class ConstantPool
      * @return a DecimalAutoConstant for the passed decimal value
      */
     public DecimalAutoConstant ensureDecAConstant(Decimal dec) {
-        DecimalAutoConstant constant = (DecimalAutoConstant) ensureLocatorLookup(Format.Dec64).get(dec);
+        DecimalAutoConstant constant = findLocated(DecimalAutoConstant.class, Format.Dec64, dec);
         if (constant == null) {
             constant = register(new DecimalAutoConstant(this, dec));
         }
@@ -829,7 +829,7 @@ public class ConstantPool
      * @return a Float8e4Constant for the passed floating point value
      */
     public Float8e4Constant ensureFloat8e4Constant(float flVal) {
-        Float8e4Constant constant = (Float8e4Constant) ensureLocatorLookup(Format.Float8e4).get(flVal);
+        Float8e4Constant constant = findLocated(Float8e4Constant.class, Format.Float8e4, flVal);
         if (constant == null) {
             constant = register(new Float8e4Constant(this, flVal));
         }
@@ -844,7 +844,7 @@ public class ConstantPool
      * @return a Float8e5Constant for the passed floating point value
      */
     public Float8e5Constant ensureFloat8e5Constant(float flVal) {
-        Float8e5Constant constant = (Float8e5Constant) ensureLocatorLookup(Format.Float8e5).get(flVal);
+        Float8e5Constant constant = findLocated(Float8e5Constant.class, Format.Float8e5, flVal);
         if (constant == null) {
             constant = register(new Float8e5Constant(this, flVal));
         }
@@ -859,7 +859,7 @@ public class ConstantPool
      * @return a BFloat16Constant for the passed floating point value
      */
     public BFloat16Constant ensureBFloat16Constant(float flVal) {
-        BFloat16Constant constant = (BFloat16Constant) ensureLocatorLookup(Format.BFloat16).get(flVal);
+        BFloat16Constant constant = findLocated(BFloat16Constant.class, Format.BFloat16, flVal);
         if (constant == null) {
             constant = register(new BFloat16Constant(this, flVal));
         }
@@ -874,7 +874,7 @@ public class ConstantPool
      * @return a Float16Constant for the passed floating point value
      */
     public Float16Constant ensureFloat16Constant(float flVal) {
-        Float16Constant constant = (Float16Constant) ensureLocatorLookup(Format.Float16).get(flVal);
+        Float16Constant constant = findLocated(Float16Constant.class, Format.Float16, flVal);
         if (constant == null) {
             constant = register(new Float16Constant(this, flVal));
         }
@@ -889,7 +889,7 @@ public class ConstantPool
      * @return a Float32Constant for the passed floating point value
      */
     public Float32Constant ensureFloat32Constant(float flVal) {
-        Float32Constant constant = (Float32Constant) ensureLocatorLookup(Format.Float32).get(flVal);
+        Float32Constant constant = findLocated(Float32Constant.class, Format.Float32, flVal);
         if (constant == null) {
             constant = register(new Float32Constant(this, flVal));
         }
@@ -904,7 +904,7 @@ public class ConstantPool
      * @return a Float64Constant for the passed floating point value
      */
     public Float64Constant ensureFloat64Constant(double flVal) {
-        Float64Constant constant = (Float64Constant) ensureLocatorLookup(Format.Float64).get(flVal);
+        Float64Constant constant = findLocated(Float64Constant.class, Format.Float64, flVal);
         if (constant == null) {
             constant = register(new Float64Constant(this, flVal));
         }
@@ -975,7 +975,7 @@ public class ConstantPool
      * @return a VersionConstant for the passed version value
      */
     public VersionConstant ensureVersionConstant(Version ver) {
-        VersionConstant constant = (VersionConstant) ensureLocatorLookup(Format.Version).get(ver.toString());
+        VersionConstant constant = findLocated(VersionConstant.class, Format.Version, ver.toString());
         if (constant == null) {
             constant = register(new VersionConstant(this, ver));
         }
@@ -1122,7 +1122,7 @@ public class ConstantPool
      * @return the desired match-any constant
      */
     public MatchAnyConstant ensureMatchAnyConstant(TypeConstant type) {
-        MatchAnyConstant constant = (MatchAnyConstant) ensureLocatorLookup(Format.Any).get(type);
+        MatchAnyConstant constant = findLocated(MatchAnyConstant.class, Format.Any, type);
         if (constant == null) {
             constant = register(new MatchAnyConstant(this, type));
         }
@@ -1633,7 +1633,7 @@ public class ConstantPool
      */
     public TypeConstant ensureClassTypeConstant(Constant constClass,
                                                 Access access, TypeConstant... constTypes) {
-        TypeConstant constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constClass);
+        TypeConstant constType = findLocated(TypeConstant.class, Format.TerminalType, constClass);
         if (constType == null) {
             constType = register(new TerminalTypeConstant(this, constClass));
         }
@@ -1677,7 +1677,7 @@ public class ConstantPool
         TypeConstant constAccess = null;
 
         if (access == Access.PUBLIC) {
-            constAccess = (TypeConstant) ensureLocatorLookup(Format.AccessType).get(constType);
+            constAccess = findLocated(TypeConstant.class, Format.AccessType, constType);
         }
 
         if (constAccess == null) {
@@ -1832,7 +1832,7 @@ public class ConstantPool
             throw new IllegalArgumentException("type already has the immutability specified");
         }
 
-        TypeConstant constant = (TypeConstant) ensureLocatorLookup(Format.ImmutableType).get(constType);
+        TypeConstant constant = findLocated(TypeConstant.class, Format.ImmutableType, constType);
         return constant == null
                 ? register(new ImmutableTypeConstant(this, constType))
                 :  constant;
@@ -1846,7 +1846,7 @@ public class ConstantPool
      * @return the service type of the passed TypeConstant
      */
     public TypeConstant ensureServiceTypeConstant(TypeConstant constType) {
-        TypeConstant constant = (TypeConstant) ensureLocatorLookup(Format.ServiceType).get(constType);
+        TypeConstant constant = findLocated(TypeConstant.class, Format.ServiceType, constType);
         return constant == null
                 ? register(new ServiceTypeConstant(this, constType))
                 : constant;
@@ -1999,7 +1999,7 @@ public class ConstantPool
      * @return an auto-narrowing constant that represents the class of "this"
      */
     public ThisClassConstant ensureThisClassConstant(IdentityConstant constClass) {
-        ThisClassConstant constant = (ThisClassConstant) ensureLocatorLookup(Format.ThisClass).get(constClass);
+        ThisClassConstant constant = findLocated(ThisClassConstant.class, Format.ThisClass, constClass);
         if (constant != null) {
             return constant;
         }
@@ -2073,7 +2073,7 @@ public class ConstantPool
         }
 
         // get the raw type
-        TypeConstant constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);
+        TypeConstant constType = findLocated(TypeConstant.class, Format.TerminalType, constId);
         if (constType == null) {
             constType = register(new TerminalTypeConstant(this, constId));
         }
@@ -2083,7 +2083,7 @@ public class ConstantPool
 
         // apply access modifier
         if (access == Access.PUBLIC) {
-            TypeConstant constAccess = (AccessTypeConstant) ensureLocatorLookup(Format.AccessType).get(constType);
+            TypeConstant constAccess = findLocated(AccessTypeConstant.class, Format.AccessType, constType);
             if (constAccess != null) {
                 return constAccess;
             }
@@ -2158,7 +2158,7 @@ public class ConstantPool
     public PureIdentityConstant ensurePureIdentityConstant(TypeConstant type) {
         assert type != null;
 
-        PureIdentityConstant id = (PureIdentityConstant) ensureLocatorLookup(Format.PureType).get(type);
+        PureIdentityConstant id = findLocated(PureIdentityConstant.class, Format.PureType, type);
         if (id == null) {
             id = register(new PureIdentityConstant(this, type));
         }
@@ -2220,7 +2220,7 @@ public class ConstantPool
      */
     public KeywordConstant ensureKeywordConstant(Format format) {
         // the KeywordConstant's locator is the format; it's effectively a singleton
-        KeywordConstant constKeyword = (KeywordConstant) ensureLocatorLookup(format).get(format);
+        KeywordConstant constKeyword = findLocated(KeywordConstant.class, format, format);
         if (constKeyword == null) {
             constKeyword = register(new KeywordConstant(this, format));
         }
@@ -3328,6 +3328,25 @@ public class ConstantPool
      *
      * @return the map from locator to Constant
      */
+    /**
+     * Look up a previously registered constant of the specified class by its locator. This is
+     * the checked boundary of the locator cache: the untyped locator maps store constants by
+     * format, and the format-to-class pairing is asserted here, once, by a checked cast that
+     * names both classes if it ever fails. The old shape handed every caller the raw
+     * {@code Map<Object, Constant>} and had each of them blind-cast the result - twenty-six
+     * casts whose failure mode was a ClassCastException at whichever use site happened to
+     * touch the poisoned entry first.
+     *
+     * @param type     the constant class the format's locator map holds
+     * @param format   the constant format
+     * @param locator  the locator value
+     *
+     * @return the located constant, or null
+     */
+    private <C extends Constant> C findLocated(Class<C> type, Format format, Object locator) {
+        return type.cast(ensureLocatorLookup(format).get(locator));
+    }
+
     private Map<Object, Constant> ensureLocatorLookup(Format format) {
         Map<Object, Constant> map = m_mapLocators.get(format);
         return map == null ? ensureLocatorLookupComplex(format) : map;

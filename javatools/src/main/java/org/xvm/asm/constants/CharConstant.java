@@ -88,78 +88,87 @@ public final class CharConstant
 
     @Override
     public Constant apply(Token.Id op, Constant that) {
-        switch (op.TEXT + that.getFormat().name()) {
-        case "+String": {
-            assert Character.isValidCodePoint(this.m_chVal);
-            String s = (char) this.m_chVal + ((StringConstant) that).getValue();
-            return getConstantPool().ensureStringConstant(s);
-        }
+        // dispatch on the operator and pattern-match the operand. This replaces a switch over
+        // op.TEXT + that.getFormat().name() - dispatch by string concatenation - whose every
+        // arm blind-cast the operand to the class its string had just described. The patterns
+        // bind the operand once, the compiler checks each binding, and an operand kind that no
+        // arm claims falls through to super exactly as the unmatched strings did.
+        ConstantPool pool = getConstantPool();
+        return switch (op) {
+            case ADD -> switch (that) {
+                case StringConstant str -> {
+                    assert Character.isValidCodePoint(this.m_chVal);
+                    yield pool.ensureStringConstant((char) this.m_chVal + str.getValue());
+                }
+                case CharConstant ch -> {
+                    assert Character.isValidCodePoint(this.m_chVal);
+                    assert Character.isValidCodePoint(ch.m_chVal);
+                    yield pool.ensureStringConstant(
+                            String.valueOf((char) this.m_chVal) + (char) ch.m_chVal);
+                }
+                // "fake" i.e. compile-time only, to support calculations resulting from the
+                // use of Range in ForEachStatement
+                case LiteralConstant lit when lit.getFormat() == Format.IntLiteral ->
+                        pool.ensureCharConstant(m_chVal
+                                + lit.toIntConstant(Format.Int32).getIntValue().getInt());
+                default -> super.apply(op, that);
+            };
 
-        case "+Char": {
-            assert Character.isValidCodePoint(this.m_chVal);
-            assert Character.isValidCodePoint(((CharConstant) that).m_chVal);
-            char chThis = (char) this.m_chVal;
-            char chThat = (char) ((CharConstant) that).m_chVal;
-            return getConstantPool().ensureStringConstant(String.valueOf(chThis) + chThat);
-        }
+            case SUB -> switch (that) {
+                case CharConstant ch -> {
+                    assert Character.isValidCodePoint(this.m_chVal);
+                    assert Character.isValidCodePoint(ch.m_chVal);
+                    yield pool.ensureIntConstant((char) this.m_chVal - (char) ch.m_chVal);
+                }
+                // "fake"; see the ADD arm above
+                case LiteralConstant lit when lit.getFormat() == Format.IntLiteral ->
+                        pool.ensureCharConstant(m_chVal
+                                - lit.toIntConstant(Format.Int32).getIntValue().getInt());
+                default -> super.apply(op, that);
+            };
 
-        case "-Char": {
-            assert Character.isValidCodePoint(this.m_chVal);
-            assert Character.isValidCodePoint(((CharConstant) that).m_chVal);
-            char chThis = (char) this.m_chVal;
-            char chThat = (char) ((CharConstant) that).m_chVal;
-            return getConstantPool().ensureIntConstant(chThis - chThat);
-        }
+            case MUL -> switch (that) {
+                case LiteralConstant lit when lit.getFormat() == Format.IntLiteral ->
+                        repeat(lit.getPackedInteger().getInt());
+                case IntConstant n when n.getFormat() == Format.Int64 ->
+                        repeat(n.getValue().getInt());
+                default -> super.apply(op, that);
+            };
 
-        case "*IntLiteral":
-        case "*Int64": {
-            assert Character.isValidCodePoint(this.m_chVal);
-            char ch = (char) this.m_chVal;
+            case COMP_EQ   -> that instanceof CharConstant ch
+                    ? pool.valOf(this.m_chVal == ch.m_chVal) : super.apply(op, that);
+            case COMP_NEQ  -> that instanceof CharConstant ch
+                    ? pool.valOf(this.m_chVal != ch.m_chVal) : super.apply(op, that);
+            case COMP_LT   -> that instanceof CharConstant ch
+                    ? pool.valOf(this.m_chVal < ch.m_chVal)  : super.apply(op, that);
+            case COMP_LTEQ -> that instanceof CharConstant ch
+                    ? pool.valOf(this.m_chVal <= ch.m_chVal) : super.apply(op, that);
+            case COMP_GT   -> that instanceof CharConstant ch
+                    ? pool.valOf(this.m_chVal > ch.m_chVal)  : super.apply(op, that);
+            case COMP_GTEQ -> that instanceof CharConstant ch
+                    ? pool.valOf(this.m_chVal >= ch.m_chVal) : super.apply(op, that);
+            case COMP_ORD  -> that instanceof CharConstant ch
+                    ? pool.valOrd(this.m_chVal - ch.m_chVal) : super.apply(op, that);
 
-            int n = that.getFormat() == Format.IntLiteral
-                    ? ((LiteralConstant) that).getPackedInteger().getInt()
-                    : ((IntConstant) that).getValue().getInt();
-            assert n >= 0 && n < 1000000;
+            case I_RANGE_I -> that instanceof CharConstant
+                    ? pool.ensureRangeConstant(this, that)   : super.apply(op, that);
 
-            char[] ach = new char[n];
-            Arrays.fill(ach, ch);
+            default -> super.apply(op, that);
+        };
+    }
 
-            return getConstantPool().ensureStringConstant(new String(ach));
-        }
+    /**
+     * @param n  the repetition count
+     *
+     * @return a string constant repeating this character {@code n} times
+     */
+    private StringConstant repeat(int n) {
+        assert Character.isValidCodePoint(this.m_chVal);
+        assert n >= 0 && n < 1000000;
 
-        // these are "fake" i.e. compile-time only in order to support calculations resulting
-        // from the use of Range in ForEachStatement
-        case "+IntLiteral":
-        case "-IntLiteral": {
-            int delta = ((LiteralConstant) that).toIntConstant(Format.Int32).getIntValue().getInt();
-            if (op == Id.SUB) {
-                delta = -delta;
-            }
-
-            return getConstantPool().ensureCharConstant(m_chVal + delta);
-        }
-
-        case "==Char":
-            return getConstantPool().valOf(this.m_chVal == ((CharConstant) that).m_chVal);
-        case "!=Char":
-            return getConstantPool().valOf(this.m_chVal != ((CharConstant) that).m_chVal);
-        case "<Char":
-            return getConstantPool().valOf(this.m_chVal < ((CharConstant) that).m_chVal);
-        case "<=Char":
-            return getConstantPool().valOf(this.m_chVal <= ((CharConstant) that).m_chVal);
-        case ">Char":
-            return getConstantPool().valOf(this.m_chVal > ((CharConstant) that).m_chVal);
-        case ">=Char":
-            return getConstantPool().valOf(this.m_chVal >= ((CharConstant) that).m_chVal);
-
-        case "<=>Char":
-            return getConstantPool().valOrd(this.m_chVal - ((CharConstant) that).m_chVal);
-
-        case "..Char":
-            return getConstantPool().ensureRangeConstant(this, that);
-        }
-
-        return super.apply(op, that);
+        char[] ach = new char[n];
+        Arrays.fill(ach, (char) this.m_chVal);
+        return getConstantPool().ensureStringConstant(new String(ach));
     }
 
     @Override

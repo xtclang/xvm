@@ -853,43 +853,29 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().isTuple();
         }
 
-        Constant         constant = getDefiningConstant();
-        IdentityConstant idClz;
-        switch (constant.getFormat()) {
-        case Module:
-        case Package:
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-        case IsClass:
-            return false;
+        // exhaustive over the sealed defining-constant union: the old shape was a 16-case
+        // format switch with a cast in every arm and a default that silently answered "not a
+        // tuple" for every format it never listed; here the formal-constant category is one
+        // arm instead of four formats, and an unlisted defining-constant kind is a compile
+        // error instead of a silently wrong answer
+        return switch (definingConstant()) {
+            case FormalConstant constant      -> constant.getConstraintType().isTuple();
+            case NativeRebaseConstant constant-> isTupleClass(constant.getClassConstant());
+            case ClassConstant constant       -> isTupleClass(constant);
+            case IdentityConstant ignored     -> false; // modules, packages, methods, ...
+            case ThisClassConstant constant   -> isTupleClass(constant.getDeclarationLevelClass());
+            case ParentClassConstant constant -> isTupleClass(constant.getDeclarationLevelClass());
+            case ChildClassConstant constant  -> isTupleClass(constant.getDeclarationLevelClass());
+            case PseudoConstant ignored       -> false; // keywords, unresolved names, ...
+        };
+    }
 
-        case NativeClass:
-            idClz = ((NativeRebaseConstant) constant).getClassConstant();
-            break;
-
-        case Class:
-            idClz = (ClassConstant) constant;
-            break;
-
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-            return ((FormalConstant) constant).getConstraintType().isTuple();
-
-        case ThisClass:
-        case ParentClass:
-        case ChildClass:
-            idClz = ((PseudoConstant) constant).getDeclarationLevelClass();
-            break;
-
-        default:
-            // let's be tolerant to unresolved constants
-            return false;
-        }
-
+    /**
+     * @param idClz  the identity of the class to test
+     *
+     * @return true iff the specified class identity is or extends the Tuple class
+     */
+    private boolean isTupleClass(IdentityConstant idClz) {
         if (idClz.equals(getConstantPool().clzTuple())) {
             return true;
         }
@@ -899,6 +885,16 @@ public sealed class TerminalTypeConstant
             throw new IllegalStateException("no ClassStructure for " + idClz);
         }
         return clz.isTuple();
+    }
+
+    /**
+     * @return the single defining constant, typed as the sealed {@link DefiningConstant}
+     *         union; a defining constant is always an identity or a pseudo constant, and the
+     *         checked conversion here fails loudly on a corrupt pool instead of letting every
+     *         caller re-derive (or silently mis-derive) the union from a format switch
+     */
+    private DefiningConstant definingConstant() {
+        return (DefiningConstant) getDefiningConstant();
     }
 
     @Override

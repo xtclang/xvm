@@ -28,6 +28,7 @@ import static org.xvm.javajit.TypeSystem.escapeJitClassName;
  */
 public abstract sealed class IdentityConstant
         extends Constant
+        implements DefiningConstant
         permits DecoratedClassConstant, MethodConstant, ModuleConstant, NamedConstant,
                 PureIdentityConstant {
     // ----- constructors --------------------------------------------------------------------------
