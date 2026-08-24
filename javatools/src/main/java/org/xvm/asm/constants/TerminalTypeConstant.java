@@ -100,49 +100,66 @@ public sealed class TerminalTypeConstant
 
     @Override
     public boolean isShared(ConstantPool poolOther) {
-        Constant constant = m_constId;
-        return switch (constant.getFormat()) {
-            case NativeClass, IsConst, IsEnum, IsModule, IsPackage, IsClass ->
-                true;
+        DefiningConstant defining = asDefining(m_constId);
+        return switch (defining) {
+            case NativeRebaseConstant ignored -> true;
+            case KeywordConstant ignored      -> true;
 
-            case Module, Package, Class ->
-                ((IdentityConstant) constant).isShared(poolOther);
+            case ModuleConstant constant  -> constant.isShared(poolOther);
+            case PackageConstant constant -> constant.isShared(poolOther);
+            case ClassConstant constant   -> constant.isShared(poolOther);
 
-            case Property, TypeParameter, FormalTypeChild, DynamicFormal ->
-                ((FormalConstant) constant).getParentConstant().isShared(poolOther);
+            case FormalConstant constant ->
+                constant.getParentConstant().isShared(poolOther);
 
-            case ThisClass, ParentClass, ChildClass ->
-                ((PseudoConstant) constant).getDeclarationLevelClass().isShared(poolOther);
+            case ThisClassConstant constant ->
+                constant.getDeclarationLevelClass().isShared(poolOther);
+            case ParentClassConstant constant ->
+                constant.getDeclarationLevelClass().isShared(poolOther);
+            case ChildClassConstant constant ->
+                constant.getDeclarationLevelClass().isShared(poolOther);
 
-            case Typedef ->
-                ((TypedefConstant) constant).getParentConstant().isShared(poolOther);
+            case TypedefConstant constant ->
+                constant.getParentConstant().isShared(poolOther);
 
-            default ->
-                throw new IllegalStateException("unexpected defining constant: " + constant);
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, SignatureConstant _, UnresolvedNameConstant _,
+                 ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + defining);
         };
     }
 
     @Override
     public boolean isComposedOfAny(Set<IdentityConstant> setIds) {
-        Constant constant = ensureResolvedConstant();
-        return switch (constant.getFormat()) {
-            case Module, Package, Class ->
-                setIds.contains((IdentityConstant) constant);
+        DefiningConstant defining = asDefining(ensureResolvedConstant());
+        return switch (defining) {
+            case NativeRebaseConstant ignored  -> false;
+            case KeywordConstant ignored       -> false;
+            case UnresolvedNameConstant ignored-> false;
 
-            case Property, TypeParameter, FormalTypeChild ->
-                setIds.contains(((FormalConstant) constant).getParentConstant());
+            case ModuleConstant constant  -> setIds.contains(constant);
+            case PackageConstant constant -> setIds.contains(constant);
+            case ClassConstant constant   -> setIds.contains(constant);
 
-            case ThisClass, ParentClass, ChildClass ->
-                setIds.contains(((PseudoConstant) constant).getDeclarationLevelClass());
-
-            case NativeClass, UnresolvedName, IsConst, IsEnum, IsModule, IsPackage, IsClass
-                -> false;
-
-            case Typedef ->
-                ((TypedefConstant) constant).getReferredToType().isComposedOfAny(setIds);
-
-            default ->
+            // note: dynamic formal constants were never composable and stay refused below
+            case DynamicFormalConstant constant ->
                 throw new IllegalStateException("unexpected defining constant: " + constant);
+            case FormalConstant constant  -> setIds.contains(constant.getParentConstant());
+
+            case ThisClassConstant constant ->
+                setIds.contains(constant.getDeclarationLevelClass());
+            case ParentClassConstant constant ->
+                setIds.contains(constant.getDeclarationLevelClass());
+            case ChildClassConstant constant ->
+                setIds.contains(constant.getDeclarationLevelClass());
+
+            case TypedefConstant constant ->
+                constant.getReferredToType().isComposedOfAny(setIds);
+
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, SignatureConstant _, ExpressionConstant _,
+                 DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + defining);
         };
     }
 
@@ -153,60 +170,48 @@ public sealed class TerminalTypeConstant
     }
 
     @Override
-    @SuppressWarnings("fallthrough")
     public boolean isImmutable() {
         TypeConstant type = resolveTypedefs();
         if (type != this) {
             return type.isImmutable();
         }
 
-        Constant         constant = getDefiningConstant();
-        IdentityConstant idClass;
-        switch (constant.getFormat()) {
-        case Module:
-        case Package:
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-            // always immutable
-            return true;
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            case ModuleConstant _, PackageConstant _ -> true;
 
-        case IsClass:
-            return false;
+            case KeywordConstant constant -> constant.getFormat() != Format.IsClass;
 
-        case Property:
-        case DynamicFormal:
-        case FormalTypeChild: {
-            // a formal type for an immutable type must be an immutable or a service
-            FormalConstant constFormal    = (FormalConstant) constant;
-            TypeConstant   typeParent     = constFormal.getParentConstant().getType();
-            TypeConstant   typeConstraint = constFormal.getConstraintType();
-            return typeConstraint.isImmutable() ||
-                    typeParent.getAccess() != Access.STRUCT && typeParent.isImmutable()
-                        && !typeConstraint.isA(getConstantPool().typeService());
-        }
+            case TypeParameterConstant constant -> constant.getConstraintType().isImmutable();
 
-        case TypeParameter:
-            return ((FormalConstant) constant).getConstraintType().isImmutable();
+            case FormalConstant constant -> {
+                // a formal type for an immutable type must be an immutable or a service
+                TypeConstant typeParent     = constant.getParentConstant().getType();
+                TypeConstant typeConstraint = constant.getConstraintType();
+                yield typeConstraint.isImmutable() ||
+                        typeParent.getAccess() != Access.STRUCT && typeParent.isImmutable()
+                            && !typeConstraint.isA(getConstantPool().typeService());
+            }
 
-        case NativeClass:
-            constant = ((NativeRebaseConstant) constant).getClassConstant();
-            // fall through
-        case Class:
-            idClass = (IdentityConstant) constant;
-            break;
+            case NativeRebaseConstant constant -> isImmutableClass(constant.getClassConstant());
+            case ClassConstant constant        -> isImmutableClass(constant);
+            case ThisClassConstant constant    -> isImmutableClass(constant.getDeclarationLevelClass());
+            case ParentClassConstant constant  -> isImmutableClass(constant.getDeclarationLevelClass());
+            case ChildClassConstant constant   -> isImmutableClass(constant.getDeclarationLevelClass());
 
-        case ThisClass:
-        case ParentClass:
-        case ChildClass:
-            idClass = ((PseudoConstant) constant).getDeclarationLevelClass();
-            break;
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
+                 UnresolvedNameConstant _, ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + defining);
+        };
+    }
 
-        default:
-            throw new IllegalStateException("unexpected defining constant: " + constant);
-        }
-
+    /**
+     * @param idClass  the identity of the class to test
+     *
+     * @return true iff the specified class is known to be immutable
+     */
+    private boolean isImmutableClass(IdentityConstant idClass) {
         // there is a possibility of this question asked during the constant registration
         // by resolveTypedefs() method; we need to play safe here
         ClassStructure clz = (ClassStructure) idClass.getComponent();
@@ -214,48 +219,38 @@ public sealed class TerminalTypeConstant
     }
 
     @Override
-    @SuppressWarnings("fallthrough")
     public boolean isService() {
         TypeConstant type = resolveTypedefs();
         if (type != this) {
             return type.isService();
         }
 
-        Constant         constant = getDefiningConstant();
-        IdentityConstant idClass;
-        switch (constant.getFormat()) {
-        case Module:
-        case Package:
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-        case IsClass:
-            return false;
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            case ModuleConstant _, PackageConstant _ -> false;
+            case KeywordConstant ignored             -> false;
 
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-            return (((FormalConstant) constant)).getConstraintType().isService();
+            case FormalConstant constant -> constant.getConstraintType().isService();
 
-        case NativeClass:
-            constant = ((NativeRebaseConstant) constant).getClassConstant();
-            // fall through
-        case Class:
-            idClass = (IdentityConstant) constant;
-            break;
+            case NativeRebaseConstant constant -> isServiceClass(constant.getClassConstant());
+            case ClassConstant constant        -> isServiceClass(constant);
+            case ThisClassConstant constant    -> isServiceClass(constant.getDeclarationLevelClass());
+            case ParentClassConstant constant  -> isServiceClass(constant.getDeclarationLevelClass());
+            case ChildClassConstant constant   -> isServiceClass(constant.getDeclarationLevelClass());
 
-        case ThisClass:
-        case ParentClass:
-        case ChildClass:
-            idClass = ((PseudoConstant) constant).getDeclarationLevelClass();
-            break;
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
+                 UnresolvedNameConstant _, ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + defining);
+        };
+    }
 
-        default:
-            throw new IllegalStateException("unexpected defining constant: " + constant);
-        }
-
+    /**
+     * @param idClass  the identity of the class to test
+     *
+     * @return true iff the specified class is known to be a service
+     */
+    private boolean isServiceClass(IdentityConstant idClass) {
         ClassStructure clz = (ClassStructure) idClass.getComponent();
         return clz != null && clz.isService();
     }
@@ -292,23 +287,42 @@ public sealed class TerminalTypeConstant
             return 0;
         }
 
-        Constant constant = getDefiningConstant();
-        return switch (constant.getFormat()) {
-            case Module,
-                 Package,
-                 Property,
-                 TypeParameter,
-                 FormalTypeChild -> 0;
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            case ModuleConstant _, PackageConstant _ -> 0;
 
+            // note: dynamic formal constants were never counted and stay refused below
+            case DynamicFormalConstant constant ->
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            case FormalConstant ignored -> 0;
+
+            // note: native rebase constants were never counted and stay refused below
+            case NativeRebaseConstant constant ->
+                throw new IllegalStateException("unexpected defining constant: " + constant);
             // examine the structure to determine if it represents a class or interface (TODO GG - is this comment just wrong?)
-            case Class -> ((ClassStructure) ((ClassConstant) constant).getComponent()).getTypeParamCount();
+            case ClassConstant constant ->
+                ((ClassStructure) constant.getComponent()).getTypeParamCount();
 
-            case ThisClass,
-                 ParentClass,
-                 ChildClass -> ((ClassStructure) ((PseudoConstant) constant).getDeclarationLevelClass().getComponent()).getTypeParamCount();
+            case ThisClassConstant constant -> declaredTypeParamCount(constant);
+            case ParentClassConstant constant -> declaredTypeParamCount(constant);
+            case ChildClassConstant constant -> declaredTypeParamCount(constant);
 
-            default -> throw new IllegalStateException("unexpected defining constant: " + constant);
+            case KeywordConstant _, DecoratedClassConstant _, MethodConstant _,
+                 MultiMethodConstant _, PureIdentityConstant _, TypedefConstant _,
+                 SignatureConstant _, UnresolvedNameConstant _, ExpressionConstant _,
+                 DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + defining);
         };
+    }
+
+    /**
+     * @param constant  a this/parent/child class pseudo constant
+     *
+     * @return the number of type parameters declared by its declaration-level class
+     */
+    private static int declaredTypeParamCount(PseudoConstant constant) {
+        return ((ClassStructure) constant.getDeclarationLevelClass().getComponent())
+                .getTypeParamCount();
     }
 
     @Override
@@ -319,39 +333,40 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().containsGenericParam(sName);
         }
 
-        Constant         constant = getDefiningConstant();
-        IdentityConstant idClz;
-        switch (constant.getFormat()) {
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-            return ((FormalConstant) constant).getConstraintType().containsGenericParam(sName);
-
-        case NativeClass:
-            idClz = ((NativeRebaseConstant) constant).getClassConstant();
-            break;
-
-        case Module:
-        case Package:
-        case Class:
-            idClz = (IdentityConstant) constant;
-            break;
-
-        case ThisClass:
-        case ParentClass:
-        case ChildClass:
-            idClz = ((PseudoConstant) constant).getDeclarationLevelClass();
-            break;
-
-        default:
-            throw new IllegalStateException("unexpected defining constant: " + constant);
+        DefiningConstant defining = definingConstant();
+        if (defining instanceof FormalConstant constant) {
+            return constant.getConstraintType().containsGenericParam(sName);
         }
 
         // because isA() uses this method, there is a chicken-and-egg problem, so instead of
         // materializing the TypeInfo at this point, just answer the question without it
-        ClassStructure clz = (ClassStructure) idClz.getComponent();
+        ClassStructure clz = (ClassStructure) definingClassId(defining).getComponent();
         return clz.containsGenericParamType(sName);
+    }
+
+    /**
+     * @param defining  a defining constant of a class-backed terminal kind
+     *
+     * @return the class identity of the specified defining constant (module, package, class,
+     *         native rebase, or this/parent/child class); any other kind is refused with the
+     *         historical diagnostic
+     */
+    private static IdentityConstant definingClassId(DefiningConstant defining) {
+        return switch (defining) {
+            case NativeRebaseConstant constant -> constant.getClassConstant();
+            case ModuleConstant constant       -> constant;
+            case PackageConstant constant      -> constant;
+            case ClassConstant constant        -> constant;
+            case ThisClassConstant constant    -> constant.getDeclarationLevelClass();
+            case ParentClassConstant constant  -> constant.getDeclarationLevelClass();
+            case ChildClassConstant constant   -> constant.getDeclarationLevelClass();
+
+            case FormalConstant _, KeywordConstant _, DecoratedClassConstant _,
+                 MethodConstant _, MultiMethodConstant _, PureIdentityConstant _,
+                 TypedefConstant _, SignatureConstant _, UnresolvedNameConstant _,
+                 ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + defining);
+        };
     }
 
     @Override
@@ -362,41 +377,16 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().getGenericParamType(sName, listParams);
         }
 
-        Constant         constant = getDefiningConstant();
-        IdentityConstant idClz;
-        switch (constant.getFormat()) {
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
+        DefiningConstant defining = definingConstant();
+        if (defining instanceof FormalConstant constant) {
             assert listParams.isEmpty();
 
-            return ((FormalConstant) constant).getConstraintType().
-                getGenericParamType(sName, listParams);
-
-        case NativeClass:
-            idClz = ((NativeRebaseConstant) constant).getClassConstant();
-            break;
-
-        case Module:
-        case Package:
-        case Class:
-            idClz = (IdentityConstant) constant;
-            break;
-
-        case ThisClass:
-        case ParentClass:
-        case ChildClass:
-            idClz = ((PseudoConstant) constant).getDeclarationLevelClass();
-            break;
-
-        default:
-            throw new IllegalStateException("unexpected defining constant: " + constant);
+            return constant.getConstraintType().getGenericParamType(sName, listParams);
         }
 
         // because isA() uses this method, there is a chicken-and-egg problem, so instead of
         // materializing the TypeInfo at this point, just answer the question without it
-        ClassStructure clz        = (ClassStructure) idClz.getComponent();
+        ClassStructure clz        = (ClassStructure) definingClassId(defining).getComponent();
         ConstantPool   pool       = getConstantPool();
         TypeConstant   typeActual = listParams.isEmpty()
                 ? this
@@ -461,7 +451,6 @@ public sealed class TerminalTypeConstant
     }
 
     @Override
-    @SuppressWarnings("fallthrough")
     public ResolutionResult resolveContributedName(
            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
         if (!isSingleDefiningConstant()) {
@@ -470,57 +459,57 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().resolveContributedName(sName, access, idMethod, collector);
         }
 
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat()) {
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-        case IsClass:
-            return ResolutionResult.UNKNOWN;
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            case FormalConstant _, KeywordConstant _ -> ResolutionResult.UNKNOWN;
 
-        case NativeClass:
-            constant = ((NativeRebaseConstant) constant).getClassConstant();
-            // fall through
-        case Module:
-        case Package:
-        case Class: {
-            IdentityConstant idClz = (IdentityConstant) constant;
-            if (idMethod != null) {
-                if (idClz.isNestMateOf(idMethod.getClassIdentity())) {
-                    access = Access.PRIVATE;
-                } else {
-                    IdentityConstant idParent = idClz.getParentConstant();
-                    if (idParent instanceof MethodConstant && idMethod.isDescendant(idParent)) {
-                        // the class is defined inside of the method
-                        access = Access.PRIVATE;
-                    }
-                }
-            }
+            case NativeRebaseConstant constant -> resolveClassContributedName(
+                    constant.getClassConstant(), sName, access, idMethod, collector);
+            case ModuleConstant constant ->
+                resolveClassContributedName(constant, sName, access, idMethod, collector);
+            case PackageConstant constant ->
+                resolveClassContributedName(constant, sName, access, idMethod, collector);
+            case ClassConstant constant ->
+                resolveClassContributedName(constant, sName, access, idMethod, collector);
 
-            return idClz.getComponent().resolveName(sName, access, collector);
-        }
-
-        case ThisClass:
-        case ParentClass:
-        case ChildClass:
-            return ((PseudoConstant) constant).getDeclarationLevelClass().getType().
+            case ThisClassConstant constant -> constant.getDeclarationLevelClass().getType().
+                    resolveContributedName(sName, access, idMethod, collector);
+            case ParentClassConstant constant -> constant.getDeclarationLevelClass().getType().
+                    resolveContributedName(sName, access, idMethod, collector);
+            case ChildClassConstant constant -> constant.getDeclarationLevelClass().getType().
                     resolveContributedName(sName, access, idMethod, collector);
 
-        case Typedef:
-            return ((TypedefConstant) constant).getReferredToType().
-                resolveContributedName(sName, access, idMethod, collector);
+            case TypedefConstant constant -> constant.getReferredToType().
+                    resolveContributedName(sName, access, idMethod, collector);
 
-        case UnresolvedName:
-            return ResolutionResult.POSSIBLE;
+            case UnresolvedNameConstant ignored -> ResolutionResult.POSSIBLE;
 
-        default:
-            throw new IllegalStateException("unexpected defining constant: " + constant);
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, SignatureConstant _, ExpressionConstant _,
+                 DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + defining);
+        };
+    }
+
+    /**
+     * Resolve a contributed name for a class-identified terminal type.
+     */
+    private static ResolutionResult resolveClassContributedName(
+            IdentityConstant idClz, String sName, Access access, MethodConstant idMethod,
+            ResolutionCollector collector) {
+        if (idMethod != null) {
+            if (idClz.isNestMateOf(idMethod.getClassIdentity())) {
+                access = Access.PRIVATE;
+            } else {
+                IdentityConstant idParent = idClz.getParentConstant();
+                if (idParent instanceof MethodConstant && idMethod.isDescendant(idParent)) {
+                    // the class is defined inside of the method
+                    access = Access.PRIVATE;
+                }
+            }
         }
+
+        return idClz.getComponent().resolveName(sName, access, collector);
     }
 
     @Override
@@ -583,40 +572,28 @@ public sealed class TerminalTypeConstant
 
     @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams) {
-        Constant constId = ensureResolvedConstant();
-
+        DefiningConstant defining = asDefining(ensureResolvedConstant());
         IdentityConstant idClz;
-        switch (constId.getFormat()) {
-        case Module:
-        case Package:
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-        case IsClass:
-            return this;
+        switch (defining) {
+        case ModuleConstant ignored     -> { return this; }
+        case PackageConstant ignored    -> { return this; }
+        case FormalConstant ignored     -> { return this; }
+        case KeywordConstant ignored    -> { return this; }
 
-        case Class:
-        case NativeClass:
-            idClz = (IdentityConstant) constId;
-            break;
+        case ClassConstant constant     -> idClz = constant;  // includes native rebase
 
-        case ThisClass:
-        case ParentClass:
-        case ChildClass:
-            idClz = ((PseudoConstant) constId).getDeclarationLevelClass();
-            break;
+        case ThisClassConstant constant -> idClz = constant.getDeclarationLevelClass();
+        case ParentClassConstant constant -> idClz = constant.getDeclarationLevelClass();
+        case ChildClassConstant constant -> idClz = constant.getDeclarationLevelClass();
 
-        case Typedef:
-            return ((TypedefConstant) constId).getReferredToType().
-                adoptParameters(pool, atypeParams);
+        case TypedefConstant constant   -> {
+            return constant.getReferredToType().adoptParameters(pool, atypeParams);
+        }
 
-        default:
-            throw new IllegalStateException("unexpected defining constant: " + constId);
+        case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+             PureIdentityConstant _, SignatureConstant _, UnresolvedNameConstant _,
+             ExpressionConstant _, DeferredValueConstant _ ->
+            throw new IllegalStateException("unexpected defining constant: " + defining);
         }
 
         if (atypeParams == null) {
@@ -641,40 +618,28 @@ public sealed class TerminalTypeConstant
 
     @Override
     public TypeConstant[] collectGenericParameters() {
-        Constant constId = ensureResolvedConstant();
-
+        DefiningConstant defining = asDefining(ensureResolvedConstant());
         IdentityConstant idClz;
-        switch (constId.getFormat()) {
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-        case IsClass:
-            return TypeConstant.NO_TYPES;
+        switch (defining) {
+        case FormalConstant ignored     -> { return TypeConstant.NO_TYPES; }
+        case KeywordConstant ignored    -> { return TypeConstant.NO_TYPES; }
 
-        case Module:
-        case Package:
-        case Class:
-        case NativeClass:
-            idClz = (IdentityConstant) constId;
-            break;
+        case ModuleConstant constant    -> idClz = constant;
+        case PackageConstant constant   -> idClz = constant;
+        case ClassConstant constant     -> idClz = constant;  // includes native rebase
 
-        case ThisClass:
-        case ParentClass:
-        case ChildClass:
-            idClz = ((PseudoConstant) constId).getDeclarationLevelClass();
-            break;
+        case ThisClassConstant constant -> idClz = constant.getDeclarationLevelClass();
+        case ParentClassConstant constant -> idClz = constant.getDeclarationLevelClass();
+        case ChildClassConstant constant -> idClz = constant.getDeclarationLevelClass();
 
-        case Typedef:
-            return ((TypedefConstant) constId).getReferredToType().
-                collectGenericParameters();
+        case TypedefConstant constant   -> {
+            return constant.getReferredToType().collectGenericParameters();
+        }
 
-        default:
-            throw new IllegalStateException("unexpected defining constant: " + constId);
+        case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+             PureIdentityConstant _, SignatureConstant _, UnresolvedNameConstant _,
+             ExpressionConstant _, DeferredValueConstant _ ->
+            throw new IllegalStateException("unexpected defining constant: " + defining);
         }
 
         if (isTuple()) {
@@ -714,10 +679,9 @@ public sealed class TerminalTypeConstant
                     resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx);
         }
 
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat()) {
-        case ThisClass: {
-            IdentityConstant idClass  = ((ThisClassConstant) constant).getDeclarationLevelClass();
+        switch (definingConstant()) {
+        case ThisClassConstant constant: {
+            IdentityConstant idClass  = constant.getDeclarationLevelClass();
             TypeConstant     typeDecl = idClass.getType();
             if (typeTarget == null || !typeTarget.isA(typeDecl)) {
                 return typeDecl;
@@ -742,8 +706,7 @@ public sealed class TerminalTypeConstant
             return typeTarget.removeAccess();
         }
 
-        case ParentClass: {
-            ParentClassConstant constParent = (ParentClassConstant) constant;
+        case ParentClassConstant constParent: {
             if (typeTarget != null) {
                 if (typeTarget.isFormalType()) {
                     typeTarget = typeTarget.resolveConstraints();
@@ -764,25 +727,26 @@ public sealed class TerminalTypeConstant
             }
             return constParent.getDeclarationLevelClass().getType();
         }
-        case ChildClass:
+        case ChildClassConstant constant:
             // currently, not used
-            return ((ChildClassConstant) constant).getDeclarationLevelClass().getType();
+            return constant.getDeclarationLevelClass().getType();
 
-        case UnresolvedName:
+        case UnresolvedNameConstant constant:
             throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
 
-        default:
+        case ModuleConstant _, PackageConstant _, ClassConstant _, FormalConstant _,
+             KeywordConstant _, DecoratedClassConstant _, MethodConstant _,
+             MultiMethodConstant _, PureIdentityConstant _, TypedefConstant _,
+             SignatureConstant _, ExpressionConstant _, DeferredValueConstant _:
             return this;
         }
     }
 
     @Override
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName) {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat()) {
-        case TypeParameter: {
-            TypeParameterConstant idTypeParam = (TypeParameterConstant) constant;
-            MethodConstant        idMethod    = idTypeParam.getMethod();
+        switch (definingConstant()) {
+        case TypeParameterConstant idTypeParam: {
+            MethodConstant idMethod = idTypeParam.getMethod();
             MethodStructure       method      = (MethodStructure) idMethod.getComponent();
             if (method != null) {
                 Parameter param = method.getParam(idTypeParam.getRegister());
@@ -822,8 +786,11 @@ public sealed class TerminalTypeConstant
             break;
         }
 
-        case Property: {
-            PropertyConstant idProp = (PropertyConstant) constant;
+        case FormalTypeChildConstant ignored:
+            // this shouldn't happen; previously the silent tail of the format switch
+            break;
+
+        case PropertyConstant idProp: {
             if (idProp.getName().equals(sFormalName)) {
                 ConstantPool pool = getConstantPool();
                 TypeConstant typeConstraint = idProp.getConstraintType().
@@ -837,9 +804,16 @@ public sealed class TerminalTypeConstant
             break;
         }
 
-        case FormalTypeChild:
-        case DynamicFormal:
+        case DynamicFormalConstant ignored:
             // this shouldn't happen
+            break;
+
+        case ModuleConstant _, PackageConstant _, ClassConstant _, KeywordConstant _,
+             ThisClassConstant _, ParentClassConstant _, ChildClassConstant _,
+             DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+             PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
+             UnresolvedNameConstant _, ExpressionConstant _, DeferredValueConstant _:
+            // previously the silent tail of the format switch
             break;
         }
         return null;
@@ -894,7 +868,22 @@ public sealed class TerminalTypeConstant
      *         caller re-derive (or silently mis-derive) the union from a format switch
      */
     private DefiningConstant definingConstant() {
-        return (DefiningConstant) getDefiningConstant();
+        return asDefining(getDefiningConstant());
+    }
+
+    /**
+     * Type the specified constant as the sealed {@link DefiningConstant} union, preserving the
+     * historical diagnostic for a corrupt pool.
+     *
+     * @param constant  the constant to type
+     *
+     * @return the constant, typed as the union
+     */
+    private static DefiningConstant asDefining(Constant constant) {
+        if (constant instanceof DefiningConstant defining) {
+            return defining;
+        }
+        throw new IllegalStateException("unexpected defining constant: " + constant);
     }
 
     @Override
@@ -904,12 +893,8 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().isNullable();
         }
 
-        Constant constant = getDefiningConstant();
-        return switch (constant.getFormat()) {
-            case Property, TypeParameter, FormalTypeChild, DynamicFormal ->
-                    ((FormalConstant) constant).getConstraintType().isNullable();
-            default -> false;
-        };
+        return getDefiningConstant() instanceof FormalConstant constant
+                && constant.getConstraintType().isNullable();
     }
 
     @Override
@@ -928,21 +913,14 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().removeNullable();
         }
 
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat()) {
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-            if (((FormalConstant) constant).getConstraintType().isNullable()) {
-                // Note: we use the DifferenceType here to say that "this" formal type
-                //       *is not* Nullable, which is not quite the same as other usages
-                //       of DifferenceType; consider adding a new TypeConstant for that case,
-                //       for example "FormalDifference"...
-                ConstantPool pool = getConstantPool();
-                return pool.ensureDifferenceTypeConstant(this, pool.typeNullable());
-            }
-            break;
+        if (getDefiningConstant() instanceof FormalConstant constant
+                && constant.getConstraintType().isNullable()) {
+            // Note: we use the DifferenceType here to say that "this" formal type
+            //       *is not* Nullable, which is not quite the same as other usages
+            //       of DifferenceType; consider adding a new TypeConstant for that case,
+            //       for example "FormalDifference"...
+            ConstantPool pool = getConstantPool();
+            return pool.ensureDifferenceTypeConstant(this, pool.typeNullable());
         }
 
         return super.removeNullable();
@@ -955,14 +933,8 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().andNot(pool, that);
         }
 
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat()) {
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal: {
-            FormalConstant constFormal    = (FormalConstant) constant;
-            TypeConstant   typeConstraint = constFormal.getConstraintType();
+        if (getDefiningConstant() instanceof FormalConstant constFormal) {
+            TypeConstant typeConstraint = constFormal.getConstraintType();
             /*
              * In a number of places in Ecstasy code we have a check that look like:
              *
@@ -993,7 +965,6 @@ public sealed class TerminalTypeConstant
                     : typeR.equals(typeConstraint)
                         ? this
                         : this.combine(pool, typeR);
-            }
         }
 
         return super.andNot(pool, that);
@@ -1012,20 +983,37 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().extendsClass(constClass);
         }
 
-        Constant constant = getDefiningConstant();
-        if (constant instanceof KeywordConstant constKeyword) {
-            constant = constKeyword.getBaseType().getDefiningConstant();
+        DefiningConstant defining = definingConstant();
+        if (defining instanceof KeywordConstant constKeyword) {
+            defining = asDefining(constKeyword.getBaseType().getDefiningConstant());
         }
-        return switch (constant.getFormat()) {
-            case Module, Package, Class -> ((ClassStructure) ((IdentityConstant) constant).getComponent()).extendsClass(constClass);
+        DefiningConstant resolved = defining;
+        return switch (resolved) {
+            // note: native rebase constants kept the historical refusal below
+            case NativeRebaseConstant constant ->
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            case ModuleConstant constant ->
+                ((ClassStructure) constant.getComponent()).extendsClass(constClass);
+            case PackageConstant constant ->
+                ((ClassStructure) constant.getComponent()).extendsClass(constClass);
+            case ClassConstant constant ->
+                ((ClassStructure) constant.getComponent()).extendsClass(constClass);
 
-            case Property, TypeParameter, FormalTypeChild, DynamicFormal ->
-                    ((FormalConstant) constant).getConstraintType().extendsClass(constClass);
+            case FormalConstant constant ->
+                constant.getConstraintType().extendsClass(constClass);
 
-            case ThisClass, ParentClass, ChildClass -> ((ClassStructure) ((PseudoConstant) constant)
+            case ThisClassConstant constant -> ((ClassStructure) constant
+                    .getDeclarationLevelClass().getComponent()).extendsClass(constClass);
+            case ParentClassConstant constant -> ((ClassStructure) constant
+                    .getDeclarationLevelClass().getComponent()).extendsClass(constClass);
+            case ChildClassConstant constant -> ((ClassStructure) constant
                     .getDeclarationLevelClass().getComponent()).extendsClass(constClass);
 
-            default -> throw new IllegalStateException("unexpected defining constant: " + constant);
+            case KeywordConstant _, DecoratedClassConstant _, MethodConstant _,
+                 MultiMethodConstant _, PureIdentityConstant _, TypedefConstant _,
+                 SignatureConstant _, UnresolvedNameConstant _, ExpressionConstant _,
+                 DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + resolved);
         };
     }
 
@@ -1048,8 +1036,8 @@ public sealed class TerminalTypeConstant
                 return true;
             }
 
-            DynamicFormalConstant constDynamic = (DynamicFormalConstant) getDefiningConstant();
-            return constDynamic.getRegister() == register;
+            return getDefiningConstant() instanceof DynamicFormalConstant constDynamic
+                    && constDynamic.getRegister() == register;
         }
         return false;
     }
@@ -1091,11 +1079,8 @@ public sealed class TerminalTypeConstant
 
     @Override
     public boolean isDynamicType() {
-        if (isSingleDefiningConstant()) {
-            Constant constant = getDefiningConstant();
-            return constant.getFormat() == Format.DynamicFormal;
-        }
-        return false;
+        return isSingleDefiningConstant()
+                && getDefiningConstant() instanceof DynamicFormalConstant;
     }
 
     @Override
@@ -1106,52 +1091,49 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().getCategory();
         }
 
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat()) {
-        case Module:
-        case Package:
-            // these are always class types (not interface types)
-            return Category.CLASS;
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            // modules and packages are always class types (not interface types)
+            case ModuleConstant _, PackageConstant _ -> Category.CLASS;
 
-        case NativeClass:
             // native rebase is only for an interface
-            return Category.IFACE;
+            case NativeRebaseConstant ignored -> Category.IFACE;
 
-        case Class: {
-            // examine the structure to determine if it represents a class or interface
-            ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
-            if (clz == null) {
-                throw new IllegalStateException("missing class for constant: " + constant);
+            case ClassConstant constant -> {
+                // examine the structure to determine if it represents a class or interface
+                ClassStructure clz = (ClassStructure) constant.getComponent();
+                if (clz == null) {
+                    throw new IllegalStateException("missing class for constant: " + constant);
+                }
+                yield clz.getFormat() == Component.Format.INTERFACE
+                        ? Category.IFACE : Category.CLASS;
             }
-            return clz.getFormat() == Component.Format.INTERFACE
-                    ? Category.IFACE : Category.CLASS;
-        }
 
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-            return Category.FORMAL;
+            case FormalConstant ignored -> Category.FORMAL;
 
-        case ThisClass:
-        case ParentClass:
-        case ChildClass: {
-            ClassStructure clz = (ClassStructure) ((PseudoConstant) constant)
-                    .getDeclarationLevelClass().getComponent();
-            return clz.getFormat() == Component.Format.INTERFACE
-                    ? Category.IFACE : Category.CLASS;
-        }
+            case ThisClassConstant constant   -> categoryOfDeclaredClass(constant);
+            case ParentClassConstant constant -> categoryOfDeclaredClass(constant);
+            case ChildClassConstant constant  -> categoryOfDeclaredClass(constant);
 
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-        case IsClass:
-            return Category.OTHER;
+            case KeywordConstant ignored -> Category.OTHER;
 
-        default:
-            throw new IllegalStateException("unexpected defining constant: " + constant);
-        }
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
+                 UnresolvedNameConstant _, ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + defining);
+        };
+    }
+
+    /**
+     * @param constant  a this/parent/child class pseudo constant
+     *
+     * @return the category of its declaration-level class
+     */
+    private static Category categoryOfDeclaredClass(PseudoConstant constant) {
+        ClassStructure clz = (ClassStructure) constant
+                .getDeclarationLevelClass().getComponent();
+        return clz.getFormat() == Component.Format.INTERFACE
+                ? Category.IFACE : Category.CLASS;
     }
 
     @Override
@@ -1162,44 +1144,43 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().isSingleUnderlyingClass(fAllowInterface);
         }
 
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat()) {
-        case Module:
-        case Package:
-        case NativeClass:
-            // these are always class types (not interface types)
-            return true;
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            // modules, packages, and native rebases are always class types (not interfaces)
+            case NativeRebaseConstant ignored        -> true;
+            case ModuleConstant _, PackageConstant _ -> true;
 
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-        case IsClass:
-            return false;
+            case KeywordConstant ignored -> false;
 
-        case Class: {
-            ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
-            return fAllowInterface || clz.getFormat() != Component.Format.INTERFACE;
-        }
+            case ClassConstant constant ->
+                isUnderlyingClass(constant, fAllowInterface);
 
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-            return ((FormalConstant) constant).getConstraintType().
-                    isSingleUnderlyingClass(fAllowInterface);
+            case FormalConstant constant ->
+                constant.getConstraintType().isSingleUnderlyingClass(fAllowInterface);
 
-        case ThisClass:
-        case ParentClass:
-        case ChildClass: {
-            ClassStructure clz = (ClassStructure) ((PseudoConstant) constant)
-                    .getDeclarationLevelClass().getComponent();
-            return fAllowInterface || clz.getFormat() != Component.Format.INTERFACE;
-        }
+            case ThisClassConstant constant ->
+                isUnderlyingClass(constant.getDeclarationLevelClass(), fAllowInterface);
+            case ParentClassConstant constant ->
+                isUnderlyingClass(constant.getDeclarationLevelClass(), fAllowInterface);
+            case ChildClassConstant constant ->
+                isUnderlyingClass(constant.getDeclarationLevelClass(), fAllowInterface);
 
-        default:
-            throw new IllegalStateException("unexpected defining constant: " + constant);
-        }
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
+                 UnresolvedNameConstant _, ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + defining);
+        };
+    }
+
+    /**
+     * @param idClz            the class identity to test
+     * @param fAllowInterface  true iff an interface is acceptable
+     *
+     * @return true iff the specified identity is an acceptable underlying class
+     */
+    private static boolean isUnderlyingClass(IdentityConstant idClz, boolean fAllowInterface) {
+        ClassStructure clz = (ClassStructure) idClz.getComponent();
+        return fAllowInterface || clz.getFormat() != Component.Format.INTERFACE;
     }
 
     @Override
@@ -1210,34 +1191,32 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().getSingleUnderlyingClass(fAllowInterface);
         }
 
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat()) {
-        case Module:
-        case Package:
-        case NativeClass:
-            // these are always class types (not interface types)
-            return (IdentityConstant) constant;
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            // modules, packages, and native rebases are always class types (not interfaces)
+            case NativeRebaseConstant constant -> constant;
+            case ModuleConstant constant       -> constant;
+            case PackageConstant constant      -> constant;
 
-        case Class:
-            assert fAllowInterface ||
-                   (((ClassConstant) constant).getComponent()).getFormat() != Component.Format.INTERFACE;
-            return (IdentityConstant) constant;
+            case ClassConstant constant -> {
+                assert fAllowInterface ||
+                       constant.getComponent().getFormat() != Component.Format.INTERFACE;
+                yield constant;
+            }
 
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-            return ((FormalConstant) constant).getConstraintType().
-                getSingleUnderlyingClass(fAllowInterface);
+            case FormalConstant constant ->
+                constant.getConstraintType().getSingleUnderlyingClass(fAllowInterface);
 
-        case ParentClass:
-        case ChildClass:
-        case ThisClass:
-            return ((PseudoConstant) constant).getDeclarationLevelClass();
+            case ThisClassConstant constant   -> constant.getDeclarationLevelClass();
+            case ParentClassConstant constant -> constant.getDeclarationLevelClass();
+            case ChildClassConstant constant  -> constant.getDeclarationLevelClass();
 
-        default:
-            throw new IllegalStateException("unexpected defining constant: " + constant);
-        }
+            case KeywordConstant _, DecoratedClassConstant _, MethodConstant _,
+                 MultiMethodConstant _, PureIdentityConstant _, TypedefConstant _,
+                 SignatureConstant _, UnresolvedNameConstant _, ExpressionConstant _,
+                 DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + defining);
+        };
     }
 
     @Override
@@ -1248,27 +1227,17 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().isExplicitClassIdentity(fAllowParams);
         }
 
-        Constant constant = getDefiningConstant();
-        return switch (constant.getFormat()) {
-            case Module,
-                 Package,
-                 Class,
-                 ThisClass,
-                 ParentClass,
-                 ChildClass,
-                 NativeClass -> true;
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            case ModuleConstant _, PackageConstant _, ClassConstant _, ThisClassConstant _,
+                 ParentClassConstant _, ChildClassConstant _ -> true;
 
-            case Property,
-                 TypeParameter,
-                 FormalTypeChild,
-                 DynamicFormal,
-                 IsConst,
-                 IsEnum,
-                 IsModule,
-                 IsPackage,
-                 IsClass -> false;
+            case FormalConstant _, KeywordConstant _ -> false;
 
-            default -> throw new IllegalStateException("unexpected defining constant: " + constant);
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
+                 UnresolvedNameConstant _, ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + defining);
         };
     }
 
@@ -1280,19 +1249,30 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().getExplicitClassFormat();
         }
 
-        Constant constant = getDefiningConstant();
-        return switch (constant.getFormat()) {
-            case Module -> Component.Format.MODULE;
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            case ModuleConstant ignored  -> Component.Format.MODULE;
+            case PackageConstant ignored -> Component.Format.PACKAGE;
 
-            case Package -> Component.Format.PACKAGE;
-
+            // note: native rebase constants kept the historical refusal below
+            case NativeRebaseConstant constant ->
+                throw new IllegalStateException("no class format for: " + constant);
             // get the class referred to and return its format
-            case Class -> ((ClassConstant) constant).getComponent().getFormat();
+            case ClassConstant constant -> constant.getComponent().getFormat();
 
             // follow the indirection to the class structure
-            case ThisClass, ParentClass, ChildClass -> ((PseudoConstant) constant).getDeclarationLevelClass().getComponent().getFormat();
+            case ThisClassConstant constant ->
+                constant.getDeclarationLevelClass().getComponent().getFormat();
+            case ParentClassConstant constant ->
+                constant.getDeclarationLevelClass().getComponent().getFormat();
+            case ChildClassConstant constant ->
+                constant.getDeclarationLevelClass().getComponent().getFormat();
 
-            default -> throw new IllegalStateException("no class format for: " + constant);
+            case FormalConstant _, KeywordConstant _, DecoratedClassConstant _,
+                 MethodConstant _, MultiMethodConstant _, PureIdentityConstant _,
+                 TypedefConstant _, SignatureConstant _, UnresolvedNameConstant _,
+                 ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("no class format for: " + defining);
         };
     }
 
@@ -1304,14 +1284,26 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().getExplicitClassInto(fResolve);
         }
 
-        Constant       constId = getDefiningConstant();
-        ClassStructure structMixin = switch (constId.getFormat()) {
-            // get the class referred to and return its format
-            case Class -> (ClassStructure) ((ClassConstant) constId).getComponent();
+        DefiningConstant defining = definingConstant();
+        ClassStructure structMixin = switch (defining) {
+            // note: native rebase constants kept the historical refusal below
+            case NativeRebaseConstant constant ->
+                throw new IllegalStateException("no class format for: " + constant);
+            // get the class referred to
+            case ClassConstant constant -> (ClassStructure) constant.getComponent();
 
-            case ThisClass, ParentClass, ChildClass -> (ClassStructure) ((PseudoConstant) constId).getDeclarationLevelClass().getComponent();
+            case ThisClassConstant constant ->
+                (ClassStructure) constant.getDeclarationLevelClass().getComponent();
+            case ParentClassConstant constant ->
+                (ClassStructure) constant.getDeclarationLevelClass().getComponent();
+            case ChildClassConstant constant ->
+                (ClassStructure) constant.getDeclarationLevelClass().getComponent();
 
-            default -> throw new IllegalStateException("no class format for: " + constId);
+            case ModuleConstant _, PackageConstant _, FormalConstant _, KeywordConstant _,
+                 DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
+                 UnresolvedNameConstant _, ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("no class format for: " + defining);
         };
 
         if (structMixin == null ||
@@ -1371,28 +1363,23 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().isConst();
         }
 
-        Constant constant = getDefiningConstant();
-        return switch (constant.getFormat()) {
-            case Module,
-                 Package,
-                 IsConst,
-                 IsEnum,
-                 IsModule,
-                 IsPackage -> true;
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            case ModuleConstant _, PackageConstant _ -> true;
 
-            case Property,
-                 TypeParameter,
-                 FormalTypeChild,
-                 DynamicFormal,
-                 ThisClass,
-                 ParentClass,
-                 ChildClass,
-                 NativeClass,
-                 IsClass -> false;
+            case KeywordConstant constant -> constant.getFormat() != Format.IsClass;
 
-            case Class -> ((ClassStructure) ((ClassConstant) constant).getComponent()).isConst();
+            case FormalConstant _, ThisClassConstant _, ParentClassConstant _,
+                 ChildClassConstant _ -> false;
 
-            default -> throw new IllegalStateException("unexpected constant: " + constant);
+            case NativeRebaseConstant ignored -> false;
+            case ClassConstant constant ->
+                ((ClassStructure) constant.getComponent()).isConst();
+
+            case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
+                 UnresolvedNameConstant _, ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected constant: " + defining);
         };
     }
 
@@ -1456,40 +1443,33 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().ensureTypeInfoInternal(errs);
         }
 
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat()) {
-        case Module:
-        case Package:
-        case Class:
-        case NativeClass:
-            return super.buildTypeInfo(errs);
+        DefiningConstant defining = definingConstant();
+        return switch (defining) {
+            case ModuleConstant _, PackageConstant _, ClassConstant _ ->
+                super.buildTypeInfo(errs);
 
-        case IsClass:
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-            return ((KeywordConstant) constant).getBaseType().ensureTypeInfoInternal(errs);
+            case KeywordConstant constant ->
+                constant.getBaseType().ensureTypeInfoInternal(errs);
 
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal: {
-            TypeConstant typeConstraint = ((FormalConstant) constant).getConstraintType();
-            int          cInvalidations = getConstantPool().getInvalidationCount();
+            case FormalConstant constant -> {
+                TypeConstant typeConstraint = constant.getConstraintType();
+                int          cInvalidations = getConstantPool().getInvalidationCount();
 
-            if (typeConstraint.containsAutoNarrowing(false)) {
-                typeConstraint = typeConstraint.resolveAutoNarrowingBase();
+                if (typeConstraint.containsAutoNarrowing(false)) {
+                    typeConstraint = typeConstraint.resolveAutoNarrowingBase();
+                }
+                TypeInfo infoConstraint = typeConstraint.ensureTypeInfoInternal(errs);
+                yield isComplete(infoConstraint)
+                        ? new TypeInfoReal(this, infoConstraint, cInvalidations)
+                        : null;
             }
-            TypeInfo infoConstraint = typeConstraint.ensureTypeInfoInternal(errs);
-            return isComplete(infoConstraint)
-                    ? new TypeInfoReal(this, infoConstraint, cInvalidations)
-                    : null;
-        }
 
-        default:
-            throw new IllegalStateException("unexpected defining constant: " + constant);
-        }
+            case ThisClassConstant _, ParentClassConstant _, ChildClassConstant _,
+                 DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
+                 PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
+                 UnresolvedNameConstant _, ExpressionConstant _, DeferredValueConstant _ ->
+                throw new IllegalStateException("unexpected defining constant: " + defining);
+        };
     }
 
 
@@ -2077,34 +2057,23 @@ public sealed class TerminalTypeConstant
                 return constId.getReferredToType().validate(errs) && super.validate(errs);
             }
 
-            Constant constant = getDefiningConstant();
-            switch (constant.getFormat()) {
-            case Module:
-            case Package:
-            case Class:
-            case Property:
-            case TypeParameter:
-            case FormalTypeChild:
-            case DynamicFormal:
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-            case NativeClass:
+            DefiningConstant defining = definingConstant();
+            switch (defining) {
+            case ModuleConstant _, PackageConstant _, ClassConstant _, FormalConstant _,
+                 ThisClassConstant _, ParentClassConstant _, ChildClassConstant _ -> {
                 return super.validate(errs);
+            }
 
-            case IsConst:
-            case IsEnum:
-            case IsModule:
-            case IsPackage:
-            case IsClass:
-                break;
+            case KeywordConstant ignored -> { }
 
-            case UnresolvedName:
-            default:
+            case UnresolvedNameConstant _, DecoratedClassConstant _, MethodConstant _,
+                 MultiMethodConstant _, PureIdentityConstant _, TypedefConstant _,
+                 SignatureConstant _, ExpressionConstant _, DeferredValueConstant _ -> {
                 // this is basically an illegal state exception
-                log(errs, Severity.ERROR, VE_UNKNOWN, constant.getValueString()
-                        + " (" + constant.getFormat() + ')');
+                log(errs, Severity.ERROR, VE_UNKNOWN, defining.getValueString()
+                        + " (" + defining.getFormat() + ')');
                 return true;
+            }
             }
         }
 

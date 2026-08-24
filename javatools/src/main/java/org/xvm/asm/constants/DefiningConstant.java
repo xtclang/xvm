@@ -1,6 +1,9 @@
 package org.xvm.asm.constants;
 
 
+import org.xvm.asm.Constant;
+
+
 /**
  * The sealed union of constants that can define a terminal type: identity constants (classes,
  * properties, formal types, and so on) and pseudo constants (this/parent/child class,
@@ -13,4 +16,13 @@ package org.xvm.asm.constants;
  */
 public sealed interface DefiningConstant
         permits IdentityConstant, PseudoConstant {
+    /**
+     * @return the format of this constant (both branches of the union are constants)
+     */
+    Constant.Format getFormat();
+
+    /**
+     * @return the value of this constant, in some sort of human-readable form
+     */
+    String getValueString();
 }
