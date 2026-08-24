@@ -59,6 +59,24 @@ semantics, and clear owner/performance reasoning.
 | 13 | Keep JIT ownership cleanup separate | Keeps JIT lifecycle, generated static fields, and `Ctx.Current` review separate from interpreter runtime. | PR 9/10 for shared ASM safety |
 | 14 | Add build, lint, and source-shape gates | Turns fixed patterns into regressions that fail early. | After the relevant patterns are clean |
 | 15 | Add structured diagnostics and logging discipline | Replaces stdout/stderr compiler/runtime decisions with typed diagnostics, guarded trace logging, and stable repro fixtures. | Independent; stronger after PR 8 and PR 8b |
+| 16 | Seal the closed constant, AST, and structure hierarchies | Compile-checked exhaustiveness over hierarchies that are closed in practice; silent dispatch defaults become compile errors. | Independent; before PR 18 |
+| 17 | Guard handle view lifecycles and default-deny mutable view cloning | Closes the freeze-split family structurally: refusal guards, shared cells/holders, and a default-deny base rule replace per-class patching. | PR 1-5 for context; technically independent |
+| 18 | Retire java.lang.Cloneable outside two disciplined islands | Copy constructors replace Object.clone(); fixes two inner-class outer-pointer defects the mechanism itself caused. | PR 16 (sealed tree enforces copy-path completeness); PR 17 recommended first |
+
+### 2026-08-24 Wave: Commit-To-PR Map
+
+The hardening wave landed as reviewable local commits; this table is the
+distillation guide the sequence above refers to. Each row is one coherent
+review story; a PR built from it cherry-picks exactly these commits.
+
+| PR | Branch commits | One-line sell |
+| --- | --- | --- |
+| PR 11 (existing) | `ff8cc479a`, `f835b3693` | Reflection invoke aliased the caller's tuple as the callee register file; short-hand property overrides aliased the library module's Parameter objects. Both master bugs, both with red-on-master pins. |
+| PR 6/14 (existing) | `cb21e0b96` | Eight "read-only" accessors only wrapped under -ea; the contract now survives -da, pinned by an idiom ban. |
+| PR 16 | `e59d4f82d`, `dc39387bd`, `298067019`, `cace6570a`, `07ed937b3`, `ab5788584`, `78111b85f` | Zero sealed classes to 30 sealed roots over ~150 classes with zero non-sealed hatches; three demonstrator rewrites delete a fallthrough suppression and two silent-default families; three captured javac errors are the review story. |
+| PR 17 | `029ff4138`, `0bbfc98c4`, `db4ae7900`, `3785afdc8`, `c621b1dca` | The freeze-split bug family closed structurally: view-clone refusal for arrays/tuples/functions/delegates, default-deny at the ObjectHandle base with the GenericHandle cells as the one opt-in, the SocketHandle shared holder, and the finalizer chain fix - each with a two-view or shape test that is red on the old shape. |
+| PR 18 | `25371b397`, `0af827c72` | Oracle's own guidance, executed: copy constructors replace Object.clone() everywhere it ever corrupted state. Two defects only the mechanism could cause - inner classes whose clones kept answering with the SOURCE owner (MethodStructure.Source pool binding, Contribution.getComponent()) - are fixed by re-binding constructors that clone() cannot express, with a red-on-master test and a per-structure field ratchet. Depends on PR 16: cloneBody() is abstract over the sealed tree, so a new structure kind without a copy path does not compile. |
+| PR 8 (existing, extend) | `WorldSnapshotDemoTest` (with slice-1 world snapshot) | Runnable sequential- and multi-container world-dump demos with printed walkthrough output (`-Porg.xtclang.java.test.stdout=true`); shows the snapshot format, the ownership sweep, and the retained-container leak signal. |
 
 ### Commit Folding Guidance
 
