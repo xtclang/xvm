@@ -979,6 +979,21 @@ public class xArray
             m_mutability = mutability;
         }
 
+        @Override
+        public ObjectHandle cloneAs(TypeComposition clazz) {
+            if (m_mutability == Mutability.Mutable) {
+                // clear() replaces m_hDelegate wholesale for Mutable arrays (the one in-place
+                // delegate-pointer replacement in the codebase), so a shallow view copy forks the
+                // storage pointer: after one alias clears, the other keeps the old delegate and
+                // the two views silently diverge while natural code believes they are one array.
+                // Fixed/Persistent/Constant arrays never replace the pointer in place - views of
+                // those share one delegate and stay consistent - and immutable arrays are the
+                // proven-safe clone inputs (ConstHeap relocation asserts immutability).
+                throw new IllegalStateException("mutable array cannot be cloned as a view: " + this);
+            }
+            return super.cloneAs(clazz);
+        }
+
         public Mutability getMutability() {
             return m_mutability;
         }

@@ -77,6 +77,7 @@ explicit owner APIs, and typed runtime accessors.
 | `org.xvm.runtime.ClassCompositionLateRegistrationTest` | Late-registration diagnostic API. |
 | `org.xvm.runtime.ClassCompositionSafePublicationTest` | Native-container factory and branch field-publication shape. |
 | `org.xvm.runtime.NativeTemplatesTest` | Owner-local native template table and related runtime helper APIs. |
+| `org.xvm.runtime.template.collections.ArrayViewGuardTest` | `cloneAs` of a Mutable array quietly forks the delegate pointer, so a later `clear()` through one alias silently diverges the views; the guard (branch-only) makes it fail loudly while Constant arrays keep cloning. |
 | `org.xvm.runtime.template.reflect.RefViewGuardTest` | `cloneAs` of a register-bound ref quietly produces a view whose frame/register binding survives scope release, reading and writing the recycled slot; the guard (branch-only) makes it fail loudly. |
 | `org.xvm.runtime.template.annotations.AtomicViewSharingTest` | Constructor-final shared cells and the first-wins injected referent (branch-only shapes); master's lazily installed per-view fields split one Atomic into two and can resolve one injection twice. |
 | `org.xvm.runtime.HandleConstantOwnerGuardTest` | `HandleConstant.getHandleFor(Container)` guard API (branch-only); master's `getHandle(Frame)` serves the live handle raw with no ownership check. |
