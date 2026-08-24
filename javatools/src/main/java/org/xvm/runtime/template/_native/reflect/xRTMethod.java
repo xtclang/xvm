@@ -206,10 +206,15 @@ public class xRTMethod
      * Implementation for: {@code ReturnTypes invoke(Target target, ParamTypes args)}.
      */
     public int invokeInvoke(Frame frame, MethodHandle hMethod, ObjectHandle[] ahArg, int iReturn) {
-        ObjectHandle   hTarget = ahArg[0];
-        TupleHandle    hTuple  = (TupleHandle) ahArg[1];
-        ObjectHandle[] ahPass  = hTuple.m_ahValue;  // TODO GG+CP do we need to check these?
-        CallChain      chain   = hMethod.getCallChain(frame, hTarget);
+        ObjectHandle hTarget = ahArg[0];
+        TupleHandle  hTuple  = (TupleHandle) ahArg[1];
+        // clone the tuple's storage: when the callee needs no extra registers,
+        // Utils.ensureSize() hands the passed array through unchanged and it becomes the callee
+        // frame's register file (f_ahVar), so any parameter reassignment inside the invoked
+        // method would write into the caller's - possibly immutable, possibly const-heap-cached -
+        // tuple (see the equivalent defensive copy in xRTFunction.invokeInvoke)
+        ObjectHandle[] ahPass = hTuple.m_ahValue.clone();
+        CallChain      chain  = hMethod.getCallChain(frame, hTarget);
 
         return chain.invokeT(frame, hTarget, ahPass, iReturn);
     }
