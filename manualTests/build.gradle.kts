@@ -482,9 +482,11 @@ val testModuleNames = listOf(
     "TestTuples"
 )
 
-// Same set as runSequential: every known runnable manual test module, excluding
-// modules that the build already documents as broken outside this stress work.
-val knownWorkingTestModuleNames = testModuleNames.filter { it !in setOf("TestAnnotations") }
+// Same set as runSequential: every known runnable manual test module. TestAnnotations was
+// excluded here while it failed; it passes again on this branch, so the set is currently
+// complete. FailProbe is deliberately NOT in this list: it exists only to verify that a
+// runtime failure is machine-visible (non-zero exit -> task failure) through every runner path.
+val knownWorkingTestModuleNames = testModuleNames
 
 /**
  * Run all tests in parallel using the Runner module, which spawns all test modules concurrently.
@@ -589,9 +591,14 @@ val runDirectSequenceStress = tasks.register<XtcRunTask>("runDirectSequenceStres
 val runSequential = tasks.register<XtcRunTask>("runSequential") {
     group = "application"
     description = "Run all known tests sequentially, one after another."
-    // TODO: TestAnnotations is currently failing - fix the test and remove this exclusion
-    // TODO: The runner.x in parallel tests apparently just swallows and prints exceptions WTF?
-    // TODO: We should integrate this with xUnit instead maybe? OR finally implement negative and positive tests.
+    // Pass/fail authority is machine-visible on every runner path: a module failure reaches the
+    // Gradle build as a non-zero exit and a failed task. Verified with the FailProbe module
+    // through (1) the Runner module's async future chain, (2) a missing-module load, (3) a
+    // direct single-module run, and (4) the same-JVM DIRECT executor; runner.x completes its
+    // result future exceptionally and abandons remaining modules instead of printing and
+    // continuing. See docs/reentrancy/logging-diagnostics-audit.md ("Test pass/fail authority").
+    // TODO: Integrate these manual modules with xUnit so expected-failure (negative) tests are
+    //       first-class instead of relying on the FailProbe verification commands.
     knownWorkingTestModuleNames.forEach { moduleName(it) }
 }
 
