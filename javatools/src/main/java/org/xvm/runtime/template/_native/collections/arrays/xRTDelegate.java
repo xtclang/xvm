@@ -922,6 +922,18 @@ public class xRTDelegate
             m_mutability = mutability;
         }
 
+        @Override
+        public ObjectHandle cloneAs(TypeComposition clazz) {
+            // delegates are the storage engines behind ArrayHandle: per-instance
+            // m_cSize/m_mutability over shared element storage that the typed subclasses
+            // replace wholesale on grow (m_abValue, m_alValue, m_ahValue, ...). A shallow view
+            // copy would fork the storage pointer or split the freeze state exactly like the
+            // splits ArrayHandle refuses. No legitimate clone path exists - ConstHeap registers
+            // the array handle, not its delegate, and delegate compositions are inception
+            // classes - so any clone request is a defect and must fail loudly.
+            throw new IllegalStateException("array delegate cannot be cloned as a view: " + this);
+        }
+
         public Mutability getMutability() {
             return m_mutability;
         }

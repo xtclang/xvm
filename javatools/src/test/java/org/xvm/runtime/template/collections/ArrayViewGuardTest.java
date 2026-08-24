@@ -107,6 +107,36 @@ public class ArrayViewGuardTest {
         }
     }
 
+    /**
+     * The storage engines behind the arrays must never be view-cloned at all: delegates keep
+     * per-instance m_cSize/m_mutability over shared element storage that typed subclasses
+     * replace wholesale on grow, and no legitimate clone path exists (ConstHeap registers the
+     * array handle, not its delegate). Red on the unguarded shape, where the inherited
+     * ObjectHandle.cloneAs quietly produced the fork.
+     */
+    @Test
+    public void arrayDelegatesRefuseViewCloningEntirely() {
+        assumeTrue(systemModulesAvailable(), "compiled XDK system modules are required");
+
+        var runtime = new Runtime();
+        try {
+            var container = NativeContainer.create(runtime, systemRepository());
+            var pool      = container.getConstantPool();
+            var clzArray  = (ClassComposition) container.resolveClass(pool.typeArray());
+
+            for (var mutability : new Mutability[] {Mutability.Mutable, Mutability.Constant}) {
+                var hDelegate = xArray.createEmptyArray(clzArray, 0, mutability).m_hDelegate;
+                var error = assertThrows(IllegalStateException.class,
+                        () -> hDelegate.cloneAs(hDelegate.getComposition()),
+                        "a delegate view would fork the storage pointer or split the freeze"
+                                + " state");
+                assertTrue(error.getMessage().contains("delegate"), error.getMessage());
+            }
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
     // ----- helpers (same discovery as ClassCompositionSafePublicationTest) ----------------------
 
     private static boolean systemModulesAvailable() {
