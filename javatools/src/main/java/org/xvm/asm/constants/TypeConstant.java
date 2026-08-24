@@ -7272,7 +7272,7 @@ public abstract class TypeConstant
     }
 
     /**
-     * @return true iff the assignment of a value of this type to a value of the specified type
+     * @return assuming that "this" can be assigned to "that", return false iff the assignment
      *         requires a "checkcast"
      */
     public boolean isJitAssignableTo(TypeConstant that) {
