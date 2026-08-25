@@ -13,14 +13,15 @@ I. Ecstasy composition specialization:
 
 2. For the JIT project, Ecstasy composition specialization is the first step of specialization,
    referred to as "layer one specialization". This corresponds to the minimum set of TypeInfo
-   objects that must be calculated for an instantiable class; for example, Range requires only 2
-   TypeInfo objects to be calculated ("private Range<Orderable>" and "private Range<Sequential>"),
-   and ListMap requires 4 TypeInfo objects to be calculated ("private ListMap<Object, Object>",
-   "private ListMap<immutable Hashable, Object>", "private ListMap<immutable Object, Shareable>",
-   and "private ListMap<immutable Hashable, Shareable>"). Each type parameter in these examples is
-   calculated as the intersection of the class' parameter constraint type (such as Orderable in the
-   Range example) with each of the applied conditional incorporation parameter constraint types
-   ("immutable Object" and "immutable Hashable" in the ListMap "11" case).
+   objects (obviously a minimum of two, hence the term "specialization") that must be calculated for
+   an instantiable class; for example, Range requires only two TypeInfo objects to be calculated
+   ("private Range<Orderable>" and "private Range<Sequential>"), and ListMap requires four TypeInfo
+   objects to be calculated ("private ListMap<Object, Object>", "private ListMap<immutable Hashable,
+   Object>", "private ListMap<immutable Object, Shareable>", and "private ListMap<immutable
+   Hashable, Shareable>"). Each type parameter in these examples is calculated as the intersection
+   of the class' parameter constraint type (such as Orderable in the Range example) with each of the
+   applied conditional incorporation parameter constraint types ("immutable Object" and "immutable
+   Hashable" in the ListMap "11" case).
 
 3. For each layer one specialization of Ecstasy types, the JIT will produce a "class of" ("c"
    prefix) classfile and an "interface of" ("i" prefix) classfile.
