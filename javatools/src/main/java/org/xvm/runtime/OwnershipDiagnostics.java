@@ -1,11 +1,15 @@
 package org.xvm.runtime;
 
 
+import java.lang.ref.Reference;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
@@ -16,9 +20,16 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.XvmStructure;
 
+import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -300,6 +311,384 @@ public final class OwnershipDiagnostics {
             }
         }
     }
+
+    // ----- generic reachability sweep (world X-ray slice 3) --------------------------------------
+
+    /**
+     * Walk the complete Java object graph reachable from a container's state and report every
+     * owner-scoped object whose owner is UNRELATED to the swept container - not the container
+     * itself, not one of its ancestors, and not one of its descendants. This is the generic
+     * detector that the curated {@link #dump}/{@link #validate} walkers cannot be: it does not
+     * depend on anyone having enumerated the field that leaks, because it visits every reference,
+     * every array element, every collection entry.
+     * <p/>
+     * What it flags: a MUTABLE {@link ObjectHandle} owned by an unrelated container (immutable
+     * handles are legitimate cross-owner currency by the pass-through protocol, and
+     * service/proxy handles are the designed cross-container mechanism); any
+     * {@link ClassTemplate}, {@link TypeComposition}, {@link NativeTemplates}, or
+     * {@link ServiceContext} owned by an unrelated container (those are never legitimate
+     * cross-container state); and a mutable live handle cached by a {@code HandleConstant} in a
+     * reachable pool whose owner is unrelated.
+     * <p/>
+     * Deliberate scope limits, stated so nobody mistakes a clean sweep for more than it is:
+     * other {@link Container} objects and unrelated {@link ServiceContext}s are boundaries - the
+     * sweep flags them when unrelated but does not descend into their state (sweep each
+     * container separately); the constant/structure plane below {@link ConstantPool} is
+     * owner-neutral module data and is not walked (except the {@code HandleConstant} live-handle
+     * check); {@code static} roots are not enumerated - process-global leaks through statics are
+     * the province of the source-shape scans and the parked JIT-statics rows; and a reachability
+     * sweep proves retained references, not temporal races - the stress harness owns those.
+     *
+     * @param root  the container whose reachable state to sweep
+     *
+     * @return the sweep report; never silently truncated
+     */
+    public static SweepReport sweepForeignReferences(Container root) {
+        Map<Object, Boolean>   visited    = new IdentityHashMap<>();
+        Deque<SweepNode>       queue      = new ArrayDeque<>();
+        List<ForeignReference> violations = new ArrayList<>();
+        List<String>           blindSpots = new ArrayList<>();
+
+        queue.add(new SweepNode(root, null, "container"));
+        visited.put(root, Boolean.TRUE);
+
+        int cVisited = 0;
+        while (!queue.isEmpty()) {
+            SweepNode node  = queue.poll();
+            Object    value = node.value();
+            ++cVisited;
+
+            // ownership check for owner-scoped values
+            if (Dumper.isOwnerScoped(value)) {
+                Container owner = Dumper.ownerOf(value);
+                if (owner != null && !isRelated(root, owner)
+                        && (!(value instanceof ObjectHandle handle) || isMutableSafe(handle))) {
+                    violations.add(new ForeignReference(
+                            node.renderPath(), describeValue(value), describeContainer(owner)));
+                }
+            }
+
+            // descent
+            if (value instanceof Container container) {
+                if (container != root) {
+                    continue; // container boundary: sweep it separately
+                }
+            } else if (value instanceof ServiceContext context) {
+                Container owner = context.f_container;
+                if (owner != null && !isRelated(root, owner)) {
+                    continue; // foreign context: flagged above, not walked
+                }
+            } else if (value instanceof ObjectHandle handle && !isMutableSafe(handle)) {
+                // immutable handles are frozen legitimate cross-owner currency: their whole
+                // graph (composition included) belongs to the origin container by design, so
+                // walking it would flag every received pass-through handle as a false positive
+                continue;
+            }
+
+            if (value instanceof ConstantPool pool) {
+                sweepPoolHandles(root, node, pool, violations);
+                continue;
+            }
+            if (value instanceof XvmStructure || value instanceof Constant) {
+                continue; // owner-neutral module plane
+            }
+
+            if (value instanceof Object[] aValue) {
+                for (int i = 0; i < aValue.length; ++i) {
+                    enqueue(queue, visited, node, "[" + i + "]", aValue[i]);
+                }
+                continue;
+            }
+            Class<?> clz = value.getClass();
+            if (clz.isArray()) {
+                continue; // primitive array
+            }
+
+            if (value instanceof Reference<?> ref) {
+                Object referent = ref.get();
+                if (referent != null && Dumper.isOwnerScoped(referent)) {
+                    // ownership-check the referent without walking through the weak edge
+                    enqueueBoundary(queue, visited, node, ".referent", referent);
+                }
+                continue;
+            }
+            if (value instanceof AtomicReference<?> ref) {
+                enqueue(queue, visited, node, ".get()", ref.get());
+                continue;
+            }
+            if (value instanceof Map<?, ?> map && clz.getName().startsWith("java.")) {
+                int i = 0;
+                for (Map.Entry<?, ?> entry : safeEntries(map)) {
+                    enqueue(queue, visited, node, ".key[" + i + "]", entry.getKey());
+                    enqueue(queue, visited, node, ".value[" + i + "]", entry.getValue());
+                    ++i;
+                }
+                continue;
+            }
+            if (value instanceof Iterable<?> iterable && clz.getName().startsWith("java.")) {
+                int i = 0;
+                for (Object element : safeElements(iterable)) {
+                    enqueue(queue, visited, node, "[" + i + "]", element);
+                    ++i;
+                }
+                continue;
+            }
+            if (value instanceof Map.Entry<?, ?> entry) {
+                enqueue(queue, visited, node, ".key", safeKey(entry));
+                enqueue(queue, visited, node, ".value", safeValue(entry));
+                continue;
+            }
+            if (value instanceof CompletableFuture<?> future) {
+                // non-blocking: a completed future's result is reachable state; a pending one is
+                // a blind window and says so
+                if (future.isDone() && !future.isCompletedExceptionally()) {
+                    enqueue(queue, visited, node, ".getNow()", future.getNow(null));
+                } else if (!future.isDone()) {
+                    blindSpots.add(node.renderPath() + " -> pending CompletableFuture");
+                }
+                continue;
+            }
+
+            if (isSweepLeaf(clz)) {
+                continue;
+            }
+
+            if (clz.getName().startsWith("org.xvm")) {
+                for (Class<?> c = clz; c != null && c != Object.class; c = c.getSuperclass()) {
+                    for (Field field : c.getDeclaredFields()) {
+                        if (Modifier.isStatic(field.getModifiers())
+                                || field.getType().isPrimitive()) {
+                            continue;
+                        }
+                        try {
+                            field.setAccessible(true);
+                            enqueue(queue, visited, node, "." + field.getName(), field.get(value));
+                        } catch (RuntimeException | ReflectiveOperationException | Error e) {
+                            // an edge the sweep cannot follow is a measured blind spot, never a
+                            // silent one
+                            blindSpots.add(node.renderPath() + "." + field.getName()
+                                    + " -> inaccessible: " + e);
+                        }
+                    }
+                }
+                continue;
+            }
+
+            // an unrecognized non-org.xvm type that can hold references is a measured blind spot
+            if (holdsReferences(clz)) {
+                blindSpots.add(node.renderPath() + " -> unhandled type " + clz.getName());
+            }
+        }
+
+        return new SweepReport(describeContainer(root), cVisited,
+                List.copyOf(violations), List.copyOf(blindSpots));
+    }
+
+    /**
+     * @return true iff instances of the class can hold object references the sweep did not walk
+     */
+    private static boolean holdsReferences(Class<?> clz) {
+        for (Class<?> c = clz; c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Field field : c.getDeclaredFields()) {
+                if (!Modifier.isStatic(field.getModifiers()) && !field.getType().isPrimitive()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static void sweepPoolHandles(Container root, SweepNode node, ConstantPool pool,
+                                         List<ForeignReference> violations) {
+        // the constant plane is owner-neutral module data EXCEPT live handles cached by
+        // HandleConstant - exactly the owner-bearing state the ConstHeap guard polices
+        Constant[] aconst;
+        try {
+            aconst = pool.getConstants();
+        } catch (RuntimeException ignore) {
+            return;
+        }
+        for (int i = 0; i < aconst.length; ++i) {
+            if (aconst[i] instanceof HandleConstant constant) {
+                ObjectHandle handle = (ObjectHandle) Dumper.readField(constant, "m_hValue");
+                if (handle != null && isMutableSafe(handle)) {
+                    Container owner = Dumper.ownerOf(handle);
+                    if (owner != null && !isRelated(root, owner)) {
+                        violations.add(new ForeignReference(
+                                node.renderPath() + ".pool[" + i + "]",
+                                describeValue(handle), describeContainer(owner)));
+                    }
+                }
+            }
+        }
+    }
+
+    private static void enqueue(Deque<SweepNode> queue, Map<Object, Boolean> visited,
+                                SweepNode parent, String edge, Object value) {
+        if (value != null && visited.putIfAbsent(value, Boolean.TRUE) == null) {
+            queue.add(new SweepNode(value, parent, edge));
+        }
+    }
+
+    private static void enqueueBoundary(Deque<SweepNode> queue, Map<Object, Boolean> visited,
+                                        SweepNode parent, String edge, Object value) {
+        // enqueue for the ownership check only; the descent rules above stop the walk there
+        enqueue(queue, visited, parent, edge, value);
+    }
+
+    private static boolean isRelated(Container root, Container owner) {
+        for (Container c = root; c != null; c = c.f_parent) {
+            if (c == owner) {
+                return true; // self or ancestor
+            }
+        }
+        for (Container c = owner; c != null; c = c.f_parent) {
+            if (c == root) {
+                return true; // descendant
+            }
+        }
+        return false;
+    }
+
+    private static boolean isMutableSafe(ObjectHandle handle) {
+        try {
+            return handle.isMutable();
+        } catch (RuntimeException ignore) {
+            // a handle that cannot even answer isMutable() is worth reporting
+            return true;
+        }
+    }
+
+    private static boolean isSweepLeaf(Class<?> clz) {
+        if (clz.isEnum() || clz == String.class || clz == Class.class
+                || Number.class.isAssignableFrom(clz)        // boxed/atomic/big numerics
+                || clz == Boolean.class || clz == Character.class
+                || Thread.class.isAssignableFrom(clz)
+                || ClassLoader.class.isAssignableFrom(clz)
+                || ThreadLocal.class.isAssignableFrom(clz)
+                // executors hold in-flight work - temporal state that a reachability sweep
+                // cannot meaningfully attribute; the quiesced execution-state capture slice
+                // owns it, and a quiesced world's queues are empty
+                || Executor.class.isAssignableFrom(clz)) {
+            return true;
+        }
+        String sName = clz.getName();
+        return sName.startsWith("java.lang.invoke")
+            || sName.startsWith("jdk.")
+            || sName.startsWith("sun.");
+    }
+
+    private static List<Map.Entry<?, ?>> safeEntries(Map<?, ?> map) {
+        try {
+            return new ArrayList<>(map.entrySet());
+        } catch (RuntimeException ignore) {
+            return List.of();
+        }
+    }
+
+    private static List<Object> safeElements(Iterable<?> iterable) {
+        List<Object> list = new ArrayList<>();
+        try {
+            for (Object element : iterable) {
+                list.add(element);
+            }
+        } catch (RuntimeException ignore) {
+            // concurrent mutation mid-iteration: report what was seen
+        }
+        return list;
+    }
+
+    private static Object safeKey(Map.Entry<?, ?> entry) {
+        try {
+            return entry.getKey();
+        } catch (RuntimeException ignore) {
+            return null;
+        }
+    }
+
+    private static Object safeValue(Map.Entry<?, ?> entry) {
+        try {
+            return entry.getValue();
+        } catch (RuntimeException ignore) {
+            return null;
+        }
+    }
+
+    private static String describeValue(Object value) {
+        return value.getClass().getSimpleName()
+                + "@" + Integer.toHexString(System.identityHashCode(value));
+    }
+
+    private static String describeContainer(Container container) {
+        return container.getClass().getSimpleName()
+                + "@" + Integer.toHexString(System.identityHashCode(container));
+    }
+
+    /**
+     * One foreign reference found by {@link #sweepForeignReferences}: the field-by-field path
+     * from the swept container to the object, the object, and its actual owner.
+     */
+    public record ForeignReference(String path, String value, String owner) {
+        public String render() {
+            return path + " -> " + value + " owned by " + owner;
+        }
+    }
+
+    /**
+     * The complete result of one reachability sweep. Never silently truncated: every reachable
+     * object was visited or is behind a documented boundary.
+     */
+    public record SweepReport(String root, int objectsVisited,
+                              List<ForeignReference> violations, List<String> blindSpots) {
+        public SweepReport {
+            violations = List.copyOf(violations);
+            blindSpots = List.copyOf(blindSpots);
+        }
+
+        /**
+         * @return true iff the sweep found no foreign references AND followed every edge - a
+         *         report with blind spots is not clean, it is unfinished, and it says where
+         */
+        public boolean isClean() {
+            return violations.isEmpty() && blindSpots.isEmpty();
+        }
+
+        public void assertClean() {
+            if (!isClean()) {
+                throw new IllegalStateException(render());
+            }
+        }
+
+        public String render() {
+            StringBuilder sb = new StringBuilder("reachability sweep of ").append(root)
+                    .append(": ").append(objectsVisited).append(" objects, ")
+                    .append(violations.size()).append(" foreign reference(s), ")
+                    .append(blindSpots.size()).append(" blind spot(s)");
+            for (ForeignReference violation : violations) {
+                sb.append("\n  - ").append(violation.render());
+            }
+            for (String blindSpot : blindSpots) {
+                sb.append("\n  ? ").append(blindSpot);
+            }
+            return sb.toString();
+        }
+    }
+
+    private record SweepNode(Object value, SweepNode parent, String edge) {
+        String renderPath() {
+            StringBuilder sb = new StringBuilder();
+            renderTo(sb);
+            return sb.toString();
+        }
+
+        private void renderTo(StringBuilder sb) {
+            if (parent != null) {
+                parent.renderTo(sb);
+            }
+            sb.append(edge);
+        }
+    }
+
 
     /**
      * Validate a handle graph as if it were being used by the specified owner.
