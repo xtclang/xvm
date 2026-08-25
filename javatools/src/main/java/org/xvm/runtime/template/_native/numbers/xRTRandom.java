@@ -222,9 +222,18 @@ public class xRTRandom
 
         ObjectHandle hRnd = m_hRandom;
         if (hRnd == null) {
-            m_hRandom = hRnd = createRandomHandle(
-                f_container.createServiceContext("Random"),
-                    getCanonicalClass(), getCanonicalType(), 0L);
+            // shared native template + non-idempotent synchronous creation (registers a
+            // service context): DCL over the volatile field so racing first injections
+            // cannot create duplicate Random services
+            synchronized (this) {
+                hRnd = m_hRandom;
+                if (hRnd == null) {
+                    hRnd = createRandomHandle(
+                            f_container.createServiceContext("Random"),
+                            getCanonicalClass(), getCanonicalType(), 0L);
+                    m_hRandom = hRnd;
+                }
+            }
         }
 
         return hRnd;
@@ -317,5 +326,5 @@ public class xRTRandom
     /**
      * Cached Random handle.
      */
-    private ObjectHandle m_hRandom;
+    private volatile ObjectHandle m_hRandom;
 }

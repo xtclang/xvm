@@ -37,9 +37,18 @@ public class xInjector
     public ObjectHandle ensureInjector(Frame frame, ObjectHandle hOpts) {
         ObjectHandle hInjector = m_hInjector;
         if (hInjector == null) {
-            m_hInjector = hInjector = createServiceHandle(
-                    f_container.createServiceContext("Injector"),
-                        getCanonicalClass(), getCanonicalType());
+            // shared template + non-idempotent synchronous creation (registers a service
+            // context): DCL over the volatile field so racing first injections cannot
+            // create duplicate Injector services
+            synchronized (this) {
+                hInjector = m_hInjector;
+                if (hInjector == null) {
+                    hInjector = createServiceHandle(
+                            f_container.createServiceContext("Injector"),
+                            getCanonicalClass(), getCanonicalType());
+                    m_hInjector = hInjector;
+                }
+            }
         }
 
         return hInjector;
@@ -73,5 +82,5 @@ public class xInjector
     /**
      * Cached Injector handle.
      */
-    private ObjectHandle m_hInjector;
+    private volatile ObjectHandle m_hInjector;
 }

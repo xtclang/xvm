@@ -140,10 +140,19 @@ public class xLocalClock
     public ServiceHandle ensureLocalClock(Frame frame, ObjectHandle hOpts) {
         ServiceHandle hClock = m_hLocalClock;
         if (hClock == null) {
-            m_hLocalClock = hClock = createServiceHandle(
-                f_container.createServiceContext("LocalClock"),
-                    getCanonicalClass(), getCanonicalType());
-            hClock.setField(frame, "utc", xBoolean.falseHandle(frame));
+            // shared native template + non-idempotent synchronous creation (registers a
+            // service context): DCL over the volatile field so racing first injections
+            // cannot create duplicate clock services
+            synchronized (this) {
+                hClock = m_hLocalClock;
+                if (hClock == null) {
+                    hClock = createServiceHandle(
+                            f_container.createServiceContext("LocalClock"),
+                            getCanonicalClass(), getCanonicalType());
+                    hClock.setField(frame, "utc", xBoolean.falseHandle(frame));
+                    m_hLocalClock = hClock;
+                }
+            }
         }
 
         return hClock;
@@ -157,10 +166,17 @@ public class xLocalClock
     public ServiceHandle ensureUTCClock(Frame frame, ObjectHandle hOpts) {
         ServiceHandle hClock = m_hUTCClock;
         if (hClock == null) {
-            m_hUTCClock = hClock = createServiceHandle(
-                f_container.createServiceContext("LocalClock"),
-                getCanonicalClass(), getCanonicalType());
-            hClock.setField(frame, "utc", xBoolean.trueHandle(frame));
+            // see ensureLocalClock
+            synchronized (this) {
+                hClock = m_hUTCClock;
+                if (hClock == null) {
+                    hClock = createServiceHandle(
+                            f_container.createServiceContext("LocalClock"),
+                            getCanonicalClass(), getCanonicalType());
+                    hClock.setField(frame, "utc", xBoolean.trueHandle(frame));
+                    m_hUTCClock = hClock;
+                }
+            }
         }
 
         return hClock;
@@ -358,10 +374,10 @@ public class xLocalClock
     /**
      * Cached LocalClock handle.
      */
-    private ServiceHandle m_hLocalClock;
+    private volatile ServiceHandle m_hLocalClock;
 
     /**
      * Cached UTCClock handle.
      */
-    private ServiceHandle m_hUTCClock;
+    private volatile ServiceHandle m_hUTCClock;
 }

@@ -69,12 +69,14 @@ public class xRTAlgorithms
      * Injection support method.
      */
     public ObjectHandle ensureAlgorithms(Frame frame, ObjectHandle hOpts) {
+        // the old shape cached instantiateAlgorithms' result directly, which had TWO defects on
+        // this shared template: racing first injections each created an Algorithms service (the
+        // loser stayed registered forever), and the R_CALL path cached a frame-bound
+        // DeferredCallHandle - a later caller then received a deferred tied to the FIRST
+        // caller's frame. The cache is now written only with the RESOLVED handle, first-wins,
+        // and a losing candidate's freshly created service context is terminated.
         ObjectHandle hAlgorithms = m_hAlgorithms;
-        if (hAlgorithms == null) {
-            m_hAlgorithms = hAlgorithms = instantiateAlgorithms(frame, hOpts);
-        }
-
-        return hAlgorithms;
+        return hAlgorithms == null ? instantiateAlgorithms(frame, hOpts) : hAlgorithms;
     }
 
     protected ObjectHandle instantiateAlgorithms(Frame frame, ObjectHandle hOpts) {
@@ -85,21 +87,53 @@ public class xRTAlgorithms
         switch (context.sendConstructRequest(frame, clz, ctor, null,
                     new ObjectHandle[ctor.getMaxVars()], Op.A_STACK)) {
         case Op.R_NEXT:
-            return invokeCreateAlgorithms(frame);
+            return publishWhenResolved(context, invokeCreateAlgorithms(frame));
 
         case Op.R_CALL: {
             Frame frameNext = frame.m_frameNext;
-            frameNext.addContinuation(frameCaller ->
-                    frameCaller.pushStack(invokeCreateAlgorithms(frameCaller)));
+            frameNext.addContinuation(frameCaller -> {
+                frameCaller.pushStack(
+                        publishWhenResolved(context, invokeCreateAlgorithms(frameCaller)));
+                return Op.R_NEXT;
+            });
             return new DeferredCallHandle(frameNext);
         }
 
         case Op.R_EXCEPTION:
+            f_container.terminate(context);
             return new DeferredCallHandle(frame.clearException());
 
         default:
             throw new IllegalStateException();
         }
+    }
+
+    /**
+     * Publish the resolved Algorithms handle first-wins; if the candidate is still deferred,
+     * attach the publication to its resolution instead of caching a frame-bound deferred.
+     */
+    private ObjectHandle publishWhenResolved(ServiceContext context, ObjectHandle hCandidate) {
+        if (hCandidate instanceof DeferredCallHandle hDeferred) {
+            hDeferred.addContinuation(frameCaller -> {
+                ObjectHandle hResolved = frameCaller.popStack();
+                frameCaller.pushStack(publishAlgorithms(context, hResolved));
+                return Op.R_NEXT;
+            });
+            return hCandidate;
+        }
+        return publishAlgorithms(context, hCandidate);
+    }
+
+    private synchronized ObjectHandle publishAlgorithms(ServiceContext context,
+                                                        ObjectHandle hResolved) {
+        ObjectHandle hAlgorithms = m_hAlgorithms;
+        if (hAlgorithms == null) {
+            m_hAlgorithms = hAlgorithms = hResolved;
+        } else {
+            // a racing injection won; drop this candidate's duplicate service registration
+            f_container.terminate(context);
+        }
+        return hAlgorithms;
     }
 
     private ObjectHandle invokeCreateAlgorithms(Frame frame) {
@@ -383,5 +417,5 @@ public class xRTAlgorithms
     /**
      * Cached Algorithms handle.
      */
-    private ObjectHandle m_hAlgorithms;
+    private volatile ObjectHandle m_hAlgorithms;
 }

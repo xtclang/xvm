@@ -87,10 +87,28 @@ public class ConstantPool
             return null;
         }
 
-        Constant constant = m_fCompletingRegistration
+        return awaitRegistrationComplete(readConstant(i));
+    }
+
+    /**
+     * Index read honoring the runtime mirror. Once the pool is runtime-published, concurrent
+     * service threads read constants by index while windowed fibers intern new ones;
+     * {@link #f_listConst} is a plain ArrayList, so those unsynchronized reads are a JMM data
+     * race (a racing grow can surface a null or stale element on weakly-ordered hardware). The
+     * mirror closes it: read the volatile count FIRST (acquire), then index the volatile
+     * array - the element store happens-before the count's release write, and destructive
+     * phases that could shrink or reorder storage are rejected on published pools, so an index
+     * below the count always resolves to a fully published slot. An index at or above the
+     * count (a registration racing this read) falls back to the pool monitor.
+     */
+    private Constant readConstant(int i) {
+        if (runtimePublication != null) {
+            int c = m_cconstMirror;
+            return i < c ? m_aconstMirror[i] : getConstantWhileRegistering(i);
+        }
+        return m_fCompletingRegistration
                 ? getConstantWhileRegistering(i)
                 : f_listConst.get(i);
-        return awaitRegistrationComplete(constant);
     }
 
     /**
@@ -108,10 +126,7 @@ public class ConstantPool
         if (i == -1) {
             return null;
         }
-        Constant constant = m_fCompletingRegistration
-                ? getConstantWhileRegistering(i)
-                : f_listConst.get(i);
-        constant = awaitRegistrationComplete(constant);
+        Constant constant = awaitRegistrationComplete(readConstant(i));
         try {
             return type.cast(constant);
         } catch (ClassCastException e) {
@@ -126,7 +141,7 @@ public class ConstantPool
      * @return the count of constants in the pool
      */
     public int size() {
-        return f_listConst.size();
+        return runtimePublication != null ? m_cconstMirror : f_listConst.size();
     }
 
     /**
@@ -141,9 +156,16 @@ public class ConstantPool
      */
     public Constant[] getConstants() {
         // note: this is expensive!!! (but purposeful)
-        Constant[] constants = m_fCompletingRegistration
-                ? getConstantsWhileRegistering()
-                : f_listConst.toArray(Constant.NO_CONSTS);
+        Constant[] constants;
+        if (runtimePublication != null) {
+            int c = m_cconstMirror;
+            constants = new Constant[c];
+            System.arraycopy(m_aconstMirror, 0, constants, 0, c);
+        } else {
+            constants = m_fCompletingRegistration
+                    ? getConstantsWhileRegistering()
+                    : f_listConst.toArray(Constant.NO_CONSTS);
+        }
         for (Constant constant : constants) {
             awaitRegistrationComplete(constant);
         }
@@ -236,6 +258,7 @@ public class ConstantPool
                     try {
                         constant.setPosition(f_listConst.size());
                         f_listConst.add(constant);
+                        appendToRuntimeMirror(constant);
                         mapConstants.put(constant, constant);
 
                         // also allow the constant to be looked up by a locator
@@ -393,8 +416,37 @@ public class ConstantPool
         if (runtimePublication == null) {
             prewarmRuntimeAccessTypeConstants();
         }
-        runtimePublication = new RuntimePublication(owner, f_listConst.size(),
-                Thread.currentThread().getName());
+        synchronized (this) {
+            // snapshot the runtime read mirror before the marker becomes visible: readers use
+            // the mirror exactly when the marker is non-null, so it must already cover every
+            // constant; later windowed registrations append under this same monitor
+            m_aconstMirror = f_listConst.toArray(Constant.NO_CONSTS);
+            m_cconstMirror = m_aconstMirror.length;
+            runtimePublication = new RuntimePublication(owner, f_listConst.size(),
+                    Thread.currentThread().getName());
+        }
+    }
+
+    /**
+     * Append a just-registered constant to the runtime read mirror; see {@link #readConstant}.
+     * No-op before publication - compile-time phases (including destructive ones) never consult
+     * the mirror, and {@link #markRuntimePublished} snapshots the complete list.
+     */
+    private void appendToRuntimeMirror(Constant constant) {
+        assert Thread.holdsLock(this);
+
+        if (runtimePublication == null) {
+            return;
+        }
+
+        Constant[] aconst = m_aconstMirror;
+        int        c      = m_cconstMirror;
+        if (c == aconst.length) {
+            aconst = Arrays.copyOf(aconst, Math.max(64, aconst.length << 1));
+            m_aconstMirror = aconst; // the grown array carries every published element
+        }
+        aconst[c] = constant;
+        m_cconstMirror = c + 1;      // release write publishing the element store above
     }
 
     /**
@@ -4273,6 +4325,14 @@ public class ConstantPool
      * Storage of Constant objects by index.
      */
     private final ArrayList<Constant> f_listConst = new ArrayList<>();
+
+    /**
+     * Race-free runtime read mirror of {@link #f_listConst}; see {@link #readConstant} for the
+     * reader protocol and {@link #appendToRuntimeMirror} for the writer side. Both fields are
+     * written only under the pool monitor.
+     */
+    private volatile Constant[] m_aconstMirror = Constant.NO_CONSTS;
+    private volatile int        m_cconstMirror;
 
     /**
      * Constants that have been published to lookup structures for same-thread recursion, but have

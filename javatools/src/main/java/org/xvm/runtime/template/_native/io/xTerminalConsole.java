@@ -69,10 +69,20 @@ public class xTerminalConsole
     public ObjectHandle ensureConsole(Frame frame, ObjectHandle hOpts) {
         ObjectHandle hConsole = m_hConsole;
         if (hConsole == null) {
-            hConsole = m_hConsole = createServiceHandle(f_container.createServiceContext("Console"),
-                    getCanonicalClass(), getCanonicalType());
+            // this template is the native container's, shared by every injecting caller; the
+            // creation is synchronous and non-idempotent (it registers a service context), so
+            // racing first injections must not each create a Console - classic DCL over the
+            // volatile field
+            synchronized (this) {
+                hConsole = m_hConsole;
+                if (hConsole == null) {
+                    hConsole = createServiceHandle(f_container.createServiceContext("Console"),
+                            getCanonicalClass(), getCanonicalType());
 
-            ensureLineReader(frame);
+                    ensureLineReader(frame);
+                    m_hConsole = hConsole;
+                }
+            }
         }
         return hConsole;
     }
@@ -243,7 +253,7 @@ public class xTerminalConsole
     /**
      * Cached Console handle.
      */
-    private ObjectHandle m_hConsole;
+    private volatile ObjectHandle m_hConsole;
 
     /**
      * Process-wide terminal state. Standard input/output and the JLine terminal are JVM process

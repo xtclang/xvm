@@ -440,16 +440,19 @@ public class NativeContainer
             switch (contextNew.sendConstructRequest(frame, clzStorage, constructor,
                             null, Utils.OBJECTS_NONE, Op.A_STACK)) {
             case Op.R_NEXT:
-                hStorage = frame.popStack();
+                hStorage = publishOSStorage(contextNew, frame.popStack());
                 break;
 
             case Op.R_EXCEPTION:
+                // the construction failed; drop the freshly registered service context
+                terminate(contextNew);
                 break;
 
             case Op.R_CALL: {
                 Frame frameNext = frame.m_frameNext;
                 frameNext.addContinuation(frameCaller -> {
-                    m_hOSStorage = frameCaller.peekStack();
+                    ObjectHandle hResolved = frameCaller.popStack();
+                    frameCaller.pushStack(publishOSStorage(contextNew, hResolved));
                     return Op.R_NEXT;
                 });
                 return new DeferredCallHandle(frameNext);
@@ -458,9 +461,25 @@ public class NativeContainer
             default:
                 throw new IllegalStateException();
             }
-            m_hOSStorage = hStorage;
         }
 
+        return hStorage;
+    }
+
+    /**
+     * First-wins publication for the OSStorage injectable: racing first injections each build a
+     * candidate service, so the shared cache field is written exactly once and a losing
+     * candidate's freshly created service context is terminated instead of staying registered
+     * forever as a duplicate.
+     */
+    private synchronized ObjectHandle publishOSStorage(ServiceContext contextNew,
+                                                       ObjectHandle hCandidate) {
+        ObjectHandle hStorage = m_hOSStorage;
+        if (hStorage == null) {
+            m_hOSStorage = hStorage = hCandidate;
+        } else {
+            terminate(contextNew);
+        }
         return hStorage;
     }
 
@@ -472,7 +491,7 @@ public class NativeContainer
                     ensureTypeInfo().findProperty("store").getIdentity();
 
             return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> m_hFileStore = h);
+                    h -> publishConvergentFileStore(h));
         }
 
         return hStore;
@@ -486,7 +505,7 @@ public class NativeContainer
                     ensureTypeInfo().findProperty("rootDir").getIdentity();
 
             return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> m_hRootDir = h);
+                    h -> publishConvergentRootDir(h));
         }
 
         return hDir;
@@ -500,7 +519,7 @@ public class NativeContainer
                     ensureTypeInfo().findProperty("homeDir").getIdentity();
 
             return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> m_hHomeDir = h);
+                    h -> publishConvergentHomeDir(h));
         }
 
         return hDir;
@@ -514,7 +533,7 @@ public class NativeContainer
                     ensureTypeInfo().findProperty("curDir").getIdentity();
 
             return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> m_hCurDir = h);
+                    h -> publishConvergentCurDir(h));
         }
 
         return hDir;
@@ -528,10 +547,50 @@ public class NativeContainer
                     ensureTypeInfo().findProperty("tmpDir").getIdentity();
 
             return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> m_hTmpDir = h);
+                    h -> publishConvergentTmpDir(h));
         }
 
         return hDir;
+    }
+
+    private synchronized void publishConvergentFileStore(ObjectHandle h) {
+        // convergent (property of the single-flighted OSStorage service); first-wins so racing
+        // callers never flip the cache between equal-but-distinct reads
+        if (m_hFileStore == null) {
+            m_hFileStore = h;
+        }
+    }
+
+    private synchronized void publishConvergentRootDir(ObjectHandle h) {
+        // convergent (property of the single-flighted OSStorage service); first-wins so racing
+        // callers never flip the cache between equal-but-distinct reads
+        if (m_hRootDir == null) {
+            m_hRootDir = h;
+        }
+    }
+
+    private synchronized void publishConvergentHomeDir(ObjectHandle h) {
+        // convergent (property of the single-flighted OSStorage service); first-wins so racing
+        // callers never flip the cache between equal-but-distinct reads
+        if (m_hHomeDir == null) {
+            m_hHomeDir = h;
+        }
+    }
+
+    private synchronized void publishConvergentCurDir(ObjectHandle h) {
+        // convergent (property of the single-flighted OSStorage service); first-wins so racing
+        // callers never flip the cache between equal-but-distinct reads
+        if (m_hCurDir == null) {
+            m_hCurDir = h;
+        }
+    }
+
+    private synchronized void publishConvergentTmpDir(ObjectHandle h) {
+        // convergent (property of the single-flighted OSStorage service); first-wins so racing
+        // callers never flip the cache between equal-but-distinct reads
+        if (m_hTmpDir == null) {
+            m_hTmpDir = h;
+        }
     }
 
     private ObjectHandle ensureProperties(Frame frame, ObjectHandle hOpts) {
@@ -645,24 +704,21 @@ public class NativeContainer
      * Injection support method.
      */
     public ObjectHandle ensureSecureNetwork(Frame frame, ObjectHandle hOpts) {
+        // the old shape cached instantiateNetwork's result directly: racing first injections
+        // could each construct a network service, and the R_CALL path cached a frame-bound
+        // DeferredCallHandle that a later caller would receive. The cache is now written only
+        // with the resolved handle, first-wins.
         ObjectHandle hNetwork = m_hSecureNetwork;
-        if (hNetwork == null) {
-            m_hSecureNetwork = hNetwork = instantiateNetwork(frame, hOpts, true);
-        }
-
-        return hNetwork;
+        return hNetwork == null ? instantiateNetwork(frame, hOpts, true) : hNetwork;
     }
 
     /**
      * Injection support method.
      */
     public ObjectHandle ensureInsecureNetwork(Frame frame, ObjectHandle hOpts) {
+        // see ensureSecureNetwork
         ObjectHandle hNetwork = m_hInsecureNetwork;
-        if (hNetwork == null) {
-            m_hInsecureNetwork = hNetwork = instantiateNetwork(frame, hOpts, false);
-        }
-
-        return hNetwork;
+        return hNetwork == null ? instantiateNetwork(frame, hOpts, false) : hNetwork;
     }
 
     protected ObjectHandle instantiateNetwork(Frame frame, ObjectHandle hOpts, boolean fSecure) {
@@ -675,7 +731,7 @@ public class NativeContainer
 
         switch (templateNetwork.construct(frame, constructor, clzMask, null, ahParams, Op.A_STACK)) {
         case Op.R_NEXT:
-            hNetwork = frame.popStack();
+            hNetwork = publishNetwork(fSecure, frame.popStack());
             break;
 
         case Op.R_EXCEPTION:
@@ -684,11 +740,8 @@ public class NativeContainer
         case Op.R_CALL: {
             Frame frameNext = frame.m_frameNext;
             frameNext.addContinuation(frameCaller -> {
-                    if (fSecure) {
-                        m_hSecureNetwork = frameCaller.peekStack();
-                    } else {
-                        m_hInsecureNetwork = frameCaller.peekStack();
-                    }
+                    ObjectHandle hResolved = frameCaller.popStack();
+                    frameCaller.pushStack(publishNetwork(fSecure, hResolved));
                     return Op.R_NEXT;
                 });
             return new ObjectHandle.DeferredCallHandle(frameNext);
@@ -698,6 +751,23 @@ public class NativeContainer
             throw new IllegalStateException();
         }
 
+        return hNetwork;
+    }
+
+    /**
+     * First-wins publication for the network injectables; the losing candidate service becomes
+     * unreachable and is dropped by the weak service registry.
+     */
+    private synchronized ObjectHandle publishNetwork(boolean fSecure, ObjectHandle hCandidate) {
+        ObjectHandle hNetwork = fSecure ? m_hSecureNetwork : m_hInsecureNetwork;
+        if (hNetwork == null) {
+            hNetwork = hCandidate;
+            if (fSecure) {
+                m_hSecureNetwork = hCandidate;
+            } else {
+                m_hInsecureNetwork = hCandidate;
+            }
+        }
         return hNetwork;
     }
 
@@ -904,16 +974,16 @@ public class NativeContainer
     private static final String NATIVE_PREFIX  = "_native.";
     private static final int    NATIVE_LENGTH  = NATIVE_PREFIX.length();
 
-    private ObjectHandle m_hOSStorage;
-    private ObjectHandle m_hFileStore;
-    private ObjectHandle m_hRootDir;
-    private ObjectHandle m_hHomeDir;
-    private ObjectHandle m_hCurDir;
-    private ObjectHandle m_hTmpDir;
+    private volatile ObjectHandle m_hOSStorage;
+    private volatile ObjectHandle m_hFileStore;
+    private volatile ObjectHandle m_hRootDir;
+    private volatile ObjectHandle m_hHomeDir;
+    private volatile ObjectHandle m_hCurDir;
+    private volatile ObjectHandle m_hTmpDir;
     private ObjectHandle m_hProperties;
 
-    private ObjectHandle m_hSecureNetwork;
-    private ObjectHandle m_hInsecureNetwork;
+    private volatile ObjectHandle m_hSecureNetwork;
+    private volatile ObjectHandle m_hInsecureNetwork;
 
     private final ModuleRepository f_repository;
     private       ModuleStructure  m_moduleSystem;

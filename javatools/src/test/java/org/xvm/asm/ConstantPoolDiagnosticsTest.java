@@ -401,6 +401,58 @@ public class ConstantPoolDiagnosticsTest {
         }
     }
 
+    /**
+     * The runtime read mirror (must-fix graduated by the 2026-08-25 pool residual audit): once a
+     * pool is runtime-published, service threads read constants by index while windowed fibers
+     * intern new ones; the backing ArrayList made those unsynchronized reads a JMM data race (a
+     * racing grow can surface null or stale elements on weakly-ordered hardware; silent on
+     * x86, so this hammer documents the contract rather than deterministically failing the old
+     * shape). Readers must see every index below size() as a fully published constant while a
+     * windowed writer interns thousands of fresh constants.
+     */
+    @Test
+    public void publishedPoolIndexReadsSeeWindowedRegistrationsRaceFree() throws Exception {
+        var pool = new FileStructure("mirrorrace").getConstantPool();
+        pool.markRuntimePublished("unit-test");
+
+        int cNew = 4000;
+        try (var executor = Executors.newFixedThreadPool(5)) {
+            var start  = new CountDownLatch(1);
+            var writer = executor.submit(() -> {
+                start.await();
+                try (var _ = pool.openRuntimeSynthesisWindow("mirror hammer")) {
+                    for (int k = 0; k < cNew; k++) {
+                        pool.ensureStringConstant("mirror-" + k);
+                    }
+                }
+                return null;
+            });
+            var readers = java.util.stream.IntStream.range(0, 4)
+                    .mapToObj(n -> executor.submit(() -> {
+                        start.await();
+                        while (!writer.isDone()) {
+                            int c = pool.size();
+                            for (int i = Math.max(0, c - 64); i < c; i++) {
+                                assertNotNull(pool.getConstant(i),
+                                        "an index below size() must resolve to a published"
+                                                + " constant");
+                            }
+                        }
+                        return null;
+                    }))
+                    .toList();
+            start.countDown();
+
+            writer.get(60, TimeUnit.SECONDS);
+            for (var reader : readers) {
+                reader.get(60, TimeUnit.SECONDS);
+            }
+        }
+
+        assertNotNull(pool.getConstant(pool.size() - 1),
+                "the last interned constant must be readable after the hammer");
+    }
+
     private static Path sourceRoot() {
         Path cwd = Path.of("").toAbsolutePath();
         Path project = cwd.resolve("src/main/java");

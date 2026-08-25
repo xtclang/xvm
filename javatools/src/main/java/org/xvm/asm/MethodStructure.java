@@ -1082,6 +1082,17 @@ public final class MethodStructure
     }
 
     public void forceAssembly(ConstantPool pool) {
+        // writer-side diagnostic for the frozen-code lifecycle (audit closure 2026-08-25):
+        // reassembly rewrites m_aop, m_registry, and every op's link fields with no
+        // synchronization, so on a runtime-published pool it is legal only inside a synthesis
+        // window (detached delegation synthesis, native rebase during fiber execution). The
+        // link-phase ordering that keeps compiler-owned paths safe was previously enforced by
+        // convention alone; a violation now fails loudly here instead of racing the readers.
+        if (pool.isRuntimePublished() && !pool.isRuntimeSynthesisWindowOpen()) {
+            throw new IllegalStateException("forceAssembly after runtime publication: "
+                    + getIdentityConstant().getValueString());
+        }
+
         // if we need to reassemble, we're going to throw away the bytes, so make sure that we have
         // the deserialized form of those bytes ensured so that we can recreate the "new" version of
         // the bytes

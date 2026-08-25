@@ -1761,11 +1761,22 @@ plain write - or, on a weakly-ordered CPU, a partially published one.
 sufficient for the continuation-completing sites (`ensureOSStorage` completes
 from another fiber's continuation).
 
-**Tests to add/run on master:** None exist yet; the red harness is a
-two-thread first-injection race per site (deterministic with a latch on the
-supplier). Classified must-fix on the audit board 2026-08-25 (manual
-lazy-cache completion sweep); fix parked for its own focused wave because the
-continuation sites need async-aware design.
+**Additional defect found while fixing:** `ensureAlgorithms` and both
+`ensureSecureNetwork`/`ensureInsecureNetwork` cached the result of an R_CALL
+construction path directly - a frame-bound `DeferredCallHandle` - so a later
+caller received a deferred tied to the FIRST caller's frame.
+
+**Branch fix (2026-08-25):** per shape - DCL over volatile fields for the
+synchronous sites (Console, LocalClock/UTCClock, Random, Injector);
+first-wins publication with loser-context `Container.terminate` for the
+construct-request sites, publishing only the RESOLVED handle from the
+completion continuation (never a deferred); fs-derived property caches
+publish first-wins convergent.
+
+**Tests to add/run on master:**
+`NativeInjectionSingletonTest.racingFirstInjectionsCreateExactlyOneService`
+(branch): 8 latch-raced first injections observe one identity and the service
+registry grows by exactly one; red-verified against the plain shape.
 
 **Dependencies/order:** Independent of rows 1-24.
 
@@ -1816,7 +1827,11 @@ red-verified against the plain-lazy shape.
 - JIT generated owner-bearing statics are must-fix but parked for a JIT rebase.
 - Runtime-published `ConstantPool` freezing and relation-cache key-shape issues
   are newly graduated/continuing audit work, not part of the already prepared
-  18 master quick-file set.
+  18 master quick-file set. 2026-08-25: the reader-safety half landed on the
+  branch as the volatile runtime read mirror (ledger row 58) - the master
+  ArrayList index-read race is real on master too (master's runtime interns
+  during execution with no gate at all), but the portable fix rides with the
+  pool-publication infrastructure rather than as a standalone hunk.
 
 ## Review Notes Before Filing
 

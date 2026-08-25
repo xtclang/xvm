@@ -230,10 +230,11 @@ classifications:
   ordering proof - disassembled methods never reassemble, link-phase
   synthesis precedes execution, row-44 synthesis is detached - holds for all
   shipped paths but is enforced only by the reader-side `validateRuntimeCode`
-  diagnostic). MUST AUDIT standing: add a writer-side diagnostic
-  (fail if `forceAssembly` runs on a runtime-published pool's method outside
-  a synthesis window). `synthesizeAppendTo` still uses attached
-  build-then-forceAssembly, legal only by link-phase ordering.
+  diagnostic). CLOSED 2026-08-25: `forceAssembly` now fails loudly on a
+  runtime-published pool outside a synthesis window - the writer-side
+  diagnostic that converts the ordering convention into a checked invariant.
+  `synthesizeAppendTo` still uses attached build-then-forceAssembly, legal by
+  link-phase ordering (pre-publication, so the diagnostic does not fire).
 - **`markNative()` non-atomic transition** (MethodStructure.java:1183-1192:
   abstract-flag flip, `resetRuntimeInfo` nulling `m_code`, then
   `m_fNative = true`): a concurrent reader can see native=false with
