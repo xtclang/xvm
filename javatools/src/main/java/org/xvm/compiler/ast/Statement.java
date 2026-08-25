@@ -286,4 +286,21 @@ public abstract sealed class Statement
      * Generally null, unless there is a break that jumps to this statement's exit label.
      */
     private transient List<Break> m_listBreaks;
+
+    protected Statement() {
+    }
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected Statement(Statement that) {
+        super(that);
+        this.m_labelEnd = that.m_labelEnd;
+        this.m_ctx = that.m_ctx;
+        this.m_listBreaks = that.m_listBreaks;
+    }
 }

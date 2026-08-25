@@ -511,4 +511,25 @@ public final class ReturnStatement
     protected transient boolean m_fFutureReturn;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ReturnStatement.class, "exprs");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ReturnStatement(ReturnStatement that) {
+        super(that);
+        this.keyword = that.keyword;
+        this.exprs = that.exprs;
+        this.m_fConditionalTernary = that.m_fConditionalTernary;
+        this.m_fTupleReturn = that.m_fTupleReturn;
+        this.m_fFutureReturn = that.m_fFutureReturn;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new ReturnStatement(this);
+    }
 }

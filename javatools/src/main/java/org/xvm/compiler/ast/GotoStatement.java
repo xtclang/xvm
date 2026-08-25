@@ -179,4 +179,18 @@ public abstract sealed class GotoStatement
     protected Token name;
 
     protected transient Label m_label;
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected GotoStatement(GotoStatement that) {
+        super(that);
+        this.keyword = that.keyword;
+        this.name = that.name;
+        this.m_label = that.m_label;
+    }
 }

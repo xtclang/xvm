@@ -261,4 +261,20 @@ public abstract sealed class TypeExpression
      * The context for which the type constant was generated.
      */
     private Context m_ctxPrev;
+
+    protected TypeExpression() {
+    }
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected TypeExpression(TypeExpression that) {
+        super(that);
+        this.m_constType = that.m_constType;
+        this.m_ctxPrev = that.m_ctxPrev;
+    }
 }

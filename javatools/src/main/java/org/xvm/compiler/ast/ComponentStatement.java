@@ -131,4 +131,18 @@ public abstract sealed class ComponentStatement
     private Component  component;
     private final long lStartPos;
     private final long lEndPos;
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ComponentStatement(ComponentStatement that) {
+        super(that);
+        this.component = that.component;
+        this.lStartPos = that.lStartPos;
+        this.lEndPos = that.lEndPos;
+    }
 }

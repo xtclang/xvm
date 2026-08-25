@@ -679,7 +679,32 @@ public final class SwitchStatement
     /**
      * This collects the assignment information that comes from each "break" statement.
      */
-    private final transient List<Map<String, Assignment>> m_listBreaks = new ArrayList<>();
+    // not final: the copy constructor mirrors Object.clone's exact semantics by ALIASING the
+    // original's instance (the deepCopy parity assertion compares by identity); a trial copy
+    // sharing the break list is the behavior the old reflective clone always had
+    private transient List<Map<String, Assignment>> m_listBreaks = new ArrayList<>();
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "conds", "block");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected SwitchStatement(SwitchStatement that) {
+        super(that);
+        this.block = that.block;
+        this.m_casemgr = that.m_casemgr;
+        this.m_listGroups = that.m_listGroups;
+        this.m_labelContinue = that.m_labelContinue;
+        this.m_listContinues = that.m_listContinues;
+        this.m_listBreaks = that.m_listBreaks;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new SwitchStatement(this);
+    }
 }

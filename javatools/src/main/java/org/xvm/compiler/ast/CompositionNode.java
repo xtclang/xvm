@@ -629,4 +629,19 @@ public abstract sealed class CompositionNode
 
     private static final Field[] CHILD_FIELDS =
             fieldsForNames(CompositionNode.class, "condition", "type");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected CompositionNode(CompositionNode that) {
+        super(that);
+        this.condition = that.condition;
+        this.keyword = that.keyword;
+        this.type = that.type;
+        this.m_contribution = that.m_contribution;
+    }
 }

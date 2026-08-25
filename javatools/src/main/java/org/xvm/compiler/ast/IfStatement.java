@@ -398,4 +398,24 @@ public final class IfStatement
     private transient List<Break> m_listShorts;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "conds", "stmtThen", "stmtElse");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected IfStatement(IfStatement that) {
+        super(that);
+        this.stmtThen = that.stmtThen;
+        this.stmtElse = that.stmtElse;
+        this.m_labelElse = that.m_labelElse;
+        this.m_listShorts = that.m_listShorts;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new IfStatement(this);
+    }
 }

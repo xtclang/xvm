@@ -267,4 +267,27 @@ public final class ImportStatement
     private transient boolean      m_fImportRegistered;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ImportStatement.class, "cond");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ImportStatement(ImportStatement that) {
+        super(that);
+        this.cond = that.cond;
+        this.keyword = that.keyword;
+        this.alias = that.alias;
+        this.qualifiedName = that.qualifiedName;
+        this.star = that.star;
+        this.m_resolver = that.m_resolver;
+        this.m_fImportRegistered = that.m_fImportRegistered;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new ImportStatement(this);
+    }
 }

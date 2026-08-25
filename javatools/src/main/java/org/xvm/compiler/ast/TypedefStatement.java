@@ -133,4 +133,24 @@ public final class TypedefStatement
     protected TypeExpression type;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypedefStatement.class, "cond", "type");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected TypedefStatement(TypedefStatement that) {
+        super(that);
+        this.cond = that.cond;
+        this.modifier = that.modifier;
+        this.alias = that.alias;
+        this.type = that.type;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new TypedefStatement(this);
+    }
 }

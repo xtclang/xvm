@@ -240,4 +240,17 @@ public abstract sealed class PrefixExpression
     protected Expression expr;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(PrefixExpression.class, "expr");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected PrefixExpression(PrefixExpression that) {
+        super(that);
+        this.operator = that.operator;
+        this.expr = that.expr;
+    }
 }

@@ -158,4 +158,25 @@ public final class CatchStatement
     private transient Label      m_labelEndCatch;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CatchStatement.class, "target", "block");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected CatchStatement(CatchStatement that) {
+        super(that);
+        this.target = that.target;
+        this.block = that.block;
+        this.lStartPos = that.lStartPos;
+        this.m_opCatch = that.m_opCatch;
+        this.m_labelEndCatch = that.m_labelEndCatch;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new CatchStatement(this);
+    }
 }

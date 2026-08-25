@@ -166,4 +166,22 @@ public final class LabeledStatement
     protected Statement stmt;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(LabeledStatement.class, "stmt");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected LabeledStatement(LabeledStatement that) {
+        super(that);
+        this.label = that.label;
+        this.stmt = that.stmt;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new LabeledStatement(this);
+    }
 }

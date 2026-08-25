@@ -276,6 +276,20 @@ public abstract sealed class AstNode
     }
 
     /**
+     * Root of the explicit copy-constructor chain that replaces {@code Object.clone()}: the
+     * stage is carried (StageMgr fast-forwards trial copies) and the parent pointer is
+     * deliberately carried STALE - trial copies are validated without ever being adopted into
+     * a tree and resolve source, pool, and name-resolution context through it.
+     */
+    protected AstNode() {
+    }
+
+    protected AstNode(AstNode that) {
+        this.m_stage  = that.m_stage;
+        this.m_parent = that.m_parent;
+    }
+
+    /**
      * Produce the per-node shallow copy for {@link #deepCopy()}. Converted classes override
      * this with an explicit copy constructor; the default is the {@code super.clone()} bridge
      * that remains only until every class in the sealed hierarchy has converted, at which

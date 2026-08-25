@@ -80,7 +80,20 @@ public abstract sealed class ConditionalStatement
     protected Token         keyword;
     protected List<AstNode> conds;
 
-    private static final AtomicInteger LABEL_COUNTER = new AtomicInteger();
+    private static    int   s_nLabelCounter;
+    private transient int   m_nLabel;
 
-    private transient int m_nLabel;
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ConditionalStatement(ConditionalStatement that) {
+        super(that);
+        this.keyword = that.keyword;
+        this.conds = that.conds;
+        this.m_nLabel = that.m_nLabel;
+    }
 }

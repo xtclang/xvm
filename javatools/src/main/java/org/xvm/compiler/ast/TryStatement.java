@@ -570,4 +570,28 @@ public final class TryStatement
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TryStatement.class,
             "resources", "block", "catches", "catchall");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected TryStatement(TryStatement that) {
+        super(that);
+        this.keyword = that.keyword;
+        this.resources = that.resources;
+        this.block = that.block;
+        this.catches = that.catches;
+        this.catchall = that.catchall;
+        this.m_ctxValidatingFinally = that.m_ctxValidatingFinally;
+        this.m_errsValidatingFinally = that.m_errsValidatingFinally;
+        this.m_regFinallyException = that.m_regFinallyException;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new TryStatement(this);
+    }
 }

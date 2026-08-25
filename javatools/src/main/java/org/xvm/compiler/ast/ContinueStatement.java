@@ -59,4 +59,20 @@ public final class ContinueStatement
         ctx.getHolder().setAst(this, new ContinueStmtAST(getTargetDepth()));
         return false;
     }
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ContinueStatement(ContinueStatement that) {
+        super(that);
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new ContinueStatement(this);
+    }
 }

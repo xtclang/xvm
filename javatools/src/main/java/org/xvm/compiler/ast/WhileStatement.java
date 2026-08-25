@@ -779,4 +779,30 @@ public final class WhileStatement
     private transient RegAllocAST[] m_aAllocSpecial;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "conds", "block");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected WhileStatement(WhileStatement that) {
+        super(that);
+        this.block = that.block;
+        this.lEndPos = that.lEndPos;
+        this.m_labelContinue = that.m_labelContinue;
+        this.m_ctxLabelVars = that.m_ctxLabelVars;
+        this.m_errsLabelVars = that.m_errsLabelVars;
+        this.m_regFirst = that.m_regFirst;
+        this.m_regCount = that.m_regCount;
+        this.m_listContinues = that.m_listContinues;
+        this.m_astCond = that.m_astCond;
+        this.m_aAllocSpecial = that.m_aAllocSpecial;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new WhileStatement(this);
+    }
 }

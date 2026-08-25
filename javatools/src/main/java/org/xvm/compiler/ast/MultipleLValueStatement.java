@@ -552,4 +552,23 @@ public final class MultipleLValueStatement
 
     private static final Field[] STMT_FIELDS = fieldsForNames(MultipleLValueStatement.class, "LVals");
     private static final Field[] EXPR_FIELDS = fieldsForNames(MultipleLValueExpression.class, "exprs");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected MultipleLValueStatement(MultipleLValueStatement that) {
+        super(that);
+        this.LVals = that.LVals;
+        this.aGroundLabels = that.aGroundLabels;
+        this.expr = that.expr;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new MultipleLValueStatement(this);
+    }
 }

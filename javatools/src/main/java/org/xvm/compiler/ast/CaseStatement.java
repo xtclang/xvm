@@ -170,4 +170,24 @@ public final class CaseStatement
     private transient Label m_label;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CaseStatement.class, "exprs");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected CaseStatement(CaseStatement that) {
+        super(that);
+        this.keyword = that.keyword;
+        this.exprs = that.exprs;
+        this.lEndPos = that.lEndPos;
+        this.m_label = that.m_label;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new CaseStatement(this);
+    }
 }

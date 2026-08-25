@@ -1381,4 +1381,37 @@ public final class ForEachStatement
     private transient List<Break> m_listContinues;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ForEachStatement.class, "conds", "block");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ForEachStatement(ForEachStatement that) {
+        super(that);
+        this.block = that.block;
+        this.m_labelContinue = that.m_labelContinue;
+        this.m_exprLValue = that.m_exprLValue;
+        this.m_exprRValue = that.m_exprRValue;
+        this.m_plan = that.m_plan;
+        this.m_ctxLabelVars = that.m_ctxLabelVars;
+        this.m_errsLabelVars = that.m_errsLabelVars;
+        this.m_regFirst = that.m_regFirst;
+        this.m_regLast = that.m_regLast;
+        this.m_regCount = that.m_regCount;
+        this.m_regEntry = that.m_regEntry;
+        this.m_regKeyType = that.m_regKeyType;
+        this.m_regValType = that.m_regValType;
+        this.m_fTupleLValue = that.m_fTupleLValue;
+        this.m_aidConvKey = that.m_aidConvKey;
+        this.m_atypeConv = that.m_atypeConv;
+        this.m_listContinues = that.m_listContinues;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new ForEachStatement(this);
+    }
 }

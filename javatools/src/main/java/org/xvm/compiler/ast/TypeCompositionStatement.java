@@ -409,7 +409,9 @@ public final class TypeCompositionStatement
      * Vast majority of classes don't incorporate, so this map holds just one Extends contribution;
      * 99% of the rest have just one Incorporates, so initial size of two seems reasonable.
      */
-    private final transient Map<Contribution, List<Expression>> m_mapContribArgs = new ListMap<>(2);
+    // not final: the copy constructor mirrors Object.clone's exact semantics by ALIASING the
+    // original's instance (the deepCopy parity assertion compares by identity)
+    private transient Map<Contribution, List<Expression>> m_mapContribArgs = new ListMap<>(2);
 
     @Override
     @SuppressWarnings("fallthrough")
@@ -3198,4 +3200,38 @@ public final class TypeCompositionStatement
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
             "condition", "annotations", "typeParams", "constructorParams", "typeArgs", "args",
             "compositions", "body");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected TypeCompositionStatement(TypeCompositionStatement that) {
+        super(that);
+        this.m_mapContribArgs = that.m_mapContribArgs;
+        this.source = that.source;
+        this.condition = that.condition;
+        this.modifiers = that.modifiers;
+        this.annotations = that.annotations;
+        this.category = that.category;
+        this.name = that.name;
+        this.qualified = that.qualified;
+        this.typeParams = that.typeParams;
+        this.constructorParams = that.constructorParams;
+        this.typeArgs = that.typeArgs;
+        this.args = that.args;
+        this.compositions = that.compositions;
+        this.body = that.body;
+        this.doc = that.doc;
+        this.enclosed = that.enclosed;
+        this.m_fAnon = that.m_fAnon;
+        this.m_fVirtChild = that.m_fVirtChild;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new TypeCompositionStatement(this);
+    }
 }

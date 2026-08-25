@@ -211,4 +211,18 @@ public abstract sealed class BiExpression
     protected Expression expr2;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(BiExpression.class, "expr1", "expr2");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected BiExpression(BiExpression that) {
+        super(that);
+        this.expr1 = that.expr1;
+        this.operator = that.operator;
+        this.expr2 = that.expr2;
+    }
 }

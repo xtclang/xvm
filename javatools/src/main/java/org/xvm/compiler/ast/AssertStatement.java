@@ -656,4 +656,26 @@ public final class AssertStatement
     private List<String> m_listTexts;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "interval", "conds", "message");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected AssertStatement(AssertStatement that) {
+        super(that);
+        this.keyword = that.keyword;
+        this.interval = that.interval;
+        this.conds = that.conds;
+        this.message = that.message;
+        this.lEndPos = that.lEndPos;
+        this.m_listTexts = that.m_listTexts;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new AssertStatement(this);
+    }
 }

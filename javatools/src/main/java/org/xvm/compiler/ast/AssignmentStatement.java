@@ -1168,4 +1168,30 @@ public final class AssignmentStatement
     private transient boolean m_fCondFalseLabelTaken; // used for verifying code-gen
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "lvalueExpr", "rvalue");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected AssignmentStatement(AssignmentStatement that) {
+        super(that);
+        this.lvalue = that.lvalue;
+        this.lvalueExpr = that.lvalueExpr;
+        this.op = that.op;
+        this.rvalue = that.rvalue;
+        this.term = that.term;
+        this.tokNegate = that.tokNegate;
+        this.endNegate = that.endNegate;
+        this.m_decls = that.m_decls;
+        this.m_labelCondFalse = that.m_labelCondFalse;
+        this.m_fCondFalseLabelTaken = that.m_fCondFalseLabelTaken;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new AssignmentStatement(this);
+    }
 }

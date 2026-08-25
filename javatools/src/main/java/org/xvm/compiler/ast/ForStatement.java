@@ -751,4 +751,32 @@ public final class ForStatement
     private transient Label[] m_alabelUpdateGround;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ForStatement.class, "init", "conds", "update", "block");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ForStatement(ForStatement that) {
+        super(that);
+        this.init = that.init;
+        this.update = that.update;
+        this.block = that.block;
+        this.m_labelContinue = that.m_labelContinue;
+        this.m_ctxLabelVars = that.m_ctxLabelVars;
+        this.m_errsLabelVars = that.m_errsLabelVars;
+        this.m_regFirst = that.m_regFirst;
+        this.m_regCount = that.m_regCount;
+        this.m_listContinues = that.m_listContinues;
+        this.m_listShorts = that.m_listShorts;
+        this.m_alabelInitGround = that.m_alabelInitGround;
+        this.m_alabelUpdateGround = that.m_alabelUpdateGround;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new ForStatement(this);
+    }
 }

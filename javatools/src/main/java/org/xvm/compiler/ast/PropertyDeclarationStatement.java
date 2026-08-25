@@ -855,4 +855,33 @@ public final class PropertyDeclarationStatement
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(PropertyDeclarationStatement.class,
             "condition", "annotations", "type", "value", "body", "initializer", "assignment");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected PropertyDeclarationStatement(PropertyDeclarationStatement that) {
+        super(that);
+        this.condition = that.condition;
+        this.modifiers = that.modifiers;
+        this.annotations = that.annotations;
+        this.type = that.type;
+        this.name = that.name;
+        this.tokAsn = that.tokAsn;
+        this.value = that.value;
+        this.body = that.body;
+        this.doc = that.doc;
+        this.initializer = that.initializer;
+        this.assignment = that.assignment;
+        this.m_fSynthetic = that.m_fSynthetic;
+        this.m_counter = that.m_counter;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new PropertyDeclarationStatement(this);
+    }
 }

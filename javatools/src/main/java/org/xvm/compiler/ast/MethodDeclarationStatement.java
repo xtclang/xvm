@@ -1268,4 +1268,34 @@ public non-sealed class MethodDeclarationStatement
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class,
             "condition", "annotations", "typeParams", "returns", "redundant", "params", "body");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected MethodDeclarationStatement(MethodDeclarationStatement that) {
+        super(that);
+        this.condition = that.condition;
+        this.modifiers = that.modifiers;
+        this.annotations = that.annotations;
+        this.typeParams = that.typeParams;
+        this.conditional = that.conditional;
+        this.returns = that.returns;
+        this.name = that.name;
+        this.redundant = that.redundant;
+        this.params = that.params;
+        this.body = that.body;
+        this.doc = that.doc;
+        this.m_tokFinally = that.m_tokFinally;
+        this.m_bodyFinally = that.m_bodyFinally;
+        this.m_stmtComplement = that.m_stmtComplement;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new MethodDeclarationStatement(this);
+    }
 }

@@ -1686,4 +1686,30 @@ public final class StatementBlock
     private transient boolean m_fTerminatedAbnormally;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementBlock.class, "stmts");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected StatementBlock(StatementBlock that) {
+        super(that);
+        this.source = that.source;
+        this.stmts = that.stmts;
+        this.lStartPos = that.lStartPos;
+        this.lEndPos = that.lEndPos;
+        this.boundary = that.boundary;
+        this.containsEnclosed = that.containsEnclosed;
+        this.imports = that.imports;
+        this.importsWild = that.importsWild;
+        this.m_fSuppressScope = that.m_fSuppressScope;
+        this.m_fTerminatedAbnormally = that.m_fTerminatedAbnormally;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new StatementBlock(this);
+    }
 }

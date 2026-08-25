@@ -3144,4 +3144,22 @@ public abstract sealed class Expression
      * Various temporary flags.
      */
     private transient int m_nFlags;
+
+    protected Expression() {
+    }
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected Expression(Expression that) {
+        super(that);
+        this.m_fit = that.m_fit;
+        this.m_oType = that.m_oType;
+        this.m_oConst = that.m_oConst;
+        this.m_nFlags = that.m_nFlags;
+    }
 }
