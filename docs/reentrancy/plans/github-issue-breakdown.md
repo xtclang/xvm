@@ -96,14 +96,14 @@ drop branch-doc files, run the row's named test plus
 | L4 | Module load cause preservation (`fix/module-load-cause`) | `979784a1a` | Clean (additive `ModuleLoadException` rides in the seed). | S2 | None |
 | L5 | Method op-assembly failure terminal (`fix/op-assembly-terminal`) | `536067f5e` | Clean. | S3 | None |
 | L6 | Compiler codegen failure terminal (`fix/codegen-terminal`) | `b00654356` | Clean. | S4 | None |
-| L7 | Startup/worker failure causes (`fix/runtime-failure-causes`) | `3e09abc32`, then `796f13465` | Clean in that order (`796f13465` edits the test `3e09abc32` adds). | S8 | None |
-| L8 | Raw file submit observes write failure (`fix/raw-submit-observed`) | `8a45ba708` | Merges clean but does NOT compile alone: needs L7's `recordRuntimeFailure` channel; adapt `frame.container()`/`makeHandle(frame, ...)` and the test literals to master forms (S5 carries the master-form hunk). | S5 | L7 |
+| L7 | Runtime failures reach the host boundary (`fix/runtime-failure-causes`) | `3e09abc32`, then `796f13465`, then `8a45ba708` | Clean in that order (`796f13465` edits the test `3e09abc32` adds; `8a45ba708` merges clean but compiles only after the channel lands - adapt its `frame.container()`/`makeHandle(frame, ...)` and test literals to master forms, S5 carries the master-form hunk). One PR: cause preservation + worker failure channel + the raw-submit observer as the channel's first consumer. | S8+S5 | None |
+| L8 | ~~Raw file submit standalone~~ | - | **Folded into L7** (2026-08-25 decision: fewest PRs; the raw-submit fix is the failure channel's natural first consumer). Split back out only if reviewers ask for a smaller diff. | S5 | - |
 | L9 | JIT failure propagation (`fix/jit-failure-propagation`) | `33323ffe1`, then `f4744cb1e` | Clean in that order. | S7 | None |
-| L10 | MethodStructure.Source re-owner (`fix/method-source-outer`) | `25371b397` | Clean. | S17 | None; pairs naturally with L14 |
+| L10 | Hidden outer re-owner on body copies (`fix/body-copy-outer`) | `25371b397`, plus the filtered contribution re-owner hunks from `0af827c72` | `25371b397` is clean; `0af827c72`'s `Component.java`/`MethodStructure.java` conflict - extract only the re-owner hunks per S16. One PR: both bugs are the same mechanism (inner-class copies keeping the SOURCE outer reference). | S17+S16 | None |
 | L11 | Future.and double-read and async failure (`fix/future-and-inputs`) | `6496f5303` | `xFuture.java` conflicts; hand-apply the master-form hunk in S6 (master `Utils.translate` is 1-arg). Test adds clean. | S6 | None |
-| L12 | Timer callback registry and rollback (`fix/timer-callback-registry`) | `5311da1ac`, then `26ce54466` | Both conflict in `xLocalClock.java`/`xNanosTimer.java` (file rows 9+10 as one PR); `xRTServer.java` and the test's add-form are clean. | S9+S10 | None |
+| L12 | Timer callback registry and rollback (`fix/timer-callback-registry`) | `5311da1ac`, then `26ce54466` | Both conflict in `xLocalClock.java`/`xNanosTimer.java`; `xRTServer.java` and the test's add-form are clean. **Confirmed one PR** (2026-08-25 decision): the commits share the same two files and one test class. | S9+S10 | None |
 | L13 | Hash/equality contracts (`fix/hash-equality-contracts`) | Filtered: `Register.java`, `VersionTree.java`, `ChildInfo.java` + `RegisterHashCodeTest`/`VersionTest` from `9456d6727`; `MethodBody.java` from `a11765c86` | The four filtered source files merge clean individually; `MethodInfoTest` needs a master add-form (branch file assumes branch APIs). | S11 | None |
-| L14 | Contribution re-owner on body copy (`fix/contribution-outer`) | Filtered re-owner hunks from `0af827c72` | `Component.java`/`MethodStructure.java` conflict; extract only the contribution re-owner hunks per S16. | S16 | None; pairs naturally with L10 |
+| L14 | ~~Contribution re-owner standalone~~ | - | **Folded into L10** (2026-08-25 decision: same hidden-outer mechanism, one review story). | S16 | - |
 | L15 | Handle view lifecycle (`fix/handle-view-lifecycle`) | `c5c40d443`, `d2165e4f8`, `f4df60ed1`, `7ce5662d1` | Only `ObjectHandle.java` (in `d2165e4f8`) conflicts; other three seeds clean. | S12 | None |
 | L16 | HandleConstant owner guard (`fix/handle-constant-guard`) | `632cac927` | `HandleConstant.java` conflicts; both tests add clean (owner-guard test may need master API adaptation). | S13 | None |
 | L17 | Finalizer chain tail-append (`fix/finalizer-chain-append`) | `c621b1dca` | `xRTFunction.java` conflicts (context drift only; the buggy shape is verbatim on master) - hand-apply the master-form hunk in S18; test needs the one-line `new NativeContainer(...)` adaptation. | S18 | None |
@@ -116,12 +116,14 @@ drop branch-doc files, run the row's named test plus
 
 ### What Blocks Filing (User Decisions Only)
 
+Decided 2026-08-25 (collapse to fewest PRs without overcomplicating): L8
+folds into L7, L14 folds into L10, L12 files as one PR. The Category A
+queue is therefore 14 PRs: L1-L7, L9-L13, L15-L17.
+
+Still open:
+
 1. M19 needs the explicit go/no-go the user reserved.
-2. L8 needs a decision: fold into L7, or inline a minimal recorder and file
-   standalone.
-3. L12 pairs rows 9+10 into one PR; confirm that packaging.
-4. Whether L10+L14 file as one "hidden outer re-owner" PR or two.
-5. The Category H gates (H1) change build behavior for every contributor;
+2. The Category H gates (H1) change build behavior for every contributor;
    file when the team is ready for fatal lint.
 
 ## PR 19: Typed Dispatch Showcase (Candidate Opener)
@@ -294,7 +296,7 @@ review story; a PR built from it cherry-picks exactly these commits.
 | --- | --- | --- |
 | PR 11 (existing) | `ff8cc479a`, `f835b3693` | Reflection invoke aliased the caller's tuple as the callee register file; short-hand property overrides aliased the library module's Parameter objects. Both master bugs, both with red-on-master pins. |
 | PR 6/14 (existing) | `cb21e0b96` | Eight "read-only" accessors only wrapped under -ea; the contract now survives -da, pinned by an idiom ban. |
-| PR 16 | `e59d4f82d`, `dc39387bd`, `298067019`, `cace6570a`, `07ed937b3`, `ab5788584`, `78111b85f` | Zero sealed classes to 30 sealed roots over ~150 classes with zero non-sealed hatches; three demonstrator rewrites delete a fallthrough suppression and two silent-default families; three captured javac errors are the review story. |
+| PR 16 | `e59d4f82d`, `dc39387bd`, `298067019`, `cace6570a`, `07ed937b3`, `ab5788584`, `78111b85f` | Zero sealed classes to 48 sealed declarations over ~150 classes; every sealed constant/structure family fully closed, with exactly one documented `non-sealed` hatch in main sources (`MethodDeclarationStatement`, for the out-of-package `EvalCompiler.EvalStatement` - see the sealed audit's final census); three demonstrator rewrites delete a fallthrough suppression and two silent-default families; three captured javac errors are the review story. |
 | PR 17 | `029ff4138`, `0bbfc98c4`, `db4ae7900`, `3785afdc8`, `c621b1dca` | The freeze-split bug family closed structurally: view-clone refusal for arrays/tuples/functions/delegates, default-deny at the ObjectHandle base with the GenericHandle cells as the one opt-in, the SocketHandle shared holder, and the finalizer chain fix - each with a two-view or shape test that is red on the old shape. |
 | PR 18 | `25371b397`, `0af827c72` | Oracle's own guidance, executed: copy constructors replace Object.clone() everywhere it ever corrupted state. Two defects only the mechanism could cause - inner classes whose clones kept answering with the SOURCE owner (MethodStructure.Source pool binding, Contribution.getComponent()) - are fixed by re-binding constructors that clone() cannot express, with a red-on-master test and a per-structure field ratchet. Depends on PR 16: cloneBody() is abstract over the sealed tree, so a new structure kind without a copy path does not compile. |
 | PR 19 | `86c89e175` | The typed-dispatch showcase and candidate series opener: stringly dispatch, a tolerant-default format switch, and 26 blind casts each replaced by the language-provided construct; 59 casts deleted, zero behavior change, first-ever folding unit tests. Full ready-to-paste description in the PR 19 section above. |

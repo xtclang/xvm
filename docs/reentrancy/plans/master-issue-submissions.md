@@ -78,14 +78,14 @@ without its listed dependency.
 | 7 | Source-only clean from `33323ffe1` and `f4744cb1e` applied in that order (`f4744cb1e` edits the test `33323ffe1` adds). | `org.xvm.javajit.JitFailurePropagationTest` (source-shape) fails on swallowed generated exceptions and bridge reflection wrapping. | Ready after manual review. |
 | 8 | Source-only clean from `3e09abc32`; the worker-failure channel seed `796f13465` is also source-clean when applied after it (its test hunks edit the test `3e09abc32` adds). | `org.xvm.runtime.RuntimeFailurePropagationTest` fails on detached startup/invocation causes. | Ready after manual review; include `796f13465` if row 5 is to depend on this issue. |
 | 9 | Extract from `26ce54466`; real conflicts in `xLocalClock.java` and `xNanosTimer.java`; test patch needs master add-form. | `org.xvm.runtime.NativeCallbackRegistrationTest.callbackRegistryIsConcurrentTimerSafeAndLeakFree()` fails on lazy `HashMap`/timer-thread throw/cancel leak shape. | Needs exact master hunk before filing. |
-| 10 | Extract from `5311da1ac`; `xRTServer.java` applies cleanly, timer files conflict with row 9. | `org.xvm.runtime.NativeCallbackRegistrationTest` fails on leaked keep-alive registration after schedule/bind failure. | Needs exact master hunk or pair with row 9. |
+| 10 | Extract from `5311da1ac`; `xRTServer.java` applies cleanly, timer files conflict with row 9. | `org.xvm.runtime.NativeCallbackRegistrationTest` fails on leaked keep-alive registration after schedule/bind failure. | Decided 2026-08-25: files WITH row 9 as one PR (launch-plan row L12). |
 | 11 | Extract only `Register.java`, `VersionTree.java`, `ChildInfo.java` from `9456d6727`, plus `MethodBody.java` from `a11765c86`; all four merge clean individually (verified 2026-08-25) - the conflicts in those broad commits are in other files. | `org.xvm.asm.RegisterHashCodeTest`, `org.xvm.asm.VersionTest`, and `org.xvm.asm.constants.MethodInfoTest.methodInfoEqualityDoesNotRecurseThroughMethodTargets()`; `MethodInfoTest` needs a master add-form. | Needs filtered diff; do not cherry-pick broad lint/adoption commits. |
 | 12 | Multi-seed extraction from `c5c40d443`, `d2165e4f8`, `f4df60ed1`, `7ce5662d1`; verified 2026-08-25: only `ObjectHandle.java` (in `d2165e4f8`) conflicts - the other three seeds are source-clean. | `AtomicViewSharingTest`, `FreezeViewSharingTest`, `ArrayViewGuardTest`, `RefViewGuardTest`. | Needs split or conflict-resolved master patch. |
 | 13 | Extract from `632cac927`; real conflict in `HandleConstant.java`. | `HandleConstantOwnerGuardTest` and `HandleConstantAssembleTest`; owner-guard test may need master API adaptation. | Needs exact master hunk before filing. |
 | 14 | Source-only clean from `ff8cc479a`. | `org.xvm.runtime.template._native.reflect.MethodInvokeArgumentAliasingTest` fails on tuple-storage aliasing. | Ready after manual review. |
 | 15 | Source-only clean from `f835b3693`. | `org.xvm.asm.ComponentMethodParameterCopyTest` fails on shared super `Parameter` elements. | Ready after manual review. |
 | 16 | Extract only contribution re-owner hunks from broad `0af827c72`; real conflicts in `Component.java` and `MethodStructure.java`. | `org.xvm.asm.ComponentBodyCopyTest.contributionsAreReOwnedByBodyCopies` fails on hidden outer owner. | Needs exact master hunk before filing. |
-| 17 | Source-only clean from `25371b397`. | `org.xvm.asm.ComponentBodyCopyTest.methodBodyCopyRebindsSourceOuter` fails on hidden outer method. | Ready after manual review, or pair with row 16. |
+| 17 | Source-only clean from `25371b397`. | `org.xvm.asm.ComponentBodyCopyTest.methodBodyCopyRebindsSourceOuter` fails on hidden outer method. | Decided 2026-08-25: files WITH row 16 as one PR (launch-plan row L10). |
 | 18 | Extract from `c621b1dca`; real conflict in `xRTFunction.java`. | `org.xvm.runtime.template._native.reflect.FinalizerChainTest.chainAppendsAtTailInsteadOfDroppingLinkedFinalizers()` fails under both `-ea` and `-da`. | Needs exact master hunk before filing. |
 
 ## Reuse Exposure Categories
@@ -463,8 +463,9 @@ file the source/test slice, not the branch docs.
 **Dependencies/order:** Depends on the container runtime-failure channel from
 branch seed `796f13465` (the row 8 family: `recordRuntimeFailure`,
 `getRuntimeFailure`, `throwIfRuntimeFailed`, and the connector `join()`
-wiring). Either file row 8 with that seed included first, or inline a minimal
-recorder in this issue.
+wiring). Decided 2026-08-25: this fix files together with row 8 in one PR
+(launch-plan row L7) as the channel's first consumer; it does not file
+standalone.
 
 ## 6. Future.and uses both inputs and preserves async failure
 
