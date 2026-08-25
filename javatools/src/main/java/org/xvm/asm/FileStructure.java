@@ -1025,6 +1025,8 @@ public final class FileStructure
      *         new (versioned) id
      */
     public ModuleStructure replaceModuleId(ModuleConstant idNew) {
+        m_pool.assertMutableBeforeRuntimePublished("module id replacement");
+
         ModuleStructure module = getModule();
         ModuleConstant  idOld  = module.getIdentityConstant();
 

@@ -30,9 +30,13 @@ The real risk categories are narrower:
 This file is the current ConstantPool/state catalog, not a proof that every
 parallelism-hostile pool pattern has been eliminated. The branch fixes the
 known runtime-owner defects listed below and adds guards for the classes of bugs
-that were proven during stress runs. A complete ConstantPool audit is still a
-must-audit backlog item because `ConstantPool` is also used as compiler,
-linker, serializer, runtime, and diagnostic state.
+that were proven during stress runs. The 2026-08-25 completion pass closed the
+runtime-published mutation gap: after runtime publication, new registrations,
+recursive registration/optimization, module-id surgery, disassembly reload, and
+TypeInfo invalidation all fail before mutating pool storage. The remaining
+pool work is structural: compiler/linker/serializer phases still need an
+explicit mutable-pool owner or immutable runtime snapshot model before claiming
+full pool reentrancy.
 
 The remaining audit must enumerate every owner-sensitive state edge in:
 
@@ -42,8 +46,8 @@ The remaining audit must enumerate every owner-sensitive state edge in:
 - ambient owner lookup through `ConstantPool.getCurrentPool()`,
   `ConstantPool.withPool(...)`, `ThreadLocal`, `TransientThreadLocal`, or
   `ScopedValue`;
-- late runtime registration and mutation after a pool has been published to a
-  container;
+- late runtime registration and destructive mutation after a pool has been
+  published to a container;
 - live runtime handles or other container-owned objects stored in constants;
 - error-listener/current-pool assumptions such as `getErrorListener()` calls
   that only work when the correct owner has already been scoped;
@@ -61,12 +65,12 @@ expanded catalog to `constant-pool-hostile-state-audit.md`.
 | --- | --- | --- | --- | --- |
 | Must fix | Wrong-owner runtime/helper state copied by adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, `MethodConstant`, `PropertyConstant`, `FormalTypeChildConstant`, `DynamicFormalConstant`, `RegisterConstant`, `MethodBindingConstant`, and `HandleConstant` | `adoptedBy(...)` changes pool ownership. Shallow-copied runtime/cache/helper state can still point at the source pool/container, compiler method/register owner, frame descriptor owner, or JIT owner. | Reset or reconstruct all non-logical state at adoption/owner-change boundaries. Throw/assert when live handles, moving compiler registers, or non-shared foreign register types are adopted into another pool. |
 | Done in this branch for semantic lookup; should fix bridge removal | Ambient current pool in runtime execution | Semantic main-code callers are fixed and `getCurrentPool()` has been removed; boundary scopes remain through `withPool(...)` | A thread-local owner is hidden from signatures. Missing scope cleanup or execution on a different thread selects the wrong pool or `null`. | Keep explicit `Frame`, `Container`, or `ConstantPool` parameters. Remove `withPool(...)` completely once the remaining boundaries have explicit owners. |
-| Must audit; runtime marker fixed 2026-08-25 | Shared mutable pool mutation during parallel runtime | `register(...)`, `ensure*Constant(...)`, `f_listConst`, `m_mapConstants`, `m_mapLocators`, `getContained()` | Some structures are concurrent/copy-on-write; `f_listConst` itself is not a general concurrent collection. The current design assumes registration and validation reentrancy more than arbitrary parallel mutation. | This branch now always installs the runtime publication marker and rejects genuinely new registrations after that point. Long term, split "frozen runtime pool" from compiler/linker mutation and close destructive storage paths. |
+| Done in this branch for runtime-published mutation; must audit long-term snapshot model | Shared mutable pool mutation during parallel runtime | `register(...)`, `ensure*Constant(...)`, recursive registration, `optimize()`, `replaceModule(...)`, disassembly reload, TypeInfo invalidation, `f_listConst`, `m_mapConstants`, `m_mapLocators`, `getContained()` | Some structures are concurrent/copy-on-write; `f_listConst` itself is not a general concurrent collection. The current design assumes registration and validation reentrancy more than arbitrary parallel mutation. | This branch always installs the runtime publication marker and rejects new registrations plus destructive compiler/serializer mutations after that point. Long term, split frozen runtime pools from compiler/linker mutation and close immutable storage snapshots. |
 | Must audit | Live runtime handles embedded as constants | `HandleConstant` in `xRTTypeTemplate.resolveFormalType`, used as annotation parameter values | A live `ObjectHandle` is owner-specific and cannot become a pool-shared serialized logical constant. | This branch adds a `HandleConstant.copyForAdoption(...)` guard for cross-pool movement. Diagnostics for annotated types carrying live handles remain useful. |
 | Should fix soon | Unsynchronized per-pool lazy implicit caches | `f_implicits`, `m_clz*`, `m_type*`, `m_val*`, `m_sig*`, `m_setJitPrimitives` | These are owner-local, so they are not cross-container globals. They are still plain lazy writes and can duplicate work or race under concurrent use of one pool. | Use owner-local `Lazy` or `ConcurrentMap.computeIfAbsent` for hot/shared runtime caches, or freeze/warm them before parallel runtime execution. |
 | Should fix soon | Ambient `ThreadLocal` implementation | `s_tloPool`, `getCurrentPool`, `withPool` | Raw `ThreadLocal` with mutable holder arrays relies on perfect manual cleanup and does not make ownership visible. This branch removed the raw setter; the remaining bridge is lexical. | Replace with explicit parameters and delete `withPool(...)`/`s_tloPool`. A `ScopedValue` bridge would improve cleanup, but it would still hide ownership and should not be the endpoint. |
 | Done in this branch | Static immutable implicit metadata maps | `s_implicits`, `s_implicitsByPath` | Class-init publication was safe, but the old maps were mutable `HashMap`s held in final static fields. No code mutated them today, but process-wide static metadata should not remain accidentally writable. | The static initializer now clones parser-returned path arrays into a private map and freezes both maps with `Map.copyOf(...)`. `ConstantPoolDiagnosticsTest.staticImplicitMetadataMapsAreImmutable()` guards the shape. |
-| Compiler backlog | Destructive pool optimization and module replacement | `optimize()`, `replaceModule(...)`, disassembly/assembly paths | These mutate pool contents, positions, and caches. They are intended for serialization/compiler flows, not concurrent runtime execution. | Keep out of this PR. Incremental compiler work should isolate mutable compiler pools from frozen runtime pools. |
+| Done in this branch for runtime-published pools; compiler backlog for phase ownership | Destructive pool optimization and module replacement | `preRegisterAll()`, `postRegisterAll(...)`, `optimize()`, `replaceModule(...)`, `FileStructure.replaceModuleId(...)`, disassembly paths | These mutate pool contents, positions, and caches. They are intended for serialization/compiler flows, not concurrent runtime execution. | Runtime-published pools now reject these paths before mutation. Incremental compiler work should still isolate mutable compiler pools from frozen runtime snapshots. |
 
 ## Field Inventory
 
@@ -84,7 +88,7 @@ Current `ConstantPool` fields fall into these groups.
 
 | Field | Classification | Notes |
 | --- | --- | --- |
-| `f_listConst` | Must audit | Owner-local list of constants by index. Registration mutates it; `getContained()` intentionally returns a live index iterator so validation can append while iterating. This is a reentrant single-thread workaround, not a general parallel mutation guarantee. |
+| `f_listConst` | Done for runtime-published writes; must audit for immutable snapshot | Owner-local list of constants by index. Registration mutates it; `getContained()` intentionally returns a live index iterator so validation can append while iterating. Runtime publication now blocks new registration and destructive storage rewrites. A future immutable runtime snapshot would remove the remaining reliance on mutable `ArrayList` reads. |
 | `m_mapConstants` | Mostly OK, must audit with `f_listConst` | Volatile copy-on-write `EnumMap` of per-format `ConcurrentHashMap`s. The lookup maps are concurrent, but they sit over mutable `f_listConst`. |
 | `m_mapLocators` | Mostly OK, must audit with `f_listConst` | Same shape as `m_mapConstants`. |
 | `f_setValidPools` | Should fix soon | Identity set of upstream pool owners. Built lazily and read during registration assertions. It is not a runtime cache, but mutable lazy build should be synchronized or eagerly built before parallel registration. |
@@ -95,7 +99,7 @@ Current `ConstantPool` fields fall into these groups.
 | Field | Classification | Notes |
 | --- | --- | --- |
 | `f_tlolistDeferred` | Must audit | Per-pool `TransientThreadLocal` list used during type-info recursion. It should not cross pool owners. It is safer than a global, but still hidden context and should stay tightly scoped. |
-| `f_listInvalidated` / `m_cInvalidated` | Mostly OK | `Vector` plus volatile count. This is an explicit per-pool invalidation log. It is not cross-container global state. Long term, prefer a clearer synchronized/immutable snapshot API. |
+| `f_listInvalidated` / `m_cInvalidated` | Done for runtime-published writes; compiler metadata state otherwise | `Vector` plus volatile count. This is an explicit per-pool invalidation log. Runtime publication now blocks TypeInfo invalidation because it is compile-time mutation. Long term, prefer a clearer synchronized/immutable snapshot API for compiler-owned pools. |
 | `f_mapRefTypes` | Mostly OK | Per-pool `ConcurrentHashMap` for NakedRef `TypeInfo`. This is the right kind of keyed owner-local cache. |
 | `m_typeNakedRef` | Must audit with runtime initialization | Set by native/runtime/JIT initialization. It is per-pool, but wrong ambient pool setup can leave it unset or set on the wrong pool. Explicit pool parameters are preferred. |
 
@@ -329,6 +333,35 @@ before marking the pool, move non-logical composition helper state out of pool
 registration, split runtime pools from compiler/linker mutation, or add a
 narrow allowlist only after proving the late registration is deterministic,
 owner-local, and concurrency-safe.
+
+### Runtime-Published Destructive Mutation Guard
+
+The 2026-08-25 completion pass extended the publication marker from "no new
+constants" to "no destructive pool lifecycle mutation." The fix is a guard on
+the runtime-published pool itself, so compiler/linker/serializer copies keep
+their current behavior while runtime-visible pools fail loud before their list,
+positions, lookup maps, or TypeInfo invalidation state are rewritten.
+
+| Site | Classification after source read | Runtime-published behavior in this branch |
+| --- | --- | --- |
+| `ConstantPool.register(...)` and all `ensure*Constant(...)` callers | Runtime-published must-fix, now guarded | A genuinely new constant throws before insertion into `f_listConst` or lookup maps; an already interned constant still returns normally. |
+| `ConstantPool.preRegisterAll()` | Runtime-published must-fix, now guarded | `FileStructure.writeTo(...)` cannot reset reference tallies on a runtime-visible pool. |
+| `ConstantPool.postRegisterAll(...)` / `optimize()` | Runtime-published must-fix, now guarded | Assembly cannot reorder constants, rewrite positions, clear lookup maps, or clear implicit caches after publication. |
+| `FileStructure.replaceModuleId(...)` / `ConstantPool.replaceModule(...)` | Runtime-published must-fix, now guarded at entry and pool surgery | Module-id replacement fails before mutating the module identity or pool identities on a runtime-visible file. Fresh temporary compiler/linker copies still use the existing destructive path. |
+| `ConstantPool.disassemble(...)` | Defensive guard | Disassembly normally targets a fresh pool, but a marked pool now refuses list/map reload before clearing storage. |
+| `ConstantPool.invalidateTypeInfos(...)` | Runtime-published must-fix, now guarded | Compile-time invalidation cannot append to `f_listInvalidated` or clear relation/TypeInfo state after runtime publication. |
+| `ensureConstantLookupComplex(...)` / `ensureLocatorLookupComplex(...)` | Allowed runtime cache construction | These build lookup caches over already-registered constants. They do not change logical pool contents and remain concurrent/copy-on-write. |
+| Per-pool implicit/core caches (`m_clz*`, `m_type*`, `m_val*`, `m_sig*`) | Should-fix, not closed by this guard | Runtime publication catches any cache path that would intern a missing constant. Duplicate publication of an already-known owner-local helper remains a later `Lazy`/snapshot cleanup. |
+| `HandleConstant` live payloads | Separate must-audit/fixed subcase | The publication marker fences new handle constants, and the adoption guard blocks cross-pool movement. A future policy should remove live handles from frozen/shared pool state entirely. |
+
+Verification:
+
+- Red-on-old-shape: with only the new tests present, the old production shape
+  compiled and failed `runtimePublishedPoolRejectsRecursiveRegistrationPass`,
+  `runtimePublishedPoolRejectsModuleReplacement`, and
+  `runtimePublishedPoolRejectsTypeInfoInvalidation` behaviorally.
+- Green-on-new-shape:
+  `./gradlew :javatools:test --tests org.xvm.asm.ConstantPoolDiagnosticsTest --rerun-tasks --no-build-cache`.
 
 ## Ambient Bridge End State
 

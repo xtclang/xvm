@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
@@ -180,6 +181,65 @@ public class ConstantPoolDiagnosticsTest {
         assertThrows(IllegalStateException.class,
                 () -> pool.register(new DiagnosticConstant(pool)));
         assertEquals(formatsBefore, constantMaps(pool).keySet());
+    }
+
+    /**
+     * A runtime-published pool must not be sent back through the compiler/serialization
+     * registration pass. The old shape only guarded new {@code register(...)} calls; writing the
+     * file could still reset reference tallies, reorder constants, clear lookup maps, and republish
+     * positions after the pool had become runtime-visible.
+     */
+    @Test
+    public void runtimePublishedPoolRejectsRecursiveRegistrationPass()
+            throws Exception {
+        var file = new FileStructure("test");
+        var pool = file.getConstantPool();
+
+        pool.markRuntimePublishedForDiagnostics("unit-test");
+
+        var error = assertThrows(IllegalStateException.class,
+                () -> file.writeTo(new ByteArrayOutputStream()));
+        assertTrue(error.getMessage().contains("recursive registration pre-pass"));
+        assertTrue(error.getMessage().contains("unit-test"));
+    }
+
+    /**
+     * Module-id replacement rewrites existing identity constants and then re-disassembles a
+     * temporary file. That surgery is only valid for fresh compiler/linker copies, never for a pool
+     * already visible to runtime execution.
+     */
+    @Test
+    public void runtimePublishedPoolRejectsModuleReplacement() {
+        var file  = new FileStructure("test");
+        var pool  = file.getConstantPool();
+        var idNew = pool.ensureModuleConstant("renamed");
+
+        pool.markRuntimePublishedForDiagnostics("unit-test");
+
+        var error = assertThrows(IllegalStateException.class,
+                () -> file.replaceModuleId(idNew));
+        assertTrue(error.getMessage().contains("module id replacement"));
+        assertTrue(error.getMessage().contains("unit-test"));
+        assertSame(file.getModuleId(), file.getModule().getIdentityConstant());
+    }
+
+    /**
+     * TypeInfo invalidation is compile-time mutation. After runtime publication, invalidation would
+     * append to the pool's invalidation list and clear owner-derived relation caches while runtime
+     * threads may be reading TypeInfo.
+     */
+    @Test
+    public void runtimePublishedPoolRejectsTypeInfoInvalidation() {
+        var file    = new FileStructure("test");
+        var pool    = file.getConstantPool();
+        var idClass = pool.ensureClassConstant(file.getModuleId(), "Child");
+
+        pool.markRuntimePublishedForDiagnostics("unit-test");
+
+        var error = assertThrows(IllegalStateException.class,
+                () -> pool.invalidateTypeInfos(idClass));
+        assertTrue(error.getMessage().contains("TypeInfo invalidation"));
+        assertTrue(error.getMessage().contains("unit-test"));
     }
 
     /**

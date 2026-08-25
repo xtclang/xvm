@@ -69,7 +69,7 @@ explicit owner APIs, and typed runtime accessors.
 | `org.xvm.api.InterpreterConnectorTest` | `OwnershipDiagnostics` and connector diagnostic-container access. |
 | `org.xvm.asm.AsmConstructorEscapeTest` | `MultiMethodStructure.createMethodCopyingParameters(...)`. |
 | `org.xvm.asm.ConstantAdoptionTest` | `ConstantAdoptionValidator` and its validation property. |
-| `org.xvm.asm.ConstantPoolDiagnosticsTest` | Current-pool assertion/removal APIs, `xvm.asm.validateConstantPoolCurrentScope`, and the always-on runtime publication marker. `publicationMarkerIsInstalledByDefault()` is red on the old property-gated shape because no marker is installed in normal runtime mode. |
+| `org.xvm.asm.ConstantPoolDiagnosticsTest` | Current-pool assertion/removal APIs, `xvm.asm.validateConstantPoolCurrentScope`, the always-on runtime publication marker, and destructive-phase publication guards. `publicationMarkerIsInstalledByDefault()` is red on the old property-gated shape because no marker is installed in normal runtime mode; the `runtimePublishedPoolRejects*` tests are red on the old register-only guard because write/replace/invalidate operations keep mutating after publication. |
 | `org.xvm.asm.ConstantPoolRegistrationDeadlockTest` | Registration-completion guard (branch-only). Red on the branch's pre-fix guard shape, which awaited another thread's registration completion inside the pool monitor and deadlocked the pool; master has no completion guard to deadlock. |
 | `org.xvm.asm.constants.MethodInfoTest` | `MethodInfo.create(...)` factory and owned-body model. `owningFreshBodyDoesNotFabricateSelfTarget()` is additionally red on the branch's own broken owned-copy shape (post-`93189541f`), where fresh bodies gained fabricated self targets that corrupted union/difference TypeInfo merges and broke the XDK build at lib_json. |
 | `org.xvm.asm.constants.TypeConstantOwnerApiTest` | Explicit-pool covariance/contravariance APIs. |
@@ -114,6 +114,16 @@ container-owned runtime state from a prior run in the same Gradle JVM.
 the old shape because `markRuntimePublishedForDiagnostics(...)` left normal
 pools unmarked; it passes here because a new post-publication registration
 throws before mutating pool storage.
+
+`ConstantPoolDiagnosticsTest.runtimePublishedPoolRejectsRecursiveRegistrationPass()`,
+`runtimePublishedPoolRejectsModuleReplacement()`, and
+`runtimePublishedPoolRejectsTypeInfoInvalidation()` close the matching
+destructive-phase gap. With the new tests left in place and the production
+guard stashed, the old shape compiled and failed behaviorally: the recursive
+registration/write path, module-id replacement, and TypeInfo invalidation all
+continued after runtime publication. The fixed shape throws before resetting
+reference tallies, rewriting module identity/pool contents, or appending to
+the invalidation list.
 
 Older audit runs also found a Gradle caveat: passing the property to Gradle
 enabled it during XTC compilation and exposed a separate metadata equality

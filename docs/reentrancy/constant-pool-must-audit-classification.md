@@ -17,12 +17,12 @@ in the API.
 | --- | --- | --- |
 | DONE IN THIS BRANCH | Base `Constant.adoptedBy(...)` shallow clone contract | `Constant.adoptedBy(...)` is now the final owner-transfer wrapper, `Constant` no longer implements `Cloneable`, and default `copyForAdoption(...)` fails closed. This stops new unsafe constants from silently inheriting `Object.clone()` ownership transfer or bypassing common owner/ref checks. |
 | DONE IN THIS BRANCH as a guard; MUST FIX long term with transactional registration | `ConstantPool.register(...)` publishes before recursive registration completes | The branch preserves same-thread cycle resolution but marks newly published constants as incomplete and makes other threads wait until recursive `registerConstants(...)` and valid-pool checks finish. The long-term fix is still private transactional registration that does not expose in-progress constants through public pool APIs. |
-| DONE IN THIS BRANCH for runtime publication marker; MUST FIX for full runtime freeze | Runtime-published pool mutation, including first `ClassComposition` construction | Runtime entry now always installs a publication marker, and new registrations after that point fail before mutating pool storage. The branch also prewarms known access-type constants before the marker and adds a first-composition test for that narrow subcase. Destructive compiler/linker mutation and full frozen-pool storage remain open. |
-| MUST FIX for runtime-published pools; MUST AUDIT otherwise | `f_listConst`, locator maps, and constant lookup maps | The storage supports single-thread reentrant validation, not arbitrary parallel mutation after publication. |
+| DONE IN THIS BRANCH for runtime-published mutation; MUST FIX long term with immutable runtime snapshots | Runtime-published pool mutation, including first `ClassComposition` construction | Runtime entry now always installs a publication marker, new registrations fail before mutating pool storage, known access-type constants are prewarmed, and destructive registration/optimization/module/disassembly/TypeInfo-invalidation phases are rejected after publication. Full frozen-pool storage snapshots remain open. |
+| DONE IN THIS BRANCH for runtime-published writes; MUST AUDIT otherwise | `f_listConst`, locator maps, and constant lookup maps | Runtime-published pools no longer accept registration or destructive lifecycle rewrites. The storage still supports single-thread reentrant validation in compiler/linker phases, not arbitrary parallel mutation. |
 | MUST AUDIT, with runtime-published use as MUST FIX | Live `HandleConstant` / `ObjectHandle` state in constants | The second-adoption guard is fixed, but fresh runtime handle constants and filesystem handle caches are still live runtime state reachable from constants. |
 | SHOULD FIX, becomes MUST AUDIT when a pool is shared concurrently | Per-pool implicit/core lazy caches | Owner is local to the pool, but writes are plain lazy field writes and can register constants after runtime publication. |
 | MUST AUDIT; TypeConstant relation/formal usage maps fixed 2026-08-25 | Owner-derived helper caches on constant subclasses | `TypeConstant`, identity/member constants, and JIT helpers mix concurrent and plain caches. Adoption clears several, and relation/formal usage cache keys are now owner-question-complete, but same-owner parallel publication is not fully proven for every helper. |
-| MUST AUDIT, MUST FIX if reachable on runtime pools | Destructive `optimize()`, `replaceModule(...)`, and disassembly mutations | These reorder positions, clear maps, and rewrite pool contents. They must remain compiler/serialization-only or be guarded out of runtime pools. |
+| DONE IN THIS BRANCH for runtime-published pools; MUST AUDIT for compiler/serializer phase ownership | Destructive `optimize()`, `replaceModule(...)`, and disassembly mutations | These reorder positions, clear maps, and rewrite pool contents. They now fail on runtime-published pools; the remaining work is proving mutable compiler/serializer pools are request-confined or splitting immutable runtime snapshots. |
 | DONE IN THIS BRANCH for semantic getter removal; MUST AUDIT for remaining bridges | Ambient current-pool effects inside constants | `getCurrentPool()` is gone and source-shape tests guard it. Remaining `withPool(...)` scopes are transitional bridge boundaries and must keep explicit owner assertions until they are replaced by explicit owner APIs. |
 | DONE IN THIS BRANCH | Static mutable metadata maps | `ConstantPool` implicit maps are now frozen after class initialization, and the unused `UnionTypeConstant.SpecialFunkies` mutable set was removed. |
 
@@ -354,9 +354,8 @@ Done in this branch:
 
 ## 3. Runtime-Published Pool Mutation And First `ClassComposition` Construction
 
-Classification: MUST FIX for runtime freeze generally. DONE IN THIS BRANCH
-for the known already-in-pool class/type first-`ClassComposition` access-type
-subcase.
+Classification: DONE IN THIS BRANCH for runtime-published mutation; MUST FIX
+long term with immutable runtime snapshots.
 
 Evidence:
 
@@ -388,17 +387,21 @@ Evidence:
 Why the old design is bad:
 
 A runtime-visible pool should be a read-mostly frozen artifact. The current
-marker is a hard runtime-entry boundary for new registrations, not the complete
-structural freeze. Compiler/linker phases can still run destructive mutations,
-and remaining runtime-visible helper state still needs owner and storage policy.
+marker is a hard runtime-entry boundary for new registrations and destructive
+pool lifecycle phases. It is still not the complete structural freeze:
+compiler/linker copies can still run destructive mutations, and remaining
+runtime-visible helper state still needs owner and storage policy.
 
 Practical same-JVM/parallel failure mode:
 
 Container A begins executing user code while another fiber or callback lazily
 creates a class composition, access type, annotation type, function signature,
 or core constant in the same pool. Readers can observe pool growth, stale map
-views, or partial registration. Repeated same-JVM runs make this worse because
-one run can warm a path that another run assumes was already frozen.
+views, or partial registration. A compiler/serializer path that reuses the same
+published file can also reset reference tallies, reorder positions, clear maps,
+or invalidate TypeInfo underneath readers. Repeated same-JVM runs make this
+worse because one run can warm a path that another run assumes was already
+frozen.
 
 Existing reproducer, test, or diagnostic:
 
@@ -414,18 +417,25 @@ Existing reproducer, test, or diagnostic:
   through `javatools/src/test/java/org/xvm/runtime/ClassCompositionLateRegistrationTest.java:80`
   covers the fixed subcase where the first `ClassComposition` for an already-known
   type does not register access-type constants after diagnostic publication.
+- `ConstantPoolDiagnosticsTest.runtimePublishedPoolRejectsRecursiveRegistrationPass()`,
+  `runtimePublishedPoolRejectsModuleReplacement()`, and
+  `runtimePublishedPoolRejectsTypeInfoInvalidation()` prove destructive
+  compiler/serializer phases fail after runtime publication. With only these
+  tests applied to the old production shape, all three compiled and failed
+  behaviorally.
 - There is still no complete runtime-freeze test that proves every runtime
-  `ensure*Constant(...)` path is warmed or forbidden after publication.
+  `ensure*Constant(...)` path is warmed or forbidden after publication, nor an
+  immutable runtime storage snapshot test.
 
 Proper fix:
 
 Separate mutable compiler/linker pools from frozen runtime pools, or make a
 complete immutable runtime-pool snapshot after warmup. The current prewarm is
 the right shape for known class/type access views, and the runtime marker now
-rejects late constants by default, but destructive storage rewrites and live
-runtime handles remain outside that marker. Runtime composition construction
-should either be part of warmup, or it must prove it only allocates owner-local
-composition objects and does not intern new constants after the freeze point.
+rejects late constants plus destructive storage phases by default. Runtime
+composition construction should either be part of warmup, or it must prove it
+only allocates owner-local composition objects and does not intern new constants
+after the freeze point. Live runtime handles still need their own policy.
 
 Expected performance and semantic impact:
 
@@ -436,10 +446,11 @@ at the boundary instead of racing later.
 
 Recommended PR slice:
 
-Create a runtime pool freeze/prewarm PR. Keep the always-on runtime publication
-marker and first-composition test as coverage for the access-type subcase, then
-enumerate every `ensure*Constant(...)` reached from runtime after
-`MainContainer.invoke0(...)` publication.
+Create a runtime pool snapshot/prewarm PR. Keep the always-on runtime
+publication marker, destructive-phase guard, and first-composition tests as
+coverage, then enumerate every `ensure*Constant(...)` reached from runtime
+after `MainContainer.invoke0(...)` publication and move runtime readers to a
+frozen list/map representation.
 
 Done in this branch:
 
@@ -449,12 +460,16 @@ path also prewarms known class/type access constants before marking the pool, an
 the new first-composition test verifies that specific path for an already-known
 type. The 2026-08-25 update makes that marker unconditional at runtime entry;
 `ConstantPoolDiagnosticsTest.publicationMarkerIsInstalledByDefault()` is red on
-the old property-gated shape and green on the always-on marker.
+the old property-gated shape and green on the always-on marker. The same-day
+completion pass adds `ConstantPool.assertMutableBeforeRuntimePublished(...)` to
+recursive registration, optimization, module replacement, disassembly reload,
+and TypeInfo invalidation paths; the three new diagnostics tests are red on the
+old "register-only" guard and green on the destructive-phase guard.
 
 ## 4. `f_listConst`, Locator, And Lookup Map Concurrency
 
-Classification: MUST FIX for runtime-published pools; MUST AUDIT for
-compiler/linker phases.
+Classification: DONE IN THIS BRANCH for runtime-published writes; MUST AUDIT
+for compiler/linker phases and immutable snapshots.
 
 Evidence:
 
@@ -492,29 +507,33 @@ Why the old design is bad:
 The storage model is half synchronized. Writers publish under `synchronized
 (this)`, but many readers and iterators do not synchronize. The lookup maps are
 concurrent at the inner-map level, but the outer `EnumMap` is copied and then
-sometimes cleared in place by destructive paths.
+sometimes cleared in place by destructive compiler/serializer paths.
 
 Practical same-JVM/parallel failure mode:
 
 A runtime reader can see stale size, miss a just-added constant, observe a
 constant before recursive registration is complete, or iterate while another
 thread mutates the backing list. Locator lookups can race with locator adoption
-or map clears, producing wrong or missing interned values.
+or map clears, producing wrong or missing interned values. This branch blocks
+those writes after runtime publication; the remaining risk belongs to
+compiler/linker phases that still share a mutable pool without an encoded owner.
 
 Existing reproducer, test, or diagnostic:
 
-There is no direct concurrent list/lookup-map stress test. The current
-`getContained()` comment documents a deliberate single-thread reentrant
-validation workaround, not a parallel guarantee.
+The current `getContained()` comment documents a deliberate single-thread
+reentrant validation workaround, not a parallel guarantee. The runtime
+publication tests now prove post-publication registration and destructive
+storage phases fail, but there is still no direct concurrent compiler-phase
+list/lookup-map stress test or immutable snapshot representation.
 
 Proper fix:
 
-Freeze `f_listConst` and lookup maps before runtime publication. Runtime public
-traversal should use immutable snapshots or immutable arrays. Keep the
-mod-count-blind iterator only as an internal validation worklist until
-validation no longer appends through `register(...)`. Replace in-place map
-clears with fresh-map publication when destructive compiler phases still need
-them.
+Freeze `f_listConst` and lookup maps before runtime publication. The current
+guard enforces the write boundary; runtime public traversal should still move
+to immutable snapshots or immutable arrays. Keep the mod-count-blind iterator
+only as an internal validation worklist until validation no longer appends
+through `register(...)`. Replace in-place map clears with fresh-map publication
+when destructive compiler phases still need them.
 
 Expected performance and semantic impact:
 
@@ -524,10 +543,11 @@ Semantics remain identical if no runtime code depends on seeing late constants.
 
 Recommended PR slice:
 
-Create a pool storage freeze PR. First add phase assertions and a stress test
-for concurrent `register(...)` plus `getConstants()`/`getContained()` access.
-Then introduce a frozen read representation for runtime and keep mutable
-`ArrayList` storage for build phases only.
+Create a pool storage snapshot PR. The phase assertions are now present for
+runtime-published pools; next add a stress test for compiler-phase concurrent
+`register(...)` plus `getConstants()`/`getContained()` access, then introduce a
+frozen read representation for runtime and keep mutable `ArrayList` storage for
+build phases only.
 
 ## 5. Live `HandleConstant` / `ObjectHandle` State In Constants
 
@@ -792,7 +812,8 @@ ownership.
 
 ## 8. Destructive Pool Optimization, Module Replacement, And Disassembly Mutations
 
-Classification: MUST AUDIT; MUST FIX if reachable on a runtime-published pool.
+Classification: DONE IN THIS BRANCH for runtime-published pools; compiler and
+serializer phase ownership remains a structural follow-up.
 
 Evidence:
 
@@ -834,17 +855,20 @@ recomputed under a different phase.
 
 Existing reproducer, test, or diagnostic:
 
-No focused runtime-reachability guard exists for these destructive paths. The
-late-registration diagnostic does not detect list clears, position rewrites, or
-map resets.
+`ConstantPoolDiagnosticsTest.runtimePublishedPoolRejectsRecursiveRegistrationPass()`,
+`runtimePublishedPoolRejectsModuleReplacement()`, and
+`runtimePublishedPoolRejectsTypeInfoInvalidation()` fail on the old production
+shape because the operations proceed after publication. They pass here because
+the guard throws before resetting reference tallies, replacing module identity,
+or appending to the TypeInfo invalidation list.
 
 Proper fix:
 
-Encode the phase boundary. Destructive methods should assert or check that the
-pool is not runtime-published and is owned by a compiler/serialization copy.
-Longer term, separate mutable assembly pools from immutable runtime snapshots.
-If map clearing remains, publish fresh `EnumMap` instances instead of clearing
-the volatile map object in place.
+The runtime-published phase boundary is now encoded in `ConstantPool` and at
+the public `FileStructure.replaceModuleId(...)` entry point. Longer term,
+separate mutable assembly pools from immutable runtime snapshots. If map
+clearing remains in compiler-owned pools, publish fresh `EnumMap` instances
+instead of clearing the volatile map object in place.
 
 Expected performance and semantic impact:
 
@@ -854,10 +878,10 @@ clear ownership and stable indexes.
 
 Recommended PR slice:
 
-Create a destructive-phase guard PR. Add tests that mark a pool runtime
-published and verify `replaceModule(...)`, disassembly reload, and
-optimization entry points cannot run on it. Then move any legitimate runtime
-uses to private copies.
+The runtime guard is now in this branch. The remaining PR is a storage/snapshot
+design slice: prove compiler/serializer pools are request-confined, or add an
+immutable runtime representation and keep mutable `ArrayList`/map clearing
+strictly on compiler-owned copies.
 
 ## 9. Remaining Ambient Current-Pool Bridge Effects Inside Constants
 
@@ -1013,17 +1037,17 @@ test above.
 
 ## Suggested PR Order
 
-1. Runtime pool freeze/prewarm: make late registration a hard runtime boundary
-   after warmup and expand the first-`ClassComposition` coverage beyond the
-   already-known access-type subcase.
+1. Runtime pool freeze/prewarm: keep the hard runtime publication boundary,
+   expand warmup coverage beyond the already-known access-type subcase, and
+   introduce immutable runtime storage snapshots.
 2. Registration publication ordering: stop exposing partially registered
    constants or formally confine registration to a single builder phase.
 3. Constant adoption contract: remove base shallow clone as the default and
    require explicit subclass adoption behavior.
 4. Live-handle constant policy: remove or strictly owner-localize live
    `ObjectHandle` storage in constants.
-5. Pool storage freeze: immutable runtime list/map snapshots and no in-place
-   map clears visible to runtime readers.
+5. Pool storage freeze: immutable runtime list/map snapshots, with mutable
+   list/map clearing confined to compiler/serializer-owned copies.
 6. TypeInfo/ambient bridge cleanup: replace remaining constant-internal
    `withPool(...)` and dynamic relation context dependencies with explicit
    owner/build context APIs.

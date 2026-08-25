@@ -477,6 +477,28 @@ public class ConstantPool
         }
     }
 
+    /**
+     * Fail before running a destructive pool lifecycle mutation after the pool has become visible
+     * to runtime execution. The registration guard covers new constants; this covers compiler and
+     * serialization operations that rewrite existing storage, indexes, lookup maps, or TypeInfo
+     * invalidation state without going through {@link #register(Constant)}.
+     *
+     * @param action  short description of the mutation that would run
+     */
+    void assertMutableBeforeRuntimePublished(String action) {
+        RuntimePublication publication = runtimePublication;
+        if (publication != null) {
+            throw new IllegalStateException("ConstantPool attempted "
+                    + action
+                    + " after runtime publication by "
+                    + publication.owner()
+                    + " at size "
+                    + publication.size()
+                    + " on thread "
+                    + publication.thread());
+        }
+    }
+
     private static String describeConstantForDiagnostics(Constant constant) {
         try {
             return constant.toString();
@@ -2708,6 +2730,8 @@ public class ConstantPool
      * after serialization.
      */
     void replaceModule(ModuleConstant idOld, ModuleConstant idNew) {
+        assertMutableBeforeRuntimePublished("module replacement");
+
         for (Constant constant : f_listConst) {
             if (constant instanceof IdentityConstant id && id.getParentConstant() == idOld) {
                 int nPos = id.getPosition();
@@ -2808,6 +2832,8 @@ public class ConstantPool
     @Override
     protected void disassemble(DataInput in)
             throws IOException {
+        assertMutableBeforeRuntimePublished("disassembly reload");
+
         f_listConst.clear();
         m_mapConstants.clear();
         m_mapLocators.clear();
@@ -3236,6 +3262,8 @@ public class ConstantPool
      * number of bytes throughout the FileStructure.
      */
     protected void preRegisterAll() {
+        assertMutableBeforeRuntimePublished("recursive registration pre-pass");
+
         assert !m_fRecurseReg;
         m_fRecurseReg = true;
 
@@ -3249,6 +3277,8 @@ public class ConstantPool
      *                  present order
      */
     protected void postRegisterAll(final boolean fOptimize) {
+        assertMutableBeforeRuntimePublished("recursive registration post-pass");
+
         assert m_fRecurseReg;
         m_fRecurseReg = false;
 
@@ -3416,6 +3446,8 @@ public class ConstantPool
      */
     public void invalidateTypeInfos(IdentityConstant id) {
         assert id.isClass();
+        assertMutableBeforeRuntimePublished("TypeInfo invalidation");
+
         synchronized (f_listInvalidated) {
             f_listInvalidated.add(register(id));
             m_cInvalidated = f_listInvalidated.size();
@@ -3994,6 +4026,8 @@ public class ConstantPool
      * Constants occur before the less used constants.
      */
     private void optimize() {
+        assertMutableBeforeRuntimePublished("pool optimization");
+
         ArrayList<Constant> list = f_listConst;
 
         // remove unused constants

@@ -279,14 +279,16 @@ now always installs the marker, and
 Effect: the old normal path allowed parallel runtime readers to observe pool
 growth, cache invalidation, or partially registered constants after the pool had
 become container-visible. The marker closes that late-registration path for
-runtime-published pools, but it is not the full structural freeze: compiler and
-serialization code can still run destructive pool phases, and live handle
-constants/storage snapshots still need explicit policy.
+runtime-published pools. The 2026-08-25 completion pass also made destructive
+registration/optimization, module replacement, disassembly reload, and TypeInfo
+invalidation fail after runtime publication. It is still not the full structural
+freeze: compiler and serialization copies still use mutable pool phases, and
+live handle constants/storage snapshots still need explicit policy.
 
-Recommended guard/fix: keep the always-on runtime marker. Split mutable
-compiler/linker pools from frozen runtime pools, or make a real immutable
-runtime snapshot/freeze model that also addresses destructive storage rewrites
-and live runtime handles.
+Recommended guard/fix: keep the always-on runtime marker and destructive-phase
+guard. Split mutable compiler/linker pools from frozen runtime pools, or make a
+real immutable runtime snapshot/freeze model that also addresses storage
+snapshots and live runtime handles.
 
 Fixed subcases in this branch:
 
@@ -300,9 +302,11 @@ Fixed subcases in this branch:
   already-known type can stay lazy without mutating the pool after the marker.
 
 This is not the full freeze solution. Genuinely new runtime-created constants
-now fail after publication, but the remaining storage, destructive mutation,
-and live-handle paths still need explicit owner/concurrency policy. That
-remaining work is why the broader category stays must-audit/must-fix.
+and destructive storage phases now fail after publication, but immutable storage
+snapshots, owner-local lazy helper publication, and live-handle policy still
+need explicit owner/concurrency work. That remaining work is why the broader
+category stays a structural follow-up rather than a claim that `ConstantPool`
+is fully reentrant-safe.
 
 ## Must Audit
 

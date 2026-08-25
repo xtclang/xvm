@@ -3186,6 +3186,40 @@ and plain console input still falls back to `CONSOLE_IN` when JLine is
 unavailable. The difference is that the mutable process resource is no longer a
 public API.
 
+### Runtime-Published ConstantPool Mutation Boundary
+
+Master had no runtime-publication boundary for `ConstantPool`. This branch first
+made runtime entry install a marker and reject new constants, but the remaining
+destructive lifecycle operations could still reset or rewrite pool state after
+publication: `FileStructure.writeTo(...)` re-ran recursive registration and
+optimization, `replaceModuleId(...)`/`replaceModule(...)` rewrote identity
+constants, disassembly reload cleared list/map storage, and TypeInfo
+invalidation appended compile-time invalidation state.
+
+That is unsafe because runtime frames and resolved metadata hold constant
+indexes and constant objects. If the same pool is reused by a same-JVM
+compile/run, serializer, or linker path after the container has started,
+readers can observe changed indexes, cleared lookup maps, recomputed helper
+caches, or invalidated TypeInfo while user code is still using the published
+artifact.
+
+The replacement keeps compiler/linker behavior on fresh mutable copies, but
+turns runtime publication into a hard mutation boundary. `ConstantPool` now
+rejects destructive registration pre/post passes, optimization, module
+replacement, disassembly reload, and TypeInfo invalidation after
+`markRuntimePublishedForDiagnostics(...)`. `FileStructure.replaceModuleId(...)`
+checks that boundary at entry so it fails before mutating the module identity.
+This is intentionally narrower than the eventual immutable runtime snapshot:
+owner-local helper caches and compiler-owned mutable pools remain follow-up
+design work.
+
+`ConstantPoolDiagnosticsTest.runtimePublishedPoolRejectsRecursiveRegistrationPass()`,
+`runtimePublishedPoolRejectsModuleReplacement()`, and
+`runtimePublishedPoolRejectsTypeInfoInvalidation()` prove the boundary. With
+the production guard stashed and only the tests applied, all three compiled and
+failed behaviorally on the old shape; the fixed shape passes the focused
+diagnostics suite.
+
 ## Supporting Edits
 
 These edits are not independent bug fixes, but they are needed to keep the

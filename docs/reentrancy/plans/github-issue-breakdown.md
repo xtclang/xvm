@@ -319,7 +319,7 @@ master-reachable under load and can be argued into category A during review.
 | Wave | Why it is reuse-enablement |
 | --- | --- |
 | Native template `INSTANCE` removal, owner-local metadata/caches, enum lifecycle, container-owned TypeHandles | last-writer-wins globals only bite when a second container/run exists in the JVM |
-| Clone-free constant adoption + `ConstantPool` ownership (ambient-pool removal, registration guard, future freeze/transaction rewrite) | pools are per-process-single-use on master; reuse makes late mutation and wrong-owner interning visible |
+| Clone-free constant adoption + `ConstantPool` ownership (ambient-pool removal, registration guard, runtime-published destructive-phase guard, future immutable snapshot/transaction rewrite) | pools are per-process-single-use on master; reuse makes late mutation, destructive rewrite, and wrong-owner interning visible |
 | `TypeInfo`/`MethodInfo`/`PropertyInfo` owner copies and safe publication | first-publication races need concurrent first access |
 | Constructor-escape removal waves | correctness hardening whose failure mode is exposure of half-built owners to other threads |
 | Same-JVM stress harness, ownership diagnostics, world-state snapshot plan | the proof infrastructure itself |
@@ -2050,13 +2050,19 @@ still in the recursive phase.
   valid-pool checks complete.
 - Preserve failed registration as failed for later public readers instead of
   returning a partial constant graph.
+- Fail destructive pool lifecycle phases after runtime publication: recursive
+  registration/optimization, module replacement, disassembly reload, and
+  TypeInfo invalidation.
 - Keep this as a compatibility guard, not the final transaction design.
 
 ### Explicit Out Of Scope
 
 - Full clone-free constant adoption. That is PR 10 / the clone-free adoption
   plan.
-- Runtime pool freeze and late-registration policy.
+- Immutable runtime pool snapshots and the full late-registration warmup policy.
+  The branch now includes the narrower runtime-published destructive-phase
+  guard: recursive registration/optimization, module replacement, disassembly
+  reload, and TypeInfo invalidation fail after publication.
 - Rewriting every `registerConstants(...)` implementation.
 - Replacing the guard with a private registration transaction/worklist. That is
   tracked in
@@ -2102,6 +2108,12 @@ Primary source areas:
 - A failed registration remains failed for public readers. The test
   `failedRecursiveRegistrationStaysFailedForReaders()` prevents accidentally
   treating a partial graph as stable.
+- Runtime publication now fences destructive lifecycle phases. The tests
+  `runtimePublishedPoolRejectsRecursiveRegistrationPass()`,
+  `runtimePublishedPoolRejectsModuleReplacement()`, and
+  `runtimePublishedPoolRejectsTypeInfoInvalidation()` are red on the old
+  register-only shape and prove the guard fires before pool storage or module
+  identity are rewritten.
 - There is no per-constant footprint after successful registration completes.
   The guard is a volatile fast-path flag plus a temporary completion object while
   a registration window is open.
