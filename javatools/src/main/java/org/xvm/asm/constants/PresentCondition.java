@@ -64,12 +64,18 @@ public final class PresentCondition
 
     @Override
     protected void resolveConstants() {
-        m_constStruct = getConstantPool().getConstant(m_iStruct);
-        assert     m_constStruct instanceof ModuleConstant
-                || m_constStruct instanceof PackageConstant
-                || m_constStruct instanceof ClassConstant
-                || m_constStruct instanceof PropertyConstant
-                || m_constStruct instanceof MethodConstant;
+        // checked deserialization boundary: only the presence-testable identity kinds may arrive
+        // from the stream, and a corrupt file must fail loudly here instead of surfacing later as
+        // a ClassCastException (the old assert ladder vanished under -da)
+        m_constStruct = switch (getConstantPool().getConstant(m_iStruct)) {
+            case ModuleConstant constant   -> constant;
+            case PackageConstant constant  -> constant;
+            case ClassConstant constant    -> constant;
+            case PropertyConstant constant -> constant;
+            case MethodConstant constant   -> constant;
+            case Constant constant -> throw new IllegalStateException(
+                    "corrupt PresentCondition: not a presence-testable identity: " + constant);
+        };
     }
 
 
@@ -82,7 +88,20 @@ public final class PresentCondition
      * @return the constant representing the XVM Structure to be tested for
      */
     public IdentityConstant getPresentConstant() {
-        return (IdentityConstant) m_constStruct;
+        return presentConstant();
+    }
+
+    /**
+     * The tested structure as its resolved identity. The field stays typed {@link Constant} only
+     * because compile-time construction may hold an {@link UnresolvedNameConstant} until
+     * registration resolves it; every evaluation-time caller needs the identity.
+     */
+    private IdentityConstant presentConstant() {
+        return switch (m_constStruct) {
+            case IdentityConstant identity -> identity;
+            case Constant constant -> throw new IllegalStateException(
+                    "PresentCondition evaluated before name resolution: " + constant);
+        };
     }
 
 
@@ -90,7 +109,7 @@ public final class PresentCondition
 
     @Override
     public boolean evaluate(LinkerContext ctx) {
-        return ctx.isPresent((IdentityConstant) m_constStruct);
+        return ctx.isPresent(presentConstant());
     }
 
     @Override
@@ -101,8 +120,8 @@ public final class PresentCondition
     @Override
     public Relation calcRelation(ConditionalConstant constant) {
         if (constant instanceof PresentCondition that) {
-            IdentityConstant constThis = (IdentityConstant) this.m_constStruct;
-            IdentityConstant constThat = (IdentityConstant) that.m_constStruct;
+            IdentityConstant constThis = this.presentConstant();
+            IdentityConstant constThat = that.presentConstant();
             if (constThis.equals(constThat)) {
                 // they're testing the same thing
                 return Relation.EQUIV;

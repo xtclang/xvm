@@ -999,53 +999,60 @@ public final class StatementBlock
                         fHasThis &= !info.isStatic();
                         typeThis  = null;
                         ++cSteps;
-                    } else if (id instanceof PropertyConstant idProp) {
-                        // first, look for a property of the given name inside the current
-                        // property
-                        IdentityConstant idResult = null;
-                        PropertyInfo     prop     = info.ensureNestedPropertiesByName(idProp).get(sName);
-                        if (prop == null) {
-                            // second, look for any methods of the given name inside the
-                            // current property
-                            if (info.containsNestedMultiMethod(idProp, sName)) {
-                                // the multi-method structure does not actually exist on the
-                                // class, but its methods exist in the TypeInfo
-                                idResult = pool.ensureMultiMethodConstant(id, sName);
-                            }
-                        } else {
-                            idResult = prop.getIdentity().ensureNestedIdentity(pool, idProp);
-                        }
-
-                        if (idResult == null) {
-                            PropertyInfo infoProp = info.findProperty(idProp, false);
-                            assert infoProp != null;
-
-                            if (infoProp.hasField() && infoProp.isRefAnnotated()) {
-                                ++cSteps;
-                            }
-                        } else {
-                            return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
-                        }
-                    } else if (id instanceof MethodConstant idMethod) {
-                        // first, look for a property of the given name inside this method
-                        IdentityConstant idResult = null;
-                        PropertyInfo     prop     = info.ensureNestedPropertiesByName(idMethod).get(sName);
-                        if (prop == null) {
-                            // second, look for any methods of the given name inside this method
-                            if (info.containsNestedMultiMethod(idMethod, sName)) {
-                                // the multi-method structure does not actually exist on the
-                                // class, but its methods exist in the TypeInfo
-                                idResult = pool.ensureMultiMethodConstant(id, sName);
-                            }
-                        } else {
-                            idResult = prop.getIdentity();
-                        }
-
-                        if (idResult != null) {
-                            return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
-                        }
                     } else {
-                        assert id instanceof MultiMethodConstant;
+                        switch (id) {
+                        case PropertyConstant idProp -> {
+                            // first, look for a property of the given name inside the current
+                            // property
+                            IdentityConstant idResult = null;
+                            PropertyInfo     prop     = info.ensureNestedPropertiesByName(idProp).get(sName);
+                            if (prop == null) {
+                                // second, look for any methods of the given name inside the
+                                // current property
+                                if (info.containsNestedMultiMethod(idProp, sName)) {
+                                    // the multi-method structure does not actually exist on the
+                                    // class, but its methods exist in the TypeInfo
+                                    idResult = pool.ensureMultiMethodConstant(id, sName);
+                                }
+                            } else {
+                                idResult = prop.getIdentity().ensureNestedIdentity(pool, idProp);
+                            }
+
+                            if (idResult == null) {
+                                PropertyInfo infoProp = info.findProperty(idProp, false);
+                                assert infoProp != null;
+
+                                if (infoProp.hasField() && infoProp.isRefAnnotated()) {
+                                    ++cSteps;
+                                }
+                            } else {
+                                return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
+                            }
+                        }
+                        case MethodConstant idMethod -> {
+                            // first, look for a property of the given name inside this method
+                            IdentityConstant idResult = null;
+                            PropertyInfo     prop     = info.ensureNestedPropertiesByName(idMethod).get(sName);
+                            if (prop == null) {
+                                // second, look for any methods of the given name inside this method
+                                if (info.containsNestedMultiMethod(idMethod, sName)) {
+                                    // the multi-method structure does not actually exist on the
+                                    // class, but its methods exist in the TypeInfo
+                                    idResult = pool.ensureMultiMethodConstant(id, sName);
+                                }
+                            } else {
+                                idResult = prop.getIdentity();
+                            }
+
+                            if (idResult != null) {
+                                return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
+                            }
+                        }
+                        // a name cannot resolve through a multi-method level; anything else in
+                        // the nesting walk is corrupt (the old shape only asserted this)
+                        case MultiMethodConstant _ -> { }
+                        default -> throw new IllegalStateException("unexpected nesting identity: " + id);
+                        }
                     }
 
                     // check if we are nested inside an anonymous inner class and attempting to
@@ -1535,25 +1542,27 @@ public final class StatementBlock
                 boolean          hasThis,
                 TypeConstant     typeTarget,
                 int              stepsOut) {
-            assert id instanceof PropertyConstant || id instanceof MultiMethodConstant;
-
             this.name       = name;
             this.id         = id;
             this.hasThis    = hasThis;
             this.typeTarget = typeTarget;
             this.stepsOut   = stepsOut;
+            this.type       = switch (id) {
+                case PropertyConstant idProp -> {
+                    PropertyInfo infoProp = typeTarget.ensureTypeInfo().findProperty(idProp);
 
-            if (id instanceof PropertyConstant idProp) {
-                PropertyInfo infoProp = typeTarget.ensureTypeInfo().findProperty(idProp);
-
-                this.type = infoProp == null
-                        ? idProp.isFormalType()
-                                ? idProp.getFormalType()
-                                : idProp.getType()
-                        : infoProp.inferImmutable(typeTarget);
-            } else {
-                this.type = null;
-            }
+                    yield infoProp == null
+                            ? idProp.isFormalType()
+                                    ? idProp.getFormalType()
+                                    : idProp.getType()
+                            : infoProp.inferImmutable(typeTarget);
+                }
+                case MultiMethodConstant _ -> null;
+                // the old shape only asserted the accepted kinds, so -da constructed a
+                // TargetInfo around an identity this resolution path cannot represent
+                default -> throw new IllegalArgumentException(
+                        "TargetInfo id must be a property or multi-method: " + id);
+            };
         }
 
         /**

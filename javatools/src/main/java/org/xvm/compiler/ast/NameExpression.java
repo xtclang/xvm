@@ -634,12 +634,12 @@ public sealed class NameExpression
             case Singleton:
                 // theoretically, the singleton could be a parent of the current
                 // class, so we could have a PseudoConstant for it
-                assert argRaw instanceof IdentityConstant ||
-                       argRaw instanceof PseudoConstant;
-
-                IdentityConstant idClass = argRaw instanceof PseudoConstant constPseudo
-                        ? constPseudo.getDeclarationLevelClass()
-                        : (IdentityConstant) argRaw;
+                IdentityConstant idClass = switch (argRaw) {
+                    case PseudoConstant constPseudo -> constPseudo.getDeclarationLevelClass();
+                    case IdentityConstant idArg     -> idArg;
+                    case null, default -> throw new IllegalStateException(
+                            "singleton argument is not an identity: " + argRaw);
+                };
                 constVal = pool.ensureSingletonConstConstant(idClass);
                 break;
 

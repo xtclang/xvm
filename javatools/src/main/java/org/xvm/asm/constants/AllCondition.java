@@ -114,17 +114,19 @@ public final class AllCondition
         ConditionalConstant[] acondOld = m_aconstCond;
         int                   cConds   = acondOld.length;
         ConditionalConstant   condLast = acondOld[cConds-1];
-        if (condLast instanceof AnyCondition condAny) {
-            if (condAny.isOnlyVersions()) {
+        switch (condLast) {
+            case AnyCondition condAny when condAny.isOnlyVersions() -> {
                 ConditionalConstant[] acondNew = acondOld.clone();
                 acondNew[cConds-1] = condAny.addVersion(ver);
                 return new AllCondition(acondNew);
             }
-        } else if (condLast instanceof VersionedCondition) {
-            ConstantPool          pool     = getConstantPool();
-            ConditionalConstant[] acondNew = acondOld.clone();
-            acondNew[cConds-1] = new AnyCondition(pool, condLast, pool.ensureVersionedCondition(ver));
-            return new AllCondition(acondNew);
+            case VersionedCondition condVer -> {
+                ConstantPool          pool     = getConstantPool();
+                ConditionalConstant[] acondNew = acondOld.clone();
+                acondNew[cConds-1] = new AnyCondition(pool, condVer, pool.ensureVersionedCondition(ver));
+                return new AllCondition(acondNew);
+            }
+            default -> { }
         }
 
         // this is the first version being added
@@ -144,30 +146,28 @@ public final class AllCondition
         // by convention, the version is placed at the end of the list
         ConditionalConstant[] acondOld = m_aconstCond;
         int                   cConds   = acondOld.length;
-        ConditionalConstant   condLast = acondOld[cConds-1];
-        if (condLast instanceof AnyCondition) {
-            assert condLast.versions().contains(ver);
-            ConditionalConstant[] acondNew = acondOld.clone();
-            acondNew[cConds-1] = condLast.removeVersion(ver);
-            return new AllCondition(acondNew);
-        } else if (condLast instanceof VersionedCondition) {
-            assert ver.equals(((VersionedCondition) condLast).getVersion());
-            switch (cConds) {
-            case 0:
-            case 1:
-                throw new IllegalStateException("unexpectedly small AllCondition: " + cConds);
-
-            case 2:
-                return acondOld[0];
-
-            default:
-                ConditionalConstant[] acondNew = new ConditionalConstant[cConds-1];
-                System.arraycopy(acondOld, 0, acondNew, 0, cConds-1);
-                return new AllCondition(acondNew);
+        return switch (acondOld[cConds-1]) {
+            case AnyCondition condAny -> {
+                assert condAny.versions().contains(ver);
+                ConditionalConstant[] acondNew = acondOld.clone();
+                acondNew[cConds-1] = condAny.removeVersion(ver);
+                yield new AllCondition(acondNew);
             }
-        } else {
-            throw new IllegalStateException("version not found at end of conditions");
-        }
+            case VersionedCondition condVer -> {
+                assert ver.equals(condVer.getVersion());
+                yield switch (cConds) {
+                    case 0, 1 -> throw new IllegalStateException(
+                            "unexpectedly small AllCondition: " + cConds);
+                    case 2    -> acondOld[0];
+                    default   -> {
+                        ConditionalConstant[] acondNew = new ConditionalConstant[cConds-1];
+                        System.arraycopy(acondOld, 0, acondNew, 0, cConds-1);
+                        yield new AllCondition(acondNew);
+                    }
+                };
+            }
+            default -> throw new IllegalStateException("version not found at end of conditions");
+        };
     }
 
     @Override
@@ -216,36 +216,41 @@ public final class AllCondition
         Set<VersionedCondition>             setVerConds = new HashSet<>();
         Set<Version>                        setVers     = null;
         for (Iterator<ConditionalConstant> iter = flatIterator(); iter.hasNext(); ) {
-            ConditionalConstant cond = iter.next();
-            if (cond instanceof VersionedCondition || cond instanceof AnyCondition) {
-                // keep track of what versions survive the conditional(s)
-                if (setVers == null) {
-                    setVers = new HashSet<>(cond.versions());
-                } else {
-                    setVers.retainAll(cond.versions());
+            // exhaustive over the sealed condition tree: versions are tracked, other terminals
+            // contribute AND, NOT contributes its pre-inverted influences, and a nested
+            // AllCondition cannot come out of the flattening iterator (the old shape only
+            // asserted that, so -da silently mis-processed an impossible kind)
+            switch (iter.next()) {
+                case VersionedCondition condVer -> {
+                    setVers = retainVersions(setVers, condVer);
+                    setVerConds.add(condVer);
                 }
-
-                // collect the terminal VersionedConditions
-                if (cond instanceof VersionedCondition) {
-                    setVerConds.add((VersionedCondition) cond);
-                } else {
-                    for (Iterator<ConditionalConstant> iterVerCond = ((AnyCondition) cond).flatIterator();
+                case AnyCondition condAny -> {
+                    setVers = retainVersions(setVers, condAny);
+                    // collect the terminal VersionedConditions
+                    for (Iterator<ConditionalConstant> iterVerCond = condAny.flatIterator();
                             iterVerCond.hasNext(); ) {
-                        setVerConds.add((VersionedCondition) iterVerCond.next());
+                        switch (iterVerCond.next()) {
+                            case VersionedCondition condNested -> setVerConds.add(condNested);
+                            case ConditionalConstant condOther -> throw new IllegalStateException(
+                                    "non-version condition under a finessable AnyCondition: "
+                                            + condOther.getValueString());
+                        }
                     }
                 }
-            } else if (cond.isTerminal()) {
-                influences.put(cond, Influence.AND);
-            } else {
-                // we've already handled the only allowable possibility of "OR" (the versions), and
-                // the possibility of "AND" (via flattening the iterator), and the terminals, so the
-                // only thing left should be "NOT"
-                assert cond instanceof NotCondition;
-
-                // the influences are already inverted; just add them with an "AND" result
-                for (Map.Entry<ConditionalConstant, Influence> entry : cond.terminalInfluences().entrySet()) {
-                    influences.put(entry.getKey(), entry.getValue().and());
+                case NotCondition condNot -> {
+                    // the influences are already inverted; just add them with an "AND" result
+                    for (Map.Entry<ConditionalConstant, Influence> entry
+                            : condNot.terminalInfluences().entrySet()) {
+                        influences.put(entry.getKey(), entry.getValue().and());
+                    }
                 }
+                case AllCondition condAll -> throw new IllegalStateException(
+                        "flattening iterator returned a nested AllCondition: "
+                                + condAll.getValueString());
+                case NamedCondition condNamed          -> influences.put(condNamed, Influence.AND);
+                case PresentCondition condPresent      -> influences.put(condPresent, Influence.AND);
+                case VersionMatchesCondition condMatch -> influences.put(condMatch, Influence.AND);
             }
         }
 
@@ -299,6 +304,18 @@ public final class AllCondition
 
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Track which versions survive the conditionals seen so far: the first version-bearing
+     * condition seeds the set, every later one intersects it.
+     */
+    private static Set<Version> retainVersions(Set<Version> setVers, ConditionalConstant cond) {
+        if (setVers == null) {
+            return new HashSet<>(cond.versions());
+        }
+        setVers.retainAll(cond.versions());
+        return setVers;
+    }
 
     /**
      * Merge all of the nested "and" conditions into one bigger array of conditions.

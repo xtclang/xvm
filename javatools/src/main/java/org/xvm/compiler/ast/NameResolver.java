@@ -386,48 +386,49 @@ public class NameResolver
                 return component;
 
             case Property:
-                if (component instanceof PropertyStructure) {
-                    return component;
-                }
-
-                if (component instanceof CompositeComponent composite) {
-                    List<Component>   listProps = composite.components();
-                    PropertyStructure prop0     = (PropertyStructure) listProps.get(0);
-                    TypeConstant      type0     = prop0.getType();
-                    for (int i = 1, c = listProps.size(); i < c; ++i) {
-                        TypeConstant typeN = ((PropertyStructure) listProps.get(i)).getType();
-                        if (!type0.equals(typeN)) {
-                            // eventual To-Do: we need to handle cases where composite
-                            // components differ in substantial ways, such as type, but for
-                            // now this is just an assertion that the type does not vary
-                            throw new UnsupportedOperationException("non-uniform composite property type: "
-                                    + id + "; 0=" + type0 + ", " + i + "=" + typeN);
+                return switch (component) {
+                    case PropertyStructure prop -> prop;
+                    case CompositeComponent composite -> {
+                        List<Component> listProps = composite.components();
+                        PropertyStructure prop0 = uniformMember(listProps, 0, PropertyStructure.class, id);
+                        TypeConstant      type0 = prop0.getType();
+                        for (int i = 1, c = listProps.size(); i < c; ++i) {
+                            TypeConstant typeN =
+                                    uniformMember(listProps, i, PropertyStructure.class, id).getType();
+                            if (!type0.equals(typeN)) {
+                                // eventual To-Do: we need to handle cases where composite
+                                // components differ in substantial ways, such as type, but for
+                                // now this is just an assertion that the type does not vary
+                                throw new UnsupportedOperationException("non-uniform composite property type: "
+                                        + id + "; 0=" + type0 + ", " + i + "=" + typeN);
+                            }
                         }
+                        yield prop0;
                     }
-                    return prop0;
-                } else {
-                    throw new IllegalStateException("id=" + id + ", prop=" + component);
-                }
+                    case null, default -> throw new IllegalStateException("id=" + id + ", prop=" + component);
+                };
 
             case Typedef:
-                if (component instanceof TypedefStructure typedef) {
-                    type = typedef.getType();
-                } else if (component instanceof CompositeComponent composite) {
-                    List<Component> listTypedefs = composite.components();
-                    type = ((TypedefStructure) listTypedefs.get(0)).getType();
-                    for (int i = 1, c = listTypedefs.size(); i < c; ++i) {
-                        TypeConstant constTypeN = ((TypedefStructure) listTypedefs.get(i)).getType();
-                        if (!type.equals(constTypeN)) {
-                            // eventual To-Do: we need to handle cases where composite
-                            // components differ in substantial ways, such as type, but for
-                            // now this is just an assertion that the type does not vary
-                            throw new UnsupportedOperationException("non-uniform composite typedef type: "
-                                    + id + "; 0=" + type + ", " + i + "=" + constTypeN);
+                type = switch (component) {
+                    case TypedefStructure typedef -> typedef.getType();
+                    case CompositeComponent composite -> {
+                        List<Component> listTypedefs = composite.components();
+                        TypeConstant type0 = uniformMember(listTypedefs, 0, TypedefStructure.class, id).getType();
+                        for (int i = 1, c = listTypedefs.size(); i < c; ++i) {
+                            TypeConstant constTypeN =
+                                    uniformMember(listTypedefs, i, TypedefStructure.class, id).getType();
+                            if (!type0.equals(constTypeN)) {
+                                // eventual To-Do: we need to handle cases where composite
+                                // components differ in substantial ways, such as type, but for
+                                // now this is just an assertion that the type does not vary
+                                throw new UnsupportedOperationException("non-uniform composite typedef type: "
+                                        + id + "; 0=" + type0 + ", " + i + "=" + constTypeN);
+                            }
                         }
+                        yield type0;
                     }
-                } else {
-                    throw new IllegalStateException("id=" + id + ", typedef=" + component);
-                }
+                    case null, default -> throw new IllegalStateException("id=" + id + ", typedef=" + component);
+                };
                 break;
 
             case TypeParameter:
@@ -438,14 +439,18 @@ public class NameResolver
             case ThisClass:
             case ChildClass:
             case ParentClass: {
-                PseudoConstant constClass = (PseudoConstant) id;
-                return constClass.getDeclarationLevelClass().getComponent();
+                if (id instanceof PseudoConstant constClass) {
+                    return constClass.getDeclarationLevelClass().getComponent();
+                }
+                throw new IllegalStateException("pseudo-class format on non-pseudo constant: " + id);
             }
 
             case FormalTypeChild: {
-                FormalTypeChildConstant constFormal = (FormalTypeChildConstant) id;
-                type = constFormal.getConstraintType().getType();
-                break;
+                if (id instanceof FormalTypeChildConstant constFormal) {
+                    type = constFormal.getConstraintType().getType();
+                    break;
+                }
+                throw new IllegalStateException("FormalTypeChild format on non-formal-child constant: " + id);
             }
 
             default:
@@ -479,8 +484,12 @@ public class NameResolver
             if (stmtImport.isWildcard()) {
                 Component component =
                     ((IdentityConstant) resolver.getConstant()).getComponent().getChild(m_sName);
-                assert component instanceof ClassStructure ||
-                       component instanceof TypedefStructure;
+                if (!(component instanceof ClassStructure || component instanceof TypedefStructure)) {
+                    // the old shape only asserted this, so -da runs fell through to an NPE or
+                    // silently resolved a non-importable member kind
+                    throw new IllegalStateException(
+                            "wildcard import of \"" + m_sName + "\" resolved to " + component);
+                }
                 if (component instanceof PackageStructure pkg && pkg.isModuleImport()) {
                     ModuleStructure module = pkg.getImportedModule();
                     if (module.isFingerprint()) {
@@ -739,6 +748,24 @@ public class NameResolver
     @Override
     public ErrorListener getErrorListener() {
         return m_errs;
+    }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * A CompositeComponent's sibling list is homogeneous by construction; a wrong member kind
+     * means corrupt composite state and must fail loudly naming the offending member instead of
+     * surfacing later as a bare ClassCastException.
+     */
+    private static <T extends Component> T uniformMember(
+            List<Component> listMembers, int iMember, Class<T> clzExpected, Constant id) {
+        Component member = listMembers.get(iMember);
+        if (clzExpected.isInstance(member)) {
+            return clzExpected.cast(member);
+        }
+        throw new IllegalStateException("id=" + id + ", composite member " + iMember
+                + " is not a " + clzExpected.getSimpleName() + ": " + member);
     }
 
 

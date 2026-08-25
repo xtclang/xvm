@@ -37,10 +37,12 @@ import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ComponentResolver.ResolutionCollector;
 import org.xvm.asm.ComponentResolver.ResolutionResult;
+import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
@@ -299,13 +301,12 @@ public abstract sealed class TypeConstant
         // replace the ImmutableType with the underlying type
         Function<TypeConstant, TypeConstant> transformer = new Function<>() {
             public TypeConstant apply(TypeConstant type) {
-                return type instanceof TerminalTypeConstant
-                        ? type
-                        : type instanceof VirtualChildTypeConstant
-                                ? type.removeImmutable()
-                                : type instanceof ImmutableTypeConstant
-                                        ? type.getUnderlyingType()
-                                        : type.replaceUnderlying(pool, this);
+                return switch (type) {
+                    case TerminalTypeConstant terminal   -> terminal;
+                    case VirtualChildTypeConstant child  -> child.removeImmutable();
+                    case ImmutableTypeConstant immutable -> immutable.getUnderlyingType();
+                    default                              -> type.replaceUnderlying(pool, this);
+                };
             }
         };
         return transformer.apply(this);
@@ -369,12 +370,12 @@ public abstract sealed class TypeConstant
         // replace the AccessType with the underlying type
         Function<TypeConstant, TypeConstant> transformer = new Function<>() {
             public TypeConstant apply(TypeConstant type) {
-                return type instanceof TerminalTypeConstant ||
-                       type instanceof VirtualChildTypeConstant
-                        ? type
-                        : type instanceof AccessTypeConstant
-                                ? type.getUnderlyingType()
-                                : type.replaceUnderlying(pool, this);
+                return switch (type) {
+                    case TerminalTypeConstant terminal  -> terminal;
+                    case VirtualChildTypeConstant child -> child;
+                    case AccessTypeConstant access      -> access.getUnderlyingType();
+                    default                             -> type.replaceUnderlying(pool, this);
+                };
             }
         };
         return transformer.apply(this);
@@ -5040,35 +5041,41 @@ public abstract sealed class TypeConstant
             ErrorListener                       errs) {
         boolean fComplete = true;
 
-        // recurse through children
+        // recurse through children; exhaustive over the sealed Component tree so a new structure
+        // kind must decide its class-membership handling here explicitly
         for (Component child : structContrib.children()) {
-            if (child instanceof MultiMethodStructure mms) {
-                for (MethodStructure method : mms.methods()) {
-                    if (!method.isLambda()) {
-                        // a finalizer is not a stand-alone method, but its children are
-                        fComplete &= method.isConstructorFinalizer()
-                                ? collectChildInfo(constId, fInterface, method, mapTypeParams,
-                                        mapProps, mapMethods, mapChildren, listExplode,
-                                mapVirtProps, nBasePropRank, nBaseMethRank, errs)
-                                : createMemberInfo(constId, fInterface, method, mapTypeParams,
-                                        mapProps, mapMethods, mapChildren, listExplode,
-                                mapVirtProps, nBasePropRank, nBaseMethRank, errs);
+            switch (child) {
+                case MultiMethodStructure mms -> {
+                    for (MethodStructure method : mms.methods()) {
+                        if (!method.isLambda()) {
+                            // a finalizer is not a stand-alone method, but its children are
+                            fComplete &= method.isConstructorFinalizer()
+                                    ? collectChildInfo(constId, fInterface, method, mapTypeParams,
+                                            mapProps, mapMethods, mapChildren, listExplode,
+                                    mapVirtProps, nBasePropRank, nBaseMethRank, errs)
+                                    : createMemberInfo(constId, fInterface, method, mapTypeParams,
+                                            mapProps, mapMethods, mapChildren, listExplode,
+                                    mapVirtProps, nBasePropRank, nBaseMethRank, errs);
+                        }
                     }
                 }
-            } else if (child instanceof PropertyStructure) {
-                fComplete &= createMemberInfo(constId, fInterface, child, mapTypeParams, mapProps,
-                        mapMethods, mapChildren, listExplode, mapVirtProps, nBasePropRank,
-                        nBaseMethRank, errs);
-            } else if (child instanceof ClassStructure || child instanceof TypedefStructure) {
-                String sName = child.getIdentityConstant().getNestedName();
-                if (sName != null) {
-                    // it should not be possible for there to be more than one at this level with
-                    // the same name
-                    if (mapChildren.containsKey(sName)) {
-                        log(errs, Severity.ERROR, VE_NAME_COLLISION, constId, sName);
+                case PropertyStructure prop -> fComplete &= createMemberInfo(constId, fInterface,
+                        prop, mapTypeParams, mapProps, mapMethods, mapChildren, listExplode,
+                        mapVirtProps, nBasePropRank, nBaseMethRank, errs);
+                case ClassStructure _, TypedefStructure _ -> {
+                    String sName = child.getIdentityConstant().getNestedName();
+                    if (sName != null) {
+                        // it should not be possible for there to be more than one at this level
+                        // with the same name
+                        if (mapChildren.containsKey(sName)) {
+                            log(errs, Severity.ERROR, VE_NAME_COLLISION, constId, sName);
+                        }
+                        mapChildren.put(sName, new ChildInfo(child));
                     }
-                    mapChildren.put(sName, new ChildInfo(child));
                 }
+                // methods live under their MultiMethodStructure; file and composite components
+                // are never class members
+                case MethodStructure _, FileStructure _, CompositeComponent _ -> { }
             }
         }
         return fComplete;
