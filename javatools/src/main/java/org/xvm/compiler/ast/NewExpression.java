@@ -147,15 +147,15 @@ public final class NewExpression
     // ----- AstNode methods -----------------------------------------------------------------------
 
     @Override
-    public AstNode clone() {
-        NewExpression that = (NewExpression) super.clone();
-        // the "body" is not a child and has to be handled manually
+    protected void completeCopy(AstNode node) {
+        NewExpression that = (NewExpression) node;
+        // the "body" is not a child and has to be handled manually; this hook runs after the
+        // child walk, so the copied anon (a child) already exists to re-tie the body to
         if (body != null) {
             that.body = anon == null
-                    ? (StatementBlock) body.clone()
+                    ? (StatementBlock) body.deepCopy()
                     : that.anon.body;
         }
-        return that;
     }
 
     @Override
@@ -371,7 +371,7 @@ public final class NewExpression
                     // now try to use the NameTypeExpression validation logic for a fully qualified
                     // type scenario, such as:
                     //      parent.new [@Mixin] Parent.Child<...>(...)
-                    TypeExpression exprTest = (TypeExpression) type.clone();
+                    TypeExpression exprTest = (TypeExpression) type.deepCopy();
                     Context        ctxTest  = ctx.enter();
                     boolean        fValid   = true;
                     if (exprTest.validate(ctxTest, pool.typeType(), errs) == null) {
@@ -1132,7 +1132,7 @@ public final class NewExpression
                     null,
                     clone(inner.getCompositions()),
                     clone(args),
-                    (StatementBlock) body.clone(),
+                    (StatementBlock) body.deepCopy(),
                     type.getStartPosition(),
                     body.getEndPosition());
             break;
@@ -1156,7 +1156,7 @@ public final class NewExpression
         case CaptureAnalysis:
             // the current inner class composition statement MUST be the "actual" one
             assert m_purposeCurrent == AnonPurpose.Actual;
-            anon = (TypeCompositionStatement) adopt(anon.clone());
+            anon = (TypeCompositionStatement) adopt(anon.deepCopy());
             anon.setComponent(m_clzActualBackup.replaceWithTemporary());
             break;
         }
@@ -1236,7 +1236,7 @@ public final class NewExpression
 
         List listCopy = new ArrayList<>(list.size());
         for (AstNode node : list) {
-            listCopy.add(node.clone());
+            listCopy.add(node.deepCopy());
         }
         return listCopy;
     }

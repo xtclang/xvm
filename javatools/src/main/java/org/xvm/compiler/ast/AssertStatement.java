@@ -553,7 +553,7 @@ public final class AssertStatement
             Expression exprSub = exprNot.expr;
             if (exprSub instanceof BiExpression exprOr
                     && exprOr.operator.getId() == Id.COND_OR) {
-                UnaryComplementExpression exprNot2 = (UnaryComplementExpression) exprNot.clone();
+                UnaryComplementExpression exprNot2 = (UnaryComplementExpression) exprNot.deepCopy();
 
                 exprNot .expr = exprOr.expr1;
                 exprNot2.expr = exprOr.expr2;

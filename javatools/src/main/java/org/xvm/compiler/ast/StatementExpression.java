@@ -114,7 +114,7 @@ public final class StatementExpression
         }
 
         // clone the body (to avoid damaging the original) and validate it to calculate its type
-        StatementBlock blockTempOld = (StatementBlock) body.clone();
+        StatementBlock blockTempOld = (StatementBlock) body.deepCopy();
         blockTempOld.suppressScope();
         ctx = enterStatementContext(ctx);
 
@@ -162,7 +162,7 @@ public final class StatementExpression
         m_atypeRequired = atypeRequired;
 
         // clone the body and validate it using the requested type to test if that type will work
-        StatementBlock blockTempOld = (StatementBlock) body.clone();
+        StatementBlock blockTempOld = (StatementBlock) body.deepCopy();
         blockTempOld.suppressScope();
         ctx = enterStatementContext(ctx);
 

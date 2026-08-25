@@ -294,8 +294,8 @@ public final class ForEachStatement
             boolean fValid = true;
 
             // clone the condition(s) and the body
-            conds = Collections.singletonList(condOrig.clone());
-            block = (StatementBlock) blockOrig.clone();
+            conds = Collections.singletonList(condOrig.deepCopy());
+            block = (StatementBlock) blockOrig.deepCopy();
 
             // create a temporary error list
             errs = errsOrig.branch(this);

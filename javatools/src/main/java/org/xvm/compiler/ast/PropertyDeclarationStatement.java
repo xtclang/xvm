@@ -413,7 +413,7 @@ public final class PropertyDeclarationStatement
                     prop.setInitialValue(null);
                 } else {
                     // create a clone of ourselves
-                    PropertyDeclarationStatement stmtClone = (PropertyDeclarationStatement) clone();
+                    PropertyDeclarationStatement stmtClone = (PropertyDeclarationStatement) deepCopy();
 
                     // create an initializer function
                     MethodStructure            methodInit = stmtClone.createInitializer();

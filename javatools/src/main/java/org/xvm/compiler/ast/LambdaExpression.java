@@ -706,7 +706,7 @@ public final class LambdaExpression
     private LambdaContext createContext(Context ctx, TypeConstant typeRequired,
                                         TypeConstant[] atypeParams, String[] asParams,
                                         ErrorListener errs) {
-        StatementBlock blockTemp = (StatementBlock) body.clone();
+        StatementBlock blockTemp = (StatementBlock) body.deepCopy();
         if (!new StageMgr(blockTemp, Stage.Validated, errs).fastForward(20)) {
             blockTemp.discard(true);
             return null;
@@ -728,7 +728,7 @@ public final class LambdaExpression
             boolean fValid = true;
 
             // clone the condition(s) and the body
-            blockTemp = (StatementBlock) blockOrig.clone();
+            blockTemp = (StatementBlock) blockOrig.deepCopy();
 
             // create a temporary error list
             ErrorListener errsTemp = errs.branch(this);
@@ -857,11 +857,9 @@ public final class LambdaExpression
     }
 
     @Override
-    public AstNode clone() {
-        // the reference to the lambda's method structure should not be a part of the cloned state
-        LambdaExpression that = (LambdaExpression) super.clone();
-        that.m_lambda = null;
-        return that;
+    protected void completeCopy(AstNode that) {
+        // the reference to the lambda's method structure should not be a part of the copied state
+        ((LambdaExpression) that).m_lambda = null;
     }
 
     @Override

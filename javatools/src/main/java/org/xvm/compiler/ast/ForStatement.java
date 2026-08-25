@@ -325,13 +325,13 @@ public final class ForStatement
             // clone the condition(s), updates and the body
             conds = new ArrayList<>(cConds);
             for (AstNode cond : condsOrig) {
-                conds.add(cond.clone());
+                conds.add(cond.deepCopy());
             }
             update = new ArrayList<>(cUpdates);
             for (Statement stmt : updateOrig) {
-                update.add((Statement) stmt.clone());
+                update.add((Statement) stmt.deepCopy());
             }
-            block = (StatementBlock) blockOrig.clone();
+            block = (StatementBlock) blockOrig.deepCopy();
 
             // create a temporary error list
             errs = errsOrig.branch(this);

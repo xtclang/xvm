@@ -45,12 +45,14 @@ public class CloneCensusTest {
             "org/xvm/compiler/ast/AstNode.java",
             "org/xvm/runtime/ObjectHandle.java");
 
-    /** The only files that may invoke {@code super.clone()}. */
+    /**
+     * The only files that may invoke {@code super.clone()}. Ratcheted DOWN 2026-08-25: the
+     * three AST special-copy overrides (LambdaExpression, NamedTypeExpression, NewExpression)
+     * became {@code completeCopy} hooks over the single {@code AstNode.shallowCopy()} bridge,
+     * which itself dies with the copy-constructor migration's final commit.
+     */
     private static final Set<String> SUPER_CLONE_ISLANDS = Set.of(
             "org/xvm/compiler/ast/AstNode.java",
-            "org/xvm/compiler/ast/LambdaExpression.java",
-            "org/xvm/compiler/ast/NamedTypeExpression.java",
-            "org/xvm/compiler/ast/NewExpression.java",
             "org/xvm/runtime/ObjectHandle.java");
 
     @Test

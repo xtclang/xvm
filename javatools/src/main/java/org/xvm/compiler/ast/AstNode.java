@@ -210,13 +210,29 @@ public abstract sealed class AstNode
     }
 
     @Override
-    public AstNode clone() {
-        AstNode that;
-        try {
-            that = (AstNode) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
+    public final AstNode clone() {
+        return deepCopy();
+    }
+
+    /**
+     * Produce a deep copy of this node for trial validation: children (per
+     * {@link #getChildFields()}) are recursively copied and adopted onto the copy; every other
+     * field - validation caches, tokens, positions, the stage, and deliberately the PARENT
+     * pointer - is carried over shallowly. The stale parent pointer is load-bearing: trial
+     * copies are validated without ever being adopted into a tree and resolve source, pool,
+     * and name-resolution context through it.
+     *
+     * <p>This is the clone-eradication replacement for the old {@code Cloneable}-based walk:
+     * the per-node shallow copy comes from {@link #shallowCopy()} - an explicit copy
+     * constructor for converted classes, the {@code super.clone()} bridge for the rest - and
+     * while the bridge exists, every converted class's copy is assertion-checked field-by-field
+     * against the reflective clone, so a hand-written copy constructor cannot silently omit a
+     * field.</p>
+     */
+    public final AstNode deepCopy() {
+        AstNode that = shallowCopy();
+
+        assert copyCoversEveryField(that);
 
         for (Field field : getChildFields()) {
             Object oVal;
@@ -230,14 +246,14 @@ public abstract sealed class AstNode
 
             if (oVal != null) {
                 if (oVal instanceof AstNode node) {
-                    AstNode nodeNew = node.clone();
+                    AstNode nodeNew = node.deepCopy();
 
                     that.adopt(nodeNew);
                     oVal = nodeNew;
                 } else if (oVal instanceof List list) {
                     ArrayList<AstNode> listNew = new ArrayList<>();
                     for (AstNode node : (List<AstNode>) list) {
-                        listNew.add(node.clone());
+                        listNew.add(node.deepCopy());
                     }
 
                     that.adopt(listNew);
@@ -255,7 +271,75 @@ public abstract sealed class AstNode
             }
         }
 
+        completeCopy(that);
         return that;
+    }
+
+    /**
+     * Produce the per-node shallow copy for {@link #deepCopy()}. Converted classes override
+     * this with an explicit copy constructor; the default is the {@code super.clone()} bridge
+     * that remains only until every class in the sealed hierarchy has converted, at which
+     * point the bridge, {@code Cloneable}, and {@code clone()} are deleted together.
+     */
+    protected AstNode shallowCopy() {
+        try {
+            return (AstNode) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /**
+     * Post-walk adjustment hook for the copy produced by {@link #deepCopy()}: runs AFTER the
+     * child walk, so non-child state that must be re-derived from copied children (or must not
+     * be shared at all) is handled here. The three known cases: LambdaExpression drops the
+     * synthesized method structure, NamedTypeExpression deep-copies its non-child dynamic
+     * expression, NewExpression re-ties the non-child body to the copied anonymous class.
+     */
+    protected void completeCopy(AstNode that) {
+    }
+
+    /**
+     * Migration self-check: a hand-written copy constructor must cover EVERY field the
+     * reflective clone used to copy. Compares this node and the fresh shallow copy
+     * field-by-field (reference identity for objects, equality for primitives) across the
+     * whole class hierarchy; runs only under assertions, and is trivially true for classes
+     * still on the {@code super.clone()} bridge.
+     */
+    private boolean copyCoversEveryField(AstNode that) {
+        if (that == this || that.getClass() != this.getClass()) {
+            throw new IllegalStateException("invalid shallow copy of "
+                    + this.getClass().getSimpleName());
+        }
+        for (Class<?> clz = getClass(); clz != AstNode.class && clz != null;
+                clz = clz.getSuperclass()) {
+            for (Field field : clz.getDeclaredFields()) {
+                if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                    continue;
+                }
+                try {
+                    field.setAccessible(true);
+                    Object oThis = field.get(this);
+                    Object oThat = field.get(that);
+                    boolean fSame = field.getType().isPrimitive()
+                            ? java.util.Objects.equals(oThis, oThat)
+                            : oThis == oThat;
+                    if (!fSame) {
+                        throw new IllegalStateException("copy constructor for "
+                                + this.getClass().getSimpleName() + " missed field "
+                                + clz.getSimpleName() + '.' + field.getName());
+                    }
+                } catch (IllegalAccessException | RuntimeException e) {
+                    if (e instanceof IllegalStateException) {
+                        throw (IllegalStateException) e;
+                    }
+                    // an inaccessible field cannot be silently skipped
+                    throw new IllegalStateException("copy parity check failed for "
+                            + this.getClass().getSimpleName(), e);
+                }
+            }
+        }
+        return true;
     }
 
     /**

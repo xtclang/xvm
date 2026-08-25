@@ -993,13 +993,11 @@ public sealed class NamedTypeExpression
     // ----- AstNode methods -----------------------------------------------------------------------
 
     @Override
-    public AstNode clone() {
-        NamedTypeExpression that = (NamedTypeExpression) super.clone();
+    protected void completeCopy(AstNode that) {
         // the "m_exprDynamic" is not a child and has to be handled manually
         if (m_exprDynamic != null) {
-            that.m_exprDynamic = (NameExpression) m_exprDynamic.clone();
+            ((NamedTypeExpression) that).m_exprDynamic = (NameExpression) m_exprDynamic.deepCopy();
         }
-        return that;
     }
 
     @Override
