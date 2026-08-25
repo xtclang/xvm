@@ -254,7 +254,7 @@ public class xRTSocket
             return frame.raiseException(xException.illegalState(frame, "socket construct failed"));
         }
         hSocket.setSocket(socket);
-        return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hSocket);
+        return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), h);
     }
 
 

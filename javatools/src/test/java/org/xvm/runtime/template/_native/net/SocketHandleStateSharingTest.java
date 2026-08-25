@@ -2,6 +2,7 @@ package org.xvm.runtime.template._native.net;
 
 
 import java.io.File;
+import java.io.IOException;
 
 import java.net.Socket;
 
@@ -25,9 +26,11 @@ import org.xvm.runtime.Runtime;
 
 import org.xvm.runtime.template._native.net.xRTSocket.SocketHandle;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
@@ -79,6 +82,31 @@ public class SocketHandleStateSharingTest {
         } finally {
             runtime.shutdownXVM();
         }
+    }
+
+    /**
+     * {@code finishConnect} must expose the masked net.Socket handle that construction produced,
+     * not the revealed native inception view that native code uses internally to install the Java
+     * socket.
+     */
+    @Test
+    public void finishConnectReturnsMaskedApplicationHandle() throws IOException {
+        var source = Files.readString(checkoutFile(
+                "javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTSocket.java")
+                .toPath());
+        int ofMethod = source.indexOf("private static int finishConnect");
+        assertTrue(ofMethod >= 0, "finishConnect must exist");
+
+        int ofEnd = source.indexOf("\n    }\n\n\n    // ----- I/O", ofMethod);
+        assertTrue(ofEnd > ofMethod, "finishConnect method boundary must be identifiable");
+
+        var method = source.substring(ofMethod, ofEnd);
+        assertTrue(method.contains("hSocket.setSocket(socket);"),
+                "finishConnect still installs the Java socket through the revealed native view");
+        assertTrue(method.contains("return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), h);"),
+                "finishConnect must return the original masked handle to application code");
+        assertFalse(method.contains("return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hSocket);"),
+                "returning the revealed native view defeats maskAs(net.Socket)");
     }
 
     // ----- helpers (same discovery as ArrayViewGuardTest) ---------------------------------------

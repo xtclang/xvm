@@ -982,6 +982,11 @@ Coverage after this branch's guards (all 88 classes classified):
      handle ever sees the socket) needs a trace. Must audit, likely must fix
      by keying the socket off shared state (a field in `m_aFields` or a
      final cell), not a per-view Java field.
+     Resolved 2026-08-25: the socket now lives in a holder shared by every
+     view, and `finishConnect` returns the originally constructed masked
+     `net.Socket` handle to application code after installing the Java socket
+     through the revealed native view. `SocketHandleStateSharingTest` covers
+     both the shared-holder behavior and the returned-handle source shape.
   2. `xRTFunction.FullyBoundHandle` - claims immutability derived from its
      bound arguments (`:889-898`) yet mutates `m_next` post-construction in
      `chain()` (`:939`). An all-immutable-args chain node passes the

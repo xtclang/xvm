@@ -700,6 +700,35 @@ Regression proof:
   through the source ref, and regular field writes through the clone are visible
   through the source handle.
 
+### Socket Handle Mask Preservation
+
+The socket clone study found two separate view bugs. The first was the shared
+state problem: `xRTSocket.SocketHandle` was constructed with the public
+`net.Socket` mask, but every native entry revealed the native inception view, so
+a per-view Java `socket` field split the live socket across clones. This branch
+already moved the socket reference into a final holder shared by every view.
+
+The second bug was the return shape from `finishConnect`. On `master`, connect
+construction pushed the masked application handle on the stack, but
+`finishConnect` called `requireSocketHandle(...)`, received the revealed native
+view, and returned that view from `assignValues`. That handed application code
+the unmasked `_native.net.RTSocket` surface that `maskAs(net.Socket)` was meant
+to hide.
+
+The replacement keeps the native write and public return separate:
+
+- `hSocket.setSocket(socket)` still runs on the revealed native view so native
+  fields and access stay available internally.
+- `assignValues(...)` returns the original constructed handle `h`, preserving the
+  public `net.Socket` mask observed by application code.
+- Later native calls still pass through `requireSocketHandle(...)`, so the
+  cross-context bounce can reveal the native view internally without leaking it
+  as the public result.
+
+`SocketHandleStateSharingTest.socketStateIsSharedAcrossViews()` covers the
+shared holder, and `finishConnectReturnsMaskedApplicationHandle()` fails on the
+old return shape by pinning that `finishConnect` returns `h`, not `hSocket`.
+
 The broader `ConstantPool` state audit is documented in
 [constant-pool-state-audit.md](constant-pool-state-audit.md). It distinguishes
 per-pool caches, ambient owner lookup, runtime registration/adoption hazards,
