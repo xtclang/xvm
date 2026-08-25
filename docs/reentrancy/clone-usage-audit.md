@@ -1062,3 +1062,41 @@ discipline is enforced by machinery (`-Xlint:this-escape` + request-locality
 for the AST; default-deny for handles) rather than by convention. Paying
 ~186 hand-written copy constructors to delete the last two islands buys no
 safety that the guards have not already bought.
+
+## Row 179 Completion Sweep (2026-08-25)
+
+Must-audit row 179 asked for the remaining `clone()`/`Cloneable` surface in
+`javatools/src/main/java`, not a grep-only count. The broad verification scans
+used for this closure were:
+
+```bash
+rg -n --glob '*.java' 'implements\s+Cloneable|\bCloneable\b' javatools/src/main/java
+rg -n --glob '*.java' 'super\.clone\(\)' javatools/src/main/java
+rg -n --glob '*.java' '\.clone\s*\(' javatools/src/main/java
+rg -n --glob '*.java' 'cloneAs\s*\(' \
+  javatools/src/main/java/org/xvm/runtime \
+  javatools/src/main/java/org/xvm/runtime/template
+```
+
+The current `Cloneable` scan has exactly two live declarations in
+`javatools/src/main/java`: `compiler/ast/AstNode.java` and
+`runtime/ObjectHandle.java`. The other hits are comments documenting retired
+copy constructors (`Token`, `Source`, `MethodStructure`, `Component`, and
+`Component.Contribution`). The current `super.clone()` scan has five hits:
+`ObjectHandle.cloneAs(...)`, `AstNode.clone()`, and the three compiler AST
+overrides (`NamedTypeExpression`, `NewExpression`, `LambdaExpression`) that
+delegate to the AST clone island.
+
+| Family read | Current sites | Classification | Closure |
+| --- | --- | --- | --- |
+| ASM structure body copies | `Component.cloneBody()`, every sealed structure `cloneBody()` override, `ComponentBifurcator`, `FileStructure` module-link clones, `MethodStructure` source/parameter re-owning | Closed runtime/ASM owner-copy family | The previous must-fixes are closed by owner-explicit copy constructors and tests. The stale `Component.Contribution.clone()` override left after that migration had no callers and has now been removed; `ComponentBodyCopyTest.contributionDoesNotDeclareCloneOverride()` failed on the stale branch shape and passes with the override gone. |
+| Runtime handle views | `ObjectHandle.cloneAs(...)`, `GenericHandle.cloneAs(...)`, `ClassComposition.ensureOrigin/ensureAccess`, `CanonicalizedTypeComposition`, `PropertyComposition`, `ConstHeap`, `Proxy`, `xRef`, `xArray`, `xTuple`, `xRTDelegate`, `xRTFunction` | Closed as a guarded island | `ObjectHandle.cloneAs(...)` is default-deny for mutable handles. `GenericHandle` is the only mutable opt-in because its freeze/init/referent cells and copy-on-write `$outer` layer share lifecycle state. Arrays, tuples, delegate storage, register-bound refs, and mutable functions fail loudly and have view-guard tests. `ConstHeap` relocates immutable handles; `Proxy` delegates to the target; socket per-view state and mask escape are fixed separately. No new must-fix graduated from this sweep. |
+| Compiler AST scratch clones | `AstNode.clone()` plus validation/retry call sites in assignment, loop, statement-expression, lambda, new-expression, invocation, conversion, switch, assert, return, and case-manager code | Compiler-scoped, record-only | These clones are request-local compiler scratch copies used while validating alternative shapes. They still rely on `Object.clone()` to copy 96 AST subclasses, which is too wide for this runtime branch. The future compiler-reentrancy branch should replace this with an explicit validation-scratch-copy API if ASTs become shared across requests. |
+| Shallow array container copies | `Constant.registerConstants`, `SignatureConstant`, `ArrayConstant`, `MapConstant`, `AllCondition`, `MethodInfo`, `PropertyInfo`, `TerminalTypeConstant`, `TypeConstant`, `OpCallable`, tuple/proxy/function argument arrays, `LinkedRepository`, `ConstantPool` implicit metadata | Not object cloning; documented copy-on-write or defensive array copies | The copied object is the array container, not an owner object. The sites read either clone before replacing immutable constant/type/body elements, expose a defensive list, copy argument/register arrays to avoid mutating caller-owned storage, or freeze static process-wide metadata arrays. Keep them documented; no owner-transfer bug was proven. |
+| JIT bridge clone surface outside the row's main-source scope | `javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArray.java` implements `Cloneable`; `freeze$p(...)` clones the object and then clones primitive `long[]` storage | JIT-bridge scoped, record-only | This is not a javatools main runtime/ASM owner transfer. It copies primitive storage for a frozen array wrapper. If the JIT bridge later receives a broad ownership pass, convert this to a copy constructor with the rest of the JIT bridge APIs; it does not block row 179. |
+
+Verdict: row 179 is closed for the runtime/ASM branch. The remaining two
+`Cloneable` islands are intentional and bounded: compiler AST request-local
+scratch copies, and runtime handle `cloneAs(...)` behind explicit refusal
+guards. The JIT bridge primitive-storage clone is recorded outside the row's
+main-source scope rather than counted as a runtime/ASM must-fix.

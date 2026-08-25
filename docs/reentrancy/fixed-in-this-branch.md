@@ -592,6 +592,22 @@ delegated method owns distinct return/parameter objects, preserves logical
 implicit-deref metadata, drops copied deref-register cache state, and leaves
 the source parameter cache intact.
 
+### Structure Contribution Clone Residue
+
+After the structure-family copy constructors landed, `Component.Contribution`
+still declared a protected `clone()` override that called `Object.clone()`. The
+new copy path no longer called it (`Component(Component)` uses
+`new Contribution(contrib)`), so the method was branch-internal residue rather
+than a separate master bug: the master-visible `Contribution.getComponent()`
+outer-reference bug is already fixed by the copy constructor and
+`ComponentBodyCopyTest.contributionsAreReOwnedByBodyCopies()`.
+
+The stale override is now removed. `ComponentBodyCopyTest` adds
+`contributionDoesNotDeclareCloneOverride()`, which failed on the stale branch
+shape with the override restored and passes after removal. This is classified
+as a Category C cleanup folded into the clone-retirement wave, not as an
+independent master issue.
+
 ### Cross-Owner GenericHandle Masking
 
 What was wrong:

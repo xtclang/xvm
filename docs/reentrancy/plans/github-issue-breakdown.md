@@ -334,6 +334,7 @@ parent waves when those become PRs:
 | `NativeRebaseConstant` / `EnumValueConstant` adoption reconstruction fixes | clone-free adoption (PR 10) |
 | `MethodBody` owned-copy spurious self-target fix | constructor-escape/owner-copy wave (PR 7/11) |
 | Registration-guard concurrent-insert deadlock fix | registration publication guard (PR 10b) |
+| `Component.Contribution.clone()` stale override removal | clone-retirement wave (PR 18) |
 
 ### Acceptance Proof Standard
 

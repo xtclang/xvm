@@ -2,6 +2,7 @@ package org.xvm.asm;
 
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 import java.util.Arrays;
@@ -159,6 +160,22 @@ public class ComponentBodyCopyTest {
                     clz.getSimpleName() + " must not be Cloneable; body copies go through the"
                             + " copy constructors");
         }
+    }
+
+    /**
+     * The retired structure clone path must not keep a custom clone override on Contribution.
+     * Red on the stale branch shape: Contribution still declared {@code clone()} even though
+     * body copies had already moved to {@code new Contribution(contrib)}.
+     */
+    @Test
+    public void contributionDoesNotDeclareCloneOverride() {
+        var hasCloneOverride = Arrays.stream(Contribution.class.getDeclaredMethods())
+                .map(Method::getName)
+                .anyMatch("clone"::equals);
+
+        assertTrue(!hasCloneOverride,
+                "Contribution must not keep a custom clone override; body copies go through"
+                        + " its copy constructor");
     }
 
     // ----- helpers -------------------------------------------------------------------------------

@@ -3244,15 +3244,6 @@ public abstract sealed class Component
         }
 
         @Override
-        protected Object clone() {
-            try {
-                return super.clone();
-            } catch (CloneNotSupportedException e) {
-                throw new IllegalStateException(e);
-            }
-        }
-
-        @Override
         public int hashCode() {
             // unfortunately we cannot use m_typeContrib here, since it starts unresolved and
             // changes its hash value as it gets resolved
