@@ -46,7 +46,12 @@ import org.xvm.util.Handy;
  */
 public abstract class ObjectHandle
         implements Cloneable {
-    protected TypeComposition m_clazz;
+    /**
+     * The composition (class, access view, and type) of this handle. Written only at
+     * construction and onto the fresh clone inside {@link #cloneAs}; every other reader goes
+     * through {@link #getComposition()}, so the write discipline is compiler-enforced.
+     */
+    private TypeComposition m_clazz;
 
     /**
      * The mutability flag. Direct writes are permitted ONLY in constructors, where views cannot
@@ -481,7 +486,7 @@ public abstract class ObjectHandle
          * methods that could observe a partially constructed handle.
          */
         protected final void initializeField(String sProp, ObjectHandle hValue) {
-            FieldInfo field = m_clazz.getFieldInfo(sProp);
+            FieldInfo field = getComposition().getFieldInfo(sProp);
             if (field == null || field.isTransient()) {
                 throw new IllegalStateException("Cannot initialize field: " + sProp);
             }
@@ -921,7 +926,7 @@ public abstract class ObjectHandle
 
         @Override
         public String toString() {
-            return super.toString() + (m_clazz.getTemplate() instanceof xChar
+            return super.toString() + (getComposition().getTemplate() instanceof xChar
                     ? Handy.quotedChar((char) m_lValue)
                     : String.valueOf(m_lValue));
         }

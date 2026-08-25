@@ -139,7 +139,7 @@ public class xAtomicInt128
 
         @Override
         public String toString() {
-            return "(Atomic " + m_clazz.getTemplate().f_sName + ')' +
+            return "(Atomic " + getComposition().getTemplate().f_sName + ')' +
                     (isAssigned() ? m_atomicValue.get() : "unassigned");
         }
     }

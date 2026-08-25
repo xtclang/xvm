@@ -879,7 +879,7 @@ public class xFuture
 
         @Override
         public String toString() {
-            return "(" + m_clazz + ") " + (
+            return "(" + getComposition() + ") " + (
                     getFuture().isDone() ? "Completed: " + toSafeString(): "Not completed"
                     );
         }

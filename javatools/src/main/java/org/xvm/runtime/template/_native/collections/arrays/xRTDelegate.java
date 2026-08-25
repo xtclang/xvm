@@ -909,6 +909,14 @@ public class xRTDelegate
 
     /**
      * Abstract array delegate handle.
+     * <p/>
+     * {@code m_cSize} and the typed storage pointers in the concrete delegates are deliberate
+     * hot-path struct fields (hundreds of read/write sites in the array templates), confined by
+     * the same contract as {@link org.xvm.runtime.Frame}'s execution fields: mutable delegates
+     * never cross a service boundary ({@code ObjectHandle.isPassThrough}), so only the owning
+     * context's thread touches them, and frozen delegates shared cross-thread are read-only by
+     * protocol. View-clone forking of this per-instance state is closed by the refuse-always
+     * {@code cloneAs} guard below.
      */
     public abstract static class DelegateHandle
             extends ObjectHandle {

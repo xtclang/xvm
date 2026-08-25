@@ -155,7 +155,7 @@ public class xAtomic
 
         @Override
         public String toString() {
-            return m_clazz + " -> " + f_atomic.get();
+            return getComposition() + " -> " + f_atomic.get();
         }
     }
 

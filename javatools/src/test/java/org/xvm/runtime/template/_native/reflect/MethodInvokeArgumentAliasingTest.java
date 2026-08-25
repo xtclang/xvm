@@ -82,6 +82,29 @@ public class MethodInvokeArgumentAliasingTest {
                         + " needs no extra registers");
     }
 
+    /**
+     * The ISA tuple-argument ops (the Call_T, Invoke_T, Construct_T, New_T, NewG_T families) share
+     * the reflection path's exact hazard: extracting {@code TupleHandle.m_ahValue} and handing it
+     * toward a callee frame aliases the caller's tuple storage as the register file. Today's
+     * compiler never emits the tuple-arg forms, but the opcodes decode from any {@code .xtc}, so
+     * the latent path is reachable from hostile or future-compiler modules. Decision (board row):
+     * every extraction goes through {@code TupleHandle.valuesCopy()}, mirroring the
+     * {@code xRTMethod}/{@code xRTFunction} clones. Red on the pre-decision shape, where all the
+     * ops read {@code .m_ahValue} raw.
+     */
+    @Test
+    public void tupleArgumentOpsCopyTupleStorage() throws IOException {
+        String[] asOps = {"Call_T0", "Call_T1", "Call_TN", "Call_TT", "Invoke_T0", "Invoke_T1",
+                          "Invoke_TN", "Invoke_TT", "Construct_T", "New_T", "NewG_T"};
+        for (String sOp : asOps) {
+            var source = Files.readString(sourceFor("org/xvm/asm/op/" + sOp + ".java"));
+            assertFalse(source.contains(".m_ahValue"),
+                    sOp + " must not hand the caller tuple's own storage toward a callee frame");
+            assertTrue(source.contains(".valuesCopy()"),
+                    sOp + " must extract tuple arguments through TupleHandle.valuesCopy()");
+        }
+    }
+
     // ----- helpers -------------------------------------------------------------------------------
 
     /**

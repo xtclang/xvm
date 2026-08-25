@@ -64,6 +64,16 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 /**
  * A call stack frame.
+ * <p/>
+ * <b>Confinement contract for the public execution fields</b> ({@code f_ahVar}, {@code f_aInfo},
+ * {@code m_iPC}, {@code m_hException}, {@code m_frameNext}, ...): frames are deliberate hot-path
+ * structs, and their fields are context-confined rather than synchronized. A ServiceContext
+ * executes only while holding its scheduling lock (the VarHandle CAS acquire/release in
+ * {@code ServiceContext}), which provides both mutual exclusion and a happens-before edge when a
+ * fiber migrates between carrier threads - so only the executing context's thread may read or
+ * write a live frame. The one tolerated exception is the debugger: {@code DebugConsole} walks
+ * other services' live frames unsynchronized for display and may stash into {@code m_debug};
+ * those racy reads are display-only and must never feed execution decisions.
  */
 public class Frame
         implements GenericTypeResolver {

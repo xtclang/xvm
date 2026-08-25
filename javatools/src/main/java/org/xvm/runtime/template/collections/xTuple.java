@@ -680,6 +680,17 @@ public class xTuple
             extends ObjectHandle {
         public ObjectHandle[] m_ahValue;
 
+        /**
+         * The tuple's values, copied for use as (or growth into) a callee register file. The ISA
+         * tuple-argument ops must never hand the tuple's own storage to a frame:
+         * {@code Utils.ensureSize} aliases when no growth is needed, so a callee parameter
+         * reassignment would mutate the caller's - possibly immutable or const-heap-cached -
+         * tuple. This mirrors the {@code xRTMethod.invokeInvoke} reflection-path fix.
+         */
+        public ObjectHandle[] valuesCopy() {
+            return m_ahValue.clone();
+        }
+
         protected TupleHandle(TypeComposition clazz, ObjectHandle[] ahValue, boolean fMutable) {
             super(clazz);
 
