@@ -85,3 +85,40 @@ utility warnings remain fixed on the separate `lagergren/fix-utils-this-escape`
 branch. Five local JIT warnings were later fixed in this branch; the remaining
 JIT constructor warning is `Xvm` startup owner publication, documented in
 `jit-implications.md`.
+
+## Compiler AST And Context Mutation Audit (2026-08-25)
+
+Must-audit row 175 asked whether compiler AST/context mutation proved a
+runtime/ASM must-fix in this branch. It does not. The sites are real mutable
+state, but they are compiler-scoped and currently depend on the compiler's
+request-local AST/context contract. If incremental or parallel compilation
+shares ASTs, `Context`s, or validation results across requests, this becomes a
+compiler-reentrancy bug; that fix belongs on the compiler branch, not in the
+runtime/ASM owner PR.
+
+The broad scan used to locate the named families was:
+
+```bash
+rg -n --glob '*.java' \
+  'm_mapByName|m_constant|m_method|m_lambda|m_listBreak|m_listContinue|NameResolver|Context\.' \
+  javatools/src/main/java/org/xvm/compiler \
+  javatools/src/main/java/org/xvm/compiler/ast
+```
+
+Sites read for classification:
+
+| Family | Evidence | Classification |
+| --- | --- | --- |
+| `Context.m_mapByName` | `Context.ensureNameMap()` lazily creates and assigns a plain `HashMap`; `replaceArguments(...)` mutates it as validation narrows/renames arguments. | Compiler request-local cache. Safe only while each validation request owns its `Context` chain. Move to request-owned context state if contexts become shared. |
+| `NameResolver` staged resolution | `NameResolver.forceResolve(...)`, `resolve(...)`, `ensurePartiallyResolvedComponent()`, and `resolvedComponent(...)` mutate `m_stage`, `m_constant`, `m_constantFirst`, `m_component`, `m_typeMode`, and `m_errs` as one resolver walks one AST name. Import and named-type AST nodes cache resolvers. | Compiler AST-local staged cache. Record-only for this branch; future compiler branch should either make resolvers per validation pass or key cached resolution by request/owner. |
+| `InvocationExpression.m_method` and target state | Validation paths assign `m_argMethod`, `m_method`, `m_fBindTarget`, and `m_targetInfo`; later type/codegen paths read `m_method`. The field is explicitly transient. | Compiler validation/codegen state. Wrong if one AST instance is validated concurrently under two contexts; not a runtime container or ASM metadata owner leak. |
+| `LambdaExpression.m_lambda` | Validation asserts `m_lambda == null`, creates a `MethodStructure` for the lambda, later uses it for component lookup/codegen, and `clone()` intentionally clears it. | Compiler AST-owned generated-method cache. It already acknowledges clone/retry sensitivity; keep it out of runtime work and redesign with explicit compiler request ownership if ASTs are reused. |
+| Break/continue assignment lists | `Statement`, `ForStatement`, `WhileStatement`, `SwitchStatement`, and `ForEachStatement` append transient `Break` records/lists during validation, merge assignment/narrowing maps, then clear or discard entries. | Compiler control-flow validation scratch state. Requires single validation owner per AST/control-flow pass. |
+
+Verdict: close row 175 for this runtime branch as compiler-scoped
+record-only. No runtime/ASM must-fix graduated. The compiler branch should
+decide between proving one AST/context graph per request, making validation
+scratch state explicitly request-owned, or rebuilding/cloning the AST per
+concurrent validation pass. The existing constructor-escape fixes and clone
+audit reduce accidental early publication, but they do not by themselves make
+shared compiler AST mutation safe.

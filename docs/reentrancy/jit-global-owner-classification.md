@@ -49,7 +49,7 @@ generated JIT statics or bridge static singletons safe by themselves.
 | Bridge injector ownership | DONE for current code shape, needs stress | `nMainInjector.java:24-30` stores one `Xvm` and one instance `HashMap` per injector; `nMainInjector.java:49-55` registers console supplier; `Ctx.java:162-165` asks the active container's injector. | Keep supplier maps instance-owned. Stress with two containers with different injectors and assert resource lookup is container-local. |
 | Bridge `TerminalConsole` | MUST AUDIT | `TerminalConsole.java:24-25` calls `super(Ctx.get())`; `TerminalConsole.java:44-48` delegates to interpreter terminal process resources. | Safe only if construction occurs inside a bound JIT invocation and terminal IO is intentionally process-wide. Add a source-shape/behavior test for construction outside `Ctx`. |
 | Bridge enum/enumeration statics | MUST AUDIT, likely MUST FIX before JIT reentrancy claim | `Boolean.java:20-31`, `eBoolean.java:14-20`, `eNullable.java:10-17`, `eOrdered.java:10-23`, `Array.java:154-174`, and `FPNumber.java:521-536` create static enum/enumeration values, sometimes from `Ctx.get()` or `$ctx()`. | Either prove these statics are native-type-system/classloader-owned for one `Xvm`, or move metadata/singletons behind a type-system or container owner table. Reject `static ... Ctx.get()` outside an allowlist. |
-| `nObject.$ctx()`, `$xvm()`, and `$owner()` | MUST AUDIT | `nObject.java:26-36` recovers the current context and `Xvm`; `nObject.java:54-64` resolves owner by current `Xvm` plus encoded owner id. | Add tests that static native objects used under a second `Ctx` resolve the intended owner, not the first class initializer's owner. |
+| `nObject.$ctx()`, `$xvm()`, and `$owner()` | MUST FIX by API before JIT reentrancy claim | `nObject.java:26-36` recovers the current context and `Xvm`; `nObject.java:54-64` resolves owner by current `Xvm` plus encoded owner id. Completion read 2026-08-25 found bridge metadata paths using the same ambient helpers in `TerminalConsole`, `ContainerControl`, `Nullable`, `Ordered`, `String`, `Array.Mutability`, and `FPNumber.Rounding`. | Replace helpers with explicit `Ctx` parameters where the caller already has one, or assert that the object owner encoded in `$meta` belongs to the active `Ctx`/`Xvm`. Add unbound/wrong-context tests for static/native bridge objects. |
 | Classloader/type-system sharing | MUST AUDIT | `TypeSystem.java:82-102` documents shared modules; `TypeSystemLoader.java:68-80` delegates to owned and shared module loaders; `ModuleLoader.java:85-101` defines classes and records class bytes. | Document which generated classes can be shared. Generated statics may hold only classloader/type-system-owned immutable state. |
 | `ModuleLoader.loadedClasses` debug map | SHOULD FIX, MUST AUDIT if dumping is concurrent | `ModuleLoader.java:100` writes to `loadedClasses`; `ModuleLoader.java:123-166` swaps and iterates a plain `HashMap` during dump. | Make dumping snapshot-based or synchronized before parallel JIT dumping. This is debug state, not interpreter PR scope. |
 | `NativeTypeSystem` native-name caches | MUST AUDIT | `NativeTypeSystem.java:138-143` has concurrent maps keyed by ASM identities/types; `NativeTypeSystem.java:267-314` fills them from the native pool. | Keep these metadata-only. Do not store `Ctx`, `Container`, injector results, handles, or service instances in these maps. |
@@ -62,6 +62,49 @@ generated JIT statics or bridge static singletons safe by themselves.
 | Interpreter `OwnershipDiagnostics` hook | OUT OF SCOPE FOR JIT | `Connector.java:108-120` returns `null` by default; `InterpreterConnector.java:135-137` returns an interpreter `MainContainer`. | Do not force JIT into interpreter diagnostics. Add a JIT-specific dump rooted at `Xvm`. |
 | Local JIT constructor escape cleanup | DONE | `BuildContext.forMethod(...)` and `forProperty(...)` bind `TypeMatrix` after construction; `JitCtorDesc` passes implicit params as constructor data; `ArrayBuilder` reads the supplied `TypeSystem`; `nLongBasedArray` writes packed state directly. | Keep `JitConstructorEscapeTest` and lint shape tests. |
 | JIT helper state cleared on constant adoption | DONE for branch scope | `TypeConstant.setContaining(...)` clears `m_sJitName`; adoption tests cover JIT helper state in type/signature constants. | Keep the branch tests and continue the broader JIT-name owner audit separately. |
+
+## Ambient Helper Completion Read (2026-08-25)
+
+Part 1 row 6 is now classified rather than open-ended. The broad source scan
+used to confirm the remaining ambient JIT helper surface was:
+
+```bash
+rg -n --glob '*.java' \
+  'static.*(Ctx\.get\(|\$ctx\(|\$xvm\(|\$owner\(|\$INSTANCE)|Ctx\.get\(|\$ctx\(|\$xvm\(|\$owner\(' \
+  javatools_jitbridge/src/main/java \
+  javatools/src/main/java/org/xvm/javajit \
+  javatools/src/main/java/org/xvm/asm/OpCondJump.java
+```
+
+Sites read for closure:
+
+- `nObject.$ctx()` and `$xvm()` are static ambient getters over
+  `Ctx.Current`; `$owner()` resolves the object's encoded owner id by asking
+  the ambient current `Xvm`. A bridge object reused under a different `Ctx`
+  can therefore resolve the right numeric owner id against the wrong `Xvm`.
+- Generated `<clinit>` in `CommonBuilder.assembleCLInit(...)` calls
+  `Ctx.get()` and writes classloader statics for `$scN` constants, injected
+  static properties, and singleton `$INSTANCE` values. The generated class
+  owns the static field; the active `Ctx` owns the container/injector answer.
+  Those owners are safe only if classloader/type-system and container sharing
+  are proven one-to-one for the value.
+- Bridge enum/enumeration statics initialize through ambient helpers:
+  `eBoolean`, `eNullable`, `eOrdered`, `Array.eMutability`, and
+  `FPNumber.eRounding` use `Ctx.get()`/`$ctx()` during static initialization;
+  `Boolean`, `Ordered`, `Nullable`, `String`, `TerminalConsole`, and
+  `ContainerControl` use `$xvm()` or `$owner()` to derive metadata from the
+  current owner.
+- `OpCondJump.buildUnary(...)` still evaluates link-time conditional constants
+  with `Ctx.get().container` even though the method already has a
+  `BuildContext`. This is a build/link API issue in the JIT path, not an
+  interpreter runtime owner issue.
+
+Verdict: `ScopedValue` gives lexical cleanup for `Ctx.Current`, but it is not
+an ownership proof and it is not inclusive enough for generated class
+initialization or bridge statics. The JIT fix must make the owner explicit
+(`Ctx`, `TypeSystem`, `ModuleLoader`, or container table) at each boundary or
+assert the active context against the generated class/bridge object's owner.
+This remains parked for the JIT lifecycle/generated-static/bridge PRs.
 
 ## Classloader And Container Rule
 
