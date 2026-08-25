@@ -699,17 +699,13 @@ public class xTuple
         }
 
         @Override
-        public ObjectHandle cloneAs(TypeComposition clazz) {
-            if (isMutable()) {
-                // m_fMutable is a per-view field while the m_ahValue storage is shared by all
-                // cloneAs views: freezing a tuple through one view would leave a sibling view
-                // still claiming mutability and therefore still willing to write into the
-                // frozen shared storage (the same split ArrayHandle refuses). Immutable tuples
-                // have a terminal lifecycle that per-view copies cannot desync, and they are
-                // the proven-safe clone inputs (ConstHeap relocation asserts immutability).
-                throw new IllegalStateException("mutable tuple cannot be cloned as a view: " + this);
-            }
-            return super.cloneAs(clazz);
+        protected boolean supportsMutableViews() {
+            // the tuple's element storage (m_ahValue, never swapped after construction) is
+            // shared by every cloneAs view, and the ONE piece of per-view lifecycle state -
+            // the mutability flag - is shared through the base freeze cell installed by the
+            // first view clone, so a freeze through any view is authoritative for all of them
+            // (the split this class used to refuse with a fail-loud guard)
+            return true;
         }
 
         @Override

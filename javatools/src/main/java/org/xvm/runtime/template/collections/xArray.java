@@ -997,6 +997,13 @@ public class xArray
             return true;
         }
 
+        @Override
+        protected void prepareMutableViewShare() {
+            // deliberately no base freeze cell: the delegate pointer AND the mutability enum
+            // already live in the constructor-final shared f_state cell, and isMutable()
+            // derives from it
+        }
+
         public DelegateHandle getDelegate() {
             return f_state.m_hDelegate;
         }

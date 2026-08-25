@@ -1015,8 +1015,11 @@ diff --git a/javatools/src/main/java/org/xvm/runtime/template/annotations/xAtomi
 ```
 
 **Tests to add/run on master:** `AtomicViewSharingTest` and
-`FreezeViewSharingTest` are red on the old shapes. `RefViewGuardTest` and
-`ArrayViewGuardTest` are source-shape/guard proofs.
+`FreezeViewSharingTest` are red on the old shapes. `RefViewGuardTest` is a
+source-shape/guard proof; `ArrayViewGuardTest` and `TupleViewGuardTest` are
+now SHARING proofs (2026-08-25: the freeze cell was hoisted to ObjectHandle
+and Array/Tuple/Function views share all lifecycle state; both tests are
+red on the per-view shape, which is master's).
 
 **Master dry-run status:** The four branch seeds are not one clean
 master-cherry-pick. `c5c40d443` applies source-only cleanly for the

@@ -377,17 +377,13 @@ public class xRTFunction
     public static class FunctionHandle
             extends SignatureHandle {
         @Override
-        public ObjectHandle cloneAs(TypeComposition clazz) {
-            if (isMutable()) {
-                // m_fMutable is a per-view field while the bound argument/delegate state is
-                // shared by all cloneAs views: freezing a bound function through one view
-                // (see the makeImmutable overrides in the delegating subclasses) would leave
-                // a sibling view still claiming mutability - the same lifecycle split that
-                // ArrayHandle and TupleHandle refuse. Immutable function handles have a
-                // terminal lifecycle and remain safe to clone.
-                throw new IllegalStateException("mutable function cannot be cloned as a view: " + this);
-            }
-            return super.cloneAs(clazz);
+        protected boolean supportsMutableViews() {
+            // the bound argument/delegate state is shared by every cloneAs view, and the one
+            // piece of per-view lifecycle state - the mutability flag - is shared through the
+            // base freeze cell installed by the first view clone, so a freeze through any view
+            // (see the makeImmutable overrides in the delegating subclasses) is authoritative
+            // for all of them (the split this class used to refuse with a fail-loud guard)
+            return true;
         }
 
         /**

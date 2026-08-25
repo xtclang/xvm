@@ -83,10 +83,15 @@ public abstract class ObjectHandle
             // lifecycle is still live splits per-view state - m_fMutable at minimum - from the
             // storage every view shares; that is the entire freeze-split bug family. Classes
             // whose views share all lifecycle state opt in via supportsMutableViews() (see
-            // GenericHandle's freeze/init/referent cells); everything else stays refused until
-            // it earns the opt-in, so an unreviewed future handle class fails loudly here
-            // instead of desyncing silently.
+            // GenericHandle's freeze/init/referent cells, ArrayHandle's ArrayState, and the
+            // base freeze cell TupleHandle/FunctionHandle share); everything else stays
+            // refused until it earns the opt-in, so an unreviewed future handle class fails
+            // loudly here instead of desyncing silently.
             throw new IllegalStateException("mutable handle cannot be cloned as a view: " + this);
+        }
+        if (supportsMutableViews()) {
+            // the freeze state must be shared before the shallow copy below duplicates it
+            prepareMutableViewShare();
         }
         try {
             ObjectHandle handle = (ObjectHandle) super.clone();
@@ -94,6 +99,44 @@ public abstract class ObjectHandle
             return handle;
         } catch (CloneNotSupportedException e) {
             throw new IllegalStateException();
+        }
+    }
+
+    /**
+     * Share the lifecycle state that must be common to every view BEFORE a shallow view copy is
+     * taken. The default installs the shared freeze cell; a subclass whose lifecycle state
+     * already lives in its own constructor-final shared cell (ArrayHandle's ArrayState)
+     * overrides this to skip the redundant cell.
+     */
+    protected void prepareMutableViewShare() {
+        ensureSharedFreeze();
+    }
+
+    /**
+     * The freeze state shared by every cloneAs view of this object, installed lazily by the
+     * first view clone. The per-instance flag is a shallow-copied field, but views are views
+     * over shared storage: on the per-view shape, makeImmutable() through one view left
+     * sibling views claiming mutability and therefore willing to write into the frozen shared
+     * storage. Handles that never have views never pay for the cell, and the CAS install
+     * keeps a racing pair of first clones from forking two cells.
+     */
+    private volatile FreezeCell m_cellFreeze;
+
+    private static final AtomicReferenceFieldUpdater<ObjectHandle, FreezeCell> FREEZE_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    ObjectHandle.class, FreezeCell.class, "m_cellFreeze");
+
+    private static final class FreezeCell {
+        volatile boolean mutable;
+
+        FreezeCell(boolean fMutable) {
+            mutable = fMutable;
+        }
+    }
+
+    protected final void ensureSharedFreeze() {
+        if (m_cellFreeze == null) {
+            FREEZE_UPDATER.compareAndSet(this, null, new FreezeCell(m_fMutable));
         }
     }
 
@@ -116,22 +159,21 @@ public abstract class ObjectHandle
     }
 
     public boolean isMutable() {
-        return m_fMutable;
+        FreezeCell cell = m_cellFreeze;
+        return cell == null ? m_fMutable : cell.mutable;
     }
 
     /**
-     * Post-construction mutability transition. Overridable so GenericHandle can reroute the write
-     * into the freeze cell shared by all of its cloneAs views.
+     * Post-construction mutability transition, routed into the freeze cell once views share it;
+     * overridable so a subclass with its own shared lifecycle cell can reroute further.
      */
     protected void setMutable(boolean fMutable) {
-        m_fMutable = fMutable;
-    }
-
-    /**
-     * @return the raw per-instance flag, ignoring any shared view cell; for storage plumbing only
-     */
-    protected final boolean rawMutable() {
-        return m_fMutable;
+        FreezeCell cell = m_cellFreeze;
+        if (cell == null) {
+            m_fMutable = fMutable;
+        } else {
+            cell.mutable = fMutable;
+        }
     }
 
     /**
@@ -545,50 +587,6 @@ public abstract class ObjectHandle
                 : hParent.getService();
         }
 
-        /**
-         * The freeze state shared by every cloneAs view of this object, installed lazily by the
-         * first view clone. The per-instance flag is a shallow-copied field, but views are views
-         * over ONE shared field array: on the old shape, makeImmutable() through one view left
-         * sibling views claiming mutability and therefore willing to write into the frozen shared
-         * storage. Handles that never have views never pay for the cell, and the CAS install
-         * keeps a racing pair of first clones from forking two cells.
-         */
-        private volatile FreezeCell m_cellFreeze;
-
-        private static final AtomicReferenceFieldUpdater<GenericHandle, FreezeCell> FREEZE_UPDATER =
-                AtomicReferenceFieldUpdater.newUpdater(
-                        GenericHandle.class, FreezeCell.class, "m_cellFreeze");
-
-        private static final class FreezeCell {
-            volatile boolean mutable;
-
-            FreezeCell(boolean fMutable) {
-                mutable = fMutable;
-            }
-        }
-
-        @Override
-        public boolean isMutable() {
-            FreezeCell cell = m_cellFreeze;
-            return cell == null ? rawMutable() : cell.mutable;
-        }
-
-        @Override
-        protected void setMutable(boolean fMutable) {
-            FreezeCell cell = m_cellFreeze;
-            if (cell == null) {
-                super.setMutable(fMutable);
-            } else {
-                cell.mutable = fMutable;
-            }
-        }
-
-        private void ensureSharedFreeze() {
-            if (m_cellFreeze == null) {
-                FREEZE_UPDATER.compareAndSet(this, null, new FreezeCell(rawMutable()));
-            }
-        }
-
         @Override
         protected boolean supportsMutableViews() {
             // GenericHandle views share their lifecycle state: the freeze cell, the lazy-init
@@ -600,9 +598,6 @@ public abstract class ObjectHandle
 
         @Override
         public ObjectHandle cloneAs(TypeComposition clazz) {
-            // the freeze state must be shared before the shallow copy below duplicates it
-            ensureSharedFreeze();
-
             // cloneAs() creates another access view of the same object. The field array therefore
             // remains shared for regular values, but inflated RefHandles need a view-local $outer:
             // mutating the shared RefHandle would make the source view suddenly point at the new
