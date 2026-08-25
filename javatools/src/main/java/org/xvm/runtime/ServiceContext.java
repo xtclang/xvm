@@ -740,23 +740,25 @@ public class ServiceContext {
         Op opReset = aOp[iPC];
         aOp[iPC] = new Op() {
             @Override
-            @SuppressWarnings("fallthrough")
             public int process(Frame frame, int iPC) {
                 int nResult = getDebugger().checkBreakPoint(frame, iPC);
                 switch (nResult) {
-                default:
+                default -> {
                     System.err.println("Not supported result: " + nResult);
-                    // fall through
-                case Op.R_NEXT:
                     aOp[iPC] = opReset;
                     return iPC; // repeat with a real op
-
-                case Op.R_RESET:
+                }
+                case Op.R_NEXT -> {
+                    aOp[iPC] = opReset;
+                    return iPC; // repeat with a real op
+                }
+                case Op.R_RESET -> {
                     aOp[iPC] = opReset;
                     return Op.R_RESET; // go up a frame
-
-                case Op.R_CALL:
+                }
+                case Op.R_CALL -> {
                     return Op.R_CALL;
+                }
                 }
             }
 

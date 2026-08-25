@@ -2805,32 +2805,24 @@ public abstract sealed class Component
          *                     Implements, Into, Incorporates, or Enumerates
          * @param constType    specifies the class type being contributed
          */
-        @SuppressWarnings("fallthrough")
         public Contribution(Composition composition, TypeConstant constType) {
             assert composition != null;
 
             switch (composition) {
-            case Annotation:
-            case Extends:
-            case Implements:
-            case Into:
-            case Incorporates:
-            case RebasesOnto:
+            case Annotation, Extends, Implements, Into, Incorporates, RebasesOnto -> {
                 if (constType == null) {
                     throw new IllegalArgumentException("type is required");
                 }
-                // fall through
-            case Equal:
-                break;
+            }
+            case Equal -> { }
 
-            case Delegates:
-                throw new IllegalArgumentException("delegates uses the constructor with a PropertyConstant");
+            case Delegates -> throw new IllegalArgumentException(
+                    "delegates uses the constructor with a PropertyConstant");
 
-            case Import:
-                throw new IllegalArgumentException("imports uses the constructor with a ModuleConstant");
+            case Import -> throw new IllegalArgumentException(
+                    "imports uses the constructor with a ModuleConstant");
 
-            default:
-                throw new UnsupportedOperationException("composition=" + composition);
+            default -> throw new UnsupportedOperationException("composition=" + composition);
             }
 
             m_composition = composition;

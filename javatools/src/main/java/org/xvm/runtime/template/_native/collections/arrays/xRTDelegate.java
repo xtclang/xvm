@@ -525,19 +525,16 @@ public class xRTDelegate
     /**
      * Check if an element write is allowed.
      */
-    @SuppressWarnings("fallthrough")
     protected int checkWrite(Frame frame, DelegateHandle hDelegate, long lIndex, long cSize) {
-        switch (hDelegate.getMutability()) {
-        case Fixed:
-            if (lIndex < cSize) {
-                break;
-            }
-            // fall through
-        case Constant:
-            return frame.raiseException(xException.readOnly(frame, hDelegate.getMutability()));
-        }
-
-        return Op.R_NEXT;
+        Mutability mutability = hDelegate.getMutability();
+        boolean fReadOnly = switch (mutability) {
+            case Fixed    -> lIndex >= cSize;
+            case Constant -> true;
+            default       -> false;
+        };
+        return fReadOnly
+                ? frame.raiseException(xException.readOnly(frame, mutability))
+                : Op.R_NEXT;
     }
 
     /**

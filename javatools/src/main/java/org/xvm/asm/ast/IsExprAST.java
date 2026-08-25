@@ -35,20 +35,19 @@ public final class IsExprAST
     }
 
     @Override
-    @SuppressWarnings("fallthrough")
     public TypeConstant getType(int i) {
         switch (i) {
-        case 0:
+        case 0 -> {
             return booleanType;
-
-        case 1:
+        }
+        case 1 -> {
             if (typeOfType != null) {
                 return typeOfType;
             }
-            // fall through
-        default:
-            throw new ArrayIndexOutOfBoundsException();
         }
+        default -> { }
+        }
+        throw new ArrayIndexOutOfBoundsException();
     }
 
     @Override

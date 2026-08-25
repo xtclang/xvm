@@ -431,36 +431,37 @@ public sealed class ClassStructure
     /**
      * @return true iff this class implements an "immutable X" interface
      */
-    @SuppressWarnings("fallthrough")
     public boolean isImmutable() {
         switch (getFormat()) {
-        case MODULE, PACKAGE, CONST, ENUM, ENUMVALUE:
+        case MODULE, PACKAGE, CONST, ENUM, ENUMVALUE -> {
             return true;
-
-        case ANNOTATION, MIXIN: {
+        }
+        case ANNOTATION, MIXIN -> {
             TypeConstant typeInto = getTypeInto();
             if (typeInto.containsUnresolved()) {
                 return false;
             }
-            if (typeInto.isImmutable()) {
-                return true;
-            }
+            return typeInto.isImmutable() || implementsImmutableContribution();
         }
-            // fall through
-        case CLASS, INTERFACE:
-            for (Contribution contrib : getContributionsAsList()) {
-                if (contrib.getComposition() == Composition.Implements) {
-                    if (!contrib.containsUnresolved() && contrib.getTypeConstant().isImmutable()) {
-                        return true;
-                    }
+        case CLASS, INTERFACE -> {
+            return implementsImmutableContribution();
+        }
+        // service is always assumed to be NOT immutable
+        default -> {
+            return false;
+        }
+        }
+    }
+
+    private boolean implementsImmutableContribution() {
+        for (Contribution contrib : getContributionsAsList()) {
+            if (contrib.getComposition() == Composition.Implements) {
+                if (!contrib.containsUnresolved() && contrib.getTypeConstant().isImmutable()) {
+                    return true;
                 }
             }
-            return false;
-
-        case SERVICE: // service is always assumed to be NOT immutable
-        default:
-            return false;
         }
+        return false;
     }
 
     /**

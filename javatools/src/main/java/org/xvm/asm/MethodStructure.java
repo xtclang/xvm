@@ -2442,7 +2442,6 @@ public final class MethodStructure
         /**
          * @return true iff the code can be optimized out
          */
-        @SuppressWarnings("fallthrough")
         public boolean isNoOp() {
             if (m_listOps == null && m_aop == null) {
                 // too early to ask
@@ -2450,24 +2449,15 @@ public final class MethodStructure
             }
 
             Op[] aOp = ensureOps();
-            switch (aOp.length) {
-            case 0:
-                return true;
-
-            case 1:
-                return aOp[0].getOpCode() == Op.OP_RETURN_0;
-
-            case 2:
-                if (aOp[1].getOpCode() == Op.OP_RETURN_0) {
-                    Op op0 = aOp[0];
-                    return op0 instanceof Nop
-                        || op0 instanceof Construct_0 opCtor0
-                            && opCtor0.isNoOp(f_method.getLocalConstants());
-                }
-                // fall through
-            default:
-                return false;
-            }
+            return switch (aOp.length) {
+            case 0  -> true;
+            case 1  -> aOp[0].getOpCode() == Op.OP_RETURN_0;
+            case 2  -> aOp[1].getOpCode() == Op.OP_RETURN_0
+                        && (aOp[0] instanceof Nop
+                            || aOp[0] instanceof Construct_0 opCtor0
+                                && opCtor0.isNoOp(f_method.getLocalConstants()));
+            default -> false;
+            };
         }
 
         /**

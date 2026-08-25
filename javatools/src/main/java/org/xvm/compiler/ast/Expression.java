@@ -276,28 +276,21 @@ public abstract sealed class Expression
      * @return a TypeFit value describing the expression's capability (or lack thereof) to produce
      *         the required type(s)
      */
-    @SuppressWarnings("fallthrough")
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
                                 ErrorListener errs) {
-        switch (atypeRequired.length) {
-        case 0:
+        if (atypeRequired.length == 0) {
             // all expressions are required to be able to yield a void result
             return TypeFit.Fit;
-
-        case 1:
-            if (hasSingleValueImpl()) {
-                return testFit(ctx, atypeRequired[0], fExhaustive, errs);
-            }
-            // fall through
-
-        default:
-            // anything that is expected to yield separate values must have a "multi"
-            // implementation, so the lack of a "multi" implementation means that this
-            // expression can't yield the desired number of values
-            return hasMultiValueImpl()
-                    ? calcFitMulti(ctx, getImplicitTypes(ctx), atypeRequired)
-                    : TypeFit.NoFit;
         }
+        if (atypeRequired.length == 1 && hasSingleValueImpl()) {
+            return testFit(ctx, atypeRequired[0], fExhaustive, errs);
+        }
+        // anything that is expected to yield separate values must have a "multi"
+        // implementation, so the lack of a "multi" implementation means that this
+        // expression can't yield the desired number of values
+        return hasMultiValueImpl()
+                ? calcFitMulti(ctx, getImplicitTypes(ctx), atypeRequired)
+                : TypeFit.NoFit;
     }
 
     /**

@@ -534,7 +534,6 @@ public abstract sealed class ConditionalConstant
      *
      * @return a Bifurcation object that indicates how to minimally bifurcate
      */
-    @SuppressWarnings("fallthrough")
     public Bifurcation bifurcate(ConditionalConstant that) {
         // unwrap a single negation of either this or that
         boolean fNegate = false;
@@ -552,14 +551,17 @@ public abstract sealed class ConditionalConstant
         // easiest case is when both are terminals
         if (condThis.isTerminal() && condThat.isTerminal()) {
             switch (condThis.calcRelation(condThat)) {
-            case INVERSE:
-                fNegate = !fNegate;
-                // fall through
-            case EQUIV:
+            case INVERSE -> {
+                // an inverse match bifurcates with the polarity flipped
+                return new Bifurcation(fNegate, null, !fNegate, null);
+            }
+            case EQUIV -> {
                 return new Bifurcation(!fNegate, null, fNegate, null);
+            }
 
-            default:
+            default -> {
                 return new Bifurcation(true, condThat, true, condThat);
+            }
             }
         }
 

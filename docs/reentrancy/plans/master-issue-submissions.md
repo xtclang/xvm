@@ -10,8 +10,8 @@ Baseline used for source references: local `origin/master`
 filing if master has moved.
 
 Scope decision: `plans/github-issue-breakdown.md` lists 19 Category A rows, but
-the last row is already extracted as PR #539. This file prepares the 18 critical
-master issues still intended for manual filing.
+the last row is already extracted as PR #539. This file prepares the critical master issues still intended for manual filing
+(originally 18; rows 19 and 20 were graduated 2026-08-25 from the audit waves).
 
 ## Reviewer Framing
 
@@ -87,6 +87,8 @@ without its listed dependency.
 | 16 | Extract only contribution re-owner hunks from broad `0af827c72`; real conflicts in `Component.java` and `MethodStructure.java`. | `org.xvm.asm.ComponentBodyCopyTest.contributionsAreReOwnedByBodyCopies` fails on hidden outer owner. | Needs exact master hunk before filing. |
 | 17 | Source-only clean from `25371b397`. | `org.xvm.asm.ComponentBodyCopyTest.methodBodyCopyRebindsSourceOuter` fails on hidden outer method. | Decided 2026-08-25: files WITH row 16 as one PR (launch-plan row L10). |
 | 18 | Extract from `c621b1dca`; real conflict in `xRTFunction.java`. | `org.xvm.runtime.template._native.reflect.FinalizerChainTest.chainAppendsAtTailInsteadOfDroppingLinkedFinalizers()` fails under both `-ea` and `-da`. | Needs exact master hunk before filing. |
+| 19 | Extract from `8077ad6c0`: the one-line `f_implicits` `ConcurrentHashMap` conversion plus `implicitIdentityCacheIsConcurrentSafe()`. | `org.xvm.asm.ConstantPoolDiagnosticsTest.implicitIdentityCacheIsConcurrentSafe()` fails on the plain-`HashMap` shape (verified by reverting the fix). | Ready after manual review; the test's master form drops the branch-only surrounding cases. |
+| 20 | Extract from `5d9a5f395`: the detached-build factories, the copy-on-write publish primitives, and the reworked `ensure*Delegation` - WITHOUT the synthesis window (`openRuntimeSynthesisWindow` exists only because of this branch's publication marker; master has no marker). | `org.xvm.asm.DelegationSynthesisTest` concurrent hammer (probabilistic red: half-built method observed / null multimethod); the deterministic marker test is branch-only. | Needs a filtered master patch; the mechanics (detached build, `publishRuntimeChild`, `publishOrAdoptSynthesizedMethod`, volatile maps) are additive and portable. |
 
 ## Reuse Exposure Categories
 
@@ -1397,6 +1399,112 @@ cherry-pick.
 
 **Dependencies/order:** None. File before broader handle lifecycle work if the
 patch stays self-contained.
+
+## 19. Implicit-identity cache is written from concurrent service threads
+
+**Issue title:** `ConstantPool.f_implicits` must be a concurrent map.
+
+**Status/category:** Category A. Concurrent, but reachable in ANY program whose
+services resolve implicit names: all ServiceContexts of one container share one
+pool over the shared multi-thread executor - the same exposure bucket as the
+timer-callback rows 9/10, no parallel containers required.
+
+**Explanation:** `getImplicitlyImportedIdentity(...)` lazily caches resolved
+implicit identities in a plain `HashMap` on the shared pool. Runtime callers
+hit it from service threads (e.g. `xService` resolving `Timeout` through
+`owner.pool()`, TypeInfo builds resolving `Object`/`String`). A `put` resize
+racing another thread's `get` can structurally corrupt the map - lost
+unrelated entries, broken bins - not merely duplicate work. The cached values
+themselves converge (identities are interned), so the map implementation is
+the entire defect.
+
+**Master evidence:** `origin/master:javatools/src/main/java/org/xvm/asm/ConstantPool.java:3984`
+declares the plain `HashMap`; `:1207` reads and `:1242` writes it on the
+lazy-miss path.
+
+**Failure mode:** Concurrent implicit-name resolution corrupts the pool-wide
+name cache; later lookups can miss or misresolve for every service of the
+container.
+
+**Minimal master-portable fix strategy:** Declare the field as
+`ConcurrentHashMap`. One line; values are interned so racing writers publish
+identical entries.
+
+**Patch/diff section:** Branch seed: `8077ad6c0` (the `ConstantPool.java`
+one-liner plus the test).
+
+**Tests to add/run on master:**
+`ConstantPoolDiagnosticsTest.implicitIdentityCacheIsConcurrentSafe()` - the
+instance-type pin fails deterministically on the `HashMap` shape (verified on
+this branch by reverting the fix); the parallel exercise is the behavioral
+companion. The master form of the test stands alone (drop the branch-only
+sibling cases).
+
+**Master dry-run status:** The fix is a one-line field-initializer change plus
+an additive test; no conflict surface beyond branch docs.
+
+**Dependencies/order:** None.
+
+## 20. Delegation synthesis publishes half-built method code
+
+**Issue title:** Runtime-lazy delegation synthesis must assemble before it
+publishes.
+
+**Status/category:** Category A. Concurrent, but reachable in ANY program in
+which two services dispatch a delegating class's member: the optimized-chain
+build is lazy and per-TypeInfo-view, so two views race the same host
+`ClassStructure` - single container, ordinary scheduling.
+
+**Explanation:** `ensureMethodDelegation`/`ensurePropertyDelegation`
+synthesize the delegating method on first dispatch, and master attaches the
+method as a findable child BEFORE building and assembling its code. A
+concurrent dispatcher whose `findMethod` sees the half-built method captures
+a partial, unlinked op array (`Code.ensureOps` hands out the in-progress
+list), and both threads then mutate the same `Code` in place - `code.add`
+racing `forceAssembly`'s dead-code elimination and re-linking. The nested
+`ensureMultiMethodStructure` check-then-create races the same way (the loser
+observes null from the failed `addChild`). Corrupted decoded code executes,
+or the dispatch NPEs.
+
+**Master evidence:** `origin/master:javatools/src/main/java/org/xvm/asm/ClassStructure.java:2958`
+(property accessor created and attached) with `forceAssembly` only at
+`:2980`; `:3009` (method delegation created and attached) with
+`forceAssembly` at `:3135`; no synchronization anywhere on the path; child
+maps are plain `ListMap`s mutated in place under concurrent readers.
+
+**Failure mode:** Concurrent first dispatch of a delegating member yields a
+method with zero/partial ops, duplicate assembly of one `Code`, corrupted
+child maps, or a null multimethod - nondeterministic by scheduling.
+
+**Minimal master-portable fix strategy:** Build the synthetic method
+DETACHED, assemble completely, then publish atomically first-wins with
+copy-on-write child-map republication (volatile fields), so unsynchronized
+readers only ever observe complete maps and complete methods; racing builders
+discard their build and adopt the winner. No lock is held across TypeInfo
+construction (synthesis can recurse cross-class).
+
+**Patch/diff section:** Branch seed: `5d9a5f395`. Portable pieces: the
+`MultiMethodStructure.createDetachedMethod*` factories,
+`Component.publishRuntimeChild`/`ensureRuntimeMultiMethodStructure`,
+`MultiMethodStructure.publishOrAdoptSynthesizedMethod`, the volatile
+`m_childByName`/`m_methodByConstant` fields, and the reworked
+`ensure*Delegation` bodies. NOT portable: `openRuntimeSynthesisWindow` - it
+exists only because this branch's pool publication marker (itself a branch
+guard) rejected the synthesis registrations; master has no marker and needs
+no window.
+
+**Tests to add/run on master:**
+`DelegationSynthesisTest.concurrentSynthesisYieldsOneAssembledAccessor()` and
+`synthesizedAccessorIsFindableAndStable()` (the deterministic marker test is
+branch-only). The concurrent red is probabilistic on master's shape; on this
+branch the pre-fix run reproduced the null-multimethod race directly.
+
+**Master dry-run status:** Needs a filtered patch (the branch commit also
+touches the branch-only window and marker interplay); the portable pieces are
+additive plus two method-body rewrites.
+
+**Dependencies/order:** None. File after row 19 if sequencing matters (both
+touch `ConstantPool`-adjacent files, but they do not conflict).
 
 ## Items intentionally not in the 18
 
