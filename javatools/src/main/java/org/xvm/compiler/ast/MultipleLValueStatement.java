@@ -245,6 +245,23 @@ public final class MultipleLValueStatement
      */
     protected final class MultipleLValueExpression
             extends Expression {
+        protected MultipleLValueExpression() {
+        }
+
+        /**
+         * Shallow copy constructor for {@link #deepCopy()}. The copy keeps the ORIGINAL's
+         * enclosing statement (the implicit outer reference binds to the shallowCopy caller's
+         * outer), exactly as the old reflective clone carried the outer reference verbatim.
+         */
+        protected MultipleLValueExpression(MultipleLValueExpression that) {
+            super(that);
+        }
+
+        @Override
+        protected AstNode shallowCopy() {
+            return new MultipleLValueExpression(this);
+        }
+
         @Override
         public MultipleLValueStatement getParent() {
             return MultipleLValueStatement.this;

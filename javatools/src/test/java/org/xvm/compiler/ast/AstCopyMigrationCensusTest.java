@@ -19,15 +19,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Ratchet for the AST-island clone eradication (user-approved series): the compiler AST is the
  * one island where {@code Cloneable} genuinely dies. Migration design: {@code AstNode.deepCopy()}
  * walks children over a per-class {@code shallowCopy()}; converted classes provide an explicit
- * copy constructor, unconverted classes ride the single {@code super.clone()} bridge in
- * {@code AstNode}, and every converted copy is assertion-checked field-by-field against the
- * reflective clone, so a hand-written copy constructor cannot silently omit a field (the
- * field-omission hazard that made the prior audit keep the island).
+ * copy constructor, {@code Cloneable}, {@code clone()}, and the migration bridge are GONE -
+ * {@code shallowCopy()} is abstract, so the sealed hierarchy makes coverage
+ * compiler-enforced, and every copy is assertion-checked field-by-field so a copy
+ * constructor cannot silently omit a field (the hazard that made the prior audit keep the
+ * island).
  *
- * <p>This census pins the migration state so it can only move forward: the bridge count can
- * never grow past one, direct {@code .clone()} calls on AST nodes can never come back (the
- * walk and the entry points use {@code deepCopy()}), and when the final commit deletes the
- * bridge, {@code Cloneable}, and {@code clone()}, this test flips to pin their absence.</p>
+ * <p>This census pins the end state: no {@code super.clone()}, no {@code Cloneable}, no
+ * {@code clone()} declaration, and no direct {@code .clone()} calls on AST nodes may ever
+ * return to the island.</p>
  */
 public class AstCopyMigrationCensusTest {
     @Test
@@ -50,13 +50,13 @@ public class AstCopyMigrationCensusTest {
             }
         }
 
-        assertEquals(1, cSuperClone,
-                "exactly one super.clone() bridge (in AstNode.shallowCopy) may exist during"
-                        + " the migration; converted classes use explicit copy constructors");
-        assertEquals(1, cCloneable,
-                "Cloneable lives only on AstNode until the eradication commit");
-        assertEquals(1, cCloneDecl,
-                "clone() is a final delegate to deepCopy(); no class may re-introduce its own");
+        assertEquals(0, cSuperClone,
+                "the AST island is clone-free: no super.clone() may return; every concrete"
+                        + " node class has an explicit copy constructor behind shallowCopy()");
+        assertEquals(0, cCloneable,
+                "Cloneable is eradicated from the AST island");
+        assertEquals(0, cCloneDecl,
+                "clone() is eradicated; deepCopy() is the only copy entry point");
     }
 
     @Test

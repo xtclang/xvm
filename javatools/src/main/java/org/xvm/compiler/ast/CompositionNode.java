@@ -185,6 +185,17 @@ public abstract sealed class CompositionNode
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Extends.class,
                 "condition", "type", "args");
+
+        protected Extends(Extends that) {
+            super(that);
+            this.args = that.args;
+            this.lEndPos = that.lEndPos;
+        }
+
+        @Override
+        protected AstNode shallowCopy() {
+            return new Extends(this);
+        }
     }
 
 
@@ -245,6 +256,16 @@ public abstract sealed class CompositionNode
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Annotates.class,
                 "annotation");
+
+        protected Annotates(Annotates that) {
+            super(that);
+            this.annotation = that.annotation;
+        }
+
+        @Override
+        protected AstNode shallowCopy() {
+            return new Annotates(this);
+        }
     }
 
 
@@ -331,6 +352,17 @@ public abstract sealed class CompositionNode
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Incorporates.class,
                 "condition", "type", "args", "constraints");
+
+        protected Incorporates(Incorporates that) {
+            super(that);
+            this.args = that.args;
+            this.constraints = that.constraints;
+        }
+
+        @Override
+        protected AstNode shallowCopy() {
+            return new Incorporates(this);
+        }
     }
 
 
@@ -340,6 +372,15 @@ public abstract sealed class CompositionNode
             extends CompositionNode {
         public Implements(Expression condition, Token keyword, TypeExpression type) {
             super(condition, keyword, type);
+        }
+
+        protected Implements(Implements that) {
+            super(that);
+        }
+
+        @Override
+        protected AstNode shallowCopy() {
+            return new Implements(this);
         }
     }
 
@@ -395,6 +436,18 @@ public abstract sealed class CompositionNode
 
         private static final Field[] CHILD_FIELDS =
                 fieldsForNames(Delegates.class, "condition", "type", "delegatee");
+
+        protected Delegates(Delegates that) {
+            super(that);
+            this.delegatee = that.delegatee;
+            this.lEndPos = that.lEndPos;
+            this.name = that.name;
+        }
+
+        @Override
+        protected AstNode shallowCopy() {
+            return new Delegates(this);
+        }
     }
 
 
@@ -404,6 +457,15 @@ public abstract sealed class CompositionNode
             extends CompositionNode {
         public Into(Expression condition, Token keyword, TypeExpression type) {
             super(condition, keyword, type);
+        }
+
+        protected Into(Into that) {
+            super(that);
+        }
+
+        @Override
+        protected AstNode shallowCopy() {
+            return new Into(this);
         }
     }
 
@@ -577,6 +639,20 @@ public abstract sealed class CompositionNode
 
         private static final Field[] CHILD_FIELDS =
                 fieldsForNames(Import.class, "condition", "type", "vers", "injects", "injector");
+
+        protected Import(Import that) {
+            super(that);
+            this.modifier = that.modifier;
+            this.vers = that.vers;
+            this.injects = that.injects;
+            this.injector = that.injector;
+            this.lEndPos = that.lEndPos;
+        }
+
+        @Override
+        protected AstNode shallowCopy() {
+            return new Import(this);
+        }
     }
 
 
@@ -616,6 +692,17 @@ public abstract sealed class CompositionNode
         protected long       lEndPos;
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Default.class, "condition", "expr");
+
+        protected Default(Default that) {
+            super(that);
+            this.expr = that.expr;
+            this.lEndPos = that.lEndPos;
+        }
+
+        @Override
+        protected AstNode shallowCopy() {
+            return new Default(this);
+        }
     }
 
 

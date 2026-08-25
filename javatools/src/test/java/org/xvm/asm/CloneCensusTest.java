@@ -42,17 +42,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class CloneCensusTest {
     /** The only classes that may declare {@code Cloneable}. */
     private static final Set<String> CLONEABLE_ISLANDS = Set.of(
-            "org/xvm/compiler/ast/AstNode.java",
             "org/xvm/runtime/ObjectHandle.java");
 
     /**
      * The only files that may invoke {@code super.clone()}. Ratcheted DOWN 2026-08-25: the
-     * three AST special-copy overrides (LambdaExpression, NamedTypeExpression, NewExpression)
-     * became {@code completeCopy} hooks over the single {@code AstNode.shallowCopy()} bridge,
-     * which itself dies with the copy-constructor migration's final commit.
+     * AST island is fully clone-free as of the copy-constructor migration: explicit copy
+     * constructors behind an abstract {@code shallowCopy()}, compiler-enforced by the sealed
+     * hierarchy. {@code ObjectHandle} remains the one deliberate island (views by design).
      */
     private static final Set<String> SUPER_CLONE_ISLANDS = Set.of(
-            "org/xvm/compiler/ast/AstNode.java",
             "org/xvm/runtime/ObjectHandle.java");
 
     @Test

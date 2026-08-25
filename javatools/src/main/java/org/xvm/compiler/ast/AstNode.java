@@ -67,7 +67,6 @@ import static org.xvm.util.Handy.indentLines;
  * Common base class for all statements and expressions.
  */
 public abstract sealed class AstNode
-        implements Cloneable
         permits CompositionNode, Expression, Parameter,
                 Statement, VersionOverride {
     // ----- accessors -----------------------------------------------------------------------------
@@ -209,11 +208,6 @@ public abstract sealed class AstNode
         return NO_FIELDS;
     }
 
-    @Override
-    public final AstNode clone() {
-        return deepCopy();
-    }
-
     /**
      * Produce a deep copy of this node for trial validation: children (per
      * {@link #getChildFields()}) are recursively copied and adopted onto the copy; every other
@@ -222,12 +216,10 @@ public abstract sealed class AstNode
      * copies are validated without ever being adopted into a tree and resolve source, pool,
      * and name-resolution context through it.
      *
-     * <p>This is the clone-eradication replacement for the old {@code Cloneable}-based walk:
-     * the per-node shallow copy comes from {@link #shallowCopy()} - an explicit copy
-     * constructor for converted classes, the {@code super.clone()} bridge for the rest - and
-     * while the bridge exists, every converted class's copy is assertion-checked field-by-field
-     * against the reflective clone, so a hand-written copy constructor cannot silently omit a
-     * field.</p>
+     * <p>The per-node shallow copy comes from {@link #shallowCopy()} - an explicit copy
+     * constructor on every concrete node class, compiler-enforced by the sealed hierarchy -
+     * and every copy is assertion-checked field-by-field, so a copy constructor cannot
+     * silently omit a field.</p>
      */
     public final AstNode deepCopy() {
         AstNode that = shallowCopy();
@@ -290,18 +282,14 @@ public abstract sealed class AstNode
     }
 
     /**
-     * Produce the per-node shallow copy for {@link #deepCopy()}. Converted classes override
-     * this with an explicit copy constructor; the default is the {@code super.clone()} bridge
-     * that remains only until every class in the sealed hierarchy has converted, at which
-     * point the bridge, {@code Cloneable}, and {@code clone()} are deleted together.
+     * Produce the per-node shallow copy for {@link #deepCopy()}: every concrete node class
+     * provides an explicit copy constructor. Abstract, because the sealed hierarchy plus this
+     * declaration make the coverage compiler-enforced: a new concrete node class cannot exist
+     * without deciding how it copies. ({@code Cloneable} and {@code Object.clone()} are gone
+     * from this island; the field-parity assertion in {@link #deepCopy()} remains the
+     * permanent net against a copy constructor missing a later-added field.)
      */
-    protected AstNode shallowCopy() {
-        try {
-            return (AstNode) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
-    }
+    protected abstract AstNode shallowCopy();
 
     /**
      * Post-walk adjustment hook for the copy produced by {@link #deepCopy()}: runs AFTER the
@@ -314,11 +302,9 @@ public abstract sealed class AstNode
     }
 
     /**
-     * Migration self-check: a hand-written copy constructor must cover EVERY field the
-     * reflective clone used to copy. Compares this node and the fresh shallow copy
-     * field-by-field (reference identity for objects, equality for primitives) across the
-     * whole class hierarchy; runs only under assertions, and is trivially true for classes
-     * still on the {@code super.clone()} bridge.
+     * Permanent self-check: a copy constructor must cover EVERY field. Compares this node and
+     * the fresh shallow copy field-by-field (reference identity for objects, equality for
+     * primitives) across the whole class hierarchy; runs only under assertions.
      */
     private boolean copyCoversEveryField(AstNode that) {
         if (that == this || that.getClass() != this.getClass()) {
