@@ -260,7 +260,7 @@ public class MainContainer
      */
     private static int invokeCall(Frame frame, ObjectHandle target, CallChain chain,
                                   ObjectHandle[] args, int iReturn, String sMethodName) {
-        frame.poolContext().markRuntimePublishedForDiagnostics(
+        frame.poolContext().markRuntimePublished(
                 "MainContainer.invoke0(" + sMethodName + ')');
         return chain.invoke(frame, target, args, iReturn);
     }

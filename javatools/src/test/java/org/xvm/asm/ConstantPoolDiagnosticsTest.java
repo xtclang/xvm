@@ -28,6 +28,7 @@ import org.xvm.asm.constants.TypeConstant.Relation;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -46,9 +47,9 @@ public class ConstantPoolDiagnosticsTest {
     public void publicationMarkerIsInstalledByDefault() {
         var pool = new FileStructure("test").getConstantPool();
 
-        pool.markRuntimePublishedForDiagnostics("unit-test");
+        pool.markRuntimePublished("unit-test");
 
-        assertTrue(pool.isRuntimePublishedForDiagnostics());
+        assertTrue(pool.isRuntimePublished());
         var error = assertThrows(IllegalStateException.class,
                 () -> pool.ensureStringConstant("late"));
         assertTrue(error.getMessage().contains("after runtime publication"));
@@ -64,9 +65,9 @@ public class ConstantPoolDiagnosticsTest {
         ConstantPool pool = new FileStructure("test").getConstantPool();
         Constant existing = pool.ensureStringConstant("existing");
 
-        pool.markRuntimePublishedForDiagnostics("unit-test");
+        pool.markRuntimePublished("unit-test");
 
-        assertTrue(pool.isRuntimePublishedForDiagnostics());
+        assertTrue(pool.isRuntimePublished());
         assertSame(existing, pool.ensureStringConstant("existing"));
 
         IllegalStateException error = assertThrows(IllegalStateException.class,
@@ -85,7 +86,7 @@ public class ConstantPoolDiagnosticsTest {
         ConstantPool pool = new FileStructure("test").getConstantPool();
         Set<Constant.Format> formatsBefore = Set.copyOf(constantMaps(pool).keySet());
 
-        pool.markRuntimePublishedForDiagnostics("unit-test");
+        pool.markRuntimePublished("unit-test");
 
         assertThrows(IllegalStateException.class,
                 () -> pool.register(new DiagnosticConstant(pool)));
@@ -104,7 +105,7 @@ public class ConstantPoolDiagnosticsTest {
         var file = new FileStructure("test");
         var pool = file.getConstantPool();
 
-        pool.markRuntimePublishedForDiagnostics("unit-test");
+        pool.markRuntimePublished("unit-test");
 
         var error = assertThrows(IllegalStateException.class,
                 () -> file.writeTo(new ByteArrayOutputStream()));
@@ -123,7 +124,7 @@ public class ConstantPoolDiagnosticsTest {
         var pool  = file.getConstantPool();
         var idNew = pool.ensureModuleConstant("renamed");
 
-        pool.markRuntimePublishedForDiagnostics("unit-test");
+        pool.markRuntimePublished("unit-test");
 
         var error = assertThrows(IllegalStateException.class,
                 () -> file.replaceModuleId(idNew));
@@ -143,7 +144,7 @@ public class ConstantPoolDiagnosticsTest {
         var pool    = file.getConstantPool();
         var idClass = pool.ensureClassConstant(file.getModuleId(), "Child");
 
-        pool.markRuntimePublishedForDiagnostics("unit-test");
+        pool.markRuntimePublished("unit-test");
 
         var error = assertThrows(IllegalStateException.class,
                 () -> pool.invalidateTypeInfos(idClass));

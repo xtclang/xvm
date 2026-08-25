@@ -38,12 +38,12 @@ public class ClassCompositionLateRegistrationTest {
             var type      = pool.typeObject();
             var clz       = new ClassComposition(container, null, type);
 
-            pool.markRuntimePublishedForDiagnostics("unit-test");
+            pool.markRuntimePublished("unit-test");
 
             TypeComposition protectedView = clz.ensureAccess(Access.PROTECTED);
 
             assertSame(protectedView, clz.ensureAccess(Access.PROTECTED));
-            assertTrue(pool.isRuntimePublishedForDiagnostics());
+            assertTrue(pool.isRuntimePublished());
         } finally {
             runtime.shutdownXVM();
         }
@@ -63,12 +63,12 @@ public class ClassCompositionLateRegistrationTest {
             var pool      = file.getConstantPool();
             var type      = pool.typeObject();
 
-            pool.markRuntimePublishedForDiagnostics("unit-test");
+            pool.markRuntimePublished("unit-test");
 
             var clz = new ClassComposition(container, null, type);
 
             assertSame(clz, clz.ensureAccess(Access.PUBLIC));
-            assertTrue(pool.isRuntimePublishedForDiagnostics());
+            assertTrue(pool.isRuntimePublished());
         } finally {
             runtime.shutdownXVM();
         }

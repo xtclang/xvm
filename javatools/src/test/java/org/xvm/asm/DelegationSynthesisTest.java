@@ -30,7 +30,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * dispatcher (a second MethodInfo/PropertyInfo owner for the same host class and signature)
  * could find the half-built method, capture a partial unlinked op array, and race the winner's
  * in-place {@code forceAssembly}. The fix builds the method detached, assembles it completely,
- * and publishes under the host class's synthesis lock with a find-or-discard check.
+ * and publishes through the atomic first-wins copy-on-write primitives on the component's own
+ * monitor ({@code Component.publishRuntimeChild},
+ * {@code MultiMethodStructure.publishOrAdoptSynthesizedMethod}); racing builders discard their
+ * build in favor of the winner.
  *
  * <p>Second, the branch's always-on pool publication marker turned LEGITIMATE lazy delegation
  * into a loud IllegalStateException in the main container: synthesis must intern genuinely new
@@ -45,7 +48,7 @@ public class DelegationSynthesisTest {
     @Test
     public void publishedPoolPermitsDelegationSynthesis() {
         var fixture = new Fixture();
-        fixture.pool.markRuntimePublishedForDiagnostics("unit-test");
+        fixture.pool.markRuntimePublished("unit-test");
 
         MethodStructure accessor = fixture.host.ensurePropertyDelegation(
                 fixture.prop, fixture.propTarget, fixture.sigGet);

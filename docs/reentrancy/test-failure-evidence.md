@@ -117,7 +117,7 @@ It validates that repeated direct runner invocations do not reuse stale
 container-owned runtime state from a prior run in the same Gradle JVM.
 
 `ConstantPoolDiagnosticsTest.publicationMarkerIsInstalledByDefault()` fails on
-the old shape because `markRuntimePublishedForDiagnostics(...)` left normal
+the old shape because `markRuntimePublished(...)` (formerly `markRuntimePublishedForDiagnostics`) left normal
 pools unmarked; it passes here because a new post-publication registration
 throws before mutating pool storage.
 

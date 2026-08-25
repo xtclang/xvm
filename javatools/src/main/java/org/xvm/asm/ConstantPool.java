@@ -389,7 +389,7 @@ public class ConstantPool
      *
      * @param owner  short description of the runtime boundary publishing this pool
      */
-    public void markRuntimePublishedForDiagnostics(String owner) {
+    public void markRuntimePublished(String owner) {
         if (runtimePublication == null) {
             prewarmRuntimeAccessTypeConstants();
         }
@@ -445,7 +445,7 @@ public class ConstantPool
     /**
      * @return true iff late-registration diagnostics currently consider this pool published
      */
-    public boolean isRuntimePublishedForDiagnostics() {
+    public boolean isRuntimePublished() {
         return runtimePublication != null;
     }
 
@@ -2608,7 +2608,7 @@ public class ConstantPool
     public SingletonConstant valTowardZero()     {SingletonConstant c = m_valTowardZero;     if (c == null) {m_valTowardZero     = c = ensureSingletonConstConstant(clzTowardZero()                    );} return c;}
     public SingletonConstant valTowardNegative() {SingletonConstant c = m_valTowardNegative; if (c == null) {m_valTowardNegative = c = ensureSingletonConstConstant(clzTowardNegative()                );} return c;}
 
-    public RegisterConstant  valDefault()        {RegisterConstant  c = m_valDefault;        if (c == null) {m_valDefault        = c = new RegisterConstant(this, Register.DEFAULT)                     ;} return c;}
+    public RegisterConstant  valDefault()        {RegisterConstant  c = m_valDefault;        if (c == null) {m_valDefault        = c = register(new RegisterConstant(this, Register.DEFAULT))           ;} return c;}
 
     public SignatureConstant sigAppendTo()       {SignatureConstant c = m_sigAppendTo;       if (c == null) {m_sigAppendTo       = c = getSignature("Stringable",  "appendTo",  1)                      ;} return c;}
     public SignatureConstant sigEstimateStrLen() {SignatureConstant c = m_sigEstStrLen;      if (c == null) {m_sigEstStrLen      = c = getSignature("Stringable",  "estimateStringLength",  0)          ;} return c;}
