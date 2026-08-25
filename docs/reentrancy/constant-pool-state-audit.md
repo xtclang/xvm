@@ -60,11 +60,11 @@ expanded catalog to `constant-pool-hostile-state-audit.md`.
 | Priority | Category | Sites | Why it matters | Proper fix or guard |
 | --- | --- | --- | --- | --- |
 | Must fix | Wrong-owner runtime/helper state copied by adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, `MethodConstant`, `PropertyConstant`, `FormalTypeChildConstant`, `DynamicFormalConstant`, `RegisterConstant`, `MethodBindingConstant`, and `HandleConstant` | `adoptedBy(...)` changes pool ownership. Shallow-copied runtime/cache/helper state can still point at the source pool/container, compiler method/register owner, frame descriptor owner, or JIT owner. | Reset or reconstruct all non-logical state at adoption/owner-change boundaries. Throw/assert when live handles, moving compiler registers, or non-shared foreign register types are adopted into another pool. |
-| Done in this branch; scoped bridge remains | Ambient current pool in runtime execution | Semantic main-code callers are fixed and `getCurrentPool()` has been removed; boundary scopes remain through `withPool(...)` | A thread-local owner is hidden from signatures. Missing scope cleanup or execution on a different thread selects the wrong pool or `null`. | Keep explicit `Frame`, `Container`, or `ConstantPool` parameters. Use scoped owner context only as a transitional boundary bridge with diagnostics. |
+| Done in this branch for semantic lookup; should fix bridge removal | Ambient current pool in runtime execution | Semantic main-code callers are fixed and `getCurrentPool()` has been removed; boundary scopes remain through `withPool(...)` | A thread-local owner is hidden from signatures. Missing scope cleanup or execution on a different thread selects the wrong pool or `null`. | Keep explicit `Frame`, `Container`, or `ConstantPool` parameters. Remove `withPool(...)` completely once the remaining boundaries have explicit owners. |
 | Must audit; runtime marker fixed 2026-08-25 | Shared mutable pool mutation during parallel runtime | `register(...)`, `ensure*Constant(...)`, `f_listConst`, `m_mapConstants`, `m_mapLocators`, `getContained()` | Some structures are concurrent/copy-on-write; `f_listConst` itself is not a general concurrent collection. The current design assumes registration and validation reentrancy more than arbitrary parallel mutation. | This branch now always installs the runtime publication marker and rejects genuinely new registrations after that point. Long term, split "frozen runtime pool" from compiler/linker mutation and close destructive storage paths. |
 | Must audit | Live runtime handles embedded as constants | `HandleConstant` in `xRTTypeTemplate.resolveFormalType`, used as annotation parameter values | A live `ObjectHandle` is owner-specific and cannot become a pool-shared serialized logical constant. | This branch adds a `HandleConstant.copyForAdoption(...)` guard for cross-pool movement. Diagnostics for annotated types carrying live handles remain useful. |
 | Should fix soon | Unsynchronized per-pool lazy implicit caches | `f_implicits`, `m_clz*`, `m_type*`, `m_val*`, `m_sig*`, `m_setJitPrimitives` | These are owner-local, so they are not cross-container globals. They are still plain lazy writes and can duplicate work or race under concurrent use of one pool. | Use owner-local `Lazy` or `ConcurrentMap.computeIfAbsent` for hot/shared runtime caches, or freeze/warm them before parallel runtime execution. |
-| Should fix soon | Ambient `ThreadLocal` implementation | `s_tloPool`, `getCurrentPool`, `withPool` | Raw `ThreadLocal` with mutable holder arrays relies on perfect manual cleanup and does not make ownership visible. This branch removed the raw setter; the remaining bridge is lexical. | Replace with explicit parameters. Where plumbing is too broad, migrate to a small `ScopedValue<RuntimeOwner>` bridge that points to the real owner. |
+| Should fix soon | Ambient `ThreadLocal` implementation | `s_tloPool`, `getCurrentPool`, `withPool` | Raw `ThreadLocal` with mutable holder arrays relies on perfect manual cleanup and does not make ownership visible. This branch removed the raw setter; the remaining bridge is lexical. | Replace with explicit parameters and delete `withPool(...)`/`s_tloPool`. A `ScopedValue` bridge would improve cleanup, but it would still hide ownership and should not be the endpoint. |
 | Done in this branch | Static immutable implicit metadata maps | `s_implicits`, `s_implicitsByPath` | Class-init publication was safe, but the old maps were mutable `HashMap`s held in final static fields. No code mutated them today, but process-wide static metadata should not remain accidentally writable. | The static initializer now clones parser-returned path arrays into a private map and freezes both maps with `Map.copyOf(...)`. `ConstantPoolDiagnosticsTest.staticImplicitMetadataMapsAreImmutable()` guards the shape. |
 | Compiler backlog | Destructive pool optimization and module replacement | `optimize()`, `replaceModule(...)`, disassembly/assembly paths | These mutate pool contents, positions, and caches. They are intended for serialization/compiler flows, not concurrent runtime execution. | Keep out of this PR. Incremental compiler work should isolate mutable compiler pools from frozen runtime pools. |
 
@@ -78,7 +78,7 @@ Current `ConstantPool` fields fall into these groups.
 | --- | --- | --- |
 | `s_implicits` | Done in this branch | Parsed once from `implicit.x`. The static initializer clones parsed path arrays and stores them in an immutable map. |
 | `s_implicitsByPath` | Done in this branch | Same static catalog, now frozen with `Map.copyOf(...)`. |
-| `s_tloPool` | Must audit, runtime-relevant | Ambient owner lookup. The stored value is per thread, but the owner dependency is hidden. This branch removed raw `setCurrentPool(...)` mutation and removed `getCurrentPool()`, leaving only lexical `withPool(...)` scopes. Replace deeper ownerless lookups with explicit parameters where possible; otherwise migrate to `ScopedValue` as a bridge. |
+| `s_tloPool` | Should fix, runtime-relevant | Ambient owner lookup. The stored value is per thread, but the owner dependency is hidden. This branch removed raw `setCurrentPool(...)` mutation and removed `getCurrentPool()`, leaving only lexical `withPool(...)` scopes. Replace the remaining scopes with explicit owner parameters and delete the thread-local bridge. |
 
 ### Core Pool Storage
 
@@ -330,10 +330,10 @@ registration, split runtime pools from compiler/linker mutation, or add a
 narrow allowlist only after proving the late registration is deterministic,
 owner-local, and concurrency-safe.
 
-## ScopedValue Replacement Shape
+## Ambient Bridge End State
 
-The future shape for ambient owner lookup should mirror
-[scoped-value.md](scoped-value.md):
+A `ScopedValue<RuntimeOwner>` bridge would be safer than the current raw
+`ThreadLocal` because the binding is lexical:
 
 ```java
 record RuntimeOwner(Container container, ConstantPool pool) {
@@ -344,14 +344,14 @@ record RuntimeOwner(Container container, ConstantPool pool) {
 }
 ```
 
-Boundary code binds it:
+Boundary code could bind it:
 
 ```java
 RuntimeOwner owner = new RuntimeOwner(container, container.getConstantPool());
 ScopedValue.where(RuntimeOwners.CURRENT, owner).run(() -> invoke(...));
 ```
 
-Legacy helpers can read it only as a bridge:
+But that is still not the desired final API. A helper that reads
 
 ```java
 static ConstantPool currentPool() {
@@ -359,7 +359,7 @@ static ConstantPool currentPool() {
 }
 ```
 
-Preferred APIs still take explicit owners:
+still hides an owner from the signature. The endpoint is explicit ownership:
 
 ```java
 TypeConstant ensureResultType(ConstantPool pool, TypeConstant left, TypeConstant right) {
@@ -367,10 +367,10 @@ TypeConstant ensureResultType(ConstantPool pool, TypeConstant left, TypeConstant
 }
 ```
 
-`ScopedValue` improves cleanup and makes the dynamic scope lexical. It does not
-make hidden owner lookup ideal, and it must not become a storage location for
-caches. The actual caches must remain on `Container`, `ConstantPool`,
-`NativeTemplates`, templates, or other real owners.
+The follow-up should remove `ConstantPool.withPool(...)`, `s_tloPool`, and the
+current-pool source-shape allowlist completely. `ScopedValue` remains valid for
+narrow context-sensitive algorithms such as `TypeConstant.s_context`, but it is
+not a replacement for owner parameters.
 
 ## Stress Strategy
 

@@ -601,9 +601,10 @@ itself becomes part of a deterministic compiler/runtime test.
 4. Add ServiceContext restoration and stale-context tests.
 5. Add JIT two-container tests for generated `<clinit>`, `$scN`, and bridge
    `$INSTANCE` ownership.
-6. Decide whether `ConstantPool.withPool(...)` should migrate from raw
-   `ThreadLocal` to a single `ScopedValue<RuntimeOwner>` bridge. This is useful
-   only after permanent APIs keep passing explicit owners.
+6. Remove `ConstantPool.withPool(...)` completely after the remaining boundary
+   callers pass explicit owners. Migrating the current-pool bridge to
+   `ScopedValue<RuntimeOwner>` would improve cleanup, but it would still hide
+   ownership from method signatures and should not be the endpoint.
 
 ## Merge Gate For This Category
 

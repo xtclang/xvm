@@ -28,6 +28,24 @@ and raw shared arrays. That is not a threading bug - it is the absence of a
 design provision, and it bites **even single-threaded**: the second
 sequential run in one JVM inherits the first run's world.
 
+This is not optional infrastructure for the LSP or compiler:
+
+- A real LSP is a resident server. It must keep parsed modules, type info,
+  diagnostics, semantic tokens, completion state, and open-document overlays in
+  memory while the editor sends more requests. Forking a JVM per keystroke is
+  not an LSP architecture; it throws away the cache that makes LSP useful.
+- A working integrated debugger has the same requirement. Breakpoints,
+  evaluation, hover inspection, stepping, and watch expressions all need to
+  inspect or run code inside the existing world, often while the compiler and
+  runtime answer other requests. If `toString()` warms caches and the runtime
+  has no world boundary, the debugger changes the program it is trying to
+  inspect.
+- The compiler needs both sequential and parallel same-JVM execution. Build
+  daemons, test suites, incremental compiles, and IDE requests all reuse one
+  process. Parallel validation/type-checking is the normal way to make large
+  projects responsive; request-local compiler state has to be owned by a
+  request, not by the process or a reused Java thread.
+
 > The ask at the end is not "rewrite it." We have a staged, test-backed plan
 > where most of the fixes are hunk-sized. But first, the evidence.
 
@@ -284,11 +302,85 @@ classified, and the work splits cleanly:
    long-lived fork (constant rebase cost, split ecosystem). The plan,
    commit-to-PR map, and per-PR descriptions exist either way.
 
+There are only three plausible alternatives:
+
+- **Fork per request/run.** This preserves today's process-global assumptions,
+  but it is exactly what prevents a fast LSP, resident compiler, integrated
+  debugger, and same-JVM test/stress harness. It also hides bugs that appear
+  the moment an embedding keeps the VM alive.
+- **Serialize everything through one global lock.** This avoids some races but
+  keeps wrong-owner state wrong, makes concurrent containers fictional, and
+  still leaves the second sequential run inheriting the first run's statics.
+- **Make owners explicit and test the boundaries.** This is the branch's plan:
+  small master bug fixes first, then explicit owner APIs, owner-local caches,
+  structural gates, and world diagnostics that can prove what is alive.
+
 **Closing line:** every problem above was found by trying to do something
 completely ordinary, every one is demonstrated by a test that fails on
 master today, and most fixes are small. The expensive thing is not fixing
 this - it is every future feature paying the tax of a runtime that cannot
 be observed, cannot be tested, and cannot be trusted to fail loudly.
+
+---
+
+## Appendix: World X-Ray Printouts
+
+Provenance:
+
+```bash
+./gradlew :javatools:test \
+  --tests org.xvm.runtime.WorldSnapshotDemoTest \
+  -Porg.xtclang.java.test.stdout=true \
+  --rerun-tasks --no-build-cache
+```
+
+Sequential same-JVM runs: run 2 starts while run 1's container is still
+reachable. The `retained:` line is the leak signal.
+
+```text
+== SEQUENTIAL RUNS: run 1 boots its world
+world: 1 container(s)
+  - Primordial container id=3d5168ac pool=3624da92
+ownership: valid
+
+== SEQUENTIAL RUNS: run 2 boots; run 1's container still reachable
+world: 2 container(s)
+  - Primordial container id=1591214a pool=5e9dc66
+  - Primordial container id=3d5168ac pool=3624da92
+ownership: valid
+
+== DIFF world2 - world1: 'retained' is the sequential-run leak signal
+world diff:
+added: 1
+  - Primordial container id=1591214a
+retained: 1
+  - Primordial container id=3d5168ac
+removed: 0
+
+retained container identity 1028745388 is run 1's world surviving into run 2:
+after a completed run this means the old world is still reachable and its
+container, pools, and handles cannot be collected
+```
+
+Concurrent containers: one world can hold two containers and sweep both for
+foreign-owner references.
+
+```text
+== MULTIPLE CONTAINERS: one world, two containers, one consistency sweep
+world: 2 container(s)
+  - Primordial container id=1afd4f36 pool=10a2cdbf
+  - Primordial container id=3e8a0b7f pool=2f6e649d
+ownership: valid
+
+'ownership: valid' above is the cross-container consistency check: every
+handle, pool, and template reachable from either container was verified to
+belong to it - a foreign-owner reference (container A state reachable from
+container B) would print the owner path here and fail this test
+```
+
+This is why the diagnostic matters: it turns "the process has some state" into
+"these are the worlds, these are their owners, and this exact old world is
+still reachable after the next run."
 
 ---
 
