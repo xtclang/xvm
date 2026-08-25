@@ -182,4 +182,25 @@ public final class FunctionTypeExpression
     protected long                 lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(FunctionTypeExpression.class, "returnValues", "paramTypes");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected FunctionTypeExpression(FunctionTypeExpression that) {
+        super(that);
+        this.function = that.function;
+        this.conditional = that.conditional;
+        this.returnValues = that.returnValues;
+        this.paramTypes = that.paramTypes;
+        this.lEndPos = that.lEndPos;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new FunctionTypeExpression(this);
+    }
 }

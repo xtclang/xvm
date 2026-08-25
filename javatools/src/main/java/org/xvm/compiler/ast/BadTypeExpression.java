@@ -85,4 +85,21 @@ public final class BadTypeExpression
     protected Expression nonType;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(BadTypeExpression.class, "nonType");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected BadTypeExpression(BadTypeExpression that) {
+        super(that);
+        this.nonType = that.nonType;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new BadTypeExpression(this);
+    }
 }

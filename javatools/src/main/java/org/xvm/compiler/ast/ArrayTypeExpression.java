@@ -157,4 +157,24 @@ public final class ArrayTypeExpression
     protected long             lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ArrayTypeExpression.class, "type", "indexes");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ArrayTypeExpression(ArrayTypeExpression that) {
+        super(that);
+        this.type = that.type;
+        this.dims = that.dims;
+        this.indexes = that.indexes;
+        this.lEndPos = that.lEndPos;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new ArrayTypeExpression(this);
+    }
 }

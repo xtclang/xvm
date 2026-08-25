@@ -136,4 +136,23 @@ public final class BiTypeExpression
     protected TypeExpression type2;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(BiTypeExpression.class, "type1", "type2");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected BiTypeExpression(BiTypeExpression that) {
+        super(that);
+        this.type1 = that.type1;
+        this.operator = that.operator;
+        this.type2 = that.type2;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new BiTypeExpression(this);
+    }
 }

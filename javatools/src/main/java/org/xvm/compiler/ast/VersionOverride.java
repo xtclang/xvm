@@ -115,4 +115,22 @@ public final class VersionOverride
     protected LiteralExpression exprVer;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VersionOverride.class, "exprVer");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected VersionOverride(VersionOverride that) {
+        super(that);
+        this.verb = that.verb;
+        this.exprVer = that.exprVer;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new VersionOverride(this);
+    }
 }

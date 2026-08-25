@@ -1110,4 +1110,36 @@ public sealed class NamedTypeExpression
     protected transient UnresolvedTypeConstant m_typeUnresolved;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NamedTypeExpression.class, "left", "paramTypes");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected NamedTypeExpression(NamedTypeExpression that) {
+        super(that);
+        this.module = that.module;
+        this.left = that.left;
+        this.immutable = that.immutable;
+        this.names = that.names;
+        this.access = that.access;
+        this.nonnarrow = that.nonnarrow;
+        this.paramTypes = that.paramTypes;
+        this.lStartPos = that.lStartPos;
+        this.lEndPos = that.lEndPos;
+        this.m_resolver = that.m_resolver;
+        this.m_constId = that.m_constId;
+        this.m_fVirtualChild = that.m_fVirtualChild;
+        this.m_fExternalTypedef = that.m_fExternalTypedef;
+        this.m_exprDynamic = that.m_exprDynamic;
+        this.m_constUnresolved = that.m_constUnresolved;
+        this.m_typeUnresolved = that.m_typeUnresolved;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new NamedTypeExpression(this);
+    }
 }

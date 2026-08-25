@@ -107,4 +107,23 @@ public final class Parameter
     protected Expression     value;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(Parameter.class, "type", "value");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected Parameter(Parameter that) {
+        super(that);
+        this.type = that.type;
+        this.name = that.name;
+        this.value = that.value;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new Parameter(this);
+    }
 }

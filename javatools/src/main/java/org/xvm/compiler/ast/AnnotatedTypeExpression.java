@@ -408,4 +408,28 @@ public final class AnnotatedTypeExpression
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AnnotatedTypeExpression.class,
             "annotation", "type");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected AnnotatedTypeExpression(AnnotatedTypeExpression that) {
+        super(that);
+        this.annotation = that.annotation;
+        this.type = that.type;
+        this.m_fDisassociateRef = that.m_fDisassociateRef;
+        this.m_fDisassociateClass = that.m_fDisassociateClass;
+        this.m_fAnonInner = that.m_fAnonInner;
+        this.m_fVar = that.m_fVar;
+        this.m_fInjected = that.m_fInjected;
+        this.m_typeUnresolved = that.m_typeUnresolved;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new AnnotatedTypeExpression(this);
+    }
 }

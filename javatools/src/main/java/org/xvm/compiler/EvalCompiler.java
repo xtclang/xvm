@@ -25,6 +25,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.Context;
 import org.xvm.compiler.ast.MethodDeclarationStatement;
 import org.xvm.compiler.ast.StageMgr;
@@ -325,6 +326,23 @@ public class EvalCompiler {
 
             f_frame = frame;
             f_ctx   = new EvalContext(frame, body, lambda);
+        }
+
+        /**
+         * Shallow copy constructor for {@link #deepCopy()}; the debugger-eval synthetic is the
+         * one out-of-package AstNode subclass (the reason MethodDeclarationStatement is
+         * non-sealed), so it carries its own copy support like every in-package leaf.
+         */
+        protected EvalStatement(EvalStatement that) {
+            super(that);
+
+            this.f_frame = that.f_frame;
+            this.f_ctx   = that.f_ctx;
+        }
+
+        @Override
+        protected AstNode shallowCopy() {
+            return new EvalStatement(this);
         }
 
         /**
