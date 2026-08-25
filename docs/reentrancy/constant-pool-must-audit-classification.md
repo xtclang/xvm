@@ -21,7 +21,7 @@ in the API.
 | MUST FIX for runtime-published pools; MUST AUDIT otherwise | `f_listConst`, locator maps, and constant lookup maps | The storage supports single-thread reentrant validation, not arbitrary parallel mutation after publication. |
 | MUST AUDIT, with runtime-published use as MUST FIX | Live `HandleConstant` / `ObjectHandle` state in constants | The second-adoption guard is fixed, but fresh runtime handle constants and filesystem handle caches are still live runtime state reachable from constants. |
 | SHOULD FIX, becomes MUST AUDIT when a pool is shared concurrently | Per-pool implicit/core lazy caches | Owner is local to the pool, but writes are plain lazy field writes and can register constants after runtime publication. |
-| MUST AUDIT | Owner-derived helper caches on constant subclasses | `TypeConstant`, identity/member constants, and JIT helpers mix concurrent and plain caches. Adoption clears several, but same-owner parallel publication is not fully proven. |
+| MUST AUDIT; TypeConstant relation/formal usage maps fixed 2026-08-25 | Owner-derived helper caches on constant subclasses | `TypeConstant`, identity/member constants, and JIT helpers mix concurrent and plain caches. Adoption clears several, and relation/formal usage cache keys are now owner-question-complete, but same-owner parallel publication is not fully proven for every helper. |
 | MUST AUDIT, MUST FIX if reachable on runtime pools | Destructive `optimize()`, `replaceModule(...)`, and disassembly mutations | These reorder positions, clear maps, and rewrite pool contents. They must remain compiler/serialization-only or be guarded out of runtime pools. |
 | DONE IN THIS BRANCH for semantic getter removal; MUST AUDIT for remaining bridges | Ambient current-pool effects inside constants | `getCurrentPool()` is gone and source-shape tests guard it. Remaining `withPool(...)` scopes are transitional bridge boundaries and must keep explicit owner assertions until they are replaced by explicit owner APIs. |
 | DONE IN THIS BRANCH | Static mutable metadata maps | `ConstantPool` implicit maps are now frozen after class initialization, and the unused `UnionTypeConstant.SpecialFunkies` mutable set was removed. |
@@ -681,7 +681,8 @@ work out of the registration-order PR.
 
 ## 7. Owner-Derived Helper Caches On Constant Subclasses
 
-Classification: MUST AUDIT.
+Classification: MUST AUDIT. `TypeConstant` relation and formal usage cache
+subitems are DONE IN THIS BRANCH.
 
 Evidence:
 
@@ -693,10 +694,11 @@ Evidence:
   formerly cached a runtime `TypeHandle` on the type constant. This branch
   moves that runtime cache to `Container.ensureTypeHandle(TypeConstant)`, so
   the owner dimension is explicit.
-- `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8015`
-  through `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8043`
-  lazily allocates relation, consumes, and produces maps with mixed concurrency
-  guarantees.
+- `TypeConstant` relation and formal usage maps are fixed in this branch:
+  relation answers are keyed by left type plus auto-narrowing relation context,
+  and formal consume/produce answers are keyed by formal name plus `Access`.
+  The usage maps now publish private pending/completed entries instead of a
+  public `IN_PROGRESS` enum sentinel.
 - `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8243`
   through `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8299`
   declares the main helper cache fields.
@@ -727,9 +729,11 @@ cleared indirectly by adoption/registration hooks.
 Practical same-JVM/parallel failure mode:
 
 A shared or adopted constant can serve helper state computed for another owner
-or another graph version. Within one pool, parallel TypeInfo/relation builds can
-race between placeholder, incomplete, and complete answers or publish JIT names
-before the owning type system is agreed on.
+or another graph version. Within one pool, unfixed helper caches can still race
+between placeholder, incomplete, and complete answers or publish JIT names
+before the owning type system is agreed on. The fixed `TypeConstant`
+relation/formal usage maps no longer reuse answers across different relation
+contexts or access policies.
 
 Existing reproducer, test, or diagnostic:
 
@@ -756,6 +760,9 @@ Existing reproducer, test, or diagnostic:
 - `javatools/src/test/java/org/xvm/asm/constants/TypeInfoMemberOwnershipTest.java:157`
   through `javatools/src/test/java/org/xvm/asm/constants/TypeInfoMemberOwnershipTest.java:207`
   covers parallel property/child metadata ownership.
+- `javatools/src/test/java/org/xvm/asm/constants/TypeConstantOwnerApiTest.java`
+  covers the relation cache context key and formal usage access key. Both tests
+  fail on the old cache shape.
 
 Proper fix:
 
@@ -763,7 +770,9 @@ For each cache, document owner, key, invalidation source, and publication
 guarantee. Runtime handles should be keyed by `Container`/pool and not by a
 constant that may be visible from another owner. JIT names need a `TypeSystem`
 or classloader ownership story. Plain per-constant maps need confinement proof
-or conversion to owner-local concurrent structures.
+or conversion to owner-local concurrent structures. The `TypeConstant`
+relation/formal usage maps have been converted; the remaining plain/JIT helper
+caches still need their owner story.
 
 Expected performance and semantic impact:
 
@@ -774,11 +783,12 @@ than per-object `Lazy` where footprint matters.
 
 Recommended PR slice:
 
-Create a TypeConstant/cache ownership PR after the registration/freeze work.
-The runtime `TypeHandle` cache and MethodConstant/PropertyConstant adoption
-cache copies are fixed in this branch. Continue with relation caches, then
-separately audit same-owner JIT name caches because they involve `TypeSystem`
-and classloader ownership.
+Create a remaining helper-cache ownership PR after the registration/freeze
+work. The runtime `TypeHandle` cache, `TypeConstant` relation/formal usage
+maps, and MethodConstant/PropertyConstant adoption cache copies are fixed in
+this branch. Continue with the remaining plain/JIT helper caches, especially
+same-owner JIT name caches because they involve `TypeSystem` and classloader
+ownership.
 
 ## 8. Destructive Pool Optimization, Module Replacement, And Disassembly Mutations
 

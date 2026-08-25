@@ -970,6 +970,25 @@ constant interning. Correct old callers pass the same pool they previously had
 to install ambiently; no cache behavior changes. `TypeConstantOwnerApiTest`
 guards the API shape by proving the old ownerless signatures are gone.
 
+This branch also fixes two `TypeConstant` metadata cache key bugs. On `master`,
+`m_mapRelations` used only the left-hand `TypeConstant` as its key even when
+auto-narrowing made the active relation context part of the answer. The
+replacement keys relation answers by `(left type, context)`, using `null` for
+context-free questions and the scoped context only for auto-narrowing-sensitive
+questions. `TypeConstantOwnerApiTest.relationCacheSeparatesContextualAutoNarrowingQuestions()`
+fails on the old shape because a context-bound relation and a context-free
+relation occupy the same cache slot.
+
+The same change fixes formal type usage caches. On `master`,
+`m_mapConsumes` and `m_mapProduces` accepted an `Access` argument but cached by
+formal type name only, so a first `PRIVATE` query could make a later `PUBLIC`
+query return the private answer. The replacement keys by `(formal name, Access)`
+and replaces the public `Usage.IN_PROGRESS` sentinel with private cache-entry
+state: the owner thread treats same-thread recursion as `NO`, while other
+threads wait for a completed answer instead of observing a temporary recursion
+marker. `TypeConstantOwnerApiTest.formalTypeUsageCacheIncludesAccess()` is the
+red-on-old regression.
+
 This branch also removes ambient pool lookup from numeric range constant
 folding. On `master`, `ByteConstant.apply(...)` and `IntConstant.apply(...)`
 used `ConstantPool.getCurrentPool()` for `..`, `..<`, `>..`, and `>..<`

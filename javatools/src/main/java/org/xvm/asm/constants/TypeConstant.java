@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -5942,21 +5943,17 @@ public abstract sealed class TypeConstant
             return calculateRelation(typeRecursive.getReferredToType());
         }
 
-        Map<TypeConstant, Relation> mapRelations = ensureRelationMap();
+        RelationKey keyRelation  = relationKey(typeLeft, typeRight);
+        Map<RelationKey, Relation> mapRelations = ensureRelationMap();
 
-        Relation relation = mapRelations.get(typeLeft);
+        Relation relation = mapRelations.get(keyRelation);
         if (relation != null) {
-            if (getContext() != null &&
-                    (typeLeft.containsAutoNarrowing(true) || typeRight.containsAutoNarrowing(true))) {
-                // ignore the cached result; the context may have changed
-            } else {
-                return relation;
-            }
+            return relation;
         }
 
-        Set<TypeConstant> setInProgress = m_tloInProgress.get();
+        Set<RelationKey> setInProgress = m_tloInProgress.get();
 
-        if (setInProgress != null && setInProgress.contains(typeLeft)) {
+        if (setInProgress != null && setInProgress.contains(keyRelation)) {
             // we are in recursion; this can only happen for duck-typing, for example:
             //
             //    interface I { I! foo(); }
@@ -5980,7 +5977,7 @@ public abstract sealed class TypeConstant
                     System.err.println("rejecting isA() due to a recursion: " + sRecursion);
                 }
             }
-            mapRelations.put(typeLeft, Relation.INCOMPATIBLE);
+            mapRelations.put(keyRelation, Relation.INCOMPATIBLE);
             return Relation.INCOMPATIBLE;
         }
 
@@ -5990,7 +5987,7 @@ public abstract sealed class TypeConstant
         // TerminalTypeConstant.calculateRelationToLeft()
         if (typeLeft.isImmutable() && !typeRight.isImmutable() &&
                 !typeLeft.isTypeParameter() && !typeLeft.isDynamicType()) {
-            mapRelations.put(typeLeft, Relation.INCOMPATIBLE);
+            mapRelations.put(keyRelation, Relation.INCOMPATIBLE);
             return Relation.INCOMPATIBLE;
         }
 
@@ -6030,7 +6027,7 @@ public abstract sealed class TypeConstant
                         relation = calculateDuckTypeRelation(typeLeft, typeRight, accessRight);
                     }
                 }
-                mapRelations.put(typeLeft, relation);
+                mapRelations.put(keyRelation, relation);
                 return relation;
             }
 
@@ -6039,14 +6036,14 @@ public abstract sealed class TypeConstant
                 relation = typeRight.isService()
                         ? typeRight.calculateRelation(typeLeft.getUnderlyingType())
                         : Relation.INCOMPATIBLE;
-                mapRelations.put(typeLeft, relation);
+                mapRelations.put(keyRelation, relation);
                 return relation;
             }
 
             // then check various "reserved" scenarios
             relation = checkReservedCompatibility(typeLeft, typeRight);
             if (relation != null) {
-                mapRelations.put(typeLeft, relation);
+                mapRelations.put(keyRelation, relation);
                 return relation;
             }
         }
@@ -6055,7 +6052,7 @@ public abstract sealed class TypeConstant
         if (setInProgress == null) {
             m_tloInProgress.set(setInProgress = new HashSet<>());
         }
-        setInProgress.add(typeLeft);
+        setInProgress.add(keyRelation);
         try {
             relation = typeRight.calculateRelationToLeft(typeLeft);
 
@@ -6063,12 +6060,12 @@ public abstract sealed class TypeConstant
                 relation = calculateDuckTypeRelation(typeLeft, typeRight, Access.PUBLIC);
             }
 
-            mapRelations.put(typeLeft, relation);
+            mapRelations.put(keyRelation, relation);
         } catch (RuntimeException | Error e) {
-            mapRelations.remove(typeLeft);
+            mapRelations.remove(keyRelation);
             throw e;
         } finally {
-            setInProgress.remove(typeLeft);
+            setInProgress.remove(keyRelation);
             if (setInProgress.isEmpty()) {
                 m_tloInProgress.remove();
             }
@@ -6528,24 +6525,9 @@ public abstract sealed class TypeConstant
      * @return true iff this type is a consumer of the specified formal type
      */
     public boolean consumesFormalType(String sTypeName, Access access) {
-        Map<String, Usage> mapUsage = ensureConsumesMap();
-
-        // WARNING: thread-unsafe
-        Usage usage = mapUsage.get(sTypeName);
-        if (usage == null) {
-            mapUsage.put(sTypeName, Usage.IN_PROGRESS);
-            try {
-                usage = checkConsumption(sTypeName, access, Collections.emptyList());
-            } catch (RuntimeException | Error e) {
-                mapUsage.remove(sTypeName);
-                throw e;
-            }
-
-            mapUsage.put(sTypeName, usage);
-        } else if (usage == Usage.IN_PROGRESS) {
-            // we are in recursion; the answer is "no"
-            mapUsage.put(sTypeName, usage = Usage.NO);
-        }
+        UsageKey keyUsage = new UsageKey(sTypeName, access);
+        Usage    usage    = ensureUsage(ensureConsumesMap(), keyUsage,
+                () -> checkConsumption(sTypeName, access, Collections.emptyList()));
 
         return usage == Usage.YES;
     }
@@ -6574,24 +6556,9 @@ public abstract sealed class TypeConstant
      * @return {@link Usage#YES} if this type produces the formal type; {@link Usage#NO} otherwise
      */
     public boolean producesFormalType(String sTypeName, Access access) {
-        Map<String, Usage> mapUsage = ensureProducesMap();
-
-        // WARNING: thread-unsafe
-        Usage usage = mapUsage.get(sTypeName);
-        if (usage == null) {
-            mapUsage.put(sTypeName, Usage.IN_PROGRESS);
-            try {
-                usage = checkProduction(sTypeName, access, Collections.emptyList());
-            } catch (RuntimeException | Error e) {
-                mapUsage.remove(sTypeName);
-                throw e;
-            }
-
-            mapUsage.put(sTypeName, usage);
-        } else if (usage == Usage.IN_PROGRESS) {
-            // we are in recursion; the answer is "no"
-            mapUsage.put(sTypeName, usage = Usage.NO);
-        }
+        UsageKey keyUsage = new UsageKey(sTypeName, access);
+        Usage    usage    = ensureUsage(ensureProducesMap(), keyUsage,
+                () -> checkProduction(sTypeName, access, Collections.emptyList()));
 
         return usage == Usage.YES;
     }
@@ -8018,8 +7985,17 @@ public abstract sealed class TypeConstant
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    private Map<TypeConstant, Relation> ensureRelationMap() {
-        Map<TypeConstant, Relation> mapRelations = m_mapRelations;
+    private static RelationKey relationKey(TypeConstant typeLeft, TypeConstant typeRight) {
+        TypeConstant typeContext = getContext();
+        if (typeContext != null &&
+                (typeLeft.containsAutoNarrowing(true) || typeRight.containsAutoNarrowing(true))) {
+            return new RelationKey(typeLeft, typeContext);
+        }
+        return new RelationKey(typeLeft, null);
+    }
+
+    private Map<RelationKey, Relation> ensureRelationMap() {
+        Map<RelationKey, Relation> mapRelations = m_mapRelations;
         if (mapRelations == null) {
             s_tloInProgress.compareAndSet(this, null, new TransientThreadLocal<>());
             mapRelations = m_mapRelations = new ConcurrentHashMap<>();
@@ -8033,20 +8009,113 @@ public abstract sealed class TypeConstant
         }
     }
 
-    private Map<String, Usage> ensureConsumesMap() {
-        Map<String, Usage> mapConsumes = m_mapConsumes;
+    private Map<UsageKey, UsageEntry> ensureConsumesMap() {
+        Map<UsageKey, UsageEntry> mapConsumes = m_mapConsumes;
         if (mapConsumes == null) {
-            mapConsumes = m_mapConsumes = new HashMap<>();
+            synchronized (this) {
+                mapConsumes = m_mapConsumes;
+                if (mapConsumes == null) {
+                    mapConsumes = m_mapConsumes = new HashMap<>();
+                }
+            }
         }
         return mapConsumes;
     }
 
-    private Map<String, Usage> ensureProducesMap() {
-        Map<String, Usage> mapProduces = m_mapProduces;
+    private Map<UsageKey, UsageEntry> ensureProducesMap() {
+        Map<UsageKey, UsageEntry> mapProduces = m_mapProduces;
         if (mapProduces == null) {
-            mapProduces = m_mapProduces = new HashMap<>();
+            synchronized (this) {
+                mapProduces = m_mapProduces;
+                if (mapProduces == null) {
+                    mapProduces = m_mapProduces = new HashMap<>();
+                }
+            }
         }
         return mapProduces;
+    }
+
+    private record RelationKey(TypeConstant typeLeft, TypeConstant typeContext) {}
+
+    private record UsageKey(String typeName, Access access) {}
+
+    private Usage ensureUsage(Map<UsageKey, UsageEntry> mapUsage, UsageKey keyUsage,
+                              Supplier<Usage> supplier) {
+        UsageEntry entry = reserveUsage(mapUsage, keyUsage);
+        if (entry instanceof CompleteUsage complete) {
+            return complete.usage();
+        }
+        var pending = (PendingUsage) entry;
+
+        Usage usage;
+        try {
+            usage = supplier.get();
+        } catch (RuntimeException | Error e) {
+            synchronized (mapUsage) {
+                if (mapUsage.get(keyUsage) == pending) {
+                    mapUsage.remove(keyUsage);
+                    mapUsage.notifyAll();
+                }
+            }
+            throw e;
+        }
+
+        synchronized (mapUsage) {
+            mapUsage.put(keyUsage, new CompleteUsage(usage));
+            mapUsage.notifyAll();
+        }
+        return usage;
+    }
+
+    private UsageEntry reserveUsage(Map<UsageKey, UsageEntry> mapUsage, UsageKey keyUsage) {
+        synchronized (mapUsage) {
+            while (true) {
+                UsageEntry entry = mapUsage.get(keyUsage);
+                switch (entry) {
+                case null -> {
+                    var pending = new PendingUsage();
+                    mapUsage.put(keyUsage, pending);
+                    return pending;
+                }
+
+                case CompleteUsage complete -> {
+                    return complete;
+                }
+
+                case PendingUsage pending -> {
+                    if (pending.isOwner(Thread.currentThread())) {
+                        return new CompleteUsage(Usage.NO);
+                    }
+
+                    try {
+                        mapUsage.wait();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException("Interrupted while awaiting formal type usage", e);
+                    }
+                }
+                }
+            }
+        }
+    }
+
+    private sealed interface UsageEntry
+            permits CompleteUsage, PendingUsage {}
+
+    private record CompleteUsage(Usage usage)
+            implements UsageEntry {}
+
+    private static final class PendingUsage
+            implements UsageEntry {
+        private PendingUsage() {
+            f_threadOwner = Thread.currentThread();
+        }
+
+        private boolean isOwner(Thread thread) {
+            return f_threadOwner == thread;
+        }
+
+        private final Thread f_threadOwner;
     }
 
     /**
@@ -8200,7 +8269,7 @@ public abstract sealed class TypeConstant
      * Consumption/production options.
      */
     public enum Usage {
-        IN_PROGRESS, YES, NO;
+        YES, NO;
 
         public static Usage valueOf(boolean f) {
             return f ? YES : NO;
@@ -8270,24 +8339,24 @@ public abstract sealed class TypeConstant
     /**
      * A cache of "isA" responses.
      */
-    private transient volatile Map<TypeConstant, Relation> m_mapRelations;
+    private transient volatile Map<RelationKey, Relation> m_mapRelations;
 
     /**
      * The set of "isA() in progress" types.
      */
-    private transient volatile TransientThreadLocal<Set<TypeConstant>> m_tloInProgress;
+    private transient volatile TransientThreadLocal<Set<RelationKey>> m_tloInProgress;
     private static final AtomicReferenceFieldUpdater<TypeConstant, TransientThreadLocal> s_tloInProgress =
             AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TransientThreadLocal.class, "m_tloInProgress");
 
     /**
      * A cache of "consumes" responses.
      */
-    private transient Map<String, Usage> m_mapConsumes;
+    private transient volatile Map<UsageKey, UsageEntry> m_mapConsumes;
 
     /**
      * A cache of "produces" responses.
      */
-    private transient Map<String, Usage> m_mapProduces;
+    private transient volatile Map<UsageKey, UsageEntry> m_mapProduces;
 
     /**
      * Cached JIT class name.
