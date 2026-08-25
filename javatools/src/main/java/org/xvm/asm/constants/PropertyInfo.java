@@ -1446,14 +1446,14 @@ public class PropertyInfo
             } else if (hasField()) {
                 chain = new MethodBody[] {
                     new MethodBody(idMethod, idMethod.getSignature(),
-                            Implementation.Field, getFieldIdentity())
+                            Implementation.Field, new MethodBody.Target.Prop(getFieldIdentity()))
                 };
             } else if (isInjected()) {
                 // injection is currently implemented at the field access level
                 // (see ClassTemplate.getFieldValue)
                 chain = new MethodBody[] {
                     new MethodBody(idMethod, idMethod.getSignature(),
-                            Implementation.Field, getHead().getIdentity())
+                            Implementation.Field, new MethodBody.Target.Prop(getHead().getIdentity()))
                 };
             } else {
                 chain = MethodBody.NO_BODIES;
@@ -1464,7 +1464,7 @@ public class PropertyInfo
                 // if a Ref or Var annotation overrides "get" or "set" (e.g. Future), but the
                 // implementation is native, we need to replace it with the field access
                 chain = new MethodBody[] {new MethodBody(idMethod, idMethod.getSignature(),
-                        Implementation.Field, getFieldIdentity())};
+                        Implementation.Field, new MethodBody.Target.Prop(getFieldIdentity()))};
             } else if (isCustomLogic()) {
                 int cBodies = chain.length;
                 int ixTail  = cBodies - 1;
@@ -1486,7 +1486,7 @@ public class PropertyInfo
                         ixTail++;
                     }
                     chain[ixTail] = new MethodBody(idMethod, idMethod.getSignature(),
-                            Implementation.Field, getFieldIdentity());
+                            Implementation.Field, new MethodBody.Target.Prop(getFieldIdentity()));
                 }
             }
         }

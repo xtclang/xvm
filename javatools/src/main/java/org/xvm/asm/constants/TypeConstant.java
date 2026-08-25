@@ -4623,7 +4623,7 @@ public abstract sealed class TypeConstant
                     MethodConstant idMethod = head.getIdentity().ensureNestedIdentity(pool, constId);
                     if (idMethod.isTopLevel()) {
                         MethodBody bodyDelegate = new MethodBody(idMethod, head.getSignature(),
-                                Implementation.Delegating, idDelegate);
+                                Implementation.Delegating, new MethodBody.Target.Prop(idDelegate));
                         methodResult = MethodInfo.create(Handy.prepend(methodResult.getChain(),
                                 bodyDelegate), methodResult.getRank());
                     }

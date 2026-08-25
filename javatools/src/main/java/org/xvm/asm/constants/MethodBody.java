@@ -1,9 +1,7 @@
 package org.xvm.asm.constants;
 
 
-import java.util.Arrays;
-
-import java.util.stream.IntStream;
+import java.util.Objects;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -51,7 +49,7 @@ public class MethodBody {
      * Internal constructor for a union type.
      */
     MethodBody(MethodConstant id, SignatureConstant sig, MethodInfo method1, MethodInfo method2) {
-        this(id, sig, Implementation.Union, new MethodInfo[] {method1, method2});
+        this(id, sig, Implementation.Union, new Target.Union(method1, method2));
     }
 
     /**
@@ -60,37 +58,25 @@ public class MethodBody {
      * @param id      the method constant that this body represents
      * @param sig     the resolved signature of the method
      * @param impl    specifies the implementation of the MethodBody
-     * @param target  a <i>resolved</i> nid (a SignatureConstant for non-nested) from the
-     *                "narrowing" chain for a Capped Implementation;
-     *                a PropertyConstant for a Delegating or Field Implementation;
-     *                a MethodInfo (which may be from an incomplete TypeInfo build) for a FromInto
-     *                Implementation;
-     *                an array of two MethodInfo objects for a Union Implementation;
-     *                otherwise null
+     * @param target  the typed {@link Target} payload for the implementation kind, or null for
+     *                implementations that carry none
      */
-    public MethodBody(MethodConstant id, SignatureConstant sig, Implementation impl, Object target) {
+    public MethodBody(MethodConstant id, SignatureConstant sig, Implementation impl, Target target) {
         assert id != null && sig != null && impl != null;
-        switch (impl) {
-        case FromInto:
-            assert target == null || target instanceof MethodInfo;
-            break;
-        case Capped:
-            assert target instanceof SignatureConstant
-                || target instanceof IdentityConstant.NestedIdentity;
-            break;
-        case Delegating:
-        case Field:
-            assert target instanceof PropertyConstant;
-            break;
-        case Union:
-            assert target instanceof MethodInfo[] legs
-                    && legs.length == 2 && legs[0] != null && legs[1] != null;
-            break;
-        case Implicit:
-            break;
-        default:
-            assert target == null;
-            break;
+
+        // the Target union already carries the payload shape; this pairing check is the only part
+        // the type system cannot express (the old Object shape validated both shape and pairing
+        // with asserts, so -da accepted any Object here)
+        boolean fValid = switch (impl) {
+            case FromInto          -> target == null || target instanceof Target.Origin;
+            case Implicit          -> true;
+            case Capped            -> target instanceof Target.Narrowing;
+            case Delegating, Field -> target instanceof Target.Prop;
+            case Union             -> target instanceof Target.Union;
+            default                -> target == null;
+        };
+        if (!fValid) {
+            throw new IllegalArgumentException(impl + " body cannot carry target " + target);
         }
 
         m_id     = id;
@@ -125,11 +111,12 @@ public class MethodBody {
         m_id           = body.m_id;
         m_sig          = body.m_sig;
         // rewrite the target only when the source body genuinely targets its own owner; a fresh
-        // unowned body has both fields null, and treating null == null as "self-targeting" would
-        // fabricate a target the source never had, changing the body's equality and corrupting
-        // union/difference TypeInfo merges built from independently owned copies
-        m_target       = body.m_target != null && body.m_target == body.m_infoMethod
-                ? method
+        // unowned body has no target and a null owner, and treating null == null as
+        // "self-targeting" would fabricate a target the source never had, changing the body's
+        // equality and corrupting union/difference TypeInfo merges built from independently owned
+        // copies
+        m_target       = body.m_target instanceof Target.Origin(var info) && info == body.m_infoMethod
+                ? new Target.Origin(method)
                 : body.m_target;
         m_impl         = body.m_impl;
         m_structMethod = body.m_structMethod;
@@ -311,7 +298,7 @@ public class MethodBody {
      */
     MethodInfo getIntoMethodInfo() {
         assert isInto();
-        return (MethodInfo) m_target;
+        return m_target instanceof Target.Origin(var info) ? info : null;
     }
 
     /**
@@ -477,18 +464,18 @@ public class MethodBody {
      * @return the left "leg" of the union MethodInfo
      */
     public MethodInfo getUnionLeft() {
-        if (m_target instanceof MethodInfo[] legs) {
-            return legs[0];
+        if (m_target instanceof Target.Union(var left, _)) {
+            return left;
         }
         throw new IllegalStateException("not a union: " + this);
     }
 
     /**
-     * @return the left "leg" of the union MethodInfo
+     * @return the right "leg" of the union MethodInfo
      */
     public MethodInfo getUnionRight() {
-        if (m_target instanceof MethodInfo[] legs) {
-            return legs[1];
+        if (m_target instanceof Target.Union(_, var right)) {
+            return right;
         }
         throw new IllegalStateException("not a union: " + this);
     }
@@ -555,18 +542,22 @@ public class MethodBody {
             return propLeft != null && propRight != null && propLeft.equals(propRight) ? propLeft : null;
         }
 
-        return m_impl == Implementation.Delegating || m_impl == Implementation.Field
-                ? (PropertyConstant) m_target
-                : null;
+        // only Delegating and Field bodies can carry a Prop target, by construction
+        return m_target instanceof Target.Prop(var idProp) ? idProp : null;
     }
 
     /**
      * @return the <i>resolved</i> nid of the method that narrowed this method, iff this MethodBody
-     *         is a cap
+     *         is a cap; the return type stays the legacy untyped nid union
+     *         (SignatureConstant | NestedIdentity) because the TypeInfo member maps still key on it
      */
     public Object getNarrowingNestedIdentity() {
         if (m_impl == Implementation.Capped) {
-            return m_target;
+            return switch (m_target) {
+                case Target.BySignature(var sig) -> sig;
+                case Target.ByNestedId(var nid)  -> nid;
+                case null, default -> throw new IllegalStateException("capped without narrowing: " + this);
+            };
         }
 
         if (m_impl == Implementation.FromInto) {
@@ -741,61 +732,38 @@ public class MethodBody {
      * these bodies.</p>
      */
     private boolean targetEquals(MethodBody that) {
-        return switch (m_impl) {
-        case FromInto,
-             Implicit -> methodTargetEquals((MethodInfo) this.m_target, (MethodInfo) that.m_target);
-
-        case Union -> unionTargetEquals((MethodInfo[]) this.m_target, (MethodInfo[]) that.m_target);
-
-        case Capped,
-             Delegating,
-             Field -> Handy.equals(this.m_target, that.m_target);
-
-        default -> this.m_target == that.m_target;
+        // equals() has already established that both bodies share one Implementation, and the
+        // constructor pairing check ties the payload kind to that Implementation
+        return switch (this.m_target) {
+        case null                       -> that.m_target == null;
+        case Target.Origin(var info)    -> that.m_target instanceof Target.Origin(var thatInfo)
+                                            && methodTargetEquals(info, thatInfo);
+        case Target.Union(var l, var r) -> that.m_target instanceof Target.Union(var thatL, var thatR)
+                                            && methodTargetEquals(l, thatL)
+                                            && methodTargetEquals(r, thatR);
+        case Target.BySignature(var sig) -> that.m_target instanceof Target.BySignature(var thatSig)
+                                            && sig.equals(thatSig);
+        case Target.ByNestedId(var nid) -> that.m_target instanceof Target.ByNestedId(var thatNid)
+                                            && nid.equals(thatNid);
+        case Target.Prop(var idProp)    -> that.m_target instanceof Target.Prop(var thatId)
+                                            && idProp.equals(thatId);
         };
     }
 
     private int targetHash() {
-        return switch (m_impl) {
-        case FromInto,
-             Implicit -> methodTargetHash((MethodInfo) m_target);
-
-        case Union -> unionTargetHash((MethodInfo[]) m_target);
-
-        case Capped,
-             Delegating,
-             Field -> Hash.of(m_target);
-
-        default -> 0;
+        return switch (m_target) {
+        case null                        -> 0;
+        case Target.Origin(var info)     -> methodTargetHash(info);
+        case Target.Union(var l, var r)  -> Hash.of(methodTargetHash(r), methodTargetHash(l));
+        case Target.BySignature(var sig) -> Hash.of(sig);
+        case Target.ByNestedId(var nid)  -> Hash.of(nid);
+        case Target.Prop(var idProp)     -> Hash.of(idProp);
         };
-    }
-
-    private static int unionTargetHash(MethodInfo[] methods) {
-        if (methods == null) {
-            return 0;
-        }
-
-        return Arrays.stream(methods)
-                .mapToInt(MethodBody::methodTargetHash)
-                .reduce(0, (hash, methodHash) -> Hash.of(methodHash, hash));
     }
 
     private static int methodTargetHash(MethodInfo info) {
         return info == null ? 0 : Hash.of(info.getRank(),
                 Hash.of(info.getIdentity(), Hash.of(info.getSignature())));
-    }
-
-    private static boolean unionTargetEquals(MethodInfo[] these, MethodInfo[] those) {
-        if (these == those) {
-            return true;
-        }
-
-        if (these == null || those == null || these.length != those.length) {
-            return false;
-        }
-
-        return IntStream.range(0, these.length)
-                .allMatch(i -> methodTargetEquals(these[i], those[i]));
     }
 
     private static boolean methodTargetEquals(MethodInfo info1, MethodInfo info2) {
@@ -828,12 +796,85 @@ public class MethodBody {
                       .append(")");
                 }
             } else {
-                sb.append(m_target instanceof Constant constant ? constant.getValueString() : m_target);
+                sb.append(switch (m_target) {
+                    case Target.Prop(var idProp)     -> idProp.getValueString();
+                    case Target.BySignature(var sig) -> sig.getValueString();
+                    case Target.ByNestedId(var nid)  -> nid;
+                    case Target.Origin(var info)     -> info;
+                    case Target.Union(var l, var r)  -> l + " + " + r;
+                });
             }
         }
 
         return sb.append('}').toString();
     }
+
+    // ----- typed target payload ------------------------------------------------------------------
+
+    /**
+     * The typed payload of a method body, by implementation kind. Master modeled this as a bare
+     * {@code Object} whose legal shapes lived in a constructor javadoc and an assert switch that
+     * {@code -da} compiled away; every reader re-proved the shape with a cast. The sealed union
+     * makes each payload compile-checked and a two-leg union with a missing leg unconstructible.
+     */
+    public sealed interface Target {
+        /**
+         * The Capped narrowing nid: a {@link SignatureConstant} for non-nested members, a
+         * {@link IdentityConstant.NestedIdentity} for nested ones. This is the typed form of the
+         * legacy untyped "nid" convention that the TypeInfo member maps still key on.
+         */
+        sealed interface Narrowing extends Target permits BySignature, ByNestedId {}
+
+        /** FromInto/Implicit: the (potentially incomplete) origin MethodInfo. */
+        record Origin(MethodInfo info) implements Target {
+            public Origin {
+                Objects.requireNonNull(info);
+            }
+        }
+
+        /** Capped: narrowed by a non-nested member signature. */
+        record BySignature(SignatureConstant sig) implements Narrowing {
+            public BySignature {
+                Objects.requireNonNull(sig);
+            }
+        }
+
+        /** Capped: narrowed by a nested member identity. */
+        record ByNestedId(IdentityConstant.NestedIdentity nid) implements Narrowing {
+            public ByNestedId {
+                Objects.requireNonNull(nid);
+            }
+        }
+
+        /** Delegating/Field: the property that provides the delegate reference or the field. */
+        record Prop(PropertyConstant id) implements Target {
+            public Prop {
+                Objects.requireNonNull(id);
+            }
+        }
+
+        /** Union: exactly two non-null legs. */
+        record Union(MethodInfo left, MethodInfo right) implements Target {
+            public Union {
+                Objects.requireNonNull(left);
+                Objects.requireNonNull(right);
+            }
+        }
+
+        /**
+         * The checked conversion boundary from the legacy untyped nid union; retire this once the
+         * TypeInfo member maps key on {@link Narrowing} directly.
+         */
+        static Narrowing narrowing(Object nid) {
+            return switch (nid) {
+                case SignatureConstant sig                  -> new BySignature(sig);
+                case IdentityConstant.NestedIdentity nested -> new ByNestedId(nested);
+                case null, default -> throw new IllegalArgumentException(
+                        "not a narrowing nid: " + nid);
+            };
+        }
+    }
+
 
     // ----- enumeration: Implementation -----------------------------------------------------------
 
@@ -956,27 +997,23 @@ public class MethodBody {
     private Implementation m_impl;
 
     /**
-     * The constant denoting additional information (if required) for the MethodBody implementation:
+     * The typed payload (if required) for the MethodBody implementation; see {@link Target}:
      * <ul>
-     * <li>For Implementation "Capped", this specifies a <i>resolved</i> nid for the narrowing
+     * <li>Capped carries {@link Target.Narrowing} - the <i>resolved</i> nid for the narrowing
      * method that the cap redirects execution to via a virtual method call;</li>
-     * <li>For Implementation "Delegating", this specifies the property which contains the reference
-     * to delegate to.</li>
-     * <li>For Implementation "Field", this specifies the property that the method body corresponds
-     * to. For example, this is used to represent the field access for a {@code get()} method on a
-     * property.</li>
-     * <li>For Implementation "FromInto", this specifies a MethodInfo that the MethodBody came from.
-     * (The value may be null.) First, this makes it possible to avoid incorporates/into infinite
-     * recursion. Second, capped chains are visible from the mixin side, allowing for meaningful
-     * compiler errors to be raised when methods on the mixin side are overriding known-capped
-     * chains. (A mixin may be incorporated at runtime in a manner that collides with a cap, but
-     * this would be a validation error at link- or run-time, not at compile-time; the goal is to
-     * catch errors at compile time if possible.)</li>
-     * <li>For Implementation "Union", this is an array of two MethodInfo, representing the two
-     * "legs" of the union.</li>
+     * <li>Delegating/Field carry {@link Target.Prop} - the property which contains the reference
+     * to delegate to, or that the field-access body corresponds to;</li>
+     * <li>FromInto carries {@link Target.Origin} (or null) - the MethodInfo that the MethodBody
+     * came from. First, this makes it possible to avoid incorporates/into infinite recursion.
+     * Second, capped chains are visible from the mixin side, allowing for meaningful compiler
+     * errors to be raised when methods on the mixin side are overriding known-capped chains. (A
+     * mixin may be incorporated at runtime in a manner that collides with a cap, but this would be
+     * a validation error at link- or run-time, not at compile-time; the goal is to catch errors at
+     * compile time if possible.)</li>
+     * <li>Union carries {@link Target.Union} - the two "legs" of the union.</li>
      * </ul>
      */
-    private final Object m_target;
+    private final Target m_target;
 
     /**
      * The MethodInfo that contains this MethodBody, or null for a standalone MethodBody.

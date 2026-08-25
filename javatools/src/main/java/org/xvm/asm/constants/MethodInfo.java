@@ -142,7 +142,7 @@ public class MethodInfo
         int          cOld = aOld.length;
         MethodBody[] aNew = new MethodBody[cOld+1];
 
-        aNew[0] = new MethodBody(idThis, sigThis, Implementation.Capped, nidThat);
+        aNew[0] = new MethodBody(idThis, sigThis, Implementation.Capped, MethodBody.Target.narrowing(nidThat));
         System.arraycopy(aOld, 0, aNew, 1, cOld);
 
         return create(aNew, f_nRank);
@@ -495,7 +495,7 @@ public class MethodInfo
                                     resolveNestedIdentity(pool, null);
         MethodBody[] chainNew = getChain().clone();
         chainNew[0] = new MethodBody(bodyCap.getIdentity(), bodyCap.getSignature(),
-                                     Implementation.Capped, nidTarget);
+                                     Implementation.Capped, MethodBody.Target.narrowing(nidTarget));
         return MethodInfo.create(chainNew, f_nRank);
     }
 
@@ -556,7 +556,7 @@ public class MethodInfo
             }
 
             if (head.isUnion()) {
-                MethodBody into = new MethodBody(head.getIdentity(), head.getSignature(), Implementation.FromInto, this);
+                MethodBody into = new MethodBody(head.getIdentity(), head.getSignature(), Implementation.FromInto, new MethodBody.Target.Origin(this));
                 return MethodInfo.create(new MethodBody[] {into}, f_nRank);
             }
         }
@@ -565,7 +565,7 @@ public class MethodInfo
             MethodConstant idBody = body.getIdentity();
             if (setFromInto == null || setFromInto.contains(idBody.getClassIdentity())) {
 
-                MethodBody into = new MethodBody(idBody, body.getSignature(), Implementation.FromInto, this);
+                MethodBody into = new MethodBody(idBody, body.getSignature(), Implementation.FromInto, new MethodBody.Target.Origin(this));
 // TODO CP either remove or complete
 //
 //                if (isCapped()) {
@@ -611,7 +611,7 @@ public class MethodInfo
     public MethodInfo markImplicitConstructor() {
         assert getHead().isConstructor();
         MethodBody   bodyOld  = m_aBody[0];
-        MethodBody   bodyNew  = new MethodBody(bodyOld.getIdentity(), bodyOld.getSignature(), Implementation.Implicit, this);
+        MethodBody   bodyNew  = new MethodBody(bodyOld.getIdentity(), bodyOld.getSignature(), Implementation.Implicit, new MethodBody.Target.Origin(this));
         return MethodInfo.create(new MethodBody[] {bodyNew}, f_nRank);
     }
 

@@ -289,7 +289,7 @@ public class MethodInfoTest {
     private static void setTarget(MethodBody body, MethodInfo target) throws Exception {
         Field field = MethodBody.class.getDeclaredField("m_target");
         field.setAccessible(true);
-        field.set(body, target);
+        field.set(body, new MethodBody.Target.Origin(target));
     }
 
     private TypeInfo createTypeInfo(
