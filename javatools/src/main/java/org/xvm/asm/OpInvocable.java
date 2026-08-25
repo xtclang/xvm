@@ -250,11 +250,11 @@ public abstract class OpInvocable extends Op {
             SignatureConstant sig    = idMethod.getSignature();
             String            sName  = sig.getName();
 
-            if ("get".equals(sName) && sig.getRawReturns()[0].isA(idProp.getType())) {
+            if ("get".equals(sName) && sig.getRawReturns().get(0).isA(idProp.getType())) {
                 return idProp;
             }
 
-            if ("set".equals(sName) && sig.getRawParams()[0].isA(idProp.getType())) {
+            if ("set".equals(sName) && sig.getRawParams().get(0).isA(idProp.getType())) {
                 return idProp;
             }
         }
@@ -338,7 +338,7 @@ public abstract class OpInvocable extends Op {
             sig = sig.resolveGenericTypes(pool, bctx.createTypeResolver(method, anArgValue));
         }
 
-        TypeConstant[] atypeResult = sig.getRawReturns();
+        TypeConstant[] atypeResult = sig.getRawReturns().unsafeArray();
         if (isMultiReturn()) {
             for (int i = 0, c = m_anRetValue.length; i < c; i++) {
                 int nRetVal = m_anRetValue[i];

@@ -2682,7 +2682,7 @@ public final class TypeCompositionStatement
             }
 
             boolean        fValid      = true;
-            TypeConstant[] atypeArgs   = idSuper.getRawParams();
+            TypeConstant[] atypeArgs   = idSuper.getRawParams().unsafeArray();
             for (int i = 0, c = listSuperArgs.size(); i < c; i++) {
                 Expression exprOld = listSuperArgs.get(i);
                 if (exprOld.isValidated()) {

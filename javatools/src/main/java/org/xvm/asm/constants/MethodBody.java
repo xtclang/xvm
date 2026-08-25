@@ -957,8 +957,9 @@ public class MethodBody {
 
         // TODO consider caching this
         return JitMethodDesc.of(builder, typeTarget, isFunction() || isCtorOrValidator(),
-                isCtorOrValidator(), sig.getRawParams(), sig.getRawReturns(),
-                                method.getTypeParamCount() + method.getRequiredParamCount());
+                isCtorOrValidator(), sig.getRawParams().unsafeArray(),
+                sig.getRawReturns().unsafeArray(),
+                method.getTypeParamCount() + method.getRequiredParamCount());
     }
 
     /**

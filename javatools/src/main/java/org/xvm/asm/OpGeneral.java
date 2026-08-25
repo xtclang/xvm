@@ -219,7 +219,7 @@ public abstract class OpGeneral
         if (isBinaryOp()) {
             TypeConstant typeTarget = bctx.getArgumentType(m_nTarget);
             MethodInfo   method     = findOpMethod(bctx, typeTarget);
-            TypeConstant typeResult = method.getSignature().getRawReturns()[0];
+            TypeConstant typeResult = method.getSignature().getRawReturns().get(0);
             if (!typeResult.equals(typeTarget)) {
                 tmx.assign(getAddress(), m_nRetValue,
                     typeResult.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null));
@@ -270,7 +270,7 @@ public abstract class OpGeneral
                     code.invokevirtual(regTarget.cd(), sJitName, md);
                 }
 
-                TypeConstant typeReturn = method.getSignature().getRawReturns()[0]; // could differ from target
+                TypeConstant typeReturn = method.getSignature().getRawReturns().get(0); // could differ from target
                 typeResult = typeReturn.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null);
                 if (!typeReturn.isA(typeResult)) {
                     code.checkcast(bctx.builder.ensureClassDesc(typeResult));
@@ -314,7 +314,7 @@ public abstract class OpGeneral
                     code.invokevirtual(regTarget.cd(), sJitName, md);
                 }
 
-                TypeConstant typeReturn = method.getSignature().getRawReturns()[0]; // could differ from target
+                TypeConstant typeReturn = method.getSignature().getRawReturns().get(0); // could differ from target
                 TypeConstant typeResult = typeReturn.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null);
                 if (!typeReturn.isA(typeResult)) {
                     code.checkcast(bctx.builder.ensureClassDesc(typeResult));

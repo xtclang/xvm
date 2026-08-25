@@ -172,7 +172,7 @@ public abstract class OpInPlaceAssign
             code.invokevirtual(regTarget.cd(), sJitName, md);
         }
 
-        TypeConstant typeResult   = method.getSignature().getRawReturns()[0]; // could differ from
+        TypeConstant typeResult   = method.getSignature().getRawReturns().get(0); // could differ from
         TypeConstant typeResolved = typeResult.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null);
         if (!typeResult.isA(typeResolved)) {
             code.checkcast(bctx.builder.ensureClassDesc(typeResolved));

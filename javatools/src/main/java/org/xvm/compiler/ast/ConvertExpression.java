@@ -51,10 +51,10 @@ public final class ConvertExpression
         assert aidConv != null && aidConv.length >= 1;
         for (MethodConstant idConv : aidConv) {
             if (idConv != null) {
-                assert idConv.getRawParams().length == 0
+                assert idConv.getRawParams().size() == 0
                     || idConv.getComponent() instanceof MethodStructure method
                         && method.getRequiredParamCount() == 0;
-                assert idConv.getRawReturns().length > 0;
+                assert idConv.getRawReturns().size() > 0;
                 assert !idConv.getComponent().isStatic();
             }
         }
@@ -69,7 +69,7 @@ public final class ConvertExpression
         if (expr.isSingle()) {
             assert aidConv.length == 1 && aidConv[0] != null;
 
-            TypeConstant type = aidConv[0].getRawReturns()[0];
+            TypeConstant type = aidConv[0].getRawReturns().get(0);
             Constant     val  = null;
             if (expr.isConstant()) {
                 // determine if compile-time conversion is supported
@@ -83,7 +83,7 @@ public final class ConvertExpression
             for (int i = 0, c = aidConv.length; i < c; i++) {
                 MethodConstant idConv = aidConv[i];
                 if (idConv != null) {
-                    aType[i] = idConv.getRawReturns()[0];
+                    aType[i] = idConv.getRawReturns().get(0);
                 }
             }
 

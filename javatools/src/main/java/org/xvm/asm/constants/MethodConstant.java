@@ -20,6 +20,7 @@ import org.xvm.asm.Parameter;
 import org.xvm.javajit.NativeNames;
 import org.xvm.javajit.TypeSystem;
 
+import org.xvm.util.FrozenArray;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -178,7 +179,7 @@ public final class MethodConstant
     /**
      * @return the method's parameter types
      */
-    public TypeConstant[] getRawParams() {
+    public FrozenArray<TypeConstant> getRawParams() {
         return getSignature().getRawParams();
     }
 
@@ -192,7 +193,7 @@ public final class MethodConstant
     /**
      * @return the method's return types
      */
-    public TypeConstant[] getRawReturns() {
+    public FrozenArray<TypeConstant> getRawReturns() {
         return getSignature().getRawReturns();
     }
 
@@ -207,7 +208,7 @@ public final class MethodConstant
      * @return the method's return types as a Tuple
      */
     public TypeConstant getReturnsAsTuple() {
-        return getConstantPool().ensureTupleType(getRawReturns());
+        return getConstantPool().ensureTupleType(getRawReturns().unsafeArray());
     }
 
     /**
@@ -425,7 +426,7 @@ public final class MethodConstant
               .append(']');
         } else {
             sb.append('(');
-            TypeConstant[] aParamType = getRawParams();
+            TypeConstant[] aParamType = getRawParams().unsafeArray();
             for (int i = 0, c = aParamType.length; i < c; i++) {
                 TypeConstant typeParam = aParamType[i];
                 if (i > 0) {

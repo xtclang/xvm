@@ -1180,7 +1180,7 @@ public abstract sealed class AstNode
                 sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
             }
 
-            TypeConstant[] atypeParam = sigMethod.getRawParams();
+            TypeConstant[] atypeParam = sigMethod.getRawParams().unsafeArray();
             TypeFit        fit        = TypeFit.Fit;
             boolean        fExact     = true;
             for (int i = 0; i < cArgs; ++i) {
@@ -1449,8 +1449,8 @@ public abstract sealed class AstNode
                     if (!fOldBetter && !fNewBetter) {
                         // choose the one that is narrower for every argument
                         for (int i = 0; i < cParamsOld; i++) {
-                            TypeConstant typeOld = sigOld.getRawParams()[i];
-                            TypeConstant typeNew = sigNew.getRawParams()[i];
+                            TypeConstant typeOld = sigOld.getRawParams().get(i);
+                            TypeConstant typeNew = sigNew.getRawParams().get(i);
 
                             if (typeOld.isA(typeNew) && !typeNew.isA(typeOld)) {
                                 fOldBetter = true;
@@ -1514,7 +1514,7 @@ public abstract sealed class AstNode
     protected TypeFit calculateReturnFit(SignatureConstant sigMethod, boolean fCall,
                                          TypeConstant[] atypeReturn, TypeConstant typeCtx,
                                          ErrorListener errs) {
-        return calculateReturnFit(sigMethod.getRawReturns(), sigMethod.getValueString(), fCall,
+        return calculateReturnFit(sigMethod.getRawReturns().unsafeArray(), sigMethod.getValueString(), fCall,
                                     atypeReturn, typeCtx, errs);
     }
 

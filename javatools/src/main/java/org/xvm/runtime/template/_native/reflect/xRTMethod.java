@@ -310,12 +310,12 @@ public class xRTMethod
 
         @Override
         public TypeConstant getParamType(int iArg) {
-            return getMethodInfo().getIdentity().getSignature().getRawParams()[iArg];
+            return getMethodInfo().getIdentity().getSignature().getRawParams().get(iArg);
         }
 
         @Override
         public TypeConstant getReturnType(int iArg) {
-            return getMethodInfo().getIdentity().getSignature().getRawReturns()[iArg];
+            return getMethodInfo().getIdentity().getSignature().getRawReturns().get(iArg);
         }
 
         private CallChain getCallChain(Frame frame, ObjectHandle hTarget) {

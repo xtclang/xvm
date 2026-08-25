@@ -1686,14 +1686,14 @@ public final class TypeInfoReal
             MethodInfo     info = entry.getValue();
             if (id.isTopLevel()
                     && id.getName().equals(sName)
-                    && id.getRawParams() .length >= cArgs
-                    && id.getRawReturns().length >= cRedundant
+                    && id.getRawParams() .size() >= cArgs
+                    && id.getRawReturns().size() >= cRedundant
                     && (info.isCtorOrValidator()
                             ? (!fMethod && !fFunction)
                             : info.isFunction() ? fFunction : fMethod)) {
                 SignatureConstant sig      = info.getSignature();
-                TypeConstant[]    aParams  = sig.getRawParams();
-                TypeConstant[]    aReturns = sig.getRawReturns();
+                TypeConstant[]    aParams  = sig.getRawParams().unsafeArray();
+                TypeConstant[]    aReturns = sig.getRawReturns().unsafeArray();
                 for (int i = 0; i < cRedundant; ++i) {
                     TypeConstant typeReturn    = aReturns  [i];
                     TypeConstant typeRedundant = aRedundant[i];
@@ -1879,7 +1879,7 @@ public final class TypeInfoReal
             case 1: {
                 idMatch = setMethods.iterator().next();
                 if (typeArg != null) {
-                    TypeConstant typeParam = idMatch.getSignature().getRawParams()[0];
+                    TypeConstant typeParam = idMatch.getSignature().getRawParams().get(0);
 
                     if (!typeArg.isA(typeParam)) {
                         // soft assert
@@ -1895,7 +1895,7 @@ public final class TypeInfoReal
                 if (typeArg != null) {
                     idMatch = null;
                     for (MethodConstant idMethod : setMethods) {
-                        TypeConstant typeParam = idMethod.getSignature().getRawParams()[0];
+                        TypeConstant typeParam = idMethod.getSignature().getRawParams().get(0);
 
                         if (typeArg.isA(typeParam)) {
                             if (typeParam.isA(typeArg)) {
@@ -2115,7 +2115,7 @@ public final class TypeInfoReal
         } else {
             for (MethodInfo info : getAutoMethodInfos()) {
                 MethodConstant method     = info.getIdentity();
-                TypeConstant   typeResult = method.getRawReturns()[0];
+                TypeConstant   typeResult = method.getRawReturns().get(0);
                 if (typeResult.equals(typeDesired)) {
                     // exact match -- it's not going to get any better than this
                     return method;
@@ -2125,7 +2125,7 @@ public final class TypeInfoReal
                     if (methodMatch == null) {
                         methodMatch = method;
                     } else {
-                        TypeConstant typeResultMatch = methodMatch.getRawReturns()[0];
+                        TypeConstant typeResultMatch = methodMatch.getRawReturns().get(0);
                         boolean fSub = typeResult.isA(typeResultMatch);
                         boolean fSup = typeResultMatch.isA(typeResult);
                         if (fSub ^ fSup) {

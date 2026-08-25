@@ -156,7 +156,7 @@ public class GP_DivRem
 
         TypeConstant   typeTarget = bctx.getArgumentType(m_nTarget);
         MethodInfo     method     = findOpMethod(bctx, typeTarget);
-        TypeConstant[] rawReturns = method.getSignature().getRawReturns();
+        TypeConstant[] rawReturns = method.getSignature().getRawReturns().unsafeArray();
 
         for (int i = 0; i < rawReturns.length; i++) {
             TypeConstant typeResult = rawReturns[0];
@@ -228,7 +228,7 @@ public class GP_DivRem
                 code.invokevirtual(regTarget.cd(), sJitName, md);
             }
 
-            TypeConstant typeReturn = method.getSignature().getRawReturns()[0]; // could differ from target
+            TypeConstant typeReturn = method.getSignature().getRawReturns().get(0); // could differ from target
             TypeConstant typeResult = typeReturn.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null);
 
             // the quotient is on the stack

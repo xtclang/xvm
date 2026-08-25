@@ -42,6 +42,7 @@ import org.xvm.compiler.Source;
 import org.xvm.type.Decimal;
 
 import org.xvm.util.Auto;
+import org.xvm.util.FrozenArray;
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.TransientThreadLocal;
@@ -1740,6 +1741,16 @@ public class ConstantPool
             TypeConstant[] aconstReturns) {
         return register(new SignatureConstant(this, sName, aconstParams,
                 aconstReturns));
+    }
+
+    /**
+     * Obtain a signature constant sharing already-frozen type arrays - the safe form of building
+     * one signature from another signature's types (the wrapper is shared; the storage cannot be
+     * mutated through it).
+     */
+    public SignatureConstant ensureSignatureConstant(String sName,
+            FrozenArray<TypeConstant> aconstParams, FrozenArray<TypeConstant> aconstReturns) {
+        return register(new SignatureConstant(this, sName, aconstParams, aconstReturns));
     }
 
     /**

@@ -657,3 +657,23 @@ the JIT generated-static/bridge rows - because those change runtime
 representation semantics, not API shape. Everything newly found here should
 go to master as ordinary PRs, with the reflective alias-mutation sweep
 harness added early so the category stays closed after it is emptied.
+
+
+## Stage 3 Progress (2026-08-25)
+
+- `FrozenArray<T>` landed in `javatools_utils` (`org.xvm.util.FrozenArray`) per
+  option (a): adopt/copyOf construction, size/get/iteration, `copy()`, and the
+  documented read-only `unsafeArray()` escape hatch for hot consumers.
+- **Family A (SignatureConstant params/returns) converted**: frozen fields,
+  wrapper-returning `getRawParams()/getRawReturns()` (+ MethodConstant
+  delegates), the `getReturns()` live-`Arrays.asList` view eliminated (was a
+  set()-writable window into interned storage - red on master), wrapper-sharing
+  signature/pool overloads replacing raw-array aliasing between constants.
+  Red-verified contract test `SignatureConstantTest.signatureTypeStorageIsFrozen`.
+- Remaining escapes into Family B (`ensureTupleType(sig.getRawReturns()
+  .unsafeArray())` at MethodConstant/Frame) are marked and close when
+  ParameterizedTypeConstant converts.
+- Next: Family B (getParamTypesArray surface); then re-evaluate the MethodBody
+  chain trailer per the recon's not-worth-it analysis. Annotation params stay
+  gated on the builder-state redesign; TypeInfo annotation arrays already
+  closed by stage-2 cloning.

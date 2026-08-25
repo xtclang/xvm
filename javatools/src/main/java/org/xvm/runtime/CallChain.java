@@ -612,7 +612,8 @@ public class CallChain {
             } else {
                 MethodStructure constructor = infoCtor.getTopmostMethodStructure(infoTarget);
                 TypeConstant[]  atypeParam  = constructor.getIdentityConstant().getSignature().
-                                                resolveGenericTypes(pool, typeTarget).getRawParams();
+                                                resolveGenericTypes(pool, typeTarget).getRawParams()
+                                                .unsafeArray();
                 f_constructor = constructor;
                 f_typeCtor    = pool.buildFunctionType(atypeParam, typeTarget);
             }

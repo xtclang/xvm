@@ -97,7 +97,7 @@ public class xRTFunction
     protected TypeComposition ensureClass(Container container, MethodStructure function) {
         ConstantPool pool = container.getConstantPool();
 
-        TypeConstant[] atypeR = function.getIdentityConstant().getRawReturns();
+        TypeConstant[] atypeR = function.getIdentityConstant().getRawReturns().unsafeArray();
 
         TypeConstant typeP   = pool.typeTuple0();
         TypeConstant typeR   = atypeR.length == 0 ? pool.typeTuple0() : pool.ensureTupleType(atypeR);

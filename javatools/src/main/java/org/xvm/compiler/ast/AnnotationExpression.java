@@ -263,7 +263,7 @@ public final class AnnotationExpression
 
             // validate the argument expressions and fix up all the constants used as arguments to
             // construct the annotation
-            TypeConstant[] atypeParams = idConstruct.getRawParams();
+            TypeConstant[] atypeParams = idConstruct.getRawParams().unsafeArray();
             int            cAll        = constructor.getParamCount();
             int            cRequired   = constructor.getRequiredParamCount();
             Constant[]     aconstArgs  = new Constant[cAll];
@@ -393,7 +393,7 @@ public final class AnnotationExpression
         }
 
         // validate the arguments
-        TypeConstant[] atypeParam = idConstruct.getRawParams();
+        TypeConstant[] atypeParam = idConstruct.getRawParams().unsafeArray();
         boolean        fValid     = true;
         boolean        fConst     = true;
 

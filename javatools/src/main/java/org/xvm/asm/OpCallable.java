@@ -595,7 +595,8 @@ public abstract class OpCallable extends Op {
 
             TypeConstant typeThis = bctx.typeMatrix.getType(A_THIS, getAddress());
             atypeResult = bodySuper.getSignature().
-                            resolveGenericTypes(bctx.pool(), typeThis).getRawReturns();
+                            resolveGenericTypes(bctx.pool(), typeThis).getRawReturns()
+                            .unsafeArray();
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
             MethodConstant idMethod = bctx.getConstant(m_nFunctionId, MethodConstant.class);
 
@@ -626,7 +627,7 @@ public abstract class OpCallable extends Op {
     protected TypeConstant[] resolveReturnTypes(BuildContext bctx, MethodConstant idMethod,
                                                 int[] anArgValue) {
         SignatureConstant   sig         = idMethod.getSignature();
-        TypeConstant[]      atypeResult = sig.getRawReturns();
+        TypeConstant[]      atypeResult = sig.getRawReturns().unsafeArray();
         GenericTypeResolver resolver = null;
         for (int i = 0, c = atypeResult.length; i < c; i++) {
             TypeConstant type = atypeResult[i];

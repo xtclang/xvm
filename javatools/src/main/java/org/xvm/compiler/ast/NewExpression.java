@@ -675,7 +675,7 @@ public final class NewExpression
             args = listArgs;
         }
 
-        if (validateExpressions(ctx, listArgs, idConstruct.getRawParams(), errs) == null) {
+        if (validateExpressions(ctx, listArgs, idConstruct.getRawParams().unsafeArray(), errs) == null) {
             return null;
         }
 

@@ -2770,7 +2770,7 @@ public sealed class NameExpression
                         typeFn = idMethod.getBjarneLambdaType();
                         if (!fDraft) {
                             int cReturns = typeDesired == null
-                                        ? idMethod.getRawReturns().length
+                                        ? idMethod.getRawReturns().size()
                                         : pool.extractFunctionReturns(typeDesired).length;
                             m_idBjarnLambda =
                                 createBjarneLambda(ctx.getThisClass(), idMethod, cReturns);

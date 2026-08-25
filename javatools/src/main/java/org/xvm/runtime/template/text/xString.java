@@ -87,7 +87,7 @@ public class xString
     @Override
     public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn) {
-        if (constructor.getIdentityConstant().getRawParams()[0].equals(frame.poolContext().typeString())) {
+        if (constructor.getIdentityConstant().getRawParams().get(0).equals(frame.poolContext().typeString())) {
             return frame.assignValue(iReturn, ahVar[0]);
         }
 

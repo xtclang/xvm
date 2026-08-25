@@ -406,7 +406,7 @@ public abstract class OpIndex
                 infoFrom.getType().removeAccess());
         }
 
-        return setMethods.iterator().next().getSignature().getRawReturns()[0];
+        return setMethods.iterator().next().getSignature().getRawReturns().get(0);
     }
 
 

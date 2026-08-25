@@ -3291,7 +3291,7 @@ public sealed class ClassStructure
 
             // 3) resolve the identity
             MethodConstant idMethod    = fnThis.getIdentityConstant();
-            TypeConstant[] atypeParams = idMethod.getRawParams();
+            TypeConstant[] atypeParams = idMethod.getRawParams().unsafeArray();
 
             TypeParameterConstant constParam = pool.ensureRegisterConstant(idMethod, 0, "CompileType");
             TypeConstant          typeFormal = constParam.getType();
@@ -3620,8 +3620,8 @@ public sealed class ClassStructure
         MethodStructure method = findMethod(sig);
         if (method == null) {
             ConstantPool   pool        = getConstantPool();
-            TypeConstant[] atypeParam  = sig.getRawParams();
-            TypeConstant[] atypeReturn = sig.getRawReturns();
+            TypeConstant[] atypeParam  = sig.getRawParams().unsafeArray();
+            TypeConstant[] atypeReturn = sig.getRawReturns().unsafeArray();
             int            cParams     = atypeParam.length;
             int            cReturns    = atypeReturn.length;
 

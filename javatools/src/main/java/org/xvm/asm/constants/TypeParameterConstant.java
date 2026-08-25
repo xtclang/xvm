@@ -99,7 +99,7 @@ public final class TypeParameterConstant
         }
 
         int            nReg        = getRegister();
-        TypeConstant[] atypeParams = constMethod.getRawParams();
+        TypeConstant[] atypeParams = constMethod.getRawParams().unsafeArray();
 
         assert atypeParams.length > nReg;
 

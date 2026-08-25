@@ -1773,7 +1773,7 @@ public abstract class ClassTemplate
             SignatureConstant sig      = idMethod.getSignature();
             if (hArg != null) {
                 TypeConstant typeArg   = hArg.getType();
-                TypeConstant typeParam = sig.getRawParams()[0];
+                TypeConstant typeParam = sig.getRawParams().get(0);
 
                 if (!typeArg.isA(typeParam)) {
                     // soft assert
@@ -1791,7 +1791,7 @@ public abstract class ClassTemplate
                 TypeConstant      typeArg = hArg.getType();
                 for (MethodConstant idMethod : setMethods) {
                     SignatureConstant sig       = idMethod.getSignature();
-                    TypeConstant      typeParam = sig.getRawParams()[0];
+                    TypeConstant      typeParam = sig.getRawParams().get(0);
 
                     if (typeArg.isA(typeParam)) {
                         if (sigBest == null) {
@@ -1809,7 +1809,7 @@ public abstract class ClassTemplate
                             // Until we have a better solution, let's choose a signature with a
                             // simpler type, because it should've been the one chosen by the
                             // compiler.
-                            int nBestDepth  = sigBest.getRawParams()[0].getTypeDepth();
+                            int nBestDepth  = sigBest.getRawParams().get(0).getTypeDepth();
                             int nParamDepth = typeParam.getTypeDepth();
 
                             if (nParamDepth < nBestDepth) {
@@ -1859,7 +1859,7 @@ public abstract class ClassTemplate
                 for (int i = 0; i < cArgs; i++) {
                     ObjectHandle hArg      = ahArg[i];
                     TypeConstant typeArg   = hArg.getType();
-                    TypeConstant typeParam = sig.getRawParams()[i];
+                    TypeConstant typeParam = sig.getRawParams().get(i);
 
                     if (!typeArg.isA(typeParam)) {
                         continue NextMethod;
@@ -2029,7 +2029,7 @@ public abstract class ClassTemplate
 
         MethodStructure method = getStructure().findMethodDeep(sName, m -> {
                 if (atypeParam != null) {
-                    TypeConstant[] atypeParamTest = m.getIdentityConstant().getRawParams();
+                    TypeConstant[] atypeParamTest = m.getIdentityConstant().getRawParams().unsafeArray();
                     int            cParams        = atypeParamTest.length;
                     if (cParams != atypeParam.length) {
                         return false;
@@ -2042,7 +2042,7 @@ public abstract class ClassTemplate
                     }
                 }
                 if (atypeReturn != null) {
-                    TypeConstant[] atypeReturnTest = m.getIdentityConstant().getRawReturns();
+                    TypeConstant[] atypeReturnTest = m.getIdentityConstant().getRawReturns().unsafeArray();
                     int            cReturns        = atypeReturnTest.length;
                     if (cReturns != atypeReturn.length) {
                         return false;

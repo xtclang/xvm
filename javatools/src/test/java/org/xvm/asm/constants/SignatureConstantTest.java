@@ -13,6 +13,7 @@ import org.xvm.asm.PropertyStructure;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -50,5 +51,43 @@ public class SignatureConstantTest {
                 "value", ConstantPool.NO_TYPES, new TypeConstant[] {actual.getCanonicalType()});
         assertFalse(methodSignature.isProperty());
         assertNotSame(resolved, methodSignature);
+    }
+
+    /**
+     * Stage-3 Family A contract (array-exposure audit): a signature's type storage is frozen.
+     * The old shape returned the interned raw arrays from getRawParams()/getRawReturns() -
+     * consumers relied on scattered clone conventions - and getReturns() was a LIVE
+     * Arrays.asList view: list.set(...) wrote straight into the interned constant shared by
+     * every container. Red on that shape (the getReturns half is red on master too).
+     */
+    @Test
+    public void signatureTypeStorageIsFrozen() {
+        var file = new FileStructure("frozensig");
+        var pool = file.getConstantPool();
+
+        var typeA = pool.typeString();
+        var typeB = pool.typeBoolean();
+        var sig   = pool.ensureSignatureConstant("m",
+                new TypeConstant[] {typeA}, new TypeConstant[] {typeB});
+
+        // the List views are immutable snapshots, not live windows into the constant
+        assertThrows(UnsupportedOperationException.class,
+                () -> sig.getReturns().set(0, typeA),
+                "getReturns() must never be a writable view of interned storage");
+        assertThrows(UnsupportedOperationException.class,
+                () -> sig.getParams().set(0, typeB));
+
+        // a copy() is the caller's own array; mutating it cannot touch the constant
+        TypeConstant[] aCopy = sig.getRawReturns().copy();
+        aCopy[0] = typeA;
+        assertSame(typeB, sig.getRawReturns().get(0),
+                "mutating a copy must not affect the interned signature");
+
+        // sharing the frozen wrapper between constants is the safe form of the old raw-array
+        // aliasing (e.g. MethodConstant building a signature from another signature's types)
+        var sigShared = pool.ensureSignatureConstant("m2",
+                sig.getRawParams(), sig.getRawReturns());
+        assertSame(sig.getRawParams().unsafeArray(), sigShared.getRawParams().unsafeArray(),
+                "wrapper sharing keeps zero-copy interning without a mutation channel");
     }
 }

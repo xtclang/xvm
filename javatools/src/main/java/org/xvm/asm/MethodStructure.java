@@ -1027,7 +1027,7 @@ public final class MethodStructure
                     return null;
                 }
 
-                TypeConstant typeOfType = sigOrig.getRawParams()[iParam];
+                TypeConstant typeOfType = sigOrig.getRawParams().get(iParam);
                 assert typeOfType.isTypeOfType();
                 TypeConstant type = typeOfType.getParamType(0);
                 return type.isJitPrimitive() ? type : null;
@@ -1917,8 +1917,8 @@ public final class MethodStructure
 
         ConstantPool   pool              = getConstantPool();
         MethodConstant constMethod       = getIdentityConstant();
-        TypeConstant[] aconstReturnTypes = constMethod.getRawReturns();
-        TypeConstant[] aconstParamTypes  = constMethod.getRawParams();
+        TypeConstant[] aconstReturnTypes = constMethod.getRawReturns().unsafeArray();
+        TypeConstant[] aconstParamTypes  = constMethod.getRawParams().unsafeArray();
 
         int          cAnnos = readMagnitude(in);
         Annotation[] aAnnos = cAnnos == 0 ? Annotation.NO_ANNOTATIONS : new Annotation[cAnnos];
