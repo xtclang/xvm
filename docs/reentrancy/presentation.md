@@ -3,7 +3,9 @@
 A 10-15 minute brief. Every claim below is backed by a committed test, a
 file:line citation, or a reproducer on the `lagergren/lazy-instance` branch;
 nothing here is opinion about style. The numbers are all re-measurable with
-the grep commands recorded in the audit docs.
+the grep commands recorded in the audit docs. Every "code:" link below
+points at **unmodified master**, pinned at commit `61e555a68` (2026-08-25) -
+click any of them live in the meeting.
 
 ---
 
@@ -39,18 +41,22 @@ What we found when we tried to make run #2 work:
   process-wide statics** (`INSTANCE = this` while the object was still under
   construction). Last writer wins; the second container silently gets the
   first container's template state.
+  - code: [xObject.java:23 - `INSTANCE = this` in the constructor](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/runtime/template/xObject.java#L23)
 - **The JIT bakes the first world into class initializers.** Generated
   `<clinit>` code reads the ambient `Ctx.get()` and writes constants,
   injected values, and singletons into **classloader-wide static fields**.
   The first active container becomes *permanent state* for every later one.
+  - code: [jitbridge Array.java:160 - `static final $INSTANCE = new eMutability(Ctx.get())`](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/Array.java#L160)
 - **A single static `java.util.Timer` serviced all containers**, and its
   callback registry was a plain `HashMap` mutated from both the service
   thread and the Timer thread - one race and the shared Timer thread dies,
   which kills alarms **for every container in the JVM**. (Reachable in any
   timer-using program; fixed + test: `NativeCallbackRegistrationTest`.)
+  - code: [xLocalClock.java:282 - `public static Timer TIMER` (not even final)](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xLocalClock.java#L282)
 - The ambient `ConstantPool` travels in a **ThreadLocal**, compiler counters
   are global statics, and the `Xvm` bootstrap wrote six public mutable
   fields *while booting*, visible half-initialized to any observer.
+  - code: [ConstantPool.java:4010 - the ThreadLocal pool](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/asm/ConstantPool.java#L4010) ; [Xvm.java:78-105 - the public world fields](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/javajit/Xvm.java#L78)
 
 **The pedagogical point:** none of this is exotic concurrency. It is the
 absence of an owner parameter. Everything that should have been
@@ -73,6 +79,7 @@ each other through statics and public fields. Consequences:
   ```java
   System.err.println("No conversion found ...");   // inside the compiler
   ```
+  code: [ConvertExpression.java:95](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/compiler/ast/ConvertExpression.java#L95)
 
 - You cannot upgrade an implementation later, because callers depend on the
   concrete representation - which brings us to the arrays.
@@ -98,6 +105,7 @@ single-threaded, fixed + red-on-master test):
 ObjectHandle[] ahPass = hTuple.m_ahValue;  // TODO GG+CP do we need to check these?
 return chain.invokeT(frame, hTarget, ahPass, iReturn);
 ```
+code: [xRTMethod.java:206](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java#L206)
 
 When the callee needs no extra registers, the caller's tuple storage
 **becomes the callee's register file** - a parameter reassignment inside the
@@ -111,6 +119,7 @@ bug, single-threaded compile, fixed + test): short-hand property overrides
 aliased the *super method's* `Parameter` objects - owned by the loaded
 ecstasy module - into a new method, and constant registration then rewrote
 the shared library objects into the user module's pool.
+code: [MethodDeclarationStatement.java:504](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java#L504)
 
 **Exhibit C - the read-only contract that evaporates in production:**
 
@@ -118,6 +127,7 @@ the shared library objects into the user module's pool.
 assert (list = Collections.unmodifiableList(m_listContribs)) != null;
 return list;
 ```
+code: [Component.java:472](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/asm/Component.java#L472) (one of eight such sites)
 
 Eight getters wrapped their internal collections in `unmodifiable*` **only
 inside an `assert`** - run with `-da` (i.e., production) and callers get the
@@ -141,12 +151,14 @@ switch (constant.getFormat()) {
         return false;   // a new format silently makes every type "not a tuple"
 }
 ```
+code: [TerminalTypeConstant.java:844 - isTuple()](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/asm/constants/TerminalTypeConstant.java#L844)
 
 **Exhibit B - dispatch by string concatenation** (constant folding):
 
 ```java
 switch (op.TEXT + that.getFormat().name())   // "add" + "Int64" ...
 ```
+code: [StringConstant.java:83](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/asm/constants/StringConstant.java#L83)
 
 A typo'd case string is a silent non-match. This code had **zero unit tests**
 until this month - the first tests constant folding ever had.
@@ -155,6 +167,7 @@ until this month - the first tests constant folding ever had.
 register-kind dispatch in `Builder.checkNull` ended in an `else` guarded
 only by `assert` - under `-da`, an unexpected register kind takes the
 reference-comparison path and the generated bytecode is simply wrong.
+code: [Builder.java:1018 - checkNull()](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/javajit/Builder.java#L1018)
 
 The codebase knows this is fragile - it says so **63 times** in "shouldn't
 happen" comments and **814** hand-written `IllegalStateException`s. Those
@@ -171,6 +184,7 @@ cloned method's source still answered `getConstantPool()` **through the
 original method**, and a cloned component's contributions answered
 `getComponent()` with the **source** component. The copy constructor fix
 (`that.new Source(...)`) expresses what `clone()` structurally cannot.
+code: [MethodStructure.java:1775 - `that.m_source = this.m_source.clone()`](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/asm/MethodStructure.java#L1775) ; [Component.java:2572 - inner class Contribution, cloned the same way](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/asm/Component.java#L2572)
 
 ---
 
@@ -184,10 +198,13 @@ them:
   one access view left sibling views still writing into the "frozen" shared
   field storage - the *language's central guarantee*, implemented as a
   per-copy boolean. (Five desync mechanisms found, all fixed + tests.)
+  - code: [ObjectHandle.java:91 - makeImmutable() flips a per-instance flag](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/runtime/ObjectHandle.java#L91)
 - **`maskAs` is defeated by its own native code:** `xRTSocket.finishConnect`
   hands application code the **unmasked** native socket view.
+  - code: [xRTSocket.java:237](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTSocket.java#L237)
 - **The shared const heap could serve a live `HandleConstant` - an actual
   runtime object - across container boundaries** (now guarded + tested).
+  - code: [HandleConstant.java:34 - getHandle() with no owner check](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/asm/constants/HandleConstant.java#L34)
 - **Injection is a single FIFO choke point with no cycle detection.** Issue
   #541: a 12-worker jsondb test deadlocks *permanently* at 0% CPU because
   every fresh `@Inject` is a cross-service round-trip, a blocked
@@ -199,6 +216,7 @@ them:
   ```
 
   The field "used for deadlock detection" is read only by the debugger.
+  code: [Fiber.java:487](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/runtime/Fiber.java#L487) ; the FIFO choke point: [xunit.x:48 - PassThruInjector](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/lib_xunit/src/main/x/xunit.x#L48)
   A real user hit this last week and had to hand-build fiber-dump tooling
   to even see the cycle.
 
@@ -211,18 +229,24 @@ up. Concrete, all fixed on the branch with red-on-master tests:
 
 - Compiler codegen wrapped in **catch-Throwable-and-continue** - a compiler
   defect produced a *silently wrong* build instead of a failed one.
+  - code: [Compiler.java:471](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/tool/Compiler.java#L471)
 - Op-assembly failure **serialized a zero-op method** - a corrupt `.xtc`
   written without an error.
+  - code: [MethodStructure.java:2037 - `System.err.println("Error in ... assemble() of ops")`, then serializes anyway](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/asm/MethodStructure.java#L2037)
 - A failed module load **discarded its cause** - "could not load" with no
   why, for any corrupt file.
+  - code: [FileRepository.java:205 - `catch (Exception e) { System.out.println(...getMessage()); }`](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/asm/FileRepository.java#L205)
 - Async file writes: submit **ignored queued write failures**.
+  - code: [xRawOSFileChannel.java:212 - submit()](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java#L212)
 - `FullyBoundHandle.chain()`: with `-ea` it asserts; with `-da` it
   **silently drops registered finalizers**. Production behavior differs
   from tested behavior by design of the failure path.
+  - code: [xRTFunction.java:918 - `assert m_next == null`](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFunction.java#L918) ; the future twin: [xFuture.java:510 - `// must not happen`](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java#L510)
 
 **And when you attach a debugger, it lies:** `toString()` implementations
 *mutate state and throw* when invoked on an already-broken object - so
-inspecting the crash corrupts or crashes the crash. There is no logger to
+inspecting the crash corrupts or crashes the crash.
+code: [TerminalTypeConstant.java:2048 - getValueString() writes m_constId at display time](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/asm/constants/TerminalTypeConstant.java#L2048) ; [TypeInfoReal.java:2164 - toString() warms method chains for the whole type](https://github.com/xtclang/xvm/blob/61e555a68cd82a866f82aea40a3bb97a424a3809/javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java#L2164) There is no logger to
 thread through (Section 3), no execution snapshot, and until this branch
 there were **essentially no unit tests** on these paths - there are now 561,
 each one red on master first, which is how every claim in this document was
