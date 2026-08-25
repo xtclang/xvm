@@ -463,7 +463,7 @@ public class xRTTypeTemplate
             return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
 
-        TypeConstant[]       atypes  = type.getParamTypesArray();
+        TypeConstant[]       atypes  = type.getParamTypesArray().unsafeArray();
         int                  cTypes  = atypes.length;
         TypeTemplateHandle[] ahTypes = new TypeTemplateHandle[cTypes];
         for (int i = 0; i < cTypes; ++i) {

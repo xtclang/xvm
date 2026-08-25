@@ -1235,7 +1235,7 @@ public final class LambdaExpression
             if (typeOld instanceof PendingTypeConstant) {
                 typeNew = pool().typeObject();
             } else if (typeOld instanceof ParameterizedTypeConstant typeParams) {
-                TypeConstant[] atypeOld = typeParams.getParamTypesArray();
+                TypeConstant[] atypeOld = typeParams.getParamTypesArray().unsafeArray();
                 TypeConstant[] atypeNew = replacePending(atypeOld);
                 if (atypeNew != atypeOld) {
                     typeNew = pool().ensureParameterizedTypeConstant(

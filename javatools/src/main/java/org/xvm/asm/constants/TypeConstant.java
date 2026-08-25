@@ -85,6 +85,7 @@ import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
+import org.xvm.util.FrozenArray;
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
@@ -426,7 +427,7 @@ public abstract sealed class TypeConstant
      * @return the number of parameters specified
      */
     public int getParamsCount() {
-        return getParamTypesArray().length;
+        return getParamTypesArray().size();
     }
 
     /**
@@ -469,10 +470,10 @@ public abstract sealed class TypeConstant
      * @throws UnsupportedOperationException if there are no type parameters specified, or if the
      *         type is a relational type
      */
-    public TypeConstant[] getParamTypesArray() {
+    public FrozenArray<TypeConstant> getParamTypesArray() {
         return isModifyingType()
                 ? getUnderlyingType().getParamTypesArray()
-                : ConstantPool.NO_TYPES;
+                : ConstantPool.NO_TYPES_FROZEN;
     }
 
     /**
@@ -480,7 +481,7 @@ public abstract sealed class TypeConstant
      */
     public TypeConstant getParamType(int i) {
         return i < getParamsCount()
-                ? getParamTypesArray()[i]
+                ? getParamTypesArray().get(i)
                 : getConstantPool().typeObject();
     }
 
@@ -976,8 +977,8 @@ public abstract sealed class TypeConstant
                 if (typeThis.equals(typeThat)) {
                     // Parameterized types are known to have a distributive property:
                     // T<E1> + T<E2> == T<E1 + E2>
-                    TypeConstant[] atypeThis  = this.getParamTypesArray();
-                    TypeConstant[] atypeThat  = that.getParamTypesArray();
+                    TypeConstant[] atypeThis  = this.getParamTypesArray().unsafeArray();
+                    TypeConstant[] atypeThat  = that.getParamTypesArray().unsafeArray();
                     int            cTypes     = Math.max(atypeThis.length, atypeThat.length);
                     TypeConstant[] atypeInter = new TypeConstant[cTypes];
                     for (int i = 0; i < cTypes; i++) {
@@ -1003,14 +1004,14 @@ public abstract sealed class TypeConstant
                 t1.isA(pool.typeClass()) == t2.isA(pool.typeClass()) &&
                 t2.isA(t1.getUnderlyingType()) &&
                 t2.isSingleUnderlyingClass(true) && !t2.isParamsSpecified()) {
-            TypeConstant[] atype1 = t1.getParamTypesArray();
+            TypeConstant[] atype1 = t1.getParamTypesArray().unsafeArray();
             ClassStructure clz2   = (ClassStructure) t2.getSingleUnderlyingClass(true).getComponent();
             if (!clz2.isParameterized()) {
                 // nothing we can do here
                 return null;
             }
 
-            TypeConstant[] atype2 = clz2.getCanonicalType().getParamTypesArray();
+            TypeConstant[] atype2 = clz2.getCanonicalType().getParamTypesArray().unsafeArray();
             boolean        fClone = false;
             for (int i = 0, c = Math.min(atype1.length, atype2.length); i < c; i++) {
                 TypeConstant te1 = atype1[i];
@@ -1055,8 +1056,8 @@ public abstract sealed class TypeConstant
                 if (typeThis.equals(typeThat)) {
                     // Parameterized types are known to have a distributive property:
                     // T<E1> | T<E2> == T<E1 | E2>
-                    TypeConstant[] atypeThis  = this.getParamTypesArray();
-                    TypeConstant[] atypeThat  = that.getParamTypesArray();
+                    TypeConstant[] atypeThis  = this.getParamTypesArray().unsafeArray();
+                    TypeConstant[] atypeThat  = that.getParamTypesArray().unsafeArray();
                     int            cTypes     = Math.max(atypeThis.length, atypeThat.length);
                     TypeConstant[] atypeUnion = new TypeConstant[cTypes];
                     for (int i = 0; i < cTypes; i++) {
@@ -1317,6 +1318,14 @@ public abstract sealed class TypeConstant
     }
 
     /**
+     * Frozen-array form of {@link #adoptParameters(ConstantPool, TypeConstant[])}: shares the
+     * wrapper, so adopting another interned constant's parameters is copy-free and safe.
+     */
+    public TypeConstant adoptParameters(ConstantPool pool, FrozenArray<TypeConstant> atypeParams) {
+        return adoptParameters(pool, atypeParams.unsafeArray());
+    }
+
+    /**
      * Collect an array of generic type parameters for this "formalizable" type.
      * <p/>
      * An already parameterized class is not formalizable.
@@ -1537,8 +1546,8 @@ public abstract sealed class TypeConstant
 
         if (this.isTuple() && that.isTuple()) {
             // tuples can be comparable if the types are not explicitly specified
-            TypeConstant[] atypeThis = this.getParamTypesArray();
-            TypeConstant[] atypeThat = that.getParamTypesArray();
+            TypeConstant[] atypeThis = this.getParamTypesArray().unsafeArray();
+            TypeConstant[] atypeThat = that.getParamTypesArray().unsafeArray();
             for (int i = 0, c = Math.min(atypeThis.length, atypeThat.length); i < c; i++) {
                 if (!atypeThis[i].supportsEquals(atypeThat[i], false)) {
                     return false;
@@ -2678,7 +2687,7 @@ public abstract sealed class TypeConstant
             mapTypeParams.put(param.getName(), param);
         } else {
             // obtain the type parameters encoded in this type constant
-            TypeConstant[] atypeParams = getParamTypesArray();
+            TypeConstant[] atypeParams = getParamTypesArray().unsafeArray();
             int            cTypeParams = atypeParams.length;
 
             // obtain the type parameters declared by the class
@@ -2934,7 +2943,8 @@ public abstract sealed class TypeConstant
                 // the original interface and Object
                 TypeConstant typeNatural = pool.register(idNative.getClassConstant().getType());
                 if (isParamsSpecified()) {
-                    typeNatural = pool.ensureParameterizedTypeConstant(typeNatural, getParamTypesArray());
+                    typeNatural = pool.ensureParameterizedTypeConstant(typeNatural,
+                            getParamTypesArray());
                 }
                 listProcess.add(struct.new Contribution(Composition.Implements, typeNatural));
                 typeExtends = pool.typeObject();

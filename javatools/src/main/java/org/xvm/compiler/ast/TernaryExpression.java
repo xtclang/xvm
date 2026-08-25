@@ -617,7 +617,7 @@ public final class TernaryExpression
                 return TypeConstant.NO_TYPES;
             }
 
-            TypeConstant[] atypeResult = typeTuple.getParamTypesArray();
+            TypeConstant[] atypeResult = typeTuple.getParamTypesArray().unsafeArray();
             return atypeResult[0].isA(pool.typeBoolean())
                      ? atypeResult
                      : TypeConstant.NO_TYPES;

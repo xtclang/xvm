@@ -97,7 +97,7 @@ public abstract sealed class AbstractDependantChildTypeConstant
 
     @Override
     public TypeConstant[] collectGenericParameters() {
-        return getChildStructure().getFormalType().getParamTypesArray();
+        return getChildStructure().getFormalType().getParamTypesArray().unsafeArray();
     }
 
     @Override

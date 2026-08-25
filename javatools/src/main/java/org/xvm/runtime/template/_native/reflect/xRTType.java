@@ -1358,7 +1358,7 @@ public class xRTType
             return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
 
-        TypeConstant[] atypes  = type.getParamTypesArray();
+        TypeConstant[] atypes  = type.getParamTypesArray().unsafeArray();
         int            cTypes  = atypes.length;
         TypeHandle[]   ahTypes = new TypeHandle[cTypes];
         for (int i = 0; i < cTypes; ++i) {

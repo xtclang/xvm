@@ -649,7 +649,7 @@ public sealed class NamedTypeExpression
                 return null;
             }
             if (type.isParamsSpecified()) {
-                TypeConstant[] atypeActual = type.getParamTypesArray();
+                TypeConstant[] atypeActual = type.getParamTypesArray().unsafeArray();
                 if (!Arrays.equals(atypeActual, atypeParams)) {
                     // this can happen for example, if m_constId is a typedef for a function
                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
@@ -885,7 +885,7 @@ public sealed class NamedTypeExpression
                               component instanceof MethodStructure method &&
                                     method.isConstructor() && !method.isPropertyInitializer())) {
                             typeTarget = pool.ensureClassTypeConstant(constTarget, null,
-                                clzTarget.getFormalType().getParamTypesArray());
+                                clzTarget.getFormalType().getParamTypesArray().unsafeArray());
                         }
                     }
 

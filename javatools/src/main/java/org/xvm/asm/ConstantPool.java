@@ -1827,9 +1827,20 @@ public class ConstantPool
      *
      * @return a type constant with the specified type parameter types
      */
+    /**
+     * Obtain a parameterized type sharing an already-frozen parameter array - the safe form of
+     * adopting another interned constant's types without copying (and without the raw-array
+     * aliasing the old shape relied on clone conventions to keep safe).
+     */
+    public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType,
+            FrozenArray<TypeConstant> constTypes) {
+        return (TypeConstant) register(
+                new ParameterizedTypeConstant(this, constType, constTypes));
+    }
+
     public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, TypeConstant... constTypes) {
         if (constType.isParamsSpecified()) {
-            TypeConstant[] atypeParam = constType.getParamTypesArray();
+            TypeConstant[] atypeParam = constType.getParamTypesArray().unsafeArray();
             int c = atypeParam.length;
             CheckTypes: if (c == constTypes.length) {
                 for (int i = 0; i < c; ++i) {
@@ -2074,11 +2085,11 @@ public class ConstantPool
                         ? ensureThisVirtualChildTypeConstant(typeParent, sName)
                         : ensureVirtualChildTypeConstant(typeParent, sName);
         if (fParameterize && clzChild.getTypeParamCount() > 0) {
-            TypeConstant[] atypeParams = fFormal
+            var atypeParams = fFormal
                     ? clzChild.getFormalType().getParamTypesArray()
                     : clzChild.getCanonicalType().getParamTypesArray();
 
-            typeTarget = ensureParameterizedTypeConstant(typeTarget, atypeParams);
+            typeTarget = ensureParameterizedTypeConstant(typeTarget, atypeParams.unsafeArray());
         }
         return typeTarget;
     }
@@ -3892,7 +3903,7 @@ public class ConstantPool
                 if (typeFunction.getParamsCount() > 0) {
                     TypeConstant typeParams = typeFunction.getParamType(0);
                     if (typeParams.isTuple()) {
-                        return typeParams.getParamTypesArray();
+                        return typeParams.getParamTypesArray().unsafeArray();
                     }
                 } else if (typeFunction instanceof IntersectionTypeConstant typeInter) {
                     return typeInter.extractFunctionParams();
@@ -3904,7 +3915,7 @@ public class ConstantPool
                 if (typeFunction.getParamsCount() > 1) {
                     TypeConstant typeParams = typeFunction.getParamType(1);
                     if (typeParams.isTuple()) {
-                        return typeParams.getParamTypesArray();
+                        return typeParams.getParamTypesArray().unsafeArray();
                     }
                 }
                 return TypeConstant.NO_TYPES;
@@ -3936,7 +3947,7 @@ public class ConstantPool
                 if (typeFunction.getParamsCount() > 1) {
                     TypeConstant typeParams = typeFunction.getParamType(1);
                     if (typeParams.isTuple()) {
-                        return typeParams.getParamTypesArray();
+                        return typeParams.getParamTypesArray().unsafeArray();
                     }
                 } else if (typeFunction instanceof IntersectionTypeConstant typeInter) {
                     return typeInter.extractFunctionReturns();
@@ -3948,7 +3959,7 @@ public class ConstantPool
                 if (typeFunction.getParamsCount() > 2) {
                     TypeConstant typeParams = typeFunction.getParamType(2);
                     if (typeParams.isTuple()) {
-                        return typeParams.getParamTypesArray();
+                        return typeParams.getParamTypesArray().unsafeArray();
                     }
                 }
                 return TypeConstant.NO_TYPES;
@@ -4331,6 +4342,11 @@ public class ConstantPool
      * An immutable, empty, zero-length array of types.
      */
     public static final TypeConstant[] NO_TYPES = TypeConstant.NO_TYPES;
+
+    /**
+     * The frozen view of {@link #NO_TYPES}, for wrapper-returning accessors.
+     */
+    public static final FrozenArray<TypeConstant> NO_TYPES_FROZEN = FrozenArray.adopt(NO_TYPES);
 
     /**
      * Storage of Constant objects by index.

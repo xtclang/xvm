@@ -813,7 +813,7 @@ public sealed class ClassStructure
 
         return cActual == cFormal
             ? atypeActual
-            : resolveType(pool, Arrays.asList(atypeActual)).getParamTypesArray();
+            : resolveType(pool, Arrays.asList(atypeActual)).getParamTypesArray().unsafeArray();
     }
 
     /**

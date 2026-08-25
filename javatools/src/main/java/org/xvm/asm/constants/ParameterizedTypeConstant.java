@@ -25,6 +25,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Register;
 
+import org.xvm.util.FrozenArray;
 import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
@@ -78,6 +79,21 @@ public final class ParameterizedTypeConstant
         }
 
         m_constType   = constType;
+        m_atypeParams = FrozenArray.adopt(constTypeParams);
+    }
+
+    /**
+     * Construct a constant whose value is a parameterized data type, sharing an already-frozen
+     * parameter array - the safe form of building one interned type from another constant's
+     * types (the wrapper is shared; the storage cannot be mutated through it).
+     *
+     * @param pool             the ConstantPool that will contain this Constant
+     * @param constType        a TypeConstant representing the parameterized type
+     * @param constTypeParams  the frozen type parameters
+     */
+    public ParameterizedTypeConstant(ConstantPool pool, TypeConstant constType,
+                                     FrozenArray<TypeConstant> constTypeParams) {
+        this(pool, constType, constTypeParams == null ? null : constTypeParams.unsafeArray());
         m_atypeParams = constTypeParams;
     }
 
@@ -113,18 +129,25 @@ public final class ParameterizedTypeConstant
         m_constType = pool.getConstant(m_iType, TypeConstant.class);
 
         if (m_aiTypeParams == null) {
-            m_atypeParams = ConstantPool.NO_TYPES;
+            m_atypeParams = FrozenArray.adopt(ConstantPool.NO_TYPES);
         } else {
             int            cParams     = m_aiTypeParams.length;
             TypeConstant[] atypeParams = new TypeConstant[cParams];
             for (int i = 0; i < cParams; ++i) {
                 atypeParams[i] = pool.getConstant(m_aiTypeParams[i], TypeConstant.class);
             }
-            m_atypeParams  = atypeParams;
+            m_atypeParams  = FrozenArray.adopt(atypeParams);
             m_aiTypeParams = null;
         }
     }
 
+
+    /**
+     * @return the wrapped parameter storage, for this class's own hot internals; never escapes
+     */
+    private TypeConstant[] atypeParams() {
+        return m_atypeParams.unsafeArray();
+    }
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -144,7 +167,7 @@ public final class ParameterizedTypeConstant
             return false;
         }
 
-        for (TypeConstant typeParam : m_atypeParams) {
+        for (TypeConstant typeParam : atypeParams()) {
             if (!typeParam.isShared(poolOther)) {
                 return false;
             }
@@ -160,20 +183,22 @@ public final class ParameterizedTypeConstant
 
     @Override
     public List<TypeConstant> getParamTypes() {
-        return m_atypeParams.length == 0
+        // the old shape returned Arrays.asList over the INTERNED storage - a live,
+        // set()-writable view of a shared constant's types; List.of copies and is immutable
+        return m_atypeParams.isEmpty()
                 ? Collections.emptyList()
-                : Arrays.asList(m_atypeParams);
+                : List.of(atypeParams());
     }
 
     @Override
-    public TypeConstant[] getParamTypesArray() {
+    public FrozenArray<TypeConstant> getParamTypesArray() {
         return m_atypeParams;
     }
 
     @Override
     public int getTypeDepth() {
         int nDepth = 1;
-        for (TypeConstant typeParam : m_atypeParams) {
+        for (TypeConstant typeParam : atypeParams()) {
             nDepth = Math.max(nDepth, typeParam.getTypeDepth() + 1);
         }
         return nDepth;
@@ -236,7 +261,7 @@ public final class ParameterizedTypeConstant
             return true;
         }
 
-        for (TypeConstant typeParam : m_atypeParams) {
+        for (TypeConstant typeParam : atypeParams()) {
             if (typeParam.containsAutoNarrowing(fAllowVirtChild)) {
                 return true;
             }
@@ -265,7 +290,7 @@ public final class ParameterizedTypeConstant
             return constResolved;
         }
 
-        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstOriginal = atypeParams();
         TypeConstant[] aconstResolved = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
             aconstResolved = cow(aconstOriginal, aconstResolved, i,
@@ -300,7 +325,7 @@ public final class ParameterizedTypeConstant
 
         assert !constResolved.isParamsSpecified();
 
-        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstOriginal = atypeParams();
         TypeConstant[] aconstResolved = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
             TypeConstant constParamOriginal = aconstOriginal[i];
@@ -309,7 +334,7 @@ public final class ParameterizedTypeConstant
                 if (constOriginal.isTuple() && constParamOriginal.isFormalTypeSequence()) {
                     // "ElementTypes" -> Tuple<T1, T2, T3>
                     assert c == 1 && constParamResolved.isTuple();
-                    aconstResolved = constParamResolved.getParamTypesArray();
+                    aconstResolved = constParamResolved.getParamTypesArray().unsafeArray();
                 } else {
                     aconstResolved = cow(aconstOriginal, aconstResolved, i, constParamResolved);
                 }
@@ -338,7 +363,7 @@ public final class ParameterizedTypeConstant
 
         assert !constResolved.isParamsSpecified();
 
-        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstOriginal = atypeParams();
         TypeConstant[] aconstResolved = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
             aconstResolved = cow(aconstOriginal, aconstResolved, i,
@@ -356,7 +381,7 @@ public final class ParameterizedTypeConstant
 
         assert !constUnderlying.isDynamicType();
 
-        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstOriginal = atypeParams();
         TypeConstant[] aconstResolved = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
             aconstResolved = cow(aconstOriginal, aconstResolved, i,
@@ -371,7 +396,7 @@ public final class ParameterizedTypeConstant
     @Override
     public boolean containsFormalType(boolean fAllowParams) {
         if (fAllowParams) {
-            for (TypeConstant typeParam : m_atypeParams) {
+            for (TypeConstant typeParam : atypeParams()) {
                 if (typeParam.containsFormalType(true)) {
                     return true;
                 }
@@ -384,7 +409,7 @@ public final class ParameterizedTypeConstant
     @Override
     public void collectFormalTypes(boolean fAllowParams, Set<TypeConstant> setFormal) {
         if (fAllowParams) {
-            for (TypeConstant typeParam : m_atypeParams) {
+            for (TypeConstant typeParam : atypeParams()) {
                 typeParam.collectFormalTypes(fAllowParams, setFormal);
             }
         }
@@ -392,7 +417,7 @@ public final class ParameterizedTypeConstant
 
     @Override
     public boolean containsDynamicType(Register register) {
-        for (TypeConstant typeParam : m_atypeParams) {
+        for (TypeConstant typeParam : atypeParams()) {
             if (typeParam.containsDynamicType(register)) {
                 return true;
             }
@@ -403,7 +428,7 @@ public final class ParameterizedTypeConstant
     @Override
     public boolean containsGenericType(boolean fAllowParams) {
         if (fAllowParams) {
-            for (TypeConstant typeParam : m_atypeParams) {
+            for (TypeConstant typeParam : atypeParams()) {
                 if (typeParam.containsGenericType(fAllowParams)) {
                     return true;
                 }
@@ -416,7 +441,7 @@ public final class ParameterizedTypeConstant
     @Override
     public boolean containsTypeParameter(boolean fAllowParams) {
         if (fAllowParams) {
-            for (TypeConstant typeParam : m_atypeParams) {
+            for (TypeConstant typeParam : atypeParams()) {
                 if (typeParam.containsTypeParameter(true)) {
                     return true;
                 }
@@ -428,7 +453,7 @@ public final class ParameterizedTypeConstant
 
     @Override
     public boolean containsRecursiveType() {
-        for (TypeConstant type : m_atypeParams) {
+        for (TypeConstant type : atypeParams()) {
             if (type.containsRecursiveType()) {
                 return true;
             }
@@ -440,19 +465,19 @@ public final class ParameterizedTypeConstant
     @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams) {
         if (atypeParams == null) {
-            atypeParams = m_atypeParams;
+            atypeParams = atypeParams();
         } else {
             // make sure we don't adopt wider types over current narrower ones
-            for (int i = 0, c = Math.min(atypeParams.length, m_atypeParams.length); i < c; i++) {
+            for (int i = 0, c = Math.min(atypeParams.length, atypeParams().length); i < c; i++) {
                 TypeConstant typeAdopt = atypeParams[i];
-                TypeConstant typeCurr  = m_atypeParams[i];
+                TypeConstant typeCurr  = atypeParams()[i];
                 if (!typeAdopt.isA(typeCurr) && !typeCurr.isFormalType()) {
                     // unfortunately, there is no way to merge the adoptees and current types
                     // in a predictable manner; need to discard the entire batch in favor of the
                     // current types
                     // TODO: soft assert; needs to be removed
                     System.err.println("Un-adoptable type parameter " + typeAdopt + " for " + this);
-                    atypeParams = m_atypeParams;
+                    atypeParams = atypeParams();
                     break;
                 }
             }
@@ -518,7 +543,7 @@ public final class ParameterizedTypeConstant
                 ClassStructure   clz   = (ClassStructure) idClz.getComponent();
 
                 if (clz.isParameterized()) {
-                    return pool.ensureParameterizedTypeConstant(constResolved, m_atypeParams);
+                    return pool.ensureParameterizedTypeConstant(constResolved, atypeParams());
                 }
             }
             return constResolved;
@@ -526,7 +551,7 @@ public final class ParameterizedTypeConstant
 
         if (constOriginal == constResolved) {
             // scenarios 4, 5
-            TypeConstant[] aconstOriginal = m_atypeParams;
+            TypeConstant[] aconstOriginal = atypeParams();
             TypeConstant[] aconstResolved = aconstOriginal;
             for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
                 aconstResolved = cow(aconstOriginal, aconstResolved, i,
@@ -547,7 +572,7 @@ public final class ParameterizedTypeConstant
                     ClassStructure   clz   = (ClassStructure) idClz.getComponent();
 
                     if (clz.isParameterized()) {
-                        TypeConstant[] aconstOriginal = m_atypeParams;
+                        TypeConstant[] aconstOriginal = atypeParams();
                         TypeConstant[] aconstResolved = aconstOriginal;
                         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
                             aconstResolved = cow(aconstOriginal, aconstResolved, i,
@@ -629,8 +654,8 @@ public final class ParameterizedTypeConstant
 
         // the name is not known by this class; recurse over the parameter types
         if (idThis.equals(idThat)) {
-            TypeConstant[] atypeThis = this.m_atypeParams;
-            TypeConstant[] atypeThat = that.m_atypeParams;
+            TypeConstant[] atypeThis = this.atypeParams();
+            TypeConstant[] atypeThat = that.atypeParams();
 
             for (int i = 0, c = Math.min(atypeThis.length, atypeThat.length); i < c; ++i) {
                 TypeConstant typeResult = atypeThis[i].resolveTypeParameter(atypeThat[i], sFormalName);
@@ -644,7 +669,7 @@ public final class ParameterizedTypeConstant
             for (StringConstant constName : clzThis.getTypeParams().keySet()) {
                 TypeConstant typeThat = typeActual.resolveGenericType(constName.getValue());
                 if (typeThat != null) {
-                    TypeConstant typeThis   = m_atypeParams[iParam];
+                    TypeConstant typeThis   = atypeParams()[iParam];
                     TypeConstant typeResult = typeThis.resolveTypeParameter(typeThat, sFormalName);
                     if (typeResult != null) {
                         return typeResult;
@@ -663,8 +688,8 @@ public final class ParameterizedTypeConstant
             TypeConstant constUnderlyingThis = this.m_constType;
             TypeConstant constUnderlyingThat = that.m_constType;
             if (constUnderlyingThat.isA(constUnderlyingThis)) {
-                TypeConstant[] aconstThis     = this.m_atypeParams;
-                TypeConstant[] aconstThat     = that.m_atypeParams;
+                TypeConstant[] aconstThis     = this.atypeParams();
+                TypeConstant[] aconstThat     = that.atypeParams();
                 TypeConstant[] aconstResolved = aconstThis;
 
                 for (int i = 0, c = Math.min(aconstThis.length, aconstThat.length); i < c; ++i) {
@@ -684,7 +709,7 @@ public final class ParameterizedTypeConstant
 
     @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type) {
-        return pool.ensureParameterizedTypeConstant(type, m_atypeParams);
+        return pool.ensureParameterizedTypeConstant(type, atypeParams());
     }
 
     @Override
@@ -695,7 +720,7 @@ public final class ParameterizedTypeConstant
             return result;
         }
 
-        for (TypeConstant typeParam : m_atypeParams) {
+        for (TypeConstant typeParam : atypeParams()) {
             ResolutionResult resultParam = typeParam.resolveContributedName(sName, access, idMethod, collector);
             if (resultParam == ResolutionResult.RESOLVED) {
                 return resultParam;
@@ -707,7 +732,7 @@ public final class ParameterizedTypeConstant
 
     @Override
     public TypeConstant widenEnumValueTypes() {
-        TypeConstant[] aconstOriginal  = m_atypeParams;
+        TypeConstant[] aconstOriginal  = atypeParams();
         TypeConstant[] aconstResolved  = aconstOriginal;
 
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
@@ -845,14 +870,14 @@ public final class ParameterizedTypeConstant
             return fDiff
                     ? fFunction
                         ? pool.buildFunctionType(atypeParams, atypeReturns)
-                        : pool.buildMethodType(m_atypeParams[0], atypeParams, atypeReturns)
+                        : pool.buildMethodType(atypeParams()[0], atypeParams, atypeReturns)
                     : this;
         }
 
         TypeConstant typeResolved = typeOrig.getCallableJitType();
         boolean      fTrivial     = true;
 
-        TypeConstant[] aconstOriginal  = m_atypeParams;
+        TypeConstant[] aconstOriginal  = atypeParams();
         TypeConstant[] aconstCanonical = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
             TypeConstant typeParamOriginal = aconstOriginal[i];
@@ -932,7 +957,7 @@ public final class ParameterizedTypeConstant
             return true;
         }
 
-        for (Constant param : m_atypeParams) {
+        for (Constant param : atypeParams()) {
             if (param.containsUnresolved()) {
                 return true;
             }
@@ -944,14 +969,14 @@ public final class ParameterizedTypeConstant
     @Override
     public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constType);
-        for (Constant param : m_atypeParams) {
+        for (Constant param : atypeParams()) {
             visitor.accept(param);
         }
     }
 
     @Override
     protected Object getLocator() {
-        return m_atypeParams.length == 0
+        return atypeParams().length == 0
                 ? m_constType
                 : null;
     }
@@ -964,8 +989,8 @@ public final class ParameterizedTypeConstant
 
         int n = this.m_constType.compareTo(that.m_constType);
         if (n == 0) {
-            TypeConstant[] atypeThis = this.m_atypeParams;
-            TypeConstant[] atypeThat = that.m_atypeParams;
+            TypeConstant[] atypeThis = this.atypeParams();
+            TypeConstant[] atypeThat = that.atypeParams();
             for (int i = 0, c = Math.min(atypeThis.length, atypeThat.length); i < c; ++i) {
                 n = atypeThis[i].compareTo(atypeThat[i]);
                 if (n != 0) {
@@ -1033,7 +1058,7 @@ public final class ParameterizedTypeConstant
         } else {
             sb.append(m_constType.getValueString())
               .append('<')
-              .append(Arrays.stream(m_atypeParams)
+              .append(Arrays.stream(atypeParams())
                       .map(TypeConstant::getValueString)
                       .collect(Collectors.joining(", ")))
               .append('>');
@@ -1048,7 +1073,7 @@ public final class ParameterizedTypeConstant
         // resolver/JIT helpers are owner-local mutable state. Reconstruct the logical value so the
         // target-pool copy is born with fresh helper cells and the same cached type behavior.
         return new ParameterizedTypeConstant(context.pool(), m_constType,
-                Arrays.copyOf(m_atypeParams, m_atypeParams.length));
+                Arrays.copyOf(atypeParams(), atypeParams().length));
     }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
@@ -1056,7 +1081,7 @@ public final class ParameterizedTypeConstant
     @Override
     protected void registerConstants(ConstantPool pool) {
         m_constType   = pool.register(m_constType);
-        m_atypeParams = registerTypeConstants(pool, m_atypeParams);
+        m_atypeParams = FrozenArray.adopt(registerTypeConstants(pool, atypeParams()));
 
         // invalidate cached types
         long stamp = m_lockPrev.writeLock();
@@ -1070,8 +1095,8 @@ public final class ParameterizedTypeConstant
             throws IOException {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, indexOf(m_constType));
-        writePackedLong(out, m_atypeParams.length);
-        for (TypeConstant constType : m_atypeParams) {
+        writePackedLong(out, atypeParams().length);
+        for (TypeConstant constType : atypeParams()) {
             writeMagnitude(out, constType.getPosition());
         }
     }
@@ -1088,7 +1113,7 @@ public final class ParameterizedTypeConstant
                 fHalt = true;
             }
 
-            for (TypeConstant type : m_atypeParams) {
+            for (TypeConstant type : atypeParams()) {
                 fHalt |= type.validate(errs);
             }
 
@@ -1103,7 +1128,7 @@ public final class ParameterizedTypeConstant
     @Override
     protected int computeHashCode() {
         return Hash.of(m_constType,
-               Hash.of(m_atypeParams));
+               Hash.of(atypeParams()));
     }
 
     // ----- fields --------------------------------------------------------------------------------
@@ -1126,7 +1151,7 @@ public final class ParameterizedTypeConstant
     /**
      * The type parameters.
      */
-    private TypeConstant[] m_atypeParams;
+    private FrozenArray<TypeConstant> m_atypeParams;
 
     /**
      * Lock protecting {@link #m_typeResolverPrev} and {@link #m_typeResolvedPrev}

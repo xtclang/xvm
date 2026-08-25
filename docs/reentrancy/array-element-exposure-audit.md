@@ -673,7 +673,13 @@ harness added early so the category stays closed after it is emptied.
 - Remaining escapes into Family B (`ensureTupleType(sig.getRawReturns()
   .unsafeArray())` at MethodConstant/Frame) are marked and close when
   ParameterizedTypeConstant converts.
-- Next: Family B (getParamTypesArray surface); then re-evaluate the MethodBody
-  chain trailer per the recon's not-worth-it analysis. Annotation params stay
-  gated on the builder-state redesign; TypeInfo annotation arrays already
-  closed by stage-2 cloning.
+- **Family B (ParameterizedTypeConstant / getParamTypesArray surface)
+  converted**: frozen field + wrapper-returning base API (`NO_TYPES_FROZEN`
+  empty default), `getParamTypes()` live-view eliminated, frozen-sharing
+  overloads on `ensureParameterizedTypeConstant`/`adoptParameters`, and the
+  first clone-convention death (TerminalTypeConstant's defensive `.clone()`
+  before parameter adoption replaced by safe wrapper sharing). Red-verified by
+  `ParameterizedTypeFrozenTest`.
+- Next: re-evaluate the MethodBody chain trailer per the recon's not-worth-it
+  analysis. Annotation params stay gated on the builder-state redesign;
+  TypeInfo annotation arrays already closed by stage-2 cloning.

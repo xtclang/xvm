@@ -1444,7 +1444,8 @@ public final class InvocationExpression
                                 assert typeTuple.isTuple();
 
                                 ExprAST astInvoke = new InvokeExprAST(idMethod,
-                                        typeTuple.getParamTypesArray(), m_astTarget, aAsts, fAsync);
+                                        typeTuple.getParamTypesArray().unsafeArray(),
+                                        m_astTarget, aAsts, fAsync);
                                 m_astInvoke = new TupleExprAST(typeTuple, new ExprAST[] {astInvoke});
                             } else {
                                 m_astInvoke = new InvokeExprAST(idMethod,
@@ -1703,7 +1704,7 @@ public final class InvocationExpression
                 TypeConstant typeTuple = getType();
                 assert typeTuple.isTuple();
 
-                ExprAST astCall = new CallExprAST(astFn, typeTuple.getParamTypesArray(), aAsts, fAsync);
+                ExprAST astCall = new CallExprAST(astFn, typeTuple.getParamTypesArray().unsafeArray(), aAsts, fAsync);
                 m_astInvoke = new TupleExprAST(typeTuple, new ExprAST[] {astCall});
             } else {
                 m_astInvoke = new CallExprAST(astFn, getTypes(), aAsts, fAsync);

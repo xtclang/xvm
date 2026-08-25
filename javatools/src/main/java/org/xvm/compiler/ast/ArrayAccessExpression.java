@@ -1028,7 +1028,7 @@ public final class ArrayAccessExpression
                 return null;
             }
 
-            TypeConstant[] atypeReq = typeRequired.getParamTypesArray();
+            TypeConstant[] atypeReq = typeRequired.getParamTypesArray().unsafeArray();
             int            cReq     = atypeReq.length;
             if (cReq > cElements) {
                 return null;

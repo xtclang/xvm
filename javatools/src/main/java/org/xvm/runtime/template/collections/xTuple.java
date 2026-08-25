@@ -274,7 +274,7 @@ public class xTuple
         ObjectHandle[] ahValue = hThis.m_ahValue;
         int            cValues = ahValue.length;
 
-        TypeConstant[] atype     = hThis.getType().getParamTypesArray();
+        TypeConstant[] atype     = hThis.getType().getParamTypesArray().unsafeArray();
         int            cTypes    = atype.length;
         int            cNew      = cValues + 1;
 
@@ -317,9 +317,9 @@ public class xTuple
             return frame.assignValue(iReturn, hThis);
         }
 
-        TypeConstant[] atype     = hThis.getType().getParamTypesArray();
+        TypeConstant[] atype     = hThis.getType().getParamTypesArray().unsafeArray();
         int            cTypes    = atype.length;
-        TypeConstant[] atypeAdd  = hThat.getType().getParamTypesArray();
+        TypeConstant[] atypeAdd  = hThat.getType().getParamTypesArray().unsafeArray();
         int            cTypesAdd = atypeAdd.length;
         int            cNew      = cValues + cValuesAdd;
 
@@ -444,7 +444,7 @@ public class xTuple
         }
 
         ObjectHandle[] ahValue = hTuple.m_ahValue;
-        TypeConstant[] atype   = hTuple.getType().getParamTypesArray();
+        TypeConstant[] atype   = hTuple.getType().getParamTypesArray().unsafeArray();
         int            cTypes  = atype.length;
 
         if (cTypes > 0 && cTypes < ahValue.length) {
@@ -545,12 +545,12 @@ public class xTuple
             return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
         }
 
-        TypeConstant[] atypeCommon = clazz.getType().getParamTypesArray();
+        TypeConstant[] atypeCommon = clazz.getType().getParamTypesArray().unsafeArray();
         int            cCommon     = atypeCommon.length;
 
         if (cCommon < cElements) {
-            TypeConstant[] atype1 = hTuple1.getType().getParamTypesArray();
-            TypeConstant[] atype2 = hTuple2.getType().getParamTypesArray();
+            TypeConstant[] atype1 = hTuple1.getType().getParamTypesArray().unsafeArray();
+            TypeConstant[] atype2 = hTuple2.getType().getParamTypesArray().unsafeArray();
 
             if (cCommon == 0) {
                 atypeCommon = atype1;
@@ -729,7 +729,7 @@ public class xTuple
         @Override
         protected TypeConstant augmentType(TypeConstant type) {
             ObjectHandle[] ahValue     = m_ahValue;
-            TypeConstant[] atypeOrig   = type.getParamTypesArray();
+            TypeConstant[] atypeOrig   = type.getParamTypesArray().unsafeArray();
             TypeConstant[] atypeActual = null;
 
             for (int i = 0, c = Math.min(ahValue.length, atypeOrig.length); i < c; i++) {

@@ -648,7 +648,7 @@ public sealed class TerminalTypeConstant
 
         ClassStructure struct = (ClassStructure) idClz.getComponent();
         if (struct.isParameterized()) {
-            return struct.getFormalType().getParamTypesArray();
+            return struct.getFormalType().getParamTypesArray().unsafeArray();
         }
         return TypeConstant.NO_TYPES;
     }
@@ -692,8 +692,9 @@ public sealed class TerminalTypeConstant
 
                 // apply the target's type parameters and annotations (if any)
                 if (typeTarget.isParamsSpecified()) {
+                    // sharing the frozen wrapper replaces the old defensive clone
                     typeCtx = pool.ensureParameterizedTypeConstant(typeCtx,
-                                    typeTarget.getParamTypesArray().clone());
+                                    typeTarget.getParamTypesArray());
                 }
                 if (typeTarget.isAnnotated()) {
                     typeCtx = pool.ensureAnnotatedTypeConstant(typeCtx,

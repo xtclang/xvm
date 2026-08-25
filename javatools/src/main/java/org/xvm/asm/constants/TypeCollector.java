@@ -229,7 +229,7 @@ public class TypeCollector {
             return type == null
                     ? TypeConstant.NO_TYPES
                     : fPacked
-                        ? type.getParamTypesArray()
+                        ? type.getParamTypesArray().unsafeArray()
                         : new TypeConstant[] {type};
         }
 

@@ -60,7 +60,7 @@ public final class UnpackExpression
     public TypeConstant[] getImplicitTypes(Context ctx) {
         return isValidated()
                 ? getTypes()
-                : expr.getImplicitType(ctx).getParamTypesArray();
+                : expr.getImplicitType(ctx).getParamTypesArray().unsafeArray();
     }
 
     @Override
@@ -154,7 +154,7 @@ public final class UnpackExpression
         TypeConstant typeTuple = exprTuple.getType();
         assert typeTuple.isTuple() && typeTuple.isParamsSpecified();
 
-        TypeConstant[] atypeField = typeTuple.getParamTypesArray();
+        TypeConstant[] atypeField = typeTuple.getParamTypesArray().unsafeArray();
         Constant[]     aconstVal  = null;
 
         if (exprTuple.isConstant()) {

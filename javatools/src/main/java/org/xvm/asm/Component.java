@@ -3190,7 +3190,7 @@ public abstract sealed class Component
         protected boolean checkConditionalIncorporate(TypeConstant typeContrib) {
             assert getComposition() == Composition.Incorporates;
 
-            TypeConstant[] atypeParams = typeContrib.getParamTypesArray();
+            TypeConstant[] atypeParams = typeContrib.getParamTypesArray().unsafeArray();
 
             Map<StringConstant, TypeConstant> mapConditional = getTypeParams();
             if (mapConditional != null) {

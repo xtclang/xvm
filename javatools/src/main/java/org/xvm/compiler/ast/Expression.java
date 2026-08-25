@@ -373,7 +373,7 @@ public abstract sealed class Expression
             TypeConstant typeOut = atypeOut[0];
             if (typeOut.isTuple() && typeOut.getParamsCount() <= cTypesIn &&
                     (cTypesIn > 1 || !atypeIn[0].isTuple())) {
-                atypeOut  = typeOut.getParamTypesArray();
+                atypeOut  = typeOut.getParamTypesArray().unsafeArray();
                 cTypesOut = atypeOut.length;
                 fitOut    = TypeFit.Pack;
             }
@@ -633,8 +633,8 @@ public abstract sealed class Expression
             if (typeActual.isParamsSpecified()) {
                 // there is a possibility that the type parameters could be in turn inferred, e.g.
                 //   PropertyMapping<structType.DataType>[] fields = new PropertyMapping[];
-                TypeConstant[] atypeRequired = typeRequired.getParamTypesArray();
-                TypeConstant[] atypeActual   = typeActual.getParamTypesArray();
+                TypeConstant[] atypeRequired = typeRequired.getParamTypesArray().unsafeArray();
+                TypeConstant[] atypeActual   = typeActual.getParamTypesArray().unsafeArray();
                 int            cRequired     = atypeRequired.length;
                 int            cActual       = atypeActual.length;
                 TypeConstant[] atypeInferred = atypeActual;

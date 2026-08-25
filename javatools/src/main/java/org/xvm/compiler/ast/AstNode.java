@@ -1559,7 +1559,7 @@ public abstract sealed class AstNode
             //    Tuple<Int, String> t = f();
             if (cReturns == 1 && atypeReturn[0].isTuple()) {
                 fit         = fit.addPack();
-                atypeReturn = atypeReturn[0].getParamTypesArray();
+                atypeReturn = atypeReturn[0].getParamTypesArray().unsafeArray();
                 cReturns    = atypeReturn.length;
             }
 

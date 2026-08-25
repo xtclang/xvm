@@ -262,7 +262,7 @@ public final class ReturnStatement
 
             if (fValid) {
                 atypeActual = m_fTupleReturn
-                        ? exprNew.getType().getParamTypesArray()
+                        ? exprNew.getType().getParamTypesArray().unsafeArray()
                         : exprNew.getTypes();
             }
         }

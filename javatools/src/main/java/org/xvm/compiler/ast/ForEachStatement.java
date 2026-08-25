@@ -444,7 +444,7 @@ public final class ForEachStatement
 
                             int cRVals = typeEl.getParamsCount();
                             if (cLVals <= cRVals) {
-                                atypeRVals = typeEl.getParamTypesArray();
+                                atypeRVals = typeEl.getParamTypesArray().unsafeArray();
                             } else {
                                 condLVal.log(errs, Severity.ERROR, Compiler.INVALID_LVALUE_COUNT,
                                             1, cRVals);

@@ -167,7 +167,7 @@ public final class TupleExpression
         int            cFields     = listFieldExprs.size();
         TypeConstant[] atypeFields = new TypeConstant[cFields];
         if (typeTuple.isParamsSpecified()) {
-            TypeConstant[] atypeSpecified = typeTuple.getParamTypesArray();
+            TypeConstant[] atypeSpecified = typeTuple.getParamTypesArray().unsafeArray();
             int            cSpecified     = atypeSpecified.length;
             System.arraycopy(atypeSpecified, 0, atypeFields, 0, Math.min(cFields, cSpecified));
         }
@@ -198,7 +198,7 @@ public final class TupleExpression
         if (atypeRequired.length == 1) {
             TypeConstant typeRequired = atypeRequired[0];
             if (typeRequired.isTuple()) {
-                atypeRequired = typeRequired.getParamTypesArray();
+                atypeRequired = typeRequired.getParamTypesArray().unsafeArray();
                 if (atypeRequired.length == 0) {
                     // any tuple is assignable to an empty tuple
                     return TypeFit.Fit;
@@ -212,7 +212,7 @@ public final class TupleExpression
             }
         }
 
-        return calcFitMulti(ctx, typeTuple.getParamTypesArray(), atypeRequired);
+        return calcFitMulti(ctx, typeTuple.getParamTypesArray().unsafeArray(), atypeRequired);
     }
 
     @Override
@@ -246,7 +246,7 @@ public final class TupleExpression
                     // the specified tuple type may have any of the field types specified as well
                     typeResult = typeSpecified;
                     if (typeSpecified.isParamsSpecified()) {
-                        aSpecTypes = typeSpecified.getParamTypesArray();
+                        aSpecTypes = typeSpecified.getParamTypesArray().unsafeArray();
                         cSpecTypes = aSpecTypes.length;
 
                         // can't have more field types specified than we have fields
@@ -276,7 +276,7 @@ public final class TupleExpression
             // finishValidation(); for now, just try to get the required field types to use
             // while validating sub-expressions
             if (typeRequired.isTuple()) {
-                aReqTypes = typeRequired.getParamTypesArray();
+                aReqTypes = typeRequired.getParamTypesArray().unsafeArray();
                 cReqTypes = aReqTypes.length;
             } else if (!typeRequired.equals(pool.typeObject())) {
                 // required type could be a union type. e.g. (T1 | Tuple<T2>), in which case
@@ -284,7 +284,7 @@ public final class TupleExpression
                 if (typeRequired instanceof UnionTypeConstant typeUnion) {
                     TypeConstant typeTuple = typeUnion.extractTuple();
                     if (typeTuple != null) {
-                        aReqTypes = typeTuple.getParamTypesArray();
+                        aReqTypes = typeTuple.getParamTypesArray().unsafeArray();
                         cReqTypes = aReqTypes.length;
                     }
                 }

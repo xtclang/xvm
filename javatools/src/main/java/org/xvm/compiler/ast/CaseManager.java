@@ -1029,7 +1029,7 @@ public class CaseManager<CookieType> {
         }
 
         // there are multiple columns; be reasonable on the number of possible combinations
-        TypeConstant[] atype = m_typeCase.getParamTypesArray();
+        TypeConstant[] atype = m_typeCase.getParamTypesArray().unsafeArray();
         assert atype.length == cConds;
 
         int[]      aiCardinals = new int[cConds];
