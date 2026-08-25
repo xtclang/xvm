@@ -224,7 +224,7 @@ public class Runner extends Launcher<RunnerOptions> {
         Connector connector = createConnector(repo, module);
 
         ConstantPool pool = connector.getConstantPool();
-        try (var _ = ConstantPool.withPool(pool)) {
+        try {
             var sMethod    = opts.getMethodName();
             var setMethods = connector.findMethods(sMethod);
             if (setMethods.size() != 1) {

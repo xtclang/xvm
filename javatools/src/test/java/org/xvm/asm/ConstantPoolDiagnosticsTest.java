@@ -38,99 +38,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class ConstantPoolDiagnosticsTest {
     /**
-     * Boundary scopes are still transitional API. This verifies the supported case: an explicit
-     * owner installs the matching ambient pool and the diagnostic assertions accept it.
-     */
-    @Test
-    public void currentPoolAssertionsAcceptScopedPool() {
-        assertTrue(assertionsEnabled(), "ConstantPool scope diagnostics require -ea");
-
-        ConstantPool pool = new FileStructure("test").getConstantPool();
-
-        try (var _ = ConstantPool.withPool(pool)) {
-            ConstantPool.assertCurrentPool(pool, "unit-test");
-            ConstantPool.assertCurrentPoolIfPresent(pool, "unit-test");
-        }
-    }
-
-    /**
-     * Explicit-owner code must work when no ambient pool exists. The old design made many helpers
-     * crash or guess from thread state; this verifies the "no scope is fine" guard.
-     */
-    @Test
-    public void currentPoolIfPresentAllowsExplicitOwnerWithoutAmbientScope() {
-        assertTrue(assertionsEnabled(), "ConstantPool scope diagnostics require -ea");
-
-        ConstantPool pool = new FileStructure("test").getConstantPool();
-
-        try (var _ = ConstantPool.withPool(null)) {
-            ConstantPool.assertCurrentPoolIfPresent(pool, "unit-test");
-
-            AssertionError error = assertThrows(AssertionError.class,
-                    () -> ConstantPool.assertCurrentPool(pool, "unit-test"));
-            assertTrue(error.getMessage().contains("unit-test"));
-        }
-    }
-
-    /**
-     * A wrong ambient pool is a real owner bug, even on one Java thread with nested work. This
-     * proves the transitional assertions catch the mismatch when assertions are enabled.
-     */
-    @Test
-    public void currentPoolAssertionsRejectWrongScopedPool() {
-        assertTrue(assertionsEnabled(), "ConstantPool scope diagnostics require -ea");
-
-        var poolExpected = new FileStructure("expected").getConstantPool();
-        var poolActual   = new FileStructure("actual").getConstantPool();
-
-        try (var _ = ConstantPool.withPool(poolActual)) {
-            AssertionError error = assertThrows(AssertionError.class,
-                    () -> ConstantPool.assertCurrentPool(poolExpected, "unit-test"));
-            assertTrue(error.getMessage().contains("unit-test"));
-
-            error = assertThrows(AssertionError.class,
-                    () -> ConstantPool.assertCurrentPoolIfPresent(poolExpected, "unit-test"));
-            assertTrue(error.getMessage().contains("unit-test"));
-        }
-    }
-
-    /**
-     * Stress and launcher tests often run without Java assertions. The diagnostic property must
-     * still make a wrong scoped owner fail as a normal exception, because hidden wrong-pool state is
-     * exactly the class of bug the same-JVM reentrancy work is trying to expose.
-     */
-    @Test
-    public void currentPoolValidationPropertyRejectsWrongScopedPool()
-            throws Exception {
-        var poolExpected = new FileStructure("expected").getConstantPool();
-        var poolActual   = new FileStructure("actual").getConstantPool();
-
-        withCurrentPoolValidation(() -> {
-            try (var _ = ConstantPool.withPool(poolActual)) {
-                var error = assertThrows(IllegalStateException.class,
-                        () -> ConstantPool.assertCurrentPool(poolExpected, "unit-test"));
-                assertTrue(error.getMessage().contains("unit-test"));
-                assertTrue(error.getMessage().contains("expected current ConstantPool"));
-            }
-        });
-    }
-
-    /**
-     * Transitional bridge code must already know the explicit owner it is asserting. A null owner
-     * used to disappear when assertions were disabled; the validation property turns that into a
-     * fail-fast diagnostic for stress runs.
-     */
-    @Test
-    public void currentPoolValidationPropertyRejectsMissingExplicitOwner()
-            throws Exception {
-        withCurrentPoolValidation(() -> {
-            var error = assertThrows(IllegalStateException.class,
-                    () -> ConstantPool.assertCurrentPool(null, "unit-test"));
-            assertTrue(error.getMessage().contains("must provide an explicit ConstantPool owner"));
-        });
-    }
-
-    /**
      * Master left runtime-published pools mutable unless a branch-local late-registration flag was
      * enabled. A normal runtime boundary must install the marker without relying on stress-only
      * flags, so a new constant fails before mutating pool storage.
@@ -257,10 +164,8 @@ public class ConstantPoolDiagnosticsTest {
                 ConstantPool.NO_TYPES, pool.typeTuple0());
         TypeConstant typeVoidReturn  = pool.buildFunctionType(ConstantPool.NO_TYPES);
 
-        try (var _ = ConstantPool.withPool(null)) {
-            assertEquals(Relation.IS_A,
-                    pool.checkFunctionCompatibility(typeTupleReturn, typeVoidReturn));
-        }
+        assertEquals(Relation.IS_A,
+                pool.checkFunctionCompatibility(typeTupleReturn, typeVoidReturn));
     }
 
     /**
@@ -275,7 +180,6 @@ public class ConstantPoolDiagnosticsTest {
         try (var files = Files.walk(sourceRoot.resolve("org/xvm"))) {
             offenders = files
                     .filter(path -> path.toString().endsWith(".java"))
-                    .filter(path -> !path.endsWith("ConstantPool.java"))
                     .filter(ConstantPoolDiagnosticsTest::usesCurrentPoolInCode)
                     .map(sourceRoot::relativize)
                     .map(Path::toString)
@@ -295,6 +199,19 @@ public class ConstantPoolDiagnosticsTest {
     public void currentPoolLookupGetterDoesNotExist() {
         assertThrows(NoSuchMethodException.class,
                 () -> ConstantPool.class.getDeclaredMethod("getCurrentPool"));
+
+        // the scoped bridge is fully deleted: no ambient install API, no thread-local slot, and
+        // no transitional assertion helpers may return
+        assertThrows(NoSuchMethodException.class,
+                () -> ConstantPool.class.getDeclaredMethod("withPool", ConstantPool.class));
+        assertThrows(NoSuchFieldException.class,
+                () -> ConstantPool.class.getDeclaredField("s_tloPool"));
+        assertThrows(NoSuchMethodException.class,
+                () -> ConstantPool.class.getDeclaredMethod(
+                        "assertCurrentPool", ConstantPool.class, String.class));
+        assertThrows(NoSuchMethodException.class,
+                () -> ConstantPool.class.getDeclaredMethod(
+                        "assertCurrentPoolIfPresent", ConstantPool.class, String.class));
     }
 
     /**
@@ -389,26 +306,6 @@ public class ConstantPoolDiagnosticsTest {
         assertSame(failure, readFailure.getCause());
     }
 
-    private static void withCurrentPoolValidation(CheckedRunnable action)
-            throws Exception {
-        withBooleanProperty(ConstantPool.VALIDATE_CURRENT_POOL_PROPERTY, action);
-    }
-
-    private static void withBooleanProperty(String property, CheckedRunnable action)
-            throws Exception {
-        var previous = System.getProperty(property);
-        System.setProperty(property, "true");
-        try {
-            action.run();
-        } finally {
-            if (previous == null) {
-                System.clearProperty(property);
-            } else {
-                System.setProperty(property, previous);
-            }
-        }
-    }
-
     @SuppressWarnings("unchecked")
     private static Map<Constant.Format, Map<Constant, Constant>> constantMaps(ConstantPool pool)
             throws ReflectiveOperationException {
@@ -445,14 +342,14 @@ public class ConstantPoolDiagnosticsTest {
      */
     @Test
     public void implicitIdentityCacheIsConcurrentSafe() throws Exception {
-        ConstantPool pool = new FileStructure("test").getConstantPool();
+        var pool = new FileStructure("test").getConstantPool();
 
-        Field field = ConstantPool.class.getDeclaredField("f_implicits");
+        var field = ConstantPool.class.getDeclaredField("f_implicits");
         field.setAccessible(true);
         assertInstanceOf(ConcurrentMap.class, field.get(pool),
                 "f_implicits is written from service threads and must be a concurrent map");
 
-        List<String> names = List.of("String", "Boolean", "Object", "Exception",
+        var names = List.of("String", "Boolean", "Object", "Exception",
                 "Map", "Array", "Int64", "Char");
         try (var executor = Executors.newFixedThreadPool(8)) {
             var start   = new CountDownLatch(1);

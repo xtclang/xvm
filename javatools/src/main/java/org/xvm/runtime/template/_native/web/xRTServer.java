@@ -45,7 +45,6 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509ExtendedKeyManager;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -689,8 +688,7 @@ public class xRTServer
 
         @Override
         public void handle(HttpExchange exchange) {
-            try (var _ = ConstantPool.withPool(f_context.f_pool)) {
-                ConstantPool.assertCurrentPool(f_context.f_pool, "xRTServer.RequestHandler");
+            try {
                 // call the Handler handle method
                 ObjectHandle[] hArgs = createArguments(exchange);
                 f_context.postRequest(null, f_hFunction, hArgs, 0).handle((response, err) -> {

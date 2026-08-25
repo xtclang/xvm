@@ -187,14 +187,11 @@ public abstract class Container
         ServiceContext ctx = m_contextMain;
         if (ctx == null) {
             ConstantPool pool = getConstantPool();
-            try (var _ = ConstantPool.withPool(pool)) {
-                ConstantPool.assertCurrentPool(pool, "Container.ensureServiceContext");
-                xService templateService = xService.getInstance(this);
-                m_contextMain = ctx = createServiceContext(getModule().getName());
-                templateService.createServiceHandle(ctx,
-                    templateService.getCanonicalClass(),
-                    templateService.getCanonicalType());
-            }
+            xService templateService = xService.getInstance(this);
+            m_contextMain = ctx = createServiceContext(getModule().getName());
+            templateService.createServiceHandle(ctx,
+                templateService.getCanonicalClass(),
+                templateService.getCanonicalType());
         }
         return ctx;
     }

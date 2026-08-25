@@ -119,10 +119,7 @@ public class NativeContainer
 
     private NativeContainer initializeNativeTemplates() {
         ConstantPool pool = loadNativeTemplates();
-        try (var _ = ConstantPool.withPool(pool)) {
-            ConstantPool.assertCurrentPool(pool, "NativeContainer.initResources");
-            initResources(pool);
-        }
+        initResources(pool);
         return this;
     }
 
@@ -169,10 +166,7 @@ public class NativeContainer
         m_moduleNative = fileRoot.getChild(NATIVE_MODULE);
 
         ConstantPool pool = fileRoot.getConstantPool();
-        try (var _ = ConstantPool.withPool(pool)) {
-            ConstantPool.assertCurrentPool(pool, "NativeContainer.loadNativeTemplates");
-            finishNativeTemplateLoad(pool);
-        }
+        finishNativeTemplateLoad(pool);
         return pool;
     }
 

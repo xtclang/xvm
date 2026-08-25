@@ -312,14 +312,12 @@ public class Compiler extends Launcher<CompilerOptions> {
         ModuleRepository repoBuild    = extractBuildRepo(repoLib);
         ModuleStructure  moduleTurtle = repoBuild.loadModule(Constants.TURTLE_MODULE);
         if (moduleTurtle != null) {
-            try (var _ = ConstantPool.withPool(moduleTurtle.getConstantPool())) {
-                ClassStructure clzNakedRef  = (ClassStructure) moduleTurtle.getChild("NakedRef");
-                TypeConstant   typeNakedRef = clzNakedRef.getFormalType();
+            ClassStructure clzNakedRef  = (ClassStructure) moduleTurtle.getChild("NakedRef");
+            TypeConstant   typeNakedRef = clzNakedRef.getFormalType();
 
-                for (String sModule : repoBuild.getModuleNames()) {
-                    ModuleStructure module = repoBuild.loadModule(sModule);
-                    module.getConstantPool().setNakedRefType(typeNakedRef);
-                }
+            for (String sModule : repoBuild.getModuleNames()) {
+                ModuleStructure module = repoBuild.loadModule(sModule);
+                module.getConstantPool().setNakedRefType(typeNakedRef);
             }
         }
     }

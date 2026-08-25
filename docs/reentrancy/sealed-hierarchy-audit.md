@@ -1033,6 +1033,36 @@ cross-side format comparisons where the enum is the honest currency, and the
 open-hierarchy capability cascades above - and **zero message-less
 UnsupportedOperationExceptions** in the runtime.
 
-Still open from this document's plan: opportunistic cascade conversions
-across the sealed families, `Op` (package split), and `TypeComposition`'s
-root (see the optional follow-up row in the backlog).
+Still open from this document's plan: `Op` (package split) and
+`TypeComposition`'s root (see the optional follow-up row in the backlog).
+
+### 2026-08-25 Cascade Conversion Wave
+
+The remaining convertible cascades were re-scanned (97 raw same-subject
+groups) and triaged by value: convert only where an assert-guarded ladder or
+silent default becomes always-on, a blind cast becomes checked, or sealed
+exhaustiveness is real. Converted (one commit): PresentCondition's
+deserialization ladder and three identity casts; AllCondition's
+addVersion/removeVersion ladders and the terminalInfluences assert-else
+(which under -da silently processed an impossible condition kind as
+NotCondition); TypeConstant's two transformer ternary-ladders and the
+collectChildren Component dispatch; NameResolver's composite-member casts
+(typed Class<T> boundary), pseudo/formal format casts, and the
+wildcard-import assert; NameExpression's Singleton assert+cast;
+StatementBlock's nesting-walk assert-else and TargetInfo constructor assert.
+
+Explicitly NOT converted, with reasons: capability probes with honest else
+arms (view-delegate STAYS, parent-walk probes, isA-driven dispatch mixing
+semantic predicates); the `Object`-nid union consumers (TypeInfoReal k1/k2,
+xConst/DebugConsole enid) - those collapse only when the nid union itself is
+typed (see the MethodBody.Target precedent and the typed-keys backlog row);
+the triplicated numeric-conversion ladders (xConstrainedInteger/BaseInt128/
+xIntLiteral share a dispatch skeleton but differ per source kind - the honest
+collapse is a convertTo double-dispatch design, recorded as a PoC candidate,
+not a mechanical extraction); and javajit sites (parked for the JIT rebase).
+
+The sealed-union mass-collapse lever moved separately: `MethodBody.Target`
+(five records + a Narrowing sub-union) replaced the five-shape `Object`
+payload convention - constructor assert-switch deleted, all 11 payload casts
+and the raw `MethodInfo[2]` union gone, mispairing loud on every JVM, and
+javac itself enumerated the untyped call sites the greps had missed.

@@ -333,27 +333,24 @@ public class xOSStorage
 
                 Container container = context.hStorage.f_context.f_container;
                 ConstantPool pool = container.getConstantPool();
-                try (var _ = ConstantPool.withPool(pool)) {
-                    ConstantPool.assertCurrentPool(pool, "xOSStorage.WatchDaemon");
-                    Path pathDir      = context.pathDir;
-                    Path pathRelative = (Path) event.context();
-                    Path pathAbsolute = pathDir.resolve(pathRelative);
+                Path pathDir      = context.pathDir;
+                Path pathRelative = (Path) event.context();
+                Path pathAbsolute = pathDir.resolve(pathRelative);
 
-                    xOSStorage     templateStorage = context.hStorage.getTemplate(xOSStorage.class);
-                    FunctionHandle hfnOnEvent =
-                            xRTFunction.makeInternalHandle(container,
-                                    templateStorage.ensureOnEventMethod()).
-                                    bindTarget(null, context.hStorage);
+                xOSStorage     templateStorage = context.hStorage.getTemplate(xOSStorage.class);
+                FunctionHandle hfnOnEvent =
+                        xRTFunction.makeInternalHandle(container,
+                                templateStorage.ensureOnEventMethod()).
+                                bindTarget(null, context.hStorage);
 
-                    StringHandle hPathDir  = xString.makeHandle(container, pathDir.toString());
-                    StringHandle hPathNode = xString.makeHandle(container, pathAbsolute.toString());
+                StringHandle hPathDir  = xString.makeHandle(container, pathDir.toString());
+                StringHandle hPathNode = xString.makeHandle(container, pathAbsolute.toString());
 
-                    ObjectHandle[] ahArg = {
-                        hPathDir, hPathNode, xBoolean.trueHandle(container),
-                        xInt64.makeHandle(container, iKind)
-                    };
-                    context.hStorage.f_context.callLater(hfnOnEvent, ahArg);
-                }
+                ObjectHandle[] ahArg = {
+                    hPathDir, hPathNode, xBoolean.trueHandle(container),
+                    xInt64.makeHandle(container, iKind)
+                };
+                context.hStorage.f_context.callLater(hfnOnEvent, ahArg);
             }
             key.reset();
         }

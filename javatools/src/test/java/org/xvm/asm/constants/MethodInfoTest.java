@@ -149,11 +149,9 @@ public class MethodInfoTest {
         MethodConstant id = pool.ensureMethodConstant(struct.getIdentityConstant(), sig);
         MethodInfo method = MethodInfo.create(new MethodBody(id, sig, Implementation.Native), 0);
 
-        try (var _ = ConstantPool.withPool(null)) {
-            assertSame(pool, invokePool(method));
-            assertSame(pool, invokePool(method.getHead()));
-            assertFalse(method.isOp());
-        }
+        assertSame(pool, invokePool(method));
+        assertSame(pool, invokePool(method.getHead()));
+        assertFalse(method.isOp());
     }
 
     /**

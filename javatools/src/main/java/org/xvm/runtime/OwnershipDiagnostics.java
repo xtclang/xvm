@@ -1012,9 +1012,7 @@ public final class OwnershipDiagnostics {
         }
 
         private static <T> T withOwnerPool(Container owner, SupplierWithException<T> supplier) {
-            try (var _ = ConstantPool.withPool(owner == null ? null : owner.getConstantPool())) {
-                return supplier.get();
-            }
+            return supplier.get();
         }
 
         private static <T> T safe(SupplierWithException<T> supplier) {

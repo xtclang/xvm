@@ -85,7 +85,6 @@ public class InterpreterConnector
         }
 
         ConstantPool pool = m_containerMain.getConstantPool();
-        ConstantPool.assertCurrentPoolIfPresent(pool, "InterpreterConnector.invoke0");
         TypeConstant   typeStrings = pool.ensureArrayType(pool.typeString());
 
         switch (method.getRequiredParamCount()) {

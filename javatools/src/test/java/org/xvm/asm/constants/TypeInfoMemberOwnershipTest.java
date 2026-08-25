@@ -150,10 +150,8 @@ public class TypeInfoMemberOwnershipTest {
         PropertyInfo property = createTypeInfo(struct, idProperty, PropertyInfo.create(body, 0), child)
                 .getProperties().get(idProperty);
 
-        try (var _ = ConstantPool.withPool(null)) {
-            assertSame(pool, invokePool(property));
-            assertTrue(property.isIdentityValid(idProperty));
-        }
+        assertSame(pool, invokePool(property));
+        assertTrue(property.isIdentityValid(idProperty));
     }
 
     /**

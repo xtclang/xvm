@@ -41,7 +41,6 @@ import org.xvm.compiler.Source;
 
 import org.xvm.type.Decimal;
 
-import org.xvm.util.Auto;
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.TransientThreadLocal;
@@ -164,14 +163,6 @@ public class ConstantPool
 
         return awaitRegistrationComplete(ensureConstantLookup(constant.getFormat()).get(constant));
     }
-
-    /**
-     * System property that promotes transitional current-pool bridge assertions to normal runtime
-     * exceptions. Stress runs use this because Java assertions are usually disabled in production
-     * launch shapes, but a wrong ambient pool is still an ownership bug.
-     */
-    public static final String VALIDATE_CURRENT_POOL_PROPERTY =
-            "xvm.asm.validateConstantPoolCurrentScope";
 
     /**
      * Register a Constant. This is used when a new Constant is created by the ConstantPool, but it
@@ -3949,79 +3940,6 @@ public class ConstantPool
     }
 
     /**
-     * Assert that the ambient current pool matches the explicit owner that a caller is already using.
-     * This is a diagnostic guard for transitional runtime boundaries that still expose
-     * {@link #withPool(ConstantPool)} to older helpers.
-     *
-     * @param poolExpected  the explicit owner pool
-     * @param sOwner        a short description of the caller asserting the ownership boundary
-     */
-    public static void assertCurrentPool(ConstantPool poolExpected, String sOwner) {
-        if (!validateCurrentPool(poolExpected != null,
-                sOwner + " must provide an explicit ConstantPool owner")) {
-            return;
-        }
-
-        ConstantPool poolCurrent = s_tloPool.get()[0];
-        validateCurrentPool(poolCurrent == poolExpected,
-                currentPoolMismatch(poolExpected, poolCurrent, sOwner));
-    }
-
-    /**
-     * Assert that any already-installed ambient pool matches the explicit owner. This is used by
-     * code that no longer depends on the ambient pool, but may still be called inside an older
-     * scoped bridge.
-     *
-     * @param poolExpected  the explicit owner pool
-     * @param sOwner        a short description of the caller asserting the ownership boundary
-     */
-    public static void assertCurrentPoolIfPresent(ConstantPool poolExpected, String sOwner) {
-        if (!validateCurrentPool(poolExpected != null,
-                sOwner + " must provide an explicit ConstantPool owner")) {
-            return;
-        }
-
-        ConstantPool poolCurrent = s_tloPool.get()[0];
-        validateCurrentPool(poolCurrent == null || poolCurrent == poolExpected,
-                currentPoolMismatch(poolExpected, poolCurrent, sOwner));
-    }
-
-    /**
-     * Temporarily update the current ConstantPool, restoring it when the returned AutoCloseable
-     * is closed.
-     *
-     * @param pool the new pool
-     *
-     * @return an Auto which will revert to the prior pool
-     */
-    public static Auto withPool(ConstantPool pool) {
-        ConstantPool[] poolHolder = s_tloPool.get();
-        ConstantPool poolPrior = poolHolder[0];
-        poolHolder[0] = pool;
-        return () -> poolHolder[0] = poolPrior;
-    }
-
-    private static String currentPoolMismatch(ConstantPool poolExpected, ConstantPool poolCurrent,
-                                              String sOwner) {
-        return sOwner + " expected current ConstantPool " + describePool(poolExpected) +
-                ", but found " + describePool(poolCurrent);
-    }
-
-    private static boolean validateCurrentPool(boolean valid, String message) {
-        if (!valid) {
-            if (Boolean.getBoolean(VALIDATE_CURRENT_POOL_PROPERTY)) {
-                throw new IllegalStateException(message);
-            }
-            assert false : message;
-        }
-        return valid;
-    }
-
-    private static String describePool(ConstantPool pool) {
-        return pool == null ? "null" : pool.getDescription();
-    }
-
-    /**
      * Discard unused Constants and order the remaining constants so that the most-referred-to
      * Constants occur before the less used constants.
      */
@@ -4362,12 +4280,6 @@ public class ConstantPool
      * Diagnostic marker installed only when late-registration validation is enabled.
      */
     private volatile RuntimePublication runtimePublication;
-
-    /**
-     * Thread local allowing to get the "current" ConstantPool without any context.
-     */
-    private static final ThreadLocal<ConstantPool[]> s_tloPool =
-            ThreadLocal.withInitial(() -> new ConstantPool[1]);
 
     /**
      * NakedRef is a fundamental formal type that comes from the "_native" module.

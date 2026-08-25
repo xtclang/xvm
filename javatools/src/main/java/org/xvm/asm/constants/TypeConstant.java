@@ -1904,7 +1904,7 @@ public abstract sealed class TypeConstant
         TypeInfo     infoObject = typeObject.getTypeInfo();
         if (infoObject == null) {
             // this is basically an inlined ensureTypeInfoInternal()
-            try (var _ = ConstantPool.withPool(pool)) {
+            try {
                 typeObject.setTypeInfo(getConstantPool().infoPlaceholder());
                 infoObject = typeObject.buildTypeInfo(errs);
                 typeObject.setTypeInfo(infoObject);
@@ -2076,11 +2076,9 @@ public abstract sealed class TypeConstant
      *         already in the process of being built
      */
     protected TypeInfo buildTypeInfo(ErrorListener errs) {
-        // any newly created derivative types and various constants should be placed into the same
-        // pool where this type comes from
-        try (var _ = ConstantPool.withPool(getConstantPool())) {
-            return buildTypeInfoImpl(errs);
-        }
+        // any newly created derivative types and various constants are placed into the same pool
+        // this type comes from, via the explicit receiver-pool APIs
+        return buildTypeInfoImpl(errs);
     }
 
     /**

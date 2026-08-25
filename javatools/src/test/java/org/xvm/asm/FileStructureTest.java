@@ -54,13 +54,9 @@ public class FileStructureTest {
         ErrorListener otherListener = err -> false;
         other.setErrorListener(otherListener);
 
-        try (var _ = ConstantPool.withPool(other.getConstantPool())) {
-            assertSame(ErrorListener.RUNTIME, file.getErrorListener());
-        }
+        assertSame(ErrorListener.RUNTIME, file.getErrorListener());
 
-        try (var _ = ConstantPool.withPool(null)) {
-            assertSame(ErrorListener.RUNTIME, file.getErrorListener());
-        }
+        assertSame(ErrorListener.RUNTIME, file.getErrorListener());
 
         file.setErrorListener(otherListener);
         assertSame(otherListener, file.getErrorListener());

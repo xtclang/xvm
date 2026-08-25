@@ -43,13 +43,11 @@ public class NestedIdentityOwnerTest {
 
         GenericTypeResolver resolver = ignored -> poolOut.typeString();
 
-        try (var _ = ConstantPool.withPool(poolWrong)) {
-            var nested  = method.resolveNestedIdentity(poolOut, resolver);
-            var resolved = (SignatureConstant) resolve(nested, signature);
+        var nested  = method.resolveNestedIdentity(poolOut, resolver);
+        var resolved = (SignatureConstant) resolve(nested, signature);
 
-            assertNotSame(signature, resolved);
-            assertSame(poolOut, resolved.getConstantPool());
-        }
+        assertNotSame(signature, resolved);
+        assertSame(poolOut, resolved.getConstantPool());
     }
 
     private static Object resolve(Object nested, SignatureConstant signature) throws Exception {

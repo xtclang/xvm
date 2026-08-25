@@ -26,15 +26,13 @@ public class ConstantRangeOwnerTest {
         var first = pool.ensureByteConstant(Format.UInt8, 1);
         var last  = pool.ensureByteConstant(Format.UInt8, 3);
 
-        try (var _ = ConstantPool.withPool(null)) {
-            var range = (RangeConstant) first.apply(Id.I_RANGE_I, last);
+        var range = (RangeConstant) first.apply(Id.I_RANGE_I, last);
 
-            assertSame(pool, range.getConstantPool());
-            assertSame(first, range.getFirst());
-            assertSame(last, range.getLast());
-            assertFalse(range.isFirstExcluded());
-            assertFalse(range.isLastExcluded());
-        }
+        assertSame(pool, range.getConstantPool());
+        assertSame(first, range.getFirst());
+        assertSame(last, range.getLast());
+        assertFalse(range.isFirstExcluded());
+        assertFalse(range.isLastExcluded());
     }
 
     /**
@@ -48,13 +46,11 @@ public class ConstantRangeOwnerTest {
         var first     = poolOwner.ensureByteConstant(Format.UInt8, 1);
         var last      = poolOwner.ensureByteConstant(Format.UInt8, 3);
 
-        try (var _ = ConstantPool.withPool(poolOther)) {
-            var range = (RangeConstant) first.apply(Id.E_RANGE_E, last);
+        var range = (RangeConstant) first.apply(Id.E_RANGE_E, last);
 
-            assertSame(poolOwner, range.getConstantPool());
-            assertTrue(range.isFirstExcluded());
-            assertTrue(range.isLastExcluded());
-        }
+        assertSame(poolOwner, range.getConstantPool());
+        assertTrue(range.isFirstExcluded());
+        assertTrue(range.isLastExcluded());
     }
 
     /**
@@ -67,14 +63,12 @@ public class ConstantRangeOwnerTest {
         var first = pool.ensureIntConstant(1);
         var last  = pool.ensureIntConstant(3);
 
-        try (var _ = ConstantPool.withPool(null)) {
-            var range = (RangeConstant) first.apply(Id.I_RANGE_E, last);
+        var range = (RangeConstant) first.apply(Id.I_RANGE_E, last);
 
-            assertSame(pool, range.getConstantPool());
-            assertSame(first, range.getFirst());
-            assertSame(last, range.getLast());
-            assertFalse(range.isFirstExcluded());
-            assertTrue(range.isLastExcluded());
-        }
+        assertSame(pool, range.getConstantPool());
+        assertSame(first, range.getFirst());
+        assertSame(last, range.getLast());
+        assertFalse(range.isFirstExcluded());
+        assertTrue(range.isLastExcluded());
     }
 }

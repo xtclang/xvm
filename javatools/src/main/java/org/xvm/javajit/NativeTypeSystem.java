@@ -105,12 +105,10 @@ public class NativeTypeSystem
         }
 
         ConstantPool pool = fs.getConstantPool();
-        try (var _ = ConstantPool.withPool(pool)) {
-            if (pool.getNakedRefType() == null) {
-                turtle = fs.getChild(TURTLE_MODULE);
-                ClassStructure clzNakedRef = (ClassStructure) turtle.getChild("NakedRef");
-                pool.setNakedRefType(clzNakedRef.getFormalType());
-            }
+        if (pool.getNakedRefType() == null) {
+            turtle = fs.getChild(TURTLE_MODULE);
+            ClassStructure clzNakedRef = (ClassStructure) turtle.getChild("NakedRef");
+            pool.setNakedRefType(clzNakedRef.getFormalType());
         }
 
         // build a list of modules that will compose the core aka native TypeSystem

@@ -108,49 +108,46 @@ public class xContainerControl
         Container    container = hCtrl.f_container;
         ConstantPool pool      = container.getConstantPool();
 
-        try (var _ = ConstantPool.withPool(pool)) {
-            ConstantPool.assertCurrentPool(pool, "xContainerControl.invokeInvoke");
-            ServiceContext ctxContainer = container.ensureServiceContext();
+        ServiceContext ctxContainer = container.ensureServiceContext();
 
-            ObjectHandle[] ahArg    = hTupleArg.m_ahValue;
-            String         sMethod  = hName.getStringValue();
-            ModuleConstant idModule = container.getModule();
-            MethodConstant idMethod = container.findModuleMethod(sMethod, ahArg);
+        ObjectHandle[] ahArg    = hTupleArg.m_ahValue;
+        String         sMethod  = hName.getStringValue();
+        ModuleConstant idModule = container.getModule();
+        MethodConstant idMethod = container.findModuleMethod(sMethod, ahArg);
 
-            if (idMethod == null) {
-                return frame.raiseException("Missing " + sMethod +
-                    " method for " + idModule.getValueString());
-            }
-
-            ServiceHandle hService = hRunWithin == ObjectHandle.DEFAULT ||
-                                     xNullable.isNull(hRunWithin)
-                    ? ctxContainer.getService()
-                    : (ServiceHandle) hRunWithin;
-
-            if (hService.f_context.f_container != container) {
-                return frame.raiseException("Out of context \"runWithin\" service");
-            }
-
-            TypeComposition   clzModule   = container.resolveClass(idModule.getType());
-            CallChain         chain       = clzModule.getMethodCallChain(idMethod.getSignature());
-            SingletonConstant constModule = pool.ensureSingletonConstConstant(idModule);
-            FunctionHandle    hFunction   = new xRTFunction.AsyncHandle(container, chain) {
-                @Override
-                protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService) {
-                    ObjectHandle hModule = frame.getConstHandle(constModule);
-                    if (!Op.isDeferred(hModule)) {
-                        // Diagnostic mode: the parallel TestProps failure surfaced here when an
-                        // adopted SingletonConstant reused another container's module handle.
-                        OwnershipDiagnostics.assertHandleValidIfEnabled(
-                                frame.f_context.f_container,
-                                "mgmt.Container.invoke module target",
-                                hModule);
-                    }
-                    return hModule;
-                }
-            };
-            return hFunction.callT(frame, hService, ahArg, iReturn);
+        if (idMethod == null) {
+            return frame.raiseException("Missing " + sMethod +
+                " method for " + idModule.getValueString());
         }
+
+        ServiceHandle hService = hRunWithin == ObjectHandle.DEFAULT ||
+                                 xNullable.isNull(hRunWithin)
+                ? ctxContainer.getService()
+                : (ServiceHandle) hRunWithin;
+
+        if (hService.f_context.f_container != container) {
+            return frame.raiseException("Out of context \"runWithin\" service");
+        }
+
+        TypeComposition   clzModule   = container.resolveClass(idModule.getType());
+        CallChain         chain       = clzModule.getMethodCallChain(idMethod.getSignature());
+        SingletonConstant constModule = pool.ensureSingletonConstConstant(idModule);
+        FunctionHandle    hFunction   = new xRTFunction.AsyncHandle(container, chain) {
+            @Override
+            protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService) {
+                ObjectHandle hModule = frame.getConstHandle(constModule);
+                if (!Op.isDeferred(hModule)) {
+                    // Diagnostic mode: the parallel TestProps failure surfaced here when an
+                    // adopted SingletonConstant reused another container's module handle.
+                    OwnershipDiagnostics.assertHandleValidIfEnabled(
+                            frame.f_context.f_container,
+                            "mgmt.Container.invoke module target",
+                            hModule);
+                }
+                return hModule;
+            }
+        };
+        return hFunction.callT(frame, hService, ahArg, iReturn);
     }
 
     /**

@@ -226,40 +226,25 @@ public final class FileStructure
 
         ConstantPool pool = m_pool;
 
-        try (var _ = ConstantPool.withPool(pool)) {
-            // add fingerprints
-            fileSource.children().stream()
-                    .filter(child -> child.isFingerprint() && getModule(child.getIdentityConstant()) == null)
-                    .map(ModuleStructure::cloneBody)
-                    .forEach(clone -> {
-                        clone.setContaining(this);
-                        addChild(clone);
-                        clone.registerConstants(pool);
-                    });
-
-            // if the source is a multi-module container, dependencies of the merged module may be
-            // present there as real (embedded) sibling modules rather than fingerprints; those
-            // dependencies must still be represented here, or the merged clone's constants cannot
-            // be re-registered against this pool and the module is unlinkable when detached
-            if (fileSource.isBundle()) {
-                module.collectDependencies().keySet().stream()
-                        .filter(id -> !id.equals(module.getIdentityConstant()) && getModule(id) == null)
-                        .map(fileSource::getModule)
-                        .filter(sibling -> sibling != null && !sibling.isFingerprint())
-                        .forEach(sibling ->
-                                ensureModule(sibling.getIdentityConstant().getName()).fingerprintRequired());
+        // add fingerprints
+        for (ModuleStructure moduleChild : module.getFileStructure().children()) {
+            if (moduleChild.isFingerprint() && getModule(moduleChild.getIdentityConstant()) == null) {
+                ModuleStructure moduleChildClone = moduleChild.cloneBody();
+                moduleChildClone.setContaining(this);
+                addChild(moduleChildClone);
+                moduleChildClone.registerConstants(pool);
             }
+        }
 
-            moduleClone.registerConstants(pool);
-            moduleClone.registerChildrenConstants(pool);
-            if (fSynthesize) {
-                moduleClone.synthesizeChildren();
-            }
+        moduleClone.registerConstants(pool);
+        moduleClone.registerChildrenConstants(pool);
+        if (fSynthesize) {
+            moduleClone.synthesizeChildren();
+        }
 
-            TypeConstant typeNakedRef = module.getConstantPool().getNakedRefType();
-            if (typeNakedRef != null) {
-                pool.setNakedRefType(typeNakedRef);
-            }
+        TypeConstant typeNakedRef = module.getConstantPool().getNakedRefType();
+        if (typeNakedRef != null) {
+            pool.setNakedRefType(typeNakedRef);
         }
 
         if (fTakeFile) {
