@@ -18,6 +18,46 @@ The standard for closing a `must audit` item is higher than "it has not crashed
 yet". Close it only by proving confinement/ownership, adding a focused test, or
 moving the state behind an explicit owner/synchronization model.
 
+## Master Control And Document Map
+
+This file is the authoritative board. If another reentrancy document disagrees
+with this one on status or priority, update this file first and treat the other
+document as stale until reconciled.
+
+Execution order:
+
+1. **Close must-fix rows first.** Runtime/ASM rows that graduate from audit to
+   concrete bugs require the full four-part discipline: prove red on old shape,
+   fix, add/keep regression tests, and update the board.
+2. **Finish the remaining must-audit umbrellas.** Audit by reading the actual
+   sites. Do not classify by grep alone. Graduate only proven defects.
+3. **Prepare/file Category A master bugs.** Use
+   `plans/master-issue-submissions.md` for the 18 master bug issue bodies,
+   patch material (exact master-form hunks where extracted, labeled sketches
+   elsewhere - the readiness matrix says which is which per row), and
+   deterministic red proofs.
+4. **Prepare broader issue/PR tracks.** Use
+   `plans/global-issue-pr-backlog.md` for diagnostic authority, nullness,
+   duplication/control-flow, logging, world X-ray, and LSP/compiler ownership
+   rows that are not all single master bugs.
+5. **Launch reviewable PRs.** Use `plans/github-issue-breakdown.md` for the
+   implementation PR sequence and per-PR reviewer checklist. Treat this branch
+   as an integration/proof branch, not the final review unit.
+6. **Keep the presentation synchronized.** Use `presentation.md` for the
+   meeting narrative only. It should link to evidence, not become the board.
+
+Document roles:
+
+| Role | File | Update when |
+| --- | --- | --- |
+| Authoritative board | `must-audit-backlog.md` | Any status, priority, open/closed, or must/should/audit classification changes. |
+| Master bug filings | `plans/master-issue-submissions.md` | A Category A issue body, exact master diff, red proof, or readiness note changes. |
+| Broader issue/PR backlog | `plans/global-issue-pr-backlog.md` | A non-Category-A issue or PR-sized track is added, split, reprioritized, or made ready. |
+| PR launch plan | `plans/github-issue-breakdown.md` | A branch PR sequence, dependency, cherry-pick result, or reviewer checklist changes. |
+| Proof/evidence ledger | `test-failure-evidence.md`, `runtime-ownership-hardening-ledger.md`, `fixed-in-this-branch.md` | A test proves red/green behavior, a fix lands, or evidence changes. |
+| Topic audits | `*-audit.md`, `plans/*.md` | The underlying site census, analysis, or design detail changes. |
+| Presentation | `presentation.md` | The sales narrative, click-through demo, or teleprompter script changes. |
+
 ## Current Wide Scans
 
 These commands were run on branch `lagergren/lazy-instance` on 2026-08-21.
@@ -164,6 +204,9 @@ runtime publication.
 | Should fix (API cleanup before reentrancy claim) | Remove `ConstantPool.withPool(...)` completely | `ambient-context-audit.md`, `constant-pool-state-audit.md`, source scan for `withPool(` | This branch removed `getCurrentPool()` and raw setter semantics, but the remaining scoped bridge still hides an owner in dynamic thread state. `ScopedValue` is lexically safer than an open `ThreadLocal`, but it would not make ownership explicit or complete; it is safe only as a bridge where entry points already assert the explicit owner. | Replace every remaining runtime/compiler/tool/JIT `withPool(...)` scope with explicit `ConstantPool`, `Container`, `Frame`, `FileStructure`, or build-context parameters as appropriate, then delete `withPool(...)`, `s_tloPool`, and the source-shape allowlist. Keep tests proving no semantic ambient owner lookup returns. |
 | Should fix (near end of should queue) | Side-effect-free `toString()`/display path redesign | `plans/side-effect-free-tostring.md` (inventory + per-site replacements), `ownership-diagnostics.md` deferred-cell precedent | Many `toString()`/`getValueString()`/`getDescription()` implementations force lazy caches, build TypeInfo, resolve types, or intern pool constants. Rendering a variable in a debugger mutates the state under investigation, which makes race debugging nondeterministic and has repeatedly required hand-patching display code mid-investigation. | Land the plan's contract (pure `toString()` over already-computed state with deferred markers; explicit forced-dump variants), migrate per the inventory, and add the banned-callee source-shape gate. |
 | Slice 1 done in this branch; slices 2-5 open | Complete world-state snapshot ("X-ray") diagnostics | `ownership-diagnostics.md`, `plans/same-jvm-launcher-stress.md` | Ownership sweeps are only as good as the tree they walk. A complete, structured snapshot of all containers, services, fibers, frames, handles, pools, and type/metadata caches — sweepable for foreign-owner references the way stress tests already sweep partial state — is the verification backbone for reentrancy claims. | Slice 1 shipped: `OwnershipDiagnostics.snapshotWorld(Runtime)` returns a structured `WorldSnapshot` (all registry containers + full cross-set validation), renderable and diffable; `WorldDiff.retained()` is the sequential-run leak signal, and native containers now register post-construction so the world enumeration is complete (`WorldSnapshotTest`). Demo/teaching layer added 2026-08-24: WorldSnapshotDemoTest prints runnable sequential- and multi-container world dumps, the diff with the retained-container leak signal, and the ownership-sweep verdict (run with -Porg.xtclang.java.test.stdout=true). Open slices: execution-state capture (fibers/frames/registers, quiesced mode), the generic reflective reachability sweep with path-to-root evidence and the coverage test, stress-harness diff wiring, and the pool/compiler planes. |
+| Should fix (compiler/LSP blocker) | Request-owned diagnostic authority; stop deep `ErrorList` creation and unexplained `BLACKHOLE` suppression | `logging-diagnostics-audit.md` ("Direct `ErrorList` And `BLACKHOLE` Findings") | Main code has ~80 `ErrorListener.BLACKHOLE` uses and 10 direct `new ErrorList(...)` sites. The bad pattern is not the list class itself; it is that parsers, type-info builders, runtime reflection helpers, JIT/linker code, and eval compilation can allocate or suppress diagnostic listeners far below the entry point that knows request id, document version, phase, owner, container, and source context. | Introduce a request-owned `DiagnosticSession`/`DiagnosticSink`; make `ErrorListener` a bridge, not the primary authority; require a documented probe/branch reason for suppressed speculative diagnostics; replace null-listener-to-`BLACKHOLE` adapters at public/compiler boundaries; add tests that assert structured diagnostic fields before rendered text. |
+| Should fix (API discipline wave) | Nullness and absence contracts | `nullness-annotation-audit.md` | Main Java sources have ~700 `return null` sites, ~6849 null checks/assignments, and only 17 annotation hits even though JetBrains annotations are already on the compile classpath. Null currently means absent, not computed, parse failed, error already logged, listener disabled, cache empty, lifecycle cleared, or legitimate value depending on local convention. That makes IDE/nullness diagnostics noisy and blocks converting required constructor state to final owner-passed fields with confidence. | Add high-signal `@NotNull`/`@Nullable` annotations at constructor/API/owner boundaries while keeping runtime guards; return empty immutable collections where absence means "none"; use typed result/diagnostic failure instead of null after side-channel logging; classify optional lookup APIs package-by-package before adding any analyzer gate. |
+| Should audit/fix opportunistically | Duplication and legacy Java control-flow patterns that duplicate invariants | `modern-java-syntax-audit.md`, `lint-parallelism-risk-audit.md`, IntelliJ duplicate-code diagnostics | Duplicated decision blocks, labelled nested loops, parameter reassignment, fallthrough state machines, anonymous visitor scaffolding, raw collections, and unchecked casts force owner/type/lifecycle invariants to be remembered repeatedly at runtime. That is how one path silently diverges when another path is fixed. | Use IntelliJ duplicate-code reports plus focused source reading to extract shared helpers or typed records where semantics match. Prefer arrow switches, pattern variables, sealed roots, typed payload records, lambdas/method references, and final locals when they reduce mutable state. Do not mechanically rewrite hot loops or constructor paths that would capture `this`; every extraction must preserve owner and allocation behavior. |
 | Nice to have (do last) | Developer logging facade (`XtcLog`/`LogCat`/`LogSink`) and print-site migration | `logging-strategy.md`, `logging-diagnostics-audit.md` | Valuable for diagnosis and LSP hosting, but not a correctness fix. Deliberately parked behind all must-fix and must-audit work. | The design is fully recorded in `logging-strategy.md` (repo-owned facade, pluggable/composable sinks, SLF4J confined to one adapter, ungated reporting plane, Tier 2 constant-gated developer plane). Implement as a small standalone PR when the must-fix list is empty. |
 
 ## Audit Categories

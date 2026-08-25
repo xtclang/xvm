@@ -16,6 +16,41 @@ That makes pattern matching for `instanceof`, lambdas, method references,
 `Stream.toList()`, and `Collection.toArray(IntFunction<T[]>)` available. This
 audit still treats those as readability tools, not as mechanical rewrites.
 
+## Why This Is Not Style Cleanup
+
+The modernization target is not "make old Java look new". It is to reduce the
+number of mutable, duplicated places where runtime/compiler state can be
+interpreted differently.
+
+Patterns that look stylistic are often state-control problems in this codebase:
+
+- duplicated decision blocks mean the same invariant is hand-maintained in
+  several places, so one path can learn about a new owner/type/state while
+  another path silently keeps the old behavior;
+- labelled nested loops and fallthrough switches hide lifecycle transitions in
+  control flow that tools cannot summarize or exhaustively check;
+- overwriting parameters with normalized/replaced values makes the original
+  input contract disappear, which is especially risky for owner-bearing
+  `Container`, `ConstantPool`, `Frame`, `TypeConstant`, and `ObjectHandle`
+  parameters;
+- anonymous visitor scaffolding and repeated builder chains often copy local
+  mutable accumulators instead of expressing the traversal once;
+- raw collections and unchecked casts make the compiler unable to tell whether
+  the value being moved is a handle, a tuple, a response, a constant, or a
+  diagnostic payload.
+
+Modern Java features should be applied where they encode those contracts:
+pattern variables remove repeated casts, arrow switches prevent accidental
+fallthrough, sealed interfaces make unknown shapes compile errors, records can
+name a payload instead of shipping an `Object[]`, lambdas/method references can
+centralize simple transformations, and empty immutable collections can remove
+null branches when absence just means "none".
+
+Do not apply these mechanically. A loop that mutates several state machines, a
+constructor path where a lambda would capture `this`, or a hot runtime dispatch
+with profiling sensitivity should stay imperative until a focused refactor can
+prove the new shape.
+
 ## Scope Commands
 
 Representative scans used for this audit:

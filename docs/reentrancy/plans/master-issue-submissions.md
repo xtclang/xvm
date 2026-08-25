@@ -13,13 +13,33 @@ Scope decision: `plans/github-issue-breakdown.md` lists 19 Category A rows, but
 the last row is already extracted as PR #539. This file prepares the 18 critical
 master issues still intended for manual filing.
 
+## Reviewer Framing
+
+These issues are not requests to adopt a house style. Each one is a concrete
+master bug where Java had a type-safety or concurrency mechanism available, but
+the code deferred the invariant to mutable shared state, raw arrays,
+`ObjectHandle`/metadata casts, hidden ambient ownership, or print-and-continue
+error handling. That makes the code behave more like a dynamically checked
+runtime than a Java implementation: the compiler cannot prove the owner, shape,
+or lifecycle state, so the failure appears later as data corruption, wrong
+success, leaked callbacks, cross-container handles, or missing diagnostics.
+
+The fixes are intentionally small. They do not require accepting the whole
+reentrancy branch, but they do use the same principle: make invalid states
+unrepresentable when Java can express them with typed exceptions, final shared
+cells, owner-aware copies, concurrent containers, explicit clone refusal, or
+stable identity keys. Several issues also have security implications because
+same-VM isolation depends on not serving live handles, mutable arrays, or hidden
+owner metadata across container and module boundaries.
+
 ## Filing Order
 
 1. jsondb rollback failure retention
 2. Requested module load preserves corrupt-file cause
 3. Method op assembly failure is terminal
 4. Compiler codegen failure is terminal
-5. Raw file submit observes queued write failures
+5. Raw file submit observes queued write failures (depends on row 8's
+   worker-failure channel seed `796f13465`, or inlines a minimal recorder)
 6. `Future.and` uses both inputs and preserves async failure
 7. JIT generated exception and bridge reflection failures are not swallowed
 8. MainContainer startup preserves failure causes
@@ -34,6 +54,60 @@ master issues still intended for manual filing.
 17. `MethodStructure.Source` body copies re-own the hidden outer method
 18. `FullyBoundHandle.chain()` appends instead of dropping linked finalizers
 
+## Filing Readiness Matrix
+
+This table is the one-page launch checklist. "Source-only clean" means the
+runtime/compiler/test files from the listed seed apply to `origin/master`
+`61e555a68cd82a866f82aea40a3bb97a424a3809`; full cherry-picks can still report
+delete/modify conflicts on branch-only `docs/reentrancy` files, and those docs
+must not be included in master filings.
+
+Every row's cherry-pick result was re-verified 2026-08-25 in a scratch
+worktree at `origin/master` (still `61e555a68` - no drift). "Merge-clean" is a
+textual statement only; row 5 merges clean but does not compile on master
+without its listed dependency.
+
+| # | Patch material for master | Deterministic red proof | Filing readiness |
+| --- | --- | --- | --- |
+| 1 | Source-only clean from `a935bc553` (verified 2026-08-25); the test rides in `5b9d577da`, which also applies clean. | `org.xvm.lib.jsondb.JsondbClientRollbackFailureTest` fails on the swallowed rollback catch shape. | Ready after manual review. |
+| 2 | Source-only clean from `979784a1a`. | `org.xvm.asm.ModuleRepositoryLoadFailureTest` fails on print/drop/null corrupt-module loads. | Ready after manual review. |
+| 3 | Source-only clean from `536067f5e`. | `org.xvm.asm.MethodStructureAssemblyFailureTest` fails when `writeTo` serializes after op/AST assembly failure. | Ready after manual review. |
+| 4 | Source-only clean from `b00654356`. | `org.xvm.tool.CompilerCodegenFailureTest` fails on catch-`Throwable`/continue codegen. | Ready after manual review. |
+| 5 | Merge-clean from `8a45ba708`, but the fix calls branch-only APIs: `Container.recordRuntimeFailure(...)` (seed `796f13465`) plus `frame.container()`/`xInt64.makeHandle(frame, ...)` need master forms. | `org.xvm.runtime.template._native.fs.RawOSFileChannelSubmitTest` (source-shape) fails while `submit` discards the `scheduleIO` future. | File with/after the row 8 worker-failure channel (`796f13465`) or inline a minimal recorder; adapt fix and test literals to master APIs. |
+| 6 | Extract from `6496f5303`; real source conflict in `xFuture.java` on master. | `org.xvm.runtime.template.annotations.FutureCompletionSafetyTest` fails on fast-path double-read and assert-only async failure. | Needs exact master hunk before filing. |
+| 7 | Source-only clean from `33323ffe1` and `f4744cb1e` applied in that order (`f4744cb1e` edits the test `33323ffe1` adds). | `org.xvm.javajit.JitFailurePropagationTest` (source-shape) fails on swallowed generated exceptions and bridge reflection wrapping. | Ready after manual review. |
+| 8 | Source-only clean from `3e09abc32`; the worker-failure channel seed `796f13465` is also source-clean when applied after it (its test hunks edit the test `3e09abc32` adds). | `org.xvm.runtime.RuntimeFailurePropagationTest` fails on detached startup/invocation causes. | Ready after manual review; include `796f13465` if row 5 is to depend on this issue. |
+| 9 | Extract from `26ce54466`; real conflicts in `xLocalClock.java` and `xNanosTimer.java`; test patch needs master add-form. | `org.xvm.runtime.NativeCallbackRegistrationTest.callbackRegistryIsConcurrentTimerSafeAndLeakFree()` fails on lazy `HashMap`/timer-thread throw/cancel leak shape. | Needs exact master hunk before filing. |
+| 10 | Extract from `5311da1ac`; `xRTServer.java` applies cleanly, timer files conflict with row 9. | `org.xvm.runtime.NativeCallbackRegistrationTest` fails on leaked keep-alive registration after schedule/bind failure. | Needs exact master hunk or pair with row 9. |
+| 11 | Extract only `Register.java`, `VersionTree.java`, `ChildInfo.java` from `9456d6727`, plus `MethodBody.java` from `a11765c86`; all four merge clean individually (verified 2026-08-25) - the conflicts in those broad commits are in other files. | `org.xvm.asm.RegisterHashCodeTest`, `org.xvm.asm.VersionTest`, and `org.xvm.asm.constants.MethodInfoTest.methodInfoEqualityDoesNotRecurseThroughMethodTargets()`; `MethodInfoTest` needs a master add-form. | Needs filtered diff; do not cherry-pick broad lint/adoption commits. |
+| 12 | Multi-seed extraction from `c5c40d443`, `d2165e4f8`, `f4df60ed1`, `7ce5662d1`; verified 2026-08-25: only `ObjectHandle.java` (in `d2165e4f8`) conflicts - the other three seeds are source-clean. | `AtomicViewSharingTest`, `FreezeViewSharingTest`, `ArrayViewGuardTest`, `RefViewGuardTest`. | Needs split or conflict-resolved master patch. |
+| 13 | Extract from `632cac927`; real conflict in `HandleConstant.java`. | `HandleConstantOwnerGuardTest` and `HandleConstantAssembleTest`; owner-guard test may need master API adaptation. | Needs exact master hunk before filing. |
+| 14 | Source-only clean from `ff8cc479a`. | `org.xvm.runtime.template._native.reflect.MethodInvokeArgumentAliasingTest` fails on tuple-storage aliasing. | Ready after manual review. |
+| 15 | Source-only clean from `f835b3693`. | `org.xvm.asm.ComponentMethodParameterCopyTest` fails on shared super `Parameter` elements. | Ready after manual review. |
+| 16 | Extract only contribution re-owner hunks from broad `0af827c72`; real conflicts in `Component.java` and `MethodStructure.java`. | `org.xvm.asm.ComponentBodyCopyTest.contributionsAreReOwnedByBodyCopies` fails on hidden outer owner. | Needs exact master hunk before filing. |
+| 17 | Source-only clean from `25371b397`. | `org.xvm.asm.ComponentBodyCopyTest.methodBodyCopyRebindsSourceOuter` fails on hidden outer method. | Ready after manual review, or pair with row 16. |
+| 18 | Extract from `c621b1dca`; real conflict in `xRTFunction.java`. | `org.xvm.runtime.template._native.reflect.FinalizerChainTest.chainAppendsAtTailInsteadOfDroppingLinkedFinalizers()` fails under both `-ea` and `-da`. | Needs exact master hunk before filing. |
+
+## Reuse Exposure Categories
+
+This is the filing sort the dev team will care about most. The first group
+breaks even if nobody ever allows two different containers, runs, or compiler
+requests to coexist in one JVM. Rows 9 and 10 are a subcase of that group:
+they use ordinary Java Timer/server/IO concurrency that already exists inside a
+single master container. The second group is the set that starts breaking, or
+becomes immediately security-critical, once the process contains multiple
+containers, sequential runs, or a resident compiler/LSP/debugger.
+
+| Exposure | Rows | Why this is the right bucket |
+| --- | --- | --- |
+| **Breaks without multiple containers/runs/compilations** | 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 18 | These are ordinary wrong results, lost failures, or already-present Java thread races: swallowed jsondb rollback evidence, corrupt-module cause loss, zero-op serialization, compiler catch-and-continue, async write false success, `Future.and` wrong input, JIT failure misreporting, detached startup causes, timer callback map races, native keep-alive leaks, broken Java collection contracts, reflection tuple aliasing, library `Parameter` mutation, contribution hidden-outer owner, and dropped finalizers. None needs same-VM reuse to be a bug. |
+| **Starts breaking immediately when one JVM hosts multiple containers/runs/compilations** | 12, 13, 17 | Handle view lifecycle state, live `HandleConstant` serving, and `MethodStructure.Source` hidden-outer ownership are owner-boundary bugs. Their most important impact is same-VM isolation: views of one object disagree about mutability/cells, a constant heap can hand container B a live handle from container A, and copied method source metadata can resolve through the wrong pool once copies cross owners. |
+
+Rows 12 and 17 have single-run symptoms too, but they are best filed in the
+reuse/security batch: row 12 contains atomic/injected and freeze-state bugs plus
+fail-loud guards for latent view shapes; row 17 is structurally wrong on every
+copy but becomes most observable when the copy crosses pools.
+
 ## 1. jsondb rollback failure retention
 
 **Issue title:** Do not swallow jsondb rollback failure after commit failure.
@@ -41,6 +115,20 @@ master issues still intended for manual filing.
 **Status/category:** Category A. Single-threaded master bug; any failed commit
 whose compensating rollback also fails loses the only evidence that the
 transaction disposition is unknown.
+
+**Explanation:** This is not a logging preference. A database commit failure is
+already a boundary where the caller must assume storage state may be abnormal.
+If the compensating rollback also fails, the client has crossed from "operation
+failed cleanly" into "the transaction's final state is unknown". Silencing that
+second exception removes the one piece of evidence recovery code and operators
+need in order to decide whether to quarantine, retry, rebuild indexes, or
+surface a stronger health signal.
+
+The security angle is auditability and integrity. A storage layer that hides a
+failed compensation path can make a partial write look like an ordinary request
+error, which is exactly the kind of failure mode that later becomes data loss or
+cross-request consistency damage. This fix keeps the runtime behavior stable but
+ensures the critical evidence is not thrown away.
 
 **Master evidence:** `origin/master:lib_jsondb/src/main/x/jsondb/Client.x:1427`
 sets the result to `DatabaseError`; line 1430 has `catch (Exception ignore) {}`.
@@ -98,6 +186,18 @@ the `lib_jsondb` hunk plus the focused Java regression test.
 **Status/category:** Category A. Single-threaded master bug; a corrupt requested
 `.xtc` file is indistinguishable from a missing module.
 
+**Explanation:** A requested module load is not a best-effort directory scan.
+When a caller asks for a specific module and the repository finds a candidate
+file, a parse/read failure means "this module exists but is broken", not "the
+module was absent". Returning `null` erases that distinction and lets higher
+layers keep searching, fall back, or report a generic missing dependency.
+
+This matters to maintainers because module loading is a trust boundary. A
+corrupt or tampered `.xtc` file should produce a typed failure with the path and
+cause, not a console print and a null. The typed exception is also a use of
+Java's type system to encode the contract instead of forcing every caller to
+reverse-engineer state from nullable returns and side effects.
+
 **Master evidence:** `../test-failure-evidence.md` records
 `ModuleRepositoryLoadFailureTest`. Branch seed: `979784a1a`.
 
@@ -144,7 +244,13 @@ diff --git a/javatools/src/main/java/org/xvm/asm/LinkedRepository.java b/javatoo
 ```
 
 **Tests to add/run on master:** `ModuleRepositoryLoadFailureTest` is behavioral
-red on master. Run `./gradlew :javatools:test --tests org.xvm.asm.ModuleRepositoryLoadFailureTest`.
+red on master. Run
+`./gradlew :javatools:test --tests org.xvm.asm.ModuleRepositoryLoadFailureTest --rerun-tasks --no-build-cache`.
+
+**Master dry-run status:** Source/test files from branch seed `979784a1a`
+apply cleanly to `origin/master` at `61e555a68cd82a866f82aea40a3bb97a424a3809`.
+A full cherry-pick conflicts only on branch-only reentrancy docs; file the
+source/test slice, not the branch docs.
 
 **Dependencies/order:** None, but the additive exception type is a tiny
 prerequisite for the test to compile.
@@ -156,6 +262,19 @@ failure.
 
 **Status/category:** Category A. Single-threaded master bug; a compiler defect
 at emission can persist a corrupt module.
+
+**Explanation:** Serialization is the last gate before a module becomes an
+artifact other tools will trust. If method op or AST assembly fails, continuing
+to write the file is equivalent to publishing a known-bad binary while recording
+the real failure only on stderr. A later loader cannot reliably tell whether the
+module was produced by a successful compiler run or by a compiler that swallowed
+its own emission failure.
+
+This is a concrete correctness and supply-chain issue. Build products must not
+be written after an unchecked internal failure, because downstream tools,
+caches, and users treat `.xtc` output as authoritative. Throwing a typed Java
+failure with the method identity and cause makes the bad state terminal at the
+point where the compiler still knows what went wrong.
 
 **Master evidence:** `origin/master:javatools/src/main/java/org/xvm/asm/MethodStructure.java:2037`
 prints an op assembly error to stderr; line 2058 does the same for AST assembly.
@@ -184,7 +303,13 @@ diff --git a/javatools/src/main/java/org/xvm/asm/MethodStructure.java b/javatool
 ```
 
 **Tests to add/run on master:** `MethodStructureAssemblyFailureTest` is
-behavioral red on master. Run `./gradlew :javatools:test --tests org.xvm.asm.MethodStructureAssemblyFailureTest`.
+behavioral red on master. Run
+`./gradlew :javatools:test --tests org.xvm.asm.MethodStructureAssemblyFailureTest --rerun-tasks --no-build-cache`.
+
+**Master dry-run status:** Source/test files from branch seed `536067f5e`
+apply cleanly to `origin/master` at `61e555a68cd82a866f82aea40a3bb97a424a3809`.
+A full cherry-pick conflicts only on branch-only reentrancy docs; file the
+source/test slice, not the branch docs.
 
 **Dependencies/order:** None.
 
@@ -194,6 +319,24 @@ behavioral red on master. Run `./gradlew :javatools:test --tests org.xvm.asm.Met
 
 **Status/category:** Category A. Single-threaded master bug; the compiler can
 catch `Throwable`, print it, and continue mutating module state.
+
+**Explanation:** Catching `Throwable` in compiler codegen is far broader than
+recovering from expected diagnostics. It catches unchecked compiler defects and
+VM-level errors, prints them, and then lets the retry loop continue against data
+structures that may already be partially mutated. That turns an internal
+compiler failure into an ambiguous output state.
+
+This is exactly where Java's exception type system should be used instead of a
+runtime catch-all. Expected compile errors should stay in the diagnostic path;
+unexpected defects should stop the compiler with their cause chain intact. That
+is both easier to debug and safer for anyone consuming compiler output in an
+automated build or toolchain.
+
+This does not change the normal "collect diagnostics and keep checking" mode.
+Typed compiler diagnostics still flow through `ErrorListener`, the compiler
+phase loop still returns `false` for deferred work, and the launcher still
+flushes accumulated node diagnostics after the phase. The terminal boundary is
+only for a Java `RuntimeException` or `Error` escaping from code generation.
 
 **Master evidence:** `origin/master:javatools/src/main/java/org/xvm/tool/Compiler.java:471`
 catches `Throwable`; line 473 prints to stderr.
@@ -212,62 +355,116 @@ reporting for expected compilation errors.
 diff --git a/javatools/src/main/java/org/xvm/tool/Compiler.java b/javatools/src/main/java/org/xvm/tool/Compiler.java
 @@
 -                } catch (Throwable e) {
--                    out("Code generation failed: " + e);
+-                    System.err.println("Failed to generate code for " + compiler);
 -                    e.printStackTrace(System.err);
-+                } catch (Throwable e) {
-+                    throw new IllegalStateException("Code generation failed", e);
+-                    log(ERROR, "Failed to generate code for {} due to exception: {}", compiler, e);
++                } catch (Error e) {
++                    throw e;
++                } catch (RuntimeException e) {
++                    // Code generation mutates module state. Continuing after an unchecked compiler
++                    // defect can persist corrupted bytecode or mask an ownership failure as a normal
++                    // diagnostic, so route it through the fatal launcher path with the cause intact.
++                    log(FATAL, e, "Failed to generate code for {}", compiler);
++                    throw e; // reachable only if error reporting is deliberately suspended
                  }
 ```
 
-**Tests to add/run on master:** `CompilerCodegenFailureTest` is behavioral red
-on master. Run `./gradlew :javatools:test --tests org.xvm.tool.CompilerCodegenFailureTest`.
+**Tests to add/run on master:** `CompilerCodegenFailureTest` is a deterministic
+behavior/source-shape guard for the catch-`Throwable` retry loop. It is red on
+master and green after the terminal failure change. Run
+`./gradlew :javatools:test --tests org.xvm.tool.CompilerCodegenFailureTest --rerun-tasks --no-build-cache`.
+
+**Master dry-run status:** Source/test files from branch seed `b00654356`
+apply cleanly to `origin/master` at `61e555a68cd82a866f82aea40a3bb97a424a3809`.
+A full cherry-pick conflicts only on branch-only reentrancy docs; file the
+source/test slice, not the branch docs.
 
 **Dependencies/order:** None.
 
 ## 5. Raw file submit observes queued write failures
 
-**Issue title:** Raw file submit must report queued write failure instead of
-returning OK immediately.
+**Issue title:** Raw file submit must observe queued write failure instead of
+discarding the scheduled future.
 
 **Status/category:** Category A. Single-service master bug; async I/O exists
 without parallel containers.
 
+**Explanation:** `RawChannel.submit()` is a deliberately non-blocking queue
+operation, so returning OK immediately is the correct contract. The master bug
+is that the `CompletableFuture` returned by `scheduleIO(task)` is discarded
+with nothing observing it: an `IOException` thrown by the queued write on the
+IO thread disappears completely, and `join()` can later report success after a
+failed native write.
+
+For storage and filesystem APIs, silently lost write failures are a security
+and integrity problem. Callers may make authorization, cleanup, or durability
+decisions based on a write that never happened. The fix keeps the non-blocking
+contract - `submit` still assigns OK immediately - but attaches a
+`whenComplete` observer to the scheduled write and records any failure through
+the container's runtime-failure channel, so the failure becomes host-visible
+at `join()` instead of dying on the IO thread.
+
 **Master evidence:** `origin/master:javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:231`
-creates the write task; line 233 discards the `CompletableFuture`; line 235
-returns OK.
+creates the write task; line 233 discards the `CompletableFuture` (`// don't
+wait`); line 235 returns OK.
 
 **Failure mode:** A queued write can fail after native `submit` has already
-returned `0`, so callers lose I/O failure information.
+returned `0`; the exception is dropped on the IO thread and the host boundary
+reports success.
 
-**Minimal master-portable fix strategy:** Keep async scheduling, but wait for
-the scheduled future through the existing frame I/O continuation path and
-assign the written byte count or raise a path exception.
+**Minimal master-portable fix strategy:** Keep async scheduling and the
+immediate OK result, but keep the scheduled future, observe its completion,
+and record failure through a container-level runtime-failure channel that
+`join()` consults. On master that channel (`Container.recordRuntimeFailure(...)`)
+does not exist yet: file this together with (or after) the row 8
+worker-failure channel from branch seed `796f13465`, or inline a minimal
+failure recorder.
 
-**Patch/diff section:** Branch seed: `8a45ba708`; master path is
-`xRawOSFileChannel.java`.
+**Patch/diff section:** Branch seed: `8a45ba708`. This is the actual branch
+hunk; the master form must use `frame.f_context.f_container` (master `Frame`
+has no `container()` accessor) and `xInt64.makeHandle(0)` (master has no
+frame-taking overload).
 
 ```diff
 diff --git a/javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java b/javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java
 @@
+         Callable<Integer> task = () -> hChannel.f_channel.write(buffer);
+
 -        frame.f_context.f_container.scheduleIO(task); // don't wait
--
--        return frame.assignValue(iReturn, xInt64.makeHandle(0)); // OK
-+        CompletableFuture<Integer> cfWrite = frame.f_context.f_container.scheduleIO(task);
-+
-+        Frame.Continuation continuation = frameCaller -> {
-+            try {
-+                return frameCaller.assignValue(iReturn, xInt64.makeHandle(cfWrite.get()));
-+            } catch (InterruptedException | ExecutionException e) {
-+                return xOSFileNode.raisePathException(frameCaller, e, hChannel.f_path);
++        // RawChannel.submit() is a non-blocking queue operation, so preserve the immediate OK
++        // result. The scheduled write still needs an observer; otherwise an IOException on the IO
++        // thread disappears and join() can report success after a failed native write.
++        var container = frame.f_context.f_container;
++        var cfWrite   = container.scheduleIO(task);
++        cfWrite.whenComplete((_, ex) -> {
++            if (ex != null) {
++                container.recordRuntimeFailure(
++                        "Unexpected RawOSFileChannel write failure: " + hChannel.f_path, ex);
 +            }
-+        };
-+        return frame.waitForIO(cfWrite, continuation);
++        });
+
+         return frame.assignValue(iReturn, xInt64.makeHandle(0)); // OK
 ```
 
-**Tests to add/run on master:** `RawOSFileChannelSubmitTest` is behavioral red
-on master. Run `./gradlew :javatools:test --tests org.xvm.runtime.template._native.fs.RawOSFileChannelSubmitTest`.
+**Tests to add/run on master:** `RawOSFileChannelSubmitTest` is a source-shape
+test that fails while `submit` discards the scheduled future. Its assertion
+literals pin the branch API shapes (`container.scheduleIO(task)`,
+`xInt64.makeHandle(frame, 0)`); the master form of the test must pin the
+master shapes instead. Run
+`./gradlew :javatools:test --tests org.xvm.runtime.template._native.fs.RawOSFileChannelSubmitTest --rerun-tasks --no-build-cache`.
 
-**Dependencies/order:** None.
+**Master dry-run status:** Verified 2026-08-25: the source/test files from
+branch seed `8a45ba708` merge cleanly onto `origin/master` at
+`61e555a68cd82a866f82aea40a3bb97a424a3809`, but the result does not compile
+there - `Container.recordRuntimeFailure(...)` and `frame.container()` are
+branch APIs. A full cherry-pick also conflicts on branch-only reentrancy docs;
+file the source/test slice, not the branch docs.
+
+**Dependencies/order:** Depends on the container runtime-failure channel from
+branch seed `796f13465` (the row 8 family: `recordRuntimeFailure`,
+`getRuntimeFailure`, `throwIfRuntimeFailed`, and the connector `join()`
+wiring). Either file row 8 with that seed included first, or inline a minimal
+recorder in this issue.
 
 ## 6. Future.and uses both inputs and preserves async failure
 
@@ -275,6 +472,18 @@ on master. Run `./gradlew :javatools:test --tests org.xvm.runtime.template._nati
 failure path.
 
 **Status/category:** Category A. Single-threaded master bug.
+
+**Explanation:** The fast path reads the first completed future twice, so
+`futureA.and(futureB)` can report a result pair built from `futureA` and
+`futureA`. That is ordinary wrong-result behavior, independent of any stress
+harness. The async path then compounds the problem by treating an unexpected
+join failure as `assert false`, which production usually compiles out.
+
+This is a good example of why stronger static structure matters. The bug is a
+two-variable ownership/value mix-up that the code currently leaves to runtime
+tests. Clearer typed helpers or sealed result states would make it much harder
+to accidentally extract the wrong input or silently continue after an impossible
+completion state.
 
 **Master evidence:** `origin/master:javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:466`
 gets `cfThis`; line 472 extracts both results from `cfThis`; line 511 uses
@@ -284,30 +493,71 @@ gets `cfThis`; line 472 extracts both results from `cfThis`; line 511 uses
 the async join path fails, assertions-disabled production can hide the defect.
 
 **Minimal master-portable fix strategy:** Extract the second result from
-`cfThat`. In the async continuation, raise or complete with the actual failure
-instead of relying on `assert false`.
+`cfThat`. In the async completion callback, move the argument extraction and
+the `postRequest` dispatch inside the `try`, complete the result future with
+the translated actual failure instead of `assert false`, and restore the
+interrupt flag on `InterruptedException`.
 
-**Patch/diff section:** Branch seed: `6496f5303`.
+**Patch/diff section:** Branch seed: `6496f5303`. This is the branch hunk in
+master form: master's `Utils.translate(...)` takes only the throwable (the
+branch signature is `Utils.translate(f_container, ...)`), and master's
+fast-path null checks read `ahRThis[1] != xNullable.NULL` (context only). Add
+the `java.util.concurrent.ExecutionException` import.
 
 ```diff
 diff --git a/javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java b/javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java
 @@
+         if (cfThis.isDone() && cfThat.isDone()) {
+             ObjectHandle[] ahRThis = extractResult(frame, cfThis);
 -            ObjectHandle[] ahRThat = extractResult(frame, cfThis);
 +            ObjectHandle[] ahRThat = extractResult(frame, cfThat);
 @@
--                    } catch (Exception e) {
+             CompletableFuture.allOf(cfThis, cfThat).whenComplete((_null, ex) -> {
+                 if (ex == null) {
+-                    ObjectHandle[] ahArg = new ObjectHandle[2];
+                     try {
+-                        ahArg[0] = cfThis.get();
+-                        ahArg[1] = cfThat.get();
+-                    } catch (Throwable e) {
+-                        // must not happen
 -                        assert false;
-+                    } catch (Exception e) {
-+                        return frameCaller.raiseException(xException.makeHandle(frameCaller,
-+                                "Future.and completion failed", e));
++                        ObjectHandle[] ahArg = {cfThis.get(), cfThat.get()};
++                        CompletableFuture<ObjectHandle> cfAnd =
++                                frame.f_context.postRequest(frame, hCombine, ahArg, 1);
++
++                        cfAnd.whenComplete((hNew, exTrans) ->
++                                hAnd.complete(hNew, Utils.translate(exTrans)));
++                    } catch (InterruptedException e) {
++                        Thread.currentThread().interrupt();
++                        hAnd.complete(null, Utils.translate(e));
++                    } catch (ExecutionException | RuntimeException e) {
++                        hAnd.complete(null, Utils.translate(e));
                      }
+-
+-                    CompletableFuture<ObjectHandle> cfAnd =
+-                            frame.f_context.postRequest(frame, hCombine, ahArg, 1);
+-
+-                    cfAnd.whenComplete((hNew, exTrans) ->
+-                            hAnd.complete(hNew, Utils.translate(exTrans)));
+                 } else {
+                     hAnd.complete(null, Utils.translate(ex));
 ```
 
 **Tests to add/run on master:** `FutureCompletionSafetyTest` is behavioral red
-on master. Run `./gradlew :javatools:test --tests org.xvm.runtime.template.annotations.FutureCompletionSafetyTest`.
+on master. Run
+`./gradlew :javatools:test --tests org.xvm.runtime.template.annotations.FutureCompletionSafetyTest --rerun-tasks --no-build-cache`.
 
-**Dependencies/order:** None. The exact exception-construction helper may need
-to match master APIs.
+**Master dry-run status:** Re-verified 2026-08-25: branch seed `6496f5303` has
+a real source conflict in
+`javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java`
+against `origin/master` at `61e555a68cd82a866f82aea40a3bb97a424a3809`
+(`FutureCompletionSafetyTest` adds cleanly). The fast-path double-read
+(`extractResult(frame, cfThis)` twice) and the `assert false` async path are
+verbatim on master; use the master-form hunk above rather than resolving the
+cherry-pick. Do not use branch docs or unrelated branch helpers.
+
+**Dependencies/order:** None. The only API delta is `Utils.translate` arity,
+already reflected in the hunk above.
 
 ## 7. JIT generated exception and bridge reflection failures are not swallowed
 
@@ -317,55 +567,112 @@ reflection exceptions.
 **Status/category:** Category A for current JIT/direct execution paths; broader
 JIT owner statics remain parked.
 
+**Explanation:** The JIT boundary is a host/runtime trust boundary. Generated
+code may throw an XTC exception, but the connector and bridge currently have
+paths that either swallow the generated failure after printing diagnostics or
+convert a real invoked exception into a generic unsupported-operation shape.
+That means a host can receive "success" or the wrong exception after generated
+code failed.
+
+This has direct security relevance. JIT execution is allowed to run program
+logic with native Java reflection and generated classes; if exceptions are
+rewrapped incorrectly, callers cannot reliably distinguish language exceptions,
+bridge defects, and VM failures. The minimal fix is deliberately not the broad
+JIT owner-state rework: it only makes the boundary report the real failure
+deterministically.
+
 **Master evidence:** `origin/master:javatools/src/main/java/org/xvm/javajit/JitConnector.java:142`
 catches `InvocationTargetException`; line 152 catches `Throwable ignore`.
 `origin/master:javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java:130`,
 `:187`, and `:231` catch `IllegalAccessException | InvocationTargetException`
 together.
 
-**Failure mode:** Generated code can throw a natural XTC exception while the
-connector reports success or hides rendering failure. `nType` reflection can
-turn an invoked XTC `nException` into `$unsupported`.
+**Failure mode:** `JitConnector` keeps its result in a stored `long result`
+field; the natural-exception arm never assigns it, relying on the field's
+initial value, so a result already stored by a successful invocation can
+survive a later generated failure - and the diagnostic print wraps its
+reflection in `catch (Throwable ignore) {}`, silently swallowing VM errors
+during failure rendering. Separately, and single-run reachable, `nType`
+reflection can turn an invoked XTC `nException` into `$unsupported`, changing
+the natural exception type the program observes.
 
-**Minimal master-portable fix strategy:** In `JitConnector`, preserve non-zero
-result when generated code throws. In `nType`, catch
+**Minimal master-portable fix strategy:** In `JitConnector`, explicitly pin
+`this.result = 1` in the natural-exception arm and narrow the print fallback
+catch to `ReflectiveOperationException | RuntimeException`. In `nType`, catch
 `InvocationTargetException` separately, unwrap its cause, rethrow XTC
-`nException`/`Error`, and keep `$unsupported` only for bridge reflection access
-failures.
+`nException`, rethrow `Error`, and keep `$unsupported` only for bridge
+reflection access failures.
 
-**Patch/diff section:** Branch seeds: `33323ffe1`, `f4744cb1e`.
+**Patch/diff section:** Branch seeds: `33323ffe1`, `f4744cb1e`. These are the
+actual branch hunks. `nType` has three identical catch sites (`equals`,
+`compare`, `hashCode$p`); the hunk below shows the `equals` site and the two
+shared helpers - `compare` and `hashCode$p` change the same way.
 
 ```diff
-diff --git a/javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java b/javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java
-@@
--        } catch (IllegalAccessException | InvocationTargetException e) {
-+        } catch (InvocationTargetException e) {
-+            Throwable cause = e.getCause();
-+            if (cause instanceof nException exception) {
-+                throw exception;
-+            }
-+            if (cause instanceof Error error) {
-+                throw error;
-+            }
-+            throw $unsupported();
-+        } catch (IllegalAccessException e) {
-             throw $unsupported();
-         }
 diff --git a/javatools/src/main/java/org/xvm/javajit/JitConnector.java b/javatools/src/main/java/org/xvm/javajit/JitConnector.java
 @@
--        } catch (InvocationTargetException e) {
--            try {
--                ...
--            } catch (Throwable ignore) {}
+             if (name.startsWith(TypeSystem.ClassfileShape.Exception.prefix) ||
+                 name.charAt(0) == TypeSystem.NO_MOD) {
+
++                // Match the interpreter connector result contract: an unhandled natural exception
++                // keeps the default non-zero result. Printing the exception is diagnostic only; the
++                // host boundary must not report success after generated XTC code threw.
++                this.result = 1;
+                 try {
+                     // TODO: add the service info; see Utils.log()
+                     System.out.println("\nUnhandled exception: " +
+                         cause.getClass().getField("exception").get(cause));
+-                } catch (Throwable ignore) {}
++                } catch (ReflectiveOperationException | RuntimeException _) {}
+             } else {
+diff --git a/javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java b/javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java
+@@
+             java.lang.Boolean result = (java.lang.Boolean)
+                     equalsMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
+             return result.booleanValue();
+-        } catch (IllegalAccessException | InvocationTargetException e) {
+-            throw Exception.$unsupported($ctx,
+-                "Failed to invoke 'equals()` on class " + $dataType.getValueString());
++        } catch (IllegalAccessException e) {
++            throw invocationUnsupported("equals()");
 +        } catch (InvocationTargetException e) {
-+            Throwable cause = e.getCause();
-+            reportUnhandled(cause);
-+            result = result == 0 ? 1 : result;
++            throw invocationFailure("equals()", e);
          }
+     }
+@@
++    /**
++     * Reflection wraps exceptions thrown by generated XTC methods. Replacing a natural
++     * {@link nException} with Unsupported changes language semantics, so unwrap and rethrow it.
++     */
++    private nException invocationFailure(java.lang.String methodName, InvocationTargetException e) {
++        Throwable cause = e.getCause();
++        if (cause instanceof nException exception) {
++            return exception;
++        }
++        if (cause instanceof Error error) {
++            throw error;
++        }
++        return invocationUnsupported(methodName);
++    }
++
++    private nException invocationUnsupported(java.lang.String methodName) {
++        return Exception.$unsupported($ctx,
++                "Failed to invoke '" + methodName + "' on class " + $dataType.getValueString());
++    }
 ```
 
-**Tests to add/run on master:** `JitFailurePropagationTest` is behavioral red
-on master. Run `./gradlew :javatools:test --tests org.xvm.javajit.JitFailurePropagationTest`.
+**Tests to add/run on master:** `JitFailurePropagationTest` is a source-shape
+test (red on master: the `this.result = 1;` pin and the narrowed catch are
+missing in `JitConnector`, and `nType` still catches
+`IllegalAccessException | InvocationTargetException` together). Run
+`./gradlew :javatools:test --tests org.xvm.javajit.JitFailurePropagationTest --rerun-tasks --no-build-cache`.
+
+**Master dry-run status:** Verified 2026-08-25: source/test files from branch
+seeds `33323ffe1` and `f4744cb1e` apply cleanly to `origin/master` at
+`61e555a68cd82a866f82aea40a3bb97a424a3809` when applied in that order
+(`f4744cb1e` edits the test that `33323ffe1` adds). A full cherry-pick
+conflicts only on branch-only reentrancy docs; file the source/test slice, not
+the branch docs.
 
 **Dependencies/order:** None for this narrow failure boundary. Keep generated
 owner-static fixes out of this issue.
@@ -376,6 +683,19 @@ owner-static fixes out of this issue.
 
 **Status/category:** Category A. Single-run master bug; startup failure
 diagnostics lose the real cause.
+
+**Explanation:** Startup and invocation are the point where host tooling,
+embedders, LSPs, test runners, and build scripts learn whether the runtime
+worked. Replacing the original exception with a string containing
+`e.getMessage()` destroys the Java cause chain, stack, suppressed exceptions,
+module identity, and sometimes the only owner/context clue. That makes failures
+harder to diagnose and easier to misclassify as user errors.
+
+This also matters for same-VM use. An LSP or compiler process that runs many
+modules sequentially and concurrently cannot rely on stderr prints or detached
+messages; it needs exact failure objects so it can isolate a failed run and keep
+the process usable. Preserving causes is the low-risk first step before any
+broader runtime ownership work.
 
 **Master evidence:** `../test-failure-evidence.md` records
 `RuntimeFailurePropagationTest`; branch seed is `3e09abc32`. The old
@@ -401,10 +721,23 @@ diff --git a/javatools/src/main/java/org/xvm/runtime/MainContainer.java b/javato
 ```
 
 **Tests to add/run on master:** `RuntimeFailurePropagationTest` is behavioral
-red on master. Run `./gradlew :javatools:test --tests org.xvm.runtime.RuntimeFailurePropagationTest`.
+red on master. Run
+`./gradlew :javatools:test --tests org.xvm.runtime.RuntimeFailurePropagationTest --rerun-tasks --no-build-cache`.
+
+**Master dry-run status:** Verified 2026-08-25: source/test files from branch
+seed `3e09abc32` apply cleanly to `origin/master` at
+`61e555a68cd82a866f82aea40a3bb97a424a3809`. The follow-on worker-failure
+channel seed `796f13465` (`Container.recordRuntimeFailure(...)`,
+`getRuntimeFailure()`, `throwIfRuntimeFailed()`, `InterpreterConnector`/
+`ServiceContext` wiring, and extra `RuntimeFailurePropagationTest` cases) is
+also source-clean when applied after `3e09abc32` - its test hunks edit the
+test that `3e09abc32` adds. A full cherry-pick conflicts only on branch-only
+reentrancy docs; file the source/test slice, not the branch docs.
 
 **Dependencies/order:** None. Worker terminal-failure and op-loop defect
-propagation can be separate issues if the patch becomes large.
+propagation can be separate issues if the patch becomes large - but row 5
+depends on `796f13465`'s failure channel, so if that seed is not included
+here, row 5 must inline its own minimal recorder.
 
 ## 9. Alarm callback registry is timer-thread safe
 
@@ -414,6 +747,18 @@ timer thread.
 **Status/category:** Category A. Concurrent, but reachable in any timer-using
 program because the service thread and the process-wide Java `Timer` thread
 exist on master.
+
+**Explanation:** This is not an exotic parallel-container bug. The Java timer
+thread exists as soon as a program uses alarms, and it runs outside the service
+thread that registers callbacks. A lazily-created plain `HashMap` shared between
+those threads has no concurrency contract. A resize or remove racing a put can
+corrupt the map, lose the callback, or throw from the timer task.
+
+The worst failure mode is process-wide: an exception escaping a `TimerTask` can
+kill the shared Java timer and silently disable future alarms. That is a denial
+of service against every container in the same VM. The fix uses the standard
+Java concurrent container that encodes the intended cross-thread access pattern
+instead of relying on mutable shared state and timing luck.
 
 **Master evidence:** `origin/master:javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xLocalClock.java:232`
 extracts callback state from a timer thread. `xNanosTimer.java:378` has the
@@ -454,7 +799,17 @@ diff --git a/javatools/src/main/java/org/xvm/runtime/template/_native/temporal/x
 
 **Tests to add/run on master:** `NativeCallbackRegistrationTest.callbackRegistryIsConcurrentTimerSafeAndLeakFree()`
 is behavioral/source-shape red on master. Run the focused test class:
-`./gradlew :javatools:test --tests org.xvm.runtime.NativeCallbackRegistrationTest`.
+`./gradlew :javatools:test --tests org.xvm.runtime.NativeCallbackRegistrationTest --rerun-tasks --no-build-cache`.
+
+**Master dry-run status:** Branch seed `26ce54466` has real source conflicts in
+`javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xLocalClock.java`
+and
+`javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xNanosTimer.java`
+against `origin/master` at `61e555a68cd82a866f82aea40a3bb97a424a3809`.
+`ServiceContext.java` and `WeakCallback.java` apply cleanly. Extract the
+concurrent-registry and null-safe timer-fire hunks manually; add
+`NativeCallbackRegistrationTest` as a new master test file rather than relying
+on the branch patch context.
 
 **Dependencies/order:** Can land with issue 10 if review prefers one native
 callback lifecycle PR; otherwise independent.
@@ -465,6 +820,19 @@ callback lifecycle PR; otherwise independent.
 server startup fails.
 
 **Status/category:** Category A. Single-threaded failure paths.
+
+**Explanation:** Native callback registration is a lifecycle count that keeps a
+container alive while Java-side timer/server work may call back into it. If
+startup fails after the count is incremented, the container can be pinned
+forever even though the native resource was never successfully installed. That
+turns a local startup failure into a leak of process resources and runtime
+liveness state.
+
+This is also an ownership problem. The code mutates a shared keep-alive counter
+without a transactional owner handoff: either the native resource is installed
+and owns a callback, or the counter must be rolled back. Encoding that lifecycle
+explicitly is safer than relying on scattered mutable fields and broad catch
+blocks to happen in the right order.
 
 **Master evidence:** `origin/master:xLocalClock.java:203` registers in the
 alarm constructor. `origin/master:xRTServer.java:286` registers after server
@@ -504,7 +872,15 @@ diff --git a/javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTSer
 ```
 
 **Tests to add/run on master:** `NativeCallbackRegistrationTest` is red on the
-old shapes. Run `./gradlew :javatools:test --tests org.xvm.runtime.NativeCallbackRegistrationTest`.
+old shapes. Run
+`./gradlew :javatools:test --tests org.xvm.runtime.NativeCallbackRegistrationTest --rerun-tasks --no-build-cache`.
+
+**Master dry-run status:** Branch seed `5311da1ac` has real source conflicts in
+`xLocalClock.java` and `xNanosTimer.java` against `origin/master`
+`61e555a68cd82a866f82aea40a3bb97a424a3809`; the `xRTServer.java` slice applies
+cleanly. Either pair this with issue 9 and resolve timer-file lifecycle hunks
+once, or file the `xRTServer` rollback slice separately and extract timer
+rollback hunks later.
 
 **Dependencies/order:** Can be paired with issue 9.
 
@@ -515,6 +891,18 @@ body equality.
 
 **Status/category:** Category A. Single-threaded map/set misuse and cyclic
 metadata graphs.
+
+**Explanation:** Java collections assume `equals` and `hashCode` describe the
+same identity. When metadata objects violate that contract, sets and maps can
+hold duplicates, miss existing entries, or produce order-dependent behavior.
+This is not a style issue; it breaks ordinary Java data structures used by the
+compiler and runtime.
+
+The `MethodBody` piece is the deeper type-safety problem. Equality walks through
+owner-shaped metadata graphs instead of comparing a stable target identity, so a
+legal cyclic graph can recurse or observe mutable owner state. This is where the
+code should lean on explicit key types or sealed identity shapes rather than
+deferring meaning to runtime graph walks and casts.
 
 **Master evidence:** `origin/master:Register.java:430` and `:773` define
 `equals(...)`; no matching `hashCode()` for those shapes. `origin/master:MethodBody.java:699`
@@ -529,8 +917,12 @@ or compare unstable owner state.
 equality field. For `MethodBody`, compare stable target identity shape instead
 of walking owner metadata graphs.
 
-**Patch/diff section:** Branch seeds: hash-contract wave plus `0231a8771` for
-MethodBody target identity. Close patch sketch.
+**Patch/diff section:** Extract only the hash-contract hunks for
+`Register.java`, `VersionTree.java`, and `ChildInfo.java` from `9456d6727`, plus
+the cycle-safe `MethodBody` target-key hunk from `a11765c86`. Do not use
+`0231a8771` for this issue; that commit is the later owned-copy self-target
+regression and belongs to the branch XDK build-break chain, not this master
+hash/equality filing. Close patch sketch.
 
 ```diff
 diff --git a/javatools/src/main/java/org/xvm/asm/Register.java b/javatools/src/main/java/org/xvm/asm/Register.java
@@ -548,6 +940,12 @@ diff --git a/javatools/src/main/java/org/xvm/asm/constants/MethodBody.java b/jav
 **Tests to add/run on master:** `RegisterHashCodeTest`, `VersionTest`, and
 `MethodInfoTest.methodInfoEqualityDoesNotRecurseThroughMethodTargets()`.
 
+**Master dry-run status:** Do not cherry-pick `9456d6727` wholesale: it is a
+broad lint/constructor-escape/audit commit and conflicts through unrelated
+runtime files. Build a filtered patch containing only `Register.java`,
+`VersionTree.java`, `ChildInfo.java`, their tests, and the cycle-safe
+`MethodBody.java`/`MethodInfoTest` hunk from `a11765c86`.
+
 **Dependencies/order:** None. Keep unrelated metadata owner-copy APIs out.
 
 ## 12. Handle view lifecycle state is shared or refused
@@ -558,6 +956,20 @@ lifecycle state.
 **Status/category:** Category A for atomic/injected first-install races and
 freeze-state split; guards for register-bound refs and mutable arrays are
 latent hardening.
+
+**Explanation:** A handle access view is supposed to be another view of the same
+runtime object, not a fork of the object's lifecycle state. Master stores
+mutability, atomic backing cells, injected values, and some register/array
+state in per-view mutable fields. Once a view is cloned, one path can freeze,
+assign, or inject while another path still sees a different state over the same
+logical object.
+
+This is exactly the kind of bug that runtime casts and mutable arrays hide until
+state leaks across an isolation boundary. Atomic and injected values should be
+constructor-final shared cells with clear owner semantics; views that cannot
+share safely should be refused. Otherwise a same-VM compiler, LSP, debugger, or
+container host can observe split object state that Java's type system could have
+prevented with explicit state objects and sealed view categories.
 
 **Master evidence:** `origin/master:ObjectHandle.java:49` stores mutable state
 as per-handle `m_fMutable`; line 65 uses shallow `clone`; line 92 clears only
@@ -597,6 +1009,14 @@ diff --git a/javatools/src/main/java/org/xvm/runtime/template/annotations/xAtomi
 `FreezeViewSharingTest` are red on the old shapes. `RefViewGuardTest` and
 `ArrayViewGuardTest` are source-shape/guard proofs.
 
+**Master dry-run status:** The four branch seeds are not one clean
+master-cherry-pick. `c5c40d443` applies source-only cleanly for the
+atomic/injected cells, but `d2165e4f8` conflicts in `ObjectHandle.java`; the
+array/ref guard commits are smaller and should be checked after the freeze-cell
+conflict is resolved. File this as split patches if the exact master hunk grows
+beyond the two proven master bugs: atomic/injected cell sharing and freeze-state
+sharing.
+
 **Dependencies/order:** Keep this as one issue only if the patch stays small by
 mechanism. Otherwise split into atomic/injected cell sharing and freeze cell.
 
@@ -607,6 +1027,19 @@ serving.
 
 **Status/category:** Category A when sibling/nested containers share module
 constants containing live handles.
+
+**Explanation:** `HandleConstant` stores a live runtime handle in a constant
+pool. If another container resolves the same module constant and receives that
+raw handle, it gets access to an object owned by a different container. That is
+not serialization or pass-through; it is a direct capability leak across the
+runtime isolation boundary.
+
+The security implication is direct. Containers are used to isolate services,
+native resources, and object graphs inside one JVM. Returning a live handle to
+the wrong owner can bypass mask/proxy checks and hand one container authority
+over another container's state. This is precisely where Java should use explicit
+owner-typed APIs instead of runtime casts and nullable checks around an
+unqualified `ObjectHandle`.
 
 **Master evidence:** `origin/master:javatools/src/main/java/org/xvm/asm/constants/HandleConstant.java:34`
 returns a live handle for the current `Frame`.
@@ -639,7 +1072,14 @@ diff --git a/javatools/src/main/java/org/xvm/asm/constants/HandleConstant.java b
 
 **Tests to add/run on master:** `HandleConstantOwnerGuardTest` is branch-API
 based; `HandleConstantAssembleTest` covers persistence. Run focused
-`javatools:test` after adapting to master APIs.
+`./gradlew :javatools:test --tests org.xvm.runtime.HandleConstantOwnerGuardTest --tests org.xvm.asm.constants.HandleConstantAssembleTest --rerun-tasks --no-build-cache`
+after adapting to master APIs.
+
+**Master dry-run status:** Branch seed `632cac927` has a real source conflict in
+`javatools/src/main/java/org/xvm/asm/constants/HandleConstant.java` against
+`origin/master` `61e555a68cd82a866f82aea40a3bb97a424a3809`. Extract the owner
+guard and assemble-refusal hunks; avoid branch-only ownership diagnostic APIs in
+the master issue.
 
 **Dependencies/order:** Can land before broad adoption work. Keep this narrow;
 do not backport all `OwnershipDiagnostics`.
@@ -649,6 +1089,19 @@ do not backport all `OwnershipDiagnostics`.
 **Issue title:** Clone reflection invoke argument arrays before frame reuse.
 
 **Status/category:** Category A. Single-threaded master bug.
+
+**Explanation:** Reflection invoke is allowed to build a callee frame from a
+caller-supplied tuple. Master passes the tuple's backing array directly when no
+extra registers are needed. That aliases caller storage into the callee register
+file, so parameter assignment by the callee can mutate the caller's tuple. If
+that tuple came from a const heap or shared runtime object, the mutation can
+escape far beyond the reflective call.
+
+This is the same class of problem as the broader array leak audit: arrays are
+mutable references, not values. The code should make ownership transfer
+explicit by cloning at the boundary. Relying on convention around `ObjectHandle[]`
+turns Java into a dynamically checked language and postpones a preventable
+ownership error until runtime corruption.
 
 **Master evidence:** `origin/master:javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java:206`
 passes `hTuple.m_ahValue` directly. `xRTFunction.java:251` already clones in
@@ -673,7 +1126,11 @@ diff --git a/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xR
 
 **Tests to add/run on master:** `MethodInvokeArgumentAliasingTest` has a
 source-shape red pin on master. The full execution test can ride with same-JVM
-stress. Run `./gradlew :javatools:test --tests org.xvm.runtime.template._native.reflect.MethodInvokeArgumentAliasingTest`.
+stress. Run
+`./gradlew :javatools:test --tests org.xvm.runtime.template._native.reflect.MethodInvokeArgumentAliasingTest --rerun-tasks --no-build-cache`.
+
+**Master dry-run status:** Source/test files from branch seed `ff8cc479a`
+apply cleanly to `origin/master` at `61e555a68cd82a866f82aea40a3bb97a424a3809`.
 
 **Dependencies/order:** None. This should be one of the first filed issues.
 
@@ -683,6 +1140,18 @@ stress. Run `./gradlew :javatools:test --tests org.xvm.runtime.template._native.
 `Parameter` objects across modules.
 
 **Status/category:** Category A. Single-threaded compile bug.
+
+**Explanation:** `Parameter` objects are not inert syntax. They carry constants
+and owner-sensitive metadata that get registered during assembly. Sharing the
+super method's `Parameter` elements into a user module's short-hand property
+override lets the user module rewrite objects owned by the library/ecstasy
+module.
+
+This is a type-system failure in practical form. A generic or owner-typed copy
+API would make it impossible to pass "borrowed library parameter" where "new
+method-owned parameter" is required. The current mutable-object style makes the
+wrong thing easy, then discovers the damage only when shared metadata is
+registered into the wrong pool.
 
 **Master evidence:** `origin/master:javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java:504`
 reads `methodSuper.getReturn(i)`; line 532 creates a new method using shared
@@ -716,7 +1185,10 @@ diff --git a/javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationState
 
 **Tests to add/run on master:** `ComponentMethodParameterCopyTest` is red on
 master for cross-module copy and call-site shape. Run
-`./gradlew :javatools:test --tests org.xvm.asm.ComponentMethodParameterCopyTest`.
+`./gradlew :javatools:test --tests org.xvm.asm.ComponentMethodParameterCopyTest --rerun-tasks --no-build-cache`.
+
+**Master dry-run status:** Source/test files from branch seed `f835b3693`
+apply cleanly to `origin/master` at `61e555a68cd82a866f82aea40a3bb97a424a3809`.
 
 **Dependencies/order:** None if the helper stays tiny. Do not pull in the full
 clone-free adoption API.
@@ -727,6 +1199,18 @@ clone-free adoption API.
 the copied component owner.
 
 **Status/category:** Category A. Single-threaded clone/copy bug.
+
+**Explanation:** Java inner classes carry a hidden reference to their outer
+instance. `super.clone()` copies that hidden reference. For `Contribution`, that
+means a copied component can contain contribution metadata that still answers
+questions through the source component. The visible fields look copied, but the
+owner relationship remains wrong.
+
+This is why the branch is retiring ad hoc `Cloneable` patterns. Runtime casts
+and shallow clones cannot express ownership. An explicit copy constructor or
+factory called on the target owner lets Java encode the invariant: this
+contribution belongs to this component. Without that, module linking and
+conditional body copying can operate on metadata that lies about its owner.
 
 **Master evidence:** `origin/master:javatools/src/main/java/org/xvm/asm/Component.java:1973`
 uses `super.clone()` in body copying. `Component.java:2751` returns the owning
@@ -757,7 +1241,14 @@ diff --git a/javatools/src/main/java/org/xvm/asm/Component.java b/javatools/src/
 ```
 
 **Tests to add/run on master:** `ComponentBodyCopyTest.contributionsAreReOwnedByBodyCopies`
-is behavioral red on master. Run `./gradlew :javatools:test --tests org.xvm.asm.ComponentBodyCopyTest`.
+is behavioral red on master. Run
+`./gradlew :javatools:test --tests org.xvm.asm.ComponentBodyCopyTest --rerun-tasks --no-build-cache`.
+
+**Master dry-run status:** Branch seed `0af827c72` is the broad Cloneable
+retirement commit and has real source conflicts in `Component.java` and
+`MethodStructure.java` on master. Extract only the `Contribution` copy/re-owner
+hunks and the matching `ComponentBodyCopyTest` method; do not file the full
+structure-family modernization as this master bug.
 
 **Dependencies/order:** Independent. Keep this separate from the broader
 Cloneable-retirement modernization.
@@ -769,6 +1260,17 @@ metadata resolves through the copied method.
 
 **Status/category:** Category A structurally; observable when copied methods
 cross pools.
+
+**Explanation:** `MethodStructure.Source` has the same hidden-outer problem as
+`Contribution`, but the failure shows up through source metadata and constant
+pool resolution. A cloned method can carry a `Source` object whose
+`getConstantPool()` still routes through the original method because `clone()`
+preserved the hidden outer reference.
+
+This is relevant even when many same-pool copies appear to work. Same-pool tests
+mask the bug because both owners answer the same pool; cross-pool adoption,
+module surgery, and compiler transformations expose it. Explicit target-owned
+copying is the small, type-safe fix.
 
 **Master evidence:** `origin/master:javatools/src/main/java/org/xvm/asm/MethodStructure.java:2760`
 defines inner `Source`; line 2954 returns `(Source) super.clone()`.
@@ -796,6 +1298,11 @@ diff --git a/javatools/src/main/java/org/xvm/asm/MethodStructure.java b/javatool
 is red on master via the outer reference. Run the same focused test class as
 issue 16.
 
+**Master dry-run status:** Source/test files from branch seed `25371b397` apply
+cleanly to `origin/master` at `61e555a68cd82a866f82aea40a3bb97a424a3809`. File
+with issue 16 only if reviewers prefer one inner-class owner-copy PR; the source
+hunk is independently clean.
+
 **Dependencies/order:** Can be filed with issue 16 as "inner-class clone owner
 fixes" if reviewers prefer, but the hunks are independent.
 
@@ -806,38 +1313,86 @@ instead of overwriting `m_next`.
 
 **Status/category:** Category A. Single-threaded master bug.
 
-**Master evidence:** Category A ledger row cites branch seed `c621b1dca`.
-Master `FullyBoundHandle.chain()` asserted `m_next == null`; assertions-on
-fails, assertions-off silently drops already-linked constructor finalizers.
+**Explanation:** Constructor finalizers form a chain of work that must run after
+construction. Master assumes the head has no existing `m_next`, asserts that
+under `-ea`, and overwrites under `-da`. That means debug/test runs can fail
+while production silently drops an already-linked finalizer. Both outcomes prove
+the chain operation has the wrong contract.
+
+This is a runtime safety issue because finalizers here are not optional logging
+callbacks; they complete object initialization semantics for annotation/mixin
+constructor paths. Appending to the tail preserves all scheduled work and turns
+the mutable linked-list operation into the contract the caller actually needs.
+
+**Master evidence:** The bug lives in the inner class
+`xRTFunction.FullyBoundHandle` (there is no separate `FullyBoundHandle` file):
+`origin/master:javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFunction.java:918`
+is `assert m_next == null;` followed by the overwrite at line 919.
+Assertions-on fails; assertions-off silently drops already-linked constructor
+finalizers.
 
 **Failure mode:** Annotation-mixin constructor finalizers delegating to super
-constructor finalizers can prepopulate a finalizer link. The construction
-epilogue then overwrites or asserts instead of appending, so one finalizer is
-lost.
+constructor finalizers can prepopulate a finalizer link
+(`Frame.chainFinalizer` links onto a frame's head finalizer before
+`ClassTemplate`'s construction epilogue folds the per-frame finalizers
+together). The epilogue's `chain(...)` then asserts (`-ea`) or overwrites
+(`-da`) instead of appending, so linked finalizers are lost.
 
 **Minimal master-portable fix strategy:** Change `chain(...)` from "must be
-unlinked" to tail append. Keep null-padding defensive fixes if the same test
-needs them, but do not pull unrelated handle-view changes.
+unlinked" to tail append. The seed also carries defensive null-padding guards
+in `isMutable()`/`makeImmutable()`/`checkArgumentsPassThrough()` (`f_ahArg` is
+the register-file-sized array with trailing null padding); the deterministic
+test does not need them - include them as clearly-marked defensive riders or
+drop them, but do not pull unrelated handle-view changes.
 
-**Patch/diff section:** Branch seed: `c621b1dca`; close patch sketch because
-the exact class location should be confirmed during cherry-pick.
+**Patch/diff section:** Branch seed: `c621b1dca`. This is the actual
+tail-append hunk (the required part of the fix):
 
 ```diff
-diff --git a/javatools/src/main/java/org/xvm/runtime/ObjectHandle.java b/javatools/src/main/java/org/xvm/runtime/ObjectHandle.java
+diff --git a/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFunction.java b/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFunction.java
 @@
--        assert m_next == null;
--        m_next = next;
-+        FullyBoundHandle tail = this;
-+        while (tail.m_next != null) {
-+            tail = tail.m_next;
-+        }
-+        tail.m_next = next;
-         return this;
+         public FullyBoundHandle chain(FullyBoundHandle handle) {
+             if (!(handle instanceof NoOpHandle)) {
+-                assert m_next == null;
+-                m_next = handle;
++                // append at the tail: the old "assert m_next == null" was not a sound
++                // invariant - Frame.chainFinalizer can already have linked a next handle onto
++                // a frame's head finalizer before ClassTemplate's construction epilogue folds
++                // the per-frame finalizers together (reachable when an annotation-mixin
++                // constructor with a finalizer delegates to a super constructor that also has
++                // one), and overwriting would silently drop the linked finalizers
++                FullyBoundHandle tail = this;
++                while (tail.m_next != null) {
++                    tail = tail.m_next;
++                }
++                tail.m_next = handle;
+             }
+             return this;
+         }
 ```
 
+The optional defensive riders change `hArg.isMutable()` to
+`hArg != null && hArg.isMutable()` (and the analogous null-skips in
+`makeImmutable()` and `checkArgumentsPassThrough()`) in the same inner class.
+
 **Tests to add/run on master:** `FinalizerChainTest.chainAppendsAtTailInsteadOfDroppingLinkedFinalizers`
-is red on master under both `-ea` and `-da`. Run
-`./gradlew :javatools:test --tests org.xvm.runtime.FinalizerChainTest`.
+is behavioral red on master under both `-ea` and `-da`: it chains three
+`FullyBoundHandle`s and asserts the first link survives the second `chain()`
+call. Master adaptation needed: the test boots the native container with the
+branch factory `NativeContainer.create(runtime, repository)`; master uses the
+public constructor `new NativeContainer(runtime, repository)`. The
+`FullyBoundHandle(Container, FunctionHandle, ObjectHandle[])` constructor and
+`Utils.OBJECTS_NONE` exist unchanged on master, and the test shares
+`xRTFunction`'s package, so protected access works. Run
+`./gradlew :javatools:test --tests org.xvm.runtime.template._native.reflect.FinalizerChainTest --rerun-tasks --no-build-cache`.
+
+**Master dry-run status:** Re-verified 2026-08-25: branch seed `c621b1dca` has
+a real content conflict in
+`javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFunction.java`
+against `origin/master` `61e555a68cd82a866f82aea40a3bb97a424a3809` (branch
+context drift around the hunks; the `assert m_next == null` shape itself is
+verbatim on master). Use the master-form hunk above rather than resolving the
+cherry-pick.
 
 **Dependencies/order:** None. File before broader handle lifecycle work if the
 patch stays self-contained.

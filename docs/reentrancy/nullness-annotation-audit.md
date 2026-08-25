@@ -50,6 +50,81 @@ nullness contracts. Adding annotations is still useful for IDE inspections,
 external static analyzers, and future local linting, but it should not be
 expected to create new javac nullness errors by itself.
 
+## Strategic Finding: Null Means Too Many Things
+
+The current codebase uses null as a value, a sentinel, a cache state, a parse
+failure, a missing module, a deferred result, a disabled listener, an absent
+collection, a cleared lifecycle field, and a local flow marker. Some of those
+uses are legitimate. The problem is that APIs rarely say which meaning applies,
+so tools and reviewers cannot distinguish "this cannot be null after
+construction" from "null means no result" from "null means a failure was already
+reported somewhere else".
+
+Broad census from 2026-08-25:
+
+```bash
+rg -n "return null;|return null\\b" javatools/src/main/java javatools_utils/src/main/java | wc -l
+# 700
+rg -n "@NotNull|@Nullable|import org\\.jetbrains\\.annotations" \
+  javatools/src/main/java javatools_utils/src/main/java | wc -l
+# 17
+rg -n "return Collections\\.empty|return List\\.of\\(\\)|return Map\\.of\\(\\)|return Set\\.of\\(\\)|\
+emptyList\\(\\)|emptyMap\\(\\)|emptySet\\(" \
+  javatools/src/main/java javatools_utils/src/main/java | wc -l
+# 126
+rg -n "= null;|== null|!= null" javatools/src/main/java javatools_utils/src/main/java | wc -l
+# 6849
+```
+
+These are broad grep counts, not a verdict that every site is wrong. They show
+why refactoring into `final` fields, owner-passed constructors, or request-local
+diagnostic sessions is unnecessarily hard: the source does not tell the IDE
+which receivers are impossible-null after construction, so warnings become
+noise exactly where lifecycle contracts should be clearest.
+
+### Nullness Debt Taxonomy
+
+| Family | Representative sites | Preferred contract |
+| --- | --- | --- |
+| Required constructor/API inputs guarded at runtime but not annotated | `Lexer`, `Parser`, `Compiler`, `Fiber`, `NativeTemplates`, `ConstHeap`, owner-aware runtime factories | Keep `Objects.requireNonNull`/guard exceptions and add `@NotNull` to parameters and non-null returns. Constructors should make required state final where feasible. |
+| Optional result from lookup/search | module repository lookups, `VersionTree.find*`, `XvmStructure.getChild(...)`, runtime template lookup helpers | Prefer `Optional<T>` for new APIs when absence is the only meaning. For hot/internal APIs where `Optional` is too noisy, annotate `@Nullable` and document "not found" explicitly. |
+| Empty collection/array result | contribution/child/type parameter getters, collection-view APIs, metadata lists | Return `List.of()`, `Set.of()`, `Map.of()`, or a stable empty array for "none". Reserve null for "unknown/not computed" only when that distinction is actually needed. |
+| Parse/probe failure | `Parser.parseModuleNameIgnoreEverythingElse()`, `xModule.resolveClassOrType(...)`, `xIntLiteral` fallback parsing, compiler speculative fits | Do not encode "probe failed" only as null plus `BLACKHOLE`. Use a typed probe result containing success/failure, suppressed diagnostics, and cause when applicable. |
+| Error already reported elsewhere | `EvalCompiler.createLambda(...)` returns null after logging into a local `ErrorList`; repository code historically returned null after printing load failure | Return a typed failure (`Result`, exception, or diagnostic event id) so the caller cannot confuse "reported failure" with "missing". |
+| Mutable lifecycle clear/reset | debugger fields, repository cached module fields, lazy cache invalidation, arrays/lists set to null after assembly | Isolate mutable lifecycle cells behind explicit state objects. Annotate fields if a checker supports field states; otherwise document the state machine and keep null clearing local. |
+| Lazy cache sentinel | `if (m_x == null) m_x = ...` patterns tracked in the lazy-cache audit | Prefer `final Lazy`, volatile/synchronized publication, or a dedicated sentinel object when null is a valid cached value. |
+
+### Representative Null Hotspots
+
+This table is not exhaustive. It lists sites worth using in reviews because
+each one demonstrates a different null contract that should be made explicit.
+
+| Site | Current shape | Why it matters |
+| --- | --- | --- |
+| `javatools/src/main/java/org/xvm/compiler/ast/StageMgr.java:42` and `:59` | Constructor accepts nullable `ErrorListener` and silently substitutes `ErrorListener.BLACKHOLE`. | A missing diagnostic session becomes silent suppression. Public/compiler boundaries should require a session; only explicit probe branches should suppress diagnostics, and they should name the reason. |
+| `javatools/src/main/java/org/xvm/compiler/ast/TypeExpression.java:75` | If caller passes null `errs`, type instantiation runs through `BLACKHOLE`. | Type computation can fail or defer while the caller loses visibility into why. Null here means "do not report", not "no listener object happened to be available". |
+| `javatools/src/main/java/org/xvm/compiler/EvalCompiler.java:143` | `createLambda(...)` returns null after catching `Exception` and logging into a local `ErrorList`. | The caller must interpret null and then inspect a side channel. A typed result or diagnostic event id would distinguish "lambda creation failed" from "no lambda". |
+| `javatools/src/main/java/org/xvm/asm/DirRepository.java:92` | Requested module load can still return null for true absence; the branch now throws a typed `ModuleLoadException` for broken candidates. | This is the right split: null can mean "not found" only after corrupt-file failure has been separated into a typed exception with retained cause. |
+| `javatools/src/main/java/org/xvm/asm/ModuleRepository.java:134` | Version selection returns null when no usable version exists. | This is a legitimate nullable lookup, but it should be annotated/documented as "not found" so callers do not confuse it with repository failure. |
+| `javatools/src/main/java/org/xvm/runtime/template/reflect/xModule.java:284` | Runtime type/class string parse uses local `ErrorList` and may fall back to null/false lookup semantics. | Runtime reflection needs the active container/frame diagnostic context; parse failure should not be hidden as ordinary absence. |
+| `javatools/src/main/java/org/xvm/runtime/DebugConsole.java` many fields and returns | Debugger state uses null for current frame, breakpoint sets, parsed command fields, and absent results. | Debugger/LSP work needs a clear session state object; otherwise display/eval commands mutate and clear shared state through convention. |
+| `javatools/src/main/java/org/xvm/asm/PropertyStructure.java` annotation/contribution locals and returns | Lists start as null and later become mutable lists or null returns depending on the property shape. | This is a common old-Java "lazy local list" idiom. For returned collection views, prefer empty immutable collections; for builder internals, keep mutation local and never expose null as a read-only collection contract. |
+| `javatools/src/main/java/org/xvm/runtime/ClassTemplate.java` lookup helpers | Several runtime helper lookups return null across construction/invocation paths. | Some are legitimate "not found"; some sit at invocation/owner boundaries. They should be classified before adding annotations so user errors, runtime defects, and absence are not collapsed. |
+
+### Especially Bad Null Shapes
+
+- `ErrorListener` parameters that accept null and silently become
+  `BLACKHOLE` make diagnostics disappear without a call-site reason.
+- Methods that return `null` after logging locally force callers to inspect a
+  separate side channel before they know whether they have "not found" or
+  "failed".
+- Collection getters that return null for absence require every caller to
+  branch, which increases both mutable local state and duplicated defensive
+  code. Empty immutable collections are safer when the only meaning is "none".
+- Constructor parameters that are always required but unannotated make IDE
+  nullness warnings useless downstream. The code then resists conversion to
+  `final` fields because tools cannot see the invariant that humans assume.
+
 ## Rule For Runtime Guards
 
 Keep runtime `Objects.requireNonNull(...)` checks at public APIs, protected

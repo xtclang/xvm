@@ -473,6 +473,45 @@ Concrete compiler/type examples:
   console behavior, but it is not a structured diagnostic policy that a test or
   LSP client can inspect.
 
+### Direct `ErrorList` And `BLACKHOLE` Findings
+
+The worst finding is not that `ErrorList` exists. The bug shape is that code
+can allocate, replace, or suppress the listener at the point of use, far below
+the compiler/runtime entry point that knows the request, owner, source version,
+container, and host operation.
+
+Broad census from 2026-08-25:
+
+```bash
+rg -n "ErrorListener\\.BLACKHOLE" javatools/src/main/java javatools_utils/src/main/java | wc -l
+# 80
+rg -n "new ErrorList\\(" javatools/src/main/java javatools_utils/src/main/java | wc -l
+# 10
+```
+
+Representative direct `ErrorList` sites:
+
+| Site | Shape | Why it is bad for a reentrant compiler/LSP |
+| --- | --- | --- |
+| `ModuleInfo.Node.errs()` (`javatools/src/main/java/org/xvm/tool/ModuleInfo.java:850`) | Lazily creates `new ErrorList(341)` inside a module-info node. | The diagnostic collector is created by an internal node, not by the compile request. A host can later drain it, but the list itself has no request id, document version, phase, owner, or correlation identity. |
+| `EvalCompiler.createLambda(...)` (`javatools/src/main/java/org/xvm/compiler/EvalCompiler.java:68`) | Creates `new ErrorList(1)`, catches broad `Exception`, logs a generic fatal parser error only if the list is not already serious, and returns `null`. | A runtime eval/lambda compile failure becomes either an internal null result or a tiny local list. The caller has to interpret `null`, inspect a separate list, and recover cause/context manually. |
+| `Parser.parseModuleNameIgnoreEverythingElse()` (`javatools/src/main/java/org/xvm/compiler/Parser.java:143-148`) | Temporarily replaces the parser listener with `BLACKHOLE`, then swaps in `new ErrorList(1)` for a tiny sub-parse. | Listener authority mutates inside a parser helper. This is exactly the shape that makes it impossible for an LSP request to know which speculative diagnostics were suppressed and why. |
+| `TypeConstant` capped-method preview (`javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:4424`) | Allocates `new ErrorList(1)` to preview `layerOn(...)` before deciding whether to ignore a contribution. | Speculative diagnostics are real compiler decisions. A local preview list can prove the decision only by absence/presence of serious errors, not by a structured "preview attempt" event tied to the type-info graph. |
+| `ConstantPool` implicit metadata static initializer (`javatools/src/main/java/org/xvm/asm/ConstantPool.java:4246`) | Parses `implicit.x` with `new ErrorList(1)`, prints errors to stderr, then throws plain `IllegalStateException` if serious. | Process-wide static metadata startup is not attached to a request, module, or diagnostic sink. Failures become stderr plus a generic Java exception while class initialization is already underway. |
+| `xModule.resolveClassOrType(...)` (`javatools/src/main/java/org/xvm/runtime/template/reflect/xModule.java:284`) | Parses a class/type string through `new ErrorList(10)` and swallows parser `RuntimeException`. | Runtime reflection diagnostics are isolated from the active container/frame and can turn parse failure into a null/false lookup path instead of a diagnostic event with owner context. |
+| `xRTCompiler.CompilerAdapter` (`javatools/src/main/java/org/xvm/runtime/template/_native/lang/src/xRTCompiler.java:320`) | Native compiler bridge constructs its superclass with `m_errorList = new ErrorList(100)`. | The in-runtime compiler needs to report diagnostics through the invoking container/request. A private mutable list is not enough for a resident compiler or LSP debugger that needs document version, owner, and operation identity. |
+| `xIntLiteral.parseBigInteger/parsePackedInteger(...)` (`javatools/src/main/java/org/xvm/runtime/template/numbers/xIntLiteral.java:381,410`) | Falls back from Java number parsing to lexer parsing with local `ErrorList(5)`. | This may be a valid local parse helper, but it demonstrates the missing distinction between "probe parse failed, ignore diagnostics" and "user/runtime diagnostic". The API cannot express that distinction. |
+| `javajit.Linker.errors` (`javatools/src/main/java/org/xvm/javajit/Linker.java:76`) | Holds a mutable `ErrorList(24)` as linker instance state. | The JIT/linker needs a request/container owner. A plain mutable list cannot prove which generated class, classloader, or container produced the diagnostic. |
+
+Representative `BLACKHOLE` families:
+
+| Family | Examples | Required replacement |
+| --- | --- | --- |
+| Speculative compiler probes | `StatementExpression.validate(...)`, `ArrayAccessExpression.chooseBest(...)`, `InvocationExpression.resolveReturnTypes(...)`, `LambdaExpression.ensurePrepared(...)`, `NameExpression.resolveRawArgument(...)` | A `DiagnosticBranch` or `DiagnosticProbe` with an explicit attempt id and reason (`speculative-fit`, `candidate-ranking`, `capture-analysis`), not a silent sink. |
+| Type-info and metadata construction | `TypeConstant.ensureTypeInfo(...)`, `TypeCollector.selectCommonType(...)`, `MethodStructure.ensureTypeInfo(...)`, `ClassStructure` service collection | Owner-aware type-info build context with pool id, contribution id, and dependency edge information. |
+| Runtime reflection/type checks | `xRTType.isNewable(...)`, `xModule.resolveClassOrType(...)` | Runtime diagnostic context carrying container/frame/module owner and Java cause where applicable. |
+| Default null-to-sink adapters | `StageMgr` and several AST helpers turn null listeners into `BLACKHOLE`. | Public/compiler entry points should require a diagnostic session. Nullable listener parameters should be confined to legacy adapters and annotated as such. |
+
 What should have been written instead:
 
 ```java
@@ -779,6 +818,12 @@ blocking diagnostic quality:
 - Introduce a guarded SLF4J facade for runtime/compiler developer trace logs.
 - Add `DiagnosticSink` or equivalent structured event model behind
   `ErrorListener`.
+- Make diagnostic ownership request-scoped: public compiler/runtime/LSP entry
+  points create the session, and deeper parser/type/runtime helpers receive a
+  branch/probe derived from it instead of constructing `new ErrorList(...)`.
+- Require every `ErrorListener.BLACKHOLE` use to name its probe reason
+  (`candidate ranking`, `fit preview`, `capture analysis`, etc.) and make that
+  suppression visible to diagnostic tests.
 - Stop direct stderr/stdout in compiler/type-system decisions.
 - Replace message-only native exception translations with cause-preserving
   translations and diagnostic events.
