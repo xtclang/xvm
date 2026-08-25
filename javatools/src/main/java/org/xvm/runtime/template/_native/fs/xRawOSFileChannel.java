@@ -216,7 +216,7 @@ public class xRawOSFileChannel
         JavaLong    hStart = (JavaLong)    ahArg[1];
         JavaLong    hEnd   = (JavaLong)    ahArg[2];
 
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hArray.m_hDelegate;
+        ByteArrayHandle hDelegate = (ByteArrayHandle) hArray.getDelegate();
         int             ofStart   = (int) hStart.getValue();
         int             ofEnd     = (int) hEnd.getValue();
 

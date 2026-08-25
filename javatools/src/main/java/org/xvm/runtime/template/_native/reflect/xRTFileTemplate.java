@@ -250,7 +250,7 @@ public class xRTFileTemplate
     private int invokeReplace(Frame frame, FileStructure file, ArrayHandle hArray) {
         List<ModuleStructure> listUnlinked = new ArrayList<>();
 
-        GenericArrayDelegate haGeneric = hArray.m_hDelegate.as(GenericArrayDelegate.class);
+        GenericArrayDelegate haGeneric = (GenericArrayDelegate) hArray.getDelegate();
         for (long i = 0, c = haGeneric.m_cSize; i < c; i++) {
             ComponentTemplateHandle hModule        = componentTemplateHandle(haGeneric.get(i));
             ModuleStructure         moduleUnlinked = hModule.getModuleStructure();

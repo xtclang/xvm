@@ -44,7 +44,7 @@ public class xRTHasher
         switch (method.getName()) {
         case "digest":
             return invokeDigest(frame, (DigestHandle) ahArg[0],
-                (ByteArrayHandle) ((ArrayHandle) ahArg[1]).m_hDelegate, iReturn);
+                (ByteArrayHandle) ((ArrayHandle) ahArg[1]).getDelegate(), iReturn);
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);

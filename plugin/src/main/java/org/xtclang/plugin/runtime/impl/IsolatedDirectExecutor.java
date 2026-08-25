@@ -115,6 +115,25 @@ public final class IsolatedDirectExecutor {
             logger.error("{}", OwnershipDiagnostics.dump(containers));
             throw e;
         }
+
+        // the curated validation above checks the state the walkers know about; the generic
+        // reachability sweep checks EVERYTHING reachable, and across the window it is the direct
+        // cross-run detector: a completed earlier run's container is unrelated to the current
+        // one, so any retained reference between their graphs is flagged with a path-to-root.
+        // A sweep is only accepted when it is complete - blind spots fail the run too, so the
+        // stress verdict can never silently narrow.
+        for (final Container observed : containers) {
+            final var report = OwnershipDiagnostics.sweepForeignReferences(observed);
+            if (report.isClean()) {
+                logger.info("Reachability sweep clean after module {}: {}",
+                    moduleName, report.render());
+            } else {
+                logger.error("Reachability sweep failed after module {}", moduleName);
+                logger.error("{}", report.render());
+                throw new IllegalStateException(
+                    "reachability sweep after module " + moduleName + ": " + report.render());
+            }
+        }
     }
 
     private static int ownershipValidationWindow() {

@@ -246,7 +246,7 @@ public class xArray
         ArrayHandle hArray = createEmptyArray(clzArray, (int) cCapacity, Mutability.Fixed);
         int cSize = (int) cCapacity;
         if (cSize > 0) {
-            hArray.m_hDelegate.m_cSize = cSize;
+            hArray.getDelegate().m_cSize = cSize;
 
             ObjectHandle hValue = ahVar[1];
             // we could get here either naturally (e.g. new Array<String>(7, "");)
@@ -297,7 +297,7 @@ public class xArray
         ObjectHandle hIterable   = ahVar[1];
 
         int cCapacity = hIterable instanceof ArrayHandle hA
-                ? (int) hA.m_hDelegate.m_cSize
+                ? (int) hA.getDelegate().m_cSize
                 : 0;
 
         ArrayHandle    hArray = createEmptyArray(clzArray, cCapacity, Mutability.Mutable);
@@ -331,7 +331,7 @@ public class xArray
                     : construct2(frame, clzArray, ahArg, iReturn);
         } else {
             ObjectHandle[] ahArg = new ObjectHandle[] {
-                hThat.m_hDelegate,
+                hThat.getDelegate(),
                 getMutabilityTemplate().ensureEnumByOrdinal(frame, mutability.ordinal())
             };
             Frame.Continuation stepNext = frameCaller ->
@@ -355,7 +355,7 @@ public class xArray
         ArrayHandle  hArray      = new ArrayHandle(
             clzArray, hDelegate, Mutability.values()[((EnumHandle) hMutability).getOrdinal()]);
 
-        if (hArray.m_mutability == Mutability.Constant) {
+        if (hArray.getMutability() == Mutability.Constant) {
             hArray.makeImmutable();
         }
         return frame.assignValue(iReturn, hArray);
@@ -370,11 +370,11 @@ public class xArray
             return calculateHash(frame, hArray, iReturn);
 
         case "delegate":
-            return frame.assignValue(iReturn, hArray.m_hDelegate);
+            return frame.assignValue(iReturn, hArray.getDelegate());
 
         case "mutability":
             return frame.assignDeferredValue(iReturn,
-                    getMutabilityTemplate().ensureEnumByOrdinal(frame, hArray.m_mutability.ordinal()));
+                    getMutabilityTemplate().ensureEnumByOrdinal(frame, hArray.getMutability().ordinal()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -387,9 +387,9 @@ public class xArray
         switch (sPropName) {
         case "mutability": {
             Mutability mutability = Mutability.values()[((EnumHandle) hValue).getOrdinal()];
-            if (mutability.compareTo(hArray.m_mutability) > 0) {
+            if (mutability.compareTo(hArray.getMutability()) > 0) {
                 return frame.raiseException(
-                    xException.illegalState(frame, hArray.m_mutability.toString()));
+                    xException.illegalState(frame, hArray.getMutability().toString()));
             }
             hArray.setMutability(mutability);
             return Op.R_NEXT;
@@ -443,13 +443,13 @@ public class xArray
             ArrayHandle hArray = (ArrayHandle) hTarget;
 
             // a view cannot naturally grow or shrink
-            Mutability mutability = hArray.m_mutability == Mutability.Constant ||
-                                    hArray.m_mutability == Mutability.Persistent
+            Mutability mutability = hArray.getMutability() == Mutability.Constant ||
+                                    hArray.getMutability() == Mutability.Persistent
                     ? Mutability.Constant
                     : Mutability.Fixed;
 
             DelegateHandle hView  =
-                    xRTViewToBit.getInstance(frame).createBitViewDelegate(hArray.m_hDelegate, mutability);
+                    xRTViewToBit.getInstance(frame).createBitViewDelegate(hArray.getDelegate(), mutability);
 
             return frame.assignValue(iReturn,
                     new ArrayHandle(xBitArray.getInstance(frame.container()).getCanonicalClass(),
@@ -458,13 +458,13 @@ public class xArray
 
         case "clear": {
             ArrayHandle hArray     = (ArrayHandle) hTarget;
-            Mutability  mutability = hArray.m_mutability;
+            Mutability  mutability = hArray.getMutability();
 
-            if (hArray.m_hDelegate.m_cSize > 0) {
+            if (hArray.getDelegate().m_cSize > 0) {
                 switch (mutability) {
                 case Mutable:
-                    hArray.m_hDelegate = makeDelegate(hArray.getComposition(), 0,
-                        Utils.OBJECTS_NONE, mutability);
+                    hArray.setDelegate(makeDelegate(hArray.getComposition(), 0,
+                        Utils.OBJECTS_NONE, mutability));
                     break;
 
                 case Fixed:
@@ -495,8 +495,8 @@ public class xArray
                 ArrayHandle hThis = (ArrayHandle) hTarget;
 
                 if (ahArg[0] instanceof ArrayHandle hThat) {
-                    DelegateHandle hDelegateThis = hThis.m_hDelegate;
-                    DelegateHandle hDelegateThat = hThat.m_hDelegate;
+                    DelegateHandle hDelegateThis = hThis.getDelegate();
+                    DelegateHandle hDelegateThat = hThat.getDelegate();
                     if (hDelegateThis.getTemplate() instanceof xRTDelegate templateThis &&
                         hDelegateThat.getTemplate() instanceof xRTDelegate templateThat &&
                             templateThis == templateThat) {
@@ -525,7 +525,7 @@ public class xArray
                                  PropertyConstant idProp, boolean fRO, int iReturn) {
         if ("delegate".equals(idProp.getName())) {
             ArrayHandle    hArray    = (ArrayHandle) hTarget;
-            DelegateHandle hDelegate = hArray.m_hDelegate;
+            DelegateHandle hDelegate = hArray.getDelegate();
 
             ConstantPool   pool      = frame.poolContext();
             TypeConstant   typeRef   = pool.ensureParameterizedTypeConstant(
@@ -551,8 +551,8 @@ public class xArray
         ArrayHandle hArray2 = (ArrayHandle) hValue2;
 
         return !hArray1.isMutable() && !hArray2.isMutable() &&
-            hArray1.m_hDelegate.getTemplate().
-                compareIdentity(hArray1.m_hDelegate, hArray2.m_hDelegate);
+            hArray1.getDelegate().getTemplate().
+                compareIdentity(hArray1.getDelegate(), hArray2.getDelegate());
     }
 
     /**
@@ -581,7 +581,7 @@ public class xArray
     @Override
     public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
 
         return ((xRTDelegate) hDelegate.getTemplate()).
                 extractArrayValue(frame, hDelegate, lIndex, iReturn);
@@ -590,7 +590,7 @@ public class xArray
     @Override
     public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue) {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
 
         return ((xRTDelegate) hDelegate.getTemplate()).
                 assignArrayValue(frame, hDelegate, lIndex, hValue);
@@ -605,13 +605,13 @@ public class xArray
     public long size(ObjectHandle hTarget) {
         ArrayHandle hArray = (ArrayHandle) hTarget;
 
-        return hArray.m_hDelegate.m_cSize;
+        return hArray.getDelegate().m_cSize;
     }
 
     @Override
     public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
 
         return ((xRTDelegate) hDelegate.getTemplate()).
                 invokePreInc(frame, hDelegate, lIndex, iReturn);
@@ -620,7 +620,7 @@ public class xArray
     @Override
     public int invokePostInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
 
         return ((xRTDelegate) hDelegate.getTemplate()).
                 invokePostInc(frame, hDelegate, lIndex, iReturn);
@@ -629,7 +629,7 @@ public class xArray
     @Override
     public int invokePreDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
 
         return ((xRTDelegate) hDelegate.getTemplate()).
                 invokePreDec(frame, hDelegate, lIndex, iReturn);
@@ -638,7 +638,7 @@ public class xArray
     @Override
     public int invokePostDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
 
         return ((xRTDelegate) hDelegate.getTemplate()).
                 invokePostDec(frame, hDelegate, lIndex, iReturn);
@@ -648,7 +648,7 @@ public class xArray
     public ObjectHandle[] toArray(Frame frame, ObjectHandle hTarget)
             throws ExceptionHandle.WrapperException {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
 
         return ((xRTDelegate) hDelegate.getTemplate()).toArray(frame, hDelegate);
     }
@@ -696,7 +696,7 @@ public class xArray
     protected int invokeSlice(Frame frame, ObjectHandle hTarget, long ixLower, boolean fExLower,
                               long ixUpper, boolean fExUpper, boolean fReverse, int iReturn) {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
         xRTDelegate    template  = (xRTDelegate) hDelegate.getTemplate();
 
         if (fExLower) {
@@ -720,7 +720,7 @@ public class xArray
 
         DelegateHandle hSlice = template.slice(hDelegate, ixLower, ixUpper - ixLower + 1, fReverse);
         if (hSlice != hDelegate) {
-            Mutability mutability = hArray.m_mutability;
+            Mutability mutability = hArray.getMutability();
             if (mutability == Mutability.Mutable) {
                 mutability = Mutability.Fixed;
             }
@@ -735,7 +735,7 @@ public class xArray
     protected int invokeDeleteAll(Frame frame, ObjectHandle hTarget, long ixLower, boolean fExLower,
                                  long ixUpper, boolean fExUpper, int iReturn) {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
         xRTDelegate    template  = (xRTDelegate) hDelegate.getTemplate();
 
         if (fExLower) {
@@ -757,7 +757,7 @@ public class xArray
             return frame.raiseException(xException.outOfBounds(frame, ixUpper, cSize));
         }
 
-        Mutability mutability = hArray.m_mutability;
+        Mutability mutability = hArray.getMutability();
         if (mutability == Mutability.Fixed) {
             return frame.raiseException(xException.sizeLimited(frame, "Fixed size array"));
         }
@@ -781,7 +781,7 @@ public class xArray
      */
     protected int fill(Frame frame, ObjectHandle hTarget, int cSize, ObjectHandle hValue, int iReturn) {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
         xRTDelegate    template  = (xRTDelegate) hDelegate.getTemplate();
 
         if (!hDelegate.checkAssign(hValue)) {
@@ -792,9 +792,9 @@ public class xArray
         DelegateHandle hDelegateNew = template.fill(hDelegate, cSize, hValue);
         if (hDelegateNew != hDelegate) {
             if (hDelegateNew == null) {
-                return frame.raiseException(xException.readOnly(frame, hArray.m_mutability));
+                return frame.raiseException(xException.readOnly(frame, hArray.getMutability()));
             }
-            hArray = new ArrayHandle(hArray.getComposition(), hDelegateNew, hArray.m_mutability);
+            hArray = new ArrayHandle(hArray.getComposition(), hDelegateNew, hArray.getMutability());
         }
         return frame.assignValue(iReturn, hArray);
     }
@@ -966,46 +966,64 @@ public class xArray
 
     public static class ArrayHandle
             extends ObjectHandle {
-        protected Mutability     m_mutability;
-        public    DelegateHandle m_hDelegate;
-        public    JavaLong       m_hHash;
+        /**
+         * The lifecycle state shared by every access view of this array. MOV_THIS_A and
+         * {@link org.xvm.runtime.ClassComposition#ensureAccess} create this:public/private/
+         * protected views of one live array through a shallow {@link #cloneAs}, and the two
+         * pieces of state that can move after construction - the delegate pointer, which
+         * clear() swaps wholesale for Mutable arrays, and the mutability enum, which freeze
+         * moves toward Constant - must be visible through every view. Both therefore live in
+         * this one cell, which the shallow clone shares by reference; per-view copies of
+         * either field were exactly the mechanism-4 desync (a cleared view forking the
+         * storage pointer, a frozen view leaving a sibling still willing to write).
+         */
+        private final ArrayState f_state;
+
+        public JavaLong m_hHash;
 
         protected ArrayHandle(TypeComposition clzArray, DelegateHandle hDelegate,
                               Mutability mutability) {
             super(clzArray);
 
-            m_hDelegate  = hDelegate;
-            m_fMutable   = mutability != Mutability.Constant;
-            m_mutability = mutability;
+            m_fMutable = mutability != Mutability.Constant;
+            f_state    = new ArrayState(hDelegate, mutability);
         }
 
         @Override
-        public ObjectHandle cloneAs(TypeComposition clazz) {
-            if (m_mutability != Mutability.Constant) {
-                // two desync axes make live-lifecycle array views unsafe. First, clear()
-                // replaces m_hDelegate wholesale for Mutable arrays (the one in-place
-                // delegate-pointer replacement in the codebase), so a shallow view copy forks
-                // the storage pointer: after one alias clears, the other keeps the old delegate
-                // and the two views silently diverge. Second, m_mutability and m_fMutable are
-                // per-view fields while the delegate storage is shared: freezing a Fixed or
-                // Persistent array through one view would leave a sibling view still willing to
-                // write into the frozen shared storage, because the write-permission checks in
-                // xArray read the handle's enum, not the delegate's. Only Constant arrays have
-                // a terminal lifecycle that per-view copies cannot split, and immutable arrays
-                // are the proven-safe clone inputs (ConstHeap relocation asserts immutability).
-                throw new IllegalStateException("mutable array cannot be cloned as a view: " + this);
-            }
-            return super.cloneAs(clazz);
+        protected boolean supportsMutableViews() {
+            // all live lifecycle state is in the shared f_state cell, so a mutable view
+            // clone cannot split it; this is the same opt-in GenericHandle earned with its
+            // freeze/init cells
+            return true;
+        }
+
+        public DelegateHandle getDelegate() {
+            return f_state.m_hDelegate;
+        }
+
+        /**
+         * Replace the storage delegate for every view of this array at once; the only caller
+         * is clear() on a Mutable array, the one wholesale delegate replacement that exists.
+         */
+        public void setDelegate(DelegateHandle hDelegate) {
+            f_state.m_hDelegate = hDelegate;
         }
 
         public Mutability getMutability() {
-            return m_mutability;
+            return f_state.m_mutability;
         }
 
         public void setMutability(Mutability mutability) {
-            assert mutability.compareTo(m_mutability) <= 0;
-            m_mutability = mutability;
-            m_hDelegate.setMutability(mutability);
+            assert mutability.compareTo(f_state.m_mutability) <= 0;
+            f_state.m_mutability = mutability;
+            f_state.m_hDelegate.setMutability(mutability);
+        }
+
+        @Override
+        public boolean isMutable() {
+            // derived from the shared cell, never from the per-view flag, so a freeze through
+            // any view is immediately authoritative for all of them
+            return f_state.m_mutability != Mutability.Constant;
         }
 
         @Override
@@ -1018,17 +1036,27 @@ public class xArray
             setMutability(Mutability.Constant);
             super.makeImmutable();
 
-            return m_hDelegate.makeImmutable();
+            return f_state.m_hDelegate.makeImmutable();
         }
 
         @Override
         public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited) {
-            return m_hDelegate.isShared(container, mapVisited);
+            return f_state.m_hDelegate.isShared(container, mapVisited);
         }
 
         @Override
         public String toString() {
-            return super.toString() + m_mutability + " " + m_hDelegate.toString();
+            return super.toString() + f_state.m_mutability + " " + f_state.m_hDelegate;
+        }
+
+        private static class ArrayState {
+            DelegateHandle m_hDelegate;
+            Mutability     m_mutability;
+
+            ArrayState(DelegateHandle hDelegate, Mutability mutability) {
+                m_hDelegate  = hDelegate;
+                m_mutability = mutability;
+            }
         }
     }
 

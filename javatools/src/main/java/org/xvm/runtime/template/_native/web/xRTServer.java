@@ -603,8 +603,8 @@ public class xRTServer
     private int invokeSetHeaders(Frame frame, ObjectHandle[] ahArg) {
         HttpExchange      exchange      = ((HttpContextHandle) ahArg[0]).f_exchange;
         long              nStatus       = ((JavaLong) ahArg[1]).getValue();
-        StringArrayHandle hHeaderNames  = (StringArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate;
-        StringArrayHandle hHeaderValues = (StringArrayHandle) ((ArrayHandle) ahArg[3]).m_hDelegate;
+        StringArrayHandle hHeaderNames  = (StringArrayHandle) ((ArrayHandle) ahArg[2]).getDelegate();
+        StringArrayHandle hHeaderValues = (StringArrayHandle) ((ArrayHandle) ahArg[3]).getDelegate();
         long              nLength       = ((JavaLong) ahArg[4]).getValue();
 
         Headers headers = exchange.getResponseHeaders();

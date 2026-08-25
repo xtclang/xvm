@@ -1709,7 +1709,7 @@ public class xRTType
                 frame.poolContext().ensureArrayType(typeElement));
         ProxyComposition clzProxy  = new ProxyComposition(clzElement, typeElement);
 
-        int            cValues = (int) hArray.m_hDelegate.m_cSize;
+        int            cValues = (int) hArray.getDelegate().m_cSize;
         ObjectHandle[] ahValue = new ObjectHandle[cValues];
         for (int i = 0; i < cValues; i++) {
             switch (hArray.getTemplate().extractArrayValue(frame, hArray, i, Op.A_STACK)) {

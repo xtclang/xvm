@@ -1688,7 +1688,7 @@ public final class DebugConsole
 
                 if (hVar instanceof ArrayHandle hArray) {
                     fArray    = true;
-                    cElements = hArray.m_hDelegate.m_cSize;
+                    cElements = hArray.getDelegate().m_cSize;
                     if (cElements > 0) {
                         fCanExpand = true;
                     }
@@ -2284,7 +2284,7 @@ public final class DebugConsole
 
             if (hVar instanceof ArrayHandle hArray) {
                 isArray = true;
-                size    = hArray.m_hDelegate.m_cSize;
+                size    = hArray.getDelegate().m_cSize;
             }
         }
 
@@ -2388,7 +2388,7 @@ public final class DebugConsole
                 throw new UnsupportedOperationException("debugger VAR form is not used: " + sVar);
 
             case ELEM:
-                long cElements = ((ArrayHandle) hVar).m_hDelegate.m_cSize;
+                long cElements = ((ArrayHandle) hVar).getDelegate().m_cSize;
 
                 // extractArrayValue returns only R_NEXT or R_EXCEPTION (out of bounds)
                 return cElements > 0 && index >= 0 && index < cElements &&

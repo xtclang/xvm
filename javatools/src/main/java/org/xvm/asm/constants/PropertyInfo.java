@@ -1247,10 +1247,12 @@ public class PropertyInfo
     public MethodConstant getGetterId() {
         MethodConstant idGetter = m_idGetter;
         if (idGetter == null) {
-            synchronized (this) {
-                idGetter = m_idGetter;
-                if (idGetter == null) {
-                    m_idGetter = idGetter = buildGetterId();
+            try (var _ = pool().openRuntimeSynthesisWindow("getter id")) {
+                synchronized (this) {
+                    idGetter = m_idGetter;
+                    if (idGetter == null) {
+                        m_idGetter = idGetter = buildGetterId();
+                    }
                 }
             }
         }
@@ -1274,24 +1276,31 @@ public class PropertyInfo
         MethodBody[] chain = m_chainGet;
         if (idNested == null) {
             if (chain == null) {
-                synchronized (this) {
-                    chain = m_chainGet;
-                    if (chain == null) {
-                        /*
-                         * Accessor chains are runtime metadata. The old unguarded lazy write could
-                         * expose a partially built array and also used one cache slot for both
-                         * top-level and nested ids. Keep the hot top-level cache and publish it
-                         * once; nested ids are computed separately so they cannot poison this slot.
-                         */
-                        m_chainGet = chain = buildOptimizedGetChain(infoType, null);
+                // runtime-lazy chain building interns constants (accessor ids, nested
+                // identities, delegation methods) - the one legitimate post-publication writer
+                try (var _ = pool().openRuntimeSynthesisWindow("optimized get chain")) {
+                    synchronized (this) {
+                        chain = m_chainGet;
+                        if (chain == null) {
+                            /*
+                             * Accessor chains are runtime metadata. The old unguarded lazy write
+                             * could expose a partially built array and also used one cache slot
+                             * for both top-level and nested ids. Keep the hot top-level cache and
+                             * publish it once; nested ids are computed separately so they cannot
+                             * poison this slot.
+                             */
+                            m_chainGet = chain = buildOptimizedGetChain(infoType, null);
+                        }
                     }
                 }
             }
             return chain;
         }
 
-        synchronized (this) {
-            return buildOptimizedGetChain(infoType, idNested);
+        try (var _ = pool().openRuntimeSynthesisWindow("optimized nested get chain")) {
+            synchronized (this) {
+                return buildOptimizedGetChain(infoType, idNested);
+            }
         }
     }
 
@@ -1303,10 +1312,12 @@ public class PropertyInfo
     public MethodConstant getSetterId() {
         MethodConstant idSetter = m_idSetter;
         if (idSetter == null) {
-            synchronized (this) {
-                idSetter = m_idSetter;
-                if (idSetter == null) {
-                    m_idSetter = idSetter = buildSetterId();
+            try (var _ = pool().openRuntimeSynthesisWindow("setter id")) {
+                synchronized (this) {
+                    idSetter = m_idSetter;
+                    if (idSetter == null) {
+                        m_idSetter = idSetter = buildSetterId();
+                    }
                 }
             }
         }
@@ -1330,23 +1341,28 @@ public class PropertyInfo
         MethodBody[] chain = m_chainSet;
         if (idNested == null) {
             if (chain == null) {
-                synchronized (this) {
-                    chain = m_chainSet;
-                    if (chain == null) {
-                        /*
-                         * Same publication and key rule as the getter cache above: top-level
-                         * setter chains keep the old hot cache, while nested ids are never allowed
-                         * to populate this unkeyed slot.
-                         */
-                        m_chainSet = chain = buildOptimizedSetChain(infoType, null);
+                // see ensureOptimizedGetChain for the synthesis-window rationale
+                try (var _ = pool().openRuntimeSynthesisWindow("optimized set chain")) {
+                    synchronized (this) {
+                        chain = m_chainSet;
+                        if (chain == null) {
+                            /*
+                             * Same publication and key rule as the getter cache above: top-level
+                             * setter chains keep the old hot cache, while nested ids are never
+                             * allowed to populate this unkeyed slot.
+                             */
+                            m_chainSet = chain = buildOptimizedSetChain(infoType, null);
+                        }
                     }
                 }
             }
             return chain;
         }
 
-        synchronized (this) {
-            return buildOptimizedSetChain(infoType, idNested);
+        try (var _ = pool().openRuntimeSynthesisWindow("optimized nested set chain")) {
+            synchronized (this) {
+                return buildOptimizedSetChain(infoType, idNested);
+            }
         }
     }
 

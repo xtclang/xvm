@@ -22,33 +22,37 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.Runtime;
 
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * Guards live-lifecycle arrays against view cloning (must-audit row 161, mechanism 4, extended by
- * the must-fix row 148 freeze-split residual). Two desync axes: {@code clear()} replaces
- * {@code ArrayHandle.m_hDelegate} wholesale for {@code Mutability.Mutable} arrays - the one
- * in-place delegate-pointer replacement in the codebase - so on the unguarded shape a shallow
- * {@code cloneAs} view forked the storage pointer; and {@code m_mutability}/{@code m_fMutable}
- * are per-view fields while the delegate storage is shared, so freezing a Fixed or Persistent
- * array through one view left a sibling view still willing to write into the frozen shared
- * storage ({@code xArray} write-permission checks read the handle's enum, not the delegate's).
- * Only Constant arrays have a terminal lifecycle that per-view copies cannot split; immutable
- * arrays are the proven-safe clone inputs (ConstHeap relocation asserts immutability).
+ * Pins the mechanism-4 closure (must-audit rows 161/186): access views of one live array share
+ * ALL of its lifecycle state. MOV_THIS_A and ClassComposition.ensureAccess create
+ * this:public/private/protected views of the same array through a shallow cloneAs - the same-JVM
+ * stress harness proved that path ordinary (TestArray hit it at {@code MOV_THIS_A #1, PRIVATE}) -
+ * and the two pieces of post-construction state, the delegate pointer that clear() swaps for
+ * Mutable arrays and the mutability enum that freeze moves, now live in one ArrayState cell that
+ * the shallow clone shares by reference. On the per-view-field shape (master's), a cleared view
+ * forked the storage pointer from its sibling and a frozen view left the sibling still claiming
+ * mutability against frozen shared storage; both splits are asserted impossible here. Array
+ * DELEGATES still refuse view cloning entirely - no legitimate delegate clone path exists.
  */
 public class ArrayViewGuardTest {
     /**
-     * Cloning a Mutable array must fail loudly; cloning a Constant array must keep working
-     * (ConstHeap relocation depends on it). Red on the unguarded shape, where the Mutable clone
-     * quietly produced the fork.
+     * The delegate-pointer axis: replacing the storage delegate through one view (what clear()
+     * does for a Mutable array with elements) must be visible through every sibling view. Red on
+     * the per-view-field shape, where each view kept its own delegate pointer after the swap.
      */
     @Test
-    public void mutableArrayRefusesViewCloning() {
+    public void viewsShareTheDelegatePointer() {
         assumeTrue(systemModulesAvailable(), "compiled XDK system modules are required");
 
         var runtime = new Runtime();
@@ -58,29 +62,30 @@ public class ArrayViewGuardTest {
             var clzArray  = (ClassComposition) container.resolveClass(pool.typeArray());
             var clzView   = clzArray.ensureAccess(Access.PROTECTED);
 
-            var hMutable = xArray.createEmptyArray(clzArray, 0, Mutability.Mutable);
-            var error = assertThrows(IllegalStateException.class,
-                    () -> hMutable.cloneAs(clzView),
-                    "a Mutable array view would fork the delegate pointer on clear()");
-            assertTrue(error.getMessage().contains("mutable array"), error.getMessage());
+            var hArray = xArray.createEmptyArray(clzArray, 0, Mutability.Mutable);
+            var hView  = (ArrayHandle) hArray.cloneAs(clzView);
+            assertNotSame(hArray, hView, "a view must be a distinct handle");
+            assertSame(hArray.getDelegate(), hView.getDelegate(),
+                    "views of one array must start on one delegate");
 
-            var hConstant = xArray.createEmptyArray(clzArray, 0, Mutability.Constant);
-            assertNotSame(hConstant, hConstant.cloneAs(clzView),
-                    "immutable arrays must still clone; ConstHeap relocation depends on it");
+            var hReplacement = xArray.createEmptyArray(clzArray, 0, Mutability.Mutable)
+                    .getDelegate();
+            hView.setDelegate(hReplacement);
+            assertSame(hReplacement, hArray.getDelegate(),
+                    "a delegate swap through one view must be authoritative for all views");
         } finally {
             runtime.shutdownXVM();
         }
     }
 
     /**
-     * Fixed and Persistent arrays still have a live lifecycle: makeImmutable() through one view
-     * writes m_mutability/m_fMutable on that view only, while the element storage is shared. Red
-     * on the mechanism-4 shape, which refused only Mutability.Mutable clones: the Fixed view pair
-     * split on freeze, and the stale sibling kept passing xArray's handle-enum write checks
-     * against frozen shared storage.
+     * The mutability axis: freezing through one view must be immediately authoritative for every
+     * sibling view, for each live starting mutability. Red on the per-view-field shape, where
+     * the sibling's enum and m_fMutable stayed live and xArray's handle-enum write checks kept
+     * passing against frozen shared storage.
      */
     @Test
-    public void fixedAndPersistentArraysRefuseViewCloning() {
+    public void freezeThroughOneViewIsAuthoritativeForAllViews() {
         assumeTrue(systemModulesAvailable(), "compiled XDK system modules are required");
 
         var runtime = new Runtime();
@@ -88,20 +93,20 @@ public class ArrayViewGuardTest {
             var container = NativeContainer.create(runtime, systemRepository());
             var pool      = container.getConstantPool();
             var clzArray  = (ClassComposition) container.resolveClass(pool.typeArray());
-            var clzView   = clzArray.ensureAccess(Access.PROTECTED);
+            var clzView   = clzArray.ensureAccess(Access.PRIVATE);
 
-            for (var mutability : new Mutability[] {Mutability.Fixed, Mutability.Persistent}) {
+            for (var mutability : new Mutability[] {
+                    Mutability.Mutable, Mutability.Fixed, Mutability.Persistent}) {
                 var hArray = xArray.createEmptyArray(clzArray, 0, mutability);
-                var error  = assertThrows(IllegalStateException.class,
-                        () -> hArray.cloneAs(clzView),
-                        mutability + " views would split the per-view mutability on freeze");
-                assertTrue(error.getMessage().contains("mutable array"), error.getMessage());
-            }
+                var hView  = (ArrayHandle) hArray.cloneAs(clzView);
 
-            var hFrozen = xArray.createEmptyArray(clzArray, 0, Mutability.Fixed);
-            assertTrue(hFrozen.makeImmutable(), "freezing an empty Fixed array must succeed");
-            assertNotSame(hFrozen, hFrozen.cloneAs(clzView),
-                    "a frozen array has a terminal lifecycle and must clone again");
+                assertTrue(hView.makeImmutable(), "freezing an empty " + mutability
+                        + " array through a view must succeed");
+                assertEquals(Mutability.Constant, hArray.getMutability(),
+                        "the sibling view's enum must have moved with the freeze");
+                assertFalse(hArray.isMutable(),
+                        "the sibling view must not still claim mutability");
+            }
         } finally {
             runtime.shutdownXVM();
         }
@@ -109,7 +114,7 @@ public class ArrayViewGuardTest {
 
     /**
      * The storage engines behind the arrays must never be view-cloned at all: delegates keep
-     * per-instance m_cSize/m_mutability over shared element storage that typed subclasses
+     * per-instance m_cSize/mutability over shared element storage that typed subclasses
      * replace wholesale on grow, and no legitimate clone path exists (ConstHeap registers the
      * array handle, not its delegate). Red on the unguarded shape, where the inherited
      * ObjectHandle.cloneAs quietly produced the fork.
@@ -125,7 +130,7 @@ public class ArrayViewGuardTest {
             var clzArray  = (ClassComposition) container.resolveClass(pool.typeArray());
 
             for (var mutability : new Mutability[] {Mutability.Mutable, Mutability.Constant}) {
-                var hDelegate = xArray.createEmptyArray(clzArray, 0, mutability).m_hDelegate;
+                var hDelegate = xArray.createEmptyArray(clzArray, 0, mutability).getDelegate();
                 var error = assertThrows(IllegalStateException.class,
                         () -> hDelegate.cloneAs(hDelegate.getComposition()),
                         "a delegate view would fork the storage pointer or split the freeze"

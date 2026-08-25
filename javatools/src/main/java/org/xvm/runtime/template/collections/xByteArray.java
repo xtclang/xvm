@@ -69,7 +69,7 @@ public class xByteArray
         switch (method.getName()) {
         case "asByteArray": {
             ArrayHandle hArray = (ArrayHandle) hTarget;
-            if (hArray.m_hDelegate instanceof ByteArrayHandle) {
+            if (hArray.getDelegate() instanceof ByteArrayHandle) {
                 return frame.assignValue(iReturn, hArray);
             }
 
@@ -79,55 +79,55 @@ public class xByteArray
         }
         case "asInt8Array": {
             ArrayHandle    hArray     = (ArrayHandle) hTarget;
-            Mutability     mutability = hArray.m_mutability;
+            Mutability     mutability = hArray.getMutability();
             DelegateHandle hView      = xRTViewFromByte.getInstance(frame.container())
                     .createByteView(frame.poolContext().typeInt8(),
-                            hArray.m_hDelegate, mutability, 1);
+                            hArray.getDelegate(), mutability, 1);
             return frame.assignValue(iReturn,
                     new ArrayHandle(getInt8ArrayComposition(), hView, mutability));
         }
 
         case "asInt16Array": {
             ArrayHandle hArray = (ArrayHandle) hTarget;
-            if (hArray.m_hDelegate.m_cSize % 2 != 0) {
+            if (hArray.getDelegate().m_cSize % 2 != 0) {
                 return frame.raiseException(xException.illegalArgument(frame,
-                            "Invalid array size: " + hArray.m_hDelegate.m_cSize));
+                            "Invalid array size: " + hArray.getDelegate().m_cSize));
             }
 
-            Mutability     mutability = hArray.m_mutability;
+            Mutability     mutability = hArray.getMutability();
             DelegateHandle hView      = xRTViewFromByte.getInstance(frame.container())
                     .createByteView(frame.poolContext().typeInt16(),
-                            hArray.m_hDelegate, mutability, 2);
+                            hArray.getDelegate(), mutability, 2);
             return frame.assignValue(iReturn,
                     new ArrayHandle(getInt16ArrayComposition(), hView, mutability));
         }
 
         case "asInt64Array": {
             ArrayHandle hArray = (ArrayHandle) hTarget;
-            if (hArray.m_hDelegate.m_cSize % 8 != 0) {
+            if (hArray.getDelegate().m_cSize % 8 != 0) {
                 return frame.raiseException(xException.illegalArgument(frame,
-                            "Invalid array size: " + hArray.m_hDelegate.m_cSize));
+                            "Invalid array size: " + hArray.getDelegate().m_cSize));
             }
 
-            Mutability     mutability = hArray.m_mutability;
+            Mutability     mutability = hArray.getMutability();
             DelegateHandle hView      = xRTViewFromByte.getInstance(frame.container())
                     .createByteView(frame.poolContext().typeInt64(),
-                            hArray.m_hDelegate, mutability, 8);
+                            hArray.getDelegate(), mutability, 8);
             return frame.assignValue(iReturn,
                     new ArrayHandle(getInt64ArrayComposition(), hView, mutability));
         }
 
         case "asFloat64Array": {
             ArrayHandle hArray = (ArrayHandle) hTarget;
-            if (hArray.m_hDelegate.m_cSize % 8 != 0) {
+            if (hArray.getDelegate().m_cSize % 8 != 0) {
                 return frame.raiseException(xException.illegalArgument(frame,
-                            "Invalid array size: " + hArray.m_hDelegate.m_cSize));
+                            "Invalid array size: " + hArray.getDelegate().m_cSize));
             }
 
-            Mutability     mutability = hArray.m_mutability;
+            Mutability     mutability = hArray.getMutability();
             DelegateHandle hView      = xRTViewFromByte.getInstance(frame.container())
                     .createByteView(frame.poolContext().typeFloat64(),
-                            hArray.m_hDelegate, mutability, 8);
+                            hArray.getDelegate(), mutability, 8);
             return frame.assignValue(iReturn,
                     new ArrayHandle(getFloat64ArrayComposition(), hView, mutability));
         }
@@ -140,7 +140,7 @@ public class xByteArray
      * Extract an array of bytes from the Array<Byte> handle.
      */
     public static byte[] getBytes(ArrayHandle hArray) {
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
         long           cSize     = hDelegate.m_cSize;
         long           ofStart   = 0;
         boolean        fReverse  = false;
@@ -169,7 +169,7 @@ public class xByteArray
      */
     public static void setBytes(byte[] abVal, int ofSrc,
                                 ArrayHandle hArray, int ofDst, int cSize) {
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
 
         if (hDelegate instanceof SliceHandle hSlice) {
             hDelegate =  hSlice.f_hSource;

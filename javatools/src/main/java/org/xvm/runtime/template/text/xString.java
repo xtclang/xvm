@@ -235,7 +235,7 @@ public class xString
      * Extract an array of chars from the Array<Char> handle.
      */
     private static char[] getChars(ArrayHandle hArray) {
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
         if (hDelegate instanceof SliceHandle hSlice) {
             CharArrayHandle hChars = (CharArrayHandle) hSlice.f_hSource;
             return xRTCharDelegate.getChars(hChars,

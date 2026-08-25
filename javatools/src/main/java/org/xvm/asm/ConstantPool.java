@@ -450,13 +450,26 @@ public class ConstantPool
     }
 
     /**
+     * @return true iff the current thread holds an open runtime synthesis window
+     */
+    public boolean isRuntimeSynthesisWindowOpen() {
+        return SYNTHESIS_WINDOWS.get()[0] > 0;
+    }
+
+    /**
      * Open a runtime-synthesis registration window for the current thread. The publication
-     * marker rejects new registrations once a pool is runtime-visible; lazily synthesized
-     * delegation methods are the one legitimate post-publication writer, and their synthesis -
-     * which publishes methods only after their code is fully assembled - opens this explicit
-     * window around the constants it must intern. The window is per-thread and reference
-     * counted, so nested synthesis (one delegation build triggering another) stays open until
-     * the outermost close; it never relaxes the destructive-mutation guard.
+     * marker's enforceable invariant is that compiler and serializer PHASES must not mutate a
+     * pool that runtime execution can already see; interpreter execution itself derives and
+     * interns constants by design (lazy delegation synthesis, optimized call chains, relation
+     * calculus normalizing parameterized types, TypeInfo builds), so the window marks "this
+     * thread is inside runtime execution or synthesis". It is deliberately thread-scoped
+     * across ALL pools, not per pool instance: one fiber's type calculus interns normalized
+     * types into whichever module pools the involved structures own, so a window opened only
+     * on the service's own pool was proven insufficient by the same-JVM stress harness. The
+     * window is reference counted, so nested synthesis stays open until the outermost close.
+     * The destructive-phase guard stays independent except for TypeInfo invalidation, which
+     * runtime execution legitimately performs (native rebase) and which is therefore
+     * window-sensitive - see {@link #invalidateTypeInfos}.
      *
      * @param sReason  short description of the synthesis, for call-site self-documentation
      *
@@ -465,10 +478,9 @@ public class ConstantPool
     public Auto openRuntimeSynthesisWindow(String sReason) {
         assert sReason != null && !sReason.isEmpty();
 
-        Thread thread = Thread.currentThread();
-        f_mapSynthesisWindows.merge(thread, 1, Integer::sum);
-        return () -> f_mapSynthesisWindows.compute(thread,
-                (threadOpen, cOpen) -> cOpen == null || cOpen <= 1 ? null : cOpen - 1);
+        int[] acDepth = SYNTHESIS_WINDOWS.get();
+        ++acDepth[0];
+        return () -> --acDepth[0];
     }
 
     /**
@@ -479,8 +491,7 @@ public class ConstantPool
      */
     private void assertRegisterBeforeRuntimePublished(Constant constant) {
         RuntimePublication publication = runtimePublication;
-        if (publication != null
-                && !f_mapSynthesisWindows.containsKey(Thread.currentThread())) {
+        if (publication != null && !isRuntimeSynthesisWindowOpen()) {
             throw new IllegalStateException("ConstantPool registered "
                     + describeConstantForDiagnostics(constant)
                     + " after runtime publication by "
@@ -515,11 +526,19 @@ public class ConstantPool
     }
 
     private static String describeConstantForDiagnostics(Constant constant) {
-        try {
-            return constant.toString();
-        } catch (RuntimeException e) {
-            return constant.getClass().getName();
+        // this formatter runs while the registration guard is mid-throw, so it must never
+        // re-enter the type calculus: Constant.toString on type constants computes isA
+        // relations, which intern normalized types, which trip the registration guard again -
+        // the same-JVM stress harness proved that recursion. Describe by format and identity
+        // path only; never by value rendering.
+        var sBase = constant.getFormat() + " (" + constant.getClass().getSimpleName() + ")";
+        if (constant instanceof IdentityConstant idConstant) {
+            try {
+                return sBase + " " + idConstant.getPathString();
+            } catch (RuntimeException ignore) {
+            }
         }
+        return sBase;
     }
 
     /**
@@ -3461,7 +3480,15 @@ public class ConstantPool
      */
     public void invalidateTypeInfos(IdentityConstant id) {
         assert id.isClass();
-        assertMutableBeforeRuntimePublished("TypeInfo invalidation");
+        // TypeInfo invalidation has two callers with opposite legitimacy: compiler passes (which
+        // must never touch a runtime-published pool - fenced below), and runtime-lazy TypeInfo
+        // building itself, which marks native-rebase methods and invalidates during FIRST
+        // construction. The latter always runs inside a runtime synthesis window, so the window
+        // distinguishes them; the other destructive ops (module replacement, serialization
+        // pre-pass, optimize) remain absolutely fenced regardless of any window.
+        if (!isRuntimeSynthesisWindowOpen()) {
+            assertMutableBeforeRuntimePublished("TypeInfo invalidation");
+        }
 
         synchronized (f_listInvalidated) {
             f_listInvalidated.add(register(id));
@@ -4306,10 +4333,12 @@ public class ConstantPool
     private volatile RuntimePublication runtimePublication;
 
     /**
-     * Per-thread reference counts of open runtime-synthesis registration windows; see
-     * {@link #openRuntimeSynthesisWindow}.
+     * Per-thread reference count of open runtime-synthesis registration windows, deliberately
+     * shared by every pool instance; see {@link #openRuntimeSynthesisWindow} for why the
+     * window is thread-scoped rather than pool-scoped.
      */
-    private final Map<Thread, Integer> f_mapSynthesisWindows = new ConcurrentHashMap<>();
+    private static final ThreadLocal<int[]> SYNTHESIS_WINDOWS =
+            ThreadLocal.withInitial(() -> new int[1]);
 
     /**
      * NakedRef is a fundamental formal type that comes from the "_native" module.

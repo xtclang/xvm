@@ -311,34 +311,38 @@ public final class ClassComposition
      */
     private CallChain ensureMethodChain(Object nidMethod) {
         ConstantPool pool   = getConstantPool();
-        boolean      fCache = true;
-        if (nidMethod instanceof SignatureConstant sig) {
-            if (sig.getConstantPool() != pool) {
-                if (sig.isShared(pool)) {
-                    nidMethod = pool.register(sig);
-                } else {
-                    // what else can we do here?
-                    fCache = false;
-                    System.err.println("WARNING: Foreign method chain for " + sig); // TODO: remove
+        // runtime-lazy chain resolution registers shared ids into this pool and drives lazy
+        // TypeInfo/chain building - the legitimate post-publication metadata writer
+        try (var _ = pool.openRuntimeSynthesisWindow("method call chain")) {
+            boolean      fCache = true;
+            if (nidMethod instanceof SignatureConstant sig) {
+                if (sig.getConstantPool() != pool) {
+                    if (sig.isShared(pool)) {
+                        nidMethod = pool.register(sig);
+                    } else {
+                        // what else can we do here?
+                        fCache = false;
+                        System.err.println("WARNING: Foreign method chain for " + sig); // TODO: remove
+                    }
+                }
+            } else {
+                NestedIdentity   idNested = (NestedIdentity) nidMethod;
+                IdentityConstant idParent = idNested.getIdentityConstant();
+                if (idParent.getConstantPool() != pool) {
+                    if (idParent.isShared(pool)) {
+                        idParent  = pool.register(idParent);
+                        nidMethod = idParent.appendNestedIdentity(pool, idNested);
+                    } else {
+                        fCache = false;
+                        System.err.println("WARNING: Foreign nested method " + idNested +
+                                           " for " + idParent); // TODO: remove
+                    }
                 }
             }
-        } else {
-            NestedIdentity   idNested = (NestedIdentity) nidMethod;
-            IdentityConstant idParent = idNested.getIdentityConstant();
-            if (idParent.getConstantPool() != pool) {
-                if (idParent.isShared(pool)) {
-                    idParent  = pool.register(idParent);
-                    nidMethod = idParent.appendNestedIdentity(pool, idNested);
-                } else {
-                    fCache = false;
-                    System.err.println("WARNING: Foreign nested method " + idNested +
-                                       " for " + idParent); // TODO: remove
-                }
-            }
+            return fCache
+                    ? f_mapMethods.computeIfAbsent(nidMethod, this::computeMethodChain)
+                    : computeMethodChain(nidMethod);
         }
-        return fCache
-                ? f_mapMethods.computeIfAbsent(nidMethod, this::computeMethodChain)
-                : computeMethodChain(nidMethod);
     }
 
     private CallChain computeMethodChain(Object nidMethod) {
@@ -365,23 +369,26 @@ public final class ClassComposition
      */
     private CallChain ensureGetterChain(PropertyConstant idProp) {
         ConstantPool pool    = getConstantPool();
-        boolean      fShared = true;
-        if (idProp.getConstantPool() != pool) {
+        // see ensureMethodChain for the synthesis-window rationale
+        try (var _ = pool.openRuntimeSynthesisWindow("getter call chain")) {
+            boolean      fShared = true;
             if (idProp.getConstantPool() != pool) {
-                if (idProp.isShared(pool)) {
-                    idProp = pool.register(idProp);
-                } else {
-                    // most likely this happens due to duck-typed properties; we may consider
-                    // caching chains by name (the PropertyInfo is most likely cached already)
-                    fShared = false;
+                if (idProp.getConstantPool() != pool) {
+                    if (idProp.isShared(pool)) {
+                        idProp = pool.register(idProp);
+                    } else {
+                        // most likely this happens due to duck-typed properties; we may consider
+                        // caching chains by name (the PropertyInfo is most likely cached already)
+                        fShared = false;
+                    }
                 }
             }
-        }
 
-        CallChain chain = fShared
-                ? f_mapGetters.computeIfAbsent(idProp, this::computeGetterChain)
-                : computeGetterChain(idProp);
-        return chain == NIL_CHAIN ? null : chain;
+            CallChain chain = fShared
+                    ? f_mapGetters.computeIfAbsent(idProp, this::computeGetterChain)
+                    : computeGetterChain(idProp);
+            return chain == NIL_CHAIN ? null : chain;
+        }
     }
 
     private CallChain computeGetterChain(PropertyConstant id) {
@@ -408,19 +415,22 @@ public final class ClassComposition
      */
     private CallChain ensurePropertySetterChain(PropertyConstant idProp) {
         ConstantPool pool    = getConstantPool();
-        boolean      fShared = true;
-        if (idProp.getConstantPool() != pool) {
-            if (idProp.isShared(pool)) {
-                idProp = pool.register(idProp);
-            } else {
-                // see the comment in ensureGetterChain()
-                fShared = false;
+        // see ensureMethodChain for the synthesis-window rationale
+        try (var _ = pool.openRuntimeSynthesisWindow("setter call chain")) {
+            boolean      fShared = true;
+            if (idProp.getConstantPool() != pool) {
+                if (idProp.isShared(pool)) {
+                    idProp = pool.register(idProp);
+                } else {
+                    // see the comment in ensureGetterChain()
+                    fShared = false;
+                }
             }
+            CallChain chain = fShared
+                    ? f_mapSetters.computeIfAbsent(idProp, this::computeSetterChain)
+                    : computeSetterChain(idProp);
+            return chain == NIL_CHAIN ? null : chain;
         }
-        CallChain chain = fShared
-                ? f_mapSetters.computeIfAbsent(idProp, this::computeSetterChain)
-                : computeSetterChain(idProp);
-        return chain == NIL_CHAIN ? null : chain;
     }
 
     private CallChain computeSetterChain(PropertyConstant id) {

@@ -72,7 +72,7 @@ public class xBitArray
         switch (method.getName()) {
         case "toByteArray": {
             ArrayHandle hArray = (ArrayHandle) hTarget;
-            long        cBits  = hArray.m_hDelegate.m_cSize;
+            long        cBits  = hArray.getDelegate().m_cSize;
 
             if (cBits % 8 != 0) {
                 return frame.raiseException(
@@ -99,16 +99,16 @@ public class xBitArray
         switch (method.getName()) {
         case "asBooleanArray": {
             ArrayHandle hArray = (ArrayHandle) hTarget;
-            long        cBits  = hArray.m_hDelegate.m_cSize;
+            long        cBits  = hArray.getDelegate().m_cSize;
             if (cBits % 8 != 0) {
                 return frame.raiseException(xException.outOfBounds(
                         frame, "Invalid array size: " + cBits));
             }
 
-            Mutability     mutability = hArray.m_mutability;
+            Mutability     mutability = hArray.getMutability();
             DelegateHandle hDelegate  = xRTViewFromBit.getInstance(frame.container())
                     .createBitViewDelegate(frame.poolContext().typeBoolean(),
-                            hArray.m_hDelegate, mutability);
+                            hArray.getDelegate(), mutability);
 
             return frame.assignValue(iReturn, new ArrayHandle(
                     xArray.getBooleanArrayComposition(frame.container()), hDelegate, mutability));
@@ -116,16 +116,16 @@ public class xBitArray
 
         case "asByteArray": {
             ArrayHandle hArray = (ArrayHandle) hTarget;
-            long        cBits  = hArray.m_hDelegate.m_cSize;
+            long        cBits  = hArray.getDelegate().m_cSize;
             if (cBits % 8 != 0) {
                 return frame.raiseException(xException.outOfBounds(
                         frame, "Invalid array size: " + cBits));
             }
 
-            Mutability     mutability = hArray.m_mutability;
+            Mutability     mutability = hArray.getMutability();
             DelegateHandle hDelegate  = xRTViewFromBit.getInstance(frame.container())
                     .createBitViewDelegate(frame.poolContext().typeByte(),
-                            hArray.m_hDelegate, mutability);
+                            hArray.getDelegate(), mutability);
 
             return frame.assignValue(iReturn, new ArrayHandle(
                     xByteArray.getInstance(frame.container()).getCanonicalClass(),
@@ -134,16 +134,16 @@ public class xBitArray
 
         case "asNibbleArray": {
             ArrayHandle hArray = (ArrayHandle) hTarget;
-            long        cBits  = hArray.m_hDelegate.m_cSize;
+            long        cBits  = hArray.getDelegate().m_cSize;
             if (cBits % 4 != 0) {
                 return frame.raiseException(xException.outOfBounds(
                         frame, "Invalid array size: " + cBits));
             }
 
-            Mutability     mutability = hArray.m_mutability;
+            Mutability     mutability = hArray.getMutability();
             DelegateHandle hDelegate  = xRTViewFromBit.getInstance(frame.container())
                     .createBitViewDelegate(frame.poolContext().typeNibble(),
-                            hArray.m_hDelegate, mutability);
+                            hArray.getDelegate(), mutability);
 
             return frame.assignValue(iReturn, new ArrayHandle(
                     xNibbleArray.getInstance(frame.container()).getCanonicalClass(),
@@ -161,7 +161,7 @@ public class xBitArray
      * Extract an array of bits from the ArrayDelegate<Bit> handle.
      */
     public static byte[] getBits(ArrayHandle hArray) {
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
 
         long    cSize    = hDelegate.m_cSize;
         long    ofStart  = 0;
@@ -184,7 +184,7 @@ public class xBitArray
      * Copy bits from the specified array.
      */
     public static void setBits(ArrayHandle hArray, byte[] abVal, long cSize) {
-        DelegateHandle hDelegate = hArray.m_hDelegate;
+        DelegateHandle hDelegate = hArray.getDelegate();
 
         long ofStart = 0;
 

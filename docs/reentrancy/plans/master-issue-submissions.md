@@ -957,8 +957,14 @@ runtime files. Build a filtered patch containing only `Register.java`,
 lifecycle state.
 
 **Status/category:** Category A for atomic/injected first-install races and
-freeze-state split; guards for register-bound refs and mutable arrays are
-latent hardening.
+freeze-state split; guards for register-bound refs are latent hardening. The
+array axis was upgraded 2026-08-25 from latent to **proven reachable**: the
+same-JVM stress harness hit `MOV_THIS_A #1, PRIVATE` on a live mutable
+`Array<Char>` in TestArray, so access views of mutable arrays are ordinary
+single-threaded interpreter behavior; on master's per-view fields, a
+subsequent `clear()` through one view forks the delegate pointer from its
+sibling and a freeze through one view leaves the sibling still claiming
+mutability over frozen shared storage.
 
 **Explanation:** A handle access view is supposed to be another view of the same
 runtime object, not a fork of the object's lifecycle state. Master stores
@@ -1505,6 +1511,216 @@ additive plus two method-body rewrites.
 
 **Dependencies/order:** None. File after row 19 if sequencing matters (both
 touch `ConstantPool`-adjacent files, but they do not conflict).
+
+## 21. JIT generated and bridge class initializers capture the first container
+
+**Issue title:** JIT `<clinit>` state (`$scN` constants, `@Inject` statics,
+`$INSTANCE` singletons, bridge enum singletons) freezes the first active
+container into classloader-wide statics.
+
+**Status/category:** Will be unsafe for concurrency in master; also breaks
+sequential same-JVM container reuse. Latent today only because the JIT executes
+single-threaded, one container per process. Graduated MUST FIX on the audit
+board (row 180/181); fix parked for a JIT rebase because of upstream churn.
+
+**Explanation:** Every generated class begins its `<clinit>` with `Ctx.get()`
+and materializes per-container state into `static` fields: `$scN` constant
+fields resolved through the ambient container's type system, `@Inject` constant
+properties resolved through the ambient container's injector, and `$INSTANCE`
+singletons owned by the defining classloader. The bridge classes do the same by
+hand: enum singletons (`eBoolean`, `eNullable`, `eOrdered`, `eRounding`,
+`Array.eMutability`) and constants (`Boolean.False/True`) read
+`$ctx().container.typeSystem.pool()` inside constructors invoked from static
+initializers. Since type systems deliberately share `ModuleLoader`s, whichever
+container first triggers JVM class initialization permanently donates its
+constants, injections, and singleton identities to every later container using
+those loaders. This is the static-scope analogue of the interpreter's
+this-escape/ambient-pool diseases fixed on this branch.
+
+**Master evidence:** `CommonBuilder.assembleCLInit` (CommonBuilder.java:660-830):
+`Ctx.get()` at :681, `$sc` fill via `ctx.getConstant` at :712-717, `@Inject`
+`putstatic` at :740-750, `$INSTANCE` at :799-815. Bridge: eBoolean.java:13-17,
+eNullable.java:10-14, eOrdered.java:10-14, Boolean.java:20-31,
+FPNumber.java:521-526, Array.java:84-94/:156-160, TerminalConsole.java:24-30,
+ContainerControl.java:17. Also: many bridge `$INSTANCE` fields are non-final
+(Ordered.java:64/71/78, FPNumber.java:489-517, Array.java:126-147), and the
+enum bridges return their backing `$values` arrays raw (eBoolean.java:30-32).
+Merged-`<clinit>` mechanics: AugmentingBuilder.java:100-108.
+
+**Failure mode:** Two containers in one process (parallel or sequential): the
+second observes the first's interned constants, injected values, and singleton
+identities; injection isolation and container ownership are silently broken.
+On a thread without a bound `Ctx`, class initialization dies with
+`NoSuchElementException` from `ScopedValue.get()`.
+
+**Minimal master-portable fix strategy:** Move container-owned state out of
+classloader statics: route `$scN`/injected/singleton access through
+per-container state reached via `Ctx` (a container-indexed table or per-
+container classloader), or make first-initialization owner capture an explicit
+loud error. Make bridge `$INSTANCE` fields final and stop exposing raw
+`$values` arrays.
+
+**Tests to add/run on master:** None exist. The recommended red harness (two
+containers in one Xvm, assert the second sees its own pool/injector; a
+class-init-on-unbound-thread test) is specified in
+`jit-global-owner-classification.md:149-171` but was never written. File the
+issue with the harness as part of the ask.
+
+**Dependencies/order:** Coordinate with active JIT branches (`origin/JIT`);
+fix against a rebased snapshot. Related fixed-on-this-branch precedent:
+`Xvm` boot-escape factory (`JitConstructorEscapeTest`).
+
+## 22. JIT ambient-context API bakes per-invocation state into shared code
+
+**Issue title:** `$ctx()`/`$xvm()`/`$owner()` ambient helpers, `nType`'s
+captured `Ctx`, and link-time condition evaluation leak invocation state
+across containers.
+
+**Status/category:** Will be unsafe for concurrency in master; `$owner()`
+cross-Xvm resolution and `OpCondJump` baking are wrong-owner bugs the moment
+more than one Xvm/container exists. Classified must-fix-by-API on the audit
+board (row 182), parked for a JIT bridge PR.
+
+**Explanation:** The bridge root `nObject` resolves everything through the
+ambient `Ctx`: `$owner()` decodes the object's numeric owner id against the
+*current* ambient Xvm's registry, so a bridge object touched under another
+Xvm's Ctx resolves the right id in the wrong world. `nType` captures its
+creating `Ctx` - per-logical-thread mutable scratch state - in an instance
+field and reuses it later; its lazy caches (`equalsMethod`, `compareMethod`,
+`hashCodeMethod`, `xvmClass`) are unsynchronized non-volatile writes. And
+`OpCondJump.buildUnary` evaluates conditional constants at bytecode-build time
+via `Ctx.get().container`, permanently baking one container's answer into
+classloader-shared generated code (latent only because `Container.isSpecified`
+currently hardcodes debug/test to true).
+
+**Master evidence:** nObject.java:26-64 (`$ctx`/`$xvm`/`$owner`);
+nType.java:35-45 (`$ctx` capture + unsync caches), :109-112 (fresh-per-call
+today; the `TODO: cache type -> nType` would make the capture cross-fiber);
+OpCondJump.java:513-526 (`cond.evaluate(Ctx.get().container)` at :522);
+Container.java:110-117 (the hardcoded `isSpecified`). `Ctx` has no owner
+consistency check (`Ctx.java:29-32` does not assert
+`xvm == container.xvm`).
+
+**Failure mode:** With two Xvms or two containers: wrong-owner resolution in
+`$owner()`, cross-fiber reuse of another invocation's `Ctx` scratch slots via
+a cached `nType`, and generated conditional branches answering for the wrong
+container. Unbound threads throw `NoSuchElementException` at arbitrary depths.
+
+**Minimal master-portable fix strategy:** Pass `Ctx` explicitly through the
+bridge API surface (the interpreter-side precedent is this branch's complete
+`withPool` ambient-bridge deletion); until then, assert
+`ctx.xvm == ctx.container.xvm` at construction, remove the `Ctx` instance
+capture from `nType`, and move `OpCondJump` condition evaluation from build
+time to run time (or key generated classes by container).
+
+**Tests to add/run on master:** None exist; same missing two-container harness
+as row 21.
+
+**Dependencies/order:** Same JIT-rebase coordination as row 21.
+
+## 23. JIT classloading and registry races
+
+**Issue title:** JIT classloaders and Xvm registries race under concurrent
+class loading and container creation.
+
+**Status/category:** Will be unsafe for concurrency in master. Latent today
+(single-threaded JIT); each window is a verified read of current source.
+
+**Explanation:** Neither `TypeSystemLoader` nor `ModuleLoader` registers as
+parallel-capable, and they delegate to each other by calling `findClass`
+DIRECTLY, bypassing the JVM's per-name classloading locks. Two type systems
+sharing the ecstasy `ModuleLoader` can both miss `findLoadedClass`, both run
+`genClass` (duplicating codegen and concurrently mutating the shared pool),
+and the `defineClass` loser dies with `LinkageError: duplicate class
+definition`, while `ModuleLoader.loadedClasses` (plain `HashMap`) races.
+`Xvm.ensureTypeSystem` synchronizes on a mutex keyed by module-shape string,
+so two differently-shaped type systems sharing a first module name hold
+different mutexes while probing the same candidate package name - the
+`putIfAbsent` loser throws bare `IllegalStateException`. The
+`moduleLoaders`/`packagesByModule` sparse arrays are mutated in place under a
+writer lock that readers deliberately skip. `CommonBuilder`'s log-dedup sets
+are process-global mutable `HashSet`s. `JitConnector` is single-use (mutable
+unsynchronized lifecycle fields) and unconditionally deletes/rewrites a
+cwd-relative `./jasm` dump tree on every invocation, so two connectors in one
+process fight over the directory.
+
+**Master evidence:** TypeSystemLoader.java:70-79 and ModuleLoader.java:85-107
+(direct `findClass` delegation, `defineClass`, `loadedClasses.put`; no
+`registerAsParallelCapable` anywhere); ModuleLoader.java:194 (`HashMap`);
+Xvm.java:411/:443-448/:468-496/:710-742 (name-collision window),
+:575-652 + :199-217 (writer-locked, reader-unlocked arrays);
+CommonBuilder.java:4159-4160/:3969-3980 (`SKIP_SET`/`METHOD_SKIP_SET`);
+JitConnector.java:218-233 (lifecycle fields), :162-184 (jasm dump).
+
+**Failure mode:** First concurrent class load through shared loaders:
+duplicate codegen, `LinkageError`, or corrupted `loadedClasses`. First
+same-named-module concurrent link: spurious `IllegalStateException`. Parallel
+builds corrupt the skip sets; parallel connectors corrupt `./jasm`.
+
+**Minimal master-portable fix strategy:** `registerAsParallelCapable` plus
+delegation through `loadClass` (or per-name lock objects); make
+`loadedClasses` concurrent; key the type-system mutex by candidate package
+name (or take a global lock around name generation + registration);
+make the skip sets concurrent; document `JitConnector` as single-use or guard
+its lifecycle; scope the jasm dump per-connector.
+
+**Tests to add/run on master:** None exist. A parallel-load red test (two
+threads loading one generated class through two sharing TypeSystemLoaders) is
+the minimal harness and needs no full runtime.
+
+**Dependencies/order:** Independent of rows 21/22; still best filed against a
+rebased JIT snapshot.
+
+## 24. JIT build mutates shared ASM structures at runtime
+
+**Issue title:** Lazy JIT classfile generation mutates shared
+`ConstantPool`/`FileStructure`/constant state outside any ownership discipline.
+
+**Status/category:** Will be unsafe for concurrency in master; the
+FileStructure splice is also a correctness hazard for two runtimes over one
+`ModuleRepository`. Latent today for the same single-threaded reason.
+
+**Explanation:** JIT class generation runs lazily inside JVM class loading,
+and it writes into the shared compile-time model while doing so: `<clinit>`
+assembly calls `pool.register(type)` and `type.ensureTypeInfo()` on the
+module's shared pool; `Linker.link()` splices the shared ecstasy
+`ModuleStructure` into the app's `FileStructure` by `removeChild`/`addChild`
+(the app module comes straight from the shared repository cache, so two Xvms
+over one repository would concurrently mutate one structure); and JIT name
+caches are lazy non-volatile writes onto shared ASM constants
+(`TypeConstant.m_sJitName`, `SignatureConstant` method-name cache) whose
+uniquifying suffixes come from a per-Xvm counter - first Xvm wins, polluting
+every later runtime that shares the constants. `ConstantPool.
+m_setJitPrimitives` is a lazily built plain transient set. This is the same
+disease family as the interpreter-side runtime-published pool mutation fixed
+on this branch, but with no publication marker, no synthesis window, and no
+first-wins publication discipline on the JIT side.
+
+**Master evidence:** CommonBuilder.java:706 (`pool.register` during classgen)
+and :725 (`ensureTypeInfo`); Linker.java:335/:367-391 (splice at :379-384);
+JitConnector.java:43 (repository-cached module); TypeConstant.java:7111-7126
++ :8369 (`m_sJitName`), SignatureConstant.java:731-742/:988; Xvm.java:342-345
+(per-Xvm suffix counter); ConstantPool.java:2398-2433/:4445
+(`m_setJitPrimitives`).
+
+**Failure mode:** Concurrent class loading = concurrent unsynchronized pool
+registration and TypeInfo builds; two runtimes over one repository corrupt the
+app FileStructure's child list; cross-Xvm cached JIT names collide or leak
+another runtime's suffix numbering.
+
+**Minimal master-portable fix strategy:** Adopt the interpreter-side pattern
+proven on this branch: build detached, publish first-wins under the owning
+structure's monitor, and put a publication/ownership marker on pools the JIT
+mutates after runtime visibility; copy the app module per Xvm the way core
+modules already are (`new FileStructure(module, true)`); make the JIT name
+caches volatile-or-CAS and Xvm-scoped rather than constant-scoped.
+
+**Tests to add/run on master:** None exist. `CloneCensusTest`/pool-guard
+analogues on the interpreter side show the shape a red harness takes; the JIT
+needs its own two-loader concurrent-generation test.
+
+**Dependencies/order:** Overlaps row 21 (`<clinit>` is both the static-capture
+and the pool-mutation site); file 21 first, reference it.
 
 ## Items intentionally not in the 18
 

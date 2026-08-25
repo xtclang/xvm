@@ -167,9 +167,9 @@ public class xRTConnector
     private int invokeSendRequest(Frame frame, ConnectorHandle hConn, StringHandle hMethod,
                                   StringHandle hUrl, ArrayHandle hHeaderNames, ArrayHandle hHeaderValues,
                                   ArrayHandle hBytes, int[] aiReturn) {
-        StringArrayHandle haNames  = (StringArrayHandle) hHeaderNames.m_hDelegate;
-        StringArrayHandle haValues = (StringArrayHandle) hHeaderValues.m_hDelegate;
-        ByteArrayHandle   haBytes  = (ByteArrayHandle)   hBytes.m_hDelegate;
+        StringArrayHandle haNames  = (StringArrayHandle) hHeaderNames.getDelegate();
+        StringArrayHandle haValues = (StringArrayHandle) hHeaderValues.getDelegate();
+        ByteArrayHandle   haBytes  = (ByteArrayHandle)   hBytes.getDelegate();
 
         try {
             long ldtTimeout     = frame.f_fiber.getTimeoutStamp();

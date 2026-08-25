@@ -50,11 +50,11 @@ public class xRTDecryptor
         switch (method.getName()) {
         case "encrypt":
             return invokeEncrypt(frame, (CipherHandle) ahArg[0], ahArg[1],
-                (ByteArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate, iReturn);
+                (ByteArrayHandle) ((ArrayHandle) ahArg[2]).getDelegate(), iReturn);
 
         case "decrypt":
             return invokeDecrypt(frame, (CipherHandle) ahArg[0], ahArg[1],
-                (ByteArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate, iReturn);
+                (ByteArrayHandle) ((ArrayHandle) ahArg[2]).getDelegate(), iReturn);
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);

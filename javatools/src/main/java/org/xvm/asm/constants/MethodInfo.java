@@ -1170,17 +1170,21 @@ public class MethodInfo
                 return infoType.getOptimizedMethodChain(bodyHead.getNarrowingNestedIdentity());
             }
 
-            synchronized (this) {
-                chain = m_aBodyResolved;
-                if (chain == null) {
-                    /*
-                     * This cache is runtime metadata. The old plain lazy write assumed duplicate
-                     * first builds were harmless, but building the chain can attach delegation
-                     * MethodStructures and replace bodies with native wrappers. Publish exactly one
-                     * fully built array, and use the volatile field to make those writes visible to
-                     * later readers.
-                     */
-                    m_aBodyResolved = chain = buildOptimizedMethodChain(infoType, chainRaw);
+            // runtime-lazy chain building interns constants and attaches delegation
+            // methods - the one legitimate post-publication writer
+            try (var _ = pool().openRuntimeSynthesisWindow("optimized method chain")) {
+                synchronized (this) {
+                    chain = m_aBodyResolved;
+                    if (chain == null) {
+                        /*
+                         * This cache is runtime metadata. The old plain lazy write assumed duplicate
+                         * first builds were harmless, but building the chain can attach delegation
+                         * MethodStructures and replace bodies with native wrappers. Publish exactly one
+                         * fully built array, and use the volatile field to make those writes visible to
+                         * later readers.
+                         */
+                        m_aBodyResolved = chain = buildOptimizedMethodChain(infoType, chainRaw);
+                    }
                 }
             }
         }

@@ -493,7 +493,7 @@ public class xRTTypeTemplate
                     "Already parameterized: " + typeThis.getValueString()));
         }
 
-        int            cTypes = (int) hArray.m_hDelegate.m_cSize;
+        int            cTypes = (int) hArray.getDelegate().m_cSize;
         TypeConstant[] aTypes = new TypeConstant[cTypes];
         for (int i = 0; i < cTypes; i++) {
             int iResult = hArray.getTemplate().extractArrayValue(frame, hArray, i, Op.A_STACK);
@@ -532,7 +532,7 @@ public class xRTTypeTemplate
             if (typeThis.isA(typeInto) ||
                     pool.ensureParameterizedTypeConstant(pool.typeClass(), typeThis).isA(typeInto)) {
                 ArrayHandle          haArgs     = (ArrayHandle) hAnno.getField(frame, "arguments");
-                GenericArrayDelegate haDelegate = (GenericArrayDelegate) haArgs.m_hDelegate;
+                GenericArrayDelegate haDelegate = (GenericArrayDelegate) haArgs.getDelegate();
                 int                  cArgs      = (int) haDelegate.m_cSize;
                 Constant[]           aconst;
 

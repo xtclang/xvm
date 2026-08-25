@@ -1698,6 +1698,15 @@ public abstract sealed class TypeConstant
     }
 
     private synchronized TypeInfo ensureTypeInfo(TypeInfo info, ErrorListener errs) {
+        // TypeInfo building is the root of runtime-lazy metadata synthesis: it interns
+        // constants, marks native-rebase methods, and invalidates stale TypeInfos during first
+        // construction; see ConstantPool.openRuntimeSynthesisWindow
+        try (var _ = getConstantPool().openRuntimeSynthesisWindow("TypeInfo build")) {
+            return ensureTypeInfoInWindow(info, errs);
+        }
+    }
+
+    private TypeInfo ensureTypeInfoInWindow(TypeInfo info, ErrorListener errs) {
         ConstantPool pool = getConstantPool();
         if (info == null) {
             // validate this TypeConstant (necessary before we build the TypeInfo)

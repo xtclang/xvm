@@ -296,7 +296,12 @@ public class ServiceContext {
         tloCtx[0] = this;
 
         Frame frame = null;
-        try {
+        // op execution legitimately derives and interns pool constants (type comparisons,
+        // reflection, ranges), so fiber execution runs inside the runtime synthesis window: the
+        // publication guard's enforceable invariant is that COMPILER/SERIALIZER phases cannot
+        // touch a runtime-published pool, not that execution stops growing it - the structural
+        // frozen-pool snapshot remains the long-term closure for the latter
+        try (var _ = f_pool.openRuntimeSynthesisWindow("fiber execution")) {
             while (true) {
                 frame = nextFiber();
                 if (frame == null) {

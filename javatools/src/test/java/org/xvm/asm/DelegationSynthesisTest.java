@@ -39,8 +39,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * into a loud IllegalStateException in the main container: synthesis must intern genuinely new
  * constants (the mirrored property, the accessor's MethodConstant) after the pool is
  * runtime-published. The fix is an explicit per-thread, reference-counted synthesis window
- * ({@code ConstantPool.openRuntimeSynthesisWindow}) that only relaxes the registration guard -
- * never the destructive-mutation guard - and only for the synthesizing thread. Red on the
+ * ({@code ConstantPool.openRuntimeSynthesisWindow}) that relaxes the registration guard for
+ * the synthesizing thread (thread-scoped across pools, because one fiber's type calculus
+ * interns into whichever module pools the involved structures own); of the destructive-phase
+ * guards, only TypeInfo invalidation - which runtime execution legitimately performs during
+ * native rebase - is window-sensitive. Red on the
  * pre-fix branch shape: {@code publishedPoolPermitsDelegationSynthesis} dies on the guard ISE
  * (verified by stashing the fix).
  */

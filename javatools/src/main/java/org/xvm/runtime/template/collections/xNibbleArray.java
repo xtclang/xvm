@@ -50,9 +50,9 @@ public class xNibbleArray
         case "asBitArray": {
             ArrayHandle hArray = (ArrayHandle) hTarget;
 
-            Mutability     mutability = hArray.m_mutability;
+            Mutability     mutability = hArray.getMutability();
             DelegateHandle hDelegate  = xRTViewToBit.getInstance(frame.container())
-                    .createBitViewDelegate(hArray.m_hDelegate, mutability);
+                    .createBitViewDelegate(hArray.getDelegate(), mutability);
 
             return frame.assignValue(iReturn, new ArrayHandle(
                     xBitArray.getInstance(frame.container()).getCanonicalClass(),
@@ -61,16 +61,16 @@ public class xNibbleArray
 
         case "asByteArray": {
             ArrayHandle hArray   = (ArrayHandle) hTarget;
-            long        cNibbles = hArray.m_hDelegate.m_cSize;
+            long        cNibbles = hArray.getDelegate().m_cSize;
             if (cNibbles % 2 != 0) {
                 return frame.raiseException(xException.outOfBounds(
                         frame, "Invalid array size: " + cNibbles));
             }
 
-            Mutability     mutability = hArray.m_mutability;
+            Mutability     mutability = hArray.getMutability();
             DelegateHandle hDelegate  = xRTViewFromBit.getInstance(frame.container())
                     .createBitViewDelegate(frame.poolContext().typeByte(),
-                            hArray.m_hDelegate, mutability);
+                            hArray.getDelegate(), mutability);
 
             return frame.assignValue(iReturn, new ArrayHandle(
                     xByteArray.getInstance(frame.container()).getCanonicalClass(),

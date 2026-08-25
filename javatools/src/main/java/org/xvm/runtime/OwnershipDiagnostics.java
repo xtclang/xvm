@@ -17,6 +17,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -24,10 +25,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.XvmStructure;
+
+import org.xvm.util.Auto;
 
 import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -80,7 +84,9 @@ public final class OwnershipDiagnostics {
      * @return a text dump suitable for logs or test artifacts
      */
     public static String dump(boolean forceLazy, Container... containers) {
-        return new Dumper(forceLazy).dump(containers);
+        try (var _ = openDiagnosticsWindow(containers)) {
+            return new Dumper(forceLazy).dump(containers);
+        }
     }
 
     /**
@@ -103,9 +109,27 @@ public final class OwnershipDiagnostics {
      * @return structured validation findings
      */
     public static Validation validate(boolean forceLazy, Container... containers) {
-        Dumper dumper = new Dumper(forceLazy, false);
-        dumper.scan(containers);
-        return dumper.validation();
+        try (var _ = openDiagnosticsWindow(containers)) {
+            Dumper dumper = new Dumper(forceLazy, false);
+            dumper.scan(containers);
+            return dumper.validation();
+        }
+    }
+
+    /**
+     * Open a runtime-synthesis window for the duration of a diagnostics walk. Diagnostics are
+     * supervised readers, but rendering a type constant's value computes isA relations, and the
+     * relation calculus interns normalized types - on a runtime-published pool that trips the
+     * registration guard from inside the very forensics reporting a failure, replacing the
+     * original finding with the guard's own IllegalStateException (the same-JVM stress harness
+     * proved that exact masking). The window is thread-scoped, so any pool instance opens it
+     * for every pool the walk can reach.
+     */
+    private static Auto openDiagnosticsWindow(Container... containers) {
+        if (containers.length == 0 || containers[0] == null) {
+            return () -> { };
+        }
+        return containers[0].getConstantPool().openRuntimeSynthesisWindow("ownership diagnostics");
     }
 
     /**
@@ -344,6 +368,12 @@ public final class OwnershipDiagnostics {
      * @return the sweep report; never silently truncated
      */
     public static SweepReport sweepForeignReferences(Container root) {
+        try (var _ = openDiagnosticsWindow(root)) {
+            return sweepForeignReferencesInWindow(root);
+        }
+    }
+
+    private static SweepReport sweepForeignReferencesInWindow(Container root) {
         Map<Object, Boolean>   visited    = new IdentityHashMap<>();
         Deque<SweepNode>       queue      = new ArrayDeque<>();
         List<ForeignReference> violations = new ArrayList<>();
@@ -416,6 +446,16 @@ public final class OwnershipDiagnostics {
                 enqueue(queue, visited, node, ".get()", ref.get());
                 continue;
             }
+            if (value instanceof AtomicReferenceArray<?> aRef) {
+                for (int i = 0, c = aRef.length(); i < c; ++i) {
+                    enqueue(queue, visited, node, ".get(" + i + ")", aRef.get(i));
+                }
+                continue;
+            }
+            if (value instanceof Optional<?> optional) {
+                enqueue(queue, visited, node, ".get()", optional.orElse(null));
+                continue;
+            }
             if (value instanceof Map<?, ?> map && clz.getName().startsWith("java.")) {
                 int i = 0;
                 for (Map.Entry<?, ?> entry : safeEntries(map)) {
@@ -474,9 +514,15 @@ public final class OwnershipDiagnostics {
                 continue;
             }
 
-            // an unrecognized non-org.xvm type that can hold references is a measured blind spot
-            if (holdsReferences(clz)) {
-                blindSpots.add(node.renderPath() + " -> unhandled type " + clz.getName());
+            // JDK types other than the walked generic carriers (collections, entries, atomics,
+            // references, futures, optionals) have no Object-typed user-data slots that runtime
+            // state can hide in, so they are documented leaves rather than blind-spot noise; an
+            // unrecognized type from any OTHER origin that can hold references is a measured
+            // blind spot
+            String sName = clz.getName();
+            if (!sName.startsWith("java.") && !sName.startsWith("javax.")
+                    && !sName.startsWith("com.sun.") && holdsReferences(clz)) {
+                blindSpots.add(node.renderPath() + " -> unhandled type " + sName);
             }
         }
 
@@ -880,7 +926,11 @@ public final class OwnershipDiagnostics {
             // template, for example Array<Property<Point>> -> native xArray.
             dumpMap("templatesByType", readField(container, "f_mapTemplatesByType"),
                     container, 1, true);
-            dumpMap("compositions", readField(container, "f_mapCompositions"), container, 1);
+            // Composition lazy state (field-name arrays, method-init structures) may resolve
+            // canonical native-parent values - reflection lazily computes f_fieldNames with
+            // string handles interned by the NativeContainer parent, the same currency the
+            // constHeap walk below accepts. Still reject values from any other runtime owner.
+            dumpMap("compositions", readField(container, "f_mapCompositions"), container, 1, true);
             dumpCollection("services", readField(container, "f_setServices"), container, 1);
         }
 
@@ -1159,13 +1209,32 @@ public final class OwnershipDiagnostics {
 
             Occurrence previous = seen.putIfAbsent(value,
                     new Occurrence(path, effectiveExpected, actual));
-            if (previous != null && previous.expected != effectiveExpected) {
+            if (previous != null && previous.expected != effectiveExpected
+                    && !isLegitimateSharedCurrency(value, previous.expected, effectiveExpected)) {
                 crossShares.add(previous.path + " and " + path
                         + " share " + identity(value)
                         + " previousExpected=" + containerName(previous.expected)
                         + " currentExpected=" + containerName(effectiveExpected)
                         + " actualOwner=" + containerName(actual));
             }
+        }
+
+        /**
+         * Parent-flow constant currency is shared between related containers by design:
+         * {@code ConstHeap.getConstHandle} copies a parent's handle into a child heap only
+         * after an isShared check, and relocateConst deliberately moves canonical constants
+         * toward ancestors, so one immutable handle (or an ownerless deferred marker such as
+         * DeferredPropertyHandle) legitimately appears in both heaps. A share is a violation
+         * only when the two expected containers are unrelated - the direct cross-run leak -
+         * or when the shared object could carry per-container mutable state.
+         */
+        private static boolean isLegitimateSharedCurrency(Object value, Container previous,
+                                                          Container current) {
+            return value instanceof ObjectHandle handle
+                    && previous != null
+                    && current != null
+                    && isRelated(previous, current)
+                    && !isMutableSafe(handle);
         }
 
         private void recordConstantPool(String path, Constant constant, Container expected) {

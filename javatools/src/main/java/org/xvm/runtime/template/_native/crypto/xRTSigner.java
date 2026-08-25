@@ -56,12 +56,12 @@ public class xRTSigner
         switch (method.getName()) {
         case "sign":
             return invokeSign(frame, ahArg[0], ahArg[1],
-                (ByteArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate, iReturn);
+                (ByteArrayHandle) ((ArrayHandle) ahArg[2]).getDelegate(), iReturn);
 
         case "verify":
             return invokeVerify(frame, ahArg[0], ahArg[1],
-                (ByteArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate,
-                (ByteArrayHandle) ((ArrayHandle) ahArg[3]).m_hDelegate, iReturn);
+                (ByteArrayHandle) ((ArrayHandle) ahArg[2]).getDelegate(),
+                (ByteArrayHandle) ((ArrayHandle) ahArg[3]).getDelegate(), iReturn);
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);

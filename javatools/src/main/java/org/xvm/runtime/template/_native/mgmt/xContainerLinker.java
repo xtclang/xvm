@@ -96,7 +96,7 @@ public class xContainerLinker
         case "loadFileTemplate":
             try {
                 ArrayHandle   hContents  = (ArrayHandle) hArg;
-                byte[]        abContents = xRTUInt8Delegate.getBytes((ByteArrayHandle) hContents.m_hDelegate);
+                byte[]        abContents = xRTUInt8Delegate.getBytes((ByteArrayHandle) hContents.getDelegate());
                 FileStructure struct = new FileStructure(new ByteArrayInputStream(abContents));
 
                 return frame.assignValue(iReturn, xRTFileTemplate.makeHandle(frame.f_context.f_container, struct));
@@ -140,7 +140,7 @@ public class xContainerLinker
         ComponentTemplateHandle hModule     = (ComponentTemplateHandle) ahArg[0];
         ArrayHandle             haCondNames = (ArrayHandle) ahArg[1];
 
-        if (haCondNames.m_hDelegate.m_cSize > 0) {
+        if (haCondNames.getDelegate().m_cSize > 0) {
             return frame.raiseException(
                 xException.unsupported(frame, "Condition names are not currently supported"));
         }
@@ -191,7 +191,7 @@ public class xContainerLinker
             return frame.raiseException(
                 xException.illegalArgument(frame, "ResourceProvider must be a service"));
         }
-        if (haCondNames.m_hDelegate.m_cSize > 0) {
+        if (haCondNames.getDelegate().m_cSize > 0) {
             return frame.raiseException(
                 xException.unsupported(frame, "Condition names are not currently supported"));
         }
@@ -201,10 +201,10 @@ public class xContainerLinker
         ObjectHandle[] ahShared;
         ObjectHandle[] ahAdditional;
         try {
-            ahShared = haShared.m_hDelegate.m_cSize == 0
+            ahShared = haShared.getDelegate().m_cSize == 0
                                 ? Utils.OBJECTS_NONE
                                 : haShared.getTemplate().toArray(frame, haShared);
-            ahAdditional = haAdditional.m_hDelegate.m_cSize == 0
+            ahAdditional = haAdditional.getDelegate().m_cSize == 0
                                 ? Utils.OBJECTS_NONE
                                 : haAdditional.getTemplate().toArray(frame, haAdditional);
         } catch (ExceptionHandle.WrapperException e) {

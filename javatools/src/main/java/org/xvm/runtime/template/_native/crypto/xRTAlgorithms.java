@@ -200,7 +200,7 @@ public class xRTAlgorithms
         if (hKey instanceof SecretHandle hSecret) {
             return hSecret.f_key;
         } else {
-            ByteArrayHandle hBytes = (ByteArrayHandle) ((ArrayHandle) hKey).m_hDelegate;
+            ByteArrayHandle hBytes = (ByteArrayHandle) ((ArrayHandle) hKey).getDelegate();
             byte[]          abRaw  = xRTUInt8Delegate.getBytes(hBytes);
 
             switch (sAlgorithm) {
