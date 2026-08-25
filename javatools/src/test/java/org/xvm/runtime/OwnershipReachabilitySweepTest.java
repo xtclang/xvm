@@ -141,8 +141,15 @@ public class OwnershipReachabilitySweepTest {
         }
     }
 
+    /**
+     * A pending future is counted and rendered - never silent - but does not fail the sweep:
+     * its value does not exist yet and its dependent continuations are same-container by
+     * construction (cross-container calls exchange proxies), so the unread content cannot hide
+     * a foreign reference. The stress harness proved runs routinely end with fire-and-forget
+     * futures still pending; only genuinely unfollowable edges are failing blind spots.
+     */
     @Test
-    public void pendingFutureIsAMeasuredBlindSpotNotASilentOne() {
+    public void pendingFutureIsCountedAndRenderedButDoesNotFailTheSweep() {
         var runtime = new Runtime();
         try {
             var container = new TestContainer(runtime, null, "pending");
@@ -152,12 +159,15 @@ public class OwnershipReachabilitySweepTest {
 
             SweepReport report = OwnershipDiagnostics.sweepForeignReferences(container);
 
-            assertFalse(report.isClean(),
-                    () -> "an unfollowed edge must make the report not-clean:\n" + report.render());
+            assertTrue(report.isClean(),
+                    () -> "a pending future must not fail the sweep:\n" + report.render());
             assertTrue(report.violations().isEmpty(), report::render);
-            assertEquals(1, report.blindSpots().size(), report::render);
-            assertTrue(report.blindSpots().get(0).contains("pending CompletableFuture"),
+            assertTrue(report.blindSpots().isEmpty(), report::render);
+            assertEquals(1, report.pendingFutures().size(), report::render);
+            assertTrue(report.pendingFutures().get(0).contains("pending CompletableFuture"),
                     report::render);
+            assertTrue(report.render().contains("pending CompletableFuture"),
+                    () -> "pending futures must stay visible in the render:\n" + report.render());
         } finally {
             runtime.shutdownXVM();
         }

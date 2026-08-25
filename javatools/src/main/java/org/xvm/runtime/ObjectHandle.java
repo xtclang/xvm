@@ -806,6 +806,57 @@ public abstract class ObjectHandle
             overrideField(field.getIndex(), hValue);
         }
 
+        /**
+         * If another view of this object already CONSTRUCTED the ref for the given inflated
+         * field, return that constructed ref from the shared slot; null otherwise. A view whose
+         * override layer still carries the pre-construction (struct-composition) clone must not
+         * re-run annotation construction - the constructed ref is object-wide state, and the
+         * stress harness proved re-construction dies on the (correctly) shared freeze state the
+         * first construction's lazy set may have frozen (TestLiterals' @Lazy CPFileStore.root).
+         */
+        RefHandle sharedConstructedRef(FieldInfo field) {
+            return m_aFields[field.getIndex()] instanceof RefHandle hShared
+                    && !hShared.getComposition().isStruct()
+                    ? hShared
+                    : null;
+        }
+
+        /**
+         * Publish a freshly constructed inflated-property ref as object-wide state: the shared
+         * slot gets the constructed ref so every view can see construction happened, and this
+         * view (whose override layer may still carry the stale pre-construction clone) adopts a
+         * view-local $outer alias of it. Sibling views self-heal through
+         * {@link #sharedConstructedRef} on their next access.
+         */
+        void publishConstructedRef(Frame frame, PropertyConstant idProp, RefHandle hRef) {
+            FieldInfo field = getComposition().getFieldInfo(idProp);
+            int       iPos  = field.getIndex();
+
+            m_aFields[iPos] = hRef;
+            if (hasFieldOverride(iPos)) {
+                overrideField(iPos, viewLocalRefAlias(hRef));
+            }
+        }
+
+        /**
+         * @return a view-local alias of the (constructed) ref whose $outer is this view
+         */
+        RefHandle viewLocalRefAlias(RefHandle hRef) {
+            RefHandle hAlias = (RefHandle) hRef.cloneAs(hRef.getComposition());
+            ((GenericHandle) hAlias).overrideField(OUTER, this);
+            return hAlias;
+        }
+
+        /**
+         * Adopt a view-local alias of a ref another view constructed, replacing this view's
+         * stale pre-construction override so later reads take the fast path.
+         */
+        RefHandle adoptConstructedRef(FieldInfo field, RefHandle hShared) {
+            RefHandle hAlias = viewLocalRefAlias(hShared);
+            overrideField(field.getIndex(), hAlias);
+            return hAlias;
+        }
+
         private void overrideField(int iPos, ObjectHandle hValue) {
             ObjectHandle[] aCurrent = m_aFieldOverrides;
             ObjectHandle[] aUpdated = aCurrent == null

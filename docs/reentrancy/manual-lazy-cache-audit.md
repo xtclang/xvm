@@ -198,3 +198,83 @@ Recommended handling:
    cleanup into a later PR.
 3. Treat the remaining immutable ASM derived values as should-fix cleanup unless
    stress testing produces a concrete cross-owner failure.
+
+## Completion Sweep (2026-08-25 evening)
+
+The strict scan above structurally misses two sibling idioms, so a completion
+sweep re-ran the audit with them included (all findings re-verified at current
+source; 697 files scanned, compiler package excluded per the board's
+record-only ruling):
+
+```bash
+# double-read idiom the strict regex cannot see (96 unique field sites, 40 files):
+rg -U -n --pcre2 \
+  "([A-Za-z_]\w*)\s*=\s*(m_\w+)\s*;[\s\S]{0,240}?\1\s*==\s*null[\s\S]{0,320}?\2\s*=(?!=)" \
+  javatools/src/main/java
+```
+
+Verification of prior rows: every FIXED row above is intact in source (no
+regressions); `GuardAll.m_guard` is hardened in the same family as the row-78
+address links (local guard built in `process()`, published only by
+`resolveAddresses`) and belongs in that row's list. One stale entry: the scan
+block still lists `ClassComposition.java:567:m_mapFields`, fixed since.
+
+### Graduated MUST FIX (concurrent-injection duplicate services)
+
+Native injection `ensure*` caches on SHARED template/container receivers,
+double-read idiom, plain writes, non-idempotent suppliers: `xRTAlgorithms.
+m_hAlgorithms`, `xLocalClock.m_hLocalClock`/`m_hUTCClock`, `xTerminalConsole.
+m_hConsole`, `xInjector.m_hInjector`, `xRTRandom.m_hRandom`, and the
+`NativeContainer.ensureOSStorage`/`ensureFileStore`/`ensureRootDir`/... family
+(including continuation writes from other fibers). `Container.getTemplate`
+delegates shared types to the parent, so one template instance serves every
+app container; racing first injections each call
+`f_container.createServiceContext(...)`, so the losers' duplicate native
+services (two Consoles, two Clocks, a second OSStorage) stay registered
+forever. Owner-consistent but divergent - the failure is duplicate service
+identity, not wrong-owner. Fix vehicle: per-site CAS with loser cleanup
+(unregister the losing context); a plain synchronized wrapper is NOT
+sufficient for the continuation-completing sites. Reachable today with
+concurrent first injections from two service threads.
+
+### Graduated MUST FIX (fixed same day): `ConstantPool.infoPlaceholder()`
+
+Found independently by this sweep and the pool residual audit: the TypeInfo
+build placeholder was created by a plain lazy write, but
+`TypeConstant.clearTypeInfoPlaceholder` CASes against it BY IDENTITY - two
+racing first builders create two placeholder instances, and a type slot
+holding the loser can never be cleared, permanently stuck "being built"
+(`ensureObjectTypeInfo` then reports the spurious root-Object failure). Fixed
+on this branch the same day: identity-stable placeholder installation; see the
+ledger row for the wave.
+
+### New SHOULD FIX (publication-visibility batch, one mechanical wave)
+
+Plain non-volatile publication of convergent cached values on cross-thread
+receivers; each is a one-word `volatile` (or small DCL) fix: `xString.
+StringHandle.m_hash` (cached `JavaLong` whose `m_lValue` is non-final - a
+reader can observe hash 0), `xIntLiteral`/`xFPLiteral` `m_hText`,
+`PropertyInfo.m_jmdGetter`/`m_jmdSetter` (inconsistent with the eight volatile
+siblings in the same class), `TypeConstant.m_sJitName` and `SignatureConstant.
+m_sJitName` (the `PropertyConstant` sibling already does proper DCL; overlaps
+JIT issue row 24), `Container.ensureServiceContext`/`ensureTypeSystemHandle`,
+`ClassTemplate.getSuper`/`getCanonicalClass` and the template
+`m_typeCanonical` family (xRTServer, xRTCertificateManager, xRTNetwork,
+xRTNetworkInterface, xRTSocket, xRTConnector). `asm/op/Label.m_label` is the
+JIT analogue of the row-78 decoded-op link slots (a `CodeBuilder`-owned label
+cached on a shared decoded op; two TypeSystems compiling one method stomp each
+other) and is recorded on JIT issue row 23/24 territory.
+
+### Confirmed confined/convergent (recorded, no action)
+
+Frame/fiber/service-confined lifecycle fields (`Frame.m_aGuard`, `m_stack`,
+`VarInfo.m_sVarName`, `Fiber.m_mapTokens`/pending maps, `ServiceContext.
+m_mapTransient` - scheduling-lock confined), compile/assembly-time builder
+state (`ClassStructure.addTypeParam`, `Component.addContribution`,
+`FileStructure.ensureContext`, `Register.m_ast*`, `MethodStructure.Code`
+internals inside the row-78 lifecycle), and the pool-derived convergent
+constant caches on IdentityConstant/MethodConstant/PropertyConstant/
+ModuleStructure (owner-consistent interned values; asm-cleanup family).
+Caveat recorded: compiler code IS runtime-reachable through `xRTCompiler`,
+`DebugConsole`, and `xIntLiteral`'s Lexer use, so "compiler rows are
+record-only" holds only while each request builds fresh compiler objects.

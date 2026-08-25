@@ -368,6 +368,39 @@ public class ConstantPoolDiagnosticsTest {
         }
     }
 
+    /**
+     * The TypeInfo build placeholder must be IDENTITY-STABLE per pool:
+     * TypeConstant.clearTypeInfoPlaceholder CASes a type's info slot against
+     * pool.infoPlaceholder() by identity, so two racing first calls creating two placeholder
+     * instances would strand the loser's placeholder in a type slot forever - "being built"
+     * that never clears, surfacing as the spurious root-Object TypeInfo failure. Graduated by
+     * both 2026-08-25 completion audits independently; master has the racy plain-lazy shape.
+     */
+    @Test
+    public void typeInfoPlaceholderIsIdentityStableUnderRacingFirstCalls() throws Exception {
+        for (int i = 0; i < 25; i++) {
+            var pool = new FileStructure("placeholderrace" + i).getConstantPool();
+            try (var executor = Executors.newFixedThreadPool(8)) {
+                var start   = new CountDownLatch(1);
+                var futures = java.util.stream.IntStream.range(0, 8)
+                        .mapToObj(n -> executor.submit(() -> {
+                            start.await();
+                            return pool.infoPlaceholder();
+                        }))
+                        .toList();
+                start.countDown();
+
+                var first = futures.get(0).get(10, TimeUnit.SECONDS);
+                for (var future : futures) {
+                    assertSame(first, future.get(10, TimeUnit.SECONDS),
+                            "racing first infoPlaceholder() calls must all observe one identity");
+                }
+                assertSame(first, pool.infoPlaceholder(),
+                        "later calls must observe the same placeholder instance");
+            }
+        }
+    }
+
     private static Path sourceRoot() {
         Path cwd = Path.of("").toAbsolutePath();
         Path project = cwd.resolve("src/main/java");

@@ -1926,6 +1926,22 @@ public abstract class ClassTemplate
      */
     protected int finishRefConstruction(Frame frame, RefHandle hRef, GenericHandle hOuter,
                                         PropertyConstant idProp, Frame.Continuation continuation) {
+        // a sibling access view may have already constructed this property's ref: construction
+        // is object-wide state published in the SHARED field slot, while this view's override
+        // layer can still carry the stale pre-construction struct clone. Re-running annotation
+        // construction on that stale clone double-computes and - because freeze state is
+        // correctly shared across ref views - dies with ReadOnly once the first construction's
+        // lazy set froze the shared cell (proven by TestLiterals' @Lazy CPFileStore.root under
+        // the same-JVM stress harness). Adopt a view-local $outer alias instead.
+        FieldInfo field   = hOuter.getComposition().getFieldInfo(idProp);
+        RefHandle hShared = field == null ? null : hOuter.sharedConstructedRef(field);
+        if (hShared != null) {
+            // contract: like the construction path below, the resulting ref is left on the
+            // frame stack for the caller's continuation to pop
+            frame.pushStack(hOuter.adoptConstructedRef(field, hShared));
+            return continuation.proceed(frame);
+        }
+
         // call annotation constructors;
         // hRef's type is "struct of annotated type" or PropertyClassTypeConstant
         AnnotatedTypeConstant constAnno = (AnnotatedTypeConstant) hRef.getComposition().getBaseType();
@@ -1936,14 +1952,14 @@ public abstract class ClassTemplate
         case Op.R_NEXT:
             hRef = (RefHandle) frame.peekStack();
             hRef.setField(frame, GenericHandle.OUTER, hOuter);
-            hOuter.setField(frame, idProp, hRef);
+            hOuter.publishConstructedRef(frame, idProp, hRef);
             return continuation.proceed(frame);
 
         case Op.R_CALL:
             frame.m_frameNext.addContinuation(frameCaller -> {
                 RefHandle hRefPublic = (RefHandle) frameCaller.peekStack();
                 hRefPublic.setField(frameCaller, GenericHandle.OUTER, hOuter);
-                hOuter.setField(frameCaller, idProp, hRefPublic);
+                hOuter.publishConstructedRef(frameCaller, idProp, hRefPublic);
                 return continuation.proceed(frameCaller);
             });
             return Op.R_CALL;

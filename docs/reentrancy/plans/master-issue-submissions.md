@@ -1722,6 +1722,91 @@ needs its own two-loader concurrent-generation test.
 **Dependencies/order:** Overlaps row 21 (`<clinit>` is both the static-capture
 and the pool-mutation site); file 21 first, reference it.
 
+## 25. Native injection caches race duplicate service creation
+
+**Issue title:** Racing first injections create duplicate native services
+(Console, Clock, Random, OSStorage) via unsynchronized `ensure*` caches.
+
+**Status/category:** Will be unsafe under concurrency in master; reachable
+today with concurrent first injections from two service threads of one
+container. Owner-consistent but divergent and non-idempotent - the failure is
+duplicate service identity, not wrong-owner state.
+
+**Explanation:** The native injection suppliers cache their service handles in
+plain double-read lazy fields on SHARED receivers: `Container.getTemplate`
+delegates shared types to the parent, so one template instance (the native
+container's) serves every app container, and the `ensure*` supplier runs on
+the injecting caller's thread. Each racing thread that misses the cache calls
+`f_container.createServiceContext(...)`; the loser's duplicate native service
+context stays registered forever (two Consoles, two Clocks, a second
+OSStorage), and the plain write publishes the winner without a fence.
+
+**Master evidence:** `xRTAlgorithms.m_hAlgorithms` (xRTAlgorithms.java:72-76),
+`xLocalClock.m_hLocalClock`/`m_hUTCClock` (xLocalClock.java:141-164),
+`xTerminalConsole.m_hConsole` (xTerminalConsole.java:70-77),
+`xInjector.m_hInjector` (xInjector.java:38-44), `xRTRandom.m_hRandom`
+(xRTRandom.java:223-228); the same shape on `NativeContainer` itself:
+`ensureOSStorage` (NativeContainer.java:433-466, including a continuation
+write from another fiber at :452-455), `ensureFileStore`/`ensureRootDir`/
+`ensureHomeDir`/`ensureCurDir`/`ensureTmpDir` (:468-535),
+`ensureSecureNetwork`/`ensureInsecureNetwork` (:647-666). All master-verbatim.
+
+**Failure mode:** Two services concurrently requesting their first `@Inject
+Console` (or Clock/Random/storage) each construct a native service; both stay
+registered in the container; later injections observe whichever handle won the
+plain write - or, on a weakly-ordered CPU, a partially published one.
+
+**Minimal master-portable fix strategy:** Per-site CAS with loser cleanup
+(unregister the losing ServiceContext). A plain `synchronized` wrapper is NOT
+sufficient for the continuation-completing sites (`ensureOSStorage` completes
+from another fiber's continuation).
+
+**Tests to add/run on master:** None exist yet; the red harness is a
+two-thread first-injection race per site (deterministic with a latch on the
+supplier). Classified must-fix on the audit board 2026-08-25 (manual
+lazy-cache completion sweep); fix parked for its own focused wave because the
+continuation sites need async-aware design.
+
+**Dependencies/order:** Independent of rows 1-24.
+
+## 26. TypeInfo placeholder identity race strands types as "being built"
+
+**Issue title:** `ConstantPool.infoPlaceholder()` is a racy lazy singleton but
+`TypeConstant` clears placeholders by identity.
+
+**Status/category:** Will be unsafe under concurrency in master; the racing
+window is first concurrent TypeInfo builds on one pool - routine for a
+container's service threads warming types. Found independently by two audits.
+
+**Explanation:** The TypeInfo build machinery installs a per-pool placeholder
+`TypeInfo` while a build is in flight, and
+`TypeConstant.clearTypeInfoPlaceholder` removes it by CASing the type's info
+slot against `pool.infoPlaceholder()` BY IDENTITY. The placeholder accessor is
+a plain unsynchronized lazy write, so two racing first callers create two
+placeholder instances; a type slot holding the loser's instance can never be
+CAS-cleared - the type is permanently "being built", and
+`ensureObjectTypeInfo` treats the stranded placeholder as an unfinished build
+and reports the spurious "Failed to create TypeInfo for root Object" error.
+
+**Master evidence:** `origin/master:ConstantPool.java:2422-2433` (plain lazy
+create; field non-volatile), cleared-by-identity at the master equivalent of
+`TypeConstant.clearTypeInfoPlaceholder` (branch :2026:
+`s_typeinfo.compareAndSet(this, getConstantPool().infoPlaceholder(), null)`).
+
+**Failure mode:** Concurrent first `infoPlaceholder()` calls -> two instances
+-> stranded placeholder in a type's info slot -> that type never finishes
+building; worst observable is the spurious root-Object TypeInfo failure.
+
+**Minimal master-portable fix strategy:** Make the field volatile and the
+create synchronized (double-checked); one small hunk, no API change.
+
+**Tests to add/run on master:**
+`ConstantPoolDiagnosticsTest.typeInfoPlaceholderIsIdentityStableUnderRacingFirstCalls`
+(branch) - 25 rounds of 8 latch-started threads asserting one identity;
+red-verified against the plain-lazy shape.
+
+**Dependencies/order:** Independent; can ride any ConstantPool-adjacent PR.
+
 ## Items intentionally not in the 18
 
 - Utility constructor this-escape fixes are listed in Category A but already

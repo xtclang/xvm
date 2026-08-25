@@ -374,10 +374,11 @@ public final class OwnershipDiagnostics {
     }
 
     private static SweepReport sweepForeignReferencesInWindow(Container root) {
-        Map<Object, Boolean>   visited    = new IdentityHashMap<>();
-        Deque<SweepNode>       queue      = new ArrayDeque<>();
-        List<ForeignReference> violations = new ArrayList<>();
-        List<String>           blindSpots = new ArrayList<>();
+        Map<Object, Boolean>   visited        = new IdentityHashMap<>();
+        Deque<SweepNode>       queue          = new ArrayDeque<>();
+        List<ForeignReference> violations     = new ArrayList<>();
+        List<String>           blindSpots     = new ArrayList<>();
+        List<String>           pendingFutures = new ArrayList<>();
 
         queue.add(new SweepNode(root, null, "container"));
         visited.put(root, Boolean.TRUE);
@@ -479,12 +480,18 @@ public final class OwnershipDiagnostics {
                 continue;
             }
             if (value instanceof CompletableFuture<?> future) {
-                // non-blocking: a completed future's result is reachable state; a pending one is
-                // a blind window and says so
+                // non-blocking: a completed future's result is reachable state. A PENDING future
+                // is legal live state, not an unfollowable ownership edge: its value does not
+                // exist yet, and its dependent continuations were allocated by this container's
+                // own execution (cross-container calls exchange proxies, never raw handles), so
+                // the unreadable content cannot carry a foreign reference. The stress harness
+                // proved runs routinely end with fire-and-forget futures still pending, so they
+                // are counted and rendered for forensics but do not fail the sweep - only a
+                // genuinely unfollowable edge (reflection failure, unknown carrier type) does.
                 if (future.isDone() && !future.isCompletedExceptionally()) {
                     enqueue(queue, visited, node, ".getNow()", future.getNow(null));
                 } else if (!future.isDone()) {
-                    blindSpots.add(node.renderPath() + " -> pending CompletableFuture");
+                    pendingFutures.add(node.renderPath() + " -> pending CompletableFuture");
                 }
                 continue;
             }
@@ -527,7 +534,7 @@ public final class OwnershipDiagnostics {
         }
 
         return new SweepReport(describeContainer(root), cVisited,
-                List.copyOf(violations), List.copyOf(blindSpots));
+                List.copyOf(violations), List.copyOf(blindSpots), List.copyOf(pendingFutures));
     }
 
     /**
@@ -685,15 +692,19 @@ public final class OwnershipDiagnostics {
      * object was visited or is behind a documented boundary.
      */
     public record SweepReport(String root, int objectsVisited,
-                              List<ForeignReference> violations, List<String> blindSpots) {
+                              List<ForeignReference> violations, List<String> blindSpots,
+                              List<String> pendingFutures) {
         public SweepReport {
-            violations = List.copyOf(violations);
-            blindSpots = List.copyOf(blindSpots);
+            violations     = List.copyOf(violations);
+            blindSpots     = List.copyOf(blindSpots);
+            pendingFutures = List.copyOf(pendingFutures);
         }
 
         /**
          * @return true iff the sweep found no foreign references AND followed every edge - a
-         *         report with blind spots is not clean, it is unfinished, and it says where
+         *         report with blind spots is not clean, it is unfinished, and it says where.
+         *         Pending futures are counted and rendered but do not make a sweep unclean:
+         *         their unread content is same-container by construction (see the walker).
          */
         public boolean isClean() {
             return violations.isEmpty() && blindSpots.isEmpty();
@@ -709,12 +720,16 @@ public final class OwnershipDiagnostics {
             StringBuilder sb = new StringBuilder("reachability sweep of ").append(root)
                     .append(": ").append(objectsVisited).append(" objects, ")
                     .append(violations.size()).append(" foreign reference(s), ")
-                    .append(blindSpots.size()).append(" blind spot(s)");
+                    .append(blindSpots.size()).append(" blind spot(s), ")
+                    .append(pendingFutures.size()).append(" pending future(s)");
             for (ForeignReference violation : violations) {
                 sb.append("\n  - ").append(violation.render());
             }
             for (String blindSpot : blindSpots) {
                 sb.append("\n  ? ").append(blindSpot);
+            }
+            for (String pending : pendingFutures) {
+                sb.append("\n  ~ ").append(pending);
             }
             return sb.toString();
         }
@@ -846,6 +861,13 @@ public final class OwnershipDiagnostics {
 
         private final Map<Container, String> containerNames = new IdentityHashMap<>();
         private final Map<Object, Occurrence> seen = new IdentityHashMap<>();
+
+        /**
+         * The container whose roots the walk currently descends from; values owned by this
+         * container are its own lifetime state and never owner-mismatches, regardless of how
+         * deep inside ancestor-attributed handles they sit.
+         */
+        private Container m_containerRoot;
         private final Set<Object> dumpedTemplateLazy =
                 Collections.newSetFromMap(new IdentityHashMap<>());
         private final Set<Object> dumpedCompositionLazy =
@@ -898,6 +920,7 @@ public final class OwnershipDiagnostics {
 
         void scanHandle(Container expected, String path, ObjectHandle handle) {
             requireNonNull(expected, "expected");
+            m_containerRoot = expected;
             requireNonNull(path, "path");
             requireNonNull(handle, "handle");
 
@@ -906,6 +929,7 @@ public final class OwnershipDiagnostics {
         }
 
         private void dumpContainer(int index, Container container) {
+            m_containerRoot = container;
             String name = containerNames.get(container);
 
             if (emitDump) {
@@ -1201,7 +1225,15 @@ public final class OwnershipDiagnostics {
 
             Container actual            = ownerOf(value);
             Container effectiveExpected = effectiveExpected(expected, actual, allowNativeOwner);
-            if (actual != null && effectiveExpected != null && actual != effectiveExpected) {
+            if (actual != null && effectiveExpected != null && actual != effectiveExpected
+                    && actual != m_containerRoot) {
+                // a value owned by the WALK ROOT itself always satisfies ownership: its graph has
+                // the root's lifetime even when it is nested inside an ancestor-attributed handle
+                // (handles of canonical native classes get the NativeContainer's composition, so a
+                // run-lifetime Path graph legally mixes native-attributed outers with run-owned
+                // inners). The detector's teeth are unchanged where they matter: walking the
+                // NATIVE root, a run-container-owned value is still a retention violation, and
+                // any unrelated-container owner is still a cross-run share.
                 ownerMismatches.add(path + " expected=" + containerName(effectiveExpected)
                         + " actual=" + containerName(actual)
                         + " object=" + identity(value));

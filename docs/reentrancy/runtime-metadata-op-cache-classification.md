@@ -86,7 +86,8 @@ Status labels:
 | `DONE for first publication; MUST AUDIT for full code lifecycle` | Pure address/link and scope simulation caches: `Op.m_lStruct`, `OpJump.m_opDest/m_cExits`, `OpCondJump.m_opDest/m_cExits`, `LoopEnd.m_opDest`, `OpSwitch.m_aOpCase/m_opDefault/m_acExits/m_cDefaultExits`, `JumpInt` equivalents, `GuardStart.m_aOpCatch`, `Jump`/`OpReturn` finally metadata. | Owner is `MethodStructure.Code` and its decoded op array; key is method body version. Invalidation occurs when code is reassembled, dead code is removed, or `m_code` is reset. | First decode is now safely published: `MethodStructure.m_code` is volatile, `ensureCode()` synchronizes first construction, decoded `Code` links before publication from its constructor, assembly-owned `Code` links through `prepareOps()`/assembly, the volatile runtime-linked flag publishes those link writes, and `Code.assertRuntimeReadyForDiagnostics()` checks branch/switch/guard readiness when `xvm.asm.validateRuntimeCode=true`. | Fixed the immediate JMM first-publication race where parallel first `getOps()` could build or expose decoded code through a plain field. This does not make `MethodStructure.Code` an immutable runtime artifact, and `getAssembledOps()` intentionally does not run hidden simulation for compiler-owned mutable code. Compiler/assembly paths still mutate code during `createCode()`, dead-code removal, reassembly, and reset. Proper long-term fix remains a frozen `ResolvedCode` snapshot or explicit runtime publication phase. `OpRuntimeCacheTest.methodCodeIsSafelyPublishedAndLinkedBeforeRuntimeAccess()` fails on master because `m_code` is not volatile and passes here while proving a prepared in-memory method is linked before runtime access. |
 | `DONE` | `GuardStart.m_guard` and `GuardAll.m_guard` cached guard structs. | Owner/key is decoded op plus method-scope shape. Invalidation is none after code linking. | The descriptors are now built during address resolution (`GuardStart.resolveAddresses()`/`resolveCode()` and `GuardAll.resolveAddresses()`), and `process()` only reads them. If an older compiler-owned path reaches `process()` before descriptor materialization, it allocates a local descriptor for that execution and does not write it back to the op. | Fixed the runtime lazy write. The old plain write was probably duplicate-build-only, but it was still shared decoded-op mutation during execution and it made the hot path depend on whichever frame arrived first. The replacement preserves the old cached hot path for linked code and avoids extra normal runtime allocation. `OpRuntimeCacheTest.guardDescriptorsAreLinkedBeforeProcessAndNotPublishedByProcess()` fails on master because `process()` writes `m_guard`, and passes here by checking link-time descriptor construction plus source shape. |
 | `DONE` | Removed runtime owner-bearing conditional/common-type caches: former `JumpCond`/`JumpNCond` condition fields and runtime write-back to `OpTest.m_typeCommon` / `OpCondJump.m_typeCommon` (`OpTest.java:216`, `OpTest.java:219`, `OpCondJump.java:226`, `OpCondJump.java:229`). | Owner is current frame only; values are no longer stored on the shared op. | Runtime resolves constants from the current `Frame` without writing them back. | Covered by `OpRuntimeCacheTest.conditionalJumpOpsDoNotCacheFrameConditionalConstants()` and `OpRuntimeCacheTest.commonTypeCalculationDoesNotWriteFrameConstantsBackToOps()` (`OpRuntimeCacheTest.java:60`, `OpRuntimeCacheTest.java:70`). |
-| `PROVEN CONFINED` | Assembly/JIT-only op helper state: `Op.Prefix.m_op`, `Op.ConstantRegistry.m_mapConstants/m_aconst`, `Label.m_mapRestore`, `Guarded.m_scope`, JIT-only jump metadata (`Op.java:453`, `Op.java:653`, `Op.java:663`, `Op.java:970`, `Label.java:55`, `Label.java:185`, `Guarded.java:42`, `Guarded.java:58`, `GuardAll.java:197`). | Owner is compiler/assembler/JIT build context. Invalidation is build lifetime. | Not read by interpreter frame execution as shared decoded runtime metadata. `ConstantRegistry.ensureOptimized()` is synchronized for its own build path. | No runtime owner-cache fix needed unless a future change exposes these objects to shared interpreter execution. Keep build/runtime separation assertions. |
+| `PROVEN CONFINED` (compiler/assembler half only) | Assembly-only op helper state: `Op.Prefix.m_op`, `Op.ConstantRegistry.m_mapConstants/m_aconst`, `Label.m_mapRestore`. | Owner is compiler/assembler build context. Invalidation is build lifetime. | Not read by interpreter frame execution as shared decoded runtime metadata. `ConstantRegistry.ensureOptimized()` is synchronized for its own build path. | No runtime owner-cache fix needed. Keep build/runtime separation assertions. |
+| `MUST AUDIT` today, `MUST FIX` before JIT concurrency (corrected 2026-08-25; the old row overstated "PROVEN CONFINED") | JIT-build writes into MODULE-SHARED decoded ops: `Jump.m_ofJumpFinally`, `OpReturn.m_nFinallyAddr`, `FinallyEnd.m_nFinallyAddr/m_fAdvances`, `GuardAll.m_jumps/m_fDoReturn`, `Label.m_label/m_action/m_fBound`, `Guarded.m_scope` - written by `BuildContext.preprocess`/build (BuildContext.java:404-525, :637-640, :991-999, :1012) on the op array from `methodStruct.getOps()`. | The fields physically live on the one decoded `Op[]` per MethodStructure, shared across containers AND across JIT TypeSystems (the Linker grafts the shared ecstasy ModuleStructure into every main FileStructure). Confinement holds against the INTERPRETER (frame execution never reads these fields - verified), not between concurrent JIT builds. `BuildContext` itself admits repeat passes ("compiling the same ops multiple times", with `Label.clear()`/`Guarded.clear()`). | `Label.m_label`, `m_action`, and `Guarded.m_scope` are NON-convergent owner-bearing objects (a classfile Label belongs to one CodeBuilder; a Scope to one build); `GuardAll.m_jumps` is a whole mutable List per build. Two TypeSystems generating classes from one shared method's ops race: foreign-label rejection or wrong-branch bytecode, assertion trips under -ea, silent leakage under -da. Loaders are not parallel-capable and delegate findClass directly, so nothing serializes the builds. | Recorded on JIT issue rows 23/24 (J23/J24) and jit-runtime-report.md section 4. Fix vehicle: move per-build jump/label/scope state into a per-BuildContext side table keyed by op (the interpreter-side Container.f_mapRuntimeOpCache precedent), never onto the shared decoded op. Gated behind `--jit` today. |
 
 ## Runtime Composition Caches
 
@@ -195,3 +196,64 @@ The chosen implementation is performance-equivalent to the old hot path:
   full handle graph.
 * Extra allocation is bounded by the number of inflated refs that actually need a different
   `$outer`, not by the total object graph size.
+
+## Full-Lifecycle Completion Audit (2026-08-25 evening)
+
+The first-publication closure above was re-audited for the FULL frozen-code
+lifecycle: 332 non-final instance fields across `asm/Op*.java` and `asm/op/`
+(819 assignment sites, bucketed by phase), every prior DONE row re-verified
+intact in source, plus `MethodStructure`'s runtime-lazy fields. Residue, with
+classifications:
+
+- **Corrected row above (JIT op writes)** - the one owner-bearing,
+  non-convergent post-publication writer family left; MUST FIX before JIT
+  concurrency, MUST AUDIT today (opt-in `--jit`).
+- **`OpInvocable.m_constMethod` written during `process()`**
+  (OpInvocable.java:144, "used by toString() only", every cache-miss
+  dispatch): convergent and functionally harmless, but it is the exact
+  runtime-writes-a-decoded-op-field pattern this branch eradicated everywhere
+  else, on a hot path. SHOULD FIX: delete the write, derive toString from
+  `m_nMethodId`. Fixed on this branch same day.
+- **`m_cVars`/`m_cScopes` mixed-read window** (MethodStructure.java:1055-1067
+  vs :1143-1154): `getMaxVars` tests `m_cScopes == 0` first with plain reads;
+  a racy reader that observes the fresh `m_cScopes` without acquire can read a
+  stale `m_cVars` and undersize the frame register array (AIOOBE).
+  Convergent values, astronomically narrow interleaving. SHOULD FIX (volatile
+  `m_cScopes` or read the volatile `m_code` first).
+- **`getAst()` plain lazy decode of `m_ast`** (MethodStructure.java:702):
+  unsynchronized publication of a deeply mutable AST graph; compile/eval-only
+  today (runtime hook commented out). SHOULD FIX before the JIT consumes ASTs
+  at runtime - mirror the `ensureCode()` volatile+synchronized shape.
+- **`forceAssembly` after publication is prevented by convention, not
+  mechanism** (MethodStructure.java:1084-1137 mutates `m_aop`, `m_registry`,
+  `m_abOps`, and every op link field unsynchronized; the board row-172
+  ordering proof - disassembled methods never reassemble, link-phase
+  synthesis precedes execution, row-44 synthesis is detached - holds for all
+  shipped paths but is enforced only by the reader-side `validateRuntimeCode`
+  diagnostic). MUST AUDIT standing: add a writer-side diagnostic
+  (fail if `forceAssembly` runs on a runtime-published pool's method outside
+  a synthesis window). `synthesizeAppendTo` still uses attached
+  build-then-forceAssembly, legal only by link-phase ordering.
+- **`markNative()` non-atomic transition** (MethodStructure.java:1183-1192:
+  abstract-flag flip, `resetRuntimeInfo` nulling `m_code`, then
+  `m_fNative = true`): a concurrent reader can see native=false with
+  code=null and die in `getOps()` ("neither native nor compiled");
+  runtime-reachable via chain building and native rebase. MUST AUDIT with the
+  rows-45-49 discipline; the plain `m_fNative`/`MethodBody.m_impl` visibility
+  fix is the cheap half (see the pool residual audit). The dead debug block
+  at :1187-1189 was deleted on this branch same day.
+- **Convergent plain lazy caches** `m_FUsesSuper`, `m_safety`,
+  `m_structFinally`, `m_FHasCode`: SHOULD FIX (JMM hygiene, `Lazy`/volatile),
+  benign duplicate computation meanwhile.
+- **`m_fInitialized` cross-container latch**: SAFE-DOCUMENTED - correctness
+  rests on the `DeferredSingletonHandle` fallback plus the branch-hardened
+  `SingletonConstant.f_state` CAS; that dependency is now stated here.
+- **Cross-sequential-run caveat**: `JumpNFirst.m_fVisited` and
+  `m_fInitialized` are decoded-structure-lifetime latches - `assert:once`
+  fires once per loaded module per JVM across sequential same-JVM runs, by
+  ledger-recorded design.
+- Everything else (~300 encoded-operand and compile-time fields, all
+  dest/link/simulation caches, per-execution action objects,
+  `AssertV.m_asParts` as the model volatile shape, `ServiceContext.
+  f_mapOpInfo` scheduling-lock confinement): SAFE-DOCUMENTED, sweep-verified
+  writers in assembly phases only.

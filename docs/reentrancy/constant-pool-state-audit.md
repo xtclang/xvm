@@ -437,3 +437,96 @@ The goal is to prove two things separately:
    it is intentionally shared immutable module/type metadata.
 2. Runtime execution does not depend on a stale ambient `ConstantPool` left on
    a reused Java thread.
+
+## Post-Publication Residual Audit (2026-08-25 evening)
+
+The marker+window regime (thread-scoped windows, ledger rows 44/51) was
+audited for what it still PERMITS to mutate after publication and whether each
+such mutation is thread-safe today. Framing findings first, then the residual
+table. Scenarios: (a) concurrent service threads of one container over one
+pool - real today; (b) two containers sharing upstream native/ecstasy pools;
+(c) resident compiler/LSP beside a running container.
+
+Framing: (1) during fiber execution the registration guard is fully open by
+design (the window covers the whole `drainWork` loop), so every storage
+structure must be safe under concurrent windowed writers + unwindowed readers
+on its own merits - the marker adds no concurrency protection during
+execution; (2) `markRuntimePublished` has exactly one production caller
+(`MainContainer.invokeCall` on the main module's pool) - upstream native/
+ecstasy pools and child-container pools are NEVER marked, so both guards are
+no-ops for them: a resident compiler or second container can register into or
+run destructive phases against a shared upstream pool with no fence.
+Classification: SHOULD FIX (guard-scope enforcement gap), promote to MUST FIX
+when multi-container/LSP-resident is supported.
+
+DOC DRIFT FIX: the guard table earlier in this file says TypeInfo invalidation
+"fails before mutating" unconditionally - superseded: since ledger row 51,
+invalidation is window-sensitive (runtime native-rebase performs it
+legitimately inside a synthesis window).
+
+Residual findings, classified:
+
+- **MUST FIX - `f_listConst` reader race (the concrete mechanism behind the
+  frozen-pool snapshot row).** Registration writes the plain `ArrayList`
+  under the pool monitor with a volatile completing-flag, but `getConstant
+  (int)`/`size()`/`getConstants()` read it unsynchronized when the flag is
+  false, and the flag check and list read are two separate racy reads - the
+  completion gate narrows the TOCTOU without closing it. Under the JMM a
+  reader can observe a grown array without its element stores or a size
+  without the element write (null/stale constant, NPE downstream). Windowed
+  runtime writers make this ROUTINE, not compiler-phase-only: op execution
+  reads constants by index while another service thread's fiber interns a
+  normalized type. Silent on x86; honest reordering exposure on ARM (this dev
+  host). The frozen snapshot's reader-safety half - immutable frozen base +
+  concurrent append-only runtime annex for windowed interning - discharges
+  it; so would routing every index read through the completion gate or a
+  lock-free array list. Writer-vs-writer registration is safe (monitor +
+  completion futures, ledger row 29).
+- **MUST FIX (fixed same day) - `infoPlaceholder()` identity race.** Plain
+  lazy creation, but `TypeConstant.clearTypeInfoPlaceholder` CASes the slot
+  against `pool.infoPlaceholder()` BY IDENTITY: two racing first builders
+  strand the loser's placeholder in a type's `m_typeinfo` forever
+  ("being built" never clears; `ensureObjectTypeInfo` then reports the
+  spurious root-Object failure). Independently found by the lazy-cache sweep.
+  Master-verbatim shape.
+- **SHOULD FIX - relation cache staleness across invalidation.**
+  `m_mapRelations` writes have no invalidation stamp: a compute in flight
+  across `invalidateTypeInfos` can re-cache a relation derived from
+  pre-invalidation TypeInfo after the clear. Narrow at runtime (native-rebase
+  invalidation does not change isA answers); the dangerous caller is a
+  compiler invalidating a shared upstream pool (scenario c). Stamp the map
+  with the invalidation count or swap-to-fresh instead of clearing in place.
+- **SHOULD FIX - native-rebase visibility.** `MethodStructure.markNative`
+  writes plain `m_fNative`; `buildOptimizedMethodChain` calls
+  `MethodBody.markNative` on bodies shared with unsynchronized raw-chain
+  readers. Transiently a rebased method can look SansCode/non-native to
+  another thread. One-word volatile fixes.
+- **SHOULD FIX - recursive `computeIfAbsent` fragility.** `f_mapRefTypes`
+  and the `ClassComposition` chain caches run full TypeInfo builds inside a
+  `ConcurrentHashMap` mapping function; a nested same-bin lookup means
+  `IllegalStateException: Recursive update` or livelock. No recursive path
+  proven today; replace with get/compute/putIfAbsent.
+- **SHOULD FIX - `setNakedRefType`** is the one pool-shape mutator with no
+  `assertMutableBeforeRuntimePublished` (all writers are link/boot-time
+  today; add the assert for symmetry).
+- **SAFE-DOCUMENTED** (verified): registration writer-vs-writer;
+  `f_implicits`/`f_mapRefTypes` as CHMs; `f_listInvalidated`+volatile count
+  protocol incl. lock ordering; `m_typeinfo` rank-monotonic CAS +
+  per-type synchronized build; consumes/produces monitor protocol;
+  `m_typeNormalized` convergent volatile; optimized-chain volatiles
+  (MethodInfo/PropertyInfo) + windowed builders; `m_setJitPrimitives`
+  (unmodifiable-set publication); `Constant.m_iHash` volatile;
+  manual `m_clz*/m_type*/m_val*` lazy cells (interned-convergent; the
+  `Lazy`-cell rework remains the tabled plan; prewarm-all rejected per
+  ledger row 43); cross-pool completion-future cross-wait (board-owned,
+  transactional-rewrite backlog).
+
+Frozen-pool snapshot verdict, recorded for the board: the snapshot's
+READER-SAFETY half is a MUST (it closes the `f_listConst` race); the full
+frozen-base + runtime-annex + upstream-guard-scope architecture is the SHOULD
+half that also buys the phase split. Minimal freeze set: `f_listConst`, both
+lookup EnumMaps + inner maps, `f_setValidPools`, the manual lazy cells,
+`m_infoPlaceholder`, `m_setJitPrimitives`, `m_typeNakedRef`; runtime-legit
+writers move to the annex (new interning) or stay as already-concurrent side
+tables (invalidation list, `f_implicits`, `f_mapRefTypes`, per-constant
+caches).

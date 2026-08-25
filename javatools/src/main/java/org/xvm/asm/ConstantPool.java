@@ -2717,17 +2717,29 @@ public class ConstantPool
     public TypeInfo infoPlaceholder() {
         TypeInfo info = m_infoPlaceholder;
         if (info == null) {
-            // Keep the placeholder as an ordinary TypeInfoReal so TypeInfoReal can remain final.
-            // The old anonymous subclass only customized toString(); TypeInfoReal now preserves
-            // that observable behavior for Progress.Building placeholders directly.
-            m_infoPlaceholder = info = new TypeInfoReal(
-                typeObject(), 0, null, 0, true, Collections.emptyMap(),
-                Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
-                typeObject(), null, typeObject(),
-                Collections.emptyList(), new ListMap<>(), new ListMap<>(),
-                Collections.emptyMap(), Collections.emptyMap(),
-                Collections.emptyMap(), Collections.emptyMap(),
-                ListMap.EMPTY, null, Progress.Building);
+            // the placeholder must be IDENTITY-STABLE per pool: TypeConstant's
+            // clearTypeInfoPlaceholder CASes the type's info slot against this exact instance,
+            // so two racing first builders creating two placeholders would strand the loser's
+            // placeholder in a type slot forever ("being built" that never clears, surfacing as
+            // the spurious root-Object TypeInfo failure). Volatile field + synchronized create
+            // makes the first instance the only instance.
+            synchronized (this) {
+                info = m_infoPlaceholder;
+                if (info == null) {
+                    // Keep the placeholder as an ordinary TypeInfoReal so TypeInfoReal can
+                    // remain final. The old anonymous subclass only customized toString();
+                    // TypeInfoReal now preserves that observable behavior for Progress.Building
+                    // placeholders directly.
+                    m_infoPlaceholder = info = new TypeInfoReal(
+                        typeObject(), 0, null, 0, true, Collections.emptyMap(),
+                        Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
+                        typeObject(), null, typeObject(),
+                        Collections.emptyList(), new ListMap<>(), new ListMap<>(),
+                        Collections.emptyMap(), Collections.emptyMap(),
+                        Collections.emptyMap(), Collections.emptyMap(),
+                        ListMap.EMPTY, null, Progress.Building);
+                }
+            }
         }
         return info;
     }
@@ -4529,7 +4541,7 @@ public class ConstantPool
     private transient SignatureConstant m_sigEstStrLen;
     private transient SignatureConstant m_sigClose;
     private transient SignatureConstant m_sigValidator;
-    private transient TypeInfo          m_infoPlaceholder;
+    private transient volatile TypeInfo m_infoPlaceholder;
 
     /**
      * Diagnostic publication boundary for late constant registration checks.

@@ -114,6 +114,8 @@ drop branch-doc files, run the row's named test plus
 | M18 | Cloneable retirement (PR 18) | `25371b397`, `0af827c72`, `a837308c6` | Overlaps L10/L14 - shrinks to the structural remainder if those filed first. | PR 18 section | M16 (sealed tree), M17 recommended |
 | L18 | Implicit-identity cache concurrency (`fix/implicit-cache-concurrent`) | Filtered from `8077ad6c0`: the `f_implicits` one-liner + its test (master-form) | One-line field change; no conflict surface. Graduated 2026-08-25 (S19). | S19 | None |
 | L19 | Delegation synthesis assembles before publishing (`fix/delegation-synthesis`) | Filtered from `5d9a5f395`: detached factories, copy-on-write publish primitives, volatile child maps, reworked ensure bodies - WITHOUT the branch-only synthesis window | Additive + two method-body rewrites; needs a filtered patch. Graduated 2026-08-25 (S20). | S20 | None |
+| L20 | Native injection duplicate-service races (issue-first; fix wave parked) | Submissions row 25; no branch fix yet (continuation sites need async-aware CAS design) | Master-verbatim; graduated 2026-08-25 manual lazy-cache completion sweep. | S25 | None |
+| L21 | TypeInfo placeholder identity race (`fix/typeinfo-placeholder-identity`) | 2026-08-25 audit-wave commit: volatile + synchronized DCL in `ConstantPool.infoPlaceholder()` + racing-identity test | One tiny hunk; red-verified vs plain-lazy shape (S26). | S26 | None |
 | M19 | Typed dispatch showcase (PR 19) | `86c89e175` | **DO NOT FILE until explicit approval** (user decision pending). | PR 19 section | None |
 
 ### JIT issue rows (2026-08-25, issue-first: fixes parked for a JIT rebase)

@@ -141,7 +141,9 @@ public abstract class OpInvocable extends Op {
         MethodConstant  idMethod = frame.getConstant(m_nMethodId, MethodConstant.class);
         MethodStructure method   = (MethodStructure) idMethod.getComponent();
 
-        m_constMethod = idMethod; // used by "toString()" only
+        // deliberately NOT cached on this op: decoded ops are shared across containers, and a
+        // runtime write here - even a convergent toString-only one - is the exact pattern the
+        // runtime-op-cache work eradicated; toString falls back to rendering m_nMethodId
 
         if (method != null && method.getAccess() == Access.PRIVATE) {
             chain = new CallChain(method);
