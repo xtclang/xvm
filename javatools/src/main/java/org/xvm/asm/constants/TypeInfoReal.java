@@ -987,7 +987,7 @@ public final class TypeInfoReal
 
     @Override
     public Map<Object, ParamInfo> getTypeParams() {
-        return f_mapTypeParams;
+        return Collections.unmodifiableMap(f_mapTypeParams);
     }
 
     @Override
@@ -997,12 +997,12 @@ public final class TypeInfoReal
 
     @Override
     public Annotation[] getClassAnnotations() {
-        return f_aannoClass;
+        return f_aannoClass.length == 0 ? f_aannoClass : f_aannoClass.clone();
     }
 
     @Override
     public Annotation[] getMixinAnnotations() {
-        return f_aannoMixin;
+        return f_aannoMixin.length == 0 ? f_aannoMixin : f_aannoMixin.clone();
     }
 
     @Override
@@ -1022,7 +1022,7 @@ public final class TypeInfoReal
 
     @Override
     public List<Contribution> getContributionList() {
-        return f_listProcess;
+        return Collections.unmodifiableList(f_listProcess);
     }
 
     @Override
@@ -1062,7 +1062,7 @@ public final class TypeInfoReal
 
     @Override
     public Map<PropertyConstant, PropertyInfo> getProperties() {
-        return f_mapProps;
+        return Collections.unmodifiableMap(f_mapProps);
     }
 
     @Override
@@ -1076,7 +1076,7 @@ public final class TypeInfoReal
 
     @Override
     public Map<Object, PropertyInfo> getVirtProperties() {
-        return f_mapVirtProps;
+        return Collections.unmodifiableMap(f_mapVirtProps);
     }
 
     @Override
@@ -1354,7 +1354,7 @@ public final class TypeInfoReal
 
     @Override
     public Map<MethodConstant, MethodInfo> getMethods() {
-        return f_mapMethods;
+        return Collections.unmodifiableMap(f_mapMethods);
     }
 
     @Override
@@ -1368,7 +1368,7 @@ public final class TypeInfoReal
 
     @Override
     public Map<Object, MethodInfo> getVirtMethods() {
-        return f_mapVirtMethods;
+        return Collections.unmodifiableMap(f_mapVirtMethods);
     }
 
     @Override

@@ -45,6 +45,37 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class TypeInfoMemberOwnershipTest {
     /**
+     * The TypeInfo member maps are the central shared runtime metadata, container-visible and
+     * cached; the old getters handed out the live internal maps with zero enforcement, so one
+     * stray write would corrupt member lookup for every user of that TypeInfo. Every reader was
+     * verified read-only (array-exposure audit), so the getters now return unmodifiable views -
+     * mutation through an accessor must throw instead of corrupting shared metadata. Red on the
+     * live-map shape.
+     */
+    @Test
+    public void memberMapGettersAreReadOnlyViews() {
+        var file   = new FileStructure("test");
+        var struct = file.getModule().createClass(Access.PUBLIC, Format.CLASS, "Test", null);
+
+        var structProperty = struct.createProperty(false, Access.PUBLIC,
+                Access.PUBLIC, struct.getCanonicalType(), "value");
+        var idProperty = structProperty.getIdentityConstant();
+        var body = new PropertyBody(structProperty, Implementation.Explicit, null,
+                structProperty.getType(), false, true, false, Effect.None, Effect.None,
+                true, false, null, null);
+        var property = PropertyInfo.create(body, 0);
+        var child    = new ChildInfo(struct.createClass(Access.PUBLIC, Format.CLASS, "Child", null));
+        var info     = createTypeInfo(struct, idProperty, property, child);
+
+        assertThrows(UnsupportedOperationException.class, () -> info.getProperties().clear());
+        assertThrows(UnsupportedOperationException.class, () -> info.getVirtProperties().clear());
+        assertThrows(UnsupportedOperationException.class, () -> info.getMethods().clear());
+        assertThrows(UnsupportedOperationException.class, () -> info.getVirtMethods().clear());
+        assertThrows(UnsupportedOperationException.class, () -> info.getTypeParams().clear());
+        assertThrows(UnsupportedOperationException.class, () -> info.getContributionList().clear());
+    }
+
+    /**
      * PropertyInfo and ChildInfo objects must be copied per TypeInfo owner. The old attachment
      * model could let the first owner mutate shared source metadata and leak it to later owners.
      */
