@@ -45,9 +45,14 @@ transaction disposition is unknown.
 **Master evidence:** `origin/master:lib_jsondb/src/main/x/jsondb/Client.x:1427`
 sets the result to `DatabaseError`; line 1430 has `catch (Exception ignore) {}`.
 
-**Failure mode:** The client reports an ordinary database error after the commit
-path failed, even if rollback also failed. A database health/recovery decision
-cannot distinguish "clean rollback" from "commit failed and rollback failed".
+**Failure mode:** The commit path is already in an exceptional state when it
+tries to compensate with `txManager.rollback(writeId_)`. If that rollback also
+throws, jsondb is no longer merely reporting "commit failed"; it no longer knows
+whether the write was committed, rolled back, or left for TxManager recovery.
+That second failure is the signal a health check, recovery tool, or operator
+needs in order to treat the transaction as unknown-disposition instead of a
+cleanly rolled-back commit failure. Master deletes that signal with an empty
+catch block, so the caller gets the same `DatabaseError` shape for both states.
 
 **Minimal master-portable fix strategy:** Keep result, close, and `rootTx`
 clearing unchanged. Log the rollback failure with the original commit failure as
@@ -59,15 +64,29 @@ context.
 diff --git a/lib_jsondb/src/main/x/jsondb/Client.x b/lib_jsondb/src/main/x/jsondb/Client.x
 @@
 -                    } catch (Exception ignore) {}
-+                    } catch (Exception rollbackFailure) {
-+                        log(rollbackFailure, $"Rollback after failed commit also failed: {e}");
++                    } catch (Exception e2) {
++                        // a rollback failure after a commit failure means this client no longer
++                        // knows the transaction's disposition; the TxManager owns recovery, but
++                        // the secondary failure is exactly the evidence that health/recovery
++                        // needs, so it must not disappear into an ignored catch
++                        log($"Exception during rollback after failed commit of {this}: {e2} (commit failure: {e})");
 +                    }
 ```
 
-**Tests to add/run on master:** Add an XTC unit or service test that forces
-commit failure and rollback failure. Behavioral red on master: rollback failure
-is not observable. Run `./gradlew xdk:installDist` after the focused module
-test, because the change is in XTC library code.
+**Tests to add/run on master:** `JsondbClientRollbackFailureTest.commitFailureDoesNotSwallowRollbackFailure()`
+is a deterministic source-shape regression test for this exact error-path
+contract. It is red on the old/master shape because the rollback region contains
+`catch (Exception ignore) {}` and no preserved commit/rollback context; it is
+green after the fix. Run
+`./gradlew :javatools:test --tests org.xvm.lib.jsondb.JsondbClientRollbackFailureTest --rerun-tasks --no-build-cache`
+and then `./gradlew xdk:installDist --rerun-tasks --no-build-cache`, because the
+behavioral fix is in XTC library source.
+
+**Master dry-run status:** Source-only patch applies cleanly to
+`origin/master` at `61e555a68cd82a866f82aea40a3bb97a424a3809`. A full
+cherry-pick of branch seed `a935bc553` conflicts only because the same commit
+also touched branch-only reentrancy docs that do not exist on master; file only
+the `lib_jsondb` hunk plus the focused Java regression test.
 
 **Dependencies/order:** None. This is the smallest opener.
 

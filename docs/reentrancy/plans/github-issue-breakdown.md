@@ -278,7 +278,7 @@ standalone PR with its red-on-master test:
 
 | Fix | Single-threaded reachable on master? | Proof |
 | --- | --- | --- |
-| jsondb rollback failure retention (single hunk, applies verbatim) | Yes - any failed commit whose compensation also fails | ledger row 34 |
+| jsondb rollback failure retention (single hunk, source-only applies cleanly) | Yes - any failed commit whose compensation also fails | `JsondbClientRollbackFailureTest`, ledger row 34 |
 | Requested module loads preserve cause (`ModuleLoadException`) | Yes - any corrupt `.xtc` file | `ModuleRepositoryLoadFailureTest` |
 | Method op-assembly failure terminal (no zero-op serialization) | Yes - any compiler defect at emission | `MethodStructureAssemblyFailureTest` |
 | Compiler codegen failure terminal (no catch-Throwable-continue) | Yes | `CompilerCodegenFailureTest` |
