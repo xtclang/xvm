@@ -64,6 +64,66 @@ semantics, and clear owner/performance reasoning.
 | 18 | Retire java.lang.Cloneable outside two disciplined islands | Copy constructors replace Object.clone(); fixes two inner-class outer-pointer defects the mechanism itself caused. | PR 16 (sealed tree enforces copy-path completeness); PR 17 recommended first |
 | 19 | Typed dispatch showcase: three exhibits, zero behavior change | The deliberately small opener: stringly-typed dispatch, a tolerant-default format switch, and 26 blind casts each replaced by what the language does for free. Candidate FIRST PR of the series - it sells the whole modernization direction on one screen of diff. | None; strongest with the stage-0 slice of PR 16 folded in (the two sealed families exhibit 2 switches over) |
 
+## PR Launch Plan (2026-08-25)
+
+Everything below is prepared to "ready-to-file": the human does every branch
+creation, cherry-pick, push, and PR/issue submission. Nothing has left this
+machine. Dry-run baseline: `origin/master` at
+`61e555a68cd82a866f82aea40a3bb97a424a3809`, re-verified 2026-08-25 by
+scratch-worktree cherry-picks (no drift since the readiness matrix was
+written). Issue bodies live in `master-issue-submissions.md` (cited as "body
+SN" below); PR descriptions for the modernization wave live in this document's
+PR sections.
+
+Standing rules: never include branch-only `docs/reentrancy` files in a master
+filing (they delete/modify-conflict by design); keep each test with the source
+hunk it proves; keep provenance hashes in the PR body.
+
+### Launch Queue
+
+Defect-first order. "Clean" means the seed's source/test files cherry-pick
+onto the baseline without conflict; conflicts and adaptations are named
+explicitly. The human action for every row is: create the named branch from
+`origin/master`, cherry-pick (or hand-apply the cited master-form hunk),
+drop branch-doc files, run the row's named test plus
+`./gradlew xdk:installDist`, push, and open the PR with the cited body.
+
+| # | Title (suggested branch) | Branch commits, in order | Dry-run result | Body | Depends on |
+| --- | --- | --- | --- | --- | --- |
+| L1 | jsondb rollback failure retention (`fix/jsondb-rollback-evidence`) | `a935bc553`, `5b9d577da` | Clean (verified: both apply verbatim). | S1 | None |
+| L2 | Reflection invoke tuple aliasing (`fix/reflection-invoke-aliasing`) | `ff8cc479a` | Clean. | S14 | None |
+| L3 | Short-hand property Parameter sharing (`fix/shorthand-parameter-copy`) | `f835b3693` | Clean. | S15 | None |
+| L4 | Module load cause preservation (`fix/module-load-cause`) | `979784a1a` | Clean (additive `ModuleLoadException` rides in the seed). | S2 | None |
+| L5 | Method op-assembly failure terminal (`fix/op-assembly-terminal`) | `536067f5e` | Clean. | S3 | None |
+| L6 | Compiler codegen failure terminal (`fix/codegen-terminal`) | `b00654356` | Clean. | S4 | None |
+| L7 | Startup/worker failure causes (`fix/runtime-failure-causes`) | `3e09abc32`, then `796f13465` | Clean in that order (`796f13465` edits the test `3e09abc32` adds). | S8 | None |
+| L8 | Raw file submit observes write failure (`fix/raw-submit-observed`) | `8a45ba708` | Merges clean but does NOT compile alone: needs L7's `recordRuntimeFailure` channel; adapt `frame.container()`/`makeHandle(frame, ...)` and the test literals to master forms (S5 carries the master-form hunk). | S5 | L7 |
+| L9 | JIT failure propagation (`fix/jit-failure-propagation`) | `33323ffe1`, then `f4744cb1e` | Clean in that order. | S7 | None |
+| L10 | MethodStructure.Source re-owner (`fix/method-source-outer`) | `25371b397` | Clean. | S17 | None; pairs naturally with L14 |
+| L11 | Future.and double-read and async failure (`fix/future-and-inputs`) | `6496f5303` | `xFuture.java` conflicts; hand-apply the master-form hunk in S6 (master `Utils.translate` is 1-arg). Test adds clean. | S6 | None |
+| L12 | Timer callback registry and rollback (`fix/timer-callback-registry`) | `5311da1ac`, then `26ce54466` | Both conflict in `xLocalClock.java`/`xNanosTimer.java` (file rows 9+10 as one PR); `xRTServer.java` and the test's add-form are clean. | S9+S10 | None |
+| L13 | Hash/equality contracts (`fix/hash-equality-contracts`) | Filtered: `Register.java`, `VersionTree.java`, `ChildInfo.java` + `RegisterHashCodeTest`/`VersionTest` from `9456d6727`; `MethodBody.java` from `a11765c86` | The four filtered source files merge clean individually; `MethodInfoTest` needs a master add-form (branch file assumes branch APIs). | S11 | None |
+| L14 | Contribution re-owner on body copy (`fix/contribution-outer`) | Filtered re-owner hunks from `0af827c72` | `Component.java`/`MethodStructure.java` conflict; extract only the contribution re-owner hunks per S16. | S16 | None; pairs naturally with L10 |
+| L15 | Handle view lifecycle (`fix/handle-view-lifecycle`) | `c5c40d443`, `d2165e4f8`, `f4df60ed1`, `7ce5662d1` | Only `ObjectHandle.java` (in `d2165e4f8`) conflicts; other three seeds clean. | S12 | None |
+| L16 | HandleConstant owner guard (`fix/handle-constant-guard`) | `632cac927` | `HandleConstant.java` conflicts; both tests add clean (owner-guard test may need master API adaptation). | S13 | None |
+| L17 | Finalizer chain tail-append (`fix/finalizer-chain-append`) | `c621b1dca` | `xRTFunction.java` conflicts (context drift only; the buggy shape is verbatim on master) - hand-apply the master-form hunk in S18; test needs the one-line `new NativeContainer(...)` adaptation. | S18 | None |
+| H1 | Fatal `this-escape` + `fallthrough` lint gates (`hardening/lint-gates`) | No single seed: extract the small convention-plugin additions from `org.xtclang.build.java.gradle.kts` plus the 35 reviewed suppressions/markers | Fresh hunk; no conflicts expected (build-logic file). State explicitly: zero live fallthrough bugs found; this is future-proofing. | Category H table | File after the Category A wave |
+| H2 | Read-only accessor contracts survive `-da` (`hardening/readonly-views`) | `cb21e0b96` | Clean (verified 2026-08-25: all six sources + `ReadOnlyViewContractTest` apply without conflict). | PR 6/14 row in the 2026-08-24 map | None |
+| M16 | Sealed hierarchies (PR 16) | `e59d4f82d`, `dc39387bd`, `298067019`, `cace6570a`, `07ed937b3`, `ab5788584`, `78111b85f` | Not dry-run; expect real conflicts - replay as a fresh series on master per the PR 16 section. | PR 16 section | After Category A wave lands |
+| M17 | View-clone guards + default deny (PR 17) | `029ff4138`, `0bbfc98c4`, `db4ae7900`, `3785afdc8`, `c621b1dca`, `84bf6b39c` | Overlaps L15/L17 - if those were filed as defect PRs, this PR shrinks to the structural remainder (default-deny base, SocketHandle holder, mask return). | PR 17 section | L15/L17 first (or subsume them) |
+| M18 | Cloneable retirement (PR 18) | `25371b397`, `0af827c72`, `a837308c6` | Overlaps L10/L14 - shrinks to the structural remainder if those filed first. | PR 18 section | M16 (sealed tree), M17 recommended |
+| M19 | Typed dispatch showcase (PR 19) | `86c89e175` | **DO NOT FILE until explicit approval** (user decision pending). | PR 19 section | None |
+
+### What Blocks Filing (User Decisions Only)
+
+1. M19 needs the explicit go/no-go the user reserved.
+2. L8 needs a decision: fold into L7, or inline a minimal recorder and file
+   standalone.
+3. L12 pairs rows 9+10 into one PR; confirm that packaging.
+4. Whether L10+L14 file as one "hidden outer re-owner" PR or two.
+5. The Category H gates (H1) change build behavior for every contributor;
+   file when the team is ready for fatal lint.
+
 ## PR 19: Typed Dispatch Showcase (Candidate Opener)
 
 DO NOT FILE without explicit approval; this section is the finished description
@@ -239,6 +299,27 @@ review story; a PR built from it cherry-picks exactly these commits.
 | PR 18 | `25371b397`, `0af827c72` | Oracle's own guidance, executed: copy constructors replace Object.clone() everywhere it ever corrupted state. Two defects only the mechanism could cause - inner classes whose clones kept answering with the SOURCE owner (MethodStructure.Source pool binding, Contribution.getComponent()) - are fixed by re-binding constructors that clone() cannot express, with a red-on-master test and a per-structure field ratchet. Depends on PR 16: cloneBody() is abstract over the sealed tree, so a new structure kind without a copy path does not compile. |
 | PR 19 | `86c89e175` | The typed-dispatch showcase and candidate series opener: stringly dispatch, a tolerant-default format switch, and 26 blind casts each replaced by the language-provided construct; 59 casts deleted, zero behavior change, first-ever folding unit tests. Full ready-to-paste description in the PR 19 section above. |
 | PR 8 (existing, extend) | `WorldSnapshotDemoTest` (with slice-1 world snapshot) | Runnable sequential- and multi-container world-dump demos with printed walkthrough output (`-Porg.xtclang.java.test.stdout=true`); shows the snapshot format, the ownership sweep, and the retained-container leak signal. |
+
+### 2026-08-25 Wave: Commits Since The Last Origin Push
+
+Audited against `git log origin/lagergren/lazy-instance..HEAD` (12 commits
+including the docs commit that records this audit). Every commit is assigned
+to exactly one PR slice or marked branch-bookkeeping.
+
+| Commit | Assignment |
+| --- | --- |
+| `ed7bb8e9a` Add meeting brief on runtime reuse problems and the staged plan | Branch-bookkeeping (presentation.md only). |
+| `432a82ae1` Link every presentation exhibit to pinned master source | Branch-bookkeeping (presentation.md only). |
+| `4740995de` Make runtime pool publication guard unconditional | ConstantPool ownership wave (PR 10 family, registration/publication guard slice): the always-on runtime publication marker, board row "runtime-published registration". |
+| `ca05695f8` Document world diagnostics and master issue drafts | Branch-bookkeeping (docs only). |
+| `866b19c4b` Fix TypeConstant metadata cache keys | Shared runtime/ASM cache hardening slice (PR 3 family): relation-cache contextual keys and access-qualified formal-usage keys, with `TypeConstantOwnerApiTest` additions. |
+| `84bf6b39c` Preserve socket mask after connect | PR 17 (handle view/lifecycle family): the `finishConnect` mask-return fix riding with the `3785afdc8` SocketHandle shared holder. |
+| `a837308c6` Close clone residue audit | PR 18 (clone retirement): removes the stale branch-internal `Component.Contribution.clone()` override (the Category C row below) plus its `ComponentBodyCopyTest` pin. |
+| `4d0b2e3a3` Record JIT and compiler audit closures | Branch-bookkeeping (docs only). |
+| `8cd0d92ac` Fence runtime-published pool mutation | ConstantPool ownership wave (PR 10 family): destructive-phase guards (recursive registration pass, module replacement, disassembly reload, TypeInfo invalidation) with `ConstantPoolDiagnosticsTest` additions. |
+| `9c5e351f3` Publish normalized type cache safely | Shared runtime/ASM cache hardening slice (PR 3 family): the `TypeConstant.m_typeNormalized` volatile publication one-liner already named in the folding guidance. |
+| `5b9d577da` Add jsondb rollback failure regression test | Category A row 1 (jsondb rollback): the test for fix `a935bc553`; both cherry-pick cleanly onto `origin/master` `61e555a68` (verified 2026-08-25). |
+| `4d549ae9e` Record global backlog and correct master issue patch material | Branch-bookkeeping (docs only). |
 
 ### Commit Folding Guidance
 
