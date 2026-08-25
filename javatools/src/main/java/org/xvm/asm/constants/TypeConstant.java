@@ -3555,7 +3555,7 @@ public abstract sealed class TypeConstant
 
             Map<PropertyConstant, PropertyInfo> mapContribProps;
             Map<MethodConstant  , MethodInfo  > mapContribMethods;
-            ListMap<String      , ChildInfo   > mapContribChildren;
+            Map<String          , ChildInfo   > mapContribChildren;
 
             TypeConstant     typeContrib   = contrib.getTypeConstant();
             Composition      composition   = contrib.getComposition();
@@ -5031,7 +5031,7 @@ public abstract sealed class TypeConstant
             Map<Object          , ParamInfo>    mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant  , MethodInfo>   mapMethods,
-            ListMap<String, ChildInfo>          mapChildren,
+            Map<String, ChildInfo>              mapChildren,
             List<PropertyConstant>              listExplode,
             Map<Object, PropertyInfo>           mapVirtProps,
             int                                 nBasePropRank,
@@ -5104,7 +5104,7 @@ public abstract sealed class TypeConstant
             Map<Object          , ParamInfo>    mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant  , MethodInfo>   mapMethods,
-            ListMap<String, ChildInfo>          mapChildren,
+            Map<String, ChildInfo>              mapChildren,
             List<PropertyConstant>              listExplode,
             Map<Object, PropertyInfo>           mapVirtProps,
             int                                 nBasePropRank,

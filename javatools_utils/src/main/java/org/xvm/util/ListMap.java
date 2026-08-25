@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -42,6 +43,17 @@ public class ListMap<K,V>
      */
     public ListMap(ListMap<K, V> map) {
         m_list = new ArrayList<>(map.m_list);
+    }
+
+    /**
+     * Construct a ListMap with the contents of another map, preserving that map's iteration
+     * order. The keys are assumed unique in the source, so entries are appended directly.
+     */
+    public ListMap(Map<K, V> map) {
+        m_list = new ArrayList<>(map.size());
+        for (Map.Entry<K, V> entry : map.entrySet()) {
+            m_list.add(new SimpleEntry<>(entry.getKey(), entry.getValue()));
+        }
     }
 
     @Override

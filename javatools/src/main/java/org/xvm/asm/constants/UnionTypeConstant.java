@@ -744,13 +744,13 @@ public final class UnionTypeConstant
     }
 
     @Override
-    protected ListMap<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
+    protected Map<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
         if (info1 == null || info2 == null) {
             return ListMap.EMPTY;
         }
 
-        ListMap<String, ChildInfo> map1     = info1.getChildInfosByName();
-        ListMap<String, ChildInfo> map2     = info2.getChildInfosByName();
+        Map<String, ChildInfo>     map1     = info1.getChildInfosByName();
+        Map<String, ChildInfo>     map2     = info2.getChildInfosByName();
         ListMap<String, ChildInfo> mapMerge = new ListMap<>();
         for (Map.Entry<String, ChildInfo> entry : map1.entrySet()) {
             String    sChild = entry.getKey();

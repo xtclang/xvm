@@ -87,13 +87,13 @@ public final class TypeInfoReal
             TypeConstant                        typeRebases,
             TypeConstant                        typeInto,
             List<Contribution>                  listProcess,
-            ListMap<IdentityConstant, Origin>   listmapClassChain,
-            ListMap<IdentityConstant, Origin>   listmapDefaultChain,
+            Map<IdentityConstant, Origin>       listmapClassChain,
+            Map<IdentityConstant, Origin>       listmapDefaultChain,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant, MethodInfo>     mapMethods,
             Map<Object, PropertyInfo>           mapVirtProps,
             Map<Object, MethodInfo>             mapVirtMethods,
-            ListMap<String, ChildInfo>          mapChildren,
+            Map<String, ChildInfo>              mapChildren,
             Set<TypeConstant>                   setDepends,
             Progress                            progress) {
         assert type                 != null;
@@ -285,7 +285,7 @@ public final class TypeInfoReal
      * Ensure that every ChildInfo in the specified map belongs exclusively to this TypeInfo.
      */
     private ListMap<String, ChildInfo> ensureChildOwnership(
-            ListMap<String, ChildInfo> mapChildren) {
+            Map<String, ChildInfo> mapChildren) {
         IdentityHashMap<ChildInfo, ChildInfo> mapChildCopies = new IdentityHashMap<>();
         ListMap<String, ChildInfo>             mapOwned       = new ListMap<>(mapChildren.size());
         for (Entry<String, ChildInfo> entry : mapChildren.entrySet()) {
@@ -1026,13 +1026,13 @@ public final class TypeInfoReal
     }
 
     @Override
-    public ListMap<IdentityConstant, Origin> getClassChain() {
-        return f_listmapClassChain;
+    public Map<IdentityConstant, Origin> getClassChain() {
+        return Collections.unmodifiableMap(f_listmapClassChain);
     }
 
     @Override
-    public ListMap<IdentityConstant, Origin> getDefaultChain() {
-        return f_listmapDefaultChain;
+    public Map<IdentityConstant, Origin> getDefaultChain() {
+        return Collections.unmodifiableMap(f_listmapDefaultChain);
     }
 
     @Override
@@ -1163,7 +1163,7 @@ public final class TypeInfoReal
         throw new IllegalStateException();
     }
 
-    private int indexOfClass(ListMap<IdentityConstant, Origin> listmap, IdentityConstant idClass) {
+    private int indexOfClass(Map<IdentityConstant, Origin> listmap, IdentityConstant idClass) {
         int i = 0;
         for (IdentityConstant id : listmap.keySet()) {
             if (id.equals(idClass)) {
@@ -2149,8 +2149,8 @@ public final class TypeInfoReal
     }
 
     @Override
-    public ListMap<String, ChildInfo> getChildInfosByName() {
-        return f_mapChildren;
+    public Map<String, ChildInfo> getChildInfosByName() {
+        return Collections.unmodifiableMap(f_mapChildren);
     }
 
     private ConstantPool pool() {
@@ -2494,12 +2494,12 @@ public final class TypeInfoReal
     /**
      * The potential call chain of classes.
      */
-    private final ListMap<IdentityConstant, Origin> f_listmapClassChain;
+    private final Map<IdentityConstant, Origin> f_listmapClassChain;
 
     /**
      * The potential default call chain of interfaces.
      */
-    private final ListMap<IdentityConstant, Origin> f_listmapDefaultChain;
+    private final Map<IdentityConstant, Origin> f_listmapDefaultChain;
 
     /**
      * The properties of this type, indexed by PropertyConstant. Constants, private properties, and

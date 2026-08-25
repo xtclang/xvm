@@ -278,12 +278,12 @@ public abstract sealed class TypeInfo
     /**
      * @return the potential call chain of classes
      */
-    public abstract ListMap<IdentityConstant, Origin> getClassChain();
+    public abstract Map<IdentityConstant, Origin> getClassChain();
 
     /**
      * @return the potential default call chain of interfaces
      */
-    public abstract ListMap<IdentityConstant, Origin> getDefaultChain();
+    public abstract Map<IdentityConstant, Origin> getDefaultChain();
 
     /**
      * Calculate a child type for a given name.
@@ -701,7 +701,7 @@ public abstract sealed class TypeInfo
     /**
      * @return a map of information about child types of this type, keyed by name
      */
-    public abstract ListMap<String, ChildInfo> getChildInfosByName();
+    public abstract Map<String, ChildInfo> getChildInfosByName();
 
     @Override
     public String toString() {

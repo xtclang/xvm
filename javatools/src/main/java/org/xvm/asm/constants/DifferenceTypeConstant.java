@@ -381,7 +381,7 @@ public final class DifferenceTypeConstant
     }
 
     @Override
-    protected ListMap<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
+    protected Map<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
         if (info1 == null) {
             return ListMap.EMPTY;
         }
@@ -390,8 +390,8 @@ public final class DifferenceTypeConstant
             return info1.getChildInfosByName();
         }
 
-        ListMap<String, ChildInfo> map1     = info1.getChildInfosByName();
-        ListMap<String, ChildInfo> map2     = info2.getChildInfosByName();
+        Map<String, ChildInfo>     map1     = info1.getChildInfosByName();
+        Map<String, ChildInfo>     map2     = info2.getChildInfosByName();
         ListMap<String, ChildInfo> mapMerge = new ListMap<>(map1);
 
         mapMerge.keySet().removeAll(map2.keySet());

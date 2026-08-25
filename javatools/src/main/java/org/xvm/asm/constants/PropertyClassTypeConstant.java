@@ -319,7 +319,7 @@ public final class PropertyClassTypeConstant
             TypeConstant                        typeContrib;
             Map<PropertyConstant, PropertyInfo> mapContribProps;
             Map<MethodConstant  , MethodInfo  > mapContribMethods;
-            ListMap<String      , ChildInfo   > mapContribChildren;
+            Map<String          , ChildInfo   > mapContribChildren;
 
             boolean fSelf = i == 0;
             if (fSelf) {

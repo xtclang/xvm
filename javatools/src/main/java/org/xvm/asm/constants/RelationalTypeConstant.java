@@ -575,7 +575,7 @@ public abstract sealed class RelationalTypeConstant
      *
      * @return a merged ListMap
      */
-    protected abstract ListMap<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs);
+    protected abstract Map<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
     /**
      * Produce a set of the types the [incomplete] TypeInfo for this type depends on.

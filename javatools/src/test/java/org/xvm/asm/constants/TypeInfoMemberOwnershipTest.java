@@ -73,6 +73,9 @@ public class TypeInfoMemberOwnershipTest {
         assertThrows(UnsupportedOperationException.class, () -> info.getVirtMethods().clear());
         assertThrows(UnsupportedOperationException.class, () -> info.getTypeParams().clear());
         assertThrows(UnsupportedOperationException.class, () -> info.getContributionList().clear());
+        assertThrows(UnsupportedOperationException.class, () -> info.getClassChain().clear());
+        assertThrows(UnsupportedOperationException.class, () -> info.getDefaultChain().clear());
+        assertThrows(UnsupportedOperationException.class, () -> info.getChildInfosByName().clear());
     }
 
     /**
