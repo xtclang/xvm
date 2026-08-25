@@ -1966,6 +1966,10 @@ runtime/ASM manual-lazy audit:
   copies clear it. The old cache could be correct inside one pool and still be
   wrong after `Constant.adoptedBy(...)`, because the shallow clone copied the
   already-computed source-pool path literal.
+- `TypeConstant.m_typeNormalized` is now a volatile owner-local normalized-type
+  cache. The old value is immutable and duplicate first computation is benign,
+  but runtime/type metadata paths can read it after publication, so the cached
+  reference needs a Java memory-model publication edge.
 - `_native:fs.OSFileNode.created` is no longer `@Lazy`. Native file nodes are
   owned by the native `OSStorage` service, but the getter can execute in an
   application container. The old lazy property cached an application-owned
@@ -1976,6 +1980,8 @@ runtime/ASM manual-lazy audit:
 that adoption preserves caching in the destination pool without reusing the
 source-pool path constant. `manualTests:runDirectSequenceStress` with
 `TestFiles` verifies the native file-node change under ownership validation.
+`TypeConstantOwnerApiTest.normalizedTypeCacheIsVolatile()` fails on the old
+plain-field shape and guards the normalized-type cache publication rule.
 
 ### Constructor-Published Native Template `INSTANCE`
 

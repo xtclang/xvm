@@ -571,8 +571,8 @@ Recommended guard/fix: classify each cache as immutable-after-compute,
 duplicate-compute-ok, or single-owner-only. Use `volatile`, `ConcurrentMap`, or
 explicit owner locks for runtime-visible caches, and keep runtime handles keyed
 by container/pool rather than by a potentially shared type object. The Type
-handle cache now follows this rule; relation, consumes/produces, normalized, and
-JIT-name helper caches remain separately audited.
+handle cache, relation/formal usage maps, and normalized-type cache now follow
+this rule; JIT-name helper caches remain separately audited.
 
 ### Live runtime handles are stored in constants
 

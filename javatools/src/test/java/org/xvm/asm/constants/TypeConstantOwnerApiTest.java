@@ -108,6 +108,18 @@ public class TypeConstantOwnerApiTest {
         assertEquals(2, relationCacheSize(typeRight));
     }
 
+    /**
+     * Normalization is immutable owner-local metadata, but the cache is reachable from runtime
+     * type-info paths. The old plain field had no publication edge; the replacement deliberately
+     * keeps benign duplicate computation while safely publishing the completed normalized type.
+     */
+    @Test
+    public void normalizedTypeCacheIsVolatile() throws Exception {
+        Field field = TypeConstant.class.getDeclaredField("m_typeNormalized");
+
+        assertTrue(Modifier.isVolatile(field.getModifiers()));
+    }
+
     @SuppressWarnings("unchecked")
     private static ScopedValue<TypeConstant> relationContext() throws ReflectiveOperationException {
         Field field = TypeConstant.class.getDeclaredField("s_context");

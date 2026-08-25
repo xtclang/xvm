@@ -249,7 +249,7 @@ Use this as the first pass when preparing actual PR branches from `master`.
 | Ambient current-pool removal | `be0270e0d`, `e856d85ce`, `d58ebfea0`, `5d5773979`, `5fce7b9ae`, `4c6521dd9`, `c93b5ad61`, `2716435f1`, `84fa61534` | Constant adoption, clone/copy fixes, JIT `Ctx.Current` policy |
 | Constant adoption hardening | `09f244211`, `e569d27db`, `e6f78a210`, `d1d0683e3`, `a0c1fe936` | Parameter/method clone fixes and `ObjectHandle.cloneAs(...)` design |
 | ConstantPool registration publication guard | Current registration-completion guard wave | Clone-free adoption, runtime pool freeze, and the later private transaction/worklist rewrite |
-| Shared runtime/ASM cache hardening | Runtime op-cache commits, `JumpNFirst` atomic state, `JumpNSample`, guard descriptor/process cleanup, `MethodStructure.Code` first-publication diagnostics, and the `TypeConstant` TypeHandle owner-cache slice | Native-template `INSTANCE` migration, enum lifecycle state, broad ConstantPool freeze, full immutable `ResolvedCode` refactor |
+| Shared runtime/ASM cache hardening | Runtime op-cache commits, `JumpNFirst` atomic state, `JumpNSample`, guard descriptor/process cleanup, `MethodStructure.Code` first-publication diagnostics, the `TypeConstant` TypeHandle owner-cache slice, and the `TypeConstant.m_typeNormalized` publication slice | Native-template `INSTANCE` migration, enum lifecycle state, broad ConstantPool freeze, full immutable `ResolvedCode` refactor |
 | Parameter, method, and handle-copy fixes | `7f82e0a1e`, `ed7220bee`, the `GenericHandle.maskAs(...)` cross-owner guard slice, and the same-owner `GenericHandle.cloneAs(...)` inflated-ref backing slice | Constant adoption validator, broad compiler clone cleanup, base `ObjectHandle.cloneAs(...)` subclass audit |
 | Constructor-escape removal in shared ASM/runtime | `1249e2a0f`, `47d7ab30e`, `93189541f`, `16915ebe7`, `7b7fc2036`, `70bf202ef` where source areas match | JIT constructor escapes and compiler/parser-only cleanup |
 | Runtime failure propagation | MainContainer cause-preservation wave, worker terminal-failure channel, op-loop VM-defect propagation, `Future.and` completion failure handling, and raw file submit failure observation | Broad exception hygiene |
@@ -1079,6 +1079,8 @@ sets.
   names.
 - Replace the `TypeConstant` recursion diagnostic `HashSet` with a concurrent
   process-wide diagnostic set.
+- Safely publish the owner-local `TypeConstant.m_typeNormalized` cache with a
+  volatile reference while preserving benign duplicate first computation.
 - Safely publish optimized `MethodInfo` and `PropertyInfo` runtime chains,
   preserving the existing top-level cache shape while preventing partially
   built arrays and nested-property-id cache poisoning.

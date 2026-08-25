@@ -72,7 +72,7 @@ explicit owner APIs, and typed runtime accessors.
 | `org.xvm.asm.ConstantPoolDiagnosticsTest` | Current-pool assertion/removal APIs, `xvm.asm.validateConstantPoolCurrentScope`, the always-on runtime publication marker, and destructive-phase publication guards. `publicationMarkerIsInstalledByDefault()` is red on the old property-gated shape because no marker is installed in normal runtime mode; the `runtimePublishedPoolRejects*` tests are red on the old register-only guard because write/replace/invalidate operations keep mutating after publication. |
 | `org.xvm.asm.ConstantPoolRegistrationDeadlockTest` | Registration-completion guard (branch-only). Red on the branch's pre-fix guard shape, which awaited another thread's registration completion inside the pool monitor and deadlocked the pool; master has no completion guard to deadlock. |
 | `org.xvm.asm.constants.MethodInfoTest` | `MethodInfo.create(...)` factory and owned-body model. `owningFreshBodyDoesNotFabricateSelfTarget()` is additionally red on the branch's own broken owned-copy shape (post-`93189541f`), where fresh bodies gained fabricated self targets that corrupted union/difference TypeInfo merges and broke the XDK build at lib_json. |
-| `org.xvm.asm.constants.TypeConstantOwnerApiTest` | Explicit-pool covariance/contravariance APIs. |
+| `org.xvm.asm.constants.TypeConstantOwnerApiTest` | Explicit-pool covariance/contravariance APIs. `normalizedTypeCacheIsVolatile()` is also red on the old branch shape when only the production `TypeConstant` fix is stashed: the class compiles and the reflection assertion fails because `m_typeNormalized` is a plain field. |
 | `org.xvm.asm.constants.TypeInfoMemberOwnershipTest` | `PropertyInfo.create(...)` factory and owner-copy model. |
 | `org.xvm.runtime.ClassCompositionLateRegistrationTest` | Late-registration diagnostic API. |
 | `org.xvm.runtime.ClassCompositionSafePublicationTest` | Native-container factory and branch field-publication shape. |
@@ -178,6 +178,13 @@ boolean helper values are observed by every thread. This is not a heavy
 end-to-end crash reproducer, but it is the right proof for the defect: the old
 code lacked a Java memory-model publication edge around owner-pool helper
 values.
+
+`TypeConstantOwnerApiTest.normalizedTypeCacheIsVolatile()` closes the matching
+`TypeConstant.m_typeNormalized` publication hole. With the test left in place
+and only the production `TypeConstant` fix stashed, the old shape compiled and
+failed behaviorally at the volatility assertion; the fixed shape preserves
+duplicate first computation while safely publishing the completed immutable
+normalized type.
 
 `ClassCompositionSafePublicationTest.accessViewsShareSafelyPublishedInceptionRuntimeCaches()`
 covers the related runtime composition field-layout and helper caches. On

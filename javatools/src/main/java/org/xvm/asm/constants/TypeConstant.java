@@ -8366,7 +8366,7 @@ public abstract sealed class TypeConstant
     /**
      * Cached normalized representation.
      */
-    private transient TypeConstant m_typeNormalized;
+    private transient volatile TypeConstant m_typeNormalized;
 
     /**
      * Process-wide diagnostic suppression for recursion pairs. This state only prevents repeated
