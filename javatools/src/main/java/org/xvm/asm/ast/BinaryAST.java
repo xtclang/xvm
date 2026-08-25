@@ -5,8 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.HashSet;
 import java.util.Set;
+
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.Constant;
 
@@ -280,7 +281,8 @@ public abstract sealed class BinaryAST
 
     // ----- internal ------------------------------------------------------------------------------
 
-    private static final Set<String> ALREADY_DISPLAYED = new HashSet();
+    // any thread stringifying an AST node may add to this debug-only dedupe set concurrently
+    private static final Set<String> ALREADY_DISPLAYED = ConcurrentHashMap.newKeySet();
 
     static void reportUnimplemented(String msg) {
         if (ALREADY_DISPLAYED.add(msg)) {

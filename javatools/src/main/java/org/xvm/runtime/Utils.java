@@ -1902,6 +1902,8 @@ public abstract class Utils {
 
      /**
      * Wait until the main context is no longer overwhelmed.
+     * <p>Stateless process-wide singleton: the anonymous op declares no fields and is never part
+     * of a MethodStructure, so assembly-time Op mutators must never run on it.
      */
     protected static final Op[] WAIT_FOR_RELIEF = new Op[] {
         new Op() {

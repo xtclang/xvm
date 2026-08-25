@@ -2713,6 +2713,8 @@ public class Frame
 
     /**
      * Wait for the completion of a FutureHandle associated with a service request.
+     * <p>Stateless process-wide singleton: the anonymous op declares no fields and is never part
+     * of a MethodStructure, so assembly-time Op mutators must never run on it.
      */
     protected static final Op[] WAIT_FOR_FUTURE = new Op[] {
         new Op() {
@@ -2756,6 +2758,8 @@ public class Frame
 
     /**
      * Wait for the completion of a FutureHandle associated with an IO request.
+     * <p>Stateless process-wide singleton: the anonymous op declares no fields and is never part
+     * of a MethodStructure, so assembly-time Op mutators must never run on it.
      */
     protected static final Op[] WAIT_FOR_IO = new Op[] {
         new Op() {

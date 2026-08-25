@@ -729,39 +729,47 @@ public final class Token {
          * String representations of tokens that have constant representations, excluding context
          * sensitive keywords.
          */
-        private static final Map<String, Id> KEYWORDS = new HashMap<>();
+        private static final Map<String, Id> KEYWORDS;
         /**
          * String representations of all tokens that have constant representations.
          */
-        private static final Map<String, Id> ALL_KEYWORDS = new HashMap<>();
+        private static final Map<String, Id> ALL_KEYWORDS;
 
         /**
          * String representations of tokens that have both "normal" and "suffixed" representations.
          */
-        private static final Map<String, Id> PREFIXES = new HashMap<>();
+        private static final Map<String, Id> PREFIXES;
 
         static {
+            // build locally, publish frozen: the maps are process-wide lookup tables and must
+            // never be mutable shared state
+            var keywords    = new HashMap<String, Id>();
+            var allKeywords = new HashMap<String, Id>();
+            var prefixes    = new HashMap<String, Id>();
             for (Id id : IDs) {
                 String sText = id.TEXT;
                 if (sText != null && !sText.isEmpty()) {
                     char ch = sText.charAt(0);
                     if (ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' || ch == '_') {
-                        ALL_KEYWORDS.put(sText, id);
+                        allKeywords.put(sText, id);
 
                         if (!id.ContextSensitive) {
-                            KEYWORDS.put(sText, id);
+                            keywords.put(sText, id);
                         }
 
                         int ofColon = sText.indexOf(':');
                         if (ofColon > 0) {
-                            Id prefix = ALL_KEYWORDS.get(sText.substring(0, ofColon));
+                            Id prefix = allKeywords.get(sText.substring(0, ofColon));
                             if (prefix != null) {
-                                PREFIXES.put(prefix.TEXT, prefix);
+                                prefixes.put(prefix.TEXT, prefix);
                             }
                         }
                     }
                 }
             }
+            KEYWORDS     = Map.copyOf(keywords);
+            ALL_KEYWORDS = Map.copyOf(allKeywords);
+            PREFIXES     = Map.copyOf(prefixes);
         }
 
         /**

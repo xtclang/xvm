@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +27,7 @@ import org.xvm.asm.constants.TypeConstant.Relation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -430,6 +432,41 @@ public class ConstantPoolDiagnosticsTest {
                     .anyMatch(line -> line.contains("getCurrentPool("));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * The implicit-identity cache is lazily written from concurrent service threads at runtime
+     * (e.g. xService resolving "Timeout" through the owner pool while sibling services run on the
+     * shared executor). The old shape was a plain HashMap, so a racing resize could structurally
+     * corrupt the map - lost unrelated entries, broken bins - not merely duplicate work. Red on
+     * the old shape: the instance-type pin fails deterministically on HashMap; the parallel
+     * exercise is the behavioral guard (values converge because the identities are interned).
+     */
+    @Test
+    public void implicitIdentityCacheIsConcurrentSafe() throws Exception {
+        ConstantPool pool = new FileStructure("test").getConstantPool();
+
+        Field field = ConstantPool.class.getDeclaredField("f_implicits");
+        field.setAccessible(true);
+        assertInstanceOf(ConcurrentMap.class, field.get(pool),
+                "f_implicits is written from service threads and must be a concurrent map");
+
+        List<String> names = List.of("String", "Boolean", "Object", "Exception",
+                "Map", "Array", "Int64", "Char");
+        try (var executor = Executors.newFixedThreadPool(8)) {
+            var start   = new CountDownLatch(1);
+            var futures = names.stream().map(name -> executor.submit(() -> {
+                start.await();
+                return pool.getImplicitlyImportedIdentity(name);
+            })).toList();
+            start.countDown();
+
+            for (int i = 0; i < names.size(); i++) {
+                assertSame(pool.getImplicitlyImportedIdentity(names.get(i)),
+                        futures.get(i).get(10, TimeUnit.SECONDS),
+                        "racing implicit lookups must resolve to the interned identity");
+            }
         }
     }
 

@@ -18,97 +18,102 @@ public class NativeNames {
     /**
      * Map of methods names keyed by the class/method-name/number-of-args combination.
      */
-    static final Map<String, String> reservedMethodName = new HashMap<>();
+    private static final Map<String, String> reservedMethodName;
     static {
-        reservedMethodName.put("Appender/add/1", "add");
+        // build locally, publish frozen: this is a process-wide lookup table
+        var map = new HashMap<String, String>();
 
-        reservedMethodName.put("Iterator/next/0", "next");
+        map.put("Appender/add/1", "add");
 
-        reservedMethodName.put("reflect.Ref/get/0", "get");
-        reservedMethodName.put("reflect.Ref/peek/0", "peek");
-        reservedMethodName.put("reflect.Var/set/1", "set");
+        map.put("Iterator/next/0", "next");
 
-        reservedMethodName.put("Boolean/not/0",    "not");
-        reservedMethodName.put("Boolean/and/1",    "and");
-        reservedMethodName.put("Boolean/or/1",     "or");
-        reservedMethodName.put("Boolean/xor/1",    "xor");
-        reservedMethodName.put("Boolean/toByte/0", "toByte");
+        map.put("reflect.Ref/get/0", "get");
+        map.put("reflect.Ref/peek/0", "peek");
+        map.put("reflect.Var/set/1", "set");
 
-        reservedMethodName.put("numbers.Bit/not/0", "not");
-        reservedMethodName.put("numbers.Bit/and/1", "and");
-        reservedMethodName.put("numbers.Bit/or/1",  "or");
-        reservedMethodName.put("numbers.Bit/xor/1", "xor");
+        map.put("Boolean/not/0",    "not");
+        map.put("Boolean/and/1",    "and");
+        map.put("Boolean/or/1",     "or");
+        map.put("Boolean/xor/1",    "xor");
+        map.put("Boolean/toByte/0", "toByte");
 
-        reservedMethodName.put("collections.Array/add/1",        "add");
-        reservedMethodName.put("collections.Array/addAll/1",     "addAll");
-        reservedMethodName.put("collections.Array/delete/1",     "delete");
-        reservedMethodName.put("collections.Array/insert/2",     "insert");
-        reservedMethodName.put("collections.Array/insertAll/2",  "insertAll");
-        reservedMethodName.put("collections.Array/reify/1",      "reify");
-        reservedMethodName.put("collections.Array/removeAll/1",  "removeAll");
-        reservedMethodName.put("collections.Collection/reify/0", "reify");
-        reservedMethodName.put("collections.Hashable/hashCode/2", "hashCode");
+        map.put("numbers.Bit/not/0", "not");
+        map.put("numbers.Bit/and/1", "and");
+        map.put("numbers.Bit/or/1",  "or");
+        map.put("numbers.Bit/xor/1", "xor");
 
-        reservedMethodName.put("numbers.Number/toInt8/2",    "toInt8$FP");
-        reservedMethodName.put("numbers.Number/toInt16/2",   "toInt16$FP");
-        reservedMethodName.put("numbers.Number/toInt32/2",   "toInt32$FP");
-        reservedMethodName.put("numbers.Number/toInt64/2",   "toInt64$FP");
-        reservedMethodName.put("numbers.Number/toInt128/2",  "toInt128$FP");
-        reservedMethodName.put("numbers.Number/toIntN/1",    "toIntN$FP");
-        reservedMethodName.put("numbers.Number/toUInt8/2",   "toUInt8$FP");
-        reservedMethodName.put("numbers.Number/toUInt16/2",  "toUInt16$FP");
-        reservedMethodName.put("numbers.Number/toUInt32/2",  "toUInt32$FP");
-        reservedMethodName.put("numbers.Number/toUInt64/2",  "toUInt64$FP");
-        reservedMethodName.put("numbers.Number/toUInt128/2", "toUInt128$FP");
-        reservedMethodName.put("numbers.Number/toUIntN/1",   "toUIntN$FP");
-        reservedMethodName.put("numbers.Number/toNibble/2",  "toNibble$FP");
+        map.put("collections.Array/add/1",        "add");
+        map.put("collections.Array/addAll/1",     "addAll");
+        map.put("collections.Array/delete/1",     "delete");
+        map.put("collections.Array/insert/2",     "insert");
+        map.put("collections.Array/insertAll/2",  "insertAll");
+        map.put("collections.Array/reify/1",      "reify");
+        map.put("collections.Array/removeAll/1",  "removeAll");
+        map.put("collections.Collection/reify/0", "reify");
+        map.put("collections.Hashable/hashCode/2", "hashCode");
 
-        reservedMethodName.put("numbers.IntNumber/add/1",           "add");
-        reservedMethodName.put("numbers.IntNumber/and/1",           "and");
-        reservedMethodName.put("numbers.IntNumber/not/0",           "not");
-        reservedMethodName.put("numbers.IntNumber/or/1",            "or");
-        reservedMethodName.put("numbers.IntNumber/nextValue/0",     "nextValue");
-        reservedMethodName.put("numbers.IntNumber/prevValue/0",     "prevValue");
-        reservedMethodName.put("numbers.IntNumber/shiftAllRight/1", "shiftAllRight");
-        reservedMethodName.put("numbers.IntNumber/shiftLeft/1",     "shiftLeft");
-        reservedMethodName.put("numbers.IntNumber/shiftRight/1",    "shiftRight");
-        reservedMethodName.put("numbers.IntNumber/skip/1",          "skip");
-        reservedMethodName.put("numbers.IntNumber/stepsTo/1",       "stepsTo");
-        reservedMethodName.put("numbers.IntNumber/sub/1",           "sub");
-        reservedMethodName.put("numbers.IntNumber/xor/1",           "xor");
+        map.put("numbers.Number/toInt8/2",    "toInt8$FP");
+        map.put("numbers.Number/toInt16/2",   "toInt16$FP");
+        map.put("numbers.Number/toInt32/2",   "toInt32$FP");
+        map.put("numbers.Number/toInt64/2",   "toInt64$FP");
+        map.put("numbers.Number/toInt128/2",  "toInt128$FP");
+        map.put("numbers.Number/toIntN/1",    "toIntN$FP");
+        map.put("numbers.Number/toUInt8/2",   "toUInt8$FP");
+        map.put("numbers.Number/toUInt16/2",  "toUInt16$FP");
+        map.put("numbers.Number/toUInt32/2",  "toUInt32$FP");
+        map.put("numbers.Number/toUInt64/2",  "toUInt64$FP");
+        map.put("numbers.Number/toUInt128/2", "toUInt128$FP");
+        map.put("numbers.Number/toUIntN/1",   "toUIntN$FP");
+        map.put("numbers.Number/toNibble/2",  "toNibble$FP");
 
-        reservedMethodName.put("numbers.IntN/abs/0",       "abs");
-        reservedMethodName.put("numbers.IntN/add/1",       "add");
-        reservedMethodName.put("numbers.IntN/div/1",       "div");
-        reservedMethodName.put("numbers.IntN/divrem/1",    "divrem");
-        reservedMethodName.put("numbers.IntN/mod/1",       "mod");
-        reservedMethodName.put("numbers.IntN/mul/1",       "mul");
-        reservedMethodName.put("numbers.IntN/neg/0",       "neg");
-        reservedMethodName.put("numbers.IntN/pow/1",       "pow");
-        reservedMethodName.put("numbers.IntN/remainder/1", "remainder");
-        reservedMethodName.put("numbers.IntN/sub/1",       "sub");
-        reservedMethodName.put("numbers.IntN/next/0",      "next");
-        reservedMethodName.put("numbers.IntN/nextValue/0", "nextValue");
-        reservedMethodName.put("numbers.IntN/prev/0",      "prev");
-        reservedMethodName.put("numbers.IntN/prevValue/0", "prevValue");
-        reservedMethodName.put("numbers.IntN/skip/1",      "skip");
-        reservedMethodName.put("numbers.IntN/stepsTo/1",   "stepsTo");
+        map.put("numbers.IntNumber/add/1",           "add");
+        map.put("numbers.IntNumber/and/1",           "and");
+        map.put("numbers.IntNumber/not/0",           "not");
+        map.put("numbers.IntNumber/or/1",            "or");
+        map.put("numbers.IntNumber/nextValue/0",     "nextValue");
+        map.put("numbers.IntNumber/prevValue/0",     "prevValue");
+        map.put("numbers.IntNumber/shiftAllRight/1", "shiftAllRight");
+        map.put("numbers.IntNumber/shiftLeft/1",     "shiftLeft");
+        map.put("numbers.IntNumber/shiftRight/1",    "shiftRight");
+        map.put("numbers.IntNumber/skip/1",          "skip");
+        map.put("numbers.IntNumber/stepsTo/1",       "stepsTo");
+        map.put("numbers.IntNumber/sub/1",           "sub");
+        map.put("numbers.IntNumber/xor/1",           "xor");
 
-        reservedMethodName.put("numbers.UIntN/abs/0",       "abs");
-        reservedMethodName.put("numbers.UIntN/add/1",       "add");
-        reservedMethodName.put("numbers.UIntN/div/1",       "div");
-        reservedMethodName.put("numbers.UIntN/divrem/1",    "divrem");
-        reservedMethodName.put("numbers.UIntN/mod/1",       "mod");
-        reservedMethodName.put("numbers.UIntN/mul/1",       "mul");
-        reservedMethodName.put("numbers.UIntN/pow/1",       "pow");
-        reservedMethodName.put("numbers.UIntN/remainder/1", "remainder");
-        reservedMethodName.put("numbers.UIntN/sub/1",       "sub");
-        reservedMethodName.put("numbers.UIntN/next/0",      "next");
-        reservedMethodName.put("numbers.UIntN/nextValue/0", "nextValue");
-        reservedMethodName.put("numbers.UIntN/prev/0",      "prev");
-        reservedMethodName.put("numbers.UIntN/prevValue/0", "prevValue");
-        reservedMethodName.put("numbers.UIntN/skip/1",      "skip");
-        reservedMethodName.put("numbers.UIntN/stepsTo/1",   "stepsTo");
+        map.put("numbers.IntN/abs/0",       "abs");
+        map.put("numbers.IntN/add/1",       "add");
+        map.put("numbers.IntN/div/1",       "div");
+        map.put("numbers.IntN/divrem/1",    "divrem");
+        map.put("numbers.IntN/mod/1",       "mod");
+        map.put("numbers.IntN/mul/1",       "mul");
+        map.put("numbers.IntN/neg/0",       "neg");
+        map.put("numbers.IntN/pow/1",       "pow");
+        map.put("numbers.IntN/remainder/1", "remainder");
+        map.put("numbers.IntN/sub/1",       "sub");
+        map.put("numbers.IntN/next/0",      "next");
+        map.put("numbers.IntN/nextValue/0", "nextValue");
+        map.put("numbers.IntN/prev/0",      "prev");
+        map.put("numbers.IntN/prevValue/0", "prevValue");
+        map.put("numbers.IntN/skip/1",      "skip");
+        map.put("numbers.IntN/stepsTo/1",   "stepsTo");
+
+        map.put("numbers.UIntN/abs/0",       "abs");
+        map.put("numbers.UIntN/add/1",       "add");
+        map.put("numbers.UIntN/div/1",       "div");
+        map.put("numbers.UIntN/divrem/1",    "divrem");
+        map.put("numbers.UIntN/mod/1",       "mod");
+        map.put("numbers.UIntN/mul/1",       "mul");
+        map.put("numbers.UIntN/pow/1",       "pow");
+        map.put("numbers.UIntN/remainder/1", "remainder");
+        map.put("numbers.UIntN/sub/1",       "sub");
+        map.put("numbers.UIntN/next/0",      "next");
+        map.put("numbers.UIntN/nextValue/0", "nextValue");
+        map.put("numbers.UIntN/prev/0",      "prev");
+        map.put("numbers.UIntN/prevValue/0", "prevValue");
+        map.put("numbers.UIntN/skip/1",      "skip");
+        map.put("numbers.UIntN/stepsTo/1",   "stepsTo");
+
+        reservedMethodName = Map.copyOf(map);
     }
 
     /**
