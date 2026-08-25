@@ -258,7 +258,7 @@ the getter returns, and
 `ConstantPoolDiagnosticsTest.semanticCurrentPoolLookupIsBridgeOnly()` fails if
 new non-comment code outside the bridge tries to call it.
 
-### Runtime-published pools are still mutable by default
+### Runtime-published pools now reject new registrations by default
 
 References:
 
@@ -266,21 +266,27 @@ References:
   (`assertRegisterBeforeRuntimePublished(...)` call)
 - `javatools/src/main/java/org/xvm/asm/ConstantPool.java:282`
   through `javatools/src/main/java/org/xvm/asm/ConstantPool.java:305`
-  (diagnostic marker and fail-fast check)
+  (runtime marker and fail-fast check)
 - `javatools/src/main/java/org/xvm/asm/ConstantPool.java:4111`
   (`runtimePublication`)
 
-Cause: publication is guarded only when
-`xvm.asm.validateConstantPoolLateRegistration` is enabled. Otherwise the same
-pool can keep registering constants during runtime execution.
+Cause: fixed on 2026-08-25 for the runtime-entry marker. Publication used to be
+guarded only by a branch-local stress flag, so normal runtime execution could
+keep registering constants after a pool became container-visible. Runtime entry
+now always installs the marker, and
+`register(...)` rejects a genuinely new constant before mutating pool storage.
 
-Effect: parallel runtime readers can observe pool growth, cache invalidation,
-or partially registered constants after the pool has become container-visible.
-The diagnostic property is useful, but it is not a structural freeze.
+Effect: the old normal path allowed parallel runtime readers to observe pool
+growth, cache invalidation, or partially registered constants after the pool had
+become container-visible. The marker closes that late-registration path for
+runtime-published pools, but it is not the full structural freeze: compiler and
+serialization code can still run destructive pool phases, and live handle
+constants/storage snapshots still need explicit policy.
 
-Recommended guard/fix: split mutable compiler/linker pools from frozen runtime
-pools, or make post-publication registration a hard error on runtime paths.
-The property can remain as extra diagnostics, not as the only guard.
+Recommended guard/fix: keep the always-on runtime marker. Split mutable
+compiler/linker pools from frozen runtime pools, or make a real immutable
+runtime snapshot/freeze model that also addresses destructive storage rewrites
+and live runtime handles.
 
 Fixed subcases in this branch:
 
@@ -293,10 +299,10 @@ Fixed subcases in this branch:
   marker is installed. That means first `ClassComposition` construction for an
   already-known type can stay lazy without mutating the pool after the marker.
 
-This is not the full freeze solution. Runtime pools remain mutable when the
-diagnostic property is disabled, and genuinely new runtime-created constants
-still need an explicit owner/concurrency policy. That remaining path is why the
-category stays must-audit/must-fix.
+This is not the full freeze solution. Genuinely new runtime-created constants
+now fail after publication, but the remaining storage, destructive mutation,
+and live-handle paths still need explicit owner/concurrency policy. That
+remaining work is why the broader category stays must-audit/must-fix.
 
 ## Must Audit
 

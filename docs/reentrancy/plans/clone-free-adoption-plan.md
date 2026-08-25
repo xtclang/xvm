@@ -476,7 +476,6 @@ Run existing same-JVM and parallel stress with:
 ```text
 -Dxvm.asm.validateConstantAdoption=true
 -Dxvm.asm.validateConstantPoolCurrentScope=true
--Dxvm.asm.validateConstantPoolLateRegistration=true
 -Dxvm.runtime.validateOwnership=true
 ```
 

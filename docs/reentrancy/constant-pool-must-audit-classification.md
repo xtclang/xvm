@@ -17,7 +17,7 @@ in the API.
 | --- | --- | --- |
 | DONE IN THIS BRANCH | Base `Constant.adoptedBy(...)` shallow clone contract | `Constant.adoptedBy(...)` is now the final owner-transfer wrapper, `Constant` no longer implements `Cloneable`, and default `copyForAdoption(...)` fails closed. This stops new unsafe constants from silently inheriting `Object.clone()` ownership transfer or bypassing common owner/ref checks. |
 | DONE IN THIS BRANCH as a guard; MUST FIX long term with transactional registration | `ConstantPool.register(...)` publishes before recursive registration completes | The branch preserves same-thread cycle resolution but marks newly published constants as incomplete and makes other threads wait until recursive `registerConstants(...)` and valid-pool checks finish. The long-term fix is still private transactional registration that does not expose in-progress constants through public pool APIs. |
-| MUST FIX for runtime freeze; DONE IN THIS BRANCH for known first `ClassComposition` access-type prewarm | Runtime-published pool mutation, including first `ClassComposition` construction | Late registration is diagnostic-only, so normal runtime pools can still mutate. The branch now prewarms known access-type constants before the diagnostic publication marker and adds a first-composition test for that narrow subcase. |
+| DONE IN THIS BRANCH for runtime publication marker; MUST FIX for full runtime freeze | Runtime-published pool mutation, including first `ClassComposition` construction | Runtime entry now always installs a publication marker, and new registrations after that point fail before mutating pool storage. The branch also prewarms known access-type constants before the marker and adds a first-composition test for that narrow subcase. Destructive compiler/linker mutation and full frozen-pool storage remain open. |
 | MUST FIX for runtime-published pools; MUST AUDIT otherwise | `f_listConst`, locator maps, and constant lookup maps | The storage supports single-thread reentrant validation, not arbitrary parallel mutation after publication. |
 | MUST AUDIT, with runtime-published use as MUST FIX | Live `HandleConstant` / `ObjectHandle` state in constants | The second-adoption guard is fixed, but fresh runtime handle constants and filesystem handle caches are still live runtime state reachable from constants. |
 | SHOULD FIX, becomes MUST AUDIT when a pool is shared concurrently | Per-pool implicit/core lazy caches | Owner is local to the pool, but writes are plain lazy field writes and can register constants after runtime publication. |
@@ -362,9 +362,8 @@ Evidence:
 
 - `javatools/src/main/java/org/xvm/asm/ConstantPool.java:282` through
   `javatools/src/main/java/org/xvm/asm/ConstantPool.java:288` installs the
-  runtime publication marker only when
-  `xvm.asm.validateConstantPoolLateRegistration` is enabled, and prewarms known
-  runtime access-type constants only on that diagnostic path.
+  runtime publication marker, prewarming known runtime access-type constants
+  before recording the marker.
 - `javatools/src/main/java/org/xvm/asm/ConstantPool.java:298` through
   `javatools/src/main/java/org/xvm/asm/ConstantPool.java:335` scans already-known
   class/type constants and interns private/protected/struct access types before
@@ -389,9 +388,9 @@ Evidence:
 Why the old design is bad:
 
 A runtime-visible pool should be a read-mostly frozen artifact. The current
-guard is a diagnostic property, not a structural freeze. Normal runs can still
-call `ensure*Constant(...)` paths after publication and grow or rewrite the
-pool while runtime readers are active.
+marker is a hard runtime-entry boundary for new registrations, not the complete
+structural freeze. Compiler/linker phases can still run destructive mutations,
+and remaining runtime-visible helper state still needs owner and storage policy.
 
 Practical same-JVM/parallel failure mode:
 
@@ -405,8 +404,8 @@ Existing reproducer, test, or diagnostic:
 
 - `javatools/src/test/java/org/xvm/asm/ConstantPoolDiagnosticsTest.java:89`
   through `javatools/src/test/java/org/xvm/asm/ConstantPoolDiagnosticsTest.java:143`
-  prove the opt-in late-registration guard is disabled by default, catches a
-  new constant when enabled, and does not create a lookup map while failing.
+  prove the runtime publication marker is installed by default, catches a new
+  constant, and fails before mutating pool storage.
 - `javatools/src/test/java/org/xvm/runtime/ClassCompositionLateRegistrationTest.java:23`
   through `javatools/src/test/java/org/xvm/runtime/ClassCompositionLateRegistrationTest.java:53`
   covers the fixed subcase where `ensureAccess(PROTECTED)` on an already-created
@@ -420,13 +419,13 @@ Existing reproducer, test, or diagnostic:
 
 Proper fix:
 
-Separate mutable compiler/linker pools from frozen runtime pools, or make
-runtime post-publication registration a hard failure after a complete warmup
-phase. The new diagnostic prewarm is the right shape for known class/type access
-views, but it is property-gated and does not freeze normal runtime pools.
-Runtime composition construction should either be part of warmup, or it must
-prove it only allocates owner-local composition objects and does not intern new
-constants after the freeze point.
+Separate mutable compiler/linker pools from frozen runtime pools, or make a
+complete immutable runtime-pool snapshot after warmup. The current prewarm is
+the right shape for known class/type access views, and the runtime marker now
+rejects late constants by default, but destructive storage rewrites and live
+runtime handles remain outside that marker. Runtime composition construction
+should either be part of warmup, or it must prove it only allocates owner-local
+composition objects and does not intern new constants after the freeze point.
 
 Expected performance and semantic impact:
 
@@ -437,11 +436,10 @@ at the boundary instead of racing later.
 
 Recommended PR slice:
 
-Create a runtime pool freeze/prewarm PR. Start by promoting the existing
-diagnostic property in a targeted stress profile, keep the first-composition
-test as coverage for the access-type subcase, and enumerate every
-`ensure*Constant(...)` reached from runtime after `MainContainer.invoke0(...)`
-publication.
+Create a runtime pool freeze/prewarm PR. Keep the always-on runtime publication
+marker and first-composition test as coverage for the access-type subcase, then
+enumerate every `ensure*Constant(...)` reached from runtime after
+`MainContainer.invoke0(...)` publication.
 
 Done in this branch:
 
@@ -449,7 +447,9 @@ The already-created composition `ensureAccess(PROTECTED)` subcase is fixed by
 prewarming access type constants in the constructor. The diagnostic publication
 path also prewarms known class/type access constants before marking the pool, and
 the new first-composition test verifies that specific path for an already-known
-type.
+type. The 2026-08-25 update makes that marker unconditional at runtime entry;
+`ConstantPoolDiagnosticsTest.publicationMarkerIsInstalledByDefault()` is red on
+the old property-gated shape and green on the always-on marker.
 
 ## 4. `f_listConst`, Locator, And Lookup Map Concurrency
 
@@ -656,9 +656,8 @@ category cannot be dismissed without a freeze/warmup proof.
 
 Existing reproducer, test, or diagnostic:
 
-No dedicated lazy-cache concurrency test exists. The late-registration
-diagnostic can catch a lazy cache that interns a new value after a publication
-marker, but only with the property enabled.
+No dedicated lazy-cache concurrency test exists. The runtime publication marker
+now catches a lazy cache that interns a new value after publication by default.
 
 Proper fix:
 

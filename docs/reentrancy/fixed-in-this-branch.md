@@ -737,8 +737,16 @@ The broader category is still tracked in
 [stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md) and
 [constant-pool-state-audit.md](constant-pool-state-audit.md): a real frozen
 runtime-pool design must still decide what happens to genuinely new constants
-created after publication and must not rely on an opt-in diagnostic property as
-the only guard.
+created before publication, destructive compiler/linker storage rewrites, and
+live runtime handles embedded in constants.
+
+The 2026-08-25 hardening makes the runtime publication marker unconditional.
+On the old branch shape, `markRuntimePublishedForDiagnostics(...)` installed no
+marker unless a branch-local stress flag was set, so a normal runtime
+boundary could still intern a new constant after publication.
+`ConstantPoolDiagnosticsTest.publicationMarkerIsInstalledByDefault()` is red on
+that shape and green here: existing constants still return, but a genuinely new
+registration fails before `f_listConst` or the lookup maps are mutated.
 
 ### Static ConstantPool Metadata Maps
 

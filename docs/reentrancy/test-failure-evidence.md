@@ -69,7 +69,7 @@ explicit owner APIs, and typed runtime accessors.
 | `org.xvm.api.InterpreterConnectorTest` | `OwnershipDiagnostics` and connector diagnostic-container access. |
 | `org.xvm.asm.AsmConstructorEscapeTest` | `MultiMethodStructure.createMethodCopyingParameters(...)`. |
 | `org.xvm.asm.ConstantAdoptionTest` | `ConstantAdoptionValidator` and its validation property. |
-| `org.xvm.asm.ConstantPoolDiagnosticsTest` | Current-pool assertion/removal APIs, `xvm.asm.validateConstantPoolCurrentScope`, and late-registration diagnostics. |
+| `org.xvm.asm.ConstantPoolDiagnosticsTest` | Current-pool assertion/removal APIs, `xvm.asm.validateConstantPoolCurrentScope`, and the always-on runtime publication marker. `publicationMarkerIsInstalledByDefault()` is red on the old property-gated shape because no marker is installed in normal runtime mode. |
 | `org.xvm.asm.ConstantPoolRegistrationDeadlockTest` | Registration-completion guard (branch-only). Red on the branch's pre-fix guard shape, which awaited another thread's registration completion inside the pool monitor and deadlocked the pool; master has no completion guard to deadlock. |
 | `org.xvm.asm.constants.MethodInfoTest` | `MethodInfo.create(...)` factory and owned-body model. `owningFreshBodyDoesNotFabricateSelfTarget()` is additionally red on the branch's own broken owned-copy shape (post-`93189541f`), where fresh bodies gained fabricated self targets that corrupted union/difference TypeInfo merges and broke the XDK build at lib_json. |
 | `org.xvm.asm.constants.TypeConstantOwnerApiTest` | Explicit-pool covariance/contravariance APIs. |
@@ -110,21 +110,24 @@ are documented in
 It validates that repeated direct runner invocations do not reuse stale
 container-owned runtime state from a prior run in the same Gradle JVM.
 
-The late-registration diagnostic property currently has an important Gradle
-caveat: passing `-Dxvm.asm.validateConstantPoolLateRegistration=true` to Gradle
-also enables it during XTC compilation. In the audit run, that broad command
-failed earlier in `:xdk:lib-ecstasy:compileXtc` with a stack repeating through
+`ConstantPoolDiagnosticsTest.publicationMarkerIsInstalledByDefault()` fails on
+the old shape because `markRuntimePublishedForDiagnostics(...)` left normal
+pools unmarked; it passes here because a new post-publication registration
+throws before mutating pool storage.
+
+Older audit runs also found a Gradle caveat: passing the property to Gradle
+enabled it during XTC compilation and exposed a separate metadata equality
+recursion in `:xdk:lib-ecstasy:compileXtc`, with a stack repeating through
 `MethodInfo.equals(...)`, `MethodBody.equals(...)`, and `Handy.equals(...)`.
-That was a separate metadata equality recursion finding, not proof that the
-runtime late-registration fix failed. This branch now fixes that equality shape:
-`MethodBody.equals(...)` and `MethodBody.hashCode()` compare `FromInto`,
-`Implicit`, and `Union` method targets by stable method identity shape instead
-of recursively walking owner metadata graphs. The focused
+That was not proof that the runtime late-registration fix failed. This branch
+now fixes that equality shape: `MethodBody.equals(...)` and
+`MethodBody.hashCode()` compare `FromInto`, `Implicit`, and `Union` method
+targets by stable method identity shape instead of recursively walking owner
+metadata graphs. The focused
 `MethodInfoTest.methodInfoEqualityDoesNotRecurseThroughMethodTargets()` test
 builds the cyclic target shapes directly. The focused
 `ClassCompositionLateRegistrationTest` tests remain the proof for the
-class-composition access-type slice until the Gradle task can pass runtime-only
-JVM properties to the direct runner.
+class-composition access-type slice.
 
 The optimized method/property chain cache tests are source-shape and
 parallel-publication proofs rather than heavy end-to-end reproducers.

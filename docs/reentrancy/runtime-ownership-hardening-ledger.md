@@ -372,7 +372,7 @@ ignored.
 | Order | Commit scope | Why this order | Required test/proof |
 | --- | --- | --- | --- |
 | 1 | Adoption/clone validator assertions | Done in this branch wave. The shallow-clone bug is proven, dangerous, and the reusable validator catches copied handles, locks, thread locals, and owner references while later work runs stress. | `ConstantAdoptionTest` proves direct detection and opt-in `ConstantPool.register(...)` failure for a default shallow-cloned helper reference. |
-| 2 | `ConstantPool` late-mutation guard | Done in this branch wave. Hidden late mutation now becomes an immediate diagnostic instead of a stale-owner symptom when `xvm.asm.validateConstantPoolLateRegistration` is enabled. One fixed subcase now prewarms `ClassComposition` protected access constants so a protected access view cannot grow an already-published pool. | `ConstantPoolDiagnosticsTest` proves existing constants still return after publication and new registrations fail before publication into the pool. `ClassCompositionLateRegistrationTest` covers the protected-view subcase. Diagnostic same-JVM stress still identifies first-time `ClassComposition` construction after publication as a broader warmup/freeze target. |
+| 2 | `ConstantPool` late-mutation guard | Done in this branch wave, with the 2026-08-25 marker hardening. Hidden late mutation now becomes an immediate runtime-boundary failure instead of a stale-owner symptom; publication is no longer property-gated. Known `ClassComposition` access constants are prewarmed so protected/struct/private views cannot grow an already-published pool. | `ConstantPoolDiagnosticsTest.publicationMarkerIsInstalledByDefault()` is red on the old property-gated marker and proves existing constants still return while new registrations fail before storage mutation. `ClassCompositionLateRegistrationTest` covers the protected-view and first-composition subcases. Full storage freeze/destructive mutation policy remains a later ConstantPool slice. |
 | 3 | Ambient `ConstantPool` lookup cleanup | Done in this branch wave for runtime boundaries. `InterpreterConnector.invoke0(...)` now uses the main container's explicit pool, native startup no longer uses raw current-pool mutation, and the remaining runtime scoped bridges assert that the scoped pool matches the explicit owner. The branch also adds `xvm.asm.validateConstantPoolCurrentScope` so stress can turn wrong scoped owners into normal exceptions when Java assertions are off. | `ConstantPoolDiagnosticsTest` covers exact scoped-owner assertions, explicit-owner calls with no ambient pool, wrong-scope assertion failures, and property-driven `IllegalStateException` failures. Source scan now shows no runtime/API callers of raw `setCurrentPool(...)`; the method itself was removed. |
 | 4 | `NativeContainer` constructor startup escape | Done in this branch wave. Native template loading, base-template installation, resource initialization, and service-context creation no longer run from the native-container constructor. `NativeContainer.create(...)` constructs the owner first, then initializes it before handing it to `InterpreterConnector`. | `javac -Xlint:this-escape` now emits no `NativeContainer.java` diagnostics. `InterpreterConnectorTest` starts several connectors in parallel, loads `ecstasy.xtclang.org`, checks distinct native containers, and forces ownership validation over the warmed containers. Startup order is preserved because the factory still completes all native-template/resource initialization before returning the container. |
 | 5 | Runtime handle construction escapes | Done in this branch wave. `RefHandle.createRegisterRef(...)` stores register refs in `Frame.VarInfo` only after construction, `RefHandle.createReferentRef(...)` initializes referent fields after construction, and `NodeHandle.create(...)` initializes native store fields after construction. | `RefHandleConstructionTest` verifies the factory APIs and runtime op call sites. Targeted `:javatools:compileJava` lint emits no `xRef.java` or `xOSFileNode.java` `this-escape` diagnostics. Same-JVM direct stress with `TestReflection,TestFiles` passes. Existing frame-local ref caching and file-node store initialization are preserved. |
@@ -476,13 +476,12 @@ Risk:
 
 Required closure:
 
-- `ConstantPool.markRuntimePublishedForDiagnostics(...)` establishes an opt-in
+- `ConstantPool.markRuntimePublishedForDiagnostics(...)` establishes the
   runtime publication boundary. `MainContainer.invoke0(...)` marks the pool
   after entry setup and module singleton resolution, immediately before the
   user call chain is invoked.
-- `ConstantPool.register(...)` rejects new registrations after that marker when
-  `-Dxvm.asm.validateConstantPoolLateRegistration=true` is enabled; existing
-  constants are still returned normally.
+- `ConstantPool.register(...)` rejects new registrations after that marker;
+  existing constants are still returned normally.
 - The protected access-view subcase is fixed: canonical `ClassComposition`
   construction now interns private/protected/struct access-type constants
   together, while view compositions remain lazy. This preserves the previous
@@ -718,7 +717,7 @@ assertion work should be explicit and opt-in first, then hardened where proven.
 | Detect cloned forbidden helper fields | Opt-in `ConstantAdoptionValidator` via `xvm.asm.validateConstantAdoption` | Catch `Atomic*`, locks, references, thread-local cells, owner/runtime references, and mutable collections copied by clone. |
 | Assert scoped pool equals explicit owner | Runtime callback/bridge sites; opt-in hard failure via `xvm.asm.validateConstantPoolCurrentScope` | Catch stale or missing ambient `ConstantPool` context even when Java assertions are disabled. |
 | Assert handle/composition owner at boundaries | `OwnershipDiagnostics` and runtime entry points | Catch cross-container values before they surface as misleading XTC-level failures. |
-| Assert no late pool registration after freeze | Opt-in `ConstantPool.register(...)` guard via `xvm.asm.validateConstantPoolLateRegistration` | Find runtime paths that mutate supposedly published pools. |
+| Assert no late pool registration after freeze | Always-on `ConstantPool.register(...)` guard after runtime publication | Find runtime paths that mutate supposedly published pools. |
 | Assert op cache owner confinement | Runtime stress and diagnostics | Prove or reject decoded op graph sharing across containers. |
 
 ## Test And Proof Requirements

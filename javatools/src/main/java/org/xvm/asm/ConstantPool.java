@@ -166,13 +166,6 @@ public class ConstantPool
     }
 
     /**
-     * System property that enables fail-fast detection of constants registered after the pool has
-     * been marked as published to runtime execution.
-     */
-    public static final String VALIDATE_LATE_REGISTRATION_PROPERTY =
-            "xvm.asm.validateConstantPoolLateRegistration";
-
-    /**
      * System property that promotes transitional current-pool bridge assertions to normal runtime
      * exceptions. Stress runs use this because Java assertions are usually disabled in production
      * launch shapes, but a wrong ambient pool is still an ownership bug.
@@ -399,27 +392,24 @@ public class ConstantPool
     private record RegistrationCompletion(Thread owner, CompletableFuture<Void> done) {}
 
     /**
-     * Mark this pool as published to runtime execution when late-registration diagnostics are
-     * enabled. Normal builds do not pay for the guard; the marker is installed only when
-     * {@link #VALIDATE_LATE_REGISTRATION_PROPERTY} is true.
+     * Mark this pool as published to runtime execution. New constants registered after this point
+     * fail before mutating pool storage; already registered constants still return normally.
      *
      * @param owner  short description of the runtime boundary publishing this pool
      */
     public void markRuntimePublishedForDiagnostics(String owner) {
-        if (Boolean.getBoolean(VALIDATE_LATE_REGISTRATION_PROPERTY)) {
-            if (runtimePublication == null) {
-                prewarmRuntimeAccessTypeConstants();
-            }
-            runtimePublication = new RuntimePublication(owner, f_listConst.size(),
-                    Thread.currentThread().getName());
+        if (runtimePublication == null) {
+            prewarmRuntimeAccessTypeConstants();
         }
+        runtimePublication = new RuntimePublication(owner, f_listConst.size(),
+                Thread.currentThread().getName());
     }
 
     /**
      * Pre-intern access-type constants for class/type constants that the pool already knows before
-     * the diagnostic publication marker is installed. Runtime class composition can be lazy, but
-     * the logical private/protected/struct type constants for already-linked classes should not
-     * first appear after the pool is considered runtime-visible.
+     * the runtime publication marker is installed. Runtime class composition can be lazy, but the
+     * logical private/protected/struct type constants for already-linked classes should not first
+     * appear after the pool is considered runtime-visible.
      */
     private void prewarmRuntimeAccessTypeConstants() {
         int cScanned = 0;

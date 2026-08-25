@@ -325,9 +325,9 @@ Current patterns are mixed:
   `CooperativelyCleanableReference`.
 - Runtime, ASM, compiler, and JIT code still contain direct `System.err`,
   `System.out`, `printStackTrace`, `Constants.DEBUG`, and one-off debug prints.
-- Reentrancy diagnostics already exist as opt-in invariants and dumps:
-  `xvm.runtime.validateOwnership`,
-  `xvm.asm.validateConstantPoolLateRegistration`, and
+- Reentrancy diagnostics already exist as explicit invariants and dumps:
+  the always-on runtime publication marker,
+  `xvm.runtime.validateOwnership`, current-pool validation, and
   `OwnershipDiagnostics.dump(...)`.
 
 The new strategy should not flatten those categories. User errors stay in
@@ -737,9 +737,8 @@ if (POOL_LOG.isTraceEnabled()) {
 }
 ```
 
-The late-registration guard should remain an explicit diagnostic invariant. A
-log line is useful context, but it must not replace the exception when the
-diagnostic property is enabled.
+The late-registration guard is an explicit runtime invariant. A log line is
+useful context, but it must not replace the exception after publication.
 
 ### Startup Races
 

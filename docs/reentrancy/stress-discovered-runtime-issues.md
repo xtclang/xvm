@@ -217,18 +217,17 @@ objects remain owner-local and lazy.
 
 ## First ClassComposition Construction After Runtime Publication
 
-Status: fixed for class/type constants already present before the diagnostic
-runtime publication marker is installed. The broader "runtime pools are still
-mutable by default" category remains must-audit/must-fix.
+Status: fixed for class/type constants already present before the runtime
+publication marker is installed. The broader storage/freeze category remains
+must-audit/must-fix.
 
-Observed failure with the late-registration guard:
+Observed failure after runtime publication:
 
 ```text
 CI=true ./gradlew :manualTests:runDirectSequenceStress \
   -PsameJvmIterations=2 \
   -PsameJvmModules=TestProps \
-  -Dxvm.asm.validateConstantAdoption=true \
-  -Dxvm.asm.validateConstantPoolLateRegistration=true
+  -Dxvm.asm.validateConstantAdoption=true
 
 java.lang.IllegalStateException:
 ConstantPool registered private TestProps:Standard after runtime publication
@@ -290,9 +289,8 @@ That keeps the previous runtime cache behavior:
 - `ClassComposition` objects are still lazy and owner-local.
 - Access-view `ClassComposition` instances are still allocated only when
   requested.
-- Normal runs with `xvm.asm.validateConstantPoolLateRegistration` disabled do
-  not execute the diagnostic warmup at all.
-- Guarded runs move deterministic logical constant interning to the
+- Normal runs execute the publication warmup before the boundary.
+- The marker moves deterministic logical constant interning to the
   pre-publication side of the runtime boundary instead of allowing it to happen
   during user execution.
 
@@ -342,38 +340,17 @@ the old shape throws from `ConstantPool.register(...)` on the first runtime
 composition access-type registration. That is the same failure recorded from
 the stress run above.
 
-### Full-Gradle Guard Caveat
+### Historical Full-Gradle Caveat
 
-Do not enable the late-registration property through `JAVA_TOOL_OPTIONS` for a
-full `./gradlew build` and interpret the first failure as a runtime result. That
-also turns the guard on during XTC compilation. A broad run with:
-
-```bash
-JAVA_TOOL_OPTIONS='-Dxvm.asm.validateConstantPoolLateRegistration=true' \
-CI=true ./gradlew :manualTests:runDirectSequenceStress \
-  -PsameJvmIterations=1 \
-  -PsameJvmModules=TestReflection \
-  --configuration-cache --console=plain --warning-mode=all
-```
-
-failed earlier in `:xdk:lib-ecstasy:compileXtc` with a stack repeating through
+An earlier broad run exposed a separate metadata equality recursion before the
+runtime sequence started, with a stack repeating through
 `MethodInfo.equals(...)`, `MethodBody.equals(...)`, and `Handy.equals(...)`.
-That was a separate metadata equality recursion finding. `FromInto`,
-`Implicit`, and `Union` method bodies can point back into method-info graphs,
-so equality must not recursively compare those target graphs. This branch fixes
+That was not a late-registration result. `FromInto`, `Implicit`, and `Union`
+method bodies can point back into method-info graphs, so equality must not
+recursively compare those target graphs. This branch fixes
 `MethodBody.equals(...)` and `MethodBody.hashCode()` to use stable target method
-shape instead. Runtime late-registration stress should still either run after
-required XTC artifacts are built without the property, or the Gradle task needs
-a dedicated runtime JVM property so compiler-side findings do not mask runtime
-ownership failures.
-
-The same caveat still applies after the access-type prewarm fix. A guarded
-manual stress invocation that passes `-Dxvm.asm.validateConstantPoolLateRegistration=true`
-to Gradle still enables the property during `:xdk:lib-ecstasy:compileXtc`, and
-that compiler-side stack overflow currently fails before the runtime sequence
-starts. The focused JUnit tests are therefore the proof for this slice; broader
-runtime stress with the late-registration guard needs task-level isolation of
-runtime JVM properties.
+shape instead. The focused JUnit tests remain the proof for the
+class-composition access-type slice.
 
 ## Direct Sequence Validator Native-Parent False Positive
 

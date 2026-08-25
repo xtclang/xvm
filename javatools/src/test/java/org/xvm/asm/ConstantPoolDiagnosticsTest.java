@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 /**
- * Tests for opt-in {@link ConstantPool} runtime ownership diagnostics.
+ * Tests for {@link ConstantPool} runtime ownership diagnostics and publication guards.
  */
 public class ConstantPoolDiagnosticsTest {
     /**
@@ -128,40 +128,41 @@ public class ConstantPoolDiagnosticsTest {
     }
 
     /**
-     * Runtime publication diagnostics must be opt-in. The guard is useful for stress/CI, but it
-     * cannot change normal compiler/runtime cache behavior when the property is not enabled.
+     * Master left runtime-published pools mutable unless a branch-local late-registration flag was
+     * enabled. A normal runtime boundary must install the marker without relying on stress-only
+     * flags, so a new constant fails before mutating pool storage.
      */
     @Test
-    public void publicationMarkerIsDisabledByDefault() {
-        ConstantPool pool = new FileStructure("test").getConstantPool();
+    public void publicationMarkerIsInstalledByDefault() {
+        var pool = new FileStructure("test").getConstantPool();
 
         pool.markRuntimePublishedForDiagnostics("unit-test");
 
-        assertFalse(pool.isRuntimePublishedForDiagnostics());
-        pool.ensureStringConstant("late");
+        assertTrue(pool.isRuntimePublishedForDiagnostics());
+        var error = assertThrows(IllegalStateException.class,
+                () -> pool.ensureStringConstant("late"));
+        assertTrue(error.getMessage().contains("after runtime publication"));
+        assertTrue(error.getMessage().contains("unit-test"));
     }
 
     /**
-     * A runtime-visible pool should not keep growing silently. This proves the opt-in guard catches
-     * late constants after publication instead of letting parallel readers observe new state.
+     * A runtime-visible pool should not keep growing silently. This proves the guard catches late
+     * constants after publication instead of letting parallel readers observe new state.
      */
     @Test
-    public void lateRegistrationGuardRejectsNewConstantsAfterPublication()
-            throws Exception {
+    public void lateRegistrationGuardRejectsNewConstantsAfterPublication() {
         ConstantPool pool = new FileStructure("test").getConstantPool();
         Constant existing = pool.ensureStringConstant("existing");
 
-        withLateRegistrationValidation(() -> {
-            pool.markRuntimePublishedForDiagnostics("unit-test");
+        pool.markRuntimePublishedForDiagnostics("unit-test");
 
-            assertTrue(pool.isRuntimePublishedForDiagnostics());
-            assertSame(existing, pool.ensureStringConstant("existing"));
+        assertTrue(pool.isRuntimePublishedForDiagnostics());
+        assertSame(existing, pool.ensureStringConstant("existing"));
 
-            IllegalStateException error = assertThrows(IllegalStateException.class,
-                    () -> pool.ensureStringConstant("late"));
-            assertTrue(error.getMessage().contains("after runtime publication"));
-            assertTrue(error.getMessage().contains("unit-test"));
-        });
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> pool.ensureStringConstant("late"));
+        assertTrue(error.getMessage().contains("after runtime publication"));
+        assertTrue(error.getMessage().contains("unit-test"));
     }
 
     /**
@@ -174,13 +175,11 @@ public class ConstantPoolDiagnosticsTest {
         ConstantPool pool = new FileStructure("test").getConstantPool();
         Set<Constant.Format> formatsBefore = Set.copyOf(constantMaps(pool).keySet());
 
-        withLateRegistrationValidation(() -> {
-            pool.markRuntimePublishedForDiagnostics("unit-test");
+        pool.markRuntimePublishedForDiagnostics("unit-test");
 
-            assertThrows(IllegalStateException.class,
-                    () -> pool.register(new DiagnosticConstant(pool)));
-            assertEquals(formatsBefore, constantMaps(pool).keySet());
-        });
+        assertThrows(IllegalStateException.class,
+                () -> pool.register(new DiagnosticConstant(pool)));
+        assertEquals(formatsBefore, constantMaps(pool).keySet());
     }
 
     /**
@@ -326,11 +325,6 @@ public class ConstantPoolDiagnosticsTest {
                 () -> pool.getConstant(index.get()));
         assertEquals("constant registration failed", readFailure.getMessage());
         assertSame(failure, readFailure.getCause());
-    }
-
-    private static void withLateRegistrationValidation(CheckedRunnable action)
-            throws Exception {
-        withBooleanProperty(ConstantPool.VALIDATE_LATE_REGISTRATION_PROPERTY, action);
     }
 
     private static void withCurrentPoolValidation(CheckedRunnable action)

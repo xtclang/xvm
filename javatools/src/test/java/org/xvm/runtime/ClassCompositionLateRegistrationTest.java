@@ -3,7 +3,6 @@ package org.xvm.runtime;
 
 import org.junit.jupiter.api.Test;
 
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.FileStructure;
 
 import org.xvm.asm.Constants.Access;
@@ -39,23 +38,21 @@ public class ClassCompositionLateRegistrationTest {
             var type      = pool.typeObject();
             var clz       = new ClassComposition(container, null, type);
 
-            withLateRegistrationValidation(() -> {
-                pool.markRuntimePublishedForDiagnostics("unit-test");
+            pool.markRuntimePublishedForDiagnostics("unit-test");
 
-                TypeComposition protectedView = clz.ensureAccess(Access.PROTECTED);
+            TypeComposition protectedView = clz.ensureAccess(Access.PROTECTED);
 
-                assertSame(protectedView, clz.ensureAccess(Access.PROTECTED));
-                assertTrue(pool.isRuntimePublishedForDiagnostics());
-            });
+            assertSame(protectedView, clz.ensureAccess(Access.PROTECTED));
+            assertTrue(pool.isRuntimePublishedForDiagnostics());
         } finally {
             runtime.shutdownXVM();
         }
     }
 
     /**
-     * Runtime publication diagnostics prewarm access-type constants for class/type constants the
-     * pool already knows. That lets a class composition remain lazy without mutating the published
-     * pool when the first object construction asks for the composition during execution.
+     * Runtime publication prewarms access-type constants for class/type constants the pool already
+     * knows. That lets a class composition remain lazy without mutating the published pool when the
+     * first object construction asks for the composition during execution.
      */
     @Test
     public void firstClassCompositionDoesNotRegisterAfterRuntimePublication() throws Exception {
@@ -66,37 +63,15 @@ public class ClassCompositionLateRegistrationTest {
             var pool      = file.getConstantPool();
             var type      = pool.typeObject();
 
-            withLateRegistrationValidation(() -> {
-                pool.markRuntimePublishedForDiagnostics("unit-test");
+            pool.markRuntimePublishedForDiagnostics("unit-test");
 
-                var clz = new ClassComposition(container, null, type);
+            var clz = new ClassComposition(container, null, type);
 
-                assertSame(clz, clz.ensureAccess(Access.PUBLIC));
-                assertTrue(pool.isRuntimePublishedForDiagnostics());
-            });
+            assertSame(clz, clz.ensureAccess(Access.PUBLIC));
+            assertTrue(pool.isRuntimePublishedForDiagnostics());
         } finally {
             runtime.shutdownXVM();
         }
-    }
-
-    private static void withLateRegistrationValidation(CheckedRunnable action) throws Exception {
-        String property = ConstantPool.VALIDATE_LATE_REGISTRATION_PROPERTY;
-        String previous = System.getProperty(property);
-        System.setProperty(property, "true");
-        try {
-            action.run();
-        } finally {
-            if (previous == null) {
-                System.clearProperty(property);
-            } else {
-                System.setProperty(property, previous);
-            }
-        }
-    }
-
-    @FunctionalInterface
-    private interface CheckedRunnable {
-        void run() throws Exception;
     }
 
     private static final class TestContainer extends Container {
