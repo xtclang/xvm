@@ -362,7 +362,59 @@ proven rather than argued.
 
 ---
 
-## 8. What we should do - the staged plan (2 min)
+## 8. The JIT runtime is rebuilding the same disease (2 min)
+
+The javajit backend - the runtime under active daily development, with the
+interpreter labeled "proof-of-concept" in the README - is repeating, today,
+every pattern this branch just spent weeks eradicating from the interpreter.
+None of this is speculative; every item is verified at current source with
+file:line evidence, cataloged as master-issue rows 21-24 in
+`plans/master-issue-submissions.md`, and none of it has an owner-boundary test
+on master. If we do not enforce the ownership rules NOW, while the JIT is
+young, we will be giving this presentation again in a year about generated
+bytecode instead of an interpreter.
+
+The same diseases, one column each:
+
+| Interpreter disease (fixed on this branch) | JIT reincarnation (live on master) |
+|---|---|
+| `withPool` ambient thread-local pool (deleted, -217 lines) | `Ctx.Current` ScopedValue + `$ctx()`/`$xvm()`/`$owner()` ambient helpers in every bridge object |
+| Constructor this-escape (fatal lint, zero suppressions) | Generated `<clinit>` captures the first container's constants, injections, and singletons into classloader statics - the static-scope this-escape |
+| Runtime-published pool mutation (publication marker + synthesis windows) | Lazy classfile generation calls `pool.register`/`ensureTypeInfo` during JVM class loading with no marker, no window, no discipline |
+| Half-built method publication (detached build, first-wins publish) | Two loaders race `genClass`/`defineClass` with no classloading locks (`findClass` called directly, not parallel-capable) |
+| Wrong-owner caches (owner-passed pools, per-owner metadata) | `TypeConstant.m_sJitName`/`SignatureConstant` caches bake one Xvm's suffix counter into constants shared by every runtime |
+| Split view lifecycle state (shared cells, view guards) | Non-final `$INSTANCE` singletons, raw shared `$values` arrays, `nType` capturing another invocation's mutable `Ctx` |
+
+Classification, in the terms the audit uses everywhere else:
+
+- **Already a problem in master today, single-threaded:** class initialization
+  on any thread without a bound `Ctx` dies with `NoSuchElementException`; the
+  first container permanently donates its constants and injections to every
+  later container sharing the loaders (breaks *sequential* same-JVM reuse -
+  the exact scenario that started this whole investigation); `JitConnector`
+  fights over a cwd-relative `./jasm` dump tree.
+- **Becomes a correctness/security problem the moment anything is concurrent:**
+  every `<clinit>`/bridge-static race, the classloader `defineClass` races,
+  the `Xvm.typeSystems` name-collision window, unsynchronized
+  `loadedClasses`/`SKIP_SET`, cross-Xvm JIT-name pollution, and shared
+  `FileStructure` splicing. The JIT has **no fiber/service scheduler yet** -
+  the moment one lands (the `Ctx` javadocs already promise virtual-thread
+  fibers), all of these detonate at once.
+
+And the dependency direction matters: the JIT executes through generated
+classes and `Ctx`, NOT through Frame/ServiceContext/ObjectHandle - so almost
+none of the runtime hardening on this branch protects it. What the JIT *does*
+sit on is the shared `org.xvm.asm` layer - ConstantPool interning, the
+TypeInfo/isA relation calculus, Component child maps, FileStructure surgery -
+which is exactly the layer this branch fenced. The pool publication marker,
+synthesis windows, and first-wins publication discipline are the ready-made
+enforcement: the JIT must adopt them, not bypass them.
+
+**Asks for this section:** (1) file issue rows 21-24 with the bug-fix batch;
+(2) adopt the branch's pool/publication discipline as a hard gate on JIT PRs;
+(3) require the two-container red harness before the JIT grows a scheduler.
+
+## 9. What we should do - the staged plan (2 min)
 
 We are not proposing a rewrite. The audits are done, everything is
 classified, and the work splits cleanly:

@@ -116,6 +116,20 @@ drop branch-doc files, run the row's named test plus
 | L19 | Delegation synthesis assembles before publishing (`fix/delegation-synthesis`) | Filtered from `5d9a5f395`: detached factories, copy-on-write publish primitives, volatile child maps, reworked ensure bodies - WITHOUT the branch-only synthesis window | Additive + two method-body rewrites; needs a filtered patch. Graduated 2026-08-25 (S20). | S20 | None |
 | M19 | Typed dispatch showcase (PR 19) | `86c89e175` | **DO NOT FILE until explicit approval** (user decision pending). | PR 19 section | None |
 
+### JIT issue rows (2026-08-25, issue-first: fixes parked for a JIT rebase)
+
+These are ISSUE filings, not PR extractions: the fixes must land against a
+rebased JIT snapshot (`origin/JIT` moves daily), so each row ships the
+evidence and the fix strategy, and the hazard-census tests pin the unsafe
+shapes so any fix or regression fails loudly on this branch.
+
+| Row | Issue (submission body) | Classification | Tests |
+| --- | --- | --- | --- |
+| J21 | Generated/bridge `<clinit>` captures first container into classloader statics (submissions row 21) | Already broken single-threaded for same-JVM reuse and unbound-thread init; detonates under concurrency | `JitConcurrencyHazardCensusTest` (shape pins); two-container red harness is part of the ask |
+| J22 | Ambient `Ctx` API leaks invocation state (`$owner()`, `nType` capture, `OpCondJump` link-time eval) (submissions row 22) | Wrong-owner today with >1 Xvm/container; unbound threads throw today | `JitConcurrencyHazardCensusTest` (shape pins) |
+| J23 | Classloading + registry races (non-parallel-capable loaders, `loadedClasses`, name-collision window, skip sets, connector lifecycle) (submissions row 23) | Latent until first concurrent load/link; then `LinkageError`/ISE/corruption | `JitConcurrencyHazardCensusTest` (shape pins) |
+| J24 | JIT build mutates shared ASM structures (runtime `pool.register`, FileStructure splice, cross-Xvm name caches) (submissions row 24) | Latent under concurrency; FileStructure splice already wrong for two runtimes over one repository | `JitConcurrencyHazardCensusTest` (shape pins) |
+
 ### What Blocks Filing (User Decisions Only)
 
 Decided 2026-08-25 (collapse to fewest PRs without overcomplicating): L8
