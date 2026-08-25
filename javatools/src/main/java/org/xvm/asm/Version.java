@@ -607,7 +607,7 @@ public class Version
      * @return the version as an array of ints
      */
     protected int[] getIntArray() {
-        return ints;
+        return ints.clone();
     }
 
     // ----- fields --------------------------------------------------------------------------------

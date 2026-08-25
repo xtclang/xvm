@@ -155,7 +155,7 @@ public class EvalCompiler {
      * @return the lambda arguments indexes
      */
     public int[] getArgs() {
-        return m_aiArg;
+        return m_aiArg.clone();
     }
 
     /**

@@ -246,7 +246,7 @@ public interface ErrorListener {
          * @return the error message parameters
          */
         public Object[] getParams() {
-            return m_aoParam;
+            return m_aoParam == null ? null : m_aoParam.clone();
         }
 
         /**

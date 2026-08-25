@@ -104,7 +104,7 @@ public class ChildInfo {
      * @return a set of known identities of the child
      */
     public Set<IdentityConstant> getAllIdentities() {
-        return f_setIds;
+        return Collections.unmodifiableSet(f_setIds);
     }
 
     /**

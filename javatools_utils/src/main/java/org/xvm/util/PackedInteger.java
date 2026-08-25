@@ -7,6 +7,8 @@ import java.io.IOException;
 
 import java.math.BigInteger;
 
+import java.util.List;
+
 
 /**
  * A PackedInteger represents a signed, 2's-complement integer of 1 byte to 64KB (512Kb) in size.
@@ -1164,9 +1166,9 @@ public class PackedInteger
     /**
      * The decimal (1000x) factors.
      */
-    public static final PackedInteger[] xB_FACTORS = {KB, MB, GB, TB, PB, EB, ZB, YB, };
+    public static final List<PackedInteger> xB_FACTORS = List.of(KB, MB, GB, TB, PB, EB, ZB, YB);
     /**
      * The binary (1024x) factors.
      */
-    public static final PackedInteger[] xI_FACTORS = {KI, MI, GI, TI, PI, EI, ZI, YI, };
+    public static final List<PackedInteger> xI_FACTORS = List.of(KI, MI, GI, TI, PI, EI, ZI, YI);
 }

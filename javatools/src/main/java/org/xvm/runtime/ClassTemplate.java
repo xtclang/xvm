@@ -703,7 +703,7 @@ public abstract class ClassTemplate
      * @return the implicit field names
      */
     public String[] getImplicitFields() {
-        return f_asFieldsImplicit;
+        return f_asFieldsImplicit.length == 0 ? f_asFieldsImplicit : f_asFieldsImplicit.clone();
     }
 
     /**

@@ -2967,7 +2967,7 @@ public abstract sealed class Component
          *         indicates that all injections are handled by the injector
          */
         public List<Injection> getInjections() {
-            return m_listInject;
+            return m_listInject == null ? null : Collections.unmodifiableList(m_listInject);
         }
 
         /**

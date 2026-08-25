@@ -326,7 +326,7 @@ public class LongLong {
 
         if (l1H == 0) {
             if (l1L == 0) {
-                return ZEROx2;
+                return new LongLong[] {ZERO, ZERO};
             }
 
             if (l1L > 0) {
@@ -374,7 +374,7 @@ public class LongLong {
 
         if (l1H == 0) {
             if (l1L == 0) {
-                return ZEROx2;
+                return new LongLong[] {ZERO, ZERO};
             }
 
             if (l1L > 0) {
@@ -620,7 +620,6 @@ public class LongLong {
     public static final LongLong   ONE          = new LongLong(1, 0);
     public static final LongLong   MAX_VALUE    = new LongLong(-1, Long.MAX_VALUE);
     public static final LongLong   MIN_VALUE    = new LongLong(0, Long.MIN_VALUE);
-    public static final LongLong[] ZEROx2       = new LongLong[] {ZERO, ZERO};
     public static final LongLong[] OVERFLOWx2   = new LongLong[] {OVERFLOW, OVERFLOW};
 
     protected static final BigInteger BIG_MASK64  = new BigInteger("FFFFFFFFFFFFFFFF", 16);

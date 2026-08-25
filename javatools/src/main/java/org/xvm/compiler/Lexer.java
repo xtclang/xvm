@@ -8,6 +8,7 @@ import java.net.IDN;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 import java.util.function.Consumer;
@@ -1624,7 +1625,7 @@ public class Lexer
                 break PossibleSuffix;
             }
 
-            PackedInteger[] factors = PackedInteger.xB_FACTORS;
+            List<PackedInteger> factors = PackedInteger.xB_FACTORS;
             if (source.hasNext()) {
                 switch (nextChar()) {
                 case 'B': case 'b':
@@ -1656,7 +1657,7 @@ public class Lexer
                 }
             }
 
-            pi = pi.mul(factors[iMul]);
+            pi = pi.mul(factors.get(iMul));
         }
 
         return pi;

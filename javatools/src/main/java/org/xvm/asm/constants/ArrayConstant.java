@@ -155,7 +155,7 @@ public final class ArrayConstant
      */
     @Override
     public Constant[] getValue() {
-        return m_aconstVal;
+        return m_aconstVal.length == 0 ? m_aconstVal : m_aconstVal.clone();
     }
 
 

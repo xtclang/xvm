@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import java.util.List;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -362,12 +364,12 @@ public sealed class LiteralConstant
                     break PossibleSuffix;
                 }
 
-                PackedInteger[] factors = PackedInteger.xB_FACTORS;
+                List<PackedInteger> factors = PackedInteger.xB_FACTORS;
                 if (of < cch && (s.charAt(of) == 'I' || s.charAt(of) == 'i')) {
                     factors = PackedInteger.xI_FACTORS;
                 }
 
-                pint = pint.mul(factors[iMul]);
+                pint = pint.mul(factors.get(iMul));
             }
 
             m_oVal = pint;
