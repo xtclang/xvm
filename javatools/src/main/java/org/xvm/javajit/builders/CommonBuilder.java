@@ -2208,9 +2208,15 @@ public class CommonBuilder
                     .ifne(returnFalse);
             } else {
                 // Object type: call static equals$p(Ctx, nType, T, T) -> boolean
-                MethodInfo    eqMethod = propType.ensureTypeInfo().getMethodBySignature(eqSig);
-                JitMethodDesc eqJmd    = eqMethod.getJitDesc(this, propType);
-                ClassDesc     cdProp   = ensureClassDesc(propType);
+                MethodInfo     eqMethod = propType.ensureTypeInfo().getMethodBySignature(eqSig);
+                MethodConstant eqTarget = eqMethod.getJitIdentity();
+
+                assert eqTarget != null;
+
+                TypeConstant  targetType = eqTarget.getNamespace().getType();
+                JitMethodDesc eqJmd      = eqMethod.getJitDesc(this, propType);
+                ClassDesc     cdProp     = ensureClassDesc(propType);
+                ClassDesc     cdTarget   = ensureClassDesc(targetType);
 
                 loadCtx(code);
 
@@ -2232,7 +2238,7 @@ public class CommonBuilder
                     code.checkcast(cdProp);
                 }
 
-                code.invokestatic(cdProp, eqOptName, eqJmd.optimizedMD)
+                code.invokestatic(cdTarget, eqOptName, eqJmd.optimizedMD, targetType.isJitInterface())
                     .ifeq(returnFalse);
             }
             // we jump here if the prop is nullable and the null check determined both were null

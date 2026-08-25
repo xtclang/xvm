@@ -7292,12 +7292,12 @@ public abstract class TypeConstant
      */
     public boolean isJitInterface() {
         // Ref/Var, Tuple and Type are always represented by native classes
-        ConstantPool pool = getConstantPool();
-        return isInterfaceType()
-                && !this.isA(pool.typeRef())
-                && !this.isTuple()
-                && !this.isTypeOfType()
-                || getCallableJitType().equals(pool.typeObject());
+        ConstantPool pool    = getConstantPool();
+        TypeConstant typeJit = getCallableJitType();
+        return typeJit.isInterfaceType()
+                && !typeJit.isA(pool.typeRef())
+                && !typeJit.isTuple()
+                && !typeJit.isTypeOfType();
     }
 
     /**
@@ -7576,10 +7576,11 @@ public abstract class TypeConstant
                 default                           -> throw new IllegalStateException();
             };
 
-            boolean        isFormal = isFormalType();
-            ClassDesc      cd;
-            JitMethodDesc  jmd;
-            String         sJitName;
+            boolean       isFormal = isFormalType();
+            ClassDesc     cd;
+            String        sJitName;
+            JitMethodDesc jmd;
+            boolean       fInterface;
 
             if (isFormal) {
                 // while the method is either "equals" or "compare", its parameter types depend
@@ -7591,16 +7592,21 @@ public abstract class TypeConstant
                 MethodConstant idFunky   = bodyFunky.getIdentity();
                 TypeConstant   typeFunky = idFunky.getNamespace().getType();
 
-                cd       = ClassDesc.of(TypeSystem.funkyInterface(
-                            bctx.builder.ensureJitClassName(typeFunky)));
-                sJitName = idFunky.ensureJitMethodName(ts);
-                jmd      = bodyFunky.getJitDesc(bctx.builder, typeFunky);
-            } else {
-                MethodInfo method = bctx.getTypeInfo(this).getMethodBySignature(sig);
+                assert typeFunky.isJitInterface();
 
-                cd       = bctx.builder.ensureClassDesc(method.getJitIdentity().getNamespace().getType());
-                sJitName = method.ensureJitMethodName(ts);
-                jmd      = method.getJitDesc(bctx.builder, this);
+                cd         = ClassDesc.of(TypeSystem.funkyInterface(
+                                bctx.builder.ensureJitClassName(typeFunky)));
+                sJitName   = idFunky.ensureJitMethodName(ts);
+                jmd        = bodyFunky.getJitDesc(bctx.builder, typeFunky);
+                fInterface = true;
+            } else {
+                MethodInfo   method     = bctx.getTypeInfo(this).getMethodBySignature(sig);
+                TypeConstant typeTarget = method.getJitIdentity().getNamespace().getType();
+
+                cd         = bctx.builder.ensureClassDesc(typeTarget);
+                sJitName   = method.ensureJitMethodName(ts);
+                jmd        = method.getJitDesc(bctx.builder, this);
+                fInterface = typeTarget.isJitInterface();
             }
 
             MethodTypeDesc md;
@@ -7639,7 +7645,7 @@ public abstract class TypeConstant
                 if (isFormal) {
                     code.invokeinterface(cd, sJitName, md);
                 } else {
-                    code.invokestatic(cd, sJitName, md);
+                    code.invokestatic(cd, sJitName, md, fInterface);
                 }
 
                 switch (nOp) {
@@ -7659,7 +7665,7 @@ public abstract class TypeConstant
                     code.invokeinterface(cd, sJitName, md);
                 } else {
                     // static Ordered compare(Ctx,nType,Object,Object)
-                    code.invokestatic(cd, sJitName, md);
+                    code.invokestatic(cd, sJitName, md, fInterface);
                 }
 
                 boolean fInverse;

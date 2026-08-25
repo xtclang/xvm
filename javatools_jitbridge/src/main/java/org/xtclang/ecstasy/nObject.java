@@ -108,13 +108,6 @@ public abstract class nObject
         return $type(ctx).$dataType.isA(t.$dataType);
     }
 
-    /**
-     * {@code static <CompileType extends Object> Boolean equals(CompileType o1, CompileType o2)}
-     */
-    public static boolean equals$p(Ctx ctx, nType CompileType, Object o1, Object o2) {
-        return o1 == o2; // TODO CP: check unwrap
-    }
-
     // ----- static helpers for when references may be non-xObj classes ----------------------------
 
     public static java.lang.Object $makeImmut(Ctx ctx, java.lang.Object ref) {

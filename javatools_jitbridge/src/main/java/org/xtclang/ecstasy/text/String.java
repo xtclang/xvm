@@ -493,9 +493,9 @@ public class String
     public static Ordered compare(Ctx ctx, nType type, String value1, String value2) {
         // ToDo Optimize???
         int i = value1.toString().compareTo(value2.toString());
-        return i < 0 ? Ordered.Lesser.$INSTANCE
-                     : i == 0 ? Ordered.Equal.$INSTANCE
-                     : Ordered.Greater.$INSTANCE;
+        return i < 0  ? Ordered.Lesser.$INSTANCE :
+               i == 0 ? Ordered.Equal.$INSTANCE  :
+                        Ordered.Greater.$INSTANCE;
     }
 
     /**

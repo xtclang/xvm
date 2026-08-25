@@ -26,6 +26,8 @@ public class NativeNames {
 
         reservedMethodName.put("Freezable/freeze/1", "freeze");
 
+        reservedMethodName.put("Object/equals/2", "equals");
+
         reservedMethodName.put("reflect.Ref/get/0", "get");
         reservedMethodName.put("reflect.Ref/peek/0", "peek");
         reservedMethodName.put("reflect.Var/set/1", "set");

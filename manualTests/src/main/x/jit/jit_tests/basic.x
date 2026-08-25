@@ -15,6 +15,7 @@ package basic {
                 passed &= runTest(() -> condMixinTests.run());
                 passed &= runTest(() -> delegationTests.run());
                 passed &= runTest(() -> enumTests.run());
+                passed &= runTest(() -> equalTests.run());
                 passed &= runTest(() -> genericTests.run());
                 passed &= runTest(() -> invocationTests.run());
                 passed &= runTest(() -> lambdaTests.run());

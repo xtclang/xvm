@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -64,10 +63,6 @@ public class xException
             s_clzIOException                = f_container.getTemplate("io.IOException"               ).getCanonicalClass();
             s_clzIOIllegalUTF               = f_container.getTemplate("io.IllegalUTF"                ).getCanonicalClass();
 
-            METHOD_FORMAT_EXCEPTION = getStructure().findMethod("formatExceptionString", 2);
-
-            markNativeMethod("toString", VOID, STRING);
-
             invalidateTypeInfo();
         }
     }
@@ -90,20 +85,6 @@ public class xException
         }
         return super.getFieldValue(frame, hTarget, idProp, iReturn);
     }
-
-    @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
-        ExceptionHandle hException = (ExceptionHandle) hTarget;
-
-        // String formatExceptionString(String exceptionName, String stackTrace)
-
-        ObjectHandle[] ahVars = new ObjectHandle[METHOD_FORMAT_EXCEPTION.getMaxVars()];
-        ahVars[0] = xString.makeHandle(getClassConstant().getValueString()); // appender
-        ahVars[1] = hException.getField(frame, "stackTrace");
-
-        return frame.call1(METHOD_FORMAT_EXCEPTION, hException, ahVars, iReturn);
-    }
-
 
     // ---- stock exceptions -----------------------------------------------------------------------
 
@@ -369,6 +350,4 @@ public class xException
     private static ClassComposition s_clzFileAlreadyExistsException;
     private static ClassComposition s_clzIOException;
     private static ClassComposition s_clzIOIllegalUTF;
-
-    private static MethodStructure METHOD_FORMAT_EXCEPTION;
 }

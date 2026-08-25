@@ -7,31 +7,17 @@
  * hiding portions of the stack trace that represent information from outside of the current
  * container.
  */
-const Exception {
-    construct(String? text = Null, Exception? cause = Null) {
-        this.text  = text;
-        this.cause = cause;
-    }
+const Exception(String? text = Null, Exception? cause = Null) {
 
-    String? text;
-    Exception!? cause;
-    Iterable<StackFrame> stackTrace;
+    Iterable<StackFrame> stackTrace; // native
 
-    @RO String message.get() {
-        return text ?: "";
-    }
+    @RO String message.get() = text ?: "";
 
     @Override
     String toString() {
-        String name       = &this.class.name;
-        String stackTrace = formatStackTrace();
-        return formatExceptionString(name, stackTrace);
-    }
-
-    String formatExceptionString(String exceptionName, String stackTrace) {
         StringBuffer buf = new StringBuffer();
 
-        buf.append(exceptionName)
+        buf.append(&this.class.name)
            .append(": ")
            .append(message)
            .append(stackTrace);
@@ -42,10 +28,6 @@ const Exception {
         }
 
         return buf.toString();
-    }
-
-    String formatStackTrace() {
-        TODO
     }
 
     static const StackFrame {

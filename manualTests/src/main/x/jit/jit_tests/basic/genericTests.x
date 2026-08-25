@@ -33,6 +33,28 @@ package genericTests {
         function Int(Object) broadTransform = value -> 42;
         GenericFunction<Int> intApply       = new GenericFunction();
         assert intApply.applyInt(broadTransform, 7) == 42;
+
+        testFormalComparison();
+        testFormalType();
+    }
+
+    void testFormalComparison() {
+        Formal<String> test = new Formal();
+        // TODO: the dynamic Orderable.compare call is not routed through the funky interface
+//        assert test.less("alpha", "beta");
+
+        class Formal<Element> {
+            Boolean less(Element value1, Element value2) {
+                assert Element.is(Type<Orderable>);
+                return value1 < value2;
+            }
+        }
+    }
+
+    void testFormalType() {
+        Iterator<String> iterator = ["alpha"].iterator();
+        // TODO GG/CP: formal type resolution recurses between nObject.$type() and $xvmType()
+//        assert iterator.Element.is(Type<Orderable>);
     }
 
     static <Element, Result> Result apply(
