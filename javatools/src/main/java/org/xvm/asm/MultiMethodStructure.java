@@ -263,7 +263,7 @@ public final class MultiMethodStructure
     public MethodStructure createMethod(boolean fFunction, Access access, Annotation[] annotations,
             Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper) {
         return createMethod(fFunction, access, annotations, aReturns, aParams,
-                fHasCode, fUsesSuper, false);
+                fHasCode, fUsesSuper, false, true);
     }
 
     /**
@@ -275,12 +275,73 @@ public final class MultiMethodStructure
             Annotation[] annotations, Parameter[] aReturns, Parameter[] aParams,
             boolean fHasCode, boolean fUsesSuper) {
         return createMethod(fFunction, access, annotations, aReturns, aParams,
-                fHasCode, fUsesSuper, true);
+                fHasCode, fUsesSuper, true, true);
+    }
+
+    /**
+     * Create a synthetic method exactly as {@link #createMethodCopyingParameters}, but WITHOUT
+     * publishing it as a findable child. Runtime-lazy synthesis (delegation) must fully assemble
+     * the method's code before any reader can observe the method through the component tree; the
+     * caller attaches the assembled method with {@link #publishSynthesizedMethod}.
+     */
+    MethodStructure createDetachedMethodCopyingParameters(boolean fFunction, Access access,
+            Annotation[] annotations, Parameter[] aReturns, Parameter[] aParams,
+            boolean fHasCode, boolean fUsesSuper) {
+        return createMethod(fFunction, access, annotations, aReturns, aParams,
+                fHasCode, fUsesSuper, true, false);
+    }
+
+    /**
+     * Create a method exactly as {@link #createMethod}, but WITHOUT publishing it as a findable
+     * child; see {@link #createDetachedMethodCopyingParameters}.
+     */
+    MethodStructure createDetachedMethod(boolean fFunction, Access access,
+            Annotation[] annotations, Parameter[] aReturns, Parameter[] aParams,
+            boolean fHasCode, boolean fUsesSuper) {
+        return createMethod(fFunction, access, annotations, aReturns, aParams,
+                fHasCode, fUsesSuper, false, false);
+    }
+
+    /**
+     * Atomically publish a fully assembled method built by a createDetached* factory, or adopt
+     * the equivalent method that another thread published first. Synthesized method identities
+     * are interned by signature, so two racing builders produce the same {@link MethodConstant}
+     * and the id lookup makes first-wins adoption exact. The map is republished copy-on-write so
+     * concurrent unsynchronized readers never observe it mid-mutation; the monitor is the
+     * multimethod's own, reentrant and leaf-scoped (nothing foreign is called while held).
+     *
+     * @param method  the fully assembled method to publish
+     *
+     * @return the published method: {@code method} itself, or the winning equivalent
+     */
+    synchronized MethodStructure publishOrAdoptSynthesizedMethod(MethodStructure method) {
+        assert method.getParent() == this;
+
+        ensureChildren();
+        Map<MethodConstant, MethodStructure> mapOld   = m_methodByConstant;
+        MethodConstant                       id       = method.getIdentityConstant();
+        MethodStructure                      existing = mapOld == null ? null : mapOld.get(id);
+        if (existing != null) {
+            return existing;
+        }
+
+        Map<MethodConstant, MethodStructure> mapNew = new ListMap<>();
+        if (mapOld != null) {
+            mapNew.putAll(mapOld);
+        }
+        mapNew.put(id, method);
+
+        // publish the new map to every sibling, exactly as ensureMethodByConstantMap() installs it
+        for (Iterator<Component> siblings = siblings(); siblings.hasNext(); ) {
+            ((MultiMethodStructure) siblings.next()).m_methodByConstant = mapNew;
+        }
+        markModified();
+        return method;
     }
 
     private MethodStructure createMethod(boolean fFunction, Access access, Annotation[] annotations,
             Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper,
-            boolean fCopyParameters) {
+            boolean fCopyParameters, boolean fPublish) {
         int nFlags   = Format.METHOD.ordinal() | access.FLAGS | (fFunction ? Component.STATIC_BIT : 0);
         int cReturns = aReturns.length;
         int cParams  = aParams.length;
@@ -326,6 +387,9 @@ public final class MultiMethodStructure
             struct.copyParametersBeforePublication();
         }
 
+        if (!fPublish) {
+            return struct;
+        }
         return addChild(struct) ? struct : null;
     }
 
@@ -423,8 +487,11 @@ public final class MultiMethodStructure
 
     /**
      * This holds all of the method children. See the explanation of Component.m_childByName.
+     * Volatile for {@link #publishOrAdoptSynthesizedMethod}: runtime-lazy synthesis republishes
+     * the map copy-on-write, and unsynchronized readers must observe either the old or the new
+     * complete map, never one under mutation.
      */
-    private Map<MethodConstant, MethodStructure> m_methodByConstant;
+    private volatile Map<MethodConstant, MethodStructure> m_methodByConstant;
 
     /**
      * The flag used by the serialization logic.

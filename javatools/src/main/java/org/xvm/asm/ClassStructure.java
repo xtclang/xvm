@@ -2961,17 +2961,35 @@ public sealed class ClassStructure
      */
     public MethodStructure ensurePropertyDelegation(
             PropertyStructure prop, PropertyStructure propTarget, SignatureConstant sigAccessor) {
-        PropertyStructure propHost = (PropertyStructure) getChild(prop.getName());
-        if (propHost == null) {
-            assert !prop.isStatic();
-            propHost = createProperty(false, prop.getAccess(), prop.getVarAccess(),
-                    prop.getType(), prop.getName());
-            propHost.setSynthetic(true);
-        }
+        ConstantPool pool = getConstantPool();
 
-        MethodStructure methodDelegate = propHost.findMethod(sigAccessor);
-        if (methodDelegate == null) {
-            ConstantPool pool     = getConstantPool();
+        // runtime-lazy synthesis is the one legitimate post-publication constant writer; the
+        // window below is per-thread and publication-guard-scoped only
+        try (var _ = pool.openRuntimeSynthesisWindow(
+                "property delegation " + prop.getName() + '.' + sigAccessor.getName())) {
+            PropertyStructure propHost = (PropertyStructure) getChild(prop.getName());
+            if (propHost == null) {
+                assert !prop.isStatic();
+                // build the mirrored property detached, then publish first-wins; the loser
+                // adopts whatever equally named property won the race
+                int nFlags = Format.PROPERTY.ordinal() | prop.getAccess().FLAGS;
+                PropertyConstant idProp = pool.ensurePropertyConstant(
+                        getIdentityConstant(), prop.getName());
+                PropertyStructure structProp = new PropertyStructure(this, nFlags, idProp, null,
+                        prop.getVarAccess(), prop.getType());
+                structProp.setSynthetic(true);
+                propHost = (PropertyStructure) publishRuntimeChild(structProp);
+            }
+
+            MethodStructure methodDelegate = propHost.findMethod(sigAccessor);
+            if (methodDelegate != null) {
+                return methodDelegate;
+            }
+
+            // build the accessor DETACHED and assemble it completely before publication: the old
+            // shape attached the method as a findable child before its code existed, so a
+            // concurrent dispatcher could capture a partial op array and both threads would then
+            // mutate one Code in place
             TypeConstant typeProp = prop.getType();
 
             boolean      fGet;
@@ -2989,8 +3007,10 @@ public sealed class ClassStructure
                 aReturns = Parameter.NO_PARAMS;
             }
 
-            methodDelegate = propHost.createMethod(false, prop.getAccess(), null,
-                    aReturns, sigAccessor.getName(), aParams, true, false);
+            MultiMethodStructure multimethod =
+                    propHost.ensureRuntimeMultiMethodStructure(sigAccessor.getName());
+            methodDelegate = multimethod.createDetachedMethod(false, prop.getAccess(), null,
+                    aReturns, aParams, true, false);
             methodDelegate.setSynthetic(true);
 
             Code             code       = methodDelegate.createCode();
@@ -3012,8 +3032,10 @@ public sealed class ClassStructure
             }
 
             methodDelegate.forceAssembly(pool);
+
+            // first-wins: a racing builder's method is discarded in favor of the winner
+            return multimethod.publishOrAdoptSynthesizedMethod(methodDelegate);
         }
-        return methodDelegate;
     }
 
     /**
@@ -3029,51 +3051,103 @@ public sealed class ClassStructure
         SignatureConstant sig            = method.getIdentityConstant().getSignature();
         MethodStructure   methodDelegate = findMethod(sig);
         if (methodDelegate == null) {
-            ConstantPool pool         = getConstantPool();
-            TypeConstant typeFormal   = getFormalType();
-            TypeConstant typePrivate  = typeFormal.ensureAccess(Access.PRIVATE);
-            TypeInfo     infoPrivate  = typePrivate.ensureTypeInfo();
-            PropertyInfo infoDelegate = infoPrivate.findProperty(sDelegate);
-            TypeConstant typeDelegate = infoDelegate.getType();
+            ConstantPool pool = getConstantPool();
 
-            Annotation[]          aAnnos      = {pool.ensureAnnotation(pool.clzOverride())};
-            MultiMethodStructure  multimethod = ensureMultiMethodStructure(method.getName());
+            // runtime-lazy synthesis is the one legitimate post-publication constant writer; the
+            // window below is per-thread and publication-guard-scoped only. The method is built
+            // DETACHED and fully assembled before publication - the old shape attached it as a
+            // findable child before its code existed, so a concurrent dispatcher could capture a
+            // partial op array and both threads would then mutate one Code in place. Racing
+            // builders are possible by design (TypeInfo construction can recurse into synthesis
+            // on other classes, so nothing here holds a lock across it); the loser's method is
+            // discarded at the first-wins publication below.
+            try (var _ = pool.openRuntimeSynthesisWindow("method delegation to " + sDelegate)) {
+                TypeConstant typeFormal   = getFormalType();
+                TypeConstant typePrivate  = typeFormal.ensureAccess(Access.PRIVATE);
+                TypeInfo     infoPrivate  = typePrivate.ensureTypeInfo();
+                PropertyInfo infoDelegate = infoPrivate.findProperty(sDelegate);
+                TypeConstant typeDelegate = infoDelegate.getType();
 
-            methodDelegate = multimethod.createMethodCopyingParameters(false, method.getAccess(),
-                    aAnnos, method.getReturnArray(), method.getParamArray(), true, false);
-            methodDelegate.setSynthetic(true);
+                Annotation[]         aAnnos      = {pool.ensureAnnotation(pool.clzOverride())};
+                MultiMethodStructure multimethod = ensureRuntimeMultiMethodStructure(method.getName());
 
-            Code           code       = methodDelegate.createCode();
-            MethodInfo     infoMethod = typeDelegate.ensureTypeInfo().getMethodBySignature(sig);
-            MethodConstant idMethod   = infoMethod.getIdentity();
-            int            cParams    = method.getParamCount();
-            int            cReturns   = method.getReturnCount();
-            Register[]     aregParam  = cParams  == 0 ? null : new Register[cParams];
-            boolean        fAtomic    = infoDelegate.isAtomic();
+                methodDelegate = multimethod.createDetachedMethodCopyingParameters(false, method.getAccess(),
+                        aAnnos, method.getReturnArray(), method.getParamArray(), true, false);
+                methodDelegate.setSynthetic(true);
 
-            for (int i = 0; i < cParams; i++) {
-                Parameter param = methodDelegate.getParam(i);
-                aregParam[i] = new Register(param.getType(), param.getName(), i);
-            }
+                Code           code       = methodDelegate.createCode();
+                MethodInfo     infoMethod = typeDelegate.ensureTypeInfo().getMethodBySignature(sig);
+                MethodConstant idMethod   = infoMethod.getIdentity();
+                int            cParams    = method.getParamCount();
+                int            cReturns   = method.getReturnCount();
+                Register[]     aregParam  = cParams  == 0 ? null : new Register[cParams];
+                boolean        fAtomic    = infoDelegate.isAtomic();
 
-            Register regProp;
-            if (infoDelegate.isConstant()) {
-                Constant constValue = infoDelegate.getInitialValue();
+                for (int i = 0; i < cParams; i++) {
+                    Parameter param = methodDelegate.getParam(i);
+                    aregParam[i] = new Register(param.getType(), param.getName(), i);
+                }
 
-                regProp = code.createRegister(typeDelegate);
-                code.add(new Var_I(regProp, constValue == null
-                        ? pool.ensureSingletonConstConstant(infoDelegate.getIdentity())
-                        : constValue));
-            } else {
-                regProp = code.createRegister(typeDelegate);
-                code.add(new L_Get(infoDelegate.getIdentity(), regProp));
-            }
+                Register regProp;
+                if (infoDelegate.isConstant()) {
+                    Constant constValue = infoDelegate.getInitialValue();
 
-            switch (cReturns) {
-            case 0:
-                if (fAtomic) {
-                    Register regReturn = code.createRegister(pool.ensureFuture(pool.typeTuple()));
-                    code.add(new Var_D(regReturn));
+                    regProp = code.createRegister(typeDelegate);
+                    code.add(new Var_I(regProp, constValue == null
+                            ? pool.ensureSingletonConstConstant(infoDelegate.getIdentity())
+                            : constValue));
+                } else {
+                    regProp = code.createRegister(typeDelegate);
+                    code.add(new L_Get(infoDelegate.getIdentity(), regProp));
+                }
+
+                switch (cReturns) {
+                case 0:
+                    if (fAtomic) {
+                        Register regReturn = code.createRegister(pool.ensureFuture(pool.typeTuple()));
+                        code.add(new Var_D(regReturn));
+
+                        switch (cParams) {
+                        case 0:
+                            code.add(new Invoke_01(regProp, idMethod, regReturn));
+                            break;
+
+                        case 1:
+                            code.add(new Invoke_11(regProp, idMethod, aregParam[0], regReturn));
+                            break;
+
+                        default:
+                            code.add(new Invoke_N1(regProp, idMethod, aregParam, regReturn));
+                            break;
+                        }
+                        code.add(new Return_1(regReturn));
+                    } else {
+                        switch (cParams) {
+                        case 0:
+                            code.add(new Invoke_00(regProp, idMethod));
+                            break;
+
+                        case 1:
+                            code.add(new Invoke_10(regProp, idMethod, aregParam[0]));
+                            break;
+
+                        default:
+                            code.add(new Invoke_N0(regProp, idMethod, aregParam));
+                            break;
+                        }
+                        code.add(new Return_0());
+                    }
+                    break;
+
+                case 1: {
+                    TypeConstant typeReturn = methodDelegate.getReturn(0).getType();
+                    Register     regReturn;
+                    if (fAtomic) {
+                        regReturn = code.createRegister(pool.ensureFuture(typeReturn));
+                        code.add(new Var_D(regReturn));
+                    } else {
+                        regReturn = code.createRegister(typeReturn, "result");
+                    }
 
                     switch (cParams) {
                     case 0:
@@ -3089,84 +3163,46 @@ public sealed class ClassStructure
                         break;
                     }
                     code.add(new Return_1(regReturn));
-                } else {
+                    break;
+                }
+
+                default: {
+                    Register[] aregReturn = new Register[cReturns];
+
+                    for (int i = 0; i < cReturns; i++) {
+                        TypeConstant typeReturn = methodDelegate.getReturn(i).getType();
+                        if (fAtomic) {
+                            Register regReturn = code.createRegister(pool.ensureFuture(typeReturn));
+                            code.add(new Var_D(regReturn));
+                            aregReturn[i] = regReturn;
+                        } else {
+                            aregReturn[i] = code.createRegister(typeReturn);
+                        }
+                    }
+
                     switch (cParams) {
                     case 0:
-                        code.add(new Invoke_00(regProp, idMethod));
+                        code.add(new Invoke_0N(regProp, idMethod, aregReturn));
                         break;
 
                     case 1:
-                        code.add(new Invoke_10(regProp, idMethod, aregParam[0]));
+                        code.add(new Invoke_1N(regProp, idMethod, aregParam[0], aregReturn));
                         break;
 
                     default:
-                        code.add(new Invoke_N0(regProp, idMethod, aregParam));
+                        code.add(new Invoke_NN(regProp, idMethod, aregParam, aregReturn));
                         break;
                     }
-                    code.add(new Return_0());
-                }
-                break;
-
-            case 1: {
-                TypeConstant typeReturn = methodDelegate.getReturn(0).getType();
-                Register     regReturn;
-                if (fAtomic) {
-                    regReturn = code.createRegister(pool.ensureFuture(typeReturn));
-                    code.add(new Var_D(regReturn));
-                } else {
-                    regReturn = code.createRegister(typeReturn, "result");
-                }
-
-                switch (cParams) {
-                case 0:
-                    code.add(new Invoke_01(regProp, idMethod, regReturn));
-                    break;
-
-                case 1:
-                    code.add(new Invoke_11(regProp, idMethod, aregParam[0], regReturn));
-                    break;
-
-                default:
-                    code.add(new Invoke_N1(regProp, idMethod, aregParam, regReturn));
+                    code.add(new Return_N(aregReturn));
                     break;
                 }
-                code.add(new Return_1(regReturn));
-                break;
+                }
+
+                methodDelegate.forceAssembly(pool);
+
+                // first-wins: a racing builder's method is discarded in favor of the winner
+                methodDelegate = multimethod.publishOrAdoptSynthesizedMethod(methodDelegate);
             }
-
-            default: {
-                Register[] aregReturn = new Register[cReturns];
-
-                for (int i = 0; i < cReturns; i++) {
-                    TypeConstant typeReturn = methodDelegate.getReturn(i).getType();
-                    if (fAtomic) {
-                        Register regReturn = code.createRegister(pool.ensureFuture(typeReturn));
-                        code.add(new Var_D(regReturn));
-                        aregReturn[i] = regReturn;
-                    } else {
-                        aregReturn[i] = code.createRegister(typeReturn);
-                    }
-                }
-
-                switch (cParams) {
-                case 0:
-                    code.add(new Invoke_0N(regProp, idMethod, aregReturn));
-                    break;
-
-                case 1:
-                    code.add(new Invoke_1N(regProp, idMethod, aregParam[0], aregReturn));
-                    break;
-
-                default:
-                    code.add(new Invoke_NN(regProp, idMethod, aregParam, aregReturn));
-                    break;
-                }
-                code.add(new Return_N(aregReturn));
-                break;
-            }
-            }
-
-            methodDelegate.forceAssembly(pool);
         }
         return methodDelegate;
     }

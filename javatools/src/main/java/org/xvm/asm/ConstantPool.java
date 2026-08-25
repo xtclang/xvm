@@ -41,6 +41,7 @@ import org.xvm.compiler.Source;
 
 import org.xvm.type.Decimal;
 
+import org.xvm.util.Auto;
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.TransientThreadLocal;
@@ -449,6 +450,28 @@ public class ConstantPool
     }
 
     /**
+     * Open a runtime-synthesis registration window for the current thread. The publication
+     * marker rejects new registrations once a pool is runtime-visible; lazily synthesized
+     * delegation methods are the one legitimate post-publication writer, and their synthesis -
+     * which publishes methods only after their code is fully assembled - opens this explicit
+     * window around the constants it must intern. The window is per-thread and reference
+     * counted, so nested synthesis (one delegation build triggering another) stays open until
+     * the outermost close; it never relaxes the destructive-mutation guard.
+     *
+     * @param sReason  short description of the synthesis, for call-site self-documentation
+     *
+     * @return an Auto that closes the window
+     */
+    public Auto openRuntimeSynthesisWindow(String sReason) {
+        assert sReason != null && !sReason.isEmpty();
+
+        Thread thread = Thread.currentThread();
+        f_mapSynthesisWindows.merge(thread, 1, Integer::sum);
+        return () -> f_mapSynthesisWindows.compute(thread,
+                (threadOpen, cOpen) -> cOpen == null || cOpen <= 1 ? null : cOpen - 1);
+    }
+
+    /**
      * Fail before publishing a new constant into a pool that diagnostics already marked as runtime
      * visible. Existing constants are still returned normally; only new registrations are rejected.
      *
@@ -456,7 +479,8 @@ public class ConstantPool
      */
     private void assertRegisterBeforeRuntimePublished(Constant constant) {
         RuntimePublication publication = runtimePublication;
-        if (publication != null) {
+        if (publication != null
+                && !f_mapSynthesisWindows.containsKey(Thread.currentThread())) {
             throw new IllegalStateException("ConstantPool registered "
                     + describeConstantForDiagnostics(constant)
                     + " after runtime publication by "
@@ -4280,6 +4304,12 @@ public class ConstantPool
      * Diagnostic marker installed only when late-registration validation is enabled.
      */
     private volatile RuntimePublication runtimePublication;
+
+    /**
+     * Per-thread reference counts of open runtime-synthesis registration windows; see
+     * {@link #openRuntimeSynthesisWindow}.
+     */
+    private final Map<Thread, Integer> f_mapSynthesisWindows = new ConcurrentHashMap<>();
 
     /**
      * NakedRef is a fundamental formal type that comes from the "_native" module.

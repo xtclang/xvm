@@ -878,6 +878,75 @@ public abstract sealed class Component
     }
 
     /**
+     * Atomically publish a fully built child for runtime-lazy synthesis, or adopt the equally
+     * named child that won the race. Compile-time {@link #addChild} mutates the shared child map
+     * in place, which is correct for the single-threaded compilation phases; runtime synthesis
+     * instead publishes copy-on-write under the component's own monitor, so concurrent readers -
+     * which are unsynchronized by design - only ever observe a completely built map, and the
+     * child itself must be completely built (code assembled) before it becomes findable. The
+     * monitor is reentrant and leaf-scoped: nothing foreign is called while it is held.
+     *
+     * @param child  the fully built child to publish; it must already name this component as its
+     *               containing component
+     *
+     * @return the published child: {@code child} itself, or the previously published winner
+     */
+    protected synchronized Component publishRuntimeChild(Component child) {
+        assert child.getContaining() == this && !(child instanceof MethodStructure);
+
+        ensureChildren();
+        Map<String, Component> mapOld   = m_childByName;
+        String                 sName    = child.getName();
+        Component              existing = mapOld == null ? null : mapOld.get(sName);
+        if (existing != null) {
+            return existing;
+        }
+
+        Map<String, Component> mapNew = new ListMap<>();
+        if (mapOld != null) {
+            mapNew.putAll(mapOld);
+        }
+        mapNew.put(sName, child);
+
+        // publish the new map to every sibling, exactly as ensureChildByNameMap() installs it
+        for (Iterator<Component> siblings = siblings(); siblings.hasNext(); ) {
+            siblings.next().m_childByName = mapNew;
+        }
+        markModified();
+        return child;
+    }
+
+    /**
+     * Runtime-safe variant of {@link #ensureMultiMethodStructure}. The compile-time helper's
+     * check-then-create races concurrent synthesis (the loser observes a null from the failed
+     * {@code addChild}), and its in-place attachment is unsafe under concurrent readers. This
+     * variant publishes first-wins copy-on-write; an empty multimethod container is benign to
+     * publish early, because {@code findMethod} on it simply returns null.
+     *
+     * @param sName  the method name
+     *
+     * @return the published (or adopted) multimethod container
+     */
+    MultiMethodStructure ensureRuntimeMultiMethodStructure(String sName) {
+        Component sibling = getChildByNameMap().get(sName);
+        while (sibling != null) {
+            if (sibling instanceof MultiMethodStructure mms) {
+                return mms;
+            }
+            sibling = sibling.getNextSibling();
+        }
+
+        MultiMethodConstant  constId = getConstantPool().ensureMultiMethodConstant(getIdentityConstant(), sName);
+        MultiMethodStructure struct  = new MultiMethodStructure(this, Format.MULTIMETHOD.ordinal(), constId, null);
+
+        Component published = publishRuntimeChild(struct);
+        if (published instanceof MultiMethodStructure mms) {
+            return mms;
+        }
+        throw new IllegalStateException("multimethod name collision: " + sName + " -> " + published);
+    }
+
+    /**
      * Link a sibling to the specified child's chain.
      *
      * @param child    the child component to link
@@ -3606,14 +3675,19 @@ public abstract sealed class Component
     private volatile byte[] m_abChildren;
 
     /**
-     * This holds the children of all siblings, except for methods (because they are identified by
-     * signature, not by name). Because a single child may turn out to be a child of more than one
-     * sibling (based on which condition applies), the child can only determine its real parent by
-     * asking the assumed parent's assumed parent for the child by the name of the assumed parent.
-     * Similarly, the child obtained by name from this map is just the first of the siblings by that
-     * name, only one of which (at most) is the child that is existent for a specified name.
+     * This holds all of the children of all of the siblings, except for methods (because they are
+     * identified by signature, not by name). Because a single child may turn out to be a child of
+     * more than one sibling (based on which condition applies), the child can only determine its
+     * real parent by asking the assumed parent's assumed parent for the child by the name of the
+     * assumed parent. Similarly, the child obtained by name from this map is just the first of the
+     * siblings by that name, only one of which (at most) is the child that is existent for a
+     * specified name.
+     * <p/>
+     * Volatile for {@link #publishRuntimeChild}: runtime-lazy synthesis republishes the map
+     * copy-on-write, and unsynchronized readers must observe either the old or the new complete
+     * map, never one under mutation.
      */
-    private Map<String, Component> m_childByName;
+    private volatile Map<String, Component> m_childByName;
 
     /**
      * For XVM structures that can be modified, this flag tracks whether a modification has
