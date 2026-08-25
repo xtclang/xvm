@@ -147,4 +147,22 @@ public final class AsExpression
     protected long lEndPos;
 
     private transient boolean m_fCastRequired = true;
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected AsExpression(AsExpression that) {
+        super(that);
+        this.lEndPos = that.lEndPos;
+        this.m_fCastRequired = that.m_fCastRequired;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new AsExpression(this);
+    }
 }

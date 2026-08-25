@@ -1533,4 +1533,33 @@ public final class LambdaExpression
 
     private static final Field[] CHILD_FIELDS =
             fieldsForNames(LambdaExpression.class, "params", "paramNames", "body");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected LambdaExpression(LambdaExpression that) {
+        super(that);
+        this.params = that.params;
+        this.paramNames = that.paramNames;
+        this.operator = that.operator;
+        this.body = that.body;
+        this.lStartPos = that.lStartPos;
+        this.m_fPrepared = that.m_fPrepared;
+        this.m_typeRequired = that.m_typeRequired;
+        this.m_collector = that.m_collector;
+        this.m_lambda = that.m_lambda;
+        this.m_ctxLambda = that.m_ctxLambda;
+        this.m_aBindArgs = that.m_aBindArgs;
+        this.m_astLambda = that.m_astLambda;
+        this.m_aAstBind = that.m_aAstBind;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new LambdaExpression(this);
+    }
 }

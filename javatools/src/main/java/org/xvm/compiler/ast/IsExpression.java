@@ -299,4 +299,21 @@ public final class IsExpression
     // ----- fields --------------------------------------------------------------------------------
 
     private final long lEndPos;
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected IsExpression(IsExpression that) {
+        super(that);
+        this.lEndPos = that.lEndPos;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new IsExpression(this);
+    }
 }

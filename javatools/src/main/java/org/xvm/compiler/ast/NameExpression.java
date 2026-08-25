@@ -3411,4 +3411,37 @@ public sealed class NameExpression
     private transient ExprAST m_astResult;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "left", "params");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected NameExpression(NameExpression that) {
+        super(that);
+        this.left = that.left;
+        this.amp = that.amp;
+        this.name = that.name;
+        this.params = that.params;
+        this.lEndPos = that.lEndPos;
+        this.m_mapTypeParams = that.m_mapTypeParams;
+        this.m_targetInfo = that.m_targetInfo;
+        this.m_arg = that.m_arg;
+        this.m_plan = that.m_plan;
+        this.m_idBjarnLambda = that.m_idBjarnLambda;
+        this.m_propAccessPlan = that.m_propAccessPlan;
+        this.m_idSingletonParent = that.m_idSingletonParent;
+        this.m_fClassAttribute = that.m_fClassAttribute;
+        this.m_fAssignable = that.m_fAssignable;
+        this.m_fNarrowed = that.m_fNarrowed;
+        this.m_astRefTarget = that.m_astRefTarget;
+        this.m_astResult = that.m_astResult;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new NameExpression(this);
+    }
 }

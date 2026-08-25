@@ -478,4 +478,24 @@ public final class FileExpression
     private ResourceDir m_dir;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(FileExpression.class, "type");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected FileExpression(FileExpression that) {
+        super(that);
+        this.type = that.type;
+        this.path = that.path;
+        this.m_file = that.m_file;
+        this.m_dir = that.m_dir;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new FileExpression(this);
+    }
 }

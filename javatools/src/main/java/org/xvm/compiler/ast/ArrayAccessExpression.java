@@ -1300,4 +1300,26 @@ public final class ArrayAccessExpression
     private transient boolean        m_fSlice;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ArrayAccessExpression.class, "expr", "indexes");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ArrayAccessExpression(ArrayAccessExpression that) {
+        super(that);
+        this.expr = that.expr;
+        this.indexes = that.indexes;
+        this.tokClose = that.tokClose;
+        this.m_idGet = that.m_idGet;
+        this.m_idSet = that.m_idSet;
+        this.m_fSlice = that.m_fSlice;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new ArrayAccessExpression(this);
+    }
 }

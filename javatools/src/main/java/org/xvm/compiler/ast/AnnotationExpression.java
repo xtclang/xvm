@@ -586,4 +586,27 @@ public final class AnnotationExpression
     private transient boolean    m_fConst;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AnnotationExpression.class, "type", "args");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected AnnotationExpression(AnnotationExpression that) {
+        super(that);
+        this.type = that.type;
+        this.args = that.args;
+        this.lStartPos = that.lStartPos;
+        this.lEndPos = that.lEndPos;
+        this.m_node = that.m_node;
+        this.m_anno = that.m_anno;
+        this.m_fConst = that.m_fConst;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new AnnotationExpression(this);
+    }
 }

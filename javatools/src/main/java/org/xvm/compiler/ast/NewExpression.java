@@ -1694,4 +1694,44 @@ public final class NewExpression
     private transient ExprAST m_astNew;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "anon");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected NewExpression(NewExpression that) {
+        super(that);
+        this.left = that.left;
+        this.operator = that.operator;
+        this.type = that.type;
+        this.args = that.args;
+        this.dims = that.dims;
+        this.body = that.body;
+        this.anon = that.anon;
+        this.lEndPos = that.lEndPos;
+        this.m_constructor = that.m_constructor;
+        this.m_fTupleArg = that.m_fTupleArg;
+        this.m_purposeCurrent = that.m_purposeCurrent;
+        this.m_anonActualBackup = that.m_anonActualBackup;
+        this.m_clzActualBackup = that.m_clzActualBackup;
+        this.m_ctxCapture = that.m_ctxCapture;
+        this.m_mapCapture = that.m_mapCapture;
+        this.m_mapRegisters = that.m_mapRegisters;
+        this.m_plan = that.m_plan;
+        this.m_nParentSteps = that.m_nParentSteps;
+        this.m_idFormal = that.m_idFormal;
+        this.m_regFormal = that.m_regFormal;
+        this.m_fFixedSizeArray = that.m_fFixedSizeArray;
+        this.m_fInstanceChild = that.m_fInstanceChild;
+        this.m_fDynamicAnno = that.m_fDynamicAnno;
+        this.m_astNew = that.m_astNew;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new NewExpression(this);
+    }
 }

@@ -304,4 +304,21 @@ public final class ToIntExpression
     // ----- fields --------------------------------------------------------------------------------
 
     private final PackedInteger m_pintOffset;
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ToIntExpression(ToIntExpression that) {
+        super(that);
+        this.m_pintOffset = that.m_pintOffset;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new ToIntExpression(this);
+    }
 }

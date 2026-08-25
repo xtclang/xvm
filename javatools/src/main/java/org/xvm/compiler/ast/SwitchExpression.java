@@ -378,4 +378,27 @@ public final class SwitchExpression
     private transient ExprAST[]               m_abastBody;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected SwitchExpression(SwitchExpression that) {
+        super(that);
+        this.keyword = that.keyword;
+        this.cond = that.cond;
+        this.contents = that.contents;
+        this.lEndPos = that.lEndPos;
+        this.m_casemgr = that.m_casemgr;
+        this.m_aconstCases = that.m_aconstCases;
+        this.m_abastBody = that.m_abastBody;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new SwitchExpression(this);
+    }
 }

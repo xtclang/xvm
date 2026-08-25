@@ -321,4 +321,25 @@ public final class StatementExpression
     private transient BinaryAST      m_astBody;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementExpression.class, "body");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected StatementExpression(StatementExpression that) {
+        super(that);
+        this.body = that.body;
+        this.m_atypeRequired = that.m_atypeRequired;
+        this.m_collector = that.m_collector;
+        this.m_aLVal = that.m_aLVal;
+        this.m_astBody = that.m_astBody;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new StatementExpression(this);
+    }
 }

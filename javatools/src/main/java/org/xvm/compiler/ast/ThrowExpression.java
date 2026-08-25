@@ -431,4 +431,24 @@ public final class ThrowExpression
     private final long   lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ThrowExpression.class, "expr", "message");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ThrowExpression(ThrowExpression that) {
+        super(that);
+        this.keyword = that.keyword;
+        this.expr = that.expr;
+        this.message = that.message;
+        this.lEndPos = that.lEndPos;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new ThrowExpression(this);
+    }
 }

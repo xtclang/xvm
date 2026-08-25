@@ -1090,4 +1090,23 @@ public final class RelOpExpression
      * The method used for the operation.
      */
     protected transient MethodConstant m_idOp;
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected RelOpExpression(RelOpExpression that) {
+        super(that);
+        this.f_tokBefore = that.f_tokBefore;
+        this.f_tokAfter = that.f_tokAfter;
+        this.m_idOp = that.m_idOp;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new RelOpExpression(this);
+    }
 }

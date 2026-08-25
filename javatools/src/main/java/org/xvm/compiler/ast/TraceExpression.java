@@ -150,4 +150,21 @@ public final class TraceExpression
      * The traceable arguments resulting from this expression.
      */
     private Argument[] m_aArgs;
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected TraceExpression(TraceExpression that) {
+        super(that);
+        this.m_aArgs = that.m_aArgs;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new TraceExpression(this);
+    }
 }

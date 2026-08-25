@@ -3089,4 +3089,42 @@ public final class InvocationExpression
     private transient ExprAST m_astInvoke;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(InvocationExpression.class, "expr", "args");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected InvocationExpression(InvocationExpression that) {
+        super(that);
+        this.expr = that.expr;
+        this.async = that.async;
+        this.args = that.args;
+        this.lEndPos = that.lEndPos;
+        this.m_fBindTarget = that.m_fBindTarget;
+        this.m_fBindParams = that.m_fBindParams;
+        this.m_fCall = that.m_fCall;
+        this.m_fTupleArg = that.m_fTupleArg;
+        this.m_fNamedArgs = that.m_fNamedArgs;
+        this.m_targetInfo = that.m_targetInfo;
+        this.m_argMethod = that.m_argMethod;
+        this.m_method = that.m_method;
+        this.m_typeTarget = that.m_typeTarget;
+        this.m_fCondResult = that.m_fCondResult;
+        this.m_fBjarne = that.m_fBjarne;
+        this.m_fPack = that.m_fPack;
+        this.m_idFormal = that.m_idFormal;
+        this.m_aargTypeParams = that.m_aargTypeParams;
+        this.m_idConvert = that.m_idConvert;
+        this.m_fAutoFuture = that.m_fAutoFuture;
+        this.m_astTarget = that.m_astTarget;
+        this.m_astInvoke = that.m_astInvoke;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new InvocationExpression(this);
+    }
 }

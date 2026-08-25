@@ -224,4 +224,24 @@ public final class ElseExpression
     private transient Label                 m_labelElse;
     private transient Map<String, Argument> m_mapElse;
     private transient boolean               m_fCondFalse;
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ElseExpression(ElseExpression that) {
+        super(that);
+        this.m_nLabel = that.m_nLabel;
+        this.m_labelElse = that.m_labelElse;
+        this.m_mapElse = that.m_mapElse;
+        this.m_fCondFalse = that.m_fCondFalse;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new ElseExpression(this);
+    }
 }

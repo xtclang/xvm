@@ -85,4 +85,20 @@ public final class UnaryMinusExpression
             super.generateAssignment(ctx, code, LVal, errs);
         }
     }
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected UnaryMinusExpression(UnaryMinusExpression that) {
+        super(that);
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new UnaryMinusExpression(this);
+    }
 }

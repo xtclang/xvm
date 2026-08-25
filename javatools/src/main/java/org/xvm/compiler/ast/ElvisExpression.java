@@ -323,4 +323,22 @@ public final class ElvisExpression
     private transient boolean m_fCond;
 
     private transient Label m_labelEnd;
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ElvisExpression(ElvisExpression that) {
+        super(that);
+        this.m_fCond = that.m_fCond;
+        this.m_labelEnd = that.m_labelEnd;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new ElvisExpression(this);
+    }
 }

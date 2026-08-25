@@ -708,4 +708,24 @@ public final class CmpExpression
 
     private transient boolean m_fArg1Null; // is the first arg equal to "Null"
     private transient boolean m_fArg2Null; // is the second arg equal to "Null"
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected CmpExpression(CmpExpression that) {
+        super(that);
+        this.m_typeCommon = that.m_typeCommon;
+        this.m_idCmp = that.m_idCmp;
+        this.m_fArg1Null = that.m_fArg1Null;
+        this.m_fArg2Null = that.m_fArg2Null;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new CmpExpression(this);
+    }
 }

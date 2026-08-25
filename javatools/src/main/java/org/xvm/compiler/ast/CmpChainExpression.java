@@ -590,4 +590,25 @@ public final class CmpChainExpression
     private Constant m_constEq;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CmpChainExpression.class, "expressions");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected CmpChainExpression(CmpChainExpression that) {
+        super(that);
+        this.expressions = that.expressions;
+        this.operators = that.operators;
+        this.m_typeCommon = that.m_typeCommon;
+        this.m_idCmp = that.m_idCmp;
+        this.m_constEq = that.m_constEq;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new CmpChainExpression(this);
+    }
 }

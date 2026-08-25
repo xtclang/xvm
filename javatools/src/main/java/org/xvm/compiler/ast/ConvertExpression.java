@@ -392,4 +392,21 @@ public final class ConvertExpression
      * The conversion methods.
      */
     private final MethodConstant[] m_aidConv;
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected ConvertExpression(ConvertExpression that) {
+        super(that);
+        this.m_aidConv = that.m_aidConv;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new ConvertExpression(this);
+    }
 }

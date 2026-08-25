@@ -303,4 +303,25 @@ public final class NotNullExpression
     private transient boolean m_fNarrowed;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NotNullExpression.class, "expr");
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected NotNullExpression(NotNullExpression that) {
+        super(that);
+        this.expr = that.expr;
+        this.operator = that.operator;
+        this.m_fCond = that.m_fCond;
+        this.m_labelShort = that.m_labelShort;
+        this.m_fNarrowed = that.m_fNarrowed;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new NotNullExpression(this);
+    }
 }

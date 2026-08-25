@@ -195,4 +195,22 @@ public final class SequentialAssignExpression
     private final boolean m_fPre;
 
     private transient Assignable m_LValTarget;
+
+    // ----- copy support --------------------------------------------------------------------------
+
+    /**
+     * Shallow copy constructor for {@link AstNode#deepCopy()}: every declared field of this
+     * tier is carried over verbatim (children are re-copied and re-adopted by the walk); the
+     * field parity assertion in deepCopy() fails loudly if a field is added but not copied.
+     */
+    protected SequentialAssignExpression(SequentialAssignExpression that) {
+        super(that);
+        this.m_fPre = that.m_fPre;
+        this.m_LValTarget = that.m_LValTarget;
+    }
+
+    @Override
+    protected AstNode shallowCopy() {
+        return new SequentialAssignExpression(this);
+    }
 }
