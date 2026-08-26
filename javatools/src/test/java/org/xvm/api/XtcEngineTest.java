@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import java.util.concurrent.TimeUnit;
@@ -69,16 +68,16 @@ public class XtcEngineTest {
                 "compiled XDK system modules are required");
 
         try (var engine = XtcEngine.builder().modulePath(xdkModulePath()).build()) {
-            var compiled = engine.compile(Map.of(
-                    "AlphaMod", """
+            var compiled = engine.compile(
+                    new XtcEngine.SourceUnit("AlphaMod", """
                             module AlphaMod {
                                 void run() {
                                     @Inject Console console;
                                     console.print("alpha");
                                 }
                             }
-                            """,
-                    "BetaMod", """
+                            """),
+                    new XtcEngine.SourceUnit("BetaMod", """
                             module BetaMod {
                                 void run() {
                                     @Inject Console console;

@@ -8,7 +8,6 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import java.util.concurrent.CompletableFuture;
@@ -113,39 +112,43 @@ public final class XtcEngine
      * @return the compile result: the compiled modules (empty on failure) plus all diagnostics
      */
     public CompileResult compile(String sModuleName, String sSource) {
-        return compile(Map.of(sModuleName, sSource));
+        return compile(new SourceUnit(sModuleName, sSource));
     }
 
     /**
      * Compile one or more in-memory module sources together, resolving cross-module references among
-     * them. Each entry is one module (name to source text).
+     * them. Each {@link SourceUnit} is one module (name plus source text); pass any number.
+     *
+     * <p>The result's {@link CompileResult#buildRepository() build repository} is an in-memory
+     * {@code ModuleRepository} holding the compiled modules: run them straight from it, or flush it -
+     * fully or partially - into any sink repository (a {@code DirRepository} is the disk sink). There is
+     * no disk-specific path, because an {@code .xtc} is just a serialized byte stream whose destination
+     * is the caller's business.</p>
+     *
+     * <p>Inputs are immutable value records passed as varargs, never a mutable collection: nothing handed
+     * in can be aliased or mutated behind the engine's back.</p>
      *
      * <p>TODO - source trees: an LSP workspace also has on-disk module DIRECTORY TREES (a module as a
-     * directory of {@code .x} files with nested packages/classes). Supporting those means building the
-     * module node tree with {@link org.xvm.tool.ModuleInfo} (which already walks a source directory into
-     * a parsed {@code TypeCompositionStatement} node tree) and feeding the resulting module statements
-     * into the same pipeline below. This method covers the in-memory case; a {@code compile(Path...)}
-     * overload should be added on top of ModuleInfo rather than by shelling out to the CLI Launcher.</p>
+     * directory of {@code .x} files). Supporting those means building the module node tree with
+     * {@link org.xvm.tool.ModuleInfo} (which already walks a source directory into a parsed
+     * {@code TypeCompositionStatement} node tree) and feeding the module statements into the same
+     * pipeline below - a {@code compile(Path...)} overload on top of ModuleInfo, not a shell-out to the
+     * Launcher. A {@code Path} is one convenient source, not the model: the content-based form here is
+     * the core, so the API assumes no local compilation environment.</p>
      *
-     * <p>TODO - incremental / method-level recompilation (a separate project; the compiler does NOT
-     * support this today). On each keystroke an LSP recompiles the whole module here, which is wasteful:
-     * most edits change a single method body. The eventual shape is a compiler that can recompile at
-     * method granularity - reuse the module's existing {@code FileStructure} and {@code ConstantPool},
-     * reparse only the edited method (or the smallest enclosing declaration), re-run
-     * resolveNames/validateExpressions/generateCode for just that method's AST subtree, and splice the
-     * regenerated {@code MethodStructure.Code} back in, invalidating only the dependent
-     * {@code TypeInfo}s. That requires new compiler capabilities (a stable per-method recompilation
-     * entry point, dependency tracking from edited declaration to affected TypeInfos, and safe in-place
-     * code replacement on a possibly runtime-published pool - which is exactly why the pool-publication
-     * marker and synthesis windows in this runtime matter). It is out of scope for this API; the engine
-     * should expose a {@code recompileMethod(module, methodId, newSource)} entry once the compiler can
-     * back it, so an LSP gets sub-millisecond edits instead of full-module rebuilds.</p>
+     * <p>TODO - granularity: this compiles a whole module, but the shape must NOT preclude method-level /
+     * incremental recompilation later. That is driven EXTERNALLY - the build's incremental compiler
+     * decides what to recompile and re-invokes at whatever granularity; the compiler gaining a stable
+     * per-method recompilation entry point is a separate project. What this API owes, at any granularity
+     * and however often it is called in parallel or sequence, is that a compile must NOT mutate or corrupt
+     * shared/global runtime state - exactly why the pool-publication marker and synthesis windows in this
+     * runtime exist. Keep that invariant and every granularity, ordering, and concurrency stays possible.</p>
      *
-     * @param namedSources  module name to source text
+     * @param units  the module sources to compile (name + source), as immutable value records
      *
      * @return the compile result
      */
-    public CompileResult compile(Map<String, String> namedSources) {
+    public CompileResult compile(SourceUnit... units) {
         var errs      = new ErrorList(Integer.MAX_VALUE);
         var repoBuild = new BuildRepository();
 
@@ -163,8 +166,8 @@ public final class XtcEngine
         prelinkSystemLibraries(repoCompile);
 
         // stage 1: parse each source and create its initial module structure in the build repo
-        for (var entry : namedSources.entrySet()) {
-            TypeCompositionStatement stmtModule = parseModule(entry.getValue(), errs);
+        for (var unit : units) {
+            TypeCompositionStatement stmtModule = parseModule(unit.source(), errs);
             if (stmtModule == null) {
                 continue; // parse errors already in errs
             }
@@ -176,7 +179,7 @@ public final class XtcEngine
             try {
                 repoBuild.storeModule(struct.getModule());
             } catch (Exception e) {
-                throw new IllegalStateException("storing module " + entry.getKey(), e);
+                throw new IllegalStateException("storing module " + unit.moduleName(), e);
             }
             compilers.add(compiler);
         }
@@ -361,6 +364,16 @@ public final class XtcEngine
                     source == null ? null : source.getFileName(), err.getLine()));
         }
         return List.copyOf(list);
+    }
+
+    /**
+     * One in-memory module source to compile: the module's name plus its source text. An immutable
+     * value record - the API never takes a mutable collection of sources.
+     *
+     * @param moduleName  the module's name (for diagnostics/labels)
+     * @param source      the module source text
+     */
+    public record SourceUnit(String moduleName, String source) {
     }
 
     /**
