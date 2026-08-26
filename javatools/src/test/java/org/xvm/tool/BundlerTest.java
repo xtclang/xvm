@@ -1,6 +1,8 @@
 package org.xvm.tool;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import java.util.ArrayList;
@@ -18,6 +20,7 @@ import org.xvm.asm.ModuleStructure.ModuleType;
 import org.xvm.asm.VersionTree;
 import org.xvm.tool.LauncherOptions.BundlerOptions;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -206,6 +209,46 @@ class BundlerTest {
         assertTrue(output.contains("Duplicate explicit module selection"));
         assertTrue(output.contains("Dup"));
         assertTrue(output.contains(fileSecond.getPath()));
+    }
+
+    // ----- reproducibility -----------------------------------------------------------------------
+
+    @Test
+    void testBundleOutputBytesIndependentOfInputOrder(@TempDir Path tempDir) throws Exception {
+        // create each input module exactly once, so its embedded creation timestamp is fixed;
+        // bundling must then be reproducible across runs that read the same inputs in any order
+        var fileMain = tempDir.resolve("MainMod.xtc").toFile();
+        var fileLibA = tempDir.resolve("LibA.xtc").toFile();
+        var fileLibB = tempDir.resolve("LibB.xtc").toFile();
+        new FileStructure("MainMod").writeTo(fileMain);
+        new FileStructure("LibA").writeTo(fileLibA);
+        new FileStructure("LibB").writeTo(fileLibB);
+
+        var outForward  = tempDir.resolve("forward.xtc");
+        var outReversed = tempDir.resolve("reversed.xtc");
+        assertEquals(0, launchBundle(outForward, fileMain, fileLibA, fileLibB));
+        assertEquals(0, launchBundle(outReversed, fileLibB, fileLibA, fileMain));
+
+        // the presentation order of the inputs must not leak into the produced binary
+        byte[] abForward  = Files.readAllBytes(outForward);
+        byte[] abReversed = Files.readAllBytes(outReversed);
+        assertArrayEquals(abForward, abReversed);
+
+        // write -> read -> write must also be a fixpoint: re-serializing a read-back bundle
+        // reproduces the identical binary
+        var reread = new FileStructure(outForward.toFile());
+        var abRewritten = new ByteArrayOutputStream();
+        reread.writeTo(abRewritten);
+        assertArrayEquals(abForward, abRewritten.toByteArray());
+    }
+
+    private static int launchBundle(Path fileOut, File... inputs) {
+        var args = new ArrayList<>(List.of("-o", fileOut.toString(), "--main", "MainMod"));
+        for (var input : inputs) {
+            args.add(input.getPath());
+        }
+        return Launcher.launch(Launcher.CMD_BUNDLE, args.toArray(new String[0]),
+                new CaptureConsole(), null);
     }
 
     private static final class CaptureConsole implements Console {
