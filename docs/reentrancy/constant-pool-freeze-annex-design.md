@@ -9,8 +9,14 @@ one architecture:
   `ToolConnector`): today only the app pool is `markRuntimePublished`; extending the
   marker to more pools is more retrofit. An immutable base needs no marker at all.
 - **#2 — the unbounded-growth memory leak**: the shared pool interns per-run types +
-  `TypeInfo` and never evicts, so a long-running host OOMs. A scoped, evictable annex
-  releases them with their scope.
+  `TypeInfo` and never evicts, so a long-running host climbs without limit. **Measured
+  (`SharedPoolGrowthCharacterizationTest`):** after a one-time first-run warmup (~2000
+  constants), each DISTINCT-typed run adds **~1-2 constants permanently** to the shared
+  native pool that never evict — small per run, but **monotone and unbounded** (a
+  very-long-lived host seeing many distinct types climbs without bound). A scoped,
+  evictable annex releases them with their scope. So this is a *slow* leak, not a fast
+  OOM — real, but its priority is "eventual, for a truly long-lived diverse-workload
+  host," not "imminent."
 
 They are the same fix because both are consequences of one broken property: **the
 runtime keeps interning into a process-shared, never-frozen, never-evicted pool.**

@@ -223,10 +223,14 @@ long-running host runs consecutive/parallel nested containers and compiles in
 container 0. Most items map to existing rows (543, MA1-MA5, JIT J21-J24). NEW /
 sharpened backlog items and verified closures:
 
-- **SHOULD-FIX — RESIDENT-TOOLING CRITICAL: shared-pool eviction / long-running
-  memory bound.** The shared native/library `ConstantPool` interns per-run types +
-  `TypeInfo` and never evicts on container disposal (543 §1c); a long-lived host
-  running many DISTINCT modules climbs to OOM **even single-threaded**. This is the
+- **SHOULD-FIX — shared-pool eviction / long-running memory bound (MEASURED: slow
+  leak, not imminent).** The shared native/library `ConstantPool` interns per-run
+  types + `TypeInfo` and never evicts on container disposal (543 §1c).
+  `SharedPoolGrowthCharacterizationTest` measured it: after a one-time ~2000-constant
+  first-run warmup, each DISTINCT-typed run adds only **~1-2 constants permanently** -
+  monotone and unbounded in principle, but a SLOW leak, so the urgency is "eventual for
+  a very-long-lived diverse-workload host," not the imminent-OOM framing used earlier.
+  Still the #1 long-running-host correctness issue (unbounded is unbounded). This is the
   existing frozen-base+runtime-annex should-fix, but it GRADUATES to a hard blocker
   for any resident tool (LSP / daemon / `ToolConnector`), independent of
   concurrency - the #1 long-running-host issue. Closure = scope-bound / evictable
