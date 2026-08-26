@@ -209,7 +209,8 @@ public class Version
         assert aiParts != null;
 
         // each version indicator must be >= 0, except the second-to-the-last or last, which may be
-        // between -1 and -5
+        // any pre-release category from "rc" (-1) down to CATEGORY_CI; CATEGORY_NONE is reserved
+        // for the unconstructable NONE sentinel
         StringBuilder sb  = new StringBuilder();
         boolean       err = aiParts.length == 0;
         boolean       fGA = true;
@@ -220,7 +221,7 @@ public class Version
                     sb.append('.');
                 }
                 sb.append(part);
-            } else if (part >= -5) {
+            } else if (part >= CATEGORY_CI) {
                 fGA = false;
                 switch (c - i) {
                 case 1:
@@ -272,7 +273,7 @@ public class Version
      */
     private Version() {
         // this is technically an illegal, unconstructable version
-        this.ints    = new int[] {1 - TEXT.length};
+        this.ints    = new int[] {CATEGORY_NONE};
         this.literal = TEXT[0];
     }
 
@@ -612,6 +613,18 @@ public class Version
     // ----- fields --------------------------------------------------------------------------------
 
     private static final String[] TEXT = {"unversioned", "CI", "Dev", "QC", "alpha", "beta", "rc", "ga"};
+
+    /**
+     * The release category encoded by {@code TEXT[0]}: the "unversioned" sentinel, which is only
+     * legal inside the {@link #NONE} marker and never inside a constructable version.
+     */
+    private static final int CATEGORY_NONE = 1 - TEXT.length;
+
+    /**
+     * The release category encoded by {@code TEXT[1]} ("CI"): the lowest pre-release category that
+     * a constructable version part may carry.
+     */
+    private static final int CATEGORY_CI = CATEGORY_NONE + 1;
 
     public static final Version NONE = new Version();
 
