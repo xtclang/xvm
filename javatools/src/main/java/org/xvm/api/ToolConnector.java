@@ -9,41 +9,106 @@ import java.time.Instant;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
-
 import org.xvm.asm.Version;
+
+import org.xvm.compiler.InstantRepository;
+
+import org.xvm.javajit.JitConnector;
 
 
 /**
- * A Connector-like implementation to support LSP and other tool uses.
+ * A Connector-like implementation to support LSP and other tool uses. This implementation uses the
+ * Connector API to run a long-running Ecstasy application (in "Container Zero") that is responsible
+ * for spinning up any number of child containers to "run()" modules. The ToolConnector is a
+ * singleton, but it does require configuration; specifically, it requires a Module Repository from
+ * which to load the core Ecstasy classes. Without configuration, the ToolConnector will attempt to
+ * locate the core Ecstasy classes using the "XDK_HOME" OS property.
+ *
+ * The methods on the ToolConnector itself can be assumed to be thread-safe and concurrent.
  */
-public class ToolSupport {
+public class ToolConnector {
     // ----- internal (construction etc.) ----------------------------------------------------------
 
     /**
-     * Internal constructor
+     * Internal constructor.
      */
-    ToolSupport() {
-        if (!configured) {
-            throw new IllegalStateException("explicit configuration required before use");
-        }
-    }
-
-    private static boolean configured;
-    private static ModuleRepository cfgRepo;
+    ToolConnector() {}
 
     /**
      * Internal singleton implementation.
      */
     private static class Singleton {
-        static ToolSupport instance = new ToolSupport();
+        static ToolConnector instance = new ToolConnector();
+    }
+
+    private static Object LOCK = new Object();
+
+    private boolean          configured;
+    private ModuleRepository cfgRepo;
+    private String           cfgInjector;
+    private Connector        connector;
+
+    /**
+     * @return true if configured
+     * @throws IllegalStateException if not configured
+     */
+    private boolean verifyConfigured() {
+        if (!configured) {
+            // attempt to auto-configure
+            String home = System.getenv("XDK_HOME");
+            if (home != null) {
+                File dir = new File(new File(home), "lib");
+                if (dir.isDirectory()) {
+                    configure(new DirRepository(dir, true), null);
+                }
+            }
+
+            if (!configured) {
+                throw new IllegalStateException("ToolConnect has not been configured, and the"
+                        + " \"XDK_HOME\" environment variable is missing or invalid");
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @return true when the JIT implementation is complete and can be used by the ToolConnector
+     */
+    private boolean useJit() {
+        return false;
+    }
+
+    /**
+     * @return the Connector instance
+     */
+    private Connector ensureConnector() {
+        synchronized (LOCK) {
+            if (connector == null) {
+                Connector starting = useJit() ? new JitConnector(cfgRepo) : new InterpreterConnector(cfgRepo);
+                starting.loadModule("org.ecstasy.runner");
+                starting.start(null);
+                // TODO GG
+                connector = starting;
+            }
+            return connector;
+        }
     }
 
     // ----- API -----------------------------------------------------------------------------------
+
+    /**
+     * @return the singleton ToolConnector instance
+     */
+    public static ToolConnector instance() {
+        return Singleton.instance;
+    }
 
     /**
      * Provide configuration necessary for the underlying Ecstasy tools and libraries. Must be
@@ -54,27 +119,50 @@ public class ToolSupport {
      *                        use to provide injectable resources in lieu of the default injector
      *                        for this implementation
      */
-    public static void configure(ModuleRepository coreRepo, String customInjector) {
-        if (configured) {
-            throw new IllegalStateException("explicit configuration has already been performed");
+    public ToolConnector configure(ModuleRepository coreRepo, String customInjector) {
+        synchronized (LOCK) {
+            if (configured) {
+                if (!(Objects.equals(coreRepo, cfgRepo) && Objects.equals(customInjector, cfgInjector))) {
+                    throw new IllegalStateException("configuration has been performed, and cannot be modified");
+                }
+            } else {
+                cfgRepo     = coreRepo;
+                cfgInjector = customInjector;
+                configured  = true;
+            }
         }
-        ToolSupport.cfgRepo = coreRepo;
+        return this;
     }
 
     /**
-     * @return the ToolSupport object
+     * @return true iff the TooolConnector has been configured
      */
-    public static ToolSupport instance() {
-        return Singleton.instance;
+    public boolean isConfigured() {
+        return configured;
     }
 
     /**
-     * @return the "native" container (aka "container negative one") ConstantPool used by the
-     *         runtime instance that is instantiated by this ToolSupport
+     * @return the configured repository, or null if the ToolConnector has not been configured
      */
-    public ConstantPool pool() {
-        // TODO GG
-        return null;
+    public ModuleRepository getConfiguredRepository() {
+        return cfgRepo;
+    }
+
+    /**
+     * @return the "modulename:classname" of the default injector to use for all "run()" containers,
+     *         or null to use the ToolConnector's built-in default injector
+     */
+    public String getConfiguredInjector() {
+        return cfgInjector;
+    }
+
+    /**
+     * @return the ConstantPool of the core Ecstasy libraries used by the runtime Connector instance
+     *         that is instantiated by this ToolConnector
+     */
+    public ConstantPool getConstantPool() {
+        verifyConfigured();
+        return ensureConnector().getConstantPool();
     }
 
     /**
@@ -87,6 +175,7 @@ public class ToolSupport {
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      */
     public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
+        verifyConfigured();
         // TODO GG
         return null;
     }
@@ -103,6 +192,7 @@ public class ToolSupport {
      * @return true if the compilation succeeded and the result was placed into the output
      */
     public boolean compile(File file, ModuleRepository input, ModuleRepository output, ErrorListener errs) {
+        verifyConfigured();
         // TODO GG
         return false;
     }
@@ -162,8 +252,9 @@ public class ToolSupport {
             File                      rootDir,
             Map<String, List<String>> injections,
             ErrorListener             errs) {
-        // TODO GG
-        return null;
+        verifyConfigured();
+        return run(new InstantRepository(module), module.getName(), module.getVersion(), null,
+                console, rootDir, injections, null, errs);
     }
 
     /**
@@ -200,6 +291,7 @@ public class ToolSupport {
             Map<String, List<String>> injections,
             String                    customInjector,
             ErrorListener             errs) {
+        verifyConfigured();
         // TODO GG
         return null;
     }
@@ -207,50 +299,50 @@ public class ToolSupport {
     /**
      * Informational only: App starting.
      */
-    public static final String INFO_STARTED               = "RT-01";
+    public static final String INFO_STARTED               = "TC-01";
     /**
      * Informational only: App stopped.
      */
-    public static final String INFO_STOPPED               = "RT-02";
+    public static final String INFO_STOPPED               = "TC-02";
     /**
      * "%1" - name of missing app module
      * "%2" - version of missing app module
      */
-    public static final String ERR_NO_APP_MODULE          = "RT-10";
+    public static final String ERR_NO_APP_MODULE          = "TC-10";
     /**
      * "%1" - name of missing app module
      * "%2" - version of missing app module
      */
-    public static final String ERR_NO_APP_MODULE_VER      = "RT-11";
+    public static final String ERR_NO_APP_MODULE_VER      = "TC-11";
     /**
      * "%1" - name of app module
      * "%2" - exception (may be null)
      * "%3" - additional description (may be null)
      */
-    public static final String ERR_BAD_APP_MODULE         = "RT-12";
+    public static final String ERR_BAD_APP_MODULE         = "TC-12";
     /**
      * "%1" - name of missing module
      */
-    public static final String ERR_MISSING_MODULE         = "RT-13";
+    public static final String ERR_MISSING_MODULE         = "TC-13";
     /**
      * "%1" - exception (may be null)
      * "%2" - additional description (may be null)
      */
-    public static final String ERR_CREATE_APP_CONTAINER   = "RT-14";
+    public static final String ERR_CREATE_APP_CONTAINER   = "TC-14";
     /**
      * "%1" - name of injector module
      * "%2" - name of injector class
      * "%3" - exception (may be null)
      * "%4" - additional description (may be null)
      */
-    public static final String ERR_CREATE_CUSTOM_INJECTOR = "RT-15";
+    public static final String ERR_CREATE_CUSTOM_INJECTOR = "TC-15";
     /**
      * "%1" - exception
      */
-    public static final String ERR_UNHANDLED_EXCEPTION    = "RT-16";
+    public static final String ERR_UNHANDLED_EXCEPTION    = "TC-16";
     /**
      * "%1" - exception (may be null)
      * "%2" - additional description (may be null)
      */
-    public static final String ERR_INTERNAL               = "RT-99";
+    public static final String ERR_INTERNAL               = "TC-99";
 }

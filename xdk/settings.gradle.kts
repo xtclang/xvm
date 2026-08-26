@@ -28,6 +28,7 @@ listOf(
     "lib_jsondb",
     "lib_metrics",
     "lib_oodb",
+    "lib_runner",
     "lib_sec",
     "lib_web",
     "lib_webauth",
