@@ -680,6 +680,16 @@ harness added early so the category stays closed after it is emptied.
   first clone-convention death (TerminalTypeConstant's defensive `.clone()`
   before parameter adoption replaced by safe wrapper sharing). Red-verified by
   `ParameterizedTypeFrozenTest`.
-- Next: re-evaluate the MethodBody chain trailer per the recon's not-worth-it
-  analysis. Annotation params stay gated on the builder-state redesign;
-  TypeInfo annotation arrays already closed by stage-2 cloning.
+- **Family C (MethodBody chains) evaluated and DEFERRED 2026-08-26**: all
+  consumers re-verified read-only, the cache write side is already
+  synchronized + volatile + synthesis-windowed (ledger rows 44/51), and the
+  retention path (`CallChain`) must keep raw-array indexing for dispatch -
+  the conversion is defense-in-depth only. Per the series' own lean rule
+  ("if it grows beyond a day, drop it"), the read-only verification plus the
+  escape ratchet stand in for the wrapper.
+- **Escape ratchet standing**: `FrozenArrayEscapeRatchetTest` pins the
+  `unsafeArray()` count (115) as a ceiling that only moves down, so the
+  stage-3 contract cannot erode and tier-2 sites can tighten incrementally.
+- Annotation params stay gated on the builder-state redesign; TypeInfo
+  annotation arrays already closed by stage-2 cloning. Stage 3 is therefore
+  COMPLETE for the families the audit priced as worth the width.
