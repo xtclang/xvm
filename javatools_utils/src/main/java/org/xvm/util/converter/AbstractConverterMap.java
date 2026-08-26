@@ -18,22 +18,23 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
     /**
      * Lazily created and cached key set view. The view is created on first access rather than
      * during base construction, because the view factories are overridable and must not run while
-     * a subclass is still initializing. The plain private field is the same benign-race caching
-     * idiom as {@code java.util.AbstractMap}: concurrent first access can at worst create one
-     * duplicate view, and publishing through a data race is safe because the view types keep all
-     * of their state in final fields.
+     * a subclass is still initializing. The field is volatile so that a concurrent reader always
+     * observes a fully constructed view, no matter how a subclass implements its views; this must
+     * not rely on final-field semantics because the view factories are overridable. Concurrent
+     * first access can at worst create a duplicate view, which is harmless: views carry no state
+     * of their own and all views delegate to the same backing map.
      */
-    private Set<K> keys;
+    private volatile Set<K> keys;
 
     /**
      * Lazily created and cached values view; see {@link #keys} for the caching contract.
      */
-    private Collection<V> values;
+    private volatile Collection<V> values;
 
     /**
      * Lazily created and cached entry set view; see {@link #keys} for the caching contract.
      */
-    private Set<Entry<K, V>> entries;
+    private volatile Set<Entry<K, V>> entries;
 
     /**
      * Construct a {@link AbstractConverterMap}.
