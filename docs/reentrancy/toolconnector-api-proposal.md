@@ -339,45 +339,193 @@ runs rather than recompiled.
 ## 4. The one hard prerequisite: concurrency safety of shared runtime/ASM state
 
 `ToolConnector`'s "fully concurrent, long-running, not-leaking" guarantee is only real if the
-state that concurrent nested children **share** — the `ConstantPool`, `TypeInfo`/lazy caches,
-native-injection singletons, and JIT-name caches — is safe under concurrent read+late-write.
-On stock master it is not: those are the same shared-state races tracked in issue **#541** /
-the same-JVM reuse defects (issue **543**). Sequential one-shot use is fine (it's what the
-CLI does); the moment §3.5 runs modules *at once*, unsynchronized `ConstantPool` mutation and
-`INSTANCE`/singleton corruption surface as non-deterministic crashes.
+state that concurrent nested children **and the container-0 compiler** share is safe under
+concurrent read + late-write. **On stock master it is not.** The analysis below is against
+**master** (file:line), because that is where `ToolConnector` is being built — not against any
+`lagergren/lazy-instance` improvement. Sequential one-shot use is fine (it is what the CLI does);
+the moment §3.5 runs modules *at once*, or container 0 compiles *at once*, these break. The API
+cannot design around any of them — they live **below the container boundary**, in state shared by
+every child and the compiler. Each must be corrected in `runtime/`/`asm/`/`compiler/`.
 
-The `lagergren/lazy-instance` branch is exactly the fix for this substrate: a `ConstantPool`
-runtime-publication fence + read mirror, thread-scoped synthesis windows, native-injection
-first-wins publication, single-root enforcement, and the frozen constant families. **So the
-branch hardening is the foundation `ToolConnector` needs to keep its concurrency promise — not
-a competing effort.** The recommendation is to build `ToolConnector` on top of that substrate
-(or fold the substrate fixes in), rather than ship the API over the unhardened pools and
-rediscover 543 under load.
+### 4.0 Priority — which are CRITICAL, and what each capability requires
 
-### 4.1 Defects `ToolConnector` CANNOT design around — must be corrected in the runtime
+Two INDEPENDENT axes. A single-threaded long-running host still needs the leak fixed; a short
+concurrent burst still needs the races fixed. Pick the capabilities you want and fix that column.
 
-No API shape avoids these: they live **below the container boundary**, in state shared by every
-nested child *and* the compiler (the pool, the type system, native templates). A cleaner API
-just reaches them faster. Each must be fixed in `runtime/`/`asm/`, not in `ToolConnector`.
-"Fixed" = done on `lagergren/lazy-instance`; "OPEN on master" = still a landmine on stock master.
+| To support this capability | you MUST fix (all CRITICAL) | why |
+| --- | --- | --- |
+| **Long-running JVM** — a host that stays up (even sequential, one run at a time) | **#2** shared pool never evicts | without it the heap climbs forever → **OOM**, regardless of concurrency. This is the long-running blocker, and it is *not* a concurrency bug. |
+| **Concurrent / overlapping runs** — parallel nested children | **#1** racy `f_listConst` read, **#3** `INSTANCE` statics, **#4** injection-singleton races, **#5** `SingletonConstant` lifecycle, **#6** `TypeInfo` build races | shared-state read+late-write with no synchronization → non-deterministic **crashes / corruption** |
+| **Concurrent compiles in container 0** | **#8** static compiler counters, **#9** shared library pool, **#10** compiler AST/`Context` state, **#11** shared `ErrorList` | compiler is single-thread-single-request → **miscompile / crash**. **Interim: serialize compiles** and this column can wait. |
+| Nice-to-have hardening (not blocking) | **#7** `markNative` (rare), MA5 leaky getters (aliasing-only) | low-probability / aliasing-only |
 
-| # | Defect (where) | Why the API can't dodge it | Status |
+**So, minimally:** to ship even a *sequential* long-running host you MUST do **#2**. To let it run
+things *concurrently* you add **#1, #3-#6**. To let it *compile* concurrently you add **#8-#11** (or
+serialize compiles and defer them). Everything in §4.3 is already safe — leave it alone.
+
+### 4.1 What breaks on MASTER — run side (concurrent / consecutive runs)
+
+| # | Broken design on master (file:line) | Concrete failure | Kind |
 | --- | --- | --- | --- |
-| 1 | **Racy `ConstantPool.f_listConst` — a plain `ArrayList` read at runtime** while late constants register (TypeInfo synthesis) | every run/compile reads the shared pool; concurrent read+append on a bare ArrayList = torn reads / `ArrayIndexOutOfBounds` / spurious crashes | **Fixed** (publication fence + volatile read mirror); OPEN on master |
-| 2 | **Constructor-published native-template `INSTANCE` / static owner metadata** | process-global mutable statics shared by all containers → last-writer-wins, wrong-container handles | **Fixed** (`NativeTemplates`, owner-local, no `INSTANCE = this`); OPEN on master |
-| 3 | **Native-injection singleton duplicate-service races** (OSStorage/Algorithms) | concurrent first-injection from two runs creates duplicate services on the shared plane | **Fixed** (resolved-only first-wins publish); OPEN on master |
-| 4 | **Split `SingletonConstant` lifecycle fields** | separate handle/fiber/future fields → impossible mixed init snapshots under concurrent init | **Fixed** (`AtomicReference<InitState>`); OPEN on master |
-| 5 | **`TypeInfo` / lazy metadata caches on shared constants** | two runs build/read the same `TypeInfo` concurrently | **Fixed** (thread-scoped synthesis windows + adjacent work); OPEN on master |
-| 6 | **`MethodStructure.markNative()` non-atomic transition** (plain `m_fNative`, false-window) | a racing `getOps()` sees `native=false, code=null` → "neither native nor compiled" | **Identified, not yet fixed** (branch should-fix: volatile flag + guard); OPEN on master |
-| 7 | **Frozen-code / op-address link caches** (mutable decoded op links, shared) | resolved before runtime exposure by convention only | **Fixed** for the interpreter (link-before-`getOps` + guard); JIT residue **parked to JIT rebase** |
-| 8 | **JIT-name caches `m_sJitName`** (owner-bearing name cached on a shared constant) | per-`Xvm` unique suffix cached against a shared constant → wrong name across containers | **Parked to JIT rebase** (J21-J24); OPEN everywhere |
-| 9 | **Injector wait-cycle deadlock** (fiber wait-graph never resolves) | reachable single-JVM under load; needs cycle detection | **OPEN — issue #541** (design-level) |
+| 1 | **`ConstantPool.f_listConst` is a plain `ArrayList`** (`ConstantPool.java:3954`) read directly by `getConstant(int){ f_listConst.get(i) }` (`:84`) — no fence, no volatile, no mirror | run A on service-thread-1 reads constant #500 mid-op while run B's lazy `TypeInfo` synthesis on service-thread-2 appends #900 and the ArrayList reallocs its backing array → thread-1 gets a torn/null slot → `ArrayIndexOutOfBounds`/`NullPointerException` mid-execution, non-deterministic | **CRASH** |
+| 2 | **Shared pool never evicts** — `f_listConst` only grows (cleared only on reset/disassembly, `:2957`); `TypeInfo` caches on shared `TypeConstant`s are never released on container disposal | a day-long host runs 50,000 distinct user modules; each novel type touched during a run (`Array<UserClass>`, `function void()`, parameterized types) is interned into the persistent library/native pool and its `TypeInfo` cached there; the run's container is GC'd but its interned types + TypeInfo stay → heap climbs monotonically → **OOM** | **LEAK (unbounded)** |
+| 3 | **Constructor-published native-template `INSTANCE` statics** (`NativeContainer.java`, 18 refs on master) | two containers init a native template concurrently; the second's ctor sets `INSTANCE = this`, so the first container's handles now resolve against the *second* container's template → wrong-container behavior / `ClassCastException` | **CRASH / corruption** |
+| 4 | **Native-injection singletons created without first-wins** (OSStorage/Algorithms) | run A and run B both `@Inject Storage` for the first time at once → two `Storage` services on the shared plane → duplicate/leaked service, inconsistent state | **corruption / leak** |
+| 5 | **Split `SingletonConstant` lifecycle fields** (separate handle/fiber/future) | two runs trigger the same module singleton init concurrently → one observes a half-set handle+future combination → NPE or double-init | **CRASH** |
+| 6 | **`TypeInfo` build races on shared constants** (no synthesis-window discipline) | two runs build `TypeInfo` for the same shared type at once → an interleaved, partially-populated `TypeInfo` is published → missing-method / wrong-layout failure | **CRASH** |
+| 7 | **`MethodStructure.markNative()` non-atomic** (plain `m_fNative`, false-window) | rare: a run triggers native marking while another reads `getOps()` → "neither native nor compiled" | **CRASH (rare)** |
 
-Two things the `ToolConnector` model *does* dodge by construction, worth noting so they are not
-re-litigated: **sibling-main relaunch static corruption** (it never relaunches container 0 — one
-host app, nested children; that is the whole point) and **container-0 leak** (nested children are
-disposable/parent-mediated). Those are design wins of the model; rows 1-9 are not — they are
-substrate and must be corrected.
+### 4.2 What breaks on MASTER — compile side (container 0 does compiles TOO)
+
+The compiler was written for **one compile at a time**. If container 0 compiles concurrently (or
+overlaps a compile with a run's lazy `TypeInfo` build), master breaks:
+
+| # | Broken design on master (file:line) | Concrete failure | Kind |
+| --- | --- | --- | --- |
+| 8 | **Plain `static` compiler counters, non-atomic** — `s_nLabelCounter` (`ConditionalStatement.java:80`), `s_nCounter` (`ElseExpression.java:220`, `ElvisExpression.java:316`), `m_counter` (`MethodDeclarationStatement.java:1265`) | two `didChange` events compile at once; both read `s_nCounter == 41` and both emit a synthetic name suffixed `41` → two distinct lambdas/labels collide → verify error / wrong dispatch | **MISCOMPILE** |
+| 9 | **Concurrent compiles hit the same shared library pool** — each injects NakedRef and registers constants into shared loaded modules, reading/writing the row-1 `f_listConst` ArrayList | same torn-ArrayList race as row 1, now on the *library* pool during link/resolve | **CRASH / corruption** |
+| 10 | **Compiler AST/`Context` state assumes single-thread, single-request** — `Context` name/narrow/assign maps, `NameResolver` staged state, `LambdaExpression`/`InvocationExpression` caches, break/continue lists, `CaseManager` labels (see `compiler-ast-context-mutation-audit.md`) | a future incremental recompile reusing a cached AST while a run walks the same nodes, or two parallel compiles of one module → corrupted resolution state | **MISCOMPILE / CRASH** |
+| 11 | **Shared `ErrorList`/diagnostic sink** funnelled from concurrent compiles | interleaved/lost diagnostics; a plain list mutated from two compile threads | **corruption of output** |
+
+### 4.3 Verified NOT a problem in the nested model (checked on master — don't chase these)
+
+- **Compositions are per-container** — `f_mapCompositions` is a per-`Container` `ConcurrentHashMap`
+  (`Container.java:745` on master). Each nested container builds its own; a disposed container's go
+  with it. No cross-container residue (that was the *sibling-main* `relocateConst` path, which the
+  model avoids).
+- **Container/service registries are safe** — `Runtime.f_containers` is a synchronized `WeakHashMap`
+  (`Runtime.java:144`) so disposed run containers auto-evict; `f_setServices` is a
+  `ConcurrentWeakHasherMap` set and `f_setFibers` a `ConcurrentSkipListSet`, so lifecycle churn does
+  not `CME`. The MA5 "leaky getters" are therefore aliasing-only (a caller *could* mutate the live
+  set), not a crash — low severity.
+- **Sibling-main relaunch corruption** — avoided by construction (nested throwaways, container 0 not
+  relaunched).
+
+**Must-fix set for `ToolConnector` on master:** the run-side crashers (1, 3, 5, 6) and the **leak (2)**;
+plus the compile-side set (8-11) if compiles run concurrently — **until 8-11 land, container 0 must
+serialize compiles.** Row 7 (`markNative`) and the JIT-name / #541 items round it out. `lazy-instance`
+already fixes 1-6 (proof they are real and a reference implementation); master has none of it.
+
+### 4.4 This is a DESIGN problem, not a locking problem — and `ConstantPool` is the worst of it
+
+Rows 1-11 are not eleven unrelated bugs. They are **one design stance repeated**: process-global,
+mutable state that is written in place *after* it has been shared and is being read, with the
+invariants ("resolve before exposing", "don't register after publish") enforced by *convention*
+instead of by *types*. `INSTANCE = this`, `static int s_nCounter`, `TypeInfo` caches that grow on
+shared constants forever — all the same shape.
+
+**`ConstantPool` is the most serious instance of it — the single most brittle, unsafe structure in
+the system.** One process-shared, mutable, *untyped* `ArrayList<Constant>` (`ConstantPool.java:3954`)
+sits at the center of everything — compiler, linker, serializer, runtime execution, and JIT all
+mutate and read the *same* pool with no phase boundary. It is unsynchronized (row 1), unbounded and
+never evicted (row 2, the leak), and reached from execution by raw integer index (`getConstant(int)`)
+then **cast at runtime** (`getConstant(int, Class<T>){ type.cast(...) }`). Nothing about that
+structure makes an illegal use *impossible*; it makes every illegal use *available*. A structure this
+central should be the most locked-down type in the codebase; instead it is the least.
+
+**The fix is NOT to sprinkle `synchronized` on every method.** That is the Java-1.0 reflex and here it
+is actively wrong:
+- It **does not fix the leak** — a lock around `f_listConst` still grows forever. #2 is not a race; no
+  lock evicts anything.
+- It **does not fix wrong-owner sharing** — a lock around `INSTANCE = this` still hands container A
+  container B's template. You serialized the corruption, you did not remove it.
+- It **defeats the whole point** — the goal is concurrent runs/compiles; a global lock on the shared
+  pool serializes them back to one-at-a-time. Pure contention for nothing.
+- It **guards a bad shape instead of fixing it.** Locks make mutate-after-publish "not crash" while
+  leaving the data mutable, shared, and unbounded.
+
+The right shape is to **make the shared thing immutable and the mutable thing owned** — then almost no
+locks are needed, because immutable data is trivially thread-safe and owned data is never contended:
+
+1. **Phase separation / freeze-on-publish.** Build the pool / type system / code in a *single-owner
+   mutable* form during compile+link; then **freeze an immutable snapshot** and publish *that* for
+   concurrent runtime reads. Immutable → lock-free by definition. (`lazy-instance`'s read-mirror +
+   publication fence is a *retrofit* of this; the real target is a `FrozenPool` the runtime can only
+   read.)
+2. **Ownership instead of globals.** No `INSTANCE`, no `static` counters — per-container/per-request
+   state, passed explicitly. A wrong-container handle becomes *unrepresentable*, not merely *unlikely*.
+3. **Bounded lifecycle.** Tie interned per-run types / `TypeInfo` to the run's scope and release on
+   disposal. This is what fixes #2, and no lock can.
+
+**And use the Java type system instead of bypassing it.** A large part of *why* these bugs are
+runtime crashes rather than compile errors is that the code throws away static typing and defers
+everything to runtime — an untyped `ArrayList<Constant>` cast per access, `instanceof` ladders and
+unchecked casts where a **sealed interface hierarchy** would give exhaustiveness and make illegal
+variants impossible, opcode operands passed as bare `int` indices. It is written like Python with a
+JVM underneath. That has two concrete costs here:
+- **Bugs that should be caught at compile time become runtime casts/crashes.** The mutate-after-publish
+  and wrong-shape errors above are exactly the class the compiler *would* reject if the mutable-builder
+  and immutable-runtime forms were *different types* (a `MutablePool` you can register into vs a
+  `FrozenPool` you can only read) — the illegal call would not compile. Runtime casting makes the
+  invariant invisible to `javac`, so it can only fail in production.
+- **No exhaustiveness, easy silent drift.** `sealed` constant/op/type hierarchies (see this repo's
+  `sealed-hierarchy-audit.md` and `generics-api-audit.md`) let the compiler force every `switch` to
+  handle every case; the current `instanceof`/`getClass()` style silently does the wrong thing when a
+  new variant appears. That is how "row 7" ("neither native nor compiled") and adjacent state-machine
+  gaps hide.
+
+So: **the runtime should stop sharing mutable state and start using the type system to make illegal
+states unrepresentable** — freeze-on-publish, ownership, sealed hierarchies, typed pools. Locks are a
+last resort at the one narrow publish boundary, not the fix for a mutate-after-publish, untyped,
+process-global design. The irony is that **Ecstasy the language is built on precisely this discipline**
+— `immutable`/`const`, service isolation, no shared mutable state, no globals — and the runtime that
+implements it should be held to its own gospel.
+
+### 4.5 Further instability risks the lazy-instance audits surfaced
+
+Beyond rows 1-11, these will bite the `ToolConnector` model and are worth naming:
+
+- **JIT mode is a whole additional hazard class.** If runs execute via the **JIT** rather than the
+  interpreter, add the entire J21-J24 set (`jit-runtime-report.md`): generated `<clinit>` statics
+  (`$INSTANCE`, injected resources) *donated from the first container to every later one*, ambient
+  `Ctx.get()` capture that binds the first owner, classloaders that are **not parallel-capable** plus a
+  racy `loadedClasses` registry, and JIT codegen writing **owner-bearing state into shared ASM**. All
+  **unfixed everywhere** (parked for the JIT rebase). This is a *mode* choice and the riskiest one — a
+  JIT-backed ToolConnector is materially less safe than an interpreter-backed one today.
+- **Concurrent compiles mutate shared ASM during link** (beyond the static counters, row 8):
+  `FileStructure.linkModules` calls `registerConstants(fileTop.m_pool)`, `setFingerprintOrigin`, and
+  `merge`/`replaceChild` on shared library `FileStructure`s. Two compiles linking the same library at
+  once corrupt the shared structures — another reason container 0 must serialize compiles.
+- **Non-volatile manual lazy caches** (~20 in `runtime/asm`; see `manual-lazy-cache-audit.md`):
+  double-checked lazy init without `volatile`. Under concurrent runs a thread can observe a
+  half-initialized object (the JMM allows the reference write to be seen before the field writes). A
+  distinct hazard from the pool race; the fix is `volatile`/final-holder idioms, not a lock.
+- **Poisoned cache on failure — CHECKED, NOT a hazard (verified on master).** The worry was that a
+  run/compile throwing *mid-build* of a shared `TypeInfo` could cache a partial and serve it to every
+  later run on the long-lived host. Verified false: the `TypeInfo` cache is exception-safe and
+  self-healing — `m_typeinfo` is `volatile` (master `:8233`); `setTypeInfo` is a monotonic CAS
+  (`rank(new) > rank(cached)`, master `:1946`) so a partial can never overwrite a complete one;
+  `isComplete` (`rank == 3`, master `:2033`) excludes the placeholder and any incomplete info, so a
+  failed build's residue triggers a *rebuild* on the next request rather than being served; and serious
+  errors call `invalidateTypeInfo()` ("don't cache it", master `:1821`). A bad input does not
+  permanently poison the shared cache. (`ConstantPool.f_mapRefTypes` is likewise `computeIfAbsent`, which
+  stores nothing on a throwing build. The non-volatile *other* lazy caches above remain a separate,
+  visibility-only concern — not a poisoning one.)
+
+### 4.6 Requests, diagnostics, and logging — an API requirement AND a current hazard
+
+An LSP/daemon issues many overlapping **requests** (compiles and runs). Each needs its **own**
+diagnostic and log stream; the current runtime does the opposite, which is both an API gap and a
+stability bug:
+
+- **Today it is shared/ambient/global.** A shared `ErrorList` funnels diagnostics from whatever is
+  compiling (row 11); the runtime reaches for diagnostics via **ambient `ServiceContext.getCurrentContext()`**
+  reads (`Argument.java:51`, `OpVar.java:115`, `Utils.java:473` — one of which NPEs on a null ambient,
+  MA4); and there are `BLACKHOLE`/swallowed-error paths (`logging-diagnostics-audit.md`). Under
+  concurrent requests these **interleave, get attributed to the wrong request, or vanish** — and a
+  swallowed error on a long-running host lets corruption accumulate silently.
+- **What the API must do instead:** every `compile(...)`/`run(...)` carries a **request-scoped**
+  diagnostic sink — no shared `ErrorList`, no ambient current-context reads (pass `Frame`/context
+  explicitly), no `BLACKHOLE`. A single **unified channel per request** spans the whole pipeline: the
+  compile's `ErrorListener`, the run's unhandled-exception handler, and engine logging all feed one sink
+  **tagged by request id**, so the host gets a coherent, ordered, source-anchored stream and can tell
+  which request each line belongs to. Diagnostics are **structured** (severity/code/message/source/
+  line/column), never stderr text. Logging is per-request or per-engine, never a process-global static
+  logger that cannot be correlated and races.
+
+This is why the `Diagnostic` record and a `DiagnosticSink` seam belong in the API from the start (our
+`XtcEngine` already returns structured `Diagnostic`s per request); retrofitting request-correlation onto
+a shared/ambient diagnostic path after the fact is exactly the kind of thing that does not retrofit.
 
 ---
 
