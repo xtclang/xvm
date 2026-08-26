@@ -231,16 +231,25 @@ sharpened backlog items and verified closures:
   for any resident tool (LSP / daemon / `ToolConnector`), independent of
   concurrency - the #1 long-running-host issue. Closure = scope-bound / evictable
   annex tied to container/run lifetime.
-- **MUST-AUDIT — concurrent-compile shared-ASM mutation (container-0 compiles).**
-  Beyond MA3's compiler AST/`Context` (compiler-branch-deferred), concurrent
-  compiles mutate SHARED library structures during link:
-  `FileStructure.linkModules` calls `registerConstants(fileTop.m_pool)`,
-  `setFingerprintOrigin`, `merge`/`replaceChild` on shared library
-  `FileStructure`s; plus the plain `static` compiler counters (`s_nLabelCounter`
-  etc., parked to `lagergren/compiler-counter-atomics`) and the shared `ErrorList`.
-  Audit whether the container-0 host must SERIALIZE compiles (interim) vs the
-  compiler-reentrancy work needed for parallel compiles. Ties MA3 +
-  compiler-counter-atomics + `compiler-ast-context-mutation-audit.md`.
+- **MUST-AUDIT — concurrent-compile shared-ASM mutation (container-0 compiles) —
+  DONE 2026-08-26** (`compiler-ast-context-mutation-audit.md`, "Concurrent-Compile
+  Shared State" section). Finding: for concurrent DIFFERENT-module compiles (the
+  common case) the compile pipeline is per-compile-ISOLATED - the read-through
+  `LinkedRepository` clones each library into the compile's own `BuildRepository`
+  and link points the fingerprint at that clone, so `registerConstants`/merge/
+  NakedRef/interning are per-compile; `ErrorList` is per-request; and the MA3
+  AST/`Context` surfaces are per-compile (they bite INCREMENTAL/same-module, not
+  parallel-different). The two REAL concurrent-compile blockers, both **MUST-FIX for
+  concurrent compiles**: (1) **`DirRepository` lazy materialization is
+  unsynchronized** - `ensureModule()`/`ensureCache()` + plain `TreeMap`/`HashMap`
+  race on first concurrent load of a library module (workaround: prewarm all
+  libraries single-threaded at boot, which `prelinkSystemLibraries` already does for
+  ecstasy/turtle, + serialize repo access; real fix: concurrent/guarded repo cache);
+  (2) **static compiler counters** (`s_nLabelCounter` etc., parked to
+  `lagergren/compiler-counter-atomics`). SHOULD-FIX/verify: the clone READS the
+  shared library instance, so prewarm is load-bearing (a lazily-materialized library
+  child touched during clone-merge would race). No NEW runtime/ASM must-fix
+  graduated; interim stance = SERIALIZE compiles until (1)+(2) land.
 - **Diagnostics/logging request-scoping** stays the existing should-fix
   (request-owned diagnostic authority; MA4 ambient `getCurrentContext` readers;
   `BLACKHOLE`; shared `ErrorList`) - see `logging-diagnostics-audit.md` and Global

@@ -226,3 +226,48 @@ by one of:
 No shared mutable AST across requests or threads. This is an inventory and
 classification only; it names no fix for this branch and graduates no
 runtime/ASM must-fix.
+
+## Concurrent-Compile Shared State (container-0 model) — MUST-AUDIT closure 2026-08-26
+
+The `ToolConnector` model compiles in container 0. This audits what shared state
+TWO CONCURRENT compiles (of DIFFERENT modules, the common case) actually touch,
+and classifies each. Verdict up front: **the AST/`Context` surfaces above are NOT
+the blocker for concurrent-DIFFERENT-module compiles** — each compile parses its
+own source into its own AST with its own `Context`, so surfaces 1-6 are per-compile
+and safe for that case (they bite INCREMENTAL recompile reusing an AST, or parallel
+compilation of the SAME module). The real concurrent-compile blockers are two
+process-shared pieces:
+
+| Surface | What happens under concurrent compiles | Verdict |
+| --- | --- | --- |
+| **`DirRepository` lazy materialization is unsynchronized** — `ensureModule()` (`DirRepository.java:424-425`) does `if (module == null) module = tryLoad()` with no lock; `ensureCache()` (`:174`) rebuilds plain `TreeMap`/`HashMap` `modulesByName`/`modulesByFile` (`:473`) | two compiles first-loading the same library module race on `tryLoad()` and the shared maps → duplicate deserialization, torn map read, or a half-built module served to one compile | **MUST-FIX for concurrent compiles.** Interim workaround: **prewarm every needed library module single-threaded at boot** (the engine's `prelinkSystemLibraries` already does this for ecstasy/turtle) and serialize repository access; real fix: guard the repo cache (concurrent maps + synchronized/`computeIfAbsent` materialize) |
+| **Static compiler counters** — `s_nLabelCounter` (`ConditionalStatement.java:80`), `s_nCounter` (`ElseExpression.java:220`, `ElvisExpression.java:316`), `m_counter` (`MethodDeclarationStatement.java:1265`), plain non-atomic `static int` | two compiles read the same counter value and emit colliding synthetic names/labels | **MUST-FIX for concurrent compiles** (parked to `lagergren/compiler-counter-atomics`). Fix: `AtomicInteger` or per-compile counters |
+
+Verified SAFE for concurrent-DIFFERENT-module compiles (per-compile isolation):
+
+- **Per-compile clones isolate link/resolve/generate.** The read-through
+  `LinkedRepository` clones each library module into the compile's OWN
+  `BuildRepository` (`LinkedRepository.java:25-26`, `new FileStructure(module,
+  false)`); compile-time `linkModules` then points the per-compile fingerprint at
+  that CLONE (`setFingerprintOrigin`), not the shared original. So `registerConstants`,
+  merge/replace, NakedRef injection, and any type interning happen in the
+  **per-compile** pool — not shared. (The runtime link path clones too:
+  `FileStructure.replace` → `moduleUnlinked.cloneBody()`.)
+- **`ErrorList` is per-request** in the reference engine (`new ErrorList` per compile
+  call); the `ToolConnector` MUST keep it per-request (a shared/ambient sink is the
+  §4.6/logging hazard, not this one).
+- **AST/`Context` surfaces 1-6** — per-compile for different modules (see above).
+
+Residual SHOULD-FIX / verify: the clone step (`new FileStructure(sharedModule,
+false)`) READS the shared library instance to copy it; if that instance is fully
+materialized first (the prewarm above), concurrent clone-reads of a settled
+structure are safe, but a lazily-materialized library child touched during the
+merge would race — so **prewarm is load-bearing**, not just an optimization.
+
+**Bottom line:** concurrent compiles in container 0 need (a) the `DirRepository`
+cache made thread-safe OR every library prewarmed single-threaded before accepting
+concurrent compiles, and (b) the static counters fixed. With libraries prewarmed
+and compiles otherwise per-compile-isolated, the interim **serialize-compiles**
+stance is only needed until those two land. This graduates no NEW runtime/ASM
+must-fix; both blockers were already tracked (repository thread-safety here;
+counters on `compiler-counter-atomics`).
