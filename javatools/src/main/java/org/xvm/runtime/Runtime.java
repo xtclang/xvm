@@ -54,10 +54,43 @@ public class Runtime {
      * Register the specified container (used only for debugging)
      */
     public <C extends Container> C registerContainer(C container) {
+        if (container instanceof MainContainer containerMain) {
+            enforceSingleRoot(containerMain);
+        }
         synchronized (f_containers) {
             f_containers.putIfAbsent(container, null);
         }
         return container;
+    }
+
+    /**
+     * The container model this runtime supports has exactly ONE root: a NativeContainer plane,
+     * ONE MainContainer installed on it, and everything else executing in NESTED containers
+     * under that root (the sandbox/security model - injection mediated by the parent's
+     * ResourceProvider - and the shape Runner.x and the platform use). Sibling main containers
+     * over one shared plane are NOT a supported shape: the shared plane's parent-flow
+     * (ConstHeap.relocateConst and friends) deliberately moves state toward ancestors, which
+     * is safe only when the ancestor plane outlives every observer - with sibling roots it
+     * serves a DEAD sibling's compositions to the next run (proven by the same-JVM stress
+     * harness the one time sibling reuse was tried). Under the ownership-validation property,
+     * installing a second root fails loudly here instead of leaking silently.
+     */
+    private void enforceSingleRoot(MainContainer containerMain) {
+        if (!Boolean.getBoolean(OwnershipDiagnostics.VALIDATE_PROPERTY)) {
+            return;
+        }
+        synchronized (f_containers) {
+            for (Container container : f_containers.keySet()) {
+                if (container instanceof MainContainer containerRoot
+                        && containerRoot != containerMain) {
+                    throw new IllegalStateException(
+                        "a second root (main) container is being installed in this runtime;"
+                        + " after the root container is installed, code must execute in"
+                        + " NESTED containers under it (existing root: " + containerRoot
+                        + ", new: " + containerMain + ")");
+                }
+            }
+        }
     }
 
     /**

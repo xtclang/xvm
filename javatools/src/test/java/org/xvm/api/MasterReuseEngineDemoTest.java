@@ -50,6 +50,14 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * What this deliberately does NOT do is create two Connectors (two bootstraps in one JVM) -
  * that is Regime B, the sequential-relaunch shape that crashes on master's first-owner-captured
  * statics and that this branch's hardening enables.
+ *
+ * <p>CONTAINER-MODEL NOTE: on this branch the SANCTIONED model is one root main container per
+ * runtime with everything else in NESTED containers under it (see RuntimeSingleRootTest) -
+ * the consecutive sibling mains below document MASTER's engine and run with the ownership-
+ * validation property off; under validation, installing the second sibling root fails loudly,
+ * because the shared plane's parent-flow (ConstHeap.relocateConst) serves a dead sibling's
+ * compositions to the next run - proven by the reachability sweep when sibling reuse was
+ * tried in the direct harness.</p>
  */
 public class MasterReuseEngineDemoTest {
     /**

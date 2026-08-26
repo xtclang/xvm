@@ -58,6 +58,14 @@ public final class IsolatedDirectExecutor {
         final var err = new ErrorList(DEFAULT_ERROR_LIMIT);
         final var console = createConsole(logger);
         final var options = new IsolatedLauncherOptionsBuilder().buildRunnerOptions(request);
+        if (request.validateRuntimeOwnership()) {
+            // arm the runtime-level ownership diagnostics for this (daemon) JVM, including the
+            // single-root container-model enforcement: after a root main container is
+            // installed in a runtime, code must execute in NESTED containers under it -
+            // installing a sibling root fails loudly instead of sharing a plane whose
+            // parent-flow would serve a dead sibling's state to the next run
+            System.setProperty(OwnershipDiagnostics.VALIDATE_PROPERTY, "true");
+        }
         final var runner = new Runner(options, console, err);
         final int result = runner.run();
         if (result == 0 && request.validateRuntimeOwnership()) {

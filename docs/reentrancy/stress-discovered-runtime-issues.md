@@ -888,3 +888,32 @@ symptoms instead of stable runtime failures. The backlog plan in
 [plans/same-jvm-launcher-stress.md](plans/same-jvm-launcher-stress.md) therefore
 requires one controlled same-JVM harness with ownership diagnostics rather than
 parallel ad hoc Gradle processes in the same checkout.
+
+
+## Sibling-Main Reuse Serves A Dead Sibling's Compositions (2026-08-26)
+
+Found the one time connector reuse (consecutive sibling MainContainers over
+one shared NativeContainer plane) was tried in the direct harness: after a few
+modules, the reachability sweep failed with 14 foreign references - the
+CURRENT run's `ServiceContext.f_mapOpInfo` (the container-owned decoded-op
+cache) holding `ClassComposition`/`PropertyComposition` objects OWNED BY THE
+PREVIOUS run's dead MainContainer.
+
+Mechanism: core-typed handles created in run N-1 carry run-N-1-owned
+compositions (each container composes its own view of even core types);
+`ConstHeap.relocateConst` deliberately moves constant handles toward
+ancestors (so a child container can be GC'd), gating only on
+`isShared(parent)` - which passes for core types - WITHOUT re-composing the
+handle onto the parent's plane when it stays the same object. The shared
+native heap then serves run N-1's composed handle to run N, whose op-info
+caches its dead sibling's composition; run N now pins the dead run's whole
+graph and dispatches against its state.
+
+Resolution: the container MODEL, not a patch - a runtime supports exactly one
+root main container; everything else runs NESTED under it, where parent-flow
+retention is safe because the ancestor outlives every observer (the shape
+Runner.x and the platform use). `Runtime.enforceSingleRoot` fails a second
+root loudly under the ownership-validation property
+(`RuntimeSingleRootTest`); the direct harness arms it, and the connector
+reuse experiment was reverted. The master-compatible sibling behavior remains
+available unvalidated and is documented by `MasterReuseEngineDemoTest`.

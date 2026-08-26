@@ -1252,20 +1252,21 @@ public final class OwnershipDiagnostics {
         }
 
         /**
-         * Parent-flow constant currency is shared between related containers by design:
-         * {@code ConstHeap.getConstHandle} copies a parent's handle into a child heap only
+         * Parent-flow constant currency is interned sharing by design:
+         * {@code ConstHeap.getConstHandle} copies a parent's handle into descendant heaps
          * after an isShared check, and relocateConst deliberately moves canonical constants
-         * toward ancestors, so one immutable handle (or an ownerless deferred marker such as
-         * DeferredPropertyHandle) legitimately appears in both heaps. A share is a violation
-         * only when the two expected containers are unrelated - the direct cross-run leak -
-         * or when the shared object could carry per-container mutable state.
+         * toward ancestors - so one immutable handle (or an ownerless deferred marker such as
+         * DeferredPropertyHandle) legitimately appears under MANY observers, including
+         * SIBLING containers that both reached it through their common ancestor (the
+         * connector-reuse regime made that ordinary: consecutive main containers share one
+         * native plane). This matches the reachability sweep's policy exactly: immutable
+         * handles are pass-through currency. The cross-container leak signal that must keep
+         * flagging is MUTABLE state observed from more than one container - and it does,
+         * regardless of how the observers are related.
          */
         private static boolean isLegitimateSharedCurrency(Object value, Container previous,
                                                           Container current) {
             return value instanceof ObjectHandle handle
-                    && previous != null
-                    && current != null
-                    && isRelated(previous, current)
                     && !isMutableSafe(handle);
         }
 
