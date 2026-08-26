@@ -6,6 +6,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -34,6 +40,79 @@ public class AbstractConverterMapTest {
         assertTrue(keys.contains("hello"));
         assertTrue(values.contains("world"));
         assertEquals("world", entries.iterator().next().getValue());
+    }
+
+    @Test
+    void shouldComputeEachViewAtMostOnceUnderConcurrentFirstAccess() throws InterruptedException {
+        var map = new FactoryCountingMap();
+
+        int threadCount = 16;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        Set<Set<String>> observedKeyViews = ConcurrentHashMap.newKeySet();
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    observedKeyViews.add(map.keySet());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(5, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // every racing thread observed the identical view, and the overridable factory ran at
+        // most once: the racy duplicate-view caveat of a plain or volatile cache field does not
+        // exist for the compute-at-most-once holder
+        assertEquals(1, observedKeyViews.size());
+        assertEquals(1, map.keySetFactoryCalls.get());
+        assertSame(map.keySet(), observedKeyViews.iterator().next());
+    }
+
+    /**
+     * Identity converter map which counts invocations of the overridable key set factory.
+     */
+    private static final class FactoryCountingMap
+            extends AbstractConverterMap<String, String, String, String> {
+        private final AtomicInteger keySetFactoryCalls = new AtomicInteger();
+
+        private FactoryCountingMap() {
+            super(new HashMap<>());
+        }
+
+        @Override
+        protected String keyDown(String key) {
+            return key;
+        }
+
+        @Override
+        protected String keyUp(String key) {
+            return key;
+        }
+
+        @Override
+        protected String valueDown(String value) {
+            return value;
+        }
+
+        @Override
+        protected String valueUp(String value) {
+            return value;
+        }
+
+        @Override
+        protected Set<String> newKeySet() {
+            keySetFactoryCalls.incrementAndGet();
+            return super.newKeySet();
+        }
     }
 
     /**
