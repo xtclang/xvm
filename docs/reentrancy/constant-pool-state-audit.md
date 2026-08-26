@@ -25,6 +25,65 @@ The real risk categories are narrower:
 - live runtime values placed in constants, especially `HandleConstant`;
 - diagnostics and JIT caches that are not serialized logical constant value.
 
+## The Fundamental Design Flaw (read this first)
+
+The per-hazard classification below is real, but it treats symptoms. The blunt
+verdict: **`ConstantPool` is a fatally-flawed design, and the single most brittle,
+unsafe structure in the system.** Everything else here is downstream of that.
+
+- **It is one untyped, mutable, process-shared bag.** A plain
+  `ArrayList<Constant>` (`ConstantPool.java` `f_listConst`) is mutated by the
+  compiler, linker, serializer, runtime execution, and JIT - the *same* pool, with
+  no phase boundary between "being built" and "being executed against." Reads go by
+  raw integer index (`getConstant(int)`) and are then **cast at runtime**
+  (`getConstant(int, Class<T>)`). Nothing about the structure makes an illegal use
+  *impossible*; it makes every illegal use *available*. A structure this central
+  should be the most locked-down type in the codebase; it is the least.
+- **Its invariants are enforced by convention, not by types.** "Resolve before
+  exposing", "don't register after publish", "don't reorder after publish" are
+  code-review rules, not compiler-checked properties - which is exactly why the
+  hazards below are *runtime crashes* instead of *compile errors*.
+
+### `markRuntimePublished` is a RETROFIT, not the fix
+
+The runtime-publication marker + volatile read mirror + destructive-phase guards
+(rows throughout this doc) make the existing mutable bag *safe enough* for
+concurrent runtime reads **without** rewriting it. That is valuable and it works,
+but it is a band-aid on a broken shape - it guards mutate-after-publish rather than
+removing it, and it does **nothing** for the unbounded-growth leak (the pool
+`f_listConst`/TypeInfo caches only grow, never evict, so a long-running host that
+runs many distinct modules climbs to OOM - see `toolconnector-api-proposal.md`
+§4.1 row 2). **Do NOT "finish" the design by sprinkling `markRuntimePublished` onto
+more (upstream/child) pools.** That is more retrofit; it neither types the pool nor
+bounds it.
+
+### The real fix: freeze-on-publish + frozen-base + owned/evictable runtime-annex
+
+Make the shared thing immutable and the mutable thing owned:
+
+1. **Freeze-on-publish.** Build the pool in a *single-owner mutable* form during
+   compile+link; then freeze an **immutable** `FrozenPool` snapshot and publish
+   *that* for concurrent runtime reads. Immutable → lock-free by definition; the
+   marker/mirror become unnecessary for the frozen base. (This doc already gestures
+   at the "immutable frozen base + concurrent append-only runtime annex" model - it
+   is the target, not a nice-to-have.)
+2. **Owned, evictable runtime annex.** Route runtime type-calculus interning into a
+   per-owner/per-scope annex overlaying the frozen base (reads check annex-then-base);
+   **release the annex with its scope** → the leak is gone. This is why #10
+   (upstream/child-pool publication) and the #2 memory leak are the SAME fix.
+3. **Use the type system.** A `MutablePool` (register-into) vs `FrozenPool`
+   (read-only) split makes the illegal "register after publish" call *not compile*;
+   sealed constant/op hierarchies (see `sealed-hierarchy-audit.md`,
+   `generics-api-audit.md`) give exhaustiveness instead of `instanceof` ladders +
+   runtime casts. The point is to make illegal states unrepresentable, not to lock
+   the current shape.
+
+The irony: **Ecstasy the language is built on this exact discipline** (`immutable`/
+`const`, service isolation, no shared mutable state, no globals); the runtime that
+implements it should be held to its own gospel. The per-hazard tables below remain
+the accurate map of *what the retrofit currently guards* - but the structural
+closure is freeze-on-publish + annex, not more markers.
+
 ## Completeness Status
 
 This file is the current ConstantPool/state catalog, not a proof that every
