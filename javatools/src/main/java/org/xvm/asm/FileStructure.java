@@ -30,7 +30,6 @@ import java.util.Set;
 
 import java.util.function.Consumer;
 
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -1462,9 +1461,14 @@ public class FileStructure
 
             if (modules != null) {
                 assert kind != FileKind.Single || modules.size() == 1;
-                modules = modules.entrySet().stream().collect(Collectors.toUnmodifiableMap(
-                        Entry::getKey,
-                        e -> ((VersionTree) e.getValue()).ensureReadOnly()));
+                // preserve the caller's deterministic module order (main module first); collecting
+                // to an unordered map would make getModuleNames() and the reflection module list
+                // non-deterministic
+                var canonical = new LinkedHashMap<String, VersionTree<Boolean>>(modules.size());
+                for (var entry : modules.entrySet()) {
+                    canonical.put(entry.getKey(), entry.getValue().ensureReadOnly());
+                }
+                modules = Collections.unmodifiableMap(canonical);
             }
         }
 

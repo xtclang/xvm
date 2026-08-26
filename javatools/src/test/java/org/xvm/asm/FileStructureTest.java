@@ -95,7 +95,9 @@ public class FileStructureTest {
 
         var metadata = bundle.buildFileInfo();
         assertEquals(FileStructure.FileKind.Library, metadata.kind());
-        assertEquals(Set.of("App", "Lib"), metadata.modules().keySet());
+        // the order is part of the contract: the main module always comes first, and the module
+        // listing must stay deterministic (getModuleNames(), reflection's module list)
+        assertEquals(List.of("App", "Lib"), List.copyOf(metadata.modules().keySet()));
         assertEquals(new VersionTree(verApp, true), metadata.modules().get("App"));
         assertEquals(new VersionTree(verLib, true), metadata.modules().get("Lib"));
         assertFalse(metadata.modules().containsKey("External"));
@@ -111,6 +113,10 @@ public class FileStructureTest {
         var reread = new FileStructure(new ByteArrayInputStream(ab));
         assertEquals(FileStructure.FileKind.Library, reread.getFileKind());
         assertEquals(metadata, reread.buildFileInfo());
+        // Map.equals is order-insensitive, so assert the deterministic order across the
+        // write/read round trip explicitly
+        assertEquals(List.of("App", "Lib"),
+                List.copyOf(FileStructure.readFileInfo(new ByteArrayInputStream(ab)).modules().keySet()));
     }
 
     @Test
