@@ -5,6 +5,8 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import java.time.Instant;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -215,31 +217,44 @@ class BundlerTest {
 
     @Test
     void testBundleOutputBytesIndependentOfInputOrder(@TempDir Path tempDir) throws Exception {
-        // create each input module exactly once, so its embedded creation timestamp is fixed;
-        // bundling must then be reproducible across runs that read the same inputs in any order
-        var fileMain = tempDir.resolve("MainMod.xtc").toFile();
-        var fileLibA = tempDir.resolve("LibA.xtc").toFile();
-        var fileLibB = tempDir.resolve("LibB.xtc").toFile();
-        new FileStructure("MainMod").writeTo(fileMain);
-        new FileStructure("LibA").writeTo(fileLibA);
-        new FileStructure("LibB").writeTo(fileLibB);
+        // with explicit creation timestamps there is no hidden wall-clock input left anywhere in
+        // the pipeline: each bundling run generates its own inputs completely from scratch, and
+        // the runs both generate and present them in opposite orders - the produced binaries must
+        // still be byte-identical
+        var timestamp = Instant.parse("2026-01-01T00:00:00Z");
 
-        var outForward  = tempDir.resolve("forward.xtc");
-        var outReversed = tempDir.resolve("reversed.xtc");
-        assertEquals(0, launchBundle(outForward, fileMain, fileLibA, fileLibB));
-        assertEquals(0, launchBundle(outReversed, fileLibB, fileLibA, fileMain));
-
-        // the presentation order of the inputs must not leak into the produced binary
-        byte[] abForward  = Files.readAllBytes(outForward);
-        byte[] abReversed = Files.readAllBytes(outReversed);
+        byte[] abForward  = generateAndBundle(tempDir.resolve("forward"), timestamp,
+                List.of("MainMod", "LibA", "LibB"));
+        byte[] abReversed = generateAndBundle(tempDir.resolve("reversed"), timestamp,
+                List.of("LibB", "LibA", "MainMod"));
         assertArrayEquals(abForward, abReversed);
 
         // write -> read -> write must also be a fixpoint: re-serializing a read-back bundle
         // reproduces the identical binary
-        var reread = new FileStructure(outForward.toFile());
+        var reread = new FileStructure(tempDir.resolve("forward").resolve("bundle.xtc").toFile());
         var abRewritten = new ByteArrayOutputStream();
         reread.writeTo(abRewritten);
         assertArrayEquals(abForward, abRewritten.toByteArray());
+    }
+
+    /**
+     * Generate fresh single-module inputs into the given directory - in the given order, stamped
+     * with the given timestamp - bundle them with the real bundle command, and return the bundle
+     * file's bytes.
+     */
+    private static byte[] generateAndBundle(Path dir, Instant timestamp, List<String> moduleNames)
+            throws Exception {
+        Files.createDirectories(dir);
+        var inputs = new ArrayList<File>();
+        for (var name : moduleNames) {
+            var file = dir.resolve(name + ".xtc").toFile();
+            new FileStructure(name, timestamp).writeTo(file);
+            inputs.add(file);
+        }
+
+        var fileOut = dir.resolve("bundle.xtc");
+        assertEquals(0, launchBundle(fileOut, inputs.toArray(new File[0])));
+        return Files.readAllBytes(fileOut);
     }
 
     private static int launchBundle(Path fileOut, File... inputs) {
