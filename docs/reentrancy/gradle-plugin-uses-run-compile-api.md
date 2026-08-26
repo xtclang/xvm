@@ -456,5 +456,159 @@ fork without changing the build's observable contract.
   `javatools_bridge/build.gradle.kts`, `manualTests/build.gradle.kts`.
 - Runtime deployment model: `javatools/src/main/java/org/xvm/runtime/NestedContainer.java:61`
   (`createForHost`).
-</content>
-</invoke>
+
+---
+
+## 8. Concrete Task List (implementation checklist)
+
+Discrete, ordered tasks derived from the phased plan (§5), the risks (§4, `R#`), and the open
+questions (§6, `Q#`). Dependencies flow top-down: T0 → Phase 1 → Phase 2 → Phase 3 → Phase 4.
+`ATTACHED` remains the correctness oracle and fallback throughout.
+
+### T0 — Foundation (prerequisites for any warm path)
+
+- [ ] **T0.1 Parameterize `run(...)`** with entry method name + module arguments (today it runs a
+  fixed `"run"`). `XtcEngine.java:323-345`; consume `XtcRunTask` module args. *(R2)*
+- [ ] **T0.2 Define the run result mapping** — `CompletableFuture<ObjectHandle>` completion/exception →
+  Gradle task success/failure + exit code + stdout/stderr redirect. `XtcRunTask.java:403-464`. *(Q6)*
+- [ ] **T0.3 Add the single-flag old-world/new-world toggle** (`org.xtclang.xtc.warm`, default `false`)
+  read as a config-cache-safe `Provider`, selecting the execution mode default with per-task override
+  preserved, and folded into the build-cache key while parity is unproven. See §9. *(enables A/B from
+  day one)*
+
+### Phase 1 — warm runs (no XDK changes, lowest risk, biggest per-unit win)
+
+- [ ] **T1.1 Hold a warm engine in the Build Service** — add a lazily-created `XtcEngine` to
+  `DirectRuntimeBuildService`, keyed by the existing runtime fingerprint; close it in the service's
+  `close()`. `DirectRuntimeBuildService.java`, `DirectRuntimeFingerprint.java`.
+- [ ] **T1.2 Derive the engine module path** from the isolated runtime's resolved module path (reuse
+  `ModulePathResolver`). `ModulePathResolver.java`.
+- [ ] **T1.3 Swap the run executor body** — replace `IsolatedDirectExecutor`'s per-call
+  `new Runner(...)` / `Launcher.launch(...)` for RUN with `engine.run(...)`.
+  `IsolatedDirectExecutor.java:50-82`, `DirectRunRequest.java`.
+- [ ] **T1.4 Route `XtcRunTask` (DIRECT) through the service engine**; keep ATTACHED as fallback.
+  `XtcRunTask.java:302-305`.
+- [ ] **T1.5 Serialize the service** (`maxParallelUsages = 1`) until shared-lazy-state concurrency is
+  proven (mirrors the already-forbidden parallel run path). *(R7)*
+- [ ] **T1.6 Tests** — warm run stdout/exit identical to the forked path; N run tasks in one build
+  reuse ONE engine (assert a single native-plane boot).
+
+### Phase 2 — warm compile (behind opt-in `DIRECT_WARM`)
+
+- [ ] **T2.1 Add `compile(Path...)` source-tree entry point** — walk a module directory tree into
+  `TypeCompositionStatement`s via `org.xvm.tool.ModuleInfo` and feed the existing in-memory pipeline.
+  This is the gating prerequisite for warm compile. `XtcEngine.java:123-128` (TODO). *(R1)*
+- [ ] **T2.2 Add a `DIRECT_WARM` execution mode** to the `ExecutionMode` enum + wiring.
+  `launchers/ExecutionMode.java`, `XtcProjectDelegate.java`.
+- [ ] **T2.3 Route `XtcCompileTask` (DIRECT_WARM)** through `engine.compile(...).writeTo(outputDir)`.
+  `XtcCompileTask.java`; `XtcEngine.java:407-421`.
+- [ ] **T2.4 Determinism gate** — prove warm `.xtc` outputs byte-identical to forked
+  `org.xvm.tool.Compiler` outputs (warm-vs-cold, run-to-run); add canonicalization if not, BEFORE warm
+  outputs may participate in the build cache. *(R4, Q2)*
+- [ ] **T2.5 Keep turtle/bridge bootstrap on the launcher** as a documented exception for now. *(R3)*
+- [ ] **T2.6 Tests** — warm-compiled module byte-identical to forked; `@CacheableTask` hit parity
+  warm-vs-cold.
+
+### Phase 3 — warm compile default for consumer builds
+
+- [ ] **T3.1 Flip the default execution mode** for consumers via `-PxtcDefaultExecutionMode`.
+  `XtcPluginConstants.java:67`.
+- [ ] **T3.2 Unify diagnostics** — compile + run errors share one engine-level sink.
+  `XtcEngine.java:78-86` (DiagnosticSink TODO).
+
+### Phase 4 — the XDK's own dependency-heavy build (needs XDK-side work)
+
+- [ ] **T4.1 Model turtle/native-bridge bootstrap inside the engine** or explicitly except it in the
+  XDK build. *(R3, Q8)*
+- [ ] **T4.2 Prove safe submission to one plane** — parallel-safe or serialized `lib_*` compiles onto a
+  single engine. *(R7, Q4)*
+- [ ] **T4.3 Self-hosting bootstrap safety** — pin which build stage's published binaries feed the
+  engine module path; guard against ever loading half-built outputs. *(R6, Q5)*
+- [ ] **T4.4 Share one warm engine across all `lib_*` compile tasks** in a single XDK build — the
+  largest self-build payoff. `xdk/build.gradle.kts:96-119`.
+
+### Cross-cutting
+
+- [ ] **TX.1 Fallback discipline** — ATTACHED stays a correct, isolated fallback selectable per task or
+  globally; any warm-engine failure falls back to a fork without changing the build's observable
+  contract.
+- [ ] **TX.2 Engine reuse scope decision** — per-build (current Build Service lifetime) vs
+  per-daemon-across-builds keyed by fingerprint (more warmth, more stale-state risk). *(Q3)*
+
+---
+
+## 9. Single-Flag Old-World / New-World Toggle (recommended for the hardening period)
+
+**Yes — a single boolean can flip the entire build between the old (forked launcher) world and the new
+(warm-engine) world, and it is one of the highest-leverage things to build first.** It costs little
+*because the abstraction it rides on already exists*, and it makes every later phase safer.
+
+### 9.1 It rides on machinery already in the tree
+
+Execution is already chosen behind a strategy seam — the `ExecutionMode` enum
+(`launchers/ExecutionMode.java`), the `ExecutionStrategy` interface with `ForkedStrategy` /
+`DirectStrategy` implementations, and a global default knob `-PxtcDefaultExecutionMode`
+(`XtcPluginConstants.java:67`). The warm engine is just a third strategy behind that same seam. So the
+"toggle" is not new plumbing — it is a thin mapping from one boolean onto the mode that is already
+selected per task and globally. The plugin does **not** need two parallel plugins or a forked build.
+
+### 9.2 Concrete shape
+
+- A single property, e.g. `org.xtclang.xtc.warm` (mirrored as `-Pxtc.warm=true|false`), read with
+  `providers.gradleProperty("org.xtclang.xtc.warm")` so it is **configuration-cache safe** (a
+  `Provider`, resolved at configuration time, never captured as a live object in a task action).
+- Default **`false` = old world** during hardening (forked/ATTACHED — today's behavior, unchanged).
+  `true` = new world (route DIRECT/`DIRECT_WARM` through the warm `XtcEngine`).
+- Settable exactly where a boolean already lives: the invocation (`-Pxtc.warm=true`), the project
+  `gradle.properties`, or the user-global `~/.gradle/gradle.properties` — "global space" as asked.
+- **Granularity = global default with local override.** The flag sets the default mode; the existing
+  per-task mode selection still wins, so a single misbehaving task can be pinned back to the old world
+  (or a single task opted into the new world) without moving the global switch. This is exactly the
+  control you want mid-hardening.
+
+### 9.3 How much complication to support BOTH worlds at once?
+
+The **toggle itself is cheap.** The real, ongoing cost is not the switch — it is the discipline of
+keeping the two worlds *observably equivalent*, which this project is committed to paying regardless
+(ATTACHED is already declared the correctness oracle, §5). Breakdown:
+
+- **Low / already-present:** the strategy seam, the mode enum, the global knob, and the isolated Build
+  Service all exist. Adding one boolean → mode mapping is small.
+- **Medium (paid anyway):** output/behavior **parity** — warm `.xtc` byte-identical to forked (R4/T2.4),
+  run exit/stdout/diagnostics identical (T0.2/T1.6). These are already required gates; the toggle does
+  not add them, it *exercises* them.
+- **New, specific to running both:** the world flag **must be a build-cache key input while parity is
+  unproven.** Otherwise a task compiled in the new world could serve a cache hit to a consumer expecting
+  old-world output (or vice-versa), silently poisoning the cache. Make `xtc.warm` (and the runtime
+  fingerprint) part of the cacheable compile task's key until §2.4 proves byte-identical output; then it
+  can be dropped from the key. This is the one genuinely extra correctness obligation of dual-world
+  support, and it is a few lines on the task's input declarations.
+- **Test matrix doubles** — but this is a *feature*, not a tax: see 9.4.
+
+Net: supporting both worlds simultaneously is **cheap on top of the parity work already planned**, with
+one real addition (world-as-cache-key while unproven).
+
+### 9.4 Why it is worth building first (not last)
+
+- **Instant, code-free rollback.** If the new world misbehaves in anyone's build, flip one flag — no
+  code change, no plugin release, no revert. This de-risks the entire rollout.
+- **Differential A/B is trivial.** Run the same build twice — `-Pxtc.warm=false` then `true` — and diff
+  outputs and wall-clock. This is precisely how you *prove* determinism (T2.4) and *measure* the real
+  speedup (§2.5) rather than asserting it, and how you bisect a warm-world-only failure.
+- **Graduated rollout maps onto the phases.** Default `false` through hardening; flip individual
+  consumer projects, then the global default (Phase 3), then the XDK self-build (Phase 4) as confidence
+  grows — all by moving one flag, never by branching the plugin.
+
+### 9.5 Caveats to keep honest
+
+- The flag is resolved at **configuration time** (correct for config-cache); it selects the strategy,
+  it does not let a single task dynamically switch worlds mid-action. That is the right constraint.
+- The new world still requires the daemon + Build Service to be available; when they are not (e.g. a
+  no-daemon CI invocation), `true` must **degrade to the old world**, not fail — same fallback
+  discipline as TX.1.
+- Keep old world as the default and the oracle until Phase 3; the toggle is for opt-in acceleration and
+  A/B proof during hardening, not for making the unproven path the silent default.
+
+**Recommendation:** implement T0.3 immediately, before Phase 1 lands, so warm runs and warm compiles are
+developed and validated behind the flag from the very first commit, with `false` shipping as the
+untouched status quo.
