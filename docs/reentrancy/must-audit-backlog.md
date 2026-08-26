@@ -114,6 +114,49 @@ category below is marked `must audit`, it becomes `must fix` as soon as a test,
 diagnostic, or code inspection proves owner sharing, cross-request reuse, or
 runtime publication.
 
+### 2026-08-26 reconciliation (post embedding-API)
+
+Backlog swept after the embedding-API wave shipped. Net state:
+
+- **CLOSED this wave:** the embedding-API must-fixes — ledger rows 66
+  (`MainContainer.futureResult`, also closes issue-543 items 1a/1b), 67
+  (`Container.runModule` + `NestedContainer.createForHost` nested-host linchpin),
+  68 (`org.xvm.api.XtcEngine` in-memory compile + run + `writeTo`). Both gates
+  green; `XtcEngineTest` (4) run, skipped=0.
+- **NEW forward work added below the line** (not previously on any list):
+  - **FW1 — Master contrast branch** (demonstration deliverable): reproduce the
+    compile/run API on a fresh branch off `master` per
+    `instructions-port-run-compile-api-to-master.md`. Compile half ports free;
+    run half = ~130 lines of hooks minus `markRuntimePublished`. Proves master is
+    fine for sequential one-shot but exposed to the 543 pool-race subset under
+    warm/parallel reuse. Priority: user call (evidence piece, not hardening).
+  - **FW2 — Gradle plugin warm-engine adoption** (large perf win): drive one warm
+    `XtcEngine` from the existing `DirectRuntimeBuildService` instead of a
+    per-invocation launcher. Full phased task list + single-flag old/new-world
+    toggle in `gradle-plugin-uses-run-compile-api.md` §8-9. Phase 1 (warm runs) is
+    low-risk/no-XDK-change; Phase 2 (warm compile) blocked on FW3.
+  - **FW3 — `XtcEngine.compile(Path...)` source-tree entry point** (prerequisite):
+    compile on-disk module directory trees via `ModuleInfo`, not just in-memory
+    strings. Unblocks warm plugin compile (FW2 Phase 2) AND the LSP source-tree
+    case. `XtcEngine.java:123-128` TODO.
+- **Reclassifications (stale corrections):**
+  - Array Stage 3 (this section's array-exposure row, ~line 205): Families A/B +
+    FrozenArray are DONE (ledger rows 60-64), Family C deferred by analysis. Only
+    the three `ListMap`-typed getters (retype to a `TypeInfo` interface + ~10-site
+    caller sweep) genuinely remain — treat as SHOULD-FIX remnant, not open Stage 3.
+  - "Retire `Object.clone()` in structure family" row (~line 198) is marked Done
+    but its Why/closure text still reads as an unexecuted plan — **needs a human to
+    confirm the copy-constructor + `Cloneable`-removal actually landed vs a
+    mislabel** before trusting the Done.
+- **Open counts after sweep:** MUST-FIX 7 (MF1 injector deadlock #541; MF2-MF6 the
+  JIT cluster J21-J24, unfiled + parked for JIT rebase; MF7 ConstantPool
+  transactional rewrite). MUST-AUDIT 4 umbrellas (3 deferred to JIT/compiler
+  branches). SHOULD-FIX ~24 (structural / sealing / diagnostics-API / small
+  follow-ups, many mapping to the 17 Global-backlog tracks; none filed to master).
+- **Master filing:** only Issue #541 and PR #539 have numbers; all 18 Category-A
+  drafts + rows 19/20/25/26 are fixed-in-branch but UNFILED; J21-J24 unfiled AND
+  unfixed.
+
 | Status | Task | Source category | Why it matters | Required closure |
 | --- | --- | --- | --- | --- |
 | Done in this branch | Remove constructor-published native template `INSTANCE` globals and static owner metadata | `must-fix-races.md`, `state-inventory.md`, `fixed-in-this-branch.md` | Process-global mutable template/metadata state was the original last-writer-wins, wrong-container, constructor-publication bug family. | Keep `NativeTemplates`, owner-local lazy metadata, and source scans that prevent `INSTANCE = this` from returning. |
