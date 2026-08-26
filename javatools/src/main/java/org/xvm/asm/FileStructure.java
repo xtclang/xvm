@@ -59,11 +59,26 @@ public class FileStructure
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a file structure that will initially contain one module.
+     * Construct a file structure that will initially contain one module, stamped with the current
+     * wall-clock time as its creation timestamp.
      *
      * @param sModule   the fully qualified module name
      */
     public FileStructure(String sModule) {
+        this(sModule, Instant.now());
+    }
+
+    /**
+     * Construct a file structure that will initially contain one module, stamped with the
+     * specified creation timestamp. Passing an explicit timestamp gives the caller complete
+     * control over the generated content, making the produced binary reproducible: the same
+     * module contents and the same timestamp yield byte-identical output.
+     *
+     * @param sModule    the fully qualified module name
+     * @param timestamp  the creation timestamp to stamp the module with; null is recorded as the
+     *                   epoch
+     */
+    public FileStructure(String sModule, Instant timestamp) {
         super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
 
         // module name required
@@ -75,7 +90,7 @@ public class FileStructure
         ConstantPool    pool     = new ConstantPool(this);
         ModuleConstant  idModule = pool.ensureModuleConstant(sModule);
         ModuleStructure module   = new ModuleStructure(this, idModule);
-        module.setTimestamp(pool.ensureTimeConstant(Instant.now()));
+        module.setTimestamp(pool.ensureTimeConstant(timestamp));
 
         if (!addChild(module)) {
             throw new IllegalStateException("module already exists");

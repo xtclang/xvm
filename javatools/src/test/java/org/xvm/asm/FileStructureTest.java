@@ -9,6 +9,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import java.time.Instant;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -117,6 +119,21 @@ public class FileStructureTest {
         // write/read round trip explicitly
         assertEquals(List.of("App", "Lib"),
                 List.copyOf(FileStructure.readFileInfo(new ByteArrayInputStream(ab)).modules().keySet()));
+    }
+
+    @Test
+    public void testExplicitTimestampMakesGenerationReproducible()
+            throws IOException {
+        // with an explicit creation timestamp, two completely independent generations of the same
+        // module are byte-identical; the wall-clock default in FileStructure(String) is the only
+        // generation-time input that is not a pure function of the module contents
+        var timestamp = Instant.parse("2026-01-01T00:00:00Z");
+
+        var outFirst  = new ByteArrayOutputStream();
+        var outSecond = new ByteArrayOutputStream();
+        new FileStructure("Repro", timestamp).writeTo(outFirst);
+        new FileStructure("Repro", timestamp).writeTo(outSecond);
+        assertArrayEquals(outFirst.toByteArray(), outSecond.toByteArray());
     }
 
     @Test
