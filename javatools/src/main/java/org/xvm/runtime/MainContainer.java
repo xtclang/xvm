@@ -4,6 +4,8 @@ package org.xvm.runtime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import java.util.concurrent.CompletableFuture;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
@@ -247,7 +249,11 @@ public class MainContainer
                 return iResult;
             });
 
-            m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE);
+            // capture the event-driven completion future the service context already produces:
+            // it completes normally when the entry point finishes and EXCEPTIONALLY (carrying the
+            // XTC ExceptionHandle) if the run threw. Embedders can await this instead of the
+            // busy-wait poll, and get a real failure object instead of only the int result.
+            m_futureResult = m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE);
         } catch (Exception e) {
             // Keep the original startup/invocation cause. Message-only wrappers hide the owner and
             // module-load failure path that same-JVM diagnostics need.
@@ -291,4 +297,21 @@ public class MainContainer
      * completed abnormally.
      */
     private int m_nResult = 1;
+
+    /**
+     * The completion future for the current {@link #invoke0} run: completes normally when the
+     * entry point finishes, exceptionally (carrying the XTC {@code ExceptionHandle} inside a
+     * {@code WrapperException}) if it threw. Null before the first {@code invoke0}. This is the
+     * event-driven, failure-carrying signal a first-class embedding API awaits instead of the
+     * naive idle poll.
+     */
+    private CompletableFuture<ObjectHandle> m_futureResult;
+
+    /**
+     * @return the completion future for the most recent {@link #invoke0}, or null if none has
+     *         been started yet
+     */
+    public CompletableFuture<ObjectHandle> futureResult() {
+        return m_futureResult;
+    }
 }
