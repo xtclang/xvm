@@ -242,11 +242,13 @@ sharpened backlog items and verified closures:
   parallel-different). The two REAL concurrent-compile blockers, both **MUST-FIX for
   concurrent compiles**: (1) **`DirRepository` lazy materialization is
   unsynchronized** - `ensureModule()`/`ensureCache()` + plain `TreeMap`/`HashMap`
-  race on first concurrent load of a library module (workaround: prewarm all
-  libraries single-threaded at boot, which `prelinkSystemLibraries` already does for
-  ecstasy/turtle, + serialize repo access; real fix: concurrent/guarded repo cache);
-  (2) **static compiler counters** (`s_nLabelCounter` etc., parked to
-  `lagergren/compiler-counter-atomics`). SHOULD-FIX/verify: the clone READS the
+  race on first concurrent load of a library module. **FIXED 2026-08-26 (ledger row
+  69):** coarse per-repository synchronization of `loadModule`/`getModuleNames`/
+  `storeModule` (correct granularity for a lookup cache). Residual: the returned
+  module is still lazy, so concurrent CLONE (read-through `LinkedRepository`) relies
+  on prewarm (`prelinkSystemLibraries` covers system libs); fully-materialize-on-load
+  is a follow-up for lazy user libraries. (2) **static compiler counters**
+  (`s_nLabelCounter` etc., still parked to `lagergren/compiler-counter-atomics`). SHOULD-FIX/verify: the clone READS the
   shared library instance, so prewarm is load-bearing (a lazily-materialized library
   child touched during clone-merge would race). No NEW runtime/ASM must-fix
   graduated; interim stance = SERIALIZE compiles until (1)+(2) land.

@@ -62,14 +62,25 @@ public class DirRepository
 
     // ----- ModuleRepository API ------------------------------------------------------------------
 
+    // Coarse per-repository synchronization: the scan cache (modulesByName/modulesByFile,
+    // ensureCache's rebuild) and each ModuleInfo's lazy module load (ensureModule -> tryLoad) are
+    // otherwise unsynchronized, so two concurrent compiles first-loading a library module race on
+    // tryLoad and the plain TreeMap/HashMap. A repository is a coarse-grained lookup cache, so a
+    // monitor here is the correct granularity - not the fine-grained-hot anti-pattern (that is the
+    // ConstantPool). NOTE: the shared module returned here is still LAZY (FileStructure(File) defers
+    // child deserialization), so a caller that CLONES it concurrently (the read-through
+    // LinkedRepository) relies on the module being fully materialized first - which is why the
+    // embedding engine prewarms the system libraries single-threaded at boot before accepting
+    // concurrent compiles. Fully-materialized-on-load is a follow-up if lazy libraries are ever
+    // loaded during concurrent compiles.
     @Override
-    public Set<String> getModuleNames() {
+    public synchronized Set<String> getModuleNames() {
         ensureCache();
         return Collections.unmodifiableSet(modulesByName.keySet());
     }
 
     @Override
-    public ModuleStructure loadModule(String sModule) {
+    public synchronized ModuleStructure loadModule(String sModule) {
         ensureCache();
         ModuleInfo info = modulesByName.get(sModule);
         if (info != null) {
@@ -113,7 +124,7 @@ public class DirRepository
     }
 
     @Override
-    public void storeModule(ModuleStructure module)
+    public synchronized void storeModule(ModuleStructure module)
             throws IOException {
         if (m_fRO) {
             throw new IOException("repository is read-only: " + this);
