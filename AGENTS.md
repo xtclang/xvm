@@ -1,154 +1,99 @@
 # Agent Configuration
 
-Claude Code imports this file through the root `CLAUDE.md` shim.
+Repo-local operator checklist for the XVM project. Imported through the root `CLAUDE.md` shim.
 
-## ABSOLUTE RULE: No Unsupervised Git Operations
+## Git — no unsupervised remote/destructive ops
 
-**NEVER push commits, create remote branches, delete branches, or perform any destructive git operation without explicit manual confirmation from the user.** This includes `git push`, `git push -u`, `git branch -D`, `git push --delete`, and any `gh` command that modifies remote state (e.g., `gh pr create`). Local branch creation and local commits are allowed when requested, but nothing leaves the local machine without the user saying so.
+Never push, create/delete remote branches, or open PRs without explicit user confirmation.
+This covers `git push`, `git push -u`, `git branch -D`, `git push --delete`, and any state-changing
+`gh` command (e.g. `gh pr create`). Local commits and local branches are fine when requested —
+nothing leaves the machine without the user saying so.
 
-## MOST IMPORTANT RULE: Gradle Task Execution
+## Gradle: `clean` runs alone
 
-### NEVER Run Clean with Other Tasks
+A custom aggregator over the composite builds rejects `clean` combined with any other task
+(race conditions, cross-subproject conflicts, task-ordering). Run it standalone, wait, then run the rest.
 
-**FORBIDDEN - The aggregator plugin will reject these:**
 ```bash
-./gradlew clean build                     # ❌ WILL FAIL
-./gradlew clean publishLocal              # ❌ WILL FAIL
-./gradlew clean build publishLocal        # ❌ WILL FAIL
+# FORBIDDEN
+./gradlew clean build
+./gradlew clean publishLocal
+
+# REQUIRED
+./gradlew clean          # alone; wait for it to finish
+./gradlew build publishLocal
 ```
 
-**ALLOWED - Multiple tasks (excluding clean):**
-```bash
-./gradlew build publishLocal              # ✅ OK - most combinations work
-./gradlew test jar                        # ✅ OK
-```
+Non-`clean` combinations are fine: `./gradlew build installDist`, `./gradlew test jar`, etc.
 
-**REQUIRED - Clean must run alone:**
-```bash
-./gradlew clean
-./gradlew build
-./gradlew publishLocal
-```
+## Composite build semantics
 
-### Why This Rule Exists
-The XVM project uses a custom aggregator plugin that prevents running `clean` with other lifecycle tasks to avoid:
-- Race conditions in composite builds
-- Build conflicts between subprojects when cleaning
-- Task ordering issues with clean
-
-Most other task combinations work fine - the restriction only applies to `clean`.
-
-# Code Style Rules (UNBREAKABLE)
-1. ALWAYS add a newline at the end of every file
-2. NEVER use star imports (import foo.*) - always use explicit imports
-3. NEVER use fully qualified Java package names in the Java code. Always import, so that i.e `org.gradle.api.model.ObjectFactory` is just `ObjectFactory`
-4. ALWAYS use `var` declarations when the type is clear from the right-hand side (e.g., `var x = new ArrayList<String>()` not `List<String> x = new ArrayList<>()`)
-
-### Task Execution Patterns:
-
-**Single project tasks:**
-- `./gradlew javatools:jar`
-- `./gradlew xdk:installDist`
-- `./gradlew javatools:clean`
-
-**Multiple lifecycle tasks (works for most tasks):**
-- `./gradlew build installDist` - ✅ Works
-- `./gradlew test jar` - ✅ Works
-- `./gradlew assemble publishLocal` - ✅ Works
-
-**Clean workflow (clean must run alone):**
-1. `./gradlew clean` (standalone, nothing else)
-2. Wait for completion
-3. Then run your desired tasks: `./gradlew build` or `./gradlew build installDist`
-
-**Remember:** Never combine `clean` with other lifecycle tasks.
-
-## Gradle Best Practices
-
-When working with Gradle build files, always follow [Gradle Best Practices](https://docs.gradle.org/current/userguide/best_practices_general.html):
-
-- **Configuration Cache Compatibility**: Use injected services (`ExecOperations`, `FileSystemOperations`) instead of project-level methods (`project.exec`, `project.javaexec`)
-- **Task Dependencies**: Declare explicit task dependencies using `dependsOn`, `mustRunAfter`, or input/output relationships
-- **Lazy Configuration**: Use Provider APIs and avoid eager evaluation during configuration
-- **Incremental Builds**: Properly declare inputs and outputs for custom tasks
-- **Build Performance**: Minimize configuration time work and prefer build cache compatible patterns
-
-When refactoring build scripts, proactively suggest migrations to follow these best practices, especially for configuration cache compatibility and proper task modeling.
-
-## CRITICAL KOTLIN DSL SYNTAX REQUIREMENTS
-
-**NEVER use old untyped Gradle syntax in build.gradle.kts files. ALWAYS use typed operations:**
-
-❌ **FORBIDDEN - Never do this:**
-```kotlin
-tasks.register("taskName") {
-    dependsOn("otherTask")  // String-based dependency
-}
-```
-
-✅ **REQUIRED - Always do this:**
-```kotlin
-val taskName by tasks.registering {
-    dependsOn(tasks.named("otherTask"))  // Typed dependency
-}
-```
-
-or even better:
-
-```kotlin
-val otherTask by tasks.existing<SomeTaskType>()
-
-val taskName by tasks.registering {
-    dependsOn(otherTask)  // Typed dependency
-}
-```
-
-**Rules:**
-- Always use `val taskName by tasks.registering` instead of `tasks.register("taskName")`
-- Always use typed task references with proper Provider API
-- This ensures proper build cache support, configuration cache compatibility, and IDE support
-- NEVER run without the configuration cache enabled. Everything MUST work with the configuration cache.
-
-
-## Lang Composite Build Properties
-
-The `lang/` directory is a **Gradle composite build** that is disabled by default. Two `-P` properties are required to enable it when running any `./gradlew :lang:*` task from the project root:
+- `settings.gradle.kts` is an aggregator root; root `build` is an aggregate lifecycle over the included builds.
+- Always included: `javatools`, `javatools_jitbridge`, `javatools_utils`, `javatools_unicode`, `plugin`, `xdk`, `docker`.
+- Optional builds are gated by `includeBuildLang` / `includeBuildManualTests` (visibility) and attached to the
+  root lifecycle by `includeBuildAttachLang` / `includeBuildAttachManualTests`. All default to `false`.
+- `manualTests` is a fake third-party consumer build that verifies published/composite plugin+XDK behavior.
+- Running any `:lang:*` task from root needs BOTH flags (either one alone fails with "project ':lang' not found"):
 
 ```bash
 ./gradlew :lang:<task> -PincludeBuildLang=true -PincludeBuildAttachLang=true
 ```
 
-### What the properties do
-- **`-PincludeBuildLang=true`**: Includes the `lang/` directory as a composite build, making `:lang:*` tasks visible to the root project
-- **`-PincludeBuildAttachLang=true`**: Wires `lang/` lifecycle tasks (build, test, etc.) to the root build's lifecycle, so `./gradlew build` from the root also builds lang
+## Run vs build lifecycle
 
-### Why they exist
-Both properties default to `false` in the root `gradle.properties` so that:
-1. CI and other developers don't need to build `lang/` unless they're working on it
-2. The main XDK build stays fast for contributors who aren't touching language tooling
-3. The composite build inclusion is opt-in to avoid unexpected build interactions
+- A leaf task does not imply `build`. `runXtc`/alias/`greet` tasks behave like Gradle `run`: they build only
+  what they need, not full `check`/`build`.
+- `testXtc` is wired into `check`, so `build` runs it — but `runXtc`/`greet` do not.
 
-### When to use them
-- **Always** when running any `./gradlew :lang:*` task from the project root
-- Both properties are always needed together -- using only one will fail
-- If you forget them, the build will fail with "project ':lang' not found" or similar
+## Running tests so they actually run
 
-### Alternative: local gradle.properties override
-Instead of passing `-P` flags every time, developers can set them in their local `gradle.properties`:
-```properties
-includeBuildLang=true
-includeBuildAttachLang=true
-```
+- Gradle caches test results: use `--rerun-tasks --no-build-cache` to force a real re-run instead of `UP-TO-DATE`.
+  Single class via `--tests`.
 
-# important-instruction-reminders
-- Do what has been asked; nothing more, nothing less.
-- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
-- NEVER add "Co-Authored-By" lines to commit messages or pull request descriptions.
+  ```bash
+  ./gradlew :javatools:test :javatools_utils:test --rerun-tasks --no-build-cache
+  ./gradlew :javatools:test --tests "fully.qualified.ClassName" --rerun-tasks --no-build-cache
+  ```
 
-# CRITICAL GRADLE RULE - CONFIGURATION CACHE COMPATIBILITY
-**NEVER WRITE GRADLE CODE THAT IS INCOMPATIBLE WITH THE CONFIGURATION CACHE**
-- Every time you write Gradle code, you MUST test the build to verify configuration cache compatibility
-- Do NOT capture script object references (like `logger`, `project`) in task actions
-- Use injected services (`@Inject` with `ExecOperations`, `Logger`, etc.) for configuration cache compatibility
-- Use Worker API or convention plugins for complex task logic
-- Always test with `./gradlew <task> --info` after making changes
+- **Silent skips**: many `javatools` tests `assumeTrue(...)` on compiled XDK outputs and SKIP silently when absent —
+  a "green" run may have executed nothing. Build outputs first with `./gradlew xdk:installDist` (alone if you just
+  cleaned), then confirm the run reports `skipped=0` when you need it to have actually run. Compiled system modules live under:
+  - `xdk/build/install/xdk/lib`, `xdk/build/install/xdk/javatools`
+  - `lib_ecstasy/build/xtc/main/lib`, `javatools_bridge/build/xtc/main/lib`
+- **Read results from XML, not console** (console output is often truncated). Authoritative per-test results are the
+  JUnit XMLs under `javatools/build/test-results/test/*.xml` — check `tests`/`failures`/`errors`/`skipped` and the
+  `<failure>` stack.
+- Bootstrap modules are special: turtle (`mack.xtclang.org`) is the NakedRef prototype at the bottom of the type
+  system, not a normal library; the native bridge is `_native.xtclang.org`. Keep them in mind for module-path /
+  repository / compile-bootstrap issues.
+
+## Gradle build logic
+
+- **Configuration cache is mandatory** — every Gradle change must work with it. Test with a real task after editing
+  (e.g. `./gradlew <task> --info`).
+  - Never capture script objects (`project`, `logger`, …) inside task actions.
+  - Use injected services (`@Inject` `ExecOperations`, `FileSystemOperations`, `Logger`) instead of `project.exec`/`project.javaexec`.
+  - Prefer Provider APIs, declared inputs/outputs, Worker API, or convention plugins; avoid eager configuration-time work.
+- **Typed Kotlin DSL** — no string-based task wiring when a typed provider exists:
+
+  ```kotlin
+  val otherTask by tasks.existing<SomeTaskType>()  // NOT: tasks.named("otherTask")
+
+  val taskName by tasks.registering {              // NOT: tasks.register("taskName") { ... }
+      dependsOn(otherTask)                          // NOT: dependsOn("otherTask")
+  }
+  ```
+
+## Java/Kotlin style (unbreakable)
+
+- Always end files with a newline.
+- Never use star imports.
+- Never use fully-qualified Java type names in source when an import works (`ObjectFactory`, not `org.gradle.api.model.ObjectFactory`).
+- Prefer `var` when the RHS type is obvious.
+- Write modern Java — records, streams, generics, fluent/functional style — not Java-1.0-style raw objects/arrays.
+
+## General
+
+- Do only what was asked; no speculative extra changes.
+- Never proactively create docs/README (`*.md`) unless the user explicitly requests it.
+- Never add `Co-Authored-By` lines.
