@@ -28,10 +28,14 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 import org.xvm.runtime.template.Child;
 import org.xvm.runtime.template.xBoolean;
@@ -292,6 +296,58 @@ public abstract class Container
         }
 
         return infoModule.findCallable(sMethod, true, false, TypeConstant.NO_TYPES, atypeArg);
+    }
+
+    /**
+     * Run a module entry point in this container from Java, returning the EVENT-DRIVEN completion
+     * future. This is the container-level primitive the first-class embedding API builds on: it
+     * instantiates the module singleton, invokes the entry point on this container's service
+     * context, and returns the {@link CompletableFuture} that {@link ServiceContext#callLater}
+     * produces - completing normally when the run finishes and EXCEPTIONALLY (carrying the XTC
+     * {@code ExceptionHandle}) if it threw. Unlike {@link MainContainer#invoke0}, it does no
+     * int-result bookkeeping; the caller awaits the future (with a deadline) for a real failure
+     * object rather than polling idleness.
+     *
+     * @param sMethodName  the module entry point (e.g. "run")
+     * @param ahArg        the entry point arguments
+     *
+     * @return the run-completion future
+     */
+    public CompletableFuture<ObjectHandle> runModule(String sMethodName, ObjectHandle... ahArg) {
+        ServiceContext ctx      = ensureServiceContext();
+        ModuleConstant idModule = getModule();
+        MethodConstant idMethod = findModuleMethod(sMethodName, ahArg);
+        if (idMethod == null) {
+            return CompletableFuture.failedFuture(new IllegalStateException(
+                    "Missing \"" + sMethodName + "\" method for " + idModule.getValueString()));
+        }
+
+        TypeComposition   clzModule = resolveClass(idModule.getType());
+        SignatureConstant sigMethod = idMethod.getSignature();
+        CallChain         chain     = clzModule.getMethodCallChain(sigMethod);
+        boolean           fReturn   = sigMethod.getReturnCount() > 0;
+
+        FunctionHandle hInstantiateAndRun = new xRTFunction.NativeFunctionHandle(this, (frame, ah, iRet) -> {
+            SingletonConstant idSingleton = frame.poolContext().ensureSingletonConstConstant(idModule);
+            ObjectHandle      hModule     = frame.getConstHandle(idSingleton);
+            int               iReturn     = fReturn ? Op.A_STACK : Op.A_IGNORE;
+
+            Frame.Continuation invoke = frameCaller -> {
+                ObjectHandle target = frameCaller.popStack();
+                // the runtime-visibility boundary: mark the pool published as this container
+                // begins executing user code (guards compiler/serializer phases from a live pool)
+                frameCaller.poolContext().markRuntimePublished(
+                        "Container.runModule(" + sMethodName + ')');
+                return chain.invoke(frameCaller, target, ahArg, iReturn);
+            };
+            if (Op.isDeferred(hModule)) {
+                return hModule.proceed(frame, invoke);
+            }
+            frame.pushStack(hModule);
+            return invoke.proceed(frame);
+        });
+
+        return ctx.callLater(hInstantiateAndRun, Utils.OBJECTS_NONE);
     }
 
     /**

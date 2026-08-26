@@ -43,6 +43,38 @@ public class NestedContainer
                 new NestedContainer(containerParent, idModule, hProvider, listShared));
     }
 
+    /**
+     * Create a nested container owned by a TRUSTED JAVA HOST (an embedder such as an LSP runner
+     * or the tooling engine), rather than by guest code with a sandbox {@code ResourceProvider}.
+     * A host container has no guest provider ({@code f_hProvider == null}) and therefore falls
+     * back to its parent (the native plane) for standard injections it does not explicitly
+     * override with {@link #registerHostResource} - exactly the trusted-kernel model the
+     * platform host uses, expressed from Java. Guest nested containers keep the strict
+     * sandbox (no parent fallback); the two are distinguished by whether a provider is present.
+     *
+     * @param containerParent  the parent container (e.g. the NativeContainer plane)
+     * @param idModule         the module to run
+     * @param listShared       shared module ids
+     *
+     * @return the host-owned nested container
+     */
+    public static NestedContainer createForHost(Container containerParent, ModuleConstant idModule,
+                                                List<ModuleConstant> listShared) {
+        return containerParent.f_runtime.registerContainer(
+                new NestedContainer(containerParent, idModule, null, listShared));
+    }
+
+    /**
+     * Register a Java-supplied injection for a host container (e.g. a capturing Console). Takes
+     * precedence over the native-plane fallback.
+     */
+    public void registerHostResource(InjectionKey key, InjectionSupplier supplier) {
+        if (f_hProvider != null) {
+            throw new IllegalStateException("cannot register host resources on a guest container");
+        }
+        f_mapResources.put(key, supplier);
+    }
+
     private NestedContainer(Container containerParent, ModuleConstant idModule,
                             ObjectHandle hProvider, List<ModuleConstant> listShared) {
         super(containerParent.f_runtime, containerParent, idModule);
@@ -132,9 +164,19 @@ public class NestedContainer
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts) {
         InjectionSupplier supplier = f_mapResources.get(new InjectionKey(sName, type));
-        return supplier == null
-                ? type.isNullable() ? xNullable.makeHandle(frame) : null
-                : supplier.supply(frame, hOpts);
+        if (supplier != null) {
+            return supplier.supply(frame, hOpts);
+        }
+        if (f_hProvider == null) {
+            // trusted host container (no guest sandbox provider): fall back to the parent/native
+            // plane for standard resources, like MainContainer does. Guest containers below keep
+            // the strict sandbox - they receive ONLY what their provider explicitly granted.
+            ObjectHandle hResource = f_parent.getInjectable(frame, sName, type, hOpts);
+            if (hResource != null) {
+                return hResource;
+            }
+        }
+        return type.isNullable() ? xNullable.makeHandle(frame) : null;
     }
 
     @Override
