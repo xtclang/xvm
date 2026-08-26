@@ -230,7 +230,11 @@ sharpened backlog items and verified closures:
   existing frozen-base+runtime-annex should-fix, but it GRADUATES to a hard blocker
   for any resident tool (LSP / daemon / `ToolConnector`), independent of
   concurrency - the #1 long-running-host issue. Closure = scope-bound / evictable
-  annex tied to container/run lifetime.
+  annex tied to container/run lifetime. **DESIGN/PLAN written 2026-08-26:
+  `constant-pool-freeze-annex-design.md`** - the frozen-base + runtime-annex
+  architecture that closes BOTH this leak (#2) and #10 (upstream/child-pool
+  concurrent reads) with one fix, in phases A-D each gated. This is the real fix
+  that `markRuntimePublished` retrofits; do NOT extend the marker to more pools.
 - **MUST-AUDIT — concurrent-compile shared-ASM mutation (container-0 compiles) —
   DONE 2026-08-26** (`compiler-ast-context-mutation-audit.md`, "Concurrent-Compile
   Shared State" section). Finding: for concurrent DIFFERENT-module compiles (the
