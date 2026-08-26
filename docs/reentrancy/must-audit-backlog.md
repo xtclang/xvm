@@ -188,7 +188,19 @@ Backlog swept after the embedding-API wave shipped. Net state:
     `markNative()` writer diagnostic + volatile flag, and the ServiceContext ambient
     diagnostic readers. The remaining must-fix residue (MA1 JIT-name, MA4 static Ctx)
     is genuinely parked to the JIT rebase. No must-audit remains un-done.
-- **QUEUED — MA5: mutable-escape / aliasing audit (NOT STARTED; runs after MA1-MA4).**
+- **MA5: mutable-escape / aliasing audit — DONE 2026-08-26** (`mutable-escape-audit.md`).
+  Result: the runtime/asm mutable surface is **overwhelmingly fenced** (unmodifiable
+  wrappers, `ROMap`/`List.of`, `emptyX`, defensive `aOwned` copies, copy-in setters).
+  **MUST-FIX: 0** (no caller mutates a returned collection to corrupt an owner).
+  **SHOULD-FIX: 8** leaky getters returning a live field directly - runtime
+  `ServiceContext.getFibers`/`Container.getServices`/`Fiber.getTokens`,
+  `getFieldLayout` record-map (verify), asm `Component.getChildByNameMap` /
+  `ModuleStructure.getDependencies` / `ConstantPool.getJitPrimitiveTypes` (JIT) /
+  `MethodStructure.getReturns`/`getParams` (`Arrays.asList` set-through). All
+  aliasing-latent or concurrency-only; cheap batch fix (return unmodifiable views),
+  low priority. Shapes (b) stored-alias and (c) shared-static-mutable are CLEAN.
+  `ErrorList.getErrors` = safe-by-convention (request-local diagnostics).
+  Original scope (kept for reference):
   A systematic sweep of every MUTABLE value that (a) is RETURNED from a method
   (getter/factory leaking internal mutable state a caller can mutate), (b) is
   PASSED INTO a constructor/setter and STORED DIRECTLY (caller keeps a live
