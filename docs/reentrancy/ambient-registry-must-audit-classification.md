@@ -1349,3 +1349,107 @@ The static `Ctx` captures in group 1 are the standing genuinely dangerous
 shape: unlike every thread-local in this table they have no clear at all —
 the first bound `Ctx` wins for the classloader lifetime. They are already
 MUST FIX above; closing row 134 does not soften them.
+
+## Must-Audit Closure 2026-08-26 (MA4 remaining ambient explicit-owner conversions)
+
+This section closes must-audit backlog row 270's "remaining explicit-owner
+conversions" remnant (`must-audit-backlog.md:270`, which names "JIT ambient
+`Ctx` rows, ServiceContext diagnostic readers, compiler-side `withPool`
+scopes"). Each named remnant was re-read in source on this branch and given a
+severity/timing/closure verdict. Framework: severity =
+MUST-FIX | SHOULD-FIX | SAFE-DOCUMENTED; timing = ALWAYS (single-threaded /
+sequential same-JVM reuse) vs CONCURRENCY-ONLY.
+
+### Verdict Summary
+
+| Remnant | Severity | Timing | Verdict |
+| --- | --- | --- | --- |
+| ServiceContext diagnostic ambient readers (3 sites) | SHOULD-FIX | ALWAYS | Runtime-actionable now; slice `service-context-ambient-debug-cleanup`. |
+| Compiler-side unasserted `withPool(...)` scopes | n/a | n/a | DONE — the mechanism was deleted branch-wide; no site exists. Row 270 wording is stale. |
+| JIT static/ambient `Ctx.get()` captures (5 sites) | MUST-FIX | mixed (see below) | Compiler/JIT-branch-deferred (parked); cross-ref only. |
+
+### 1. ServiceContext diagnostic ambient readers — RUNTIME-ACTIONABLE NOW
+
+The ambient mechanism is `ServiceContext.s_tloContext`
+(`javatools/src/main/java/org/xvm/runtime/ServiceContext.java:2178`), read
+through `getCurrentContext()` (`ServiceContext.java:172-173`). Verified in
+source: the **sole writer** is `drainWork()`, which saves the prior context
+(`ServiceContext.java:294-296`) and restores it in `finally`
+(`ServiceContext.java:325`). No other assignment to `s_tloContext[0]` exists,
+so the write discipline itself is category `(a)` and is not the defect. The
+defect is the three ambient *readers*, which recover an owner the API never
+required them to receive:
+
+- `Argument.toIdString(...)` — `javatools/src/main/java/org/xvm/asm/Argument.java:51`.
+  Debug id-string rendering; reads the current frame's local constants, wrapped
+  in `try { ... } catch (Throwable ignore) {}` (`Argument.java:49-56`), falling
+  back to `Register.getIdString(nArg)`.
+- `OpVar.getName(...)` — `javatools/src/main/java/org/xvm/asm/OpVar.java:115`.
+  Variable-name rendering; same `catch (Throwable ignore)` swallow
+  (`OpVar.java:113-121`), falling back to `"?"`.
+- `Utils.log(Frame, String)` — `javatools/src/main/java/org/xvm/runtime/Utils.java:473`.
+  Only when `frame == null`; it then dereferences `context.f_container` at
+  `Utils.java:480`, so a `null` ambient (a non-service Java thread) NPEs rather
+  than falling back. No `log(null, ...)` call site exists in current main
+  source, so the hazard is latent on this path.
+
+Classification: **SHOULD-FIX, ALWAYS.** The reads are diagnostics-only (two are
+behind `catch (Throwable)`), so this is not a correctness must-fix. But the
+timing is ALWAYS, not concurrency-only: a pooled or non-service Java thread can
+observe a stale, wrong, or `null` service context single-threaded, and the two
+broad `catch (Throwable)` blocks convert a wrong-owner read into a plausible
+but wrong debug name. Required closure: pass `Frame`, `ServiceContext`, or
+`Constant[] localConstants` explicitly to the debug/name/log helpers; keep
+`getCurrentContext()` only as a narrow, non-swallowing diagnostic bridge. This
+is the runtime-actionable-now remnant, tracked by PR slice
+`service-context-ambient-debug-cleanup`.
+
+### 2. Compiler-side unasserted `withPool(...)` scopes — DONE (mechanism deleted)
+
+Verified in source: `withPool(...)`, `getCurrentPool()`, `setCurrentPool`,
+`s_tloPool`, and `assertCurrentPool*` have **no remaining call sites** anywhere
+in `javatools*/src/main/java`. A repo-wide scan for
+`withPool|getCurrentPool|setCurrentPool` returns only two hits, both comments
+in `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:6305` and
+`:6389` warning future authors not to reintroduce `getCurrentPool()`. This
+matches board row 252 (`must-audit-backlog.md:252`), which records the complete
+2026-08-25 removal of the scoped bridge and all 21 main-source scopes.
+
+Consequence: the "compiler-side `withPool` scopes" listed as a live remnant in
+row 270 **no longer exist** — there is nothing to convert to explicit owners,
+nothing runtime-actionable, and nothing compiler-branch-deferred here. Row 270's
+enumeration is stale on this point and should be read as closed. (The compiler
+still opens `try`/lexical scopes for other reasons, but none is an ambient
+current-pool bridge; ownership now flows through explicit `ConstantPool`,
+`Frame`, `FileStructure`, and receiver-pool arguments.)
+
+### 3. JIT static/ambient `Ctx.get()` captures — COMPILER/JIT-BRANCH-DEFERRED (parked)
+
+Per the task scope these belong to the parked JIT rows and are cross-referenced
+here, not re-audited. Confirmed still present in source:
+
+- `nObject.$ctx()` — `javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nObject.java:27`.
+- `FPNumber.eRounding.$INSTANCE` — `javatools_jitbridge/src/main/java/org/xtclang/ecstasy/numbers/FPNumber.java:526`.
+- `Array.eMutability.$INSTANCE` — `javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/Array.java:160`.
+- `TerminalConsole()` `super(Ctx.get())` — `javatools_jitbridge/src/main/java/org/xtclang/_native/io/TerminalConsole.java:25`.
+- `OpCondJump.buildUnary(...)` `Ctx.get().container` — `javatools/src/main/java/org/xvm/asm/OpCondJump.java:522`.
+
+These are already MUST FIX in this document's MUST FIX section and are governed
+by `jit-global-owner-classification.md` (classification matrix and the
+"Ambient Helper Completion Read (2026-08-25)" parked note). Board row 227
+(`must-audit-backlog.md:227`) integrates them as master-bug submissions rows
+21-24 / launch rows J21-J24, split into already-broken-single-threaded (the
+first-`Ctx`-wins static captures, which have no clear at all) vs
+broken-under-concurrency (helper/build reads racing class init). No new JIT
+work is opened here.
+
+### MA4 Headline
+
+Runtime-actionable now: the three ServiceContext diagnostic ambient readers
+(`Argument.java:51`, `OpVar.java:115`, `Utils.java:473`) — SHOULD-FIX, ALWAYS,
+slice `service-context-ambient-debug-cleanup`. Everything else in the MA4
+remnant is either already closed (compiler-side `withPool` fully removed —
+row 270 stale) or compiler/JIT-branch-deferred (the five static/ambient
+`Ctx.get()` captures, parked under `jit-global-owner-classification.md`). Net:
+the ambient explicit-owner sweep leaves exactly one small runtime slice open on
+this branch, and it is diagnostics-only.

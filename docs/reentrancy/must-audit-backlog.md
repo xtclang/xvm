@@ -156,6 +156,52 @@ Backlog swept after the embedding-API wave shipped. Net state:
 - **Master filing:** only Issue #541 and PR #539 have numbers; all 18 Category-A
   drafts + rows 19/20/25/26 are fixed-in-branch but UNFILED; J21-J24 unfiled AND
   unfixed.
+- **MUST-AUDIT CLOSURE 2026-08-26 — all four umbrellas audited + documented:**
+  - **MA1** (owner-bearing metadata caches): remnant = the `m_sJitName` caches -
+    proven owner-bearing (per-`Xvm` unique suffix cached against a shared constant)
+    but with ZERO interpreter reach (all callers are JIT codegen). Verdict:
+    must-audit-today / must-fix-before-JIT-concurrency, **parked to the JIT rows**
+    (J21-J24, `jit-global-owner-classification.md`). Doc:
+    `runtime-metadata-op-cache-classification.md`.
+  - **MA2** (frozen-code writer diagnostic): `forceAssembly` diagnostic already
+    DONE; residual = **`markNative()`** non-atomic 3-step transition with a plain
+    (non-volatile) `m_fNative` - a racing `getOps()->ensureCode()` can observe
+    `native=false, code=null` and die. Verdict: **NEW SHOULD-FIX, concurrency-only,
+    ACTIONABLE-NOW** (volatile `m_fNative` + a `forceAssembly`-shaped throw at the
+    head of `markNative()`). Doc: `runtime-metadata-op-cache-classification.md`.
+  - **MA3** (compiler AST/context mutation): 6 distinct compiler-mutation surfaces
+    (`Context` maps, `NameResolver`, `InvocationExpression`/`LambdaExpression`
+    caches, break/continue lists, label/`CaseManager` scratch) inventoried and
+    classified - **all compiler-branch-deferred, record-only, no runtime/ASM
+    must-fix graduated.** NEW doc: `compiler-ast-context-mutation-audit.md`.
+  - **MA4** (remaining ambient explicit-owner conversions): one runtime slice open -
+    the 3 `ServiceContext.getCurrentContext()` diagnostic readers (`Argument.java:51`,
+    `OpVar.java:115`, `Utils.java:473`), **NEW SHOULD-FIX / ALWAYS** (diagnostics-only,
+    but `Utils.log` NPEs on a null ambient); closure = pass `Frame`/`ServiceContext`
+    explicitly. The 5 static `Ctx.get()` captures are parked to the JIT rows. STALE
+    CORRECTION: the "compiler-side `withPool` scopes" remnant no longer exists
+    (`withPool`/`getCurrentPool`/`setCurrentPool` have zero call sites) - already done
+    per board row 252; the row-270 wording is stale. Doc:
+    `ambient-registry-must-audit-classification.md`.
+  - **Net:** the four must-audits are CLOSED as audits. Two NEW actionable SHOULD-FIX
+    items surfaced (both concurrency/diagnostics, safe to fix on this branch):
+    `markNative()` writer diagnostic + volatile flag, and the ServiceContext ambient
+    diagnostic readers. The remaining must-fix residue (MA1 JIT-name, MA4 static Ctx)
+    is genuinely parked to the JIT rebase. No must-audit remains un-done.
+- **QUEUED — MA5: mutable-escape / aliasing audit (NOT STARTED; runs after MA1-MA4).**
+  A systematic sweep of every MUTABLE value that (a) is RETURNED from a method
+  (getter/factory leaking internal mutable state a caller can mutate), (b) is
+  PASSED INTO a constructor/setter and STORED DIRECTLY (caller keeps a live
+  alias), or (c) otherwise ends up in a FIELD from an externally-owned source -
+  across `runtime/` and `asm/` (compiler noted, deferred). Each site classified:
+  MISUSE reachable today (must-fix) / broken-only-under-concurrency / safe-by-
+  convention or already-immutable / already-covered (cross-ref
+  `array-element-exposure-audit.md`, `array-list-immutability-study.md`,
+  `clone-usage-audit.md`, `constant-adoption-clone-audit.md`, `generics-api-audit.md`
+  so this does not re-audit the array/clone/adoption work). Goal: determine where
+  XVM already misuses shared mutable references vs where the frozen/immutable work
+  already covers it. Deliverable: `mutable-escape-audit.md` (new) or augment the
+  closest existing home. User-requested 2026-08-26.
 
 | Status | Task | Source category | Why it matters | Required closure |
 | --- | --- | --- | --- | --- |

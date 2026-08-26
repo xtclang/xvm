@@ -258,3 +258,121 @@ classifications:
   `AssertV.m_asParts` as the model volatile shape, `ServiceContext.
   f_mapOpInfo` scheduling-lock confinement): SAFE-DOCUMENTED, sweep-verified
   writers in assembly phases only.
+
+## Must-Audit Closure 2026-08-26 (MA1 metadata remnant + MA2 frozen-code writer diagnostic)
+
+Two OPEN must-audits closed by source inspection only (no code changed). MA2 is
+board must-audit-backlog.md row family 218/the "Full-Lifecycle Completion Audit"
+above; MA1 is board rows 221/226-229. Classification uses severity
+(MUST-FIX | SHOULD-FIX | SAFE-DOCUMENTED) x timing (ALREADY-BROKEN-SINGLE-THREADED
+vs BROKEN-ONLY-UNDER-CONCURRENCY).
+
+### MA2 - frozen-code lifecycle writer-side diagnostic
+
+Audited: `MethodStructure.Code` mutation entry points against the runtime
+publication marker - `forceAssembly`, `markNative`/`resetRuntimeInfo`,
+`ensureCode`/`getOps`, the synthesis-window API, and every op-array write path.
+
+| Writer | Source | Diagnostic today | Verdict |
+| --- | --- | --- | --- |
+| `forceAssembly(pool)` | `MethodStructure.java:1084-1094` (throw at `:1091-1094`) | PRESENT - throws `IllegalStateException` when `pool.isRuntimePublished() && !pool.isRuntimeSynthesisWindowOpen()` | CLOSED. The ordering convention (disassembled methods never reassemble; link-phase `forceAssembly` precedes execution; native rebase runs inside a synthesis window) is now a checked writer-side invariant, matching `ConstantPool` register/destructive guards (`ConstantPool.java:508-537`, `:545-557`). |
+| `markNative()` -> `resetRuntimeInfo()` | `MethodStructure.java:1195-1201`, `:1072-1077` | ABSENT - no publication/window check | RESIDUAL (see below). |
+
+Findings on the `markNative` residual:
+
+- **Non-atomic, plain-field transition.** `markNative()` calls
+  `setAbstract(false)`, then `resetRuntimeInfo()` (nulls the volatile `m_code`
+  and writes `m_fNative=false`), then `m_fNative=true`. `m_fNative` is a plain
+  `transient boolean` (`MethodStructure.java:3235`); `m_code` is
+  `transient volatile` (`:3209`). The transition therefore passes through an
+  observable `(native=false, code=null)` state with no happens-before on the
+  flag.
+- **Reader failure mode.** A concurrent `getOps()` (`:668-680`) -> `ensureCode()`
+  (`:615-634`) reads `isNative()` (plain `m_fNative`) and `m_code` (volatile).
+  Observing `native=false, code=null` builds a fresh empty `Code`, and
+  `ensureOps()` throws `"... is neither native nor compiled"`
+  (`MethodStructure.java:2803`).
+- **Reachability is narrower than the flag name suggests.** The code-nulling
+  `MethodStructure.markNative()` is called only from native-template bootstrap:
+  `ClassTemplate.markNativeMethod` (`ClassTemplate.java:2086`, property/getter/
+  setter `:2200-2242`), `xConst`/`xNumber`/`xArray`/`xRTType` `initNative`, the
+  `fnThis` synthetic (`ClassStructure.java:3289`), and `TypeConstant.java:5153`.
+  The runtime chain-building path (`MethodInfo.buildOptimizedMethodChain`
+  `:1209`) calls `MethodBody.markNative()` (`MethodBody.java:425-433`), which
+  only flips the body's `m_impl` and does **not** null `Code` - benign, already
+  tracked as the `MethodBody.m_impl` visibility should-fix (board row 214). For a
+  single container, native init completes before that container's fibers run, so
+  the window is not single-threaded-reachable.
+- **Residual hazard.** Same-JVM parallel container bootstrap sharing the grafted
+  ecstasy `ModuleStructure`, plus any post-publication native rebase (the
+  `forceAssembly` guard comment lists native rebase as a legal synthesis-window
+  case). The `if (!method.isNative())` skip (`ClassTemplate.java:2064-2086`) makes
+  a repeat idempotent but is a plain read giving no happens-before.
+
+**Exact invariant a diagnostic must enforce:** identical predicate to
+`forceAssembly` - "no code-nulling native transition on a `MethodStructure`
+whose `ConstantPool` is runtime-published, outside an open synthesis window."
+**Where:** head of `MethodStructure.markNative()`, mirroring `:1091-1094`.
+**Form:** hard `IllegalStateException` throw (a real lifecycle violation, not a
+debug `assert`), consistent with `forceAssembly`. **Cheap half:** make
+`m_fNative` volatile (or set it true before `resetRuntimeInfo` nulls code) to
+remove the observable false/null intermediate.
+
+**MA2 final classification:** `forceAssembly` writer-diagnostic = DONE (present,
+verified `:1091-1094`). `markNative` writer-diagnostic = **SHOULD-FIX**, timing
+**BROKEN-ONLY-UNDER-CONCURRENCY** (parallel same-JVM native bootstrap /
+post-publication rebase; not single-threaded-reachable). Actionable now in this
+interpreter branch (small, mechanical: volatile `m_fNative` + a
+`forceAssembly`-shaped throw). No source changed here per the read-only task.
+
+### MA1 - owner-bearing type/class metadata remnant (JIT-name/descriptor caches)
+
+Audited: the JIT-name caches and any TypeConstant/TypeInfo/ClassStructure
+metadata cache holding owner-local state. The non-JIT metadata caches in this
+umbrella (`TypeConstant.m_typeinfo`, `m_mapRelations`, `m_mapConsumes`/
+`m_mapProduces`, `m_typeNormalized`, `m_handle` moved to `Container`;
+`ClassComposition`, `TypeInfoReal`, `MethodInfo`, `PropertyInfo`) are already
+DONE in the tables above. The remnant is the JIT-name family.
+
+| Cache | Field shape | Owner dimension in key? |
+| --- | --- | --- |
+| `TypeConstant.m_sJitName` | plain `transient` (`TypeConstant.java:8388`); `ensureJitClassName` reads/writes plain (`:7130-7142`); `buildJitClassName` synchronized (`:7144`); cleared on adoption in `setContaining` (`:7945`) | key = constant only; name is a fn of `TypeSystem ts` |
+| `MethodConstant.m_sJitName` | plain `transient` (`:742`); `ensureJitMethodName` plain read/write (`:288-327`) | key = constant only; fn of `ts` |
+| `SignatureConstant.m_sJitName` | plain `transient` (`:1037`) | key = constant only; fn of `ts` |
+| `PropertyConstant.m_sJitName` | `transient volatile` + synchronized DCL (`:533`, `:369-388`) - already JMM-clean | key = constant only; fn of `ts` |
+
+Findings:
+
+- **JIT-only reachable.** Every caller of `ensureJitClassName` /
+  `ensureJitMethodName` / `ensureJitPropertyName` is in `asm/Op*`, `asm/op/`
+  (the `build(BuildContext)` codegen methods), the `asm/constants` name-computation
+  chain, or `javajit/`. Zero callers under `runtime/` (interpreter). Gated behind
+  `--jit`; not reachable single-threaded from the interpreter.
+- **Owner-bearing, not globally stable.** The cache key is the shared constant
+  (the ecstasy module is grafted into every `TypeSystem`), but the value is a
+  function of the `TypeSystem`/`Xvm`. Concrete proof it is NOT a pure function of
+  the type: `PropertyConstant.ensureJitPropertyName` appends
+  `ts.xvm.createUniqueSuffix(name)` for ANNOTATION/MIXIN properties
+  (`PropertyConstant.java:380`), and `createUniqueSuffix` derives from a per-`Xvm`
+  `nameCounters` map (`Xvm.java:342-345`). Two `Xvm`/`TypeSystem` instances
+  produce different suffixes for the same shared constant; the identity-keyed
+  cache hands the first `Xvm`'s name to the second. `TypeConstant.ensureJitClassName`
+  partially resolves the master owner (`ts.findOwnerLoader(this)` +
+  `register(this)`, `:7136-7138`) but still caches on the possibly-foreign
+  instance keyed only by identity.
+- **JMM hygiene.** Three of four fields (`TypeConstant`, `MethodConstant`,
+  `SignatureConstant`) are plain non-volatile with racy publish/read;
+  `PropertyConstant` is already volatile+synchronized. Adoption clearing exists
+  only for `TypeConstant.m_sJitName` (`:7945`); the other three should be checked
+  by the JIT work.
+
+**MA1 final classification:** owner-correctness half = **MUST-FIX before JIT
+concurrency**, MUST-AUDIT today; JMM-hygiene half = **SHOULD-FIX**. Timing
+**BROKEN-ONLY-UNDER-CONCURRENCY** (multi-`TypeSystem`/parallel JIT). **Parked to
+JIT**, not actionable in this interpreter branch. Cross-reference
+`jit-global-owner-classification.md` - matrix rows "JIT name caches on shared ASM
+constants" (MUST AUDIT: prove name valid for owner pool/module loader, or key by
+owner) and "JIT helper state cleared on constant adoption" (DONE for branch
+scope). Also board rows 226-229, master-bug submissions rows 21-24 / launch rows
+J21-J24, `JitConcurrencyHazardCensusTest` shape pins, and `jit-runtime-report.md`
+section 4 (JIT->asm unsafe-surface edges).
