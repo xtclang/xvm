@@ -1232,11 +1232,6 @@ public class FileStructure
     }
 
     @Override
-    protected void markModified() {
-        super.markModified();
-    }
-
-    @Override
     protected void disassemble(DataInput in)
             throws IOException {
         FileInfo info = readFileInfo(in, false); // TODO true
