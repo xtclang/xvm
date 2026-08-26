@@ -215,6 +215,50 @@ Backlog swept after the embedding-API wave shipped. Net state:
   already covers it. Deliverable: `mutable-escape-audit.md` (new) or augment the
   closest existing home. User-requested 2026-08-26.
 
+### 2026-08-26 ToolConnector hazard-analysis feedback
+
+The `ToolConnector` (née LspSupport) desired-API analysis
+(`toolconnector-api-proposal.md` §4, MASTER-based) enumerated what breaks when a
+long-running host runs consecutive/parallel nested containers and compiles in
+container 0. Most items map to existing rows (543, MA1-MA5, JIT J21-J24). NEW /
+sharpened backlog items and verified closures:
+
+- **SHOULD-FIX — RESIDENT-TOOLING CRITICAL: shared-pool eviction / long-running
+  memory bound.** The shared native/library `ConstantPool` interns per-run types +
+  `TypeInfo` and never evicts on container disposal (543 §1c); a long-lived host
+  running many DISTINCT modules climbs to OOM **even single-threaded**. This is the
+  existing frozen-base+runtime-annex should-fix, but it GRADUATES to a hard blocker
+  for any resident tool (LSP / daemon / `ToolConnector`), independent of
+  concurrency - the #1 long-running-host issue. Closure = scope-bound / evictable
+  annex tied to container/run lifetime.
+- **MUST-AUDIT — concurrent-compile shared-ASM mutation (container-0 compiles).**
+  Beyond MA3's compiler AST/`Context` (compiler-branch-deferred), concurrent
+  compiles mutate SHARED library structures during link:
+  `FileStructure.linkModules` calls `registerConstants(fileTop.m_pool)`,
+  `setFingerprintOrigin`, `merge`/`replaceChild` on shared library
+  `FileStructure`s; plus the plain `static` compiler counters (`s_nLabelCounter`
+  etc., parked to `lagergren/compiler-counter-atomics`) and the shared `ErrorList`.
+  Audit whether the container-0 host must SERIALIZE compiles (interim) vs the
+  compiler-reentrancy work needed for parallel compiles. Ties MA3 +
+  compiler-counter-atomics + `compiler-ast-context-mutation-audit.md`.
+- **Diagnostics/logging request-scoping** stays the existing should-fix
+  (request-owned diagnostic authority; MA4 ambient `getCurrentContext` readers;
+  `BLACKHOLE`; shared `ErrorList`) - see `logging-diagnostics-audit.md` and Global
+  backlog #1-3. `ToolConnector` needs per-request correlated sinks; no new row.
+
+- **VERIFIED-SAFE (checked against MASTER 2026-08-26; do NOT re-audit):**
+  - `TypeInfo` cache poisoning on failure - NOT a hazard: `m_typeinfo` `volatile`
+    (`:8233`), `setTypeInfo` monotonic CAS so a partial never overwrites a complete
+    (`:1946`), `isComplete` excludes placeholder/incomplete (`:2033`) so a failed
+    build's residue triggers a REBUILD, serious errors `invalidateTypeInfo()`
+    (`:1821`); `f_mapRefTypes` is `computeIfAbsent` (nothing cached on throw).
+  - Compositions per-container (`f_mapCompositions` per-`Container`
+    `ConcurrentHashMap`, master `Container.java:745`) - no cross-container residue
+    in the nested model (the `relocateConst` residue was the sibling-main path).
+  - Container/service registries - `Runtime.f_containers` a synchronized
+    `WeakHashMap` (disposed containers auto-evict), `f_setServices`/`f_setFibers`
+    concurrent - lifecycle churn is safe; MA5 leaky getters are aliasing-only.
+
 | Status | Task | Source category | Why it matters | Required closure |
 | --- | --- | --- | --- | --- |
 | Done in this branch | Remove constructor-published native template `INSTANCE` globals and static owner metadata | `must-fix-races.md`, `state-inventory.md`, `fixed-in-this-branch.md` | Process-global mutable template/metadata state was the original last-writer-wins, wrong-container, constructor-publication bug family. | Keep `NativeTemplates`, owner-local lazy metadata, and source scans that prevent `INSTANCE = this` from returning. |
