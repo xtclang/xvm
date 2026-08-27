@@ -1,11 +1,9 @@
 package org.xvm.javajit;
 
 import java.io.File;
-import java.io.PrintStream;
 
 import java.util.Arrays;
 
-import java.util.Set;
 import java.util.function.Predicate;
 
 import org.xvm.asm.ModuleStructure;
