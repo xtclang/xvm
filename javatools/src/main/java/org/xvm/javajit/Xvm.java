@@ -184,6 +184,11 @@ public class Xvm {
      */
     private final Object[] locks = new Object[61];
 
+    /**
+     * The ScopedValue for the current fiber/context.
+     */
+    public final ScopedValue<Ctx> Current = ScopedValue.newInstance();
+
     // ----- public API ----------------------------------------------------------------------------
 
     /**
@@ -288,6 +293,15 @@ public class Xvm {
     public String createUniqueSuffix(String name) {
         int count = nameCounters.compute(name, (k, v) -> v == null ? -1 : v + 1);
         return count == -1 ? "" : HASH + String.valueOf(count);
+    }
+
+    /**
+     * Obtain the current fiber context running on this Java thread within this Xvm.
+     *
+     * @return the Ctx for the current fiber, or null if no fiber is running
+     */
+    public Ctx getCtx() {
+        return Current.get();
     }
 
     // ----- internal ------------------------------------------------------------------------------

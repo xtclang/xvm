@@ -186,7 +186,7 @@ public class String
 
     @Override
     public TypeConstant $xvmType(Ctx ctx) {
-        return $xvm().nativeTypeSystem.pool().typeString();
+        return ctx.pool().typeString();
     }
 
     /**
@@ -261,7 +261,7 @@ public class String
      */
     public ArrayᐸCharᐳ chars$get(Ctx ctx) {
         if (chars == null) {
-            ConstantPool  pool         = ctx.container.typeSystem.pool();
+            ConstantPool  pool         = ctx.pool();
             ClassConstant clz          = pool.clzArray();
             TypeConstant typeChar      = pool.typeChar();
             TypeConstant typeCharArray = pool.ensureClassTypeConstant(clz, null, typeChar);
@@ -334,7 +334,7 @@ public class String
 
         @Override
         public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeChar());
+            return nType.$ensureType(ctx, ctx.pool().typeChar());
         }
 
         @Override

@@ -1830,8 +1830,8 @@ public abstract class Builder {
     /**
      * Adds a log message generation (this also allows to break in the debugger).
      */
-    public static void addLog(CodeBuilder code, String message) {
-        code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
+    public static void addLog(CodeBuilder code, int ctxSlot, String message) {
+        code.aload(ctxSlot)
             .loadConstant(message)
             .invokevirtual(CD_Ctx, "log", MethodTypeDesc.of(CD_void, CD_JavaString));
     }

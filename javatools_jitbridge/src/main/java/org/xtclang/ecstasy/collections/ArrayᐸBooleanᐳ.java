@@ -196,7 +196,7 @@ public class ArrayᐸBooleanᐳ
 
         @Override
         public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeBoolean());
+            return nType.$ensureType(ctx, ctx.pool().typeBoolean());
         }
     }
 }

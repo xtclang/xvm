@@ -116,10 +116,24 @@ public class ModuleLoader
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
-     * Retrieve a constant at the specified index from the ConstantPool associated with this module.
+     * @return a constant at the specified index from the ConstantPool associated with this module
      */
     public Constant getConstant(int index) {
         return module.getConstantPool().getConstant(index);
+    }
+
+    /**
+     * @return the xvm this module loader belongs to
+     */
+    public Xvm getXvm() {
+        return typeSystem.xvm;
+    }
+
+    /**
+     * @return the context for the current fiber
+     */
+    public Ctx getCtx() {
+        return getXvm().getCtx();
     }
 
     // ----- debugging -----------------------------------------------------------------------------

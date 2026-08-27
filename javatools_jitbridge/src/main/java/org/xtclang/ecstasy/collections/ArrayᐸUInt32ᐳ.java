@@ -194,7 +194,7 @@ public class ArrayᐸUInt32ᐳ
 
         @Override
         public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeUInt32());
+            return nType.$ensureType(ctx, ctx.pool().typeUInt32());
         }
     }
 }

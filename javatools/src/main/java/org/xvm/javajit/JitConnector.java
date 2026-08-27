@@ -79,11 +79,10 @@ public class JitConnector
 
     @Override
     public void invoke0(MethodStructure methodStructure, String... args) {
-        ScopedValue.where(Ctx.Current, new Ctx(xvm, container)).run(
-            () -> invoke0Impl(methodStructure, args));
+        container.newFiber(() -> invoke0Impl(methodStructure, args));
     }
 
-    public void invoke0Impl(MethodStructure methodStructure, String... args) {
+    private void invoke0Impl(MethodStructure methodStructure, String... args) {
         String typeName = ts.owned[0].module.getIdentityConstant().getType().ensureJitClassName(ts);
 
         TypeSystemLoader loader    = ts.loader;
@@ -91,7 +90,7 @@ public class JitConnector
         Set<String>      dumpNames = new HashSet<>(Arrays.asList(CLASS_DUMP_LIST));
         try {
             Class  mainClass = loader.loadClass(typeName);
-            Ctx    ctx       = Ctx.get();
+            Ctx    ctx       = xvm.getCtx();
             Object module    = mainClass.getDeclaredConstructor(Ctx.class).newInstance(ctx);
 
             Object result;

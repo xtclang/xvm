@@ -1,17 +1,17 @@
 package org.xtclang.ecstasy;
 
-import org.xtclang.ecstasy.collections.ArrayᐸBitᐳ;
-import org.xtclang.ecstasy.collections.ArrayᐸBooleanᐳ;
-import org.xtclang.ecstasy.collections.ArrayᐸObjectᐳ;
 import org.xtclang.ecstasy.reflect.Enumeration;
 import org.xtclang.ecstasy.text.String;
+
+import org.xvm.javajit.ModuleLoader;
 
 /**
  * Native Enumeration<Boolean>.
  */
 public class eBoolean extends Enumeration {
     private eBoolean() {
-        super(null, $ctx().container.typeSystem.pool().typeBoolean());
+        super(null, ((ModuleLoader) eBoolean.class.getClassLoader()).getCtx().
+                pool().typeBoolean());
     }
 
     public static final eBoolean $INSTANCE = new eBoolean();

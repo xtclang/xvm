@@ -23,7 +23,7 @@ public class Nullable
     public static final Nullable Null = new Null();
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
-        return $xvm().ecstasyPool.typeNull();
+        return ctx.pool().typeNull();
     }
 
     public Enumeration enumeration$get(Ctx ctx) {

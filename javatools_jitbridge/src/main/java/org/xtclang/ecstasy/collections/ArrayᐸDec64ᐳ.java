@@ -189,7 +189,7 @@ public class ArrayᐸDec64ᐳ
 
         @Override
         public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeDec64());
+            return nType.$ensureType(ctx, ctx.pool().typeDec64());
         }
     }
 }

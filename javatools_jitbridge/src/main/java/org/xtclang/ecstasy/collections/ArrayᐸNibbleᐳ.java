@@ -169,7 +169,7 @@ public class ArrayᐸNibbleᐳ
      * This is called by various number types to return a nibble array representation of the number.
      */
     public static ArrayᐸNibbleᐳ $fromLongs(Ctx ctx, Mutability mutability, long bits, long... values) {
-        ConstantPool  pool = ctx.container.typeSystem.pool();
+        ConstantPool  pool = ctx.pool();
         TypeConstant  type  = pool.ensureClassTypeConstant(pool.clzArray(), null, pool.typeNibble());
         long          size  = bits / 4;
         ArrayᐸNibbleᐳ array = $new$p(ctx, type, size, false);
@@ -203,7 +203,7 @@ public class ArrayᐸNibbleᐳ
 
         @Override
         public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeNibble());
+            return nType.$ensureType(ctx, ctx.pool().typeNibble());
         }
     }
 }

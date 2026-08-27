@@ -23,7 +23,7 @@ public class Class
     public final TypeConstant $publicType;
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
-        ConstantPool pool = ctx.container.typeSystem.pool();
+        ConstantPool pool = ctx.pool();
         return pool.ensureClassTypeConstant(pool.clzClass(), null, $publicType);
     }
 }

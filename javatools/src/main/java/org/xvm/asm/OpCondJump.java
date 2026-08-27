@@ -17,7 +17,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
-import org.xvm.javajit.Ctx;
 import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
@@ -479,7 +478,7 @@ public abstract class OpCondJump
         case OP_JMP_COND, OP_JMP_NCOND:
             // conditional constants are evaluated during the link time
             ConditionalConstant cond   = bctx.getConstant(m_nArg, ConditionalConstant.class);
-            boolean             fValid = cond.evaluate(Ctx.get().container);
+            boolean             fValid = cond.evaluate(bctx.typeSystem.xvm.getCtx().container);
             if ((op == OP_JMP_COND) == fValid) {
                 bctx.markDeadCode(nAddrThis + 1, nAddrJump);
             }

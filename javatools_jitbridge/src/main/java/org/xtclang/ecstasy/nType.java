@@ -32,11 +32,9 @@ public class nType
 
         assert !type.containsFormalType(true);
 
-        $ctx      = ctx;
         $dataType = type;
     }
 
-    public final Ctx          $ctx;
     public final TypeConstant $dataType;
 
     private Method equalsMethod;
@@ -158,7 +156,7 @@ public class nType
         }
 
         if (equalsMethod == null) {
-            equalsMethod = ensureMethod("equals$p", 2);
+            equalsMethod = ensureMethod(ctx, "equals$p", 2);
         }
 
         try {
@@ -166,7 +164,7 @@ public class nType
                     equalsMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
             return result.booleanValue();
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw Exception.$unsupported($ctx,
+            throw Exception.$unsupported(ctx,
                 "Failed to invoke 'equals()` on class " + $dataType.getValueString());
         }
     }
@@ -217,13 +215,13 @@ public class nType
         }
 
         if (compareMethod == null) {
-            compareMethod = ensureMethod("compare", 2);
+            compareMethod = ensureMethod(ctx, "compare", 2);
         }
 
         try {
             return (Ordered) compareMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw Exception.$unsupported($ctx,
+            throw Exception.$unsupported(ctx,
                 "Failed to invoke 'compare()` on class " + $dataType.getValueString());
         }
     }
@@ -261,26 +259,26 @@ public class nType
         }
 
         if (hashCodeMethod == null) {
-            hashCodeMethod = ensureMethod("hashCode$p", 1);
+            hashCodeMethod = ensureMethod(ctx, "hashCode$p", 1);
         }
 
         try {
             return (long) hashCodeMethod.invoke($xvmClass(ctx), ctx, this, value);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw Exception.$unsupported($ctx,
+            throw Exception.$unsupported(ctx,
                     "Failed to invoke 'hashCode$p()` on class " + $dataType.getValueString());
         }
 
     }
 
-    private Method ensureMethod(java.lang.String methodName, int valueCount) {
-        TypeSystem       typeSystem = $ctx.container.typeSystem;
+    private Method ensureMethod(Ctx ctx, java.lang.String methodName, int valueCount) {
+        TypeSystem       typeSystem = ctx.container.typeSystem;
         java.lang.String className  = $dataType.ensureJitClassName(typeSystem);
         java.lang.Class  targetClass;
         try {
             targetClass = typeSystem.loader.loadClass(className);
         } catch (ClassNotFoundException e) {
-            throw Exception.$unsupported($ctx, "No such class " + className);
+            throw Exception.$unsupported(ctx, "No such class " + className);
         }
 
         int paramCount   = 2 + valueCount;
@@ -305,7 +303,7 @@ public class nType
 
         // fall through to the class-of-class routing method; its value parameters use the funky
         // declaration types rather than the concrete target type represented by paramClasses
-        java.lang.Class classOfClass = $xvmClass($ctx).getClass();
+        java.lang.Class classOfClass = $xvmClass(ctx).getClass();
         for (Method method : classOfClass.getDeclaredMethods()) {
             if (!method.getName().equals(methodName) ||
                     method.getParameterCount() != paramCount) {
@@ -323,7 +321,7 @@ public class nType
             }
         }
 
-        throw Exception.$unsupported($ctx,
+        throw Exception.$unsupported(ctx,
             "No method " + methodName + " on class " + $dataType.getValueString());
     }
 }

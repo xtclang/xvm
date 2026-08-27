@@ -61,20 +61,6 @@ public final class Ctx {
 
     // ----- memory accounting ---------------------------------------------------------------------
 
-    public static final ScopedValue<Ctx> Current = ScopedValue.newInstance();
-
-    /**
-     * Obtain the current xvm context. This method should only be called from code running on an
-     * xvm fiber.
-     *
-     * @return the Ctx for the current fiber
-     */
-    public static Ctx get() {
-        return Current.get();
-    }
-
-    // ----- memory accounting ---------------------------------------------------------------------
-
     /**
      * "Request" the specified number of bytes. This call may return immediately, wait indefinitely
      * (i.e. park this virtual thread and schedule a different fiber to run), or even kill the

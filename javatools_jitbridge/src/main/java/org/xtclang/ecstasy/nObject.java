@@ -4,7 +4,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Container;
 import org.xvm.javajit.Ctx;
-import org.xvm.javajit.Xvm;
+import org.xvm.javajit.ModuleLoader;
 
 /**
  * In Ecstasy, there is a root interface (Object, which extends Comparable), but not root class. The
@@ -21,19 +21,10 @@ public abstract class nObject
     /**
      * (Helper)
      *
-     * @return the current context object
+     * @return the current context
      */
-    public static Ctx $ctx() {
-        return Ctx.get();
-    }
-
-    /**
-     * (Helper)
-     *
-     * @return the XVM that this object exists within
-     */
-    public static Xvm $xvm() {
-        return $ctx().xvm;
+    public Ctx $ctx() {
+        return ((ModuleLoader) getClass().getClassLoader()).getCtx();
     }
 
     /**
@@ -52,7 +43,7 @@ public abstract class nObject
      * @return the container that "pays for" this object
      */
     public Container $owner() {
-        return $xvm().getContainer($ownerId());
+        return $ctx().xvm.getContainer($ownerId());
     }
 
     /**

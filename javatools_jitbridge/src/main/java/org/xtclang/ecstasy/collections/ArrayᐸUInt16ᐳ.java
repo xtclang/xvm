@@ -195,7 +195,7 @@ public class ArrayᐸUInt16ᐳ
 
         @Override
         public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeUInt16());
+            return nType.$ensureType(ctx, ctx.pool().typeUInt16());
         }
     }
 }

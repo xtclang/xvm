@@ -692,8 +692,6 @@ public class CommonBuilder
             if (isDebugInfo()) {
                 code.localVariable(ctxSlot, "ctx", CD_Ctx, startScope, endScope);
             }
-            code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
-                .astore(ctxSlot);
 
             int loaderSlot = code.allocateLocal(TypeKind.REFERENCE);
             if (isDebugInfo()) {
@@ -706,6 +704,10 @@ public class CommonBuilder
                         MethodTypeDesc.of(cdClassLoader))
                 .checkcast(cdModuleLoader)
                 .astore(loaderSlot);
+
+            code.aload(loaderSlot)
+                .invokevirtual(cdModuleLoader, "getCtx", MethodTypeDesc.of(CD_Ctx))
+                .astore(ctxSlot);
 
             // initialize synthetic "TypeConstant" and other static "Constant" fields; to make the
             // jasm look neater generate the assignments in the lexicographical order; additionally,

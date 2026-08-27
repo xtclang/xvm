@@ -106,6 +106,12 @@ public class Container
     // public long committed()
     // public long allocated()
 
+    // ----- invocation ----------------------------------------------------------------------------
+
+    void newFiber(Runnable task) {
+        ScopedValue.where(xvm.Current, new Ctx(xvm, this)).run(task);
+    }
+
     // ----- LinkerContext interface ---------------------------------------------------------------
 
     @Override

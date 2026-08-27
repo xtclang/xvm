@@ -185,7 +185,7 @@ public class ArrayᐸBitᐳ
      * @param bits  the size of the array in bits
      */
     public static ArrayᐸBitᐳ $fromLongs(Ctx ctx, Mutability mutability, long bits, long... values) {
-        TypeConstant type  = ctx.container.typeSystem.pool().typeBitArray();
+        TypeConstant type  = ctx.pool().typeBitArray();
         ArrayᐸBitᐳ   array = $new$p(ctx, type, bits, false);
         array.$mut(mutability == null ? $CONSTANT : (int) mutability.$ordinal);
         array.$storage = values;
@@ -235,7 +235,7 @@ public class ArrayᐸBitᐳ
 
         @Override
         public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeBit());
+            return nType.$ensureType(ctx, ctx.pool().typeBit());
         }
     }
 }
