@@ -109,18 +109,30 @@ public abstract class OpVar
             return ((StringConstant) aconst[convertId(nNameId)]).getValue();
         }
 
-        // we cannot use Argument.toIdString(), since it returns a quoted string
-        try {
-            if (nNameId <= Op.CONSTANT_OFFSET) {
-                ServiceContext context = ServiceContext.getCurrentContext();
-                if (context != null) {
-                    return ((StringConstant) context.getCurrentFrame().
-                            localConstants()[convertId(nNameId)]).getValue();
-                }
-            }
-        } catch (Throwable ignore) {}
+        // PURE: do NOT read the ambient ServiceContext/fiber - under a debugger that is whatever
+        // frame is current on the observing thread, usually NOT this op's frame, so it indexed an
+        // unrelated constant array (AIOOBE silently swallowed) or returned a misleading name. A name
+        // referenced only by index needs a frame; render a marker. Frame-owning dumps resolve it via
+        // getName(Frame, ...) below.
+        return nNameId <= Op.CONSTANT_OFFSET ? "name:#" + convertId(nNameId) : "?";
+    }
 
-        return "?";
+    /**
+     * Forced display: resolve a name id against an EXPLICITLY supplied frame, never the ambient
+     * service context.
+     *
+     * @param frame     the frame that owns the op, or null
+     * @param aconst    (optional) an array of constants to retrieve constants by index from
+     * @param constName (optional) the name constant
+     * @param nNameId   the name-constant index
+     *
+     * @return the variable name
+     */
+    protected String getName(Frame frame, Constant[] aconst, StringConstant constName, int nNameId) {
+        if (constName == null && aconst == null && nNameId <= Op.CONSTANT_OFFSET && frame != null) {
+            return ((StringConstant) frame.localConstants()[convertId(nNameId)]).getValue();
+        }
+        return getName(aconst, constName, nNameId);
     }
 
     /**
