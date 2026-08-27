@@ -309,12 +309,12 @@ public class MapConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public MapConstant ensureMutable() {
+    protected MapConstant ensureMutable() {
         return (MapConstant) super.ensureMutable();
     }
 
     @Override
-    public MapConstant ensureReadOnly() {
+    protected MapConstant ensureReadOnly() {
         return (MapConstant) super.ensureReadOnly();
     }
 

@@ -247,12 +247,12 @@ public class PendingTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public PendingTypeConstant ensureMutable() {
+    protected PendingTypeConstant ensureMutable() {
         return (PendingTypeConstant) super.ensureMutable();
     }
 
     @Override
-    public PendingTypeConstant ensureReadOnly() {
+    protected PendingTypeConstant ensureReadOnly() {
         return (PendingTypeConstant) super.ensureReadOnly();
     }
 

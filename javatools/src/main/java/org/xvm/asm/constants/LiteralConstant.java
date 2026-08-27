@@ -1617,12 +1617,12 @@ public class LiteralConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public LiteralConstant ensureMutable() {
+    protected LiteralConstant ensureMutable() {
         return (LiteralConstant) super.ensureMutable();
     }
 
     @Override
-    public LiteralConstant ensureReadOnly() {
+    protected LiteralConstant ensureReadOnly() {
         return (LiteralConstant) super.ensureReadOnly();
     }
 

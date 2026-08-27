@@ -163,12 +163,12 @@ public abstract class NamedConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public NamedConstant ensureMutable() {
+    protected NamedConstant ensureMutable() {
         return (NamedConstant) super.ensureMutable();
     }
 
     @Override
-    public NamedConstant ensureReadOnly() {
+    protected NamedConstant ensureReadOnly() {
         return (NamedConstant) super.ensureReadOnly();
     }
 

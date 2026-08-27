@@ -709,12 +709,12 @@ public class PropertyStructure
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public PropertyStructure ensureMutable() {
+    protected PropertyStructure ensureMutable() {
         return (PropertyStructure) super.ensureMutable();
     }
 
     @Override
-    public PropertyStructure ensureReadOnly() {
+    protected PropertyStructure ensureReadOnly() {
         return (PropertyStructure) super.ensureReadOnly();
     }
 

@@ -7941,12 +7941,12 @@ public abstract class TypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public TypeConstant ensureMutable() {
+    protected TypeConstant ensureMutable() {
         return (TypeConstant) super.ensureMutable();
     }
 
     @Override
-    public TypeConstant ensureReadOnly() {
+    protected TypeConstant ensureReadOnly() {
         return (TypeConstant) super.ensureReadOnly();
     }
 

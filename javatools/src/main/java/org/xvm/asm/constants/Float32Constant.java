@@ -100,12 +100,12 @@ public class Float32Constant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public Float32Constant ensureMutable() {
+    protected Float32Constant ensureMutable() {
         return (Float32Constant) super.ensureMutable();
     }
 
     @Override
-    public Float32Constant ensureReadOnly() {
+    protected Float32Constant ensureReadOnly() {
         return (Float32Constant) super.ensureReadOnly();
     }
 

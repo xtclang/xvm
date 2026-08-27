@@ -312,12 +312,12 @@ public class FSNodeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public FSNodeConstant ensureMutable() {
+    protected FSNodeConstant ensureMutable() {
         return (FSNodeConstant) super.ensureMutable();
     }
 
     @Override
-    public FSNodeConstant ensureReadOnly() {
+    protected FSNodeConstant ensureReadOnly() {
         return (FSNodeConstant) super.ensureReadOnly();
     }
 

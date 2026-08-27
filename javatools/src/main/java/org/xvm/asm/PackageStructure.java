@@ -31,12 +31,12 @@ public class PackageStructure
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public PackageStructure ensureMutable() {
+    protected PackageStructure ensureMutable() {
         return (PackageStructure) super.ensureMutable();
     }
 
     @Override
-    public PackageStructure ensureReadOnly() {
+    protected PackageStructure ensureReadOnly() {
         return (PackageStructure) super.ensureReadOnly();
     }
 

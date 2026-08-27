@@ -64,12 +64,12 @@ public abstract class PseudoConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public PseudoConstant ensureMutable() {
+    protected PseudoConstant ensureMutable() {
         return (PseudoConstant) super.ensureMutable();
     }
 
     @Override
-    public PseudoConstant ensureReadOnly() {
+    protected PseudoConstant ensureReadOnly() {
         return (PseudoConstant) super.ensureReadOnly();
     }
 

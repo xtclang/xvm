@@ -775,12 +775,12 @@ public abstract class IdentityConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public IdentityConstant ensureMutable() {
+    protected IdentityConstant ensureMutable() {
         return (IdentityConstant) super.ensureMutable();
     }
 
     @Override
-    public IdentityConstant ensureReadOnly() {
+    protected IdentityConstant ensureReadOnly() {
         return (IdentityConstant) super.ensureReadOnly();
     }
 

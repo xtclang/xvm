@@ -155,12 +155,12 @@ public class StringConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public StringConstant ensureMutable() {
+    protected StringConstant ensureMutable() {
         return (StringConstant) super.ensureMutable();
     }
 
     @Override
-    public StringConstant ensureReadOnly() {
+    protected StringConstant ensureReadOnly() {
         return (StringConstant) super.ensureReadOnly();
     }
 

@@ -333,12 +333,12 @@ public class ClassConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public ClassConstant ensureMutable() {
+    protected ClassConstant ensureMutable() {
         return (ClassConstant) super.ensureMutable();
     }
 
     @Override
-    public ClassConstant ensureReadOnly() {
+    protected ClassConstant ensureReadOnly() {
         return (ClassConstant) super.ensureReadOnly();
     }
 

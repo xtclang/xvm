@@ -389,23 +389,23 @@ public class CompositeComponent
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public CompositeComponent ensureMutable() {
+    protected CompositeComponent ensureMutable() {
         if (!isReadOnly()) {
             return this;
         }
 
         FileStructure file = new FileStructure(getFileStructure());
         Component parent = (Component) getContaining();
-        Component parentCopy = parent.findCorrespondingStructure(file);
+        Component parentCopy = parent.findThisIn(file);
         IdentityArrayList<Component> siblingCopies = new IdentityArrayList<>();
         for (Component sibling : f_siblings) {
-            siblingCopies.add(sibling.findCorrespondingStructure(file));
+            siblingCopies.add(sibling.findThisIn(file));
         }
         return new CompositeComponent(parentCopy, siblingCopies);
     }
 
     @Override
-    public CompositeComponent ensureReadOnly() {
+    protected CompositeComponent ensureReadOnly() {
         for (Component sibling : f_siblings) {
             sibling.ensureReadOnly();
         }

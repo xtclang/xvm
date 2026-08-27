@@ -146,12 +146,12 @@ public class DecimalAutoConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public DecimalAutoConstant ensureMutable() {
+    protected DecimalAutoConstant ensureMutable() {
         return (DecimalAutoConstant) super.ensureMutable();
     }
 
     @Override
-    public DecimalAutoConstant ensureReadOnly() {
+    protected DecimalAutoConstant ensureReadOnly() {
         return (DecimalAutoConstant) super.ensureReadOnly();
     }
 

@@ -165,12 +165,12 @@ public class FileStoreConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public FileStoreConstant ensureMutable() {
+    protected FileStoreConstant ensureMutable() {
         return (FileStoreConstant) super.ensureMutable();
     }
 
     @Override
-    public FileStoreConstant ensureReadOnly() {
+    protected FileStoreConstant ensureReadOnly() {
         return (FileStoreConstant) super.ensureReadOnly();
     }
 

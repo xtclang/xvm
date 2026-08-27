@@ -107,12 +107,12 @@ public class UInt8ArrayConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public UInt8ArrayConstant ensureMutable() {
+    protected UInt8ArrayConstant ensureMutable() {
         return (UInt8ArrayConstant) super.ensureMutable();
     }
 
     @Override
-    public UInt8ArrayConstant ensureReadOnly() {
+    protected UInt8ArrayConstant ensureReadOnly() {
         return (UInt8ArrayConstant) super.ensureReadOnly();
     }
 

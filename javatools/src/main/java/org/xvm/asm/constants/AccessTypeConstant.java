@@ -261,12 +261,12 @@ public class AccessTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public AccessTypeConstant ensureMutable() {
+    protected AccessTypeConstant ensureMutable() {
         return (AccessTypeConstant) super.ensureMutable();
     }
 
     @Override
-    public AccessTypeConstant ensureReadOnly() {
+    protected AccessTypeConstant ensureReadOnly() {
         return (AccessTypeConstant) super.ensureReadOnly();
     }
 

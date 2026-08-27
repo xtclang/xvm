@@ -126,12 +126,12 @@ public class CastTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public CastTypeConstant ensureMutable() {
+    protected CastTypeConstant ensureMutable() {
         return (CastTypeConstant) super.ensureMutable();
     }
 
     @Override
-    public CastTypeConstant ensureReadOnly() {
+    protected CastTypeConstant ensureReadOnly() {
         return (CastTypeConstant) super.ensureReadOnly();
     }
 

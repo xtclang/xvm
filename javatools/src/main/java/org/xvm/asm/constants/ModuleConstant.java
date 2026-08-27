@@ -285,12 +285,12 @@ public class ModuleConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public ModuleConstant ensureMutable() {
+    protected ModuleConstant ensureMutable() {
         return (ModuleConstant) super.ensureMutable();
     }
 
     @Override
-    public ModuleConstant ensureReadOnly() {
+    protected ModuleConstant ensureReadOnly() {
         return (ModuleConstant) super.ensureReadOnly();
     }
 

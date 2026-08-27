@@ -172,12 +172,12 @@ public class VersionMatchesCondition
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public VersionMatchesCondition ensureMutable() {
+    protected VersionMatchesCondition ensureMutable() {
         return (VersionMatchesCondition) super.ensureMutable();
     }
 
     @Override
-    public VersionMatchesCondition ensureReadOnly() {
+    protected VersionMatchesCondition ensureReadOnly() {
         return (VersionMatchesCondition) super.ensureReadOnly();
     }
 

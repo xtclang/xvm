@@ -274,12 +274,12 @@ public abstract class MultiCondition
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public MultiCondition ensureMutable() {
+    protected MultiCondition ensureMutable() {
         return (MultiCondition) super.ensureMutable();
     }
 
     @Override
-    public MultiCondition ensureReadOnly() {
+    protected MultiCondition ensureReadOnly() {
         return (MultiCondition) super.ensureReadOnly();
     }
 

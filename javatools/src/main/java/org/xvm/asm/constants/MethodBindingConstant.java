@@ -145,12 +145,12 @@ public class MethodBindingConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public MethodBindingConstant ensureMutable() {
+    protected MethodBindingConstant ensureMutable() {
         return (MethodBindingConstant) super.ensureMutable();
     }
 
     @Override
-    public MethodBindingConstant ensureReadOnly() {
+    protected MethodBindingConstant ensureReadOnly() {
         return (MethodBindingConstant) super.ensureReadOnly();
     }
 

@@ -674,12 +674,12 @@ public class AnnotatedTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public AnnotatedTypeConstant ensureMutable() {
+    protected AnnotatedTypeConstant ensureMutable() {
         return (AnnotatedTypeConstant) super.ensureMutable();
     }
 
     @Override
-    public AnnotatedTypeConstant ensureReadOnly() {
+    protected AnnotatedTypeConstant ensureReadOnly() {
         return (AnnotatedTypeConstant) super.ensureReadOnly();
     }
 

@@ -181,12 +181,12 @@ public class ChildClassConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public ChildClassConstant ensureMutable() {
+    protected ChildClassConstant ensureMutable() {
         return (ChildClassConstant) super.ensureMutable();
     }
 
     @Override
-    public ChildClassConstant ensureReadOnly() {
+    protected ChildClassConstant ensureReadOnly() {
         return (ChildClassConstant) super.ensureReadOnly();
     }
 

@@ -1894,12 +1894,12 @@ public class MethodStructure
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public MethodStructure ensureMutable() {
+    protected MethodStructure ensureMutable() {
         return (MethodStructure) super.ensureMutable();
     }
 
     @Override
-    public MethodStructure ensureReadOnly() {
+    protected MethodStructure ensureReadOnly() {
         return (MethodStructure) super.ensureReadOnly();
     }
 
@@ -1931,8 +1931,8 @@ public class MethodStructure
     }
 
     @Override
-    protected MethodStructure findCorrespondingStructure(FileStructure file) {
-        return (MethodStructure) super.findCorrespondingStructure(file);
+    protected MethodStructure findThisIn(FileStructure thatFileStructure) {
+        return (MethodStructure) super.findThisIn(thatFileStructure);
     }
 
     @Override

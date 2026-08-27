@@ -687,12 +687,12 @@ public abstract class RelationalTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public RelationalTypeConstant ensureMutable() {
+    protected RelationalTypeConstant ensureMutable() {
         return (RelationalTypeConstant) super.ensureMutable();
     }
 
     @Override
-    public RelationalTypeConstant ensureReadOnly() {
+    protected RelationalTypeConstant ensureReadOnly() {
         return (RelationalTypeConstant) super.ensureReadOnly();
     }
 

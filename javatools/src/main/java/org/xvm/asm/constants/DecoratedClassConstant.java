@@ -154,12 +154,12 @@ public class DecoratedClassConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public DecoratedClassConstant ensureMutable() {
+    protected DecoratedClassConstant ensureMutable() {
         return (DecoratedClassConstant) super.ensureMutable();
     }
 
     @Override
-    public DecoratedClassConstant ensureReadOnly() {
+    protected DecoratedClassConstant ensureReadOnly() {
         return (DecoratedClassConstant) super.ensureReadOnly();
     }
 

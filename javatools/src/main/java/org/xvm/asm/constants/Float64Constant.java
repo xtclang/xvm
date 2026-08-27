@@ -100,12 +100,12 @@ public class Float64Constant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public Float64Constant ensureMutable() {
+    protected Float64Constant ensureMutable() {
         return (Float64Constant) super.ensureMutable();
     }
 
     @Override
-    public Float64Constant ensureReadOnly() {
+    protected Float64Constant ensureReadOnly() {
         return (Float64Constant) super.ensureReadOnly();
     }
 

@@ -177,7 +177,7 @@ public abstract class XvmStructure
      *
      * @throws IllegalStateException  if this XVM structure is read-only
      */
-    public final boolean verifyMutable() {
+    protected final boolean verifyMutable() {
         if (isReadOnly()) {
             throw new IllegalStateException(getClass().getSimpleName() + " is read-only");
         }
@@ -185,26 +185,34 @@ public abstract class XvmStructure
     }
 
     /**
-     * Obtain a mutable version of this XVM structure. If this structure is read-only, the entire
-     * containing FileStructure is copied and the corresponding structure from that mutable copy is
-     * returned.
+     * Obtain a mutable version of this XVM structure. If this structure is read-only, then the
+     * entire containing FileStructure is copied and the corresponding structure from that mutable
+     * copy is returned.
      *
      * @return this XVM structure if it is mutable, otherwise its counterpart in a mutable copy of
-     *         the containing FileStructure
+     *         the FileStructure that contains this XVM structure
      */
-    public XvmStructure ensureMutable() {
+    protected XvmStructure ensureMutable() {
         return isReadOnly()
-                ? findCorrespondingStructure(new FileStructure(getFileStructure()))
+                ? findThisIn(new FileStructure(getFileStructure()))
                 : this;
     }
 
     /**
-     * Make this XVM structure and all structures contained by it read-only.
+     * If this XVM structure is not already read-only, then make this XVM structure read-only by
+     * making its entire FileStructure read-only.
      *
      * @return this XVM structure, marked as read-only
      */
-    public XvmStructure ensureReadOnly() {
-        markReadOnly();
+    protected XvmStructure ensureReadOnly() {
+        if (!isReadOnly()) {
+            FileStructure fileStructure = getFileStructure();
+            if (fileStructure == null) {
+                throw new IllegalStateException("this " + getClass().getSimpleName()
+                        + " is not part of a FileStructure");
+            }
+            fileStructure.markReadOnly();
+        }
         return this;
     }
 
@@ -212,20 +220,18 @@ public abstract class XvmStructure
      * Mark this structure and all structures contained by it as read-only.
      */
     protected final void markReadOnly() {
-        if (!m_fReadOnly) {
-            getContained().forEach(XvmStructure::ensureReadOnly);
-            m_fReadOnly = true;
-        }
+        getContained().forEach(XvmStructure::ensureReadOnly);
+        m_fReadOnly = true;
     }
 
     /**
-     * Locate this XVM structure's counterpart in a copy of its containing FileStructure.
+     * Locate the copy of this XVM structure in a copy of its containing FileStructure.
      *
-     * @param file  the FileStructure copy
+     * @param thatFileStructure  the FileStructure copy
      *
-     * @return the corresponding XVM structure
+     * @return the XVM structure in thatFileStructure that corresponds to this
      */
-    protected abstract XvmStructure findCorrespondingStructure(FileStructure file);
+    protected abstract XvmStructure findThisIn(FileStructure thatFileStructure);
 
     /**
      * Determine if the XVM structure (or any nested XVM structure) has been modified.

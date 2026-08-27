@@ -173,12 +173,12 @@ public class NotCondition
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public NotCondition ensureMutable() {
+    protected NotCondition ensureMutable() {
         return (NotCondition) super.ensureMutable();
     }
 
     @Override
-    public NotCondition ensureReadOnly() {
+    protected NotCondition ensureReadOnly() {
         return (NotCondition) super.ensureReadOnly();
     }
 

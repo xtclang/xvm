@@ -280,12 +280,12 @@ public class ArrayConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public ArrayConstant ensureMutable() {
+    protected ArrayConstant ensureMutable() {
         return (ArrayConstant) super.ensureMutable();
     }
 
     @Override
-    public ArrayConstant ensureReadOnly() {
+    protected ArrayConstant ensureReadOnly() {
         return (ArrayConstant) super.ensureReadOnly();
     }
 

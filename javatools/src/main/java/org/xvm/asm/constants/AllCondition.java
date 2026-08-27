@@ -340,12 +340,12 @@ public class AllCondition
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public AllCondition ensureMutable() {
+    protected AllCondition ensureMutable() {
         return (AllCondition) super.ensureMutable();
     }
 
     @Override
-    public AllCondition ensureReadOnly() {
+    protected AllCondition ensureReadOnly() {
         return (AllCondition) super.ensureReadOnly();
     }
 

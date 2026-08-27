@@ -3329,12 +3329,12 @@ public class ClassStructure
     // ----- XvmStructure/Component methods --------------------------------------------------------
 
     @Override
-    public ClassStructure ensureMutable() {
+    protected ClassStructure ensureMutable() {
         return (ClassStructure) super.ensureMutable();
     }
 
     @Override
-    public ClassStructure ensureReadOnly() {
+    protected ClassStructure ensureReadOnly() {
         return (ClassStructure) super.ensureReadOnly();
     }
 

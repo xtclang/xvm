@@ -215,12 +215,12 @@ public class DynamicFormalConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public DynamicFormalConstant ensureMutable() {
+    protected DynamicFormalConstant ensureMutable() {
         return (DynamicFormalConstant) super.ensureMutable();
     }
 
     @Override
-    public DynamicFormalConstant ensureReadOnly() {
+    protected DynamicFormalConstant ensureReadOnly() {
         return (DynamicFormalConstant) super.ensureReadOnly();
     }
 

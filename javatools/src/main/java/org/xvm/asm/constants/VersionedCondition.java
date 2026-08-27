@@ -175,12 +175,12 @@ public class VersionedCondition
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public VersionedCondition ensureMutable() {
+    protected VersionedCondition ensureMutable() {
         return (VersionedCondition) super.ensureMutable();
     }
 
     @Override
-    public VersionedCondition ensureReadOnly() {
+    protected VersionedCondition ensureReadOnly() {
         return (VersionedCondition) super.ensureReadOnly();
     }
 

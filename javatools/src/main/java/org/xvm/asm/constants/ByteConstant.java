@@ -519,12 +519,12 @@ public class ByteConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public ByteConstant ensureMutable() {
+    protected ByteConstant ensureMutable() {
         return (ByteConstant) super.ensureMutable();
     }
 
     @Override
-    public ByteConstant ensureReadOnly() {
+    protected ByteConstant ensureReadOnly() {
         return (ByteConstant) super.ensureReadOnly();
     }
 

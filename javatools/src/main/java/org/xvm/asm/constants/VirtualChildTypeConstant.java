@@ -326,12 +326,12 @@ public class VirtualChildTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public VirtualChildTypeConstant ensureMutable() {
+    protected VirtualChildTypeConstant ensureMutable() {
         return (VirtualChildTypeConstant) super.ensureMutable();
     }
 
     @Override
-    public VirtualChildTypeConstant ensureReadOnly() {
+    protected VirtualChildTypeConstant ensureReadOnly() {
         return (VirtualChildTypeConstant) super.ensureReadOnly();
     }
 

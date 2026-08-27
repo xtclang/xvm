@@ -420,12 +420,12 @@ public class PropertyConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public PropertyConstant ensureMutable() {
+    protected PropertyConstant ensureMutable() {
         return (PropertyConstant) super.ensureMutable();
     }
 
     @Override
-    public PropertyConstant ensureReadOnly() {
+    protected PropertyConstant ensureReadOnly() {
         return (PropertyConstant) super.ensureReadOnly();
     }
 

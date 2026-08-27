@@ -120,12 +120,12 @@ public class MatchAnyConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public MatchAnyConstant ensureMutable() {
+    protected MatchAnyConstant ensureMutable() {
         return (MatchAnyConstant) super.ensureMutable();
     }
 
     @Override
-    public MatchAnyConstant ensureReadOnly() {
+    protected MatchAnyConstant ensureReadOnly() {
         return (MatchAnyConstant) super.ensureReadOnly();
     }
 

@@ -51,12 +51,12 @@ public class MultiMethodStructure
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public MultiMethodStructure ensureMutable() {
+    protected MultiMethodStructure ensureMutable() {
         return (MultiMethodStructure) super.ensureMutable();
     }
 
     @Override
-    public MultiMethodStructure ensureReadOnly() {
+    protected MultiMethodStructure ensureReadOnly() {
         return (MultiMethodStructure) super.ensureReadOnly();
     }
 

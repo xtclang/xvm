@@ -66,12 +66,12 @@ public class TypedefStructure
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public TypedefStructure ensureMutable() {
+    protected TypedefStructure ensureMutable() {
         return (TypedefStructure) super.ensureMutable();
     }
 
     @Override
-    public TypedefStructure ensureReadOnly() {
+    protected TypedefStructure ensureReadOnly() {
         return (TypedefStructure) super.ensureReadOnly();
     }
 

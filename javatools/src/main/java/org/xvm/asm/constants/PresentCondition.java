@@ -170,12 +170,12 @@ public class PresentCondition
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public PresentCondition ensureMutable() {
+    protected PresentCondition ensureMutable() {
         return (PresentCondition) super.ensureMutable();
     }
 
     @Override
-    public PresentCondition ensureReadOnly() {
+    protected PresentCondition ensureReadOnly() {
         return (PresentCondition) super.ensureReadOnly();
     }
 

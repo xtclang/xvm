@@ -623,12 +623,12 @@ public class MethodConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public MethodConstant ensureMutable() {
+    protected MethodConstant ensureMutable() {
         return (MethodConstant) super.ensureMutable();
     }
 
     @Override
-    public MethodConstant ensureReadOnly() {
+    protected MethodConstant ensureReadOnly() {
         return (MethodConstant) super.ensureReadOnly();
     }
 

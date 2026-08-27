@@ -1044,12 +1044,12 @@ public class ParameterizedTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public ParameterizedTypeConstant ensureMutable() {
+    protected ParameterizedTypeConstant ensureMutable() {
         return (ParameterizedTypeConstant) super.ensureMutable();
     }
 
     @Override
-    public ParameterizedTypeConstant ensureReadOnly() {
+    protected ParameterizedTypeConstant ensureReadOnly() {
         return (ParameterizedTypeConstant) super.ensureReadOnly();
     }
 

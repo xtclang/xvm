@@ -224,12 +224,12 @@ public class DecimalConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public DecimalConstant ensureMutable() {
+    protected DecimalConstant ensureMutable() {
         return (DecimalConstant) super.ensureMutable();
     }
 
     @Override
-    public DecimalConstant ensureReadOnly() {
+    protected DecimalConstant ensureReadOnly() {
         return (DecimalConstant) super.ensureReadOnly();
     }
 

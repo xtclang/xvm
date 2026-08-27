@@ -99,12 +99,12 @@ public class NativeRebaseConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public NativeRebaseConstant ensureMutable() {
+    protected NativeRebaseConstant ensureMutable() {
         return (NativeRebaseConstant) super.ensureMutable();
     }
 
     @Override
-    public NativeRebaseConstant ensureReadOnly() {
+    protected NativeRebaseConstant ensureReadOnly() {
         return (NativeRebaseConstant) super.ensureReadOnly();
     }
 

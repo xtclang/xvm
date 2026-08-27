@@ -244,12 +244,12 @@ public class SingletonConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public SingletonConstant ensureMutable() {
+    protected SingletonConstant ensureMutable() {
         return (SingletonConstant) super.ensureMutable();
     }
 
     @Override
-    public SingletonConstant ensureReadOnly() {
+    protected SingletonConstant ensureReadOnly() {
         return (SingletonConstant) super.ensureReadOnly();
     }
 

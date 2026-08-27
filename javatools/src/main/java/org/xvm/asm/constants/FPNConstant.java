@@ -138,12 +138,12 @@ public class FPNConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public FPNConstant ensureMutable() {
+    protected FPNConstant ensureMutable() {
         return (FPNConstant) super.ensureMutable();
     }
 
     @Override
-    public FPNConstant ensureReadOnly() {
+    protected FPNConstant ensureReadOnly() {
         return (FPNConstant) super.ensureReadOnly();
     }
 

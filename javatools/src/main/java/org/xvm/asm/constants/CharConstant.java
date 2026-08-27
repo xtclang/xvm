@@ -201,12 +201,12 @@ public class CharConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public CharConstant ensureMutable() {
+    protected CharConstant ensureMutable() {
         return (CharConstant) super.ensureMutable();
     }
 
     @Override
-    public CharConstant ensureReadOnly() {
+    protected CharConstant ensureReadOnly() {
         return (CharConstant) super.ensureReadOnly();
     }
 

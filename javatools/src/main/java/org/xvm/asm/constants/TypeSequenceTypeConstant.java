@@ -299,12 +299,12 @@ public class TypeSequenceTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public TypeSequenceTypeConstant ensureMutable() {
+    protected TypeSequenceTypeConstant ensureMutable() {
         return (TypeSequenceTypeConstant) super.ensureMutable();
     }
 
     @Override
-    public TypeSequenceTypeConstant ensureReadOnly() {
+    protected TypeSequenceTypeConstant ensureReadOnly() {
         return (TypeSequenceTypeConstant) super.ensureReadOnly();
     }
 

@@ -164,12 +164,12 @@ public class PureIdentityConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public PureIdentityConstant ensureMutable() {
+    protected PureIdentityConstant ensureMutable() {
         return (PureIdentityConstant) super.ensureMutable();
     }
 
     @Override
-    public PureIdentityConstant ensureReadOnly() {
+    protected PureIdentityConstant ensureReadOnly() {
         return (PureIdentityConstant) super.ensureReadOnly();
     }
 

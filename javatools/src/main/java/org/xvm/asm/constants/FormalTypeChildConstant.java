@@ -197,12 +197,12 @@ public class FormalTypeChildConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public FormalTypeChildConstant ensureMutable() {
+    protected FormalTypeChildConstant ensureMutable() {
         return (FormalTypeChildConstant) super.ensureMutable();
     }
 
     @Override
-    public FormalTypeChildConstant ensureReadOnly() {
+    protected FormalTypeChildConstant ensureReadOnly() {
         return (FormalTypeChildConstant) super.ensureReadOnly();
     }
 

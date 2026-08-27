@@ -391,12 +391,12 @@ public class Parameter
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public Parameter ensureMutable() {
+    protected Parameter ensureMutable() {
         return (Parameter) super.ensureMutable();
     }
 
     @Override
-    public Parameter ensureReadOnly() {
+    protected Parameter ensureReadOnly() {
         if (!isReadOnly()) {
             m_aAnnotations = m_aAnnotations.clone();
         }
@@ -404,12 +404,12 @@ public class Parameter
     }
 
     @Override
-    protected Parameter findCorrespondingStructure(FileStructure file) {
+    protected Parameter findThisIn(FileStructure thatFileStructure) {
         if (!(getContaining() instanceof MethodStructure method)) {
             throw new IllegalStateException("parameter is not contained by a method");
         }
 
-        MethodStructure methodCopy = (MethodStructure) method.findCorrespondingStructure(file);
+        MethodStructure methodCopy = (MethodStructure) method.findThisIn(thatFileStructure);
         return isParameter()
                 ? methodCopy.getParam(getIndex())
                 : methodCopy.getReturn(getIndex());

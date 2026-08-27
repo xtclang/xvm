@@ -131,12 +131,12 @@ public class NamedCondition
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public NamedCondition ensureMutable() {
+    protected NamedCondition ensureMutable() {
         return (NamedCondition) super.ensureMutable();
     }
 
     @Override
-    public NamedCondition ensureReadOnly() {
+    protected NamedCondition ensureReadOnly() {
         return (NamedCondition) super.ensureReadOnly();
     }
 

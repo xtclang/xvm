@@ -221,12 +221,12 @@ public class ImmutableTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public ImmutableTypeConstant ensureMutable() {
+    protected ImmutableTypeConstant ensureMutable() {
         return (ImmutableTypeConstant) super.ensureMutable();
     }
 
     @Override
-    public ImmutableTypeConstant ensureReadOnly() {
+    protected ImmutableTypeConstant ensureReadOnly() {
         return (ImmutableTypeConstant) super.ensureReadOnly();
     }
 

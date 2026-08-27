@@ -489,12 +489,12 @@ public class UnresolvedTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public UnresolvedTypeConstant ensureMutable() {
+    protected UnresolvedTypeConstant ensureMutable() {
         return (UnresolvedTypeConstant) super.ensureMutable();
     }
 
     @Override
-    public UnresolvedTypeConstant ensureReadOnly() {
+    protected UnresolvedTypeConstant ensureReadOnly() {
         return (UnresolvedTypeConstant) super.ensureReadOnly();
     }
 

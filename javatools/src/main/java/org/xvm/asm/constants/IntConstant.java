@@ -1146,12 +1146,12 @@ public class IntConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public IntConstant ensureMutable() {
+    protected IntConstant ensureMutable() {
         return (IntConstant) super.ensureMutable();
     }
 
     @Override
-    public IntConstant ensureReadOnly() {
+    protected IntConstant ensureReadOnly() {
         return (IntConstant) super.ensureReadOnly();
     }
 

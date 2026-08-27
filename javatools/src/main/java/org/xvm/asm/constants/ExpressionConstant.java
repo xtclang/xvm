@@ -67,12 +67,12 @@ public class ExpressionConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public ExpressionConstant ensureMutable() {
+    protected ExpressionConstant ensureMutable() {
         return (ExpressionConstant) super.ensureMutable();
     }
 
     @Override
-    public ExpressionConstant ensureReadOnly() {
+    protected ExpressionConstant ensureReadOnly() {
         return (ExpressionConstant) super.ensureReadOnly();
     }
 

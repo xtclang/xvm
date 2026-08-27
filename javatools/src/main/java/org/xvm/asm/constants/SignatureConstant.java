@@ -749,12 +749,12 @@ public class SignatureConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public SignatureConstant ensureMutable() {
+    protected SignatureConstant ensureMutable() {
         return (SignatureConstant) super.ensureMutable();
     }
 
     @Override
-    public SignatureConstant ensureReadOnly() {
+    protected SignatureConstant ensureReadOnly() {
         return (SignatureConstant) super.ensureReadOnly();
     }
 

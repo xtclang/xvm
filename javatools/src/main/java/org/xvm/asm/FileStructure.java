@@ -1285,8 +1285,8 @@ public class FileStructure
     }
 
     @Override
-    protected FileStructure findCorrespondingStructure(FileStructure file) {
-        return file;
+    protected FileStructure findThisIn(FileStructure thatFileStructure) {
+        return thatFileStructure;
     }
 
     @Override

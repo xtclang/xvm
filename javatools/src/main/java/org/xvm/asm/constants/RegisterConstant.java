@@ -126,12 +126,12 @@ public class RegisterConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public RegisterConstant ensureMutable() {
+    protected RegisterConstant ensureMutable() {
         return (RegisterConstant) super.ensureMutable();
     }
 
     @Override
-    public RegisterConstant ensureReadOnly() {
+    protected RegisterConstant ensureReadOnly() {
         return (RegisterConstant) super.ensureReadOnly();
     }
 

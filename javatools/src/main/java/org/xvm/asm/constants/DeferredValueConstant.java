@@ -79,12 +79,12 @@ public class DeferredValueConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public DeferredValueConstant ensureMutable() {
+    protected DeferredValueConstant ensureMutable() {
         return (DeferredValueConstant) super.ensureMutable();
     }
 
     @Override
-    public DeferredValueConstant ensureReadOnly() {
+    protected DeferredValueConstant ensureReadOnly() {
         return (DeferredValueConstant) super.ensureReadOnly();
     }
 

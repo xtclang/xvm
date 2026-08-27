@@ -104,12 +104,12 @@ public class MultiMethodConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public MultiMethodConstant ensureMutable() {
+    protected MultiMethodConstant ensureMutable() {
         return (MultiMethodConstant) super.ensureMutable();
     }
 
     @Override
-    public MultiMethodConstant ensureReadOnly() {
+    protected MultiMethodConstant ensureReadOnly() {
         return (MultiMethodConstant) super.ensureReadOnly();
     }
 

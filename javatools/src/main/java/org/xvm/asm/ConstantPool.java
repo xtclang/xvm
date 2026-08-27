@@ -2491,18 +2491,18 @@ public class ConstantPool
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public ConstantPool ensureMutable() {
+    protected ConstantPool ensureMutable() {
         return (ConstantPool) super.ensureMutable();
     }
 
     @Override
-    public ConstantPool ensureReadOnly() {
+    protected ConstantPool ensureReadOnly() {
         return (ConstantPool) super.ensureReadOnly();
     }
 
     @Override
-    protected ConstantPool findCorrespondingStructure(FileStructure file) {
-        return file.getConstantPool();
+    protected ConstantPool findThisIn(FileStructure thatFileStructure) {
+        return thatFileStructure.getConstantPool();
     }
 
     @Override

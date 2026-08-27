@@ -117,12 +117,12 @@ public class Float128Constant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public Float128Constant ensureMutable() {
+    protected Float128Constant ensureMutable() {
         return (Float128Constant) super.ensureMutable();
     }
 
     @Override
-    public Float128Constant ensureReadOnly() {
+    protected Float128Constant ensureReadOnly() {
         return (Float128Constant) super.ensureReadOnly();
     }
 

@@ -328,12 +328,12 @@ public class RangeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public RangeConstant ensureMutable() {
+    protected RangeConstant ensureMutable() {
         return (RangeConstant) super.ensureMutable();
     }
 
     @Override
-    public RangeConstant ensureReadOnly() {
+    protected RangeConstant ensureReadOnly() {
         return (RangeConstant) super.ensureReadOnly();
     }
 

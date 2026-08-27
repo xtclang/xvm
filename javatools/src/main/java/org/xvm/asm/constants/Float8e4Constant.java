@@ -88,12 +88,12 @@ public class Float8e4Constant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public Float8e4Constant ensureMutable() {
+    protected Float8e4Constant ensureMutable() {
         return (Float8e4Constant) super.ensureMutable();
     }
 
     @Override
-    public Float8e4Constant ensureReadOnly() {
+    protected Float8e4Constant ensureReadOnly() {
         return (Float8e4Constant) super.ensureReadOnly();
     }
 

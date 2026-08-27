@@ -76,12 +76,12 @@ public class PackageConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public PackageConstant ensureMutable() {
+    protected PackageConstant ensureMutable() {
         return (PackageConstant) super.ensureMutable();
     }
 
     @Override
-    public PackageConstant ensureReadOnly() {
+    protected PackageConstant ensureReadOnly() {
         return (PackageConstant) super.ensureReadOnly();
     }
 

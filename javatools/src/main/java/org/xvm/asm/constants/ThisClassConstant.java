@@ -123,12 +123,12 @@ public class ThisClassConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public ThisClassConstant ensureMutable() {
+    protected ThisClassConstant ensureMutable() {
         return (ThisClassConstant) super.ensureMutable();
     }
 
     @Override
-    public ThisClassConstant ensureReadOnly() {
+    protected ThisClassConstant ensureReadOnly() {
         return (ThisClassConstant) super.ensureReadOnly();
     }
 

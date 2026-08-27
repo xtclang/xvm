@@ -106,12 +106,12 @@ public class RegExConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public RegExConstant ensureMutable() {
+    protected RegExConstant ensureMutable() {
         return (RegExConstant) super.ensureMutable();
     }
 
     @Override
-    public RegExConstant ensureReadOnly() {
+    protected RegExConstant ensureReadOnly() {
         return (RegExConstant) super.ensureReadOnly();
     }
 

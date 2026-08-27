@@ -2157,12 +2157,12 @@ public abstract class Component
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public Component ensureMutable() {
+    protected Component ensureMutable() {
         return (Component) super.ensureMutable();
     }
 
     @Override
-    public Component ensureReadOnly() {
+    protected Component ensureReadOnly() {
         for (Component sibling = getEldestSibling(); sibling != null;
                 sibling = sibling.getNextSibling()) {
             if (!sibling.isReadOnly()) {
@@ -2184,14 +2184,14 @@ public abstract class Component
     }
 
     @Override
-    protected Component findCorrespondingStructure(FileStructure file) {
-        Component parent     = (Component) getContaining();
-        Component parentCopy = parent.findCorrespondingStructure(file);
+    protected Component findThisIn(FileStructure thatFileStructure) {
+        Component thisParent = (Component) getContaining();
+        Component thatParent = thisParent.findThisIn(thatFileStructure);
 
         IdentityConstant idCopy = (IdentityConstant)
-                file.getConstantPool().getConstant(getIdentityConstant());
-        Component original = parent.getChild(getIdentityConstant());
-        Component copy     = parentCopy.getChild(idCopy);
+                thatFileStructure.getConstantPool().getConstant(getIdentityConstant());
+        Component original = thisParent.getChild(getIdentityConstant());
+        Component copy     = thatParent.getChild(idCopy);
 
         while (original != this && original != null && copy != null) {
             original = original.getNextSibling();

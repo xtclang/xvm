@@ -38,12 +38,12 @@ public abstract class FrameDependentConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public FrameDependentConstant ensureMutable() {
+    protected FrameDependentConstant ensureMutable() {
         return (FrameDependentConstant) super.ensureMutable();
     }
 
     @Override
-    public FrameDependentConstant ensureReadOnly() {
+    protected FrameDependentConstant ensureReadOnly() {
         return (FrameDependentConstant) super.ensureReadOnly();
     }
 

@@ -237,12 +237,12 @@ public class UnresolvedNameConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public UnresolvedNameConstant ensureMutable() {
+    protected UnresolvedNameConstant ensureMutable() {
         return (UnresolvedNameConstant) super.ensureMutable();
     }
 
     @Override
-    public UnresolvedNameConstant ensureReadOnly() {
+    protected UnresolvedNameConstant ensureReadOnly() {
         return (UnresolvedNameConstant) super.ensureReadOnly();
     }
 

@@ -2042,12 +2042,12 @@ public class TerminalTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public TerminalTypeConstant ensureMutable() {
+    protected TerminalTypeConstant ensureMutable() {
         return (TerminalTypeConstant) super.ensureMutable();
     }
 
     @Override
-    public TerminalTypeConstant ensureReadOnly() {
+    protected TerminalTypeConstant ensureReadOnly() {
         return (TerminalTypeConstant) super.ensureReadOnly();
     }
 

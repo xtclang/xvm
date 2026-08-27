@@ -286,12 +286,12 @@ public class Annotation
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public Annotation ensureMutable() {
+    protected Annotation ensureMutable() {
         return (Annotation) super.ensureMutable();
     }
 
     @Override
-    public Annotation ensureReadOnly() {
+    protected Annotation ensureReadOnly() {
         return (Annotation) super.ensureReadOnly();
     }
 
