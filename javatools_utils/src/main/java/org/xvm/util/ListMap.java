@@ -15,6 +15,18 @@ import java.util.Set;
  * A simple implementation of a Map on top of an ArrayList to maintain order of
  * insertion. This map should work well for small numbers of entries, but will
  * degrade in performance as it grows in size.
+ *
+ * <p><b>WARNING - LOAD-BEARING IN TYPE COMPUTATION.</b> This class is not just a small-map
+ * convenience: it is the <b>insertion-ORDERED</b> map the XVM type system and {@code ConstantPool}
+ * resolution depend on for <b>type parameters</b> (order is significant -
+ * {@code Array<Int,String> != Array<String,Int>}). Callers and the type system rely on that
+ * ordering when they iterate, bind, register, and resolve parameterized types. <b>Do not swap a
+ * {@code ListMap} for a {@code HashMap} or a plain {@code Map} anywhere it is stored or iterated for
+ * type identity, and do not assume the order can be dropped - doing so breaks type resolution in
+ * subtle, wide-ranging ways.</b> It uses {@link AbstractMap}'s standard (order-insensitive,
+ * any-{@code Map}) {@code equals}/{@code hashCode}, so narrowing a getter's RETURN to an immutable
+ * order-preserving VIEW is safe; changing the stored representation is not. See
+ * {@code docs/reentrancy/listmap-issues.md}.</p>
  */
 public class ListMap<K,V>
         extends AbstractMap<K,V> {

@@ -551,6 +551,15 @@ public sealed class ClassStructure
      *
      * @return a read-only map of type parameter name to type
      */
+    // WARNING - LOAD-BEARING: m_mapParams is a ListMap and MUST stay one. ListMap is the
+    // insertion-ORDERED map the type system depends on (Array<Int,String> != Array<String,Int>);
+    // type resolution and ConstantPool resolution rely on its order throughout. Do NOT change the
+    // stored field to a HashMap/other, and do NOT drop the ordering guarantee. Returning an
+    // unmodifiable VIEW here is safe ONLY because the view delegates iteration to the backing
+    // ListMap (order preserved) and ListMap uses AbstractMap.equals (no custom equality); this was
+    // validated by a full xdk:installDist (real type resolution), not just unit tests. See
+    // docs/reentrancy/listmap-issues.md before touching anything ListMap-typed. The long-term fix
+    // is a frozen ListMap (same type, immutable, zero per-call allocation) - see that doc.
     public Map<StringConstant, TypeConstant> getTypeParams() {
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
