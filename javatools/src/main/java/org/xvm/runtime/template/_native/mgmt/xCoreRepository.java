@@ -134,6 +134,6 @@ public class xCoreRepository
      * The final Lazy cell preserves one-handle-per-owner caching and safely
      * publishes the handle if injection is requested concurrently.
      */
-    private final Lazy.Owner<xCoreRepository, ObjectHandle> f_hRepository =
-            Lazy.ofOwner(owner -> owner.makeHandle(owner.container()));
+    private final Lazy.Bound<xCoreRepository, ObjectHandle> f_hRepository =
+            Lazy.ofBound(owner -> owner.makeHandle(owner.container()));
 }

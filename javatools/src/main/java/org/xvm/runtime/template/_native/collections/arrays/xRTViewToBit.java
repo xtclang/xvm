@@ -93,8 +93,8 @@ public class xRTViewToBit
     // The dispatch map is owner-local because both the element type keys and specialized templates
     // are ConstantPool/container owned. A static map built from subtype INSTANCE fields can cross
     // containers under parallel startup.
-    private final Lazy.Owner<xRTViewToBit, Map<TypeConstant, xRTViewToBit>> f_views =
-            Lazy.ofOwner(xRTViewToBit::createViews);
+    private final Lazy.Bound<xRTViewToBit, Map<TypeConstant, xRTViewToBit>> f_views =
+            Lazy.ofBound(xRTViewToBit::createViews);
 
     private Map<TypeConstant, xRTViewToBit> createViews() {
         ConstantPool                    pool     = pool();

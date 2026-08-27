@@ -118,20 +118,20 @@ import org.xvm.util.Lazy;
 public final class NativeTemplates {
     NativeTemplates(Container container) {
         f_container    = requireNonNull(container, "container");
-        f_templateBit  = Lazy.ofOwner(owner -> owner.container().getTemplate(
+        f_templateBit  = Lazy.ofBound(owner -> owner.container().getTemplate(
                 owner.container().getConstantPool().typeBitArray(), xBitArray.class));
-        f_templateByte = Lazy.ofOwner(owner -> owner.container().getTemplate(
+        f_templateByte = Lazy.ofBound(owner -> owner.container().getTemplate(
                 owner.container().getConstantPool().typeByteArray(), xByteArray.class));
-        f_templateNibble = Lazy.ofOwner(owner -> {
+        f_templateNibble = Lazy.ofBound(owner -> {
             var pool = owner.container().getConstantPool();
             return owner.container().getTemplate(pool.ensureArrayType(pool.typeNibble()),
                     xNibbleArray.class);
         });
-        f_templateRef = Lazy.ofOwner(owner -> owner.container().getTemplate(
+        f_templateRef = Lazy.ofBound(owner -> owner.container().getTemplate(
                 owner.container().getConstantPool().typeRef(), xRef.class));
-        f_templateVar = Lazy.ofOwner(owner -> owner.container().getTemplate(
+        f_templateVar = Lazy.ofBound(owner -> owner.container().getTemplate(
                 owner.container().getConstantPool().typeVar(), xVar.class));
-        f_templateProxy = Lazy.ofOwner(owner -> new Proxy(owner.container()));
+        f_templateProxy = Lazy.ofBound(owner -> new Proxy(owner.container()));
     }
 
     /**
@@ -535,8 +535,8 @@ public final class NativeTemplates {
         // Install the Lazy cell in the concurrent map, but resolve the template from Lazy.get().
         // Template resolution can recurse during bootstrap; doing that work inside computeIfAbsent()
         // would couple recursive runtime startup to ConcurrentHashMap's update path.
-        Lazy.Owner<NativeTemplates, ?> lazy = f_mapTemplates.computeIfAbsent(ref,
-                refTemplate -> Lazy.ofOwner(owner -> refTemplate.resolve(owner.container())));
+        Lazy.Bound<NativeTemplates, ?> lazy = f_mapTemplates.computeIfAbsent(ref,
+                refTemplate -> Lazy.ofBound(owner -> refTemplate.resolve(owner.container())));
 
         return ref.cast((ClassTemplate) lazy.get(this));
     }
@@ -783,44 +783,44 @@ public final class NativeTemplates {
      * Specialized array templates are selected by the array element type; resolving them by the mixin
      * name would return the generic xObject fallback for the mixin itself.
      */
-    private final Lazy.Owner<NativeTemplates, xBitArray> f_templateBit;
+    private final Lazy.Bound<NativeTemplates, xBitArray> f_templateBit;
 
     /**
      * Specialized array templates are selected by the array element type; resolving them by the mixin
      * name would return the generic xObject fallback for the mixin itself.
      */
-    private final Lazy.Owner<NativeTemplates, xByteArray> f_templateByte;
+    private final Lazy.Bound<NativeTemplates, xByteArray> f_templateByte;
 
     /**
      * Specialized array templates are selected by the array element type; resolving them by the mixin
      * name would return the generic xObject fallback for the mixin itself.
      */
-    private final Lazy.Owner<NativeTemplates, xNibbleArray> f_templateNibble;
+    private final Lazy.Bound<NativeTemplates, xNibbleArray> f_templateNibble;
 
     /**
      * Canonical owner Ref template. Ref-derived templates inherit this template's
      * native rebase and get-signature metadata; they must not recompute it from
      * their own reflected structures.
      */
-    private final Lazy.Owner<NativeTemplates, xRef> f_templateRef;
+    private final Lazy.Bound<NativeTemplates, xRef> f_templateRef;
 
     /**
      * Canonical owner Var template. Var-derived templates inherit this template's
      * native rebase and set-signature metadata; they must not recompute it from
      * their own reflected structures.
      */
-    private final Lazy.Owner<NativeTemplates, xVar> f_templateVar;
+    private final Lazy.Bound<NativeTemplates, xVar> f_templateVar;
 
     /**
      * Owner-local proxy support object. Proxy is not a normal registered native template; the
      * legacy runtime constructed one global helper from Service registration. This preserves that
      * helper object, but scopes it to the container that owns the proxy composition.
      */
-    private final Lazy.Owner<NativeTemplates, Proxy> f_templateProxy;
+    private final Lazy.Bound<NativeTemplates, Proxy> f_templateProxy;
 
     /**
      * Lazily resolved templates by immutable native-template key.
      */
-    private final ConcurrentMap<NativeTemplateRef<?>, Lazy.Owner<NativeTemplates, ?>> f_mapTemplates =
+    private final ConcurrentMap<NativeTemplateRef<?>, Lazy.Bound<NativeTemplates, ?>> f_mapTemplates =
             new ConcurrentHashMap<>();
 }

@@ -926,8 +926,8 @@ public abstract class Container
      * reference, so construct it after Container construction instead of passing "this" to a child
      * object from the base constructor.
      */
-    private final Lazy.Owner<Container, NativeTemplates> f_nativeTemplates =
-            Lazy.ofOwner(NativeTemplates::new);
+    private final Lazy.Bound<Container, NativeTemplates> f_nativeTemplates =
+            Lazy.ofBound(NativeTemplates::new);
 
     /**
      * Container-local runtime cache state for decoded ops that would otherwise store frame-derived
@@ -948,8 +948,8 @@ public abstract class Container
      * constant pool. This replaces Utils' old JVM-global mutable metadata fields while preserving
      * the same one-time lookup behavior for each owner.
      */
-    private final Lazy.Owner<Container, Utils.RuntimeMetadata> f_runtimeMetadata =
-            Lazy.ofOwner(Utils::createRuntimeMetadata);
+    private final Lazy.Bound<Container, Utils.RuntimeMetadata> f_runtimeMetadata =
+            Lazy.ofBound(Utils::createRuntimeMetadata);
 
     /**
      * The parent container.

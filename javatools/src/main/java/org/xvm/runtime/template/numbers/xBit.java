@@ -227,8 +227,8 @@ public class xBit
         return getInstance(container).makeHandle(f);
     }
 
-    private final Lazy.Owner<xBit, JavaLong> f_zero =
-            Lazy.ofOwner(owner -> new JavaLong(owner.getCanonicalClass(), 0));
-    private final Lazy.Owner<xBit, JavaLong> f_one =
-            Lazy.ofOwner(owner -> new JavaLong(owner.getCanonicalClass(), 1));
+    private final Lazy.Bound<xBit, JavaLong> f_zero =
+            Lazy.ofBound(owner -> new JavaLong(owner.getCanonicalClass(), 0));
+    private final Lazy.Bound<xBit, JavaLong> f_one =
+            Lazy.ofBound(owner -> new JavaLong(owner.getCanonicalClass(), 1));
 }

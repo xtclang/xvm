@@ -399,7 +399,7 @@ public class xRTMethod
     /**
      * Empty Method[] constant derived from this template's constant pool.
      */
-    private final Lazy.Owner<xRTMethod, ArrayConstant> f_constEmptyArray = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xRTMethod, ArrayConstant> f_constEmptyArray = Lazy.ofBound(owner -> {
         ConstantPool pool = owner.pool();
         return new ArrayConstant(pool, Constant.Format.Array, pool.ensureArrayType(pool.typeMethod()));
     });

@@ -278,14 +278,14 @@ public class xRTNameService
 
     // ----- constants and fields ------------------------------------------------------------------
 
-    private final Lazy.Owner<xRTNameService, TypeConstant> f_typeCanonical = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xRTNameService, TypeConstant> f_typeCanonical = Lazy.ofBound(owner -> {
         var pool = owner.container().getConstantPool();
         return pool.ensureTerminalTypeConstant(pool.ensureClassConstant(
                 pool.ensureModuleConstant("net.xtclang.org"), "NameService"));
     });
 
-    private final Lazy.Owner<xRTNameService, TypeConstant> f_typeByteArrayArray =
-            Lazy.ofOwner(owner -> owner.pool().ensureArrayType(owner.pool().typeByteArray()));
+    private final Lazy.Bound<xRTNameService, TypeConstant> f_typeByteArrayArray =
+            Lazy.ofBound(owner -> owner.pool().ensureArrayType(owner.pool().typeByteArray()));
 
     private static final String[] NO_RECORD_FIELDS = new String[0];
 

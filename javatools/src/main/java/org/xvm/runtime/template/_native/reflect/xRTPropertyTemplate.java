@@ -211,8 +211,8 @@ public class xRTPropertyTemplate
      * PropertyTemplate compositions are container-owned metadata. The old static caches could mix
      * one container's template with another container's handles.
      */
-    private final Lazy.Owner<xRTPropertyTemplate, TypeComposition> f_compPropertyTemplate =
-            Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xRTPropertyTemplate, TypeComposition> f_compPropertyTemplate =
+            Lazy.ofBound(owner -> {
         ConstantPool    pool         = owner.pool();
         TypeConstant    typeTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
         TypeComposition clz          = owner.ensureClass(owner.container(), typeTemplate);
@@ -220,8 +220,8 @@ public class xRTPropertyTemplate
         return clz;
     });
 
-    private final Lazy.Owner<xRTPropertyTemplate, TypeComposition> f_compPropertyTemplateArray =
-            Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xRTPropertyTemplate, TypeComposition> f_compPropertyTemplateArray =
+            Lazy.ofBound(owner -> {
         ConstantPool pool                 = owner.pool();
         TypeConstant typePropertyTemplate =
                 pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");

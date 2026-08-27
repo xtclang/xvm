@@ -235,7 +235,7 @@ public class xContainerControl
         protected final Container f_container;
     }
 
-    private final Lazy.Owner<xContainerControl, TypeComposition> f_clzControl = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xContainerControl, TypeComposition> f_clzControl = Lazy.ofBound(owner -> {
         TypeConstant typeMask = owner.pool().ensureEcstasyTypeConstant("mgmt.Container.Control");
         return owner.ensureClass(owner.container(), owner.getCanonicalType(), typeMask);
     });

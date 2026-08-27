@@ -404,10 +404,10 @@ public class xRTComponentTemplate
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private final Lazy.Owner<xRTComponentTemplate, TypeConstant> f_typeComponentArray =
-            Lazy.ofOwner(owner -> owner.pool().ensureArrayType(
+    private final Lazy.Bound<xRTComponentTemplate, TypeConstant> f_typeComponentArray =
+            Lazy.ofBound(owner -> owner.pool().ensureArrayType(
                     owner.pool().ensureEcstasyTypeConstant("reflect.ComponentTemplate")));
 
-    private final Lazy.Owner<xRTComponentTemplate, ClassTemplate> f_templateMultiMethod =
-            Lazy.ofOwner(owner -> owner.container().getTemplate("_native.reflect.RTMultiMethodTemplate"));
+    private final Lazy.Bound<xRTComponentTemplate, ClassTemplate> f_templateMultiMethod =
+            Lazy.ofBound(owner -> owner.container().getTemplate("_native.reflect.RTMultiMethodTemplate"));
 }

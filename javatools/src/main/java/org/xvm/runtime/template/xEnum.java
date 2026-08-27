@@ -428,10 +428,10 @@ public class xEnum
 
     // ----- constants and fields ------------------------------------------------------------------
 
-    private final Lazy.Owner<xEnum, ClassTemplate> f_templateRange =
-            Lazy.ofOwner(owner -> owner.container().getTemplate("Range"));
+    private final Lazy.Bound<xEnum, ClassTemplate> f_templateRange =
+            Lazy.ofBound(owner -> owner.container().getTemplate("Range"));
 
-    private final Lazy.Owner<xEnum, MethodStructure> f_ctorRange = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xEnum, MethodStructure> f_ctorRange = Lazy.ofBound(owner ->
             owner.f_templateRange.get(owner).getStructure().findMethod("construct", 4));
 
     private EnumInfo enumInfo() {
@@ -462,7 +462,7 @@ public class xEnum
         return new EnumInfo(listNames, listHandles);
     }
 
-    private final Lazy.Owner<xEnum, EnumInfo> f_enumInfo = Lazy.ofOwner(xEnum::createEnumInfo);
+    private final Lazy.Bound<xEnum, EnumInfo> f_enumInfo = Lazy.ofBound(xEnum::createEnumInfo);
 
     /**
      * Template-local enum index. Natural enum values can start as construction structs; the

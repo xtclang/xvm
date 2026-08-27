@@ -512,6 +512,6 @@ public class xOSFile
      * MethodStructure to this template's owning ClassStructure instead of a
      * process-global static.
      */
-    private final Lazy.Owner<xOSFile, MethodStructure> f_constructor =
-            Lazy.ofOwner(owner -> owner.getStructure().findConstructor());
+    private final Lazy.Bound<xOSFile, MethodStructure> f_constructor =
+            Lazy.ofBound(owner -> owner.getStructure().findConstructor());
 }

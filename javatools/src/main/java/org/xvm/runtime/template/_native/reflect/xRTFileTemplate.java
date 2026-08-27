@@ -338,9 +338,9 @@ public class xRTFileTemplate
      * FileTemplate metadata used to be mutable static state. Both values come from this template's
      * structure and constant pool, so cache them on the owning template.
      */
-    private final Lazy.Owner<xRTFileTemplate, TypeConstant> f_typeFileTemplate =
-            Lazy.ofOwner(owner -> owner.pool().ensureEcstasyTypeConstant("reflect.FileTemplate"));
+    private final Lazy.Bound<xRTFileTemplate, TypeConstant> f_typeFileTemplate =
+            Lazy.ofBound(owner -> owner.pool().ensureEcstasyTypeConstant("reflect.FileTemplate"));
 
-    private final Lazy.Owner<xRTFileTemplate, MethodStructure> f_methodLinkModules =
-            Lazy.ofOwner(owner -> owner.f_struct.findMethod("linkModules", 1));
+    private final Lazy.Bound<xRTFileTemplate, MethodStructure> f_methodLinkModules =
+            Lazy.ofBound(owner -> owner.f_struct.findMethod("linkModules", 1));
 }

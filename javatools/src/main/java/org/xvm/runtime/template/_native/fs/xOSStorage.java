@@ -390,8 +390,8 @@ public class xOSStorage
      * delivered through the watched storage handle, so resolving the method from that handle's
      * template preserves the old callback binding without a JVM-global MethodStructure.
      */
-    private final Lazy.Owner<xOSStorage, MethodStructure> f_methodOnEvent =
-            Lazy.ofOwner(owner -> owner.getStructure().findMethodDeep("onEvent", Utils.ANY));
+    private final Lazy.Bound<xOSStorage, MethodStructure> f_methodOnEvent =
+            Lazy.ofBound(owner -> owner.getStructure().findMethodDeep("onEvent", Utils.ANY));
 
     private MethodStructure ensureOnEventMethod() {
         return f_methodOnEvent.get(this);

@@ -757,7 +757,7 @@ public class xFuture
      * annotation type is derived from this template's pool and this container's
      * Var template, so it cannot be JVM-global.
      */
-    private final Lazy.Owner<xFuture, TypeConstant> f_type = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xFuture, TypeConstant> f_type = Lazy.ofBound(owner -> {
         ConstantPool  pool    = owner.pool();
         ClassConstant idMixin = (ClassConstant) owner.f_struct.getIdentityConstant();
         Annotation    anno    = pool.ensureAnnotation(idMixin);
@@ -770,7 +770,7 @@ public class xFuture
     /**
      * Owner-scoped equivalent of the old static COMPLETION enum template cache.
      */
-    private final Lazy.Owner<xFuture, xEnum> f_templateCompletion = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xFuture, xEnum> f_templateCompletion = Lazy.ofBound(owner ->
             owner.container().getEnumTemplate("annotations.Future.Completion"));
 
     /**

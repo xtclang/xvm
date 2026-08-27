@@ -1935,29 +1935,29 @@ public class xRTType
 
     // ----- data members --------------------------------------------------------------------------
 
-    private final Lazy.Owner<xRTType, TypeConstant> f_typeArray = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTType, TypeConstant> f_typeArray = Lazy.ofBound(owner ->
             owner.pool().ensureArrayType(owner.pool().typeType()));
 
-    private final Lazy.Owner<xRTType, ArrayConstant> f_constEmptyTypeArray = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTType, ArrayConstant> f_constEmptyTypeArray = Lazy.ofBound(owner ->
             owner.pool().ensureArrayConstant(owner.f_typeArray.get(owner), Constant.NO_CONSTS));
 
-    private final Lazy.Owner<xRTType, TypeConstant> f_typeListMap = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xRTType, TypeConstant> f_typeListMap = Lazy.ofBound(owner -> {
         ConstantPool  pool = owner.pool();
         TypeConstant type = pool.ensureEcstasyTypeConstant("maps.ListMap");
         type = pool.ensureParameterizedTypeConstant(type, pool.typeString(), pool.typeType());
         return pool.ensureImmutableTypeConstant(type);
     });
 
-    private final Lazy.Owner<xRTType, TypeComposition> f_compRegister = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTType, TypeComposition> f_compRegister = Lazy.ofBound(owner ->
             owner.container().resolveClass(owner.pool().ensureEcstasyTypeConstant("reflect.Register")));
 
-    private final Lazy.Owner<xRTType, MethodStructure> f_ctorRegister = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTType, MethodStructure> f_ctorRegister = Lazy.ofBound(owner ->
             owner.f_compRegister.get(owner).getTemplate().getStructure().findMethod("construct", 1));
 
-    private final Lazy.Owner<xRTType, PropertyConstant> f_propCalculate = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTType, PropertyConstant> f_propCalculate = Lazy.ofBound(owner ->
             (PropertyConstant) owner.pool().clzLazy().getComponent()
                     .getChild("calculate").getIdentityConstant());
 
-    private final Lazy.Owner<xRTType, PropertyConstant> f_propHasher = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTType, PropertyConstant> f_propHasher = Lazy.ofBound(owner ->
             (PropertyConstant) owner.f_struct.getChild("hasher").getIdentityConstant());
 }

@@ -602,40 +602,40 @@ public class xRTClassTemplate
      * Reflective class-template metadata is cached per owner template. These final lazy cells preserve
      * the old one-time lookup behavior without constructor-time owner capture or global sharing.
      */
-    private final Lazy.Owner<xRTClassTemplate, TypeConstant> f_typeClassTemplate = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTClassTemplate, TypeConstant> f_typeClassTemplate = Lazy.ofBound(owner ->
             owner.pool().ensureEcstasyTypeConstant("reflect.ClassTemplate"));
 
-    private final Lazy.Owner<xRTClassTemplate, TypeConstant> f_typeClassTemplateArray =
-            Lazy.ofOwner(owner -> owner.pool().ensureArrayType(owner.f_typeClassTemplate.get(owner)));
+    private final Lazy.Bound<xRTClassTemplate, TypeConstant> f_typeClassTemplateArray =
+            Lazy.ofBound(owner -> owner.pool().ensureArrayType(owner.f_typeClassTemplate.get(owner)));
 
-    private final Lazy.Owner<xRTClassTemplate, TypeConstant> f_typeMultiMethodArray =
-            Lazy.ofOwner(owner -> owner.pool().ensureArrayType(
+    private final Lazy.Bound<xRTClassTemplate, TypeConstant> f_typeMultiMethodArray =
+            Lazy.ofBound(owner -> owner.pool().ensureArrayType(
                     owner.pool().ensureEcstasyTypeConstant("reflect.MultiMethodTemplate")));
 
-    private final Lazy.Owner<xRTClassTemplate, TypeConstant> f_typeMethodArray =
-            Lazy.ofOwner(owner -> owner.pool().ensureArrayType(
+    private final Lazy.Bound<xRTClassTemplate, TypeConstant> f_typeMethodArray =
+            Lazy.ofBound(owner -> owner.pool().ensureArrayType(
                     owner.pool().ensureEcstasyTypeConstant("reflect.MethodTemplate")));
 
-    private final Lazy.Owner<xRTClassTemplate, TypeConstant> f_typeAnnotationArray =
-            Lazy.ofOwner(owner -> owner.pool().ensureArrayType(
+    private final Lazy.Bound<xRTClassTemplate, TypeConstant> f_typeAnnotationArray =
+            Lazy.ofBound(owner -> owner.pool().ensureArrayType(
                     owner.pool().ensureEcstasyTypeConstant("reflect.AnnotationTemplate")));
 
-    private final Lazy.Owner<xRTClassTemplate, TypeConstant> f_typeContributionArray =
-            Lazy.ofOwner(owner -> owner.pool().ensureArrayType(owner.pool().ensureEcstasyTypeConstant(
+    private final Lazy.Bound<xRTClassTemplate, TypeConstant> f_typeContributionArray =
+            Lazy.ofBound(owner -> owner.pool().ensureArrayType(owner.pool().ensureEcstasyTypeConstant(
                     "reflect.ClassTemplate.Composition.Contribution")));
 
-    private final Lazy.Owner<xRTClassTemplate, ArrayConstant> f_constEmptyParameterArray =
-            Lazy.ofOwner(owner -> owner.pool().ensureArrayConstant(
+    private final Lazy.Bound<xRTClassTemplate, ArrayConstant> f_constEmptyParameterArray =
+            Lazy.ofBound(owner -> owner.pool().ensureArrayConstant(
                     owner.pool().ensureArrayType(
                             owner.pool().ensureEcstasyTypeConstant("reflect.TypeParameter")),
                     Constant.NO_CONSTS));
 
-    private final Lazy.Owner<xRTClassTemplate, xEnum> f_templateAction = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTClassTemplate, xEnum> f_templateAction = Lazy.ofBound(owner ->
             owner.container().getEnumTemplate("reflect.ClassTemplate.Composition.Action"));
 
-    private final Lazy.Owner<xRTClassTemplate, MethodStructure> f_methodCreateContrib =
-            Lazy.ofOwner(owner -> owner.getStructure().findMethod("createContribution", 6));
+    private final Lazy.Bound<xRTClassTemplate, MethodStructure> f_methodCreateContrib =
+            Lazy.ofBound(owner -> owner.getStructure().findMethod("createContribution", 6));
 
-    private final Lazy.Owner<xRTClassTemplate, MethodStructure> f_methodCreateTypeParameters =
-            Lazy.ofOwner(owner -> owner.getStructure().findMethod("createTypeParameters", 2));
+    private final Lazy.Bound<xRTClassTemplate, MethodStructure> f_methodCreateTypeParameters =
+            Lazy.ofBound(owner -> owner.getStructure().findMethod("createTypeParameters", 2));
 }

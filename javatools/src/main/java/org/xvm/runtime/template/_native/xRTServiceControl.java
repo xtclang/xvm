@@ -144,7 +144,7 @@ public class xRTServiceControl
     /**
      * Lazily resolved ServiceControl composition owned by this template's container.
      */
-    private final Lazy.Owner<xRTServiceControl, TypeComposition> f_clzControl = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xRTServiceControl, TypeComposition> f_clzControl = Lazy.ofBound(owner -> {
         TypeConstant typeMask = owner.pool().ensureEcstasyTypeConstant("Service.ServiceControl");
         return owner.ensureClass(owner.container(), owner.getCanonicalType(), typeMask);
     });
@@ -152,6 +152,6 @@ public class xRTServiceControl
     /**
      * Lazily resolved Service.ServiceStatus enum template owned by this template's container.
      */
-    private final Lazy.Owner<xRTServiceControl, xEnum> f_templateServiceStatus =
-            Lazy.ofOwner(owner -> owner.container().getEnumTemplate("Service.ServiceStatus"));
+    private final Lazy.Bound<xRTServiceControl, xEnum> f_templateServiceStatus =
+            Lazy.ofBound(owner -> owner.container().getEnumTemplate("Service.ServiceStatus"));
 }

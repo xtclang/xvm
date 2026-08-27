@@ -318,11 +318,11 @@ public class xPackage
 
     // ListMap metadata is owned by this template's container. Keeping it as final lazy state
     // preserves the old per-template cache without racing through process-global statics.
-    private final Lazy.Owner<xPackage, TypeConstant> f_typeListMap = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xPackage, TypeConstant> f_typeListMap = Lazy.ofBound(owner ->
             owner.pool().ensureParameterizedTypeConstant(
                     owner.pool().ensureEcstasyTypeConstant("maps.ListMap"),
                     owner.pool().typeString(), owner.pool().typeClass()));
 
-    private final Lazy.Owner<xPackage, ClassTemplate> f_templateListMap = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xPackage, ClassTemplate> f_templateListMap = Lazy.ofBound(owner ->
             owner.container().getTemplate(owner.f_typeListMap.get(owner)));
 }

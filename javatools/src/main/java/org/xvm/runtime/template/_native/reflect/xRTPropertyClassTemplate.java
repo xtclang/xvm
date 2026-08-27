@@ -287,8 +287,8 @@ public class xRTPropertyClassTemplate
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private final Lazy.Owner<xRTPropertyClassTemplate, TypeComposition> f_compPropertyClassTemplate =
-            Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xRTPropertyClassTemplate, TypeComposition> f_compPropertyClassTemplate =
+            Lazy.ofBound(owner -> {
         TypeConstant typeMask = owner.pool().ensureEcstasyTypeConstant("reflect.ClassTemplate");
         return owner.ensureClass(owner.container(), owner.getCanonicalType(), typeMask);
     });

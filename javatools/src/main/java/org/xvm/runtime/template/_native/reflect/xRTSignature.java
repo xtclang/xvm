@@ -544,29 +544,29 @@ public class xRTSignature
      * Signature metadata belongs to a ConstantPool/Container pair. Keeping these as final lazy
      * fields preserves the old one-time caching behavior without sharing metadata across owners.
      */
-    private final Lazy.Owner<xRTSignature, TypeConstant> f_typeReturn = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTSignature, TypeConstant> f_typeReturn = Lazy.ofBound(owner ->
             owner.pool().ensureEcstasyTypeConstant("reflect.Return"));
 
-    private final Lazy.Owner<xRTSignature, TypeConstant> f_typeParam = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTSignature, TypeConstant> f_typeParam = Lazy.ofBound(owner ->
             owner.pool().typeParameter());
 
-    private final Lazy.Owner<xRTSignature, TypeConstant> f_typeRTReturn = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTSignature, TypeConstant> f_typeRTReturn = Lazy.ofBound(owner ->
             owner.container().getClassStructure("_native.reflect.RTReturn")
                     .getIdentityConstant().getType());
 
-    private final Lazy.Owner<xRTSignature, TypeConstant> f_typeRTParam = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTSignature, TypeConstant> f_typeRTParam = Lazy.ofBound(owner ->
             owner.container().getClassStructure("_native.reflect.RTParameter")
                     .getIdentityConstant().getType());
 
-    private final Lazy.Owner<xRTSignature, xConst> f_templateRTReturn = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTSignature, xConst> f_templateRTReturn = Lazy.ofBound(owner ->
             owner.container().getTemplate(owner.f_typeRTReturn.get(owner), xConst.class));
 
-    private final Lazy.Owner<xRTSignature, xConst> f_templateRTParam = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTSignature, xConst> f_templateRTParam = Lazy.ofBound(owner ->
             owner.container().getTemplate(owner.f_typeRTParam.get(owner), xConst.class));
 
-    private final Lazy.Owner<xRTSignature, TypeComposition> f_clzReturnArray = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTSignature, TypeComposition> f_clzReturnArray = Lazy.ofBound(owner ->
             owner.container().resolveClass(owner.pool().ensureArrayType(owner.f_typeReturn.get(owner))));
 
-    private final Lazy.Owner<xRTSignature, TypeComposition> f_clzParamArray = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTSignature, TypeComposition> f_clzParamArray = Lazy.ofBound(owner ->
             owner.container().resolveClass(owner.pool().ensureArrayType(owner.f_typeParam.get(owner))));
 }

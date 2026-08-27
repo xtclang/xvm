@@ -872,9 +872,9 @@ public class xRTTypeTemplate
         private MethodStructure               constructor;
     }
 
-    private final Lazy.Owner<xRTTypeTemplate, TypeConstant> f_typeTemplateArray = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTTypeTemplate, TypeConstant> f_typeTemplateArray = Lazy.ofBound(owner ->
             owner.pool().ensureArrayType(owner.pool().ensureEcstasyTypeConstant("reflect.TypeTemplate")));
 
-    private final Lazy.Owner<xRTTypeTemplate, MethodStructure> f_methodCreateComposition = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTTypeTemplate, MethodStructure> f_methodCreateComposition = Lazy.ofBound(owner ->
             owner.f_struct.findMethod("createComposition", 2));
 }

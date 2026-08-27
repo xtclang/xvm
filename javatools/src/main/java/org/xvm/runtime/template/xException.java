@@ -431,6 +431,6 @@ public class xException
     /**
      * Owner-scoped equivalent of the old static well-known exception class cache.
      */
-    private final Lazy.Owner<xException, ExceptionInfo> f_info =
-            Lazy.ofOwner(xException::createExceptionInfo);
+    private final Lazy.Bound<xException, ExceptionInfo> f_info =
+            Lazy.ofBound(xException::createExceptionInfo);
 }

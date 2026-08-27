@@ -976,6 +976,6 @@ public class xRTDelegate
 
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};
 
-    private final Lazy.Owner<xRTDelegate, Map<TypeConstant, xRTDelegate>> f_delegates =
-            Lazy.ofOwner(xRTDelegate::createDelegates);
+    private final Lazy.Bound<xRTDelegate, Map<TypeConstant, xRTDelegate>> f_delegates =
+            Lazy.ofBound(xRTDelegate::createDelegates);
 }

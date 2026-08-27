@@ -1573,13 +1573,13 @@ public class xRTFunction
     // These caches are derived from this template's ConstantPool and structure. Keeping them lazy
     // and final preserves the old interning/handle caching behavior without leaking one container's
     // metadata into another container through process-global mutable statics.
-    private final Lazy.Owner<xRTFunction, TypeConstant> f_typeFunctionArray = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTFunction, TypeConstant> f_typeFunctionArray = Lazy.ofBound(owner ->
             owner.pool().ensureArrayType(owner.pool().typeFunction()));
 
-    private final Lazy.Owner<xRTFunction, ArrayConstant> f_constEmptyFunctionArray = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTFunction, ArrayConstant> f_constEmptyFunctionArray = Lazy.ofBound(owner ->
             owner.pool().ensureArrayConstant(owner.f_typeFunctionArray.get(owner), Constant.NO_CONSTS));
 
-    private final Lazy.Owner<xRTFunction, TypeConstant> f_typeListMap = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTFunction, TypeConstant> f_typeListMap = Lazy.ofBound(owner ->
             owner.pool().ensureParameterizedTypeConstant(
                     owner.pool().ensureEcstasyTypeConstant("maps.ListMap"),
                     owner.pool().typeParameter(), owner.pool().typeObject()));
@@ -1588,7 +1588,7 @@ public class xRTFunction
      * RTFunction:
      *      static (Int[], Object[]) toArray(Map<Parameter, Object> params)
      */
-    private final Lazy.Owner<xRTFunction, MethodStructure> f_methodToArray = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xRTFunction, MethodStructure> f_methodToArray = Lazy.ofBound(owner ->
             owner.getStructure().findMethod("toArray", 1));
 
     private static xRTFunction template(Container container) {

@@ -564,7 +564,7 @@ public class xService
     /**
      * The inception class for the native rebase.
      */
-    private final Lazy.Owner<xService, ClassConstant> f_constInception = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xService, ClassConstant> f_constInception = Lazy.ofBound(owner ->
             new NativeRebaseConstant((ClassConstant) owner.f_struct.getIdentityConstant()));
 
     /**
@@ -576,7 +576,7 @@ public class xService
     /**
      * Property constant for "Timeout.remainingTime".
      */
-    private final Lazy.Owner<xService, PropertyConstant> f_propRemainingTime = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xService, PropertyConstant> f_propRemainingTime = Lazy.ofBound(owner -> {
         IdentityConstant idTimeout  = owner.pool().getImplicitlyImportedIdentity("Timeout");
         ClassStructure   clzTimeout = (ClassStructure) idTimeout.getComponent();
         return (PropertyConstant) clzTimeout.getChild("remainingTime").getIdentityConstant();
@@ -585,6 +585,6 @@ public class xService
     /**
      * Enum used by the native properties.
      */
-    private final Lazy.Owner<xService, xEnum> f_templateSynchronicity = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xService, xEnum> f_templateSynchronicity = Lazy.ofBound(owner ->
             owner.container().getEnumTemplate("Service.Synchronicity"));
 }

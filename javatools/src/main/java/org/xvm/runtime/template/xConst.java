@@ -815,5 +815,5 @@ public class xConst
      * signatures are derived from this template's container and constant pool, so they cannot be
      * shared safely between containers.
      */
-    private final Lazy.Owner<xConst, ConstInfo> f_info = Lazy.ofOwner(xConst::createInfo);
+    private final Lazy.Bound<xConst, ConstInfo> f_info = Lazy.ofBound(xConst::createInfo);
 }

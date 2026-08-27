@@ -133,6 +133,6 @@ public class xOSDirectory
      * MethodStructure to this template's owning ClassStructure instead of a
      * process-global static.
      */
-    private final Lazy.Owner<xOSDirectory, MethodStructure> f_constructor =
-            Lazy.ofOwner(owner -> owner.getStructure().findConstructor());
+    private final Lazy.Bound<xOSDirectory, MethodStructure> f_constructor =
+            Lazy.ofBound(owner -> owner.getStructure().findConstructor());
 }

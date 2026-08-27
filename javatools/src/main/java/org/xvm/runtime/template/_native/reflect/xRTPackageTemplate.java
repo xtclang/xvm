@@ -51,8 +51,8 @@ public class xRTPackageTemplate
     /**
      * PackageTemplate is a container-owned type constant, not JVM-global metadata.
      */
-    private final Lazy.Owner<xRTPackageTemplate, TypeConstant> f_typePackageTemplate =
-            Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xRTPackageTemplate, TypeConstant> f_typePackageTemplate =
+            Lazy.ofBound(owner -> {
         ConstantPool pool = owner.container().getConstantPool();
         return pool.ensureEcstasyTypeConstant("reflect.PackageTemplate");
     });

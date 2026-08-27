@@ -322,7 +322,7 @@ public class xContainerLinker
     /**
      * Lazily resolved ResourceProvider.getResource signature owned by this template's container.
      */
-    private final Lazy.Owner<xContainerLinker, SignatureConstant> f_sigGetResource = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xContainerLinker, SignatureConstant> f_sigGetResource = Lazy.ofBound(owner -> {
         ClassStructure clz = (ClassStructure)
                 owner.pool().ensureEcstasyClassConstant("mgmt.ResourceProvider").getComponent();
         return clz.findMethod("getResource", 2).getIdentityConstant().getSignature();
@@ -331,7 +331,7 @@ public class xContainerLinker
     /**
      * Cached Linker handle.
      */
-    private final Lazy.Owner<xContainerLinker, ObjectHandle> f_hLinker = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xContainerLinker, ObjectHandle> f_hLinker = Lazy.ofBound(owner ->
             owner.createServiceHandle(owner.container().createServiceContext("Linker"),
                     owner.getCanonicalClass(), owner.getCanonicalType()));
 }

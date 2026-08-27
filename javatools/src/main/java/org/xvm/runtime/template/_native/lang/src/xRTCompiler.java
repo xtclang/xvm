@@ -499,7 +499,7 @@ public class xRTCompiler
      * identity is still found once for this template, but it stays tied to this container's module
      * repository metadata.
      */
-    private final Lazy.Owner<xRTCompiler, MethodConstant> f_idGetModule = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xRTCompiler, MethodConstant> f_idGetModule = Lazy.ofBound(owner -> {
         ClassStructure structRepo = owner.container().getClassStructure("mgmt.ModuleRepository");
         return structRepo.findMethod("getModule", 2).getIdentityConstant();
     });

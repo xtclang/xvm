@@ -553,8 +553,8 @@ public class xNanosTimer
      * class through the caller's frame so the cached TypeComposition belongs to the active
      * container, while retaining the one-time template lookup underneath.
      */
-    private final Lazy.Owner<xNanosTimer, TypeComposition> f_clzDuration =
-            Lazy.ofOwner(owner -> owner.container().getTemplate("temporal.Duration").getCanonicalClass());
+    private final Lazy.Bound<xNanosTimer, TypeComposition> f_clzDuration =
+            Lazy.ofBound(owner -> owner.container().getTemplate("temporal.Duration").getCanonicalClass());
 
     private TypeComposition ensureDurationClass() {
         return f_clzDuration.get(this);

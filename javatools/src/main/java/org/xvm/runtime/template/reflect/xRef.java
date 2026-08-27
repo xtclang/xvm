@@ -79,8 +79,8 @@ public class xRef
                 ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
                 : null;
         f_sigGet = canonical
-                ? Lazy.ofOwner(xRef::resolveGetSignature)
-                : Lazy.ofOwner(owner -> xRef.getInstance(owner.container()).getGetSignature());
+                ? Lazy.ofBound(xRef::resolveGetSignature)
+                : Lazy.ofBound(owner -> xRef.getInstance(owner.container()).getGetSignature());
     }
 
     @Override
@@ -1244,7 +1244,7 @@ public class xRef
 
     private final ClassConstant f_constInception;
 
-    private final Lazy.Owner<xRef, SignatureConstant> f_sigGet;
+    private final Lazy.Bound<xRef, SignatureConstant> f_sigGet;
 
 
     // ----- helper types --------------------------------------------------------------------------

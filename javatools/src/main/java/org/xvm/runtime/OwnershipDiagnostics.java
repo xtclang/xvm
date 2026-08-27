@@ -984,19 +984,19 @@ public final class OwnershipDiagnostics {
 
         private void dumpNativeTemplates(Container container) {
             Object lazy = readField(container, "f_nativeTemplates");
-            if (!(lazy instanceof Lazy.Owner<?, ?> ownerLazy)) {
+            if (!(lazy instanceof Lazy.Bound<?, ?> ownerLazy)) {
                 line(1, "nativeTemplates = " + describe(lazy, container));
                 return;
             }
 
             boolean computed = ownerLazy.isComputed();
-            line(1, "nativeTemplates = Lazy.Owner[" + (computed ? "computed" : "deferred") + "]");
+            line(1, "nativeTemplates = Lazy.Bound[" + (computed ? "computed" : "deferred") + "]");
             if (!computed && !forceLazy) {
                 return;
             }
 
             NativeTemplates templates = withOwnerPool(container,
-                    () -> ownerLazy.get(container, NativeTemplates.class));
+                    () -> (NativeTemplates) getBound(ownerLazy, container));
             if (emitDump) {
                 out.append("    value = ")
                         .append(describe(templates, container))
@@ -1030,7 +1030,7 @@ public final class OwnershipDiagnostics {
                 if (value instanceof Lazy<?> lazy) {
                     dumpLazy(field.getDeclaringClass().getSimpleName() + "." + field.getName(),
                             lazy, expected, indent + 1, allowNativeOwner);
-                } else if (value instanceof Lazy.Owner<?, ?> lazy) {
+                } else if (value instanceof Lazy.Bound<?, ?> lazy) {
                     dumpOwnerLazy(field.getDeclaringClass().getSimpleName() + "." + field.getName(),
                             lazy, lazyOwner(owner, field), expected, indent + 1, allowNativeOwner);
                 }
@@ -1052,10 +1052,10 @@ public final class OwnershipDiagnostics {
             }
         }
 
-        private void dumpOwnerLazy(String label, Lazy.Owner<?, ?> lazy, Object owner,
+        private void dumpOwnerLazy(String label, Lazy.Bound<?, ?> lazy, Object owner,
                                    Container expected, int indent, boolean allowNativeOwner) {
             boolean computed = lazy.isComputed();
-            line(indent, label + " = Lazy.Owner[" + (computed ? "computed" : "deferred") + "]");
+            line(indent, label + " = Lazy.Bound[" + (computed ? "computed" : "deferred") + "]");
 
             if (computed || forceLazy) {
                 if (owner == null) {
@@ -1065,9 +1065,20 @@ public final class OwnershipDiagnostics {
 
                 Container ownerContainer = ownerOf(owner);
                 Container scopedOwner    = Objects.requireNonNullElse(ownerContainer, expected);
-                dumpValue("value", withOwnerPool(scopedOwner, () -> lazy.get(owner, Object.class)),
+                dumpValue("value", withOwnerPool(scopedOwner, () -> getBound(lazy, owner)),
                         expected, indent + 1, allowNativeOwner);
             }
+        }
+
+        /**
+         * Invoke {@link Lazy.Bound#get} on a wildcard {@code Lazy.Bound<?, ?>} held reflectively by
+         * this diagnostic. Master's {@code Lazy.Bound} exposes only the typed {@code get(O)}, so the
+         * raw-owner cast is unavoidable here; the diagnostic already validated the field is a bound
+         * lazy before calling.
+         */
+        @SuppressWarnings("unchecked")
+        private static Object getBound(Lazy.Bound<?, ?> bound, Object owner) {
+            return ((Lazy.Bound<Object, Object>) bound).get(owner);
         }
 
         private void dumpMap(String label, Object value, Container expected, int indent) {
@@ -1110,7 +1121,7 @@ public final class OwnershipDiagnostics {
             record("key " + key, key, expected, allowNativeOwner);
             if (value instanceof Lazy<?> lazy) {
                 dumpLazy(String.valueOf(key), lazy, expected, indent, allowNativeOwner);
-            } else if (value instanceof Lazy.Owner<?, ?> lazy) {
+            } else if (value instanceof Lazy.Bound<?, ?> lazy) {
                 dumpOwnerLazy(String.valueOf(key), lazy, lazyOwner, expected, indent,
                         allowNativeOwner);
             } else {
@@ -1424,7 +1435,7 @@ public final class OwnershipDiagnostics {
 
         private static Object lazyOwner(Object owner, Field field) {
             if (owner instanceof ClassComposition
-                    && Lazy.Owner.class.isAssignableFrom(field.getType())) {
+                    && Lazy.Bound.class.isAssignableFrom(field.getType())) {
                 return readField(owner, "f_clzInception");
             }
             return owner;
@@ -1465,7 +1476,7 @@ public final class OwnershipDiagnostics {
                 for (Field field : current.getDeclaredFields()) {
                     if (!Modifier.isStatic(field.getModifiers())
                             && (Lazy.class.isAssignableFrom(field.getType())
-                                || Lazy.Owner.class.isAssignableFrom(field.getType()))) {
+                                || Lazy.Bound.class.isAssignableFrom(field.getType()))) {
                         field.setAccessible(true);
                         fields.add(field);
                     }

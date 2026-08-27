@@ -782,6 +782,6 @@ public class xTuple
      * Owner-scoped empty tuple handle. The handle's composition is container-owned, so the old static
      * H_VOID cache could leak one container's Tuple() into another container.
      */
-    private final Lazy.Owner<xTuple, TupleHandle> f_hVoid =
-            Lazy.ofOwner(owner -> xTuple.makeImmutableHandle(owner.getCanonicalClass(), Utils.OBJECTS_NONE));
+    private final Lazy.Bound<xTuple, TupleHandle> f_hVoid =
+            Lazy.ofBound(owner -> xTuple.makeImmutableHandle(owner.getCanonicalClass(), Utils.OBJECTS_NONE));
 }

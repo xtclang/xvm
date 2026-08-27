@@ -363,7 +363,7 @@ public final class PropertyComposition
     private static PropertyComposition createStructView(PropertyComposition owner) {
         /*
          * The struct view is a runtime composition object for this property owner. It shares all
-         * call-chain caches with the inception composition, so Lazy.Owner publishes one completed
+         * call-chain caches with the inception composition, so Lazy.Bound publishes one completed
          * view without a constructor-captured `this` supplier or a mutable cache field.
          */
         return new PropertyComposition(owner);
@@ -389,6 +389,6 @@ public final class PropertyComposition
 
     private final boolean f_fStruct;
 
-    private final Lazy.Owner<PropertyComposition, PropertyComposition> f_structView =
-            Lazy.ofOwner(PropertyComposition::createStructView);
+    private final Lazy.Bound<PropertyComposition, PropertyComposition> f_structView =
+            Lazy.ofBound(PropertyComposition::createStructView);
 }

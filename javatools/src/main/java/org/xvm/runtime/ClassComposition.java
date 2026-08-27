@@ -80,9 +80,9 @@ public final class ClassComposition
         f_mapMethods      = new ConcurrentHashMap<>();
         f_mapGetters      = new ConcurrentHashMap<>();
         f_mapSetters      = new ConcurrentHashMap<>();
-        f_fieldLayout     = Lazy.ofOwner(ClassComposition::buildFieldLayout);
-        f_fieldNames      = Lazy.ofOwner(ClassComposition::buildFieldNameArray);
-        f_methodInit      = Lazy.ofOwner(ClassComposition::buildAutoInitializer);
+        f_fieldLayout     = Lazy.ofBound(ClassComposition::buildFieldLayout);
+        f_fieldNames      = Lazy.ofBound(ClassComposition::buildFieldNameArray);
+        f_methodInit      = Lazy.ofBound(ClassComposition::buildAutoInitializer);
     }
 
     /**
@@ -274,7 +274,7 @@ public final class ClassComposition
         /*
          * The synthetic structure initializer is owner-pool metadata, not decoded class identity.
          * All access views share the inception composition's field layout, so publish one completed
-         * initializer from that owner through a final Lazy.Owner cell instead of a mutable field.
+         * initializer from that owner through a final Lazy.Bound cell instead of a mutable field.
          */
         MethodStructure method = f_methodInit.get(this);
         return method.isAbstract() ? null : method;
@@ -995,17 +995,17 @@ public final class ClassComposition
      * regular-field count, and flags in one final lazy holder so access views cannot copy a stale
      * partial layout.
      */
-    private final Lazy.Owner<ClassComposition, FieldLayout> f_fieldLayout;
+    private final Lazy.Bound<ClassComposition, FieldLayout> f_fieldLayout;
 
     /**
      * Cached field-name handles for native Stringable methods.
      */
-    private final Lazy.Owner<ClassComposition, StringHandle[]> f_fieldNames;
+    private final Lazy.Bound<ClassComposition, StringHandle[]> f_fieldNames;
 
     /**
      * Cached auto-generated structure initializer.
      */
-    private final Lazy.Owner<ClassComposition, MethodStructure> f_methodInit;
+    private final Lazy.Bound<ClassComposition, MethodStructure> f_methodInit;
 
     /**
      * Marker for a cached null {@link CallChain}.

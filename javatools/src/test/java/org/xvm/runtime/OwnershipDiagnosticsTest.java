@@ -65,8 +65,8 @@ public class OwnershipDiagnosticsTest {
             assertTrue(dump.contains("runtimeRegistry = contains=true size=1"));
             assertTrue(dump.contains("constHeap = ConstHeap@"));
             assertTrue(dump.contains("owner=explicit-parameter"));
-            assertTrue(dump.contains("nativeTemplates = Lazy.Owner[deferred]"));
-            assertFalse(dump.contains("nativeTemplates = Lazy.Owner[computed]"));
+            assertTrue(dump.contains("nativeTemplates = Lazy.Bound[deferred]"));
+            assertFalse(dump.contains("nativeTemplates = Lazy.Bound[computed]"));
         } finally {
             runtime.shutdownXVM();
         }

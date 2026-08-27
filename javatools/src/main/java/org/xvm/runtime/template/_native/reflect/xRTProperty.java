@@ -401,7 +401,7 @@ public class xRTProperty
      * Empty Property array constants are pool-owned. Caching the key on this container's template
      * preserves the old ConstHeap handle cache without crossing container ConstantPools.
      */
-    private final Lazy.Owner<xRTProperty, ArrayConstant> f_constEmptyPropertyArray = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xRTProperty, ArrayConstant> f_constEmptyPropertyArray = Lazy.ofBound(owner -> {
         ConstantPool pool = owner.pool();
         return pool.ensureArrayConstant(
                 pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Property")),

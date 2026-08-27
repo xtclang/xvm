@@ -17,7 +17,6 @@ import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -110,16 +109,16 @@ public class ClassCompositionSafePublicationTest {
                 assertThrows(UnsupportedOperationException.class, () ->
                         clz.getFieldLayout().clear());
 
-                var fieldLayout = (Lazy.Owner<?, ?>) fieldLayoutCell.get(clz);
+                var fieldLayout = (Lazy.Bound<?, ?>) fieldLayoutCell.get(clz);
                 assertTrue(fieldLayout.isComputed());
 
-                var fieldNames = (Lazy.Owner<?, ?>) fieldNamesCell.get(clz);
+                var fieldNames = (Lazy.Bound<?, ?>) fieldNamesCell.get(clz);
                 assertTrue(fieldNames.isComputed());
-                assertSame(first.names(), fieldNames.get(clz, StringHandle[].class));
+                assertSame(first.names(), rawGet(fieldNames, clz));
 
-                var initializerLazy = (Lazy.Owner<?, ?>) initializerCell.get(clz);
+                var initializerLazy = (Lazy.Bound<?, ?>) initializerCell.get(clz);
                 assertTrue(initializerLazy.isComputed());
-                var initializer = initializerLazy.get(clz, MethodStructure.class);
+                var initializer = (MethodStructure) rawGet(initializerLazy, clz);
                 assertNotNull(initializer);
                 if (first.initializer() != null) {
                     assertSame(first.initializer(), initializer);
@@ -133,7 +132,7 @@ public class ClassCompositionSafePublicationTest {
     /**
      * PropertyComposition struct access is also a runtime view cache. The old plain field could
      * publish duplicate struct view identities under parallel first access. The fixed code uses
-     * Lazy.Owner so the cache stays final, owner-derived, and free of constructor-time `this`
+     * Lazy.Bound so the cache stays final, owner-derived, and free of constructor-time `this`
      * capture while preserving one lazy struct view per property composition.
      */
     @Test
@@ -185,7 +184,7 @@ public class ClassCompositionSafePublicationTest {
                 assertTrue(first.isStruct());
                 assertSame(first, property.ensureAccess(Access.STRUCT));
                 assertSame(property, first.ensureAccess(Access.PUBLIC));
-                var lazy = (Lazy.Owner<?, ?>) structViewCell.get(property);
+                var lazy = (Lazy.Bound<?, ?>) structViewCell.get(property);
                 assertTrue(lazy.isComputed());
             }
         } finally {
@@ -223,15 +222,26 @@ public class ClassCompositionSafePublicationTest {
     @SuppressWarnings("unchecked")
     private static void setOwnerLazyValue(ClassComposition clz, String name, Object value)
             throws Exception {
-        var lazy       = (Lazy.Owner<?, ?>) finalField(ClassComposition.class, name).get(clz);
-        var ownerField = Lazy.Owner.class.getDeclaredField("owner");
+        var lazy       = (Lazy.Bound<?, ?>) finalField(ClassComposition.class, name).get(clz);
+        var ownerField = Lazy.Bound.class.getDeclaredField("owner");
         ownerField.setAccessible(true);
         ownerField.set(lazy, clz);
 
-        var valueRefField = Lazy.Owner.class.getDeclaredField("valueRef");
-        valueRefField.setAccessible(true);
-        var valueRef = (AtomicReference<Object>) valueRefField.get(lazy);
-        valueRef.set(value);
+        // master's Lazy.Bound holds the computed value in a plain 'value' field (VarHandle-published),
+        // not an AtomicReference; install it directly for this white-box safe-publication test.
+        var valueField = Lazy.Bound.class.getDeclaredField("value");
+        valueField.setAccessible(true);
+        valueField.set(lazy, value);
+    }
+
+    /**
+     * Invoke {@link Lazy.Bound#get} on a wildcard {@code Lazy.Bound<?, ?>} the test holds via
+     * reflection. Master's {@code Lazy.Bound} exposes only the typed {@code get(O)}, so the raw-owner
+     * cast is unavoidable; the test has already asserted the cell is computed.
+     */
+    @SuppressWarnings("unchecked")
+    private static Object rawGet(Lazy.Bound<?, ?> bound, Object owner) {
+        return ((Lazy.Bound<Object, Object>) bound).get(owner);
     }
 
     private static Field finalField(Class<?> clz, String name) throws Exception {

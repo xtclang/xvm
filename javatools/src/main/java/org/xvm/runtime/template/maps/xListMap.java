@@ -139,6 +139,6 @@ public class xListMap
      * Owner-scoped constructor cache. The MethodStructure belongs to the template structure resolved
      * by this container; keeping it static would cross containers during parallel startup.
      */
-    private final Lazy.Owner<xListMap, MethodStructure> f_constructor = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xListMap, MethodStructure> f_constructor = Lazy.ofBound(owner ->
             owner.getStructure().findMethod("construct", m -> m.getParamCount() == 3));
 }

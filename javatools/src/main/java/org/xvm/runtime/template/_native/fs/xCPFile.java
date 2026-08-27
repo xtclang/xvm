@@ -57,6 +57,6 @@ public class xCPFile
      * MethodStructure to this template's owning ClassStructure instead of a
      * process-global static.
      */
-    private final Lazy.Owner<xCPFile, MethodStructure> f_constructor = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xCPFile, MethodStructure> f_constructor = Lazy.ofBound(owner ->
             owner.getStructure().findConstructor(owner.container().getConstantPool().typeObject()));
 }

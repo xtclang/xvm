@@ -202,7 +202,7 @@ public class xRTMethodTemplate
      * The old cache was process-global and reached through INSTANCE. The composition is owned by
      * the native template's container, so cache it on that template instead.
      */
-    private final Lazy.Owner<xRTMethodTemplate, TypeComposition> f_compMethodTemplate = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xRTMethodTemplate, TypeComposition> f_compMethodTemplate = Lazy.ofBound(owner -> {
         ConstantPool     pool         = owner.pool();
         TypeConstant     typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
         TypeComposition  clz          = owner.ensureClass(owner.container(), typeTemplate);

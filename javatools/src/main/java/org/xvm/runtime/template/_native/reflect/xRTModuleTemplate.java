@@ -174,8 +174,8 @@ public class xRTModuleTemplate
     // This type is owned by a ConstantPool. Store it on the owner template and register it into the
     // caller's pool when constructing arrays/maps, instead of publishing one container's value in a
     // mutable static field.
-    private final Lazy.Owner<xRTModuleTemplate, TypeConstant> f_typeModuleTemplate =
-            Lazy.ofOwner(owner -> owner.pool().ensureEcstasyTypeConstant("reflect.ModuleTemplate"));
+    private final Lazy.Bound<xRTModuleTemplate, TypeConstant> f_typeModuleTemplate =
+            Lazy.ofBound(owner -> owner.pool().ensureEcstasyTypeConstant("reflect.ModuleTemplate"));
 
     private static xRTModuleTemplate template(Container container) {
         return NativeTemplates.get(container).moduleTemplate();

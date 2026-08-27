@@ -494,16 +494,16 @@ public class xString
      * Owner-local cached empty string handle. String handles carry a TypeComposition, so even the
      * common empty string must be cached by the owning container/template, not in a JVM global.
      */
-    private final Lazy.Owner<xString, StringHandle> f_emptyString =
-            Lazy.ofOwner(owner -> new StringHandle(owner.getCanonicalClass(), new char[0]));
+    private final Lazy.Bound<xString, StringHandle> f_emptyString =
+            Lazy.ofBound(owner -> new StringHandle(owner.getCanonicalClass(), new char[0]));
 
-    private final Lazy.Owner<xString, StringHandle> f_zero =
-            Lazy.ofOwner(owner -> owner.makeHandle("0"));
+    private final Lazy.Bound<xString, StringHandle> f_zero =
+            Lazy.ofBound(owner -> owner.makeHandle("0"));
 
-    private final Lazy.Owner<xString, StringHandle> f_one =
-            Lazy.ofOwner(owner -> owner.makeHandle("1"));
+    private final Lazy.Bound<xString, StringHandle> f_one =
+            Lazy.ofBound(owner -> owner.makeHandle("1"));
 
-    private final Lazy.Owner<xString, MethodStructure> f_methodAppendTo = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xString, MethodStructure> f_methodAppendTo = Lazy.ofBound(owner -> {
         ConstantPool pool    = owner.pool();
         TypeConstant typeArg = pool.ensureClassTypeConstant(
                 pool.ensureEcstasyClassConstant("Appender"), null,
@@ -512,6 +512,6 @@ public class xString
         return owner.getStructure().findMethod("appendTo", 1, typeArg);
     });
 
-    private final Lazy.Owner<xString, ArrayHandle> f_emptyStringArray =
-            Lazy.ofOwner(owner -> xArray.makeStringArrayHandle(owner.container(), Utils.STRINGS_NONE));
+    private final Lazy.Bound<xString, ArrayHandle> f_emptyStringArray =
+            Lazy.ofBound(owner -> xArray.makeStringArrayHandle(owner.container(), Utils.STRINGS_NONE));
 }

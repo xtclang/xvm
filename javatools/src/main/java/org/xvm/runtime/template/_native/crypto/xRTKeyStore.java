@@ -567,7 +567,7 @@ public class xRTKeyStore
     /**
      * Cached canonical type for this container's crypto module.
      */
-    private final Lazy.Owner<xRTKeyStore, TypeConstant> f_typeCanonical = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xRTKeyStore, TypeConstant> f_typeCanonical = Lazy.ofBound(owner -> {
         ConstantPool pool = owner.pool();
         return pool.ensureTerminalTypeConstant(
                 pool.ensureClassConstant(pool.ensureModuleConstant("crypto.xtclang.org"), "KeyStore"));
@@ -578,7 +578,7 @@ public class xRTKeyStore
      * interns the type once for this owner, but the cached constant can no longer leak across
      * containers.
      */
-    private final Lazy.Owner<xRTKeyStore, TypeConstant> f_typeNamedPassword = Lazy.ofOwner(owner -> {
+    private final Lazy.Bound<xRTKeyStore, TypeConstant> f_typeNamedPassword = Lazy.ofBound(owner -> {
         ConstantPool pool = owner.pool();
         return pool.ensureClassConstant(
                 pool.ensureModuleConstant("crypto.xtclang.org"), "CryptoPassword").getType();

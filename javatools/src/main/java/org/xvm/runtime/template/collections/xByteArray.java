@@ -208,15 +208,15 @@ public class xByteArray
         return NativeTemplates.get(container).byteArray();
     }
 
-    private final Lazy.Owner<xByteArray, TypeComposition> f_clzInt8Array = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xByteArray, TypeComposition> f_clzInt8Array = Lazy.ofBound(owner ->
             owner.container().resolveClass(owner.pool().ensureArrayType(owner.pool().typeInt8())));
 
-    private final Lazy.Owner<xByteArray, TypeComposition> f_clzInt16Array = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xByteArray, TypeComposition> f_clzInt16Array = Lazy.ofBound(owner ->
             owner.container().resolveClass(owner.pool().ensureArrayType(owner.pool().typeInt16())));
 
-    private final Lazy.Owner<xByteArray, TypeComposition> f_clzInt64Array = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xByteArray, TypeComposition> f_clzInt64Array = Lazy.ofBound(owner ->
             owner.container().resolveClass(owner.pool().ensureArrayType(owner.pool().typeInt64())));
 
-    private final Lazy.Owner<xByteArray, TypeComposition> f_clzFloat64Array = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xByteArray, TypeComposition> f_clzFloat64Array = Lazy.ofBound(owner ->
             owner.container().resolveClass(owner.pool().ensureArrayType(owner.pool().typeFloat64())));
 }

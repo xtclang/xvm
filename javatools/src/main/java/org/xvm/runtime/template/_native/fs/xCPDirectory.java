@@ -57,6 +57,6 @@ public class xCPDirectory
      * MethodStructure to this template's owning ClassStructure instead of a
      * process-global static.
      */
-    private final Lazy.Owner<xCPDirectory, MethodStructure> f_constructor = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xCPDirectory, MethodStructure> f_constructor = Lazy.ofBound(owner ->
             owner.getStructure().findConstructor(owner.container().getConstantPool().typeObject()));
 }

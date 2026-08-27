@@ -138,8 +138,8 @@ public class xRTViewFromBit
 
     // ----- data members --------------------------------------------------------------------------
 
-    private final Lazy.Owner<xRTViewFromBit, Map<TypeConstant, xRTViewFromBit>> f_views =
-            Lazy.ofOwner(xRTViewFromBit::createViews);
+    private final Lazy.Bound<xRTViewFromBit, Map<TypeConstant, xRTViewFromBit>> f_views =
+            Lazy.ofBound(xRTViewFromBit::createViews);
 
     private Map<TypeConstant, xRTViewFromBit> createViews() {
         ConstantPool                      pool     = pool();

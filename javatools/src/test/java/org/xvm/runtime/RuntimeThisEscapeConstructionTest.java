@@ -80,7 +80,7 @@ public class RuntimeThisEscapeConstructionTest {
                 "Container must not construct owner-retaining NativeTemplates during construction");
         assertFalse(container.contains("registerContainer(this)"),
                 "Container must not register itself from the base constructor");
-        assertTrue(container.contains("Lazy.ofOwner(NativeTemplates::new)"),
+        assertTrue(container.contains("Lazy.ofBound(NativeTemplates::new)"),
                 "NativeTemplates must remain owner-local and lazy after Container construction");
         assertTrue(container.contains("private final ConstHeap f_heap;"),
                 "ConstHeap should be reached through Container.getConstHeap()");

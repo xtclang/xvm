@@ -48,8 +48,8 @@ public class xVar
                 ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
                 : null;
         f_sigSet = canonical
-                ? Lazy.ofOwner(xVar::resolveSetSignature)
-                : Lazy.ofOwner(owner -> xVar.getInstance(owner.container()).getSetSignature());
+                ? Lazy.ofBound(xVar::resolveSetSignature)
+                : Lazy.ofBound(owner -> xVar.getInstance(owner.container()).getSetSignature());
     }
 
     @Override
@@ -290,5 +290,5 @@ public class xVar
 
     private final ClassConstant f_constInception;
 
-    private final Lazy.Owner<xVar, SignatureConstant> f_sigSet;
+    private final Lazy.Bound<xVar, SignatureConstant> f_sigSet;
 }

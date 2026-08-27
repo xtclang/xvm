@@ -91,7 +91,7 @@ public class xRTBuffer
 
     // Template-owned metadata must not be a process-global cache. This keeps
     // the old one-time lookup behavior, but under the owning container/template.
-    private final Lazy.Owner<xRTBuffer, PropertyConstant> f_propRawBytes =
-            Lazy.ofOwner(owner -> owner.getStructure()
+    private final Lazy.Bound<xRTBuffer, PropertyConstant> f_propRawBytes =
+            Lazy.ofBound(owner -> owner.getStructure()
                     .findPropertyDeep("rawBytes").getIdentityConstant());
 }

@@ -353,13 +353,13 @@ public class xModule
 
     // These constants are tied to this template's ConstantPool. Lazy final fields preserve the
     // previous single-computation behavior without sharing one container's constants globally.
-    private final Lazy.Owner<xModule, TypeConstant> f_typeModuleArray = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xModule, TypeConstant> f_typeModuleArray = Lazy.ofBound(owner ->
             owner.pool().ensureArrayType(owner.pool().typeModule()));
 
-    private final Lazy.Owner<xModule, ArrayConstant> f_constEmptyModuleArray = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xModule, ArrayConstant> f_constEmptyModuleArray = Lazy.ofBound(owner ->
             owner.pool().ensureArrayConstant(owner.f_typeModuleArray.get(owner), Constant.NO_CONSTS));
 
-    private final Lazy.Owner<xModule, VersionConstant> f_constDefaultVersion = Lazy.ofOwner(owner ->
+    private final Lazy.Bound<xModule, VersionConstant> f_constDefaultVersion = Lazy.ofBound(owner ->
             owner.pool().ensureVersionConstant(new Version("CI")));
 
     private static xModule template(Container container) {
