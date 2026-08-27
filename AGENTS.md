@@ -1,6 +1,6 @@
 # Agent Configuration
 
-Repo-local operator checklist for the XVM project. Imported through the root `CLAUDE.md` shim.
+Repo-local operator checklist for the XVM project.
 
 ## Git — no unsupervised remote/destructive ops
 
@@ -74,12 +74,11 @@ Non-`clean` combinations are fine: `./gradlew build installDist`, `./gradlew tes
   - Never capture script objects (`project`, `logger`, …) inside task actions.
   - Use injected services (`@Inject` `ExecOperations`, `FileSystemOperations`, `Logger`) instead of `project.exec`/`project.javaexec`.
   - Prefer Provider APIs, declared inputs/outputs, Worker API, or convention plugins; avoid eager configuration-time work.
-## Java/Kotlin style (unbreakable)
+## Java/Kotlin style
 
 - Always end files with a newline.
-- Never use star imports.
-- Never use fully-qualified Java type names in source when an import works (`ObjectFactory`, not `org.gradle.api.model.ObjectFactory`).
-- Prefer `var` when the RHS type is obvious.
+- Don't use star imports unless there is more than 20 from the same package.
+- Don't use fully-qualified Java type names in source when an import works (`ObjectFactory`, not `org.gradle.api.model.ObjectFactory`).
 - For new code, write modern Java — records, streams, generics, fluent/functional style — not Java-1.0-style raw objects/arrays.
 - Prefer immutable or minimally mutable state when there is no concrete reason for mutation; this reduces the amount of
   parallelism/reentrancy reasoning required later.
@@ -87,6 +86,8 @@ Non-`clean` combinations are fine: `./gradlew build installDist`, `./gradlew tes
   caches when the holder fits the ownership and construction constraints.
 - When fixing bugs in existing code, do not perform broad modernization rewrites unless they are needed for the fix or make
   the touched code materially safer or clearer.
+- Keep the style of the code you add to an existing class consistent with its current style.
+
 
 ## General
 
