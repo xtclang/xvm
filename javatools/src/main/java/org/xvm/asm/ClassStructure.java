@@ -551,11 +551,11 @@ public sealed class ClassStructure
      *
      * @return a read-only map of type parameter name to type
      */
-    public ListMap<StringConstant, TypeConstant> getTypeParams() {
+    public Map<StringConstant, TypeConstant> getTypeParams() {
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
                 ? ListMap.EMPTY
-                : mapThis;
+                : Collections.unmodifiableMap(mapThis);
     }
 
     /**

@@ -8203,8 +8203,8 @@ public abstract sealed class TypeConstant
                 }
 
                 if (cParamsLeft > 0) {
-                    ListMap<StringConstant, TypeConstant> mapParamsLeft  = clzLeft.getTypeParams();
-                    ListMap<StringConstant, TypeConstant> mapParamsRight = clzRight.getTypeParams();
+                    Map<StringConstant, TypeConstant> mapParamsLeft  = clzLeft.getTypeParams();
+                    Map<StringConstant, TypeConstant> mapParamsRight = clzRight.getTypeParams();
 
                     for (StringConstant constName : mapParamsLeft.keySet()) {
                         if (!mapParamsRight.containsKey(constName)) {
