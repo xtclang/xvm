@@ -480,4 +480,45 @@ class JsonMapStoreTest {
             assert keysInTx.contains("C");
         }
     }
+
+    /**
+     * Regression test for a `keys.size == size` desync in `JsonMapStore.keysAt()`.
+     */
+    @Test
+    void shouldNotDoubleCountWhenPendingModUpdatesExistingKey() {
+        assert TestClient client := clientProvider.getClient();
+        TestSchema        schema = client.testSchema;
+
+        // Seed enough committed keys to exercise an update among many history entries.
+        String[] seeded = new String[40](i -> $"key{(i + 10)}");
+        for (String k : seeded) {
+            schema.mapData.put(k, $"v-{k}");
+        }
+
+        // This shape previously failed when the history and modifications were zipper-merged.
+        String modKey = "key10";
+        assert seeded.contains(modKey);
+
+        Connection<TestSchema> conn = client.ensureConnection();
+        using (conn.createTransaction()) {
+            schema.mapData.put(modKey, "v-updated");
+
+            Int      sizeInTx = schema.mapData.size;
+            String[] keysInTx = schema.mapData.keys.toArray();
+
+            assert keysInTx.size == sizeInTx
+                    as $|keysAt() double-counted: size={sizeInTx} but {keysInTx.size} keys \
+                        |returned.
+                        ;
+
+            // no key emitted twice
+            assert new HashSet<String>(keysInTx).size == keysInTx.size
+                    as "keysAt() emitted a duplicate key";
+
+            assert sizeInTx == seeded.size;
+            for (String k : seeded) {
+                assert keysInTx.contains(k);
+            }
+        }
+    }
 }

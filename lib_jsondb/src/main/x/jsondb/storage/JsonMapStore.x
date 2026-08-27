@@ -417,87 +417,34 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             }
 
             // all the keys and values are in memory; just ship all the keys back in one array
-            Key[] keys        = new Key[](size);
-            Int   readId      = txId;
-            val   histEntries = history.entries.iterator();
+            Key[]              keys   = new Key[](size);
+            Int                readId = txId;
+            Map<Key, MapValue> mods   = NoChanges;
 
-            WriteTx: if (Changes tx := checkTx(txId)) {
+            if (Changes tx := checkTx(txId)) {
                 readId = tx.readId;
-                if (tx.peekMods().empty) {
-                    break WriteTx;
-                }
-
-                // complicated: keep an iterator of the changes to merge into the iterator of
-                // the underlying (readId) transaction version
-                val modEntries = tx.ensureMods().entries.iterator();
-                assert Map.Entry<Key, MapValue> modEntry := modEntries.next();
-
-                // create an iterator of the keys in the history to use as the "main" iterator
-                // for the "zipper" loop
-                NextHistoryKey: while (True) {
-                    if (Map.Entry<Key, History> histEntry := histEntries.next()) {
-                        while (True) {
-                            // determine if we are at a junction point between the history and
-                            // the transactional modifications
-                            switch (histEntry.key <=> modEntry.key) {
-                            case Lesser:
-                                // this history entry has no matching transaction modification
-                                if (isHistoryVisible(histEntry.value, readId)) {
-                                    keys += histEntry.key;
-                                }
-                                continue NextHistoryKey;
-
-                            case Equal:
-                                // the current transaction's modification shadows history
-                                if (modEntry.value != Deleted) {
-                                    keys += modEntry.key; // i.e. same as histEntry.key
-                                }
-
-                                if (modEntry := modEntries.next()) {
-                                    continue NextHistoryKey;
-                                } else {
-                                    // we have exhausted the transaction's modifications;
-                                    // just break out and drain the remainder of the history map
-                                    break NextHistoryKey;
-                                }
-
-                            case Greater:
-                                // the mod appears to be an insert
-                                if (modEntry.value != Deleted) {
-                                    keys += modEntry.key;
-                                }
-
-                                if (modEntry := modEntries.next()) {
-                                    break; // do NOT go to NextHistoryKey
-                                } else {
-                                    // the current history key follows the last modified key from
-                                    // the transaction; the history entry has already been taken
-                                    // from the iterator, so add its key before exiting the "zipper"
-                                    // loop (the rest will be drained below)
-                                    if (isHistoryVisible(histEntry.value, readId)) {
-                                        keys += histEntry.key;
-                                    }
-                                    break NextHistoryKey;
-                                }
-                            }
-                        }
-                    } else {
-                        // we have exhausted the history, so drain the remainder of the mods
-                        do {
-                            if (modEntry.value != Deleted) {
-                                keys += modEntry.key;
-                            }
-                        } while (modEntry := modEntries.next());
-
-                        break NextHistoryKey;
-                    }
-                }
+                mods   = tx.peekMods();
             }
 
-            // take whatever keys remain in the history iterator
-            for (val histEntry : histEntries) {
-                if (isHistoryVisible(histEntry.value, readId)) {
-                    keys += histEntry.key;
+            if (mods.empty) {
+                for ((Key key, History valueHistory) : history) {
+                    if (isHistoryVisible(valueHistory, readId)) {
+                        keys += key;
+                    }
+                }
+            } else {
+                HashSet<Key> modifiedKeys = new HashSet(mods.size);
+                for ((Key key, MapValue value) : mods) {
+                    modifiedKeys.add(key);
+                    if (value != Deleted) {
+                        keys += key;
+                    }
+                }
+
+                for ((Key key, History valueHistory) : history) {
+                    if (!modifiedKeys.contains(key) && isHistoryVisible(valueHistory, readId)) {
+                        keys += key;
+                    }
                 }
             }
 
