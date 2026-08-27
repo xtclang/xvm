@@ -6,6 +6,7 @@ import java.lang.invoke.VarHandle;
 import java.lang.ref.WeakReference;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -163,7 +164,7 @@ public class ServiceContext {
      * @return the set of Fibers for this context
      */
     public Set<Fiber> getFibers() {
-        return f_setFibers;
+        return Collections.unmodifiableSet(f_setFibers);
     }
 
     /**

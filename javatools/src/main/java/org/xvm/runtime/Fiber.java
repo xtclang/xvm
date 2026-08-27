@@ -4,6 +4,7 @@ package org.xvm.runtime;
 import java.lang.ref.WeakReference;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -139,7 +140,7 @@ public class Fiber
      * Get the map of SharedContext.Token objects for read-only access.
      */
     public Map<ObjectHandle, ObjectHandle> getTokens() {
-        return m_mapTokens;
+        return m_mapTokens == null ? null : Collections.unmodifiableMap(m_mapTokens);
     }
 
     /**

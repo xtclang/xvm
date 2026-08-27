@@ -217,7 +217,7 @@ public abstract class Container
      * @return a set of services that belong to this container
      */
     public Set<ServiceContext> getServices() {
-        return f_setServices;
+        return Collections.unmodifiableSet(f_setServices);
     }
 
     /**

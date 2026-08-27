@@ -12,6 +12,7 @@ import java.io.PrintWriter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -459,7 +460,7 @@ public final class MethodStructure
      * @return a list of Parameter structures that represent all return values of the method
      */
     public List<Parameter> getReturns() {
-        return Arrays.asList(m_aReturns);
+        return Collections.unmodifiableList(Arrays.asList(m_aReturns));
     }
 
     /**
@@ -575,7 +576,7 @@ public final class MethodStructure
      * @return a list of Parameter structures that represent all parameters of the method
      */
     public List<Parameter> getParams() {
-        return Arrays.asList(m_aParams);
+        return Collections.unmodifiableList(Arrays.asList(m_aParams));
     }
 
     /**
