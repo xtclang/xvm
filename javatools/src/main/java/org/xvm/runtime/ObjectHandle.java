@@ -480,6 +480,19 @@ public abstract class ObjectHandle
                     : getField(frame, field);
         }
 
+        /**
+         * Non-forcing field read for DISPLAY only: returns the named field's value iff this handle's
+         * composition field layout is ALREADY computed, else null. Never forces the layout Lazy cell
+         * (getField(...) would, via getFieldInfo -> fieldLayout()) - a debugger, or Throwable.toString
+         * rendering an exception, must not force it. See
+         * docs/reentrancy/plans/side-effect-free-tostring.md.
+         */
+        protected ObjectHandle peekField(String sName) {
+            return getComposition() instanceof ClassComposition clz && clz.isFieldLayoutComputed()
+                    ? getField(null, sName)
+                    : null;
+        }
+
         private ObjectHandle missingPropertyException(Frame frame, String sProp) {
             return new DeferredCallHandle(
                     xException.makeHandle(frame, "Missing property: " + sProp));
@@ -907,11 +920,14 @@ public abstract class ObjectHandle
 
         @Override
         public String toString() {
-            ObjectHandle hText = getField(null, "text");
+            // PURE: read "text" only when the field layout is already computed. getField(...) would
+            // otherwise force the ClassComposition.f_fieldLayout Lazy cell - and Throwable.toString()
+            // reaches here on ANY exception print, not just a debugger render.
+            ObjectHandle hText = peekField("text");
             return super.toString() +
                 (hText instanceof StringHandle hString
                     ? Handy.quotedString(hString.getStringValue())
-                    : "");
+                    : "<text deferred>");
         }
 
         public class WrapperException

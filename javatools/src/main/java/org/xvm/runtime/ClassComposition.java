@@ -734,6 +734,15 @@ public final class ClassComposition
     }
 
     /**
+     * @return true iff this composition's field layout is already computed - a non-forcing peek so
+     *         display code (GenericHandle.peekField) can read a field without forcing the
+     *         {@code f_fieldLayout} Lazy cell. Package-private: only peekField uses it.
+     */
+    boolean isFieldLayoutComputed() {
+        return f_fieldLayout.isComputed();
+    }
+
+    /**
      * @return the compile-time type for a given property name or identity (never nested identity)
      */
     public TypeConstant getFieldType(Object nid) {
