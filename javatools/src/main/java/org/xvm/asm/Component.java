@@ -741,7 +741,8 @@ public abstract sealed class Component
     public Map<String, Component> getChildByNameMap() {
         ensureChildren();
         Map<String, Component> map = m_childByName;
-        return map == null ? Collections.emptyMap() : map;
+        // m_childByName is live-mutable during structure building, so expose a read-only view
+        return map == null ? Collections.emptyMap() : Collections.unmodifiableMap(map);
     }
 
     /**

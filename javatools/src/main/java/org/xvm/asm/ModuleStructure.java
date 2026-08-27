@@ -175,7 +175,9 @@ public final class ModuleStructure
                     case Primary -> throw new IllegalStateException();
                 });
         }
-        return map;
+        // freeze at the source so the getDependencies() lazy cache is inherently immutable -
+        // no caller-side wrapper needed
+        return Collections.unmodifiableMap(map);
     }
 
     /**
