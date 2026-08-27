@@ -74,23 +74,19 @@ Non-`clean` combinations are fine: `./gradlew build installDist`, `./gradlew tes
   - Never capture script objects (`project`, `logger`, …) inside task actions.
   - Use injected services (`@Inject` `ExecOperations`, `FileSystemOperations`, `Logger`) instead of `project.exec`/`project.javaexec`.
   - Prefer Provider APIs, declared inputs/outputs, Worker API, or convention plugins; avoid eager configuration-time work.
-- **Typed Kotlin DSL** — no string-based task wiring when a typed provider exists:
-
-  ```kotlin
-  val otherTask by tasks.existing<SomeTaskType>()  // NOT: tasks.named("otherTask")
-
-  val taskName by tasks.registering {              // NOT: tasks.register("taskName") { ... }
-      dependsOn(otherTask)                          // NOT: dependsOn("otherTask")
-  }
-  ```
-
 ## Java/Kotlin style (unbreakable)
 
 - Always end files with a newline.
 - Never use star imports.
 - Never use fully-qualified Java type names in source when an import works (`ObjectFactory`, not `org.gradle.api.model.ObjectFactory`).
 - Prefer `var` when the RHS type is obvious.
-- Write modern Java — records, streams, generics, fluent/functional style — not Java-1.0-style raw objects/arrays.
+- For new code, write modern Java — records, streams, generics, fluent/functional style — not Java-1.0-style raw objects/arrays.
+- Prefer immutable or minimally mutable state when there is no concrete reason for mutation; this reduces the amount of
+  parallelism/reentrancy reasoning required later.
+- For lazy cached values, prefer final holder patterns such as `Lazy`/`Lazy.Bound` over mutable `if (field == null)` getter
+  caches when the holder fits the ownership and construction constraints.
+- When fixing bugs in existing code, do not perform broad modernization rewrites unless they are needed for the fix or make
+  the touched code materially safer or clearer.
 
 ## General
 
