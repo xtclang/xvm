@@ -306,8 +306,14 @@ public class xRTType
         TypeHandle hType = (TypeHandle) hTarget;
         switch (method.getName()) {
         case "dump":
+            // Type.dump() wants the FULL member dump. The no-arg TypeInfo.toString() is now PURE
+            // (header only, so an IDE debugger rendering a TypeInfo can't mutate the world); the full
+            // dump is the explicit toString(boolean) overload. Calling toString(false) here keeps this
+            // reflection method's output byte-identical to before the split (the old path was the
+            // no-arg toString(), which delegated to toString(false)). See
+            // docs/reentrancy/plans/side-effect-free-tostring.md.
             return frame.assignValue(iReturn,
-                xString.makeHandle(frame, hType.getUnsafeDataType().ensureTypeInfo().toString()));
+                xString.makeHandle(frame, hType.getUnsafeDataType().ensureTypeInfo().toString(false)));
         }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }

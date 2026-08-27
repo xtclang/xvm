@@ -2162,143 +2162,96 @@ public final class TypeInfoReal
 
     @Override
     public String toString() {
-        return isPlaceHolder() ? "Placeholder" : super.toString();
+        // PURE header (docs/reentrancy/plans/side-effect-free-tostring.md): identity, progress,
+        // format, flags - nothing that forces chains, resolves identities, or grows the pool, so a
+        // debugger (which calls toString() implicitly) can render a TypeInfo safely. The FULL member
+        // dump is the toString(boolean) overload, which Java never calls implicitly.
+        return isPlaceHolder() ? "Placeholder" : appendHeader(new StringBuilder()).toString();
     }
 
+    /** Append the pure one-line header (identity, progress, format, flags). Shared by {@link
+     *  #toString()} and the full {@link #toString(boolean)} dump; forces nothing, grows nothing. */
+    private StringBuilder appendHeader(StringBuilder sb) {
+        sb.append("TypeInfo: ").append(f_type).append(" (");
+        if (f_progress != Progress.Complete) { sb.append(f_progress).append(", "); }
+        sb.append("format=").append(getFormat());
+        if (isAbstract())  { sb.append(", abstract");  }
+        if (isStatic())    { sb.append(", static");    }
+        if (isSingleton()) { sb.append(", singleton"); }
+        return sb.append(')');
+    }
+
+    /**
+     * The FULL, rich member dump (parameters, into/rebases/extends, class/default chains, properties,
+     * methods). This is the explicit variant: Java never calls the {@code toString(boolean)} overload
+     * implicitly (only {@link #toString()}), so a debugger's rendering stays pure. {@code Type.dump()}
+     * calls this. It may memoize canonical nested identities and, when {@code fRuntime}, compute and
+     * cache optimized method chains and allocate {@code MethodInfo}s. Its output is byte-identical to
+     * the historical {@code toString(fRuntime)}.
+     *
+     * @param fRuntime  if specified, optimize (and render) the method call chains
+     */
     @Override
     public String toString(boolean fRuntime) {
-        StringBuilder sb = new StringBuilder();
+        var pool = pool();
+        var sb   = appendHeader(new StringBuilder());
 
-        sb.append("TypeInfo: ")
-          .append(f_type)
-          .append(" (");
+        appendNumberedSection(sb, "Parameters", f_mapTypeParams.entrySet().stream().sorted(KeySorter)
+                .map(e -> e.getKey() + "=" + e.getValue()).toList());
 
-        if (f_progress != Progress.Complete) {
-            sb.append(f_progress)
-              .append(", ");
-        }
+        if (f_typeInto    != null) { sb.append("\n- Into: ")   .append(f_typeInto.getValueString());    }
+        if (f_typeRebases != null) { sb.append("\n- Rebases: ").append(f_typeRebases.getValueString()); }
+        if (f_typeExtends != null) { sb.append("\n- Extends: ").append(f_typeExtends.getValueString()); }
 
-        sb.append("format=")
-          .append(getFormat());
+        appendNumberedSection(sb, "Class Chain", f_listmapClassChain.entrySet().stream()
+                .map(e -> e.getKey().getValueString() + (e.getValue().isAnchored() ? " (Anchored)" : ""))
+                .toList());
 
-        if (isAbstract()) {
-            sb.append(", abstract");
-        }
-        if (isStatic()) {
-            sb.append(", static");
-        }
-        if (isSingleton()) {
-            sb.append(", singleton");
-        }
+        appendNumberedSection(sb, "Default Chain", f_listmapDefaultChain.keySet().stream()
+                .map(IdentityConstant::getValueString).toList());
 
-        sb.append(")");
+        appendNumberedSection(sb, "Properties", f_mapProps.entrySet().stream().sorted(KeySorter)
+                .map(e -> (f_mapVirtProps.containsKey(e.getKey().resolveNestedIdentity(pool, null)) ? "(v) " : "")
+                        + e.getKey() + "=" + e.getValue())
+                .toList());
 
-        if (!f_mapTypeParams.isEmpty()) {
-            sb.append("\n- Parameters (")
-              .append(f_mapTypeParams.size())
-              .append(')');
-            int i = 0;
-            for (Entry<Object, ParamInfo> entry : f_mapTypeParams.entrySet().stream().sorted(KeySorter).toList()) {
-                sb.append("\n  [")
-                  .append(i++)
-                  .append("] ")
-                  .append(entry.getKey())
-                  .append("=")
-                  .append(entry.getValue());
-            }
-        }
-
-        if (f_typeInto != null) {
-            sb.append("\n- Into: ")
-              .append(f_typeInto.getValueString());
-        }
-        if (f_typeRebases != null) {
-            sb.append("\n- Rebases: ")
-              .append(f_typeRebases.getValueString());
-        }
-        if (f_typeExtends != null) {
-            sb.append("\n- Extends: ")
-              .append(f_typeExtends.getValueString());
-        }
-
-        if (!f_listmapClassChain.isEmpty()) {
-            sb.append("\n- Class Chain (")
-              .append(f_listmapClassChain.size())
-              .append(')');
-            int i = 0;
-            for (Entry<IdentityConstant, Origin> entry : f_listmapClassChain.entrySet()) {
-                sb.append("\n  [")
-                  .append(i++)
-                  .append("] ")
-                  .append(entry.getKey().getValueString());
-
-                if (entry.getValue().isAnchored()) {
-                    sb.append(" (Anchored)");
-                }
-            }
-        }
-
-        if (!f_listmapDefaultChain.isEmpty()) {
-            sb.append("\n- Default Chain (")
-              .append(f_listmapDefaultChain.size())
-              .append(')');
-            int i = 0;
-            for (IdentityConstant constId : f_listmapDefaultChain.keySet()) {
-                sb.append("\n  [")
-                  .append(i++)
-                  .append("] ")
-                  .append(constId.getValueString());
-            }
-        }
-
-        ConstantPool pool = pool();
-        if (!f_mapProps.isEmpty()) {
-            sb.append("\n- Properties (")
-              .append(f_mapProps.size())
-              .append(')');
-            int i = 0;
-            for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet().stream().sorted(KeySorter).toList()) {
-                sb.append("\n  [")
-                  .append(i++)
-                  .append("] ");
-                if (f_mapVirtProps.containsKey(entry.getKey().resolveNestedIdentity(pool, null))) {
-                    sb.append("(v) ");
-                }
-                sb.append(entry.getKey())
-                  .append("=")
-                  .append(entry.getValue());
-            }
-        }
-
-        if (!f_mapMethods.isEmpty()) {
-            sb.append("\n- Methods (")
-              .append(f_mapMethods.size())
-              .append(')');
-            int i = 0;
-            for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet().stream().sorted(KeySorter).toList()) {
-                MethodInfo method = entry.getValue();
-                if (fRuntime && method.isCapped()) {
-                    continue;
-                }
-                sb.append("\n  [")
-                  .append(i++)
-                  .append("] ");
-                if (f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool, null))) {
-                    sb.append("(v) ");
-                }
-                if (fRuntime) {
-                    MethodBody[] chain = method.ensureOptimizedMethodChain(this);
-                    method = chain.length == 0
-                        ? MethodInfo.create(new MethodBody(method.getHead(), Implementation.Native), 0)
-                        : MethodInfo.create(chain, 0);
-                }
-                sb.append(entry.getKey())
-                  .append("=")
-                  .append(method);
-            }
-        }
+        appendNumberedSection(sb, "Methods", f_mapMethods.entrySet().stream().sorted(KeySorter)
+                .filter(e -> !(fRuntime && e.getValue().isCapped()))
+                .map(e -> renderMethod(e, fRuntime, pool)).toList());
 
         return sb.toString();
+    }
+
+    /**
+     * Render one method entry for the full {@link #toString(boolean)} dump: an optional {@code (v)}
+     * virtual marker and, when {@code fRuntime}, the optimized method chain (the forcing part - kept
+     * out of the pure no-arg {@code toString()} path, which never reaches here).
+     */
+    private String renderMethod(Entry<MethodConstant, MethodInfo> entry, boolean fRuntime, ConstantPool pool) {
+        var method = entry.getValue();
+        if (fRuntime) {
+            var chain = method.ensureOptimizedMethodChain(this);
+            method = chain.length == 0
+                    ? MethodInfo.create(new MethodBody(method.getHead(), Implementation.Native), 0)
+                    : MethodInfo.create(chain, 0);
+        }
+        String sVirtual = f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool, null))
+                ? "(v) " : "";
+        return sVirtual + entry.getKey() + "=" + method;
+    }
+
+    /**
+     * Append a {@code "- Name (N)"} header followed by numbered {@code "  [i] item"} lines; nothing is
+     * appended for an empty list. Replaces the old per-section index-counter loops.
+     */
+    private static void appendNumberedSection(StringBuilder sb, String sName, List<String> items) {
+        if (items.isEmpty()) {
+            return;
+        }
+        sb.append("\n- ").append(sName).append(" (").append(items.size()).append(')');
+        for (int i = 0; i < items.size(); i++) {
+            sb.append("\n  [").append(i).append("] ").append(items.get(i));
+        }
     }
 
 

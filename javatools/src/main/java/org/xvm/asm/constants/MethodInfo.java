@@ -1642,20 +1642,25 @@ public class MethodInfo
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        if (isOp()) {
-            sb.append("@Op ");
-        }
-        sb.append(getSignature().getValueString());
+        return appendTo(new StringBuilder()).toString();
+    }
 
-        int i = 0;
+    /**
+     * Append this {@code MethodInfo}'s display form directly into {@code sb}, returning {@code sb}.
+     * This is the allocation-lean primitive for nested rendering: a parent renderer appends a child
+     * without an intermediate {@code String} (unlike {@code sb.append(child.toString())}), which
+     * matters because a {@code TypeInfo} dump renders many methods. {@link #toString()} delegates
+     * here. Appending directly is precisely why this uses a buffer-filling loop rather than
+     * {@code collect(Collectors.joining())} - the latter would allocate the very {@code String} this
+     * pattern exists to avoid.
+     */
+    public StringBuilder appendTo(StringBuilder sb) {
+        sb.append(isOp() ? "@Op " : "").append(getSignature().getValueString());
+        int i = 0;   // number concrete bodies sequentially; abstract bodies render "[*]"
         for (MethodBody body : m_aBody) {
-            sb.append("\n    [")
-              .append(body.isConcrete() ? String.valueOf(i++) : "*")
-              .append("] ")
-              .append(body);
+            sb.append("\n    [").append(body.isConcrete() ? i++ : "*").append("] ").append(body);
         }
-        return sb.toString();
+        return sb;
     }
 
     // ----- constants and fields ------------------------------------------------------------------

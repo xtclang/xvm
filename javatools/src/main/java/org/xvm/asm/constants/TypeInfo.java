@@ -703,13 +703,29 @@ public abstract sealed class TypeInfo
      */
     public abstract Map<String, ChildInfo> getChildInfosByName();
 
+    /**
+     * The PURE header (identity, progress, format, flags) - and nothing that walks members. Java (and
+     * an IDE debugger) call {@code toString()} IMPLICITLY, so this must never resolve nested
+     * identities, force method chains, or grow the pool; merely inspecting a {@code TypeInfo} must not
+     * mutate the world. The full member dump is the explicit {@link #toString(boolean)} overload.
+     * Declared abstract so a new subclass cannot forget to provide a pure header. See
+     * docs/reentrancy/plans/side-effect-free-tostring.md.
+     */
     @Override
-    public String toString() {
-        return toString(false);
-    }
+    public abstract String toString();
 
     /**
-     * @param fRuntime  if specified, optimize the method call chains
+     * The FULL, rich member dump (parameters, chains, properties, methods). This is the EXPLICIT
+     * variant: Java never calls the overload implicitly (only {@link #toString()}), so it is safe for
+     * it to walk members. Note the safety boundary is ARITY, not this flag: the member walk touches
+     * {@code resolveNestedIdentity} (which can intern) regardless, so neither {@code true} nor {@code
+     * false} is "pure" - only {@code toString()} is. The flag chooses what the method rows show:
+     * {@code true} renders each method's OPTIMIZED call chain (via {@code ensureOptimizedMethodChain},
+     * which caches it), {@code false} renders the raw method bodies. Callers that want the dump call
+     * this deliberately (e.g. the {@code Type.dump()} reflection method). Declared abstract so a new
+     * subclass cannot forget it. See docs/reentrancy/plans/side-effect-free-tostring.md.
+     *
+     * @param fRuntime  if specified, render (and thereby compute+cache) the optimized method chains
      */
     public abstract String toString(boolean fRuntime);
 
