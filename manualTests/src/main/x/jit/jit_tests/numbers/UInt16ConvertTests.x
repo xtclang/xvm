@@ -71,6 +71,8 @@ class UInt16ConvertTests {
         testUInt16ToUInt128(500, 500);
         testUInt16ToUInt128(Int16.MaxValue, 32767);
 
+        testUInt16toArray();
+        testParse();
     }
 
     void testUInt16ToInt8(UInt16 a, Int8 expected) {
@@ -187,5 +189,29 @@ class UInt16ConvertTests {
     void testInt8ToUIntN(UInt8 a, UIntN expected) {
         UIntN b = a.toUIntN();
         assert b == expected;
+    }
+
+    void testUInt16toArray() {
+        UInt16 value = 0xFEDC;
+
+        assert new UInt16(value.toBitArray()) == value;
+        assert new UInt16(value.toByteArray()) == value;
+    }
+
+    void testParse() {
+        assert UInt16 decimal := UInt16.parse("12345");
+        assert decimal == 12345;
+
+        assert UInt16 hex := UInt16.parse("FFFF", 16);
+        assert hex == UInt16.MaxValue;
+
+        assert !canParse("12x");
+
+        Boolean canParse(String text) {
+            if (UInt16 value := UInt16.parse(text)) {
+                return True;
+            }
+            return False;
+        }
     }
 }

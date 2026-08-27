@@ -5,11 +5,15 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -69,6 +73,11 @@ public class Invoke_0T
     }
 
     @Override
+    protected boolean isTupleReturn() {
+        return true;
+    }
+
+    @Override
     public int process(Frame frame, int iPC) {
         try {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
@@ -86,5 +95,17 @@ public class Invoke_0T
         checkReturnTupleRegister(frame, hTarget);
 
         return getCallChain(frame, hTarget).invokeT(frame, hTarget, Utils.OBJECTS_NONE, m_nRetValue);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        computeInvokeTypes(bctx, NO_ARGS);
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildInvoke(bctx, code, NO_ARGS);
     }
 }

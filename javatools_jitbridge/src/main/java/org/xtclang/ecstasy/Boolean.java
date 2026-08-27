@@ -22,19 +22,19 @@ public abstract class Boolean
 
     public static class False extends Boolean {
         public False() {
-            super($xvm().ecstasyPool.typeFalse(), false, 0, String.of(null, "False"));
+            super(false, 0, String.of(null, "False"));
         }
     }
 
     public static class True extends Boolean {
         public True() {
-            super($xvm().ecstasyPool.typeTrue(), true, 1, String.of(null, "True"));
+            super(true, 1, String.of(null, "True"));
         }
     }
 
-    private Boolean(TypeConstant type, boolean value, long ordinal, String name) {
+    private Boolean(boolean value, long ordinal, String name) {
         super(null);
-        $type    = type;
+        $type    = value ? $ctx().pool().typeTrue() : $ctx().pool().typeFalse();
         $value   = value;
         $ordinal = ordinal;
         $name    = name;

@@ -9,6 +9,8 @@ package constTests {
         testEmptyConstShouldHaveNoneZeroHashCode();
         testEmptyConstShouldBeStringable();
 
+        testExceptionCompare();
+
         testSimpleConstEquality();
         testSimpleConstHashCode();
         testSimpleTestConstCompare();
@@ -167,6 +169,22 @@ package constTests {
         TestEmptyConst c1 = new TestEmptyConst();
         assert c1.estimateStringLength() == 2;
         assert c1.toString() == "()";
+    }
+
+    void testExceptionCompare() {
+        ReadOnly ro1 = new ReadOnly("test");
+        ReadOnly ro2 = new ReadOnly("test");
+        assert ro1 != ro2;
+        assert ro1 <=> ro2 != Equal;
+
+        Exception e1 = ro1;
+        Exception e2 = ro2;
+        assert e1 != e2;
+        assert e1 <=> e2 != Equal;
+
+        e2 = ro1;
+        assert e1 == e2;
+        assert e1 <=> e2 == Equal;
     }
 
     void testSimpleConstEquality() {

@@ -71,16 +71,6 @@ public class UIntN extends UIntNumber {
         return new UIntN(BigInteger.valueOf(value));
     }
 
-    /**
-     * Box a 128-bit number represented by two Java {@code long} values into an {@link UIntN}.
-     */
-    public static UIntN $box(long low, long high) {
-        ByteBuffer buffer = ByteBuffer.allocate(16);
-        buffer.putLong(high);
-        buffer.putLong(low);
-        return new UIntN(new BigInteger(buffer.array()));
-    }
-
     @Override
     protected long[] $longValues() {
         byte[] ab = $value.toByteArray();

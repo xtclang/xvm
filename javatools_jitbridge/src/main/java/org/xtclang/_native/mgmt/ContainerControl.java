@@ -14,7 +14,7 @@ public class ContainerControl extends nService {
     public ContainerControl(Ctx ctx) {
         super(ctx);
 
-        $containerType = $xvm().ecstasyPool.ensureEcstasyTypeConstant("mgmt.Container.Control");
+        $containerType = ctx.pool().ensureEcstasyTypeConstant("mgmt.Container.Control");
     }
 
     private final TypeConstant $containerType;

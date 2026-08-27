@@ -23,17 +23,17 @@ public interface NumberSupportInt128 {
     /**
      * The {@link ClassDesc} for {@code java.lang.Math}.
      */
-    ClassDesc CD_Math = ClassDesc.of("java.lang.Math");
+    ClassDesc CD_Math = ClassDesc.of(Math.class.getName());
 
     /**
-     * The name of the {@code multiplyHigh} method in {@code java.lang.Math}.
+     * The name of the {@code unsignedMultiplyHigh} method in {@code java.lang.Math}.
      */
-    String Math_MultiplyHigh = "multiplyHigh";
+    String Math_UnsignedMultiplyHigh = "unsignedMultiplyHigh";
 
     /**
-     * The {@link MethodTypeDesc} for {@code java.lang.Math.multiplyHigh(long, long)}.
+     * The {@link MethodTypeDesc} for {@code java.lang.Math.unsignedMultiplyHigh(long, long)}.
      */
-    MethodTypeDesc MD_MultiplyHigh = MethodTypeDesc.of(CD_long, CD_long, CD_long);
+    MethodTypeDesc MD_UnsignedMultiplyHigh = MethodTypeDesc.of(CD_long, CD_long, CD_long);
 
     /**
      * The name of the {@code $div} method in Int128 wrapper classes.
@@ -338,9 +338,9 @@ public interface NumberSupportInt128 {
             .lmul();       // low long result (stack: [low, low_2])
 
         // 2. Calculate high long result
-        code.lload(slotH1) // Load h1
+        code.lload(slotL1) // Load l1
             .lload(slotL2) // Load l2
-            .invokestatic(CD_Math,Math_MultiplyHigh, MD_MultiplyHigh) // High bits of l1*l2
+            .invokestatic(CD_Math, Math_UnsignedMultiplyHigh, MD_UnsignedMultiplyHigh) // High bits of l1*l2
             .lload(slotL1) // Load l1
             .lload(slotH2) // Load h2
             .lmul()        // Low bits of l1*h2

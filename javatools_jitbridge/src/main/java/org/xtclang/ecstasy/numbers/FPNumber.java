@@ -16,6 +16,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
+import org.xvm.javajit.ModuleLoader;
 
 /**
  * Native FPNumber wrapper.
@@ -427,6 +428,22 @@ public abstract class FPNumber extends Number {
         return UInt128.$fromBigInteger(ctx, bi);
     }
 
+    public IntN toIntN$FP$p(Ctx ctx, Rounding direction) {
+        BigInteger bi = $toBigInteger(direction);
+        return IntN.$box(bi);
+    }
+
+    public UIntN toUIntN$FP$p(Ctx ctx, Rounding direction) {
+        if ($isSigned()) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+                    + " is not a valid UIntN value");
+        }
+        BigInteger bi = $toBigInteger(direction);
+        return UIntN.$box(bi);
+    }
+
+
     // ----- inner class Rounding ------------------------------------------------------------------
 
     /**
@@ -449,7 +466,7 @@ public abstract class FPNumber extends Number {
         private final RoundingMode $roundingMode;
 
         @Override public TypeConstant $xvmType(Ctx ctx) {
-            ConstantPool pool = $xvm().ecstasyPool;
+            ConstantPool pool = ctx.pool();
             return switch ((int) $ordinal) {
                 case 0  -> pool.valTiesToEven()    .getType();
                 case 1  -> pool.valTiesToAway()    .getType();
@@ -520,10 +537,11 @@ public abstract class FPNumber extends Number {
 
     public static class eRounding extends Enumeration {
         private eRounding(Ctx ctx) {
-            super(ctx, ctx.container.typeSystem.pool().typeRounding());
+            super(ctx, ctx.pool().typeRounding());
         }
 
-        public static final eRounding $INSTANCE = new eRounding(Ctx.get());
+        public static final eRounding $INSTANCE = new eRounding(
+                ((ModuleLoader) eRounding.class.getClassLoader()).getCtx());
 
         public static final String[]  $names  = new String[] {
                 Rounding.TiesToEven.$INSTANCE.$name,

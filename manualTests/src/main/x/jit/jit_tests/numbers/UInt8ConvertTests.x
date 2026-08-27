@@ -54,6 +54,14 @@ class UInt8ConvertTests {
         testUInt8ToUInt128(100, 100);
         testUInt8ToUInt128(Int8.MaxValue, 127);
 
+        testUInt8toArray();
+    }
+
+    void testUInt8toArray() {
+        UInt8 value = 0xFE;
+
+        assert new UInt8(value.toBitArray()) == value;
+        assert new UInt8(value.toByteArray()) == value;
     }
 
     void testUInt8ToInt8(UInt8 a, Int8 expected) {

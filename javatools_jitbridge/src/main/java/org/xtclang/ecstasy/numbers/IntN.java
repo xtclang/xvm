@@ -2,8 +2,6 @@ package org.xtclang.ecstasy.numbers;
 
 import java.math.BigInteger;
 
-import java.nio.ByteBuffer;
-
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.Boolean;
 import org.xtclang.ecstasy.Ordered;
@@ -69,16 +67,6 @@ public class IntN extends IntNumber {
      */
     public static IntN $box(long value) {
         return new IntN(BigInteger.valueOf(value));
-    }
-
-    /**
-     * Box a 128-bit number represented by two Java {@code long} values into an {@link IntN}.
-     */
-    public static IntN $box(long low, long high) {
-        ByteBuffer buffer = ByteBuffer.allocate(16);
-        buffer.putLong(high);
-        buffer.putLong(low);
-        return new IntN(new BigInteger(buffer.array()));
     }
 
     @Override

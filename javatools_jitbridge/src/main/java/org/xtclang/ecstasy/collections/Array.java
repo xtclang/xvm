@@ -17,6 +17,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
+import org.xvm.javajit.ModuleLoader;
 
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Iterable;
@@ -153,11 +154,11 @@ public abstract class Array
 
     public static class eMutability extends Enumeration {
         private eMutability(Ctx ctx) {
-            super(ctx, $ctx().container.typeSystem.pool().
-                ensureEcstasyTypeConstant("collections.Array.Mutability"));
+            super(ctx, ctx.pool().ensureEcstasyTypeConstant("collections.Array.Mutability"));
         }
 
-        public static final eMutability $INSTANCE = new eMutability(Ctx.get());
+        public static final eMutability $INSTANCE = new eMutability(
+                ((ModuleLoader) eMutability.class.getClassLoader()).getCtx());
 
         public static final String[] $names = new String[] {
             Mutability.Constant.$INSTANCE.$name,

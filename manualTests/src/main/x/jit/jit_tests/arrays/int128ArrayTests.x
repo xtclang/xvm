@@ -9,6 +9,7 @@ package int128ArrayTests {
         shouldCreateArrayInitializedWithZeroValue();
         shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
+        shouldCreateArrayFromVariables();
         shouldBeEmpty();
         shouldAddElement();
         shouldAddElementUsingOperator();
@@ -58,6 +59,16 @@ package int128ArrayTests {
         Int128[] array = [10, 20, Int128.MaxValue];
         assert array.size == 3;
         assert array[0] == 10 && array[1] == 20 && array[2] == Int128.MaxValue;
+    }
+
+    void shouldCreateArrayFromVariables() {
+        Int128[] array = makeArray(10, Int128.MaxValue);
+        assert array.size == 2;
+        assert array[0] == 10 && array[1] == Int128.MaxValue;
+
+        Int128[] makeArray(Int128 first, Int128 second) {
+            return [first, second];
+        }
     }
 
     void shouldBeEmpty() {

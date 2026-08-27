@@ -6,7 +6,6 @@ import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.IteratorᐸDec64ᐳ;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nType;
-import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Dec64;
 import org.xtclang.ecstasy.numbers.Int64;
@@ -119,13 +118,6 @@ public class ArrayᐸDec64ᐳ
         return add$p(ctx, ((Dec64) element).$bits);
     }
 
-    // this method must be here even though all is does is call super, otherwise the JIT
-    // will not be able to find this method as it uses "invokevirtual" for the invocation
-    @Override
-    public ArrayᐸDec64ᐳ add$p(Ctx ctx, long value) {
-        return super.add$p(ctx, value);
-    }
-
     public ArrayᐸDec64ᐳ insert$p(Ctx ctx, long index, long value) {
         if (index < 0 || index > size$get$p(ctx)) {
             throw $oob(ctx, index);
@@ -142,11 +134,6 @@ public class ArrayᐸDec64ᐳ
         }
         $delete(ctx, index, 1);
         return this;
-    }
-
-    @Override
-    public ArrayᐸDec64ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
-        return (ArrayᐸDec64ᐳ) super.slice(ctx, range);
     }
 
     // ----- Array internals -----------------------------------------------------------------------
@@ -202,7 +189,7 @@ public class ArrayᐸDec64ᐳ
 
         @Override
         public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeDec64());
+            return nType.$ensureType(ctx, ctx.pool().typeDec64());
         }
     }
 }

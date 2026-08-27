@@ -3,7 +3,6 @@ package org.xvm.javajit;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.PrintStream;
 
 import java.lang.classfile.ClassFile;
@@ -11,12 +10,15 @@ import java.lang.classfile.ClassModel;
 
 import java.lang.classfile.constantpool.ClassEntry;
 
+import java.lang.reflect.AccessFlag;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import java.util.function.Predicate;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ModuleStructure;
 
 import static org.xvm.util.Handy.isHexit;
@@ -111,6 +113,29 @@ public class ModuleLoader
         return module.toString();
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * @return a constant at the specified index from the ConstantPool associated with this module
+     */
+    public Constant getConstant(int index) {
+        return module.getConstantPool().getConstant(index);
+    }
+
+    /**
+     * @return the xvm this module loader belongs to
+     */
+    public Xvm getXvm() {
+        return typeSystem.xvm;
+    }
+
+    /**
+     * @return the context for the current fiber
+     */
+    public Ctx getCtx() {
+        return getXvm().getCtx();
+    }
+
     // ----- debugging -----------------------------------------------------------------------------
 
     public void dump(File dir, Predicate<String> filter) {
@@ -157,6 +182,7 @@ public class ModuleLoader
                     out.println("Methods:");
                     model.methods().stream().map(m -> "  " + m.methodName() +
                                     m.methodTypeSymbol().displayDescriptor() +
+                                    (m.flags().has(AccessFlag.STATIC) ? " static" : "") +
                                     (m.code().isPresent() ? "\n" + render(m.code().get().toDebugString()) : "")).
                             forEach(out::println);
                 } catch (FileNotFoundException e) {

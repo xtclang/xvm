@@ -93,7 +93,6 @@ import static java.lang.constant.ConstantDescs.CD_int;
 
 import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_Ordered;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.Builder.XVM_PRIMITIVE_COMPARE;
@@ -2397,7 +2396,7 @@ public abstract class TypeConstant
             case IsConst   -> idThis = getConstantPool().clzConst();
             case IsEnum    -> idThis = getConstantPool().clzEnum();
             case IsModule  -> idThis = getConstantPool().clzModule();
-            case IsPackage -> idThis = getConstantPool().clzModule();
+            case IsPackage -> idThis = getConstantPool().clzPackage();
             default        -> { return; }
             }
         } else {
@@ -2417,7 +2416,7 @@ public abstract class TypeConstant
             List<Contribution> listProcess  = new ArrayList<>();
             TypeConstant[]     atypeSpecial = buildProcessList(idThis, clz, atypeContrib,
                                                                listProcess, errs);
-            if (atypeCondInc != null && atypeCondInc.length > 0) {
+            if (atypeCondInc != null) {
                 for (TypeConstant type : atypeCondInc) {
                     if (type != null) {
                         type.collectContribs(setVisited, setOmit, errs);
@@ -2432,7 +2431,7 @@ public abstract class TypeConstant
             for (Contribution contrib : listProcess) {
                 contrib.getTypeConstant().collectContribs(setVisited, setOmit, errs);
             }
-        } else if (struct instanceof PropertyStructure prop) {
+        } else if (struct instanceof PropertyStructure) {
             log(errs, Severity.WARNING, VE_UNKNOWN,
                     "No implementation of collectContribs() for property type \"" + this + "\"");
         } else {
@@ -3439,8 +3438,7 @@ public abstract class TypeConstant
         }
 
         // add the default chains for the "root type" to the end
-        for (Iterator<IdentityConstant> iterId = listmapRootChain.keySet().iterator(); iterId.hasNext(); ) {
-            IdentityConstant id = iterId.next();
+        for (IdentityConstant id : listmapRootChain.keySet()) {
             if (!listmapDefaultChain.containsKey(id)) {
                 listmapDefaultChain.put(id, listmapRootChain.get(id));
             }
@@ -3556,8 +3554,8 @@ public abstract class TypeConstant
             TypeConstant     typeContrib   = contrib.getTypeConstant();
             Composition      composition   = contrib.getComposition();
             PropertyConstant idDelegate    = contrib.getDelegatePropertyConstant();
-            TypeInfo         infoContrib   = null;
             boolean          fSelf         = composition == Composition.Equal;
+            TypeInfo         infoContrib;
             ContribSource    contribSource = fSelf
                     ? ContribSource.Self
                     : composition == Composition.Incorporates
@@ -3773,7 +3771,6 @@ public abstract class TypeConstant
             Map<Object, MethodInfo>             mapVirtMethods,
             ErrorListener                       errs) {
         boolean fComplete = true;
-        boolean fExploded = info.isExploded();
 
         // layer on an "into" of either "into Ref" or "into Var"
         ConstantPool pool     = getConstantPool();
@@ -3807,7 +3804,7 @@ public abstract class TypeConstant
                            typeInto, infoInto, ContribSource.Regular, errs);
             PropertyInfo infoProp = mapProps.get(idProp);
             assert infoProp != null;
-            infoProp.getHead().markExploded();;
+            infoProp.getHead().markExploded();
         } else {
             fComplete = false;
             errs      = ErrorListener.BLACKHOLE;
@@ -4385,8 +4382,8 @@ public abstract class TypeConstant
                 // type" (which will be common)
                 assert bodyContribTail.isOverride() ^ bodyContribTail.isInto(); // never both!
 
-                Object     nidBase    = null;
-                MethodInfo methodBase = null;
+                Object     nidBase = null;
+                MethodInfo methodBase;
                 if (listMatches.isEmpty()) {
                     if (bodyContribTail.isNative() || bodyContribTail.isInto() && !fMixingIn) {
                         // take it as is
@@ -4511,7 +4508,6 @@ public abstract class TypeConstant
                         // as a result, the call to
                         //      constId.appendNestedIdentity(pool, nid)
                         // below may produce different results
-                        nidContrib = nidBase;
                     } else if (!mapVirtMods.containsKey(nidBase)) {
                         // there exists a method that this method will narrow that did *not*
                         // receive a contribution of its own, so add this method to the set of
@@ -7276,14 +7272,32 @@ public abstract class TypeConstant
     }
 
     /**
+     * @return assuming that "this" can be assigned to "that", return false iff the assignment
+     *         requires a "checkcast"
+     */
+    public boolean isJitAssignableTo(TypeConstant that) {
+        TypeConstant typeThisJit = getCallableJitType();
+        TypeConstant typeThatJit = that.getCallableJitType();
+
+        // Let's say C = ListMap<K,V>; M = ListMapIndex<K,V>
+        // Ecstasy: M --into--> C, so M.isA(C), but
+        // Java:    C --implements--> M, so M -> C requires a checkcast
+        return typeThisJit.equals(typeThatJit) ||
+                !isJitL2Specialized() && typeThisJit.isA(typeThatJit);
+    }
+
+    /**
      * @return true iff the specified type is represented by the Java interface and needs to be
      *         cast explicitly to {@code nObject} class to invoke its methods
      */
     public boolean isJitInterface() {
-        // Ref/Var and Type are always represented by native classes
-        ConstantPool pool = getConstantPool();
-        return isInterfaceType() && !this.isA(pool.typeRef()) && !this.isA(pool.typeType()) ||
-            getCallableJitType().equals(pool.typeObject());
+        // Ref/Var, Tuple and Type are always represented by native classes
+        ConstantPool pool    = getConstantPool();
+        TypeConstant typeJit = getCallableJitType();
+        return typeJit.isInterfaceType()
+                && !typeJit.isA(pool.typeRef())
+                && !typeJit.isTuple()
+                && !typeJit.isTypeOfType();
     }
 
     /**
@@ -7562,10 +7576,11 @@ public abstract class TypeConstant
                 default                           -> throw new IllegalStateException();
             };
 
-            boolean        isFormal = isFormalType();
-            ClassDesc      cd;
-            JitMethodDesc  jmd;
-            String         sJitName;
+            boolean       isFormal = isFormalType();
+            ClassDesc     cd;
+            String        sJitName;
+            JitMethodDesc jmd;
+            boolean       fInterface;
 
             if (isFormal) {
                 // while the method is either "equals" or "compare", its parameter types depend
@@ -7577,16 +7592,21 @@ public abstract class TypeConstant
                 MethodConstant idFunky   = bodyFunky.getIdentity();
                 TypeConstant   typeFunky = idFunky.getNamespace().getType();
 
-                cd       = ClassDesc.of(TypeSystem.funkyInterface(
-                            bctx.builder.ensureJitClassName(typeFunky)));
-                sJitName = idFunky.ensureJitMethodName(ts);
-                jmd      = bodyFunky.getJitDesc(bctx.builder, typeFunky);
-            } else {
-                MethodInfo method = bctx.getTypeInfo(this).getMethodBySignature(sig);
+                assert typeFunky.isJitInterface();
 
-                cd       = bctx.builder.ensureClassDesc(method.getJitIdentity().getNamespace().getType());
-                sJitName = method.ensureJitMethodName(ts);
-                jmd      = method.getJitDesc(bctx.builder, this);
+                cd         = ClassDesc.of(TypeSystem.funkyInterface(
+                                bctx.builder.ensureJitClassName(typeFunky)));
+                sJitName   = idFunky.ensureJitMethodName(ts);
+                jmd        = bodyFunky.getJitDesc(bctx.builder, typeFunky);
+                fInterface = true;
+            } else {
+                MethodInfo   method     = bctx.getTypeInfo(this).getMethodBySignature(sig);
+                TypeConstant typeTarget = method.getJitIdentity().getNamespace().getType();
+
+                cd         = bctx.builder.ensureClassDesc(typeTarget);
+                sJitName   = method.ensureJitMethodName(ts);
+                jmd        = method.getJitDesc(bctx.builder, this);
+                fInterface = typeTarget.isJitInterface();
             }
 
             MethodTypeDesc md;
@@ -7625,7 +7645,7 @@ public abstract class TypeConstant
                 if (isFormal) {
                     code.invokeinterface(cd, sJitName, md);
                 } else {
-                    code.invokestatic(cd, sJitName, md);
+                    code.invokestatic(cd, sJitName, md, fInterface);
                 }
 
                 switch (nOp) {
@@ -7645,7 +7665,7 @@ public abstract class TypeConstant
                     code.invokeinterface(cd, sJitName, md);
                 } else {
                     // static Ordered compare(Ctx,nType,Object,Object)
-                    code.invokestatic(cd, sJitName, md);
+                    code.invokestatic(cd, sJitName, md, fInterface);
                 }
 
                 boolean fInverse;

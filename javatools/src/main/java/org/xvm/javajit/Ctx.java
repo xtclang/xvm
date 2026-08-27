@@ -1,16 +1,14 @@
 package org.xvm.javajit;
 
-import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.util.function.Function;
 
-import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.ByteHashCollector;
 
-import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_JavaObject;
@@ -60,20 +58,6 @@ public final class Ctx {
     public Object   o7;
     public long[]   iN;
     public Object[] oN; // coldest at the bottom (no fields should be declared below this point!)
-
-    // ----- memory accounting ---------------------------------------------------------------------
-
-    public static final ScopedValue<Ctx> Current = ScopedValue.newInstance();
-
-    /**
-     * Obtain the current xvm context. This method should only be called from code running on an
-     * xvm fiber.
-     *
-     * @return the Ctx for the current fiber
-     */
-    public static Ctx get() {
-        return Current.get();
-    }
 
     // ----- memory accounting ---------------------------------------------------------------------
 
@@ -142,18 +126,10 @@ public final class Ctx {
     // ----- Container and Service support ---------------------------------------------------------
 
     /**
-     * Helper method to retrieve a constant at the specified index from the ConstantPool associated
-     * with the specified class.
+     * @return the container's type system ConstantPool
      */
-    public Constant getConstant(String className, int index) {
-        ModuleLoader loader;
-        if (index < 0) {
-            loader = container.xvm.nativeTypeSystem.findOwnerLoader(className);
-            index = -index;
-        } else {
-            loader = container.typeSystem.findOwnerLoader(className);
-        }
-        return loader.module.getConstantPool().getConstant(index);
+    public ConstantPool pool() {
+        return container.typeSystem.pool();
     }
 
     /**
@@ -179,9 +155,6 @@ public final class Ctx {
     // ----- Ctx method descriptors ----------------------------------------------------------------
 
     public static final MethodTypeDesc MD_log = MethodTypeDesc.of(CD_void, CD_JavaString);
-
-    public static final MethodTypeDesc MD_getConstant = MethodTypeDesc.of(
-        ClassDesc.of(Constant.class.getName()), CD_JavaString, CD_int);
 
     public static MethodTypeDesc MD_inject = MethodTypeDesc.of(
         CD_JavaObject, CD_TypeConstant, CD_JavaString, CD_JavaObject);

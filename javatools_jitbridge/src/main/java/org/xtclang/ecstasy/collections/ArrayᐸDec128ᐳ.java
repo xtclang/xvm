@@ -1,11 +1,9 @@
 package org.xtclang.ecstasy.collections;
 
 import org.xtclang.ecstasy.Iterable;
-import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.IteratorᐸDec128ᐳ;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nType;
-import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Dec128;
 import org.xtclang.ecstasy.numbers.Int64;
@@ -24,7 +22,7 @@ import org.xvm.javajit.Ctx;
  * Storage - ref
  */
 public class ArrayᐸDec128ᐳ
-        extends nLongBasedArray<ArrayᐸDec128ᐳ> {
+        extends nLongLongBasedArray<ArrayᐸDec128ᐳ> {
 
     public ArrayᐸDec128ᐳ(Ctx ctx, TypeConstant type) {
         super(ctx, type);
@@ -53,20 +51,8 @@ public class ArrayᐸDec128ᐳ
             ctx.alloc(size * 16); // REVIEW + HEADER_SIZE?
             ArrayᐸDec128ᐳ array = new ArrayᐸDec128ᐳ(ctx, type);
             array.$mut($FIXED);
-
-            if (array.$growInPlace(ctx, size)) {
-                long low  = boxed.$lowBits;
-                long high = boxed.$highBits;
-                long[] storage = array.$storage;
-                for (int i = 0, len = (int) size * 2; i < len; i += 2) {
-                    storage[i]   = low;
-                    storage[i+1] = high;
-                }
-                array.$size((int) size);
-                return array;
-            } else {
-                throw array.$oob(ctx, size);
-            }
+            array.$fill128(ctx, size, boxed.$lowBits, boxed.$highBits);
+            return array;
         }
         // TODO
         throw new UnsupportedOperationException();
@@ -98,25 +84,8 @@ public class ArrayᐸDec128ᐳ
         return Dec128.$box(low, ctx.i0);
     }
 
-    public long getElement$p(Ctx ctx, long index) {
-        return $getElement$pi(ctx, index);
-    }
-
-    public long getElement$pi(Ctx ctx, long index) {
-        return $getElement$pi(ctx, index);
-    }
-
     public void setElement(Ctx ctx, Int64 index, Object value) {
         setElement$pi(ctx, index.$value, ((Dec128) value).$lowBits, ((Dec128) value).$highBits);
-    }
-
-    public void setElement$p(Ctx ctx, long index, long lowBits, long highBits) {
-        setElement$pi(ctx, index, lowBits, highBits);
-    }
-
-    public void setElement$pi(Ctx ctx, long index, long lowValue, long highValue) {
-        ctx.i0 = highValue;
-        setElement$pi(ctx, index, lowValue);
     }
 
     public IteratorᐸDec128ᐳ iterator(Ctx ctx) {
@@ -129,40 +98,16 @@ public class ArrayᐸDec128ᐳ
     }
 
     public ArrayᐸDec128ᐳ add$p(Ctx ctx, long lowValue, long highValue) {
-        ctx.i0 = highValue;
-        return super.add$p(ctx, lowValue);
-    }
-
-    @Override
-    public Array addAll(Ctx ctx, Iterable values) {
-        Iterator it = values.iterator(ctx);
-        while (it.next$p(ctx)) {
-            add$p(ctx, ctx.i0, ctx.i1);
-        }
-        return this;
+        return $add128(ctx, lowValue, highValue);
     }
 
     public ArrayᐸDec128ᐳ insert$p(Ctx ctx, long index, long lowValue, long highValue) {
-        if (index < 0 || index > size$get$p(ctx)) {
-            throw $oob(ctx, index);
-        }
-        $insert(ctx, index, 1);
-        $set128bitElement(index, lowValue, highValue);
-        return this;
+        return $insert128(ctx, index, lowValue, highValue);
     }
 
     @Override
     public ArrayᐸDec128ᐳ delete$p(Ctx ctx, long index) {
-        if (index < 0 || index >= size$get$p(ctx)) {
-            throw $oob(ctx, index);
-        }
-        $delete(ctx, index, 1);
-        return this;
-    }
-
-    @Override
-    public ArrayᐸDec128ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
-        return (ArrayᐸDec128ᐳ) super.slice(ctx, range);
+        return $delete128(ctx, index);
     }
 
     // ----- Array internals -----------------------------------------------------------------------
@@ -175,63 +120,16 @@ public class ArrayᐸDec128ᐳ
         return n.toString(ctx).toString();
     }
 
-    @Override
-    protected long $storageCapacity() {
-        return $storageCapacity128bit();
-    }
-
-    @Override
-    protected long $getElement(Ctx ctx, long index) {
-        return $get128bitElement(ctx, index);
-    }
-
-    @Override
-    protected void $setElement(Ctx ctx, long index, long value) {
-        $set128bitElement(index, value, ctx.i0);
-    }
-
-    @Override
-    protected long $cap2len(long cap) {
-        return $cap2len128bits(cap);
-    }
-
-    @Override
-    protected long $calculateHash(Ctx ctx) {
-        return $calculate128BitHash(ctx);
-    }
-
-    @Override
-    protected void $deleteElements(long index, long count) {
-        $delete128bit(index, count);
-    }
-
-    @Override
-    protected void $insertElements(long index, long count) {
-        $insert128bit(index, count);
-    }
-
     // ---- Iterator implementation ----------------------------------------------------------------
 
-    private class nIterator extends nBaseIterator implements IteratorᐸDec128ᐳ {
+    private class nIterator extends n128BitIterator implements IteratorᐸDec128ᐳ {
         public nIterator(Ctx ctx) {
             super(ctx);
         }
 
         @Override
         public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeDec128());
-        }
-
-        @Override
-        public boolean next$p(Ctx ctx) {
-            if (index < size$get$p(ctx)) {
-                long low = getElement$pi(ctx, index++);
-                // high is already in ctx.i0
-                ctx.i1 = ctx.i0;
-                ctx.i0 = low;
-                return true;
-            }
-            return false;
+            return nType.$ensureType(ctx, ctx.pool().typeDec128());
         }
     }
 }

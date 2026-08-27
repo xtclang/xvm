@@ -822,8 +822,10 @@ public class MethodBody {
                 builder.pool(), typeTarget.getCallableJitType());
 
         // TODO consider caching this
-        return JitMethodDesc.of(builder, typeTarget, isFunction() || isCtorOrValidator(),
-                isCtorOrValidator(), sig.getRawParams(), sig.getRawReturns(),
+        boolean fCtorOrValidator = isCtorOrValidator();
+        return JitMethodDesc.of(builder, typeTarget,
+                fCtorOrValidator || method.isStatic(), fCtorOrValidator,
+                sig.getRawParams(), sig.getRawReturns(),
                                 method.getTypeParamCount() + method.getRequiredParamCount());
     }
 

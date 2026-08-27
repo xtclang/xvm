@@ -15,6 +15,8 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.RegisterInfo;
 
+import org.xvm.javajit.Builder.Loader;
+
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
 /**
@@ -79,7 +81,20 @@ public abstract class OpReturn
      * the return values allocations.
      */
     public int buildReturn(BuildContext bctx, CodeBuilder code, int[] anRet) {
-        int cRets = anRet.length;
+        int      cRets   = anRet.length;
+        Loader[] loaders = new Loader[cRets];
+        for (int i = 0; i < cRets; i++) {
+            int retId = anRet[i];
+            loaders[i] = code_ -> bctx.loadArgument(code_, retId);
+        }
+        return buildReturn(bctx, code, loaders);
+    }
+
+    /**
+     * Build a return using the specified logical return-value loaders.
+     */
+    public int buildReturn(BuildContext bctx, CodeBuilder code, Loader[] retLoaders) {
+        int cRets = retLoaders.length;
         assert cRets > 0;
 
         JitMethodDesc jmd        = bctx.methodDesc;
@@ -114,68 +129,104 @@ public abstract class OpReturn
 
                 String       slotName = GuardAll.returnSlotName(pdRet);
                 int          slotR    = bctx.scope.getSynthetic(slotName, true);
-                RegisterInfo regRet   = bctx.loadArgument(code, anRet[i]);
+                RegisterInfo regRet   = retLoaders[i].load(code);
                 ClassDesc    cd       = regRet.cd();
-                JitParamDesc retDesc;
 
-                switch (pdRet.flavor) {
-                case NullablePrimitive:
-                    assert fOptimized;
-                    if (cd.isPrimitive()) {
-                        // iSynth - the actual primitive value; and `false` at iSynth+1
-                        Builder.store(code, cd, slotR);
-                        code.iconst_0();
-                        Builder.store(code, CD_boolean, slotValEx);
-                    } else {
-                        assert regRet.type().isOnlyNullable();
-
-                        // iSynth - the default primitive value and `true` at iSynth+1
-                        Builder.defaultLoad(code, pdRet.cd);
-                        Builder.store(code, cd, slotR);
-                        code.iconst_1();
-                        Builder.store(code, CD_boolean, slotValEx);
-                    }
+                String sTransform = regRet.flavor().name() + "->" + pdRet.flavor.name();
+                switch (sTransform) {
+                case "Primitive->Primitive",
+                     "Specific->Specific",
+                     "Specific->Widened",
+                     "Widened->Specific",
+                     "Widened->Widened":
+                    Builder.store(code, cd, slotR);
                     break;
 
-                case XvmPrimitive:
+                case "Specific->Primitive",
+                     "Widened->Primitive":
+                    assert fOptimized;
+                    Builder.unbox(code, pdRet.type);
+                    Builder.store(code, pdRet.cd, slotR);
+                    break;
+
+                case "Primitive->NullablePrimitive":
+                    assert fOptimized;
+                    // iSynth - the actual primitive value; and `false` at iSynth+1
+                    Builder.store(code, cd, slotR);
+                    code.iconst_0();
+                    Builder.store(code, CD_boolean, slotValEx);
+                    break;
+
+                case "NullablePrimitive->Primitive":
+                    assert fOptimized;
+                    code.pop();
+                    Builder.store(code, cd, slotR);
+                    break;
+
+                case "NullablePrimitive->NullablePrimitive":
+                    assert fOptimized;
+                    // iSynth - the primitive value and its null indicator
+                    Builder.store(code, CD_boolean, slotValEx);
+                    Builder.store(code, cd, slotR);
+                    break;
+
+                case "Specific->NullablePrimitive",
+                     "Widened->NullablePrimitive":
+                    assert fOptimized;
+                    // e.g.: Int? f() = Null; load the default primitive value and a `true` null
+                    // indicator
+                    Builder.unboxNullable(code, pdRet.type,
+                            bctx.builder.ensureClassDesc(pdRet.type.removeNullable()));
+                    Builder.store(code, CD_boolean, slotValEx);
+                    Builder.store(code, pdRet.cd, slotR);
+                    break;
+
+                case "XvmPrimitive->XvmPrimitive":
                     // iSynth - the primitive values into slots in reverse order
-                    for (int j = retIndexes.length - 1; j >= 0; j--) {
-                        retDesc  = jmd.optimizedReturns[retIndexes[j]];
-                        slotName = GuardAll.returnSlotName(retDesc);
-                        slotR    = bctx.scope.getSynthetic(slotName, true);
-                        Builder.store(code, retDesc.cd, slotR);
-                    }
+                    storeOptimizedReturns(bctx, code, retIndexes, retIndexes.length);
                     break;
 
-                case NullableXvmPrimitive:
+                case "Specific->XvmPrimitive",
+                     "Widened->XvmPrimitive":
                     assert fOptimized;
-                    if (regRet.type().removeNullable().isXvmPrimitive()) {
-                        // iSynth - `false` at iSynth+n and the primitive values in reverse
-                        for (int j = retIndexes.length - 1; j >= 0; j--) {
-                            retDesc  = jmd.optimizedReturns[retIndexes[j]];
-                            slotName = GuardAll.returnSlotName(retDesc);
-                            slotR    = bctx.scope.getSynthetic(slotName, true);
-                            Builder.store(code, retDesc.cd, slotR);
-                        }
-                    } else { // return is Null
-                        assert regRet.type().isOnlyNullable();
-                        // iSynth - `true` at iSynth+n and the default primitive values in reverse
-                        int j = retIndexes.length - 1;
-                        code.iconst_1();
-                        Builder.store(code, CD_boolean, slotValEx);
-                        for (; j >= 0; j--) {
-                            retDesc  = jmd.optimizedReturns[retIndexes[j]];
-                            slotName = GuardAll.returnSlotName(retDesc);
-                            slotR    = bctx.scope.getSynthetic(slotName, true);
-                            Builder.defaultLoad(code, retDesc.cd);
-                            Builder.store(code, retDesc.cd, slotR);
-                        }
-                    }
+                    Builder.unbox(code, pdRet.type);
+                    // iSynth - the primitive values into slots in reverse order
+                    storeOptimizedReturns(bctx, code, retIndexes, retIndexes.length);
+                    break;
+
+                case "XvmPrimitive->NullableXvmPrimitive":
+                    assert fOptimized;
+                    // iSynth - `false` at iSynth+n and the primitive values in reverse
+                    code.iconst_0();
+                    Builder.store(code, CD_boolean, slotValEx);
+                    storeOptimizedReturns(bctx, code, retIndexes, retIndexes.length - 1);
+                    break;
+
+                case "Specific->NullableXvmPrimitive",
+                     "Widened->NullableXvmPrimitive":
+                    assert fOptimized;
+                    // e.g.: Int128? f() = Null; load the default values and a `true` null indicator
+                    Builder.unboxNullable(code, pdRet.type,
+                            bctx.builder.ensureClassDesc(pdRet.type.removeNullable()));
+                    // iSynth - the null indicator and primitive values in reverse order
+                    storeOptimizedReturns(bctx, code, retIndexes, retIndexes.length);
+                    break;
+
+                case "NullableXvmPrimitive->XvmPrimitive":
+                    assert fOptimized;
+                    code.pop();
+                    // iSynth - the primitive values into slots in reverse order
+                    storeOptimizedReturns(bctx, code, retIndexes, retIndexes.length);
+                    break;
+
+                case "NullableXvmPrimitive->NullableXvmPrimitive":
+                    assert fOptimized;
+                    // iSynth - the null indicator and primitive values in reverse order
+                    storeOptimizedReturns(bctx, code, retIndexes, retIndexes.length);
                     break;
 
                 default:
-                    Builder.store(code, cd, slotR);
-                    break;
+                    throw new UnsupportedOperationException("Not implemented: " + sTransform);
                 }
             }
 
@@ -197,184 +248,134 @@ public abstract class OpReturn
                     pdExt      = null;
                 }
 
-                RegisterInfo regRet     = bctx.loadArgument(code, anRet[i]);
-                ClassDesc    cd         = regRet.cd();
-                boolean      fValid     = true;
+                RegisterInfo regRet   = retLoaders[i].load(code);
+                ClassDesc    cd       = regRet.cd();
+                String       sTransform = regRet.flavor().name() + "->" + pdRet.flavor.name();
 
-                switch (regRet.flavor()) {
-                case NullablePrimitive:
-                    switch (pdRet.flavor) {
-                    case NullablePrimitive:
-                        assert fOptimized;
-                        // e.g.: Int? f(Int? i) = i;
-                        bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
-                        break;
-
-                    case Primitive:
-                        // e.g.: Int f(Int? i) = i ?: -1;
-                        code.pop();
-                        break;
-
-                    default:
-                        fValid = false;
-                        break;
-                    }
-                    break;
-
-                case Primitive: {
+                switch (sTransform) {
+                case "NullablePrimitive->NullablePrimitive":
                     assert fOptimized;
-                    switch (pdRet.flavor) {
-                    case NullablePrimitive:
-                        // e.g.: Int? f() = 42;
-
-                        // pass `false` at Ctx
-                        code.iconst_0();
-                        bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
-                        break;
-
-                    case Primitive:
-                        break;
-
-                    default:
-                        fValid = false;
-                        break;
-                    }
+                    // e.g.: Int? f(Int? i) = i;
+                    bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
                     break;
+
+                case "NullablePrimitive->Primitive":
+                    // e.g.: Int f(Int? i) = i ?: -1;
+                    code.pop();
+                    break;
+
+                case "Primitive->NullablePrimitive":
+                    assert fOptimized;
+                    // e.g.: Int? f() = 42;
+                    // pass `false` at Ctx
+                    code.iconst_0();
+                    bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
+                    break;
+
+                case "Primitive->Primitive",
+                     "Specific->Specific",
+                     "Specific->Widened",
+                     "Widened->Widened":
+                    break;
+
+                case "Widened->Specific":
+                    code.checkcast(pdRet.cd);
+                    break;
+
+                case "Specific->Primitive",
+                     "Widened->Primitive":
+                    Builder.unbox(code, pdRet.type);
+                    cd = pdRet.cd;
+                    break;
+
+                case "Specific->NullablePrimitive",
+                     "Widened->NullablePrimitive":
+                    // e.g.: Int? f() = Null; load the default primitive value and a `true` null
+                    // indicator
+                    Builder.unboxNullable(code, pdRet.type,
+                            bctx.builder.ensureClassDesc(pdRet.type.removeNullable()));
+                    bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
+                    cd = pdRet.cd;
+                    break;
+
+                case "NullableXvmPrimitive->NullableXvmPrimitive":
+                    assert fOptimized;
+                    // e.g.: Int128? f(Int128? i) = i;
+                    bctx.storeOptReturnsToContext(code, optIndexes, 1, optIndexes.length - 1);
+                    cd = pdRet.cd;
+                    break;
+
+                case "NullableXvmPrimitive->XvmPrimitive":
+                    // e.g.: Int f(Int? i) = i ?: -1;
+                    assert fOptimized;
+                    // pop the boolean nullable flag
+                    code.pop();
+                    // store the remaining primitives to the context
+                    bctx.storeOptReturnsToContext(code, optIndexes, 1, optIndexes.length - 1);
+                    cd = pdRet.cd;
+                    break;
+
+                case "XvmPrimitive->XvmPrimitive":
+                    assert fOptimized;
+                    bctx.storeOptReturnsToContext(code, optIndexes, 1, optIndexes.length - 1);
+                    cd = pdRet.cd;
+                    break;
+
+                case "Specific->XvmPrimitive",
+                     "Widened->XvmPrimitive":
+                    Builder.unbox(code, pdRet.type);
+                    bctx.storeOptReturnsToContext(code, optIndexes, 1, optIndexes.length - 1);
+                    cd = pdRet.cd;
+                    break;
+
+                case "XvmPrimitive->NullableXvmPrimitive":
+                    assert fOptimized;
+                    // e.g.: Int? f() = 42;
+                    // store the remaining primitives to the context
+                    bctx.storeOptReturnsToContext(code, optIndexes, 1, optIndexes.length - 2);
+                    // pass `false` in the Ctx slot for the boolean nullable flag
+                    code.iconst_0();
+                    bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
+                    cd = pdRet.cd;
+                    break;
+
+                case "Specific->NullableXvmPrimitive",
+                     "Widened->NullableXvmPrimitive":
+                    // e.g.: Int128? f() = Null; load the default values and a `true` null indicator
+                    Builder.unboxNullable(code, pdRet.type,
+                            bctx.builder.ensureClassDesc(pdRet.type.removeNullable()));
+                    bctx.storeOptReturnsToContext(code, optIndexes, 1, optIndexes.length - 1);
+                    cd = pdRet.cd;
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException("Not implemented: " + sTransform);
                 }
 
-                case Specific:
-                    switch (pdRet.flavor) {
-                    case Primitive:
-                        Builder.unbox(code, pdRet.type);
-                        cd = pdRet.cd;
-                        break;
-
-                    case NullablePrimitive:
-                        // e.g.: Int? f() = Null;
-                        assert fOptimized && regRet.type().isOnlyNullable();
-
-                        // throw away Null; `true` at Ctx and return the default value
-                        code.pop().iconst_1();
-                        bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
-                        cd = pdRet.cd;
-                        Builder.defaultLoad(code, cd);
-                        break;
-
-                    case NullableXvmPrimitive:
-                        // e.g.: Int128? f() = Null;
-                        assert fOptimized && regRet.type().isOnlyNullable();
-
-                        // throw away Null; `true` at Ctx and return the default value
-                        // since Null is being returned, there is no need to load default values
-                        // to the context
-                        code.pop().iconst_1();
-                        bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
-                        cd = pdRet.cd;
-                        Builder.defaultLoad(code, cd);
-                        break;
-
-                    case Specific, Widened, XvmPrimitive:
-                        break;
-
-                    default:
-                        fValid = false;
-                        break;
-                    }
-                    break;
-
-                case Widened:
-                    switch (pdRet.flavor) {
-                        case Specific:
-                            code.checkcast(pdRet.cd);
-                            break;
-
-                        case Widened:
-                            break;
-
-                        default:
-                            fValid = false;
-                            break;
-                    }
-                    break;
-
-                case NullableXvmPrimitive:
-                    switch (pdRet.flavor) {
-                    case NullableXvmPrimitive:
-                        assert fOptimized;
-                        // e.g.: Int128? f(Int128? i) = i;
-                        for (int j = optIndexes.length - 1; j >= 1 ; j--) {
-                            JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                            bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
-                        }
-                        cd = pdRet.cd;
-                        break;
-
-                    case XvmPrimitive:
-                        // e.g.: Int f(Int? i) = i ?: -1;
-                        assert fOptimized;
-                        // pop the boolean nullable flag
-                        code.pop();
-                        // store the remaining primitives to the context
-                        for (int j = optIndexes.length - 1; j >= 1 ; j--) {
-                            JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                            bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
-                        }
-                        cd = pdRet.cd;
-                        break;
-
-                    default:
-                        fValid = false;
-                        break;
-                    }
-                    break;
-
-                case XvmPrimitive:
-                    assert fOptimized;
-                    switch (pdRet.flavor) {
-                    case XvmPrimitive:
-                        for (int j = optIndexes.length - 1; j >= 1 ; j--) {
-                            JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                            bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
-                        }
-                        cd = pdRet.cd;
-                        break;
-
-                    case NullableXvmPrimitive:
-                        // e.g.: Int? f() = 42;
-                        // store the remaining primitives to the context
-                        for (int j = optIndexes.length - 2; j >= 1 ; j--) {
-                            JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                            bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
-                        }
-                        // pass `false` in the Ctx slot for the boolean nullable flag
-                        code.iconst_0();
-                        bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
-                        cd = pdRet.cd;
-                        break;
-
-                    default:
-                        fValid = false;
-                        break;
-
-                    }
-                    break;
-                }
-
-                if (fValid) {
-                    if (i == 0) {
-                        // return the actual primitive value
-                        Builder.addReturn(code, cd);
-                    } else {
-                        // pass the actual primitive value at Ctx
-                        bctx.storeToContext(code, pdRet.cd, pdRet.altIndex);
-                    }
+                if (i == 0) {
+                    // return the actual primitive value
+                    Builder.addReturn(code, cd);
                 } else {
-                    throw new UnsupportedOperationException(
-                        "Not implemented: src=" + regRet.flavor() + "; dst=" + pdRet.flavor);
+                    // pass the actual primitive value at Ctx
+                    bctx.storeToContext(code, pdRet.cd, pdRet.altIndex);
                 }
             }
         }
         return -1;
+    }
+
+    /**
+     * Store optimized return components from the Java stack into their synthetic return slots.
+     */
+    private void storeOptimizedReturns(BuildContext bctx, CodeBuilder code,
+                                       int[] anRetIndexes, int cIndexes) {
+        JitParamDesc[] apdRet = bctx.methodDesc.optimizedReturns;
+        for (int i = cIndexes - 1; i >= 0; i--) {
+            JitParamDesc pdRet = apdRet[anRetIndexes[i]];
+            String       sName = GuardAll.returnSlotName(pdRet);
+            int          nSlot = bctx.scope.getSynthetic(sName, true);
+            Builder.store(code, pdRet.cd, nSlot);
+        }
     }
 
     // ----- fields --------------------------------------------------------------------------------

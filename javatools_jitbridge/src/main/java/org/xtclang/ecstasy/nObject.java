@@ -4,7 +4,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Container;
 import org.xvm.javajit.Ctx;
-import org.xvm.javajit.Xvm;
+import org.xvm.javajit.ModuleLoader;
 
 /**
  * In Ecstasy, there is a root interface (Object, which extends Comparable), but not root class. The
@@ -21,19 +21,10 @@ public abstract class nObject
     /**
      * (Helper)
      *
-     * @return the current context object
+     * @return the current context
      */
-    public static Ctx $ctx() {
-        return Ctx.get();
-    }
-
-    /**
-     * (Helper)
-     *
-     * @return the XVM that this object exists within
-     */
-    public static Xvm $xvm() {
-        return $ctx().xvm;
+    public Ctx $ctx() {
+        return ((ModuleLoader) getClass().getClassLoader()).getCtx();
     }
 
     /**
@@ -52,7 +43,7 @@ public abstract class nObject
      * @return the container that "pays for" this object
      */
     public Container $owner() {
-        return $xvm().getContainer($ownerId());
+        return $ctx().xvm.getContainer($ownerId());
     }
 
     /**
@@ -82,7 +73,7 @@ public abstract class nObject
      *
      * @see {@link org.xvm.javajit.builders.CommonBuilder#assembleGenericProperty}
      */
-    public nType $type(Ctx ctx, java.lang.String name) {
+    public nType $typeForName(Ctx ctx, java.lang.String name) {
         TypeConstant type = $xvmType(ctx).resolveGenericType(name);
         return type == null ? null : nType.$ensureType(ctx, type);
     }
@@ -106,13 +97,6 @@ public abstract class nObject
      */
     public boolean $isA(Ctx ctx, nType t) {
         return $type(ctx).$dataType.isA(t.$dataType);
-    }
-
-    /**
-     * {@code static <CompileType extends Object> Boolean equals(CompileType o1, CompileType o2)}
-     */
-    public static boolean equals$p(Ctx ctx, nType CompileType, Object o1, Object o2) {
-        return o1 == o2; // TODO CP: check unwrap
     }
 
     // ----- static helpers for when references may be non-xObj classes ----------------------------
@@ -154,18 +138,6 @@ public abstract class nObject
         // TODO
 
         return true;
-    }
-
-    public static nType $type(Ctx ctx, java.lang.Object ref) {
-        if (ref instanceof nObject xRef) {
-            return xRef.$type(ctx);
-        }
-
-        // handle all of the intrinsic types
-        // TODO
-
-        // not an Ecstasy ref
-        throw new IllegalStateException();
     }
 
     protected static final long $ID_MASK   = -1L >>> 8;

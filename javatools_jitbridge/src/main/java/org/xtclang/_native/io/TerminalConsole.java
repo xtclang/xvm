@@ -11,6 +11,7 @@ import org.xtclang.ecstasy.text.String;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
+import org.xvm.javajit.ModuleLoader;
 
 import org.xvm.runtime.template._native.io.xTerminalConsole;
 
@@ -22,12 +23,12 @@ public class TerminalConsole
         implements Console {
 
     public TerminalConsole() {
-        super(Ctx.get());
+        super(null);
     }
 
     @Override
     public TypeConstant $xvmType(Ctx ctx) {
-        return $xvm().ecstasyPool.ensureEcstasyTypeConstant("io.Console");
+        return ctx.pool().ensureEcstasyTypeConstant("io.Console");
     }
 
     /**

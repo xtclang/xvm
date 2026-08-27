@@ -114,10 +114,25 @@ class Int64Tests {
         testInt64OpXor();
         testInt64OpXorInPlace();
 
-        // Stringable
+        // Number tests
+        testInt64toArray();
+
+        // parsing tests
+        testParse();
+
+        // Stringable tests
         testAppendTo();
         testEstimateStringLength();
 
+    }
+
+    // ----- Number tests --------------------------------------------------------------------------
+
+    void testInt64toArray() {
+        Int64 value = -42;
+
+        assert new Int64(value.toBitArray()) == value;
+        assert new Int64(value.toByteArray()) == value;
     }
 
     // ----- comparison tests ----------------------------------------------------------------------
@@ -800,6 +815,25 @@ class Int64Tests {
         Int64 n = 0x00F2_F0F2_F0F0_F0F0;
         n ^= 0x0AA0_AAAA_AAAA_AAAA;
         assert n == 0x0A52_5A58_5A5A_5A5A;
+    }
+
+    // ----- parsing tests -------------------------------------------------------------------------
+
+    void testParse() {
+        assert Int64 decimal := Int64.parse("-12345");
+        assert decimal == -12345;
+
+        assert Int64 hex := Int64.parse("7FFF", 16);
+        assert hex == 0x7FFF;
+
+        assert !canParse("12x");
+
+        Boolean canParse(String text) {
+            if (Int64 value := Int64.parse(text)) {
+                return True;
+            }
+            return False;
+        }
     }
 
     // ----- Stringable tests ----------------------------------------------------------------------

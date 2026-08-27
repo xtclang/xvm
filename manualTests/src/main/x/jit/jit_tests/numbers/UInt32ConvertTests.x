@@ -87,6 +87,14 @@ class UInt32ConvertTests {
         testUInt32ToUInt128WithBoundsCheck(100, 100, False);
         testUInt32ToUInt128WithBoundsCheck(UInt32.MaxValue, 0xFFFFFFFF, False);
 
+        testUInt32toArray();
+    }
+
+    void testUInt32toArray() {
+        UInt32 value = 0xFEDC_BA98;
+
+        assert new UInt32(value.toBitArray()) == value;
+        assert new UInt32(value.toByteArray()) == value;
     }
 
     void testUInt32ToInt8(UInt32 a, Int8 expected) {

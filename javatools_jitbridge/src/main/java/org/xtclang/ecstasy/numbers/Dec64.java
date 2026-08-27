@@ -183,6 +183,14 @@ public class Dec64 extends DecimalFPNumber {
         return $box(thi$).toUInt128$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
     }
 
+    public static IntN toIntN$FP$p(long thi$, Ctx ctx, Rounding direction) {
+        return $box(thi$).toIntN$FP$p(ctx, direction);
+    }
+
+    public static UIntN toUIntN$FP$p(long thi$, Ctx ctx, Rounding direction) {
+        return $box(thi$).toUIntN$FP$p(ctx, direction);
+    }
+
     // ----- Op methods ----------------------------------------------------------------------------
 
     /**
@@ -419,7 +427,7 @@ public class Dec64 extends DecimalFPNumber {
      * @return {@code true} if the two Dec32 values are equal, {@code false} otherwise.
      */
     public static boolean $equals(long value1, long value2) {
-        return value1 == value2;
+        return $compare(value1, value2) == 0;
     }
 
     // ----- accessors -----------------------------------------------------------------------------

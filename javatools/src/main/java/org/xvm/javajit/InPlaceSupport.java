@@ -78,7 +78,7 @@ public interface InPlaceSupport
                         code.iload(reg.slot())
                             .iconst_1()
                             .isub();
-                        bctx.adjustIntValue(code, reg.type());
+                        Builder.adjustIntValue(code, reg.type());
                         code.istore(reg.slot());
                         break;
 
@@ -86,7 +86,7 @@ public interface InPlaceSupport
                         code.iload(reg.slot())
                             .iconst_1()
                             .iadd();
-                        bctx.adjustIntValue(code, reg.type());
+                        Builder.adjustIntValue(code, reg.type());
                         code.istore(reg.slot());
                         break;
 
@@ -95,7 +95,7 @@ public interface InPlaceSupport
                             .dup()
                             .iconst_1()
                             .isub();
-                        bctx.adjustIntValue(code, reg.type());
+                        Builder.adjustIntValue(code, reg.type());
                         code.istore(reg.slot());
                         break;
 
@@ -104,7 +104,7 @@ public interface InPlaceSupport
                             .dup()
                             .iconst_1()
                             .iadd();
-                        bctx.adjustIntValue(code, reg.type());
+                        Builder.adjustIntValue(code, reg.type());
                         code.istore(reg.slot());
                         break;
 
@@ -112,7 +112,7 @@ public interface InPlaceSupport
                         code.iload(reg.slot())
                             .iconst_1()
                             .isub();
-                        bctx.adjustIntValue(code, reg.type());
+                        Builder.adjustIntValue(code, reg.type());
                         code.dup()
                             .istore(reg.slot());
                         break;
@@ -121,7 +121,7 @@ public interface InPlaceSupport
                         code.iload(reg.slot())
                             .iconst_1()
                             .iadd();
-                        bctx.adjustIntValue(code, reg.type());
+                        Builder.adjustIntValue(code, reg.type());
                         code.dup()
                             .istore(reg.slot());
                         break;

@@ -95,6 +95,7 @@ import static org.xvm.javajit.Builder.CD_nException;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nRef;
+import static org.xvm.javajit.Builder.CD_nTuple;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.OPT;
@@ -265,7 +266,8 @@ public class BuildContext {
     private final Map<RegisterInfo, Label> unassignedRegisters = new IdentityHashMap<>();
 
     /**
-     * The registers used for conditional return payloads.
+     * The registers whose Java slots require verifier-visible default values because they are not
+     * assigned on every incoming control-flow path.
      */
     private final Set<Integer> conditionalRegisters = new HashSet<>();
 
@@ -632,6 +634,17 @@ public class BuildContext {
     }
 
     /**
+     * @return true iff the register id represents a local property
+     */
+    public boolean isProperty(int regId) {
+        if (regId <= Op.CONSTANT_OFFSET) {
+            assert getConstant(regId) instanceof PropertyConstant;
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Obtain the Constant at the specified index, verifying it is of the expected type.
      *
      * @param argId  the argument id
@@ -684,19 +697,30 @@ public class BuildContext {
                     scope.startLabel, scope.endLabel);
         }
 
-        int            extraArgs  = methodDesc.getImplicitParamCount(); // e.g. $ctx, $cctx, thi$, ...
-        ClassDesc      CD_this    = builder.ensureClassDesc(thisType);
-        JitParamDesc[] params     = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
+        int            extraArgs = methodDesc.getImplicitParamCount(); // e.g. $ctx, $cctx, thi$, ...
+        ClassDesc      CD_this   = builder.art.CD();
+        JitParamDesc[] params    = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
         if (isConstructor) {
             TypeConstant structType = thisType.ensureAccess(Access.STRUCT);
-            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1, Specific, structType,
-                CD_this, "thi$"));
+            registerInfos.put(Op.A_THIS,
+                    new SingleSlot(Op.A_THIS, extraArgs-1, Specific, structType, CD_this, "thi$"));
             typeMatrix.declare(-1, Op.A_THIS, structType);
         } else if (isStatic) {
             typeMatrix.ensureMutableView(0);
         } else if (!thisType.isJitPrimitive()) {
-            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, 0, Specific, thisType,
-                CD_this, "thi$"));
+            RegisterInfo regThis = new SingleSlot(Op.A_THIS, 0, Specific, thisType, CD_this, "thi$");
+
+            // an augmented interface (e.g. Service) can declare the method while every runtime
+            // instance is represented by the corresponding native class (nService)
+            if (thisType.isInterfaceType()) {
+                ClassDesc cdValue = builder.ensureClassDesc(thisType);
+                if (!cdValue.equals(CD_this)) {
+                    regThis = new Narrowed(Op.A_THIS, regThis.slots(), thisType, Specific, cdValue,
+                            regThis.slotCds(), "thi$", 0, regThis);
+                }
+            }
+
+            registerInfos.put(Op.A_THIS, regThis);
             typeMatrix.declare(-1, Op.A_THIS, thisType);
         }
 
@@ -1013,6 +1037,17 @@ public class BuildContext {
     }
 
     /**
+     * Store a range of optimized return components from the Java stack into the current context.
+     * The components are stored in reverse order to match their stack order.
+     */
+    public void storeOptReturnsToContext(CodeBuilder code, int[] returnIndexes, int first, int count) {
+        for (int i = first + count - 1; i >= first; i--) {
+            JitParamDesc retDesc = methodDesc.optimizedReturns[returnIndexes[i]];
+            storeToContext(code, retDesc.cd, retDesc.altIndex);
+        }
+    }
+
+    /**
      * Load a return value from the current context.
      */
     public void loadFromContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
@@ -1142,10 +1177,10 @@ public class BuildContext {
     }
 
     /**
-     * Adjust the register type based on the type matrix type. This only appies to non-primitive
-     * or boxed registers.
+     * Adjust the register type based on the type matrix type. This applies to non-primitive or
+     * boxed registers, as well as nullable primitives that the type matrix proves to be non-null.
      */
-    protected RegisterInfo adjustRegister(RegisterInfo reg) {
+    protected RegisterInfo adjustRegister(CodeBuilder code, RegisterInfo reg) {
         if (reg.isJavaStack()) {
             return reg;
         }
@@ -1161,7 +1196,13 @@ public class BuildContext {
 
         TypeConstant regType  = reg.type();
         TypeConstant baseType = regType.removeNullable();
-        if (!baseType.isJitPrimitive()) {
+        if (baseType.isJitPrimitive()) {
+            TypeConstant mtxType = typeMatrix.getType(reg.regId(), currOpAddr);
+            if (mtxType != null && !mtxType.equals(regType) && // this check simply an optimization
+                    !mtxType.isEquivalent(regType) && mtxType.isEquivalent(baseType)) {
+                return narrowRegister(code, reg, currOpAddr, mtxType);
+            }
+        } else {
             int          regId   = reg.regId();
             TypeConstant mtxType = typeMatrix.getType(regId, currOpAddr);
 
@@ -1206,7 +1247,7 @@ public class BuildContext {
         if (argId >= 0) {
             RegisterInfo reg = registerInfos.get(argId);
             assert reg != null;
-            return adjustRegister(reg);
+            return adjustRegister(code, reg);
         }
 
         if (argId == Op.A_THIS) {
@@ -1359,7 +1400,7 @@ public class BuildContext {
             }
             loadCtx(code);
             code.ldc(((FormalConstant) dataType.getDefiningConstant()).getName())
-                .invokevirtual(CD_nObject, "$type",
+                .invokevirtual(CD_nObject, "$typeForName",
                         MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
             return new SingleSlot(type, Specific, CD_nType, "");
         }
@@ -1388,8 +1429,8 @@ public class BuildContext {
         }
 
         if (formalConst instanceof FormalTypeChildConstant child) {
-            loadFormalType(code, child.getParentConstant());
-            return loadFormalTypeChild(code, child);
+            RegisterInfo targetReg = loadFormalType(code, child.getParentConstant());
+            return loadFormalType(code, targetReg, child);
         }
 
         if (formalConst instanceof DynamicFormalConstant dynamic) {
@@ -1400,13 +1441,21 @@ public class BuildContext {
     }
 
     /**
-     * Complete loading a formal child type. The parent's nType is already on the Java stack.
+     * Load the {@link nType} represented by the specified formal constant from a target that is
+     * already on the Java stack.
+     *
+     * @return the register information for the loaded {@link nType}
      */
-    private RegisterInfo loadFormalTypeChild(CodeBuilder code, FormalTypeChildConstant child) {
+    private RegisterInfo loadFormalType(CodeBuilder code, RegisterInfo targetReg,
+                                        FormalConstant formalConst) {
+        if (targetReg.type().isJitInterface()) {
+            code.checkcast(CD_nObject);
+        }
         loadCtx(code);
-        code.ldc(child.getName())
-            .invokevirtual(CD_nObject, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
-        return new SingleSlot(child.getType(), Specific, CD_nType, "");
+        code.ldc(formalConst.getName())
+            .invokevirtual(CD_nObject, "$typeForName",
+                    MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
+        return new SingleSlot(formalConst.getType(), Specific, CD_nType, "");
     }
 
     /**
@@ -1529,10 +1578,9 @@ public class BuildContext {
      * @param type  (optional) the known destination type
      */
     public void storeValue(CodeBuilder code, RegisterInfo reg, TypeConstant type) {
-        int regId = reg.regId();
-        if (regId <= Op.CONSTANT_OFFSET) {
+        if (reg.isProperty()) {
             // the register represents a property that the value(s) on the stack must be stored into
-            buildSetPropertyFromStack(code, regId, reg.type(), reg.flavor());
+            buildSetPropertyFromStack(code, reg.regId(), reg.type(), reg.flavor());
         } else {
             reg.store(this, code, type);
             ensureRegisterScope(code, reg);
@@ -1550,7 +1598,7 @@ public class BuildContext {
      * @param type   (optional) the known destination type
      */
     public void storeValue(CodeBuilder code, int regId, TypeConstant type) {
-        if (regId <= Op.CONSTANT_OFFSET) {
+        if (isProperty(regId)) {
             JitTypeDesc jitDesc = type.getJitDesc(builder);
 
             // the register represents a property that the value(s) on the stack must be stored into
@@ -1639,7 +1687,8 @@ public class BuildContext {
                             code.localVariable(slots[i], name + "$" + i, cds[i], varStart, scope.endLabel);
                         }
                     }
-                    yield new MultiSlot(this, regId, slots, XvmPrimitive, type, jtd.cd, cds, name);
+                    yield new MultiSlot(this, regId, slots, XvmPrimitive,
+                            jtd.type, jtd.cd, cds, name);
 
                 }
                 case NullableXvmPrimitive -> {
@@ -1668,8 +1717,7 @@ public class BuildContext {
         registerInfos.put(regId, reg);
         unassignedRegisters.put(reg, varStart);
         if (conditionalRegisters.contains(regId)) {
-            // a conditional return payload is undefined when the condition is `False`, but its Java
-            // slots must still have verifier-visible values
+            // ensure a verifier-visible value
             Builder.defaultStore(code, reg);
         }
         return reg;
@@ -1686,6 +1734,15 @@ public class BuildContext {
             if (regId >= 0) {
                 conditionalRegisters.add(regId);
             }
+        }
+    }
+
+    /**
+     * Register a local whose assignment is conditional on the control-flow path.
+     */
+    public void registerConditionalAssignment(int regId) {
+        if (regId >= 0) {
+            conditionalRegisters.add(regId);
         }
     }
 
@@ -1725,7 +1782,7 @@ public class BuildContext {
         }
 
         if (!typeFrom.isA(typeTo)) {
-            if (!Builder.isJitAssignable(typeFrom, typeTo) && regFrom.flavor() != NullablePrimitive) {
+            if (!typeFrom.isJitAssignableTo(typeTo) && regFrom.flavor() != NullablePrimitive) {
                 assert allowUpcast;
                 if (cdFrom.isPrimitive()) {
                     // this can only be caused by a dead/unreachable code
@@ -1987,7 +2044,7 @@ public class BuildContext {
             JitFlavor    srcFlavor = srcReg.flavor();
             if (srcFlavor == dstFlavor) {
                 if (srcFlavor == Specific && !srcReg.cd().equals(pd.cd) &&
-                        !Builder.isJitAssignable(srcReg.type(), pd.type)) {
+                        !srcReg.type().isJitAssignableTo(pd.type)) {
                     generateCheckCast(code, pd.type);
                 }
                 continue;
@@ -2003,9 +2060,13 @@ public class BuildContext {
             switch (srcFlavor.name() + "->" + dstFlavor.name()) {
             case "Specific->SpecificWithDefault":
             case "Widened->Specific",
-                 "Widened->SpecificWithDefault",
-                 "Widened->WidenedWithDefault":
-                // nothing to do
+                 "Widened->SpecificWithDefault":
+                if (!srcReg.cd().equals(pd.cd)) {
+                    generateCheckCast(code, pd.type);
+                }
+                continue;
+
+            case "Widened->WidenedWithDefault":
                 continue;
 
             case "Specific->Widened",
@@ -2046,7 +2107,7 @@ public class BuildContext {
                  "XvmPrimitive->SpecificWithDefault",
                  "XvmPrimitive->Widened",
                  "XvmPrimitive->WidenedWithDefault":
-                assert Builder.isJitAssignable(srcReg.type(), pd.type);
+                assert srcReg.type().isJitAssignableTo(pd.type);
                 Builder.box(code, srcReg.type());
                 continue;
 
@@ -2269,7 +2330,7 @@ public class BuildContext {
                             // reuse the ExtendedSlot
                             return -1;
                         }
-                        case Widened ->
+                        case Specific, Widened ->
                             Builder.loadNull(code);
                         default ->
                             throw new IllegalStateException();
@@ -2390,18 +2451,17 @@ public class BuildContext {
      * Get the property value. The target register value is already on Java stack.
      */
     public void buildGetProperty(CodeBuilder code, RegisterInfo targetReg, int propIdIndex, int retId) {
-        PropertyConstant propId     = getConstant(propIdIndex, PropertyConstant.class);
-        TypeConstant     targetType = targetReg.type();
+        PropertyConstant propId = getConstant(propIdIndex, PropertyConstant.class);
 
-        if (propId instanceof FormalTypeChildConstant child) {
-            assert targetType.isTypeOfType();
+        if (propId.isFormalType()) {
+            loadFormalType(code, targetReg, propId);
 
-            loadFormalTypeChild(code, child);
-            storeValue(code, retId, child.getType().getType());
+            storeValue(code, retId, propId.getFormalValueType());
             return;
         }
 
-        PropertyInfo  propInfo = propId.getPropertyInfo(targetType);
+        TypeConstant  targetType = targetReg.type();
+        PropertyInfo  propInfo   = propId.getPropertyInfo(targetType);
         JitMethodDesc jmdGet;
 
         if (targetType.getAccess() == Access.STRUCT && !propInfo.isFormalType()) {
@@ -2682,7 +2742,7 @@ public class BuildContext {
 
             case "Widened->Specific" -> {
                 TypeConstant dstType = propInfo.getType();
-                if (!Builder.isJitAssignable(srcType, dstType)) {
+                if (!srcType.isJitAssignableTo(dstType)) {
                     code.checkcast(builder.ensureClassDesc(dstType));
                 }
             }
@@ -2911,6 +2971,57 @@ public class BuildContext {
         }
     }
 
+    /**
+     * Package the return values from a standard invocation into an {@code nTuple}.
+     */
+    public void assignTupleReturns(CodeBuilder code, JitMethodDesc jmd, int regId) {
+        assert !jmd.isOptimized;
+
+        JitParamDesc[] returns     = jmd.standardReturns;
+        int            returnCount = returns.length;
+
+        if (regId == Op.A_IGNORE) {
+            if (returnCount > 0) {
+                Builder.pop(code, returns[0].cd);
+            }
+            return;
+        }
+
+        TypeConstant tupleType = getReturnType(regId);
+        assert tupleType.isTuple();
+
+        int primarySlot = returnCount == 0
+                ? -1
+                : storeTempValue(code, returns[0].cd);
+
+        code.new_(CD_nTuple)
+            .dup();
+        loadCtx(code);
+        loadTypeConstant(code, tupleType);
+        code.loadConstant(returnCount)
+            .anewarray(CD_nObject);
+
+        for (int i = 0; i < returnCount; i++) {
+            JitParamDesc ret = returns[i];
+
+            code.dup()
+                .loadConstant(i);
+            if (i == 0) {
+                Builder.load(code, ret.cd, primarySlot);
+            } else {
+                loadFromContext(code, ret.cd, ret.altIndex);
+            }
+            if (ret.type.isJitInterface()) {
+                code.checkcast(CD_nObject);
+            }
+            code.aastore();
+        }
+
+        code.invokespecial(CD_nTuple, INIT_NAME,
+                MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
+        storeValue(code, regId, tupleType);
+    }
+
     private void assignConditionalReturns(CodeBuilder code, JitMethodDesc jmd, int cReturns,
                                           int[] anVar, boolean isOptimized) {
         assert cReturns > 1;
@@ -2921,7 +3032,7 @@ public class BuildContext {
 
         for (int i = 1; i < cReturns; i++) {
             int regId = anVar[i];
-            if (regId == Op.A_IGNORE || regId <= Op.CONSTANT_OFFSET) {
+            if (regId == Op.A_IGNORE || isProperty(regId)) {
                 continue;
             }
 
@@ -3270,24 +3381,6 @@ public class BuildContext {
     public int buildAndStoreString(CodeBuilder  code, String text, ClassDesc... argsTypes) {
         buildString(code, text, argsTypes);
         return storeTempValue(code, CD_String);
-    }
-
-    /**
-     * Adjust the int value on the stack according to its type.
-     */
-    public void adjustIntValue(CodeBuilder code, TypeConstant type) {
-        switch (type.getSingleUnderlyingClass(false).getName()) {
-            case "Bit"    -> code.i2b().ldc(0x01).iand();
-            case "Nibble" -> code.ldc(0x0F).iand();
-            case "Int8"   -> code.i2b();
-            case "UInt8"  -> code.ldc(0xFF).iand();
-            case "Int16"  -> code.i2s();
-            case "UInt16" -> code.ldc(0xFFFF).iand();
-            case "Int32",
-                 "UInt32",
-                 "Char"   -> {}
-            default       -> throw new IllegalStateException();
-        }
     }
 
     /**

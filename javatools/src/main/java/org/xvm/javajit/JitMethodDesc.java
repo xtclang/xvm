@@ -174,6 +174,16 @@ public class JitMethodDesc {
         return list.stream().mapToInt(i -> i).toArray();
     }
 
+    /**
+     * Obtain a descriptor that uses only the standard calling convention.
+     */
+    public JitMethodDesc standardOnly() {
+        return isOptimized
+                ? new JitMethodDesc(typeTarget, standardReturns, standardParams,
+                        null, null, isStandardStatic)
+                : this;
+    }
+
     protected MethodTypeDesc computeMethodDesc(JitParamDesc[] returns, JitParamDesc[] params) {
         int         extraCount = getImplicitParamCount();
         int         paramCount = params.length;
@@ -243,6 +253,10 @@ public class JitMethodDesc {
             TypeConstant type  = iOrig >= 0 ? paramTypes[iOrig] : targetType.removeAccess();
             boolean      fDflt = iOrig >= reqParamCount;
             ClassDesc    cd;
+
+            if (targetType != null && targetType.isJitPrimitive() && type.isAutoNarrowing()) {
+                type = type.resolveAutoNarrowing(pool, false, targetType, null);
+            }
 
             if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
                 if (iOrig >= 0) {
@@ -329,13 +343,7 @@ public class JitMethodDesc {
             } else {
                 assert type.isSingleUnderlyingClass(true);
 
-                if (targetType != null) {
-                    TypeConstant constraintType = type.resolveConstraints();
-                    if (constraintType.containsAutoNarrowing(false) &&
-                            constraintType.getExplicitClassFormat() == Format.MIXIN) {
-                        type = constraintType.resolveAutoNarrowing(pool, false, targetType, null);
-                    }
-                }
+                type = resolveMixinAutoNarrowing(type, targetType, pool);
 
                 cd = builder.ensureClassDesc(type);
                 JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
@@ -363,6 +371,10 @@ public class JitMethodDesc {
         for (int iOrig = 0, c = returnTypes.length; iOrig < c; iOrig++) {
             TypeConstant type = returnTypes[iOrig];
             ClassDesc    cd;
+
+            if (targetType != null && targetType.isJitPrimitive() && type.isAutoNarrowing()) {
+                type = type.resolveAutoNarrowing(pool, false, targetType, null);
+            }
 
             if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
                 ClassDesc cdStd = builder.ensureClassDesc(type);
@@ -401,7 +413,8 @@ public class JitMethodDesc {
             } else {
                 assert type.isSingleUnderlyingClass(true);
 
-                cd = builder.ensureClassDesc(type);
+                type = resolveMixinAutoNarrowing(type, targetType, pool);
+                cd   = builder.ensureClassDesc(type);
 
                 stdParamList.add(new JitParamDesc(type, Specific, cd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Specific, cd, iOrig, ixOptObj++, false));
@@ -428,6 +441,21 @@ public class JitMethodDesc {
         } else {
             return new JitMethodDesc(targetType, stdReturns, stdParams, optReturns, optParams, isStatic);
         }
+    }
+
+    /**
+     * Resolve a mixin's auto-narrowing type against the class incorporating the mixin.
+     */
+    private static TypeConstant resolveMixinAutoNarrowing(TypeConstant type,
+                                                          TypeConstant targetType, ConstantPool pool) {
+        if (targetType != null) {
+            TypeConstant constraintType = type.resolveConstraints();
+            if (constraintType.containsAutoNarrowing(false) &&
+                    constraintType.getExplicitClassFormat() == Format.MIXIN) {
+                return constraintType.resolveAutoNarrowing(pool, false, targetType, null);
+            }
+        }
+        return type;
     }
 
     @Override

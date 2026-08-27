@@ -586,7 +586,8 @@ class NibbleTests {
     // ----- Op tests (Retain LSB) -----------------------------------------------------------------
 
     void testNibbleRetainLSBits() {
-// TODO NoSuchMethodError: 'org.xtclang.ecstasy.numbers.IntNumber org.xtclang.ecstasy.numbers.Nibble.retainLSBits$p(int, org.xvm.javajit.Ctx, long)'        Nibble n1 = 0b1011;
+// TODO retainLSBits() is generated as Unsupported for Nibble
+//        Nibble n1 = 0b1011;
 //        Int  n2 = 2;
 //        Nibble n3 = n1.retainLSBits(n2);
 //        assert n3 == 0b0011;
@@ -623,7 +624,7 @@ class NibbleTests {
     // ----- Op tests (Retain MSB) -----------------------------------------------------------------
 
     void testNibbleRetainMSBits() {
-// TODO NoSuchMethodError: 'org.xtclang.ecstasy.numbers.IntNumber org.xtclang.ecstasy.numbers.Nibble.retainMSBits$p(int, org.xvm.javajit.Ctx, long)'
+// TODO retainMSBits() is generated as Unsupported for Nibble
 //        Nibble n1 = 0b1110;
 //        Int  n2 = 2;
 //        Nibble n3 = n1.retainMSBits(n2);
@@ -661,28 +662,25 @@ class NibbleTests {
     // ----- Op tests (Rotate left) ----------------------------------------------------------------
 
     void testNibbleRotateLeft() {
-// TODO - NoSuchMethodError: 'org.xtclang.ecstasy.numbers.IntNumber org.xtclang.ecstasy.numbers.Nibble.rotateLeft$p(int, org.xvm.javajit.Ctx, long)'
+// TODO rotateLeft() is generated as Unsupported for Nibble
 //        Nibble n1 = 0b1110;
 //        Nibble n2 = n1.rotateLeft(2);
 //        assert n2 == 0b1011;
     }
 
     void testNibbleZeroRotateLeft() {
-// TODO - NoSuchMethodError: 'org.xtclang.ecstasy.numbers.IntNumber org.xtclang.ecstasy.numbers.Nibble.rotateLeft$p(int, org.xvm.javajit.Ctx, long)'
 //        Nibble n1 = 0;
 //        Nibble n2 = n1.rotateLeft(2);
 //        assert n2 == 0;
     }
 
     void testNibbleRotateLeftByZero() {
-// TODO - NoSuchMethodError: 'org.xtclang.ecstasy.numbers.IntNumber org.xtclang.ecstasy.numbers.Nibble.rotateLeft$p(int, org.xvm.javajit.Ctx, long)'
 //        Nibble n1 = 0b1110;
 //        Nibble n2 = n1.rotateLeft(0);
 //        assert n2 == n1;
     }
 
     void testNibbleRotateLeftByBitLength() {
-// TODO - NoSuchMethodError: 'org.xtclang.ecstasy.numbers.IntNumber org.xtclang.ecstasy.numbers.Nibble.rotateLeft$p(int, org.xvm.javajit.Ctx, long)'
 //        Nibble n1 = 0b1110;
 //        Nibble n2 = n1.rotateLeft(4);
 //        assert n2 == n1;
@@ -691,28 +689,25 @@ class NibbleTests {
     // ----- Op tests (Rotate right) ---------------------------------------------------------------
 
     void testNibbleRotateRight() {
-// TODO - NoSuchMethodError: 'org.xtclang.ecstasy.numbers.IntNumber org.xtclang.ecstasy.numbers.Nibble.rotateRight$p(int, org.xvm.javajit.Ctx, long)'
+// TODO rotateRight() is generated as Unsupported for Nibble
 //        Nibble n1 = 0b1110;
 //        Nibble n2 = n1.rotateRight(2);
 //        assert n2 == 0b1011;
     }
 
     void testNibbleZeroRotateRight() {
-// TODO - NoSuchMethodError: 'org.xtclang.ecstasy.numbers.IntNumber org.xtclang.ecstasy.numbers.Nibble.rotateRight$p(int, org.xvm.javajit.Ctx, long)'
 //        Nibble n1 = 0;
 //        Nibble n2 = n1.rotateRight(2);
 //        assert n2 == 0;
     }
 
     void testNibbleRotateRightByZero() {
-// TODO - NoSuchMethodError: 'org.xtclang.ecstasy.numbers.IntNumber org.xtclang.ecstasy.numbers.Nibble.rotateRight$p(int, org.xvm.javajit.Ctx, long)'
 //        Nibble n1 = 0b1110;
 //        Nibble n2 = n1.rotateRight(0);
 //        assert n2 == n1;
     }
 
     void testNibbleRotateRightByBitLength() {
-// TODO - NoSuchMethodError: 'org.xtclang.ecstasy.numbers.IntNumber org.xtclang.ecstasy.numbers.Nibble.rotateRight$p(int, org.xvm.javajit.Ctx, long)'
 //        Nibble n1 = 0b1110;
 //        Nibble n2 = n1.rotateRight(64);
 //        assert n2 == n1;
@@ -735,7 +730,7 @@ class NibbleTests {
     void testNibbleOpShiftLeftMinus2() {
         Nibble n = 0b1110;
         Nibble n2 = n << -2; // same a right shift 2
-// TODO
+// TODO negative shift distance produces zero instead of reversing the direction
 //        assert n2 == 0b0011;
     }
 
@@ -756,7 +751,7 @@ class NibbleTests {
     void testNibbleOpShiftRightMinus2() {
         Nibble n = 0b1110;
         Nibble n2 = n >> -2; // same as left shift 2
-// TODO
+// TODO negative shift distance produces zero instead of reversing the direction
 //        assert n2 == 0b1000;
     }
 
@@ -777,7 +772,7 @@ class NibbleTests {
     void testNibbleOpUnsignedShiftRightMinus2() {
         Nibble n = 0b1110;
         Nibble n2 = n >>> -2; // same as left shift 2
-// TODO
+// TODO negative shift distance produces zero instead of reversing the direction
 //        assert n2 == 0b1000;
     }
 
@@ -799,7 +794,7 @@ class NibbleTests {
     // ----- Misc tests ----------------------------------------------------------------------------
 
     void testNibbleAbsPositive() {
-// TODO NoSuchMethodError: 'org.xtclang.ecstasy.numbers.UIntNumber org.xtclang.ecstasy.numbers.Nibble.absꖛ4$p(int, org.xvm.javajit.Ctx)'
+// TODO abs() is generated as Unsupported for Nibble
 //        Nibble n1 = 10;
 //        Nibble n2 = n1.abs();
 //        assert n2 == 10;
@@ -881,11 +876,10 @@ class NibbleTests {
     }
 
     void testMagnitude() {
-// TODO fix Nibble.magnitude
-//        Nibble n = 0;
-//        assert n.magnitude == 0;
-//        n = 0xF;
-//        assert n.magnitude == 100;
+        Nibble n = 0;
+        assert n.magnitude == 0;
+        n = 0xF;
+        assert n.magnitude == 0xF;
     }
 
     // ----- Stringable tests ----------------------------------------------------------------------
@@ -929,7 +923,7 @@ class NibbleTests {
     // ----- As Sequential tests -------------------------------------------------------------------
 
     void testDecAsSequential() {
-// TODO does not work
+// TODO prevValue() is generated as Unsupported for Nibble
 //        Nibble     n1 = 12;
 //        Sequential n2 = decSequential(n1);
 //        assert n2.is(Nibble);
@@ -941,7 +935,7 @@ class NibbleTests {
     }
 
     void testIncAsSequential() {
-// TODO does not work
+// TODO nextValue() is generated as Unsupported for Nibble
 //        Nibble     n1 = 10;
 //        Sequential n2 = incSequential(n1);
 //        assert n2.is(Nibble);

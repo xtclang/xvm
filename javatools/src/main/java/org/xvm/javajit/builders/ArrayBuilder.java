@@ -9,6 +9,7 @@ import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -59,6 +60,12 @@ public class ArrayBuilder extends AugmentingBuilder {
             // not an array
             return false;
         }
+
+        if (type instanceof CastTypeConstant) {
+            // use the explicit cast target to select the array representation
+            type = type.getUnderlyingType2();
+        }
+
         if (!type.isParamsSpecified()) {
             // no parameter type specified, type is base array
             return true;
@@ -69,6 +76,7 @@ public class ArrayBuilder extends AugmentingBuilder {
             // parameter type is a JIT primitive, sp array is specialized
             return false;
         }
+
         if (isObjectArray &&
                 type.removeAutoNarrowing().removeAccess().equals(thisType.removeAccess())) {
             // this builder is for Array<Object> and the type matches, so not base array

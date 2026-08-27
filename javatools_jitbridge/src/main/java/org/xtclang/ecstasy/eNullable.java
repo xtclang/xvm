@@ -3,12 +3,15 @@ package org.xtclang.ecstasy;
 import org.xtclang.ecstasy.reflect.Enumeration;
 import org.xtclang.ecstasy.text.String;
 
+import org.xvm.javajit.ModuleLoader;
+
 /**
  * Native Enumeration<Nullable>.
  */
 public class eNullable extends Enumeration {
     private eNullable() {
-        super(null, $ctx().container.typeSystem.pool().typeNullable());
+        super(null, ((ModuleLoader) eNullable.class.getClassLoader()).getCtx().
+                pool().typeNullable());
     }
 
     public static final eNullable $INSTANCE = new eNullable();

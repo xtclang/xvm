@@ -15,6 +15,7 @@ package basic {
                 passed &= runTest(() -> condMixinTests.run());
                 passed &= runTest(() -> delegationTests.run());
                 passed &= runTest(() -> enumTests.run());
+                passed &= runTest(() -> equalTests.run());
                 passed &= runTest(() -> genericTests.run());
                 passed &= runTest(() -> invocationTests.run());
                 passed &= runTest(() -> lambdaTests.run());
@@ -28,6 +29,8 @@ package basic {
                 passed &= runTest(() -> exceptionTests.run());
                 passed &= runTest(() -> stringTests.run());
                 passed &= runTest(() -> literalTests.run());
+                passed &= runTest(() -> mapTests.run());
+                passed &= runTest(() -> tupleTests.run());
             } catch (IllegalState e) {
                 console.print(e);
             }

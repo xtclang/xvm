@@ -5,9 +5,20 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.ClassDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpReturn;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.JitParamDesc;
+import org.xvm.javajit.RegisterInfo;
+import org.xvm.javajit.Builder.Loader;
+
+import org.xvm.javajit.registers.SingleSlot;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -17,6 +28,9 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
+
+import static org.xvm.javajit.Builder.CD_nObject;
+import static org.xvm.javajit.Builder.CD_nTuple;
 
 
 /**
@@ -106,6 +120,41 @@ public class Return_T
 
         private final TupleHandle m_hValue;
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        JitParamDesc[] returns = bctx.methodDesc.standardReturns;
+        if (returns.length == 0) {
+            code.return_();
+            return -1;
+        }
+
+        RegisterInfo tupleReg  = bctx.loadArgument(code, m_nArg);
+        int          tupleSlot = bctx.storeTempValue(code, tupleReg.cd());
+        Loader[]     loaders   = new Loader[returns.length];
+
+        for (int i = 0; i < returns.length; i++) {
+            int          index = i;
+            JitParamDesc ret   = returns[i];
+            ClassDesc    cd    = ret.cd;
+
+            loaders[i] = code_ -> {
+                code_.aload(tupleSlot)
+                    .getfield(CD_nTuple, "$values", CD_nObject.arrayType())
+                    .loadConstant(index)
+                    .aaload();
+                if (!cd.equals(CD_nObject)) {
+                    code_.checkcast(cd);
+                }
+                return new SingleSlot(ret.type, ret.flavor, cd, "");
+            };
+        }
+        return buildReturn(bctx, code, loaders);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int      m_nArg;
     private Argument m_argT;

@@ -6,10 +6,11 @@ package assertTests {
 
         testPrimitiveValues(7, 8);
         testNullNullablePrimitive(Null, False);
+        testSpecificNullJump(Null);
+        testSpecificNullTest(Null);
         testXvmPrimitiveValues(1234567890, 9876543210);
         testNullNullableXvmPrimitive(Null, False);
         testStringValue("world", 7);
-
     }
 
     void testPrimitiveValues(Int value, Int? value2) {
@@ -28,6 +29,17 @@ package assertTests {
         } catch (IllegalState e) {
             assertText(e, "\"value != Null || value2\": value=Null, value2=False");
         }
+    }
+
+    <Value extends Nullable> void testSpecificNullJump(Value value) {
+        if (value == Null) {
+            return;
+        }
+        assert;
+    }
+
+    <Value extends Nullable> void testSpecificNullTest(Value value) {
+        assert value == Null;
     }
 
     void testXvmPrimitiveValues(Int128 value, Int128? value2) {

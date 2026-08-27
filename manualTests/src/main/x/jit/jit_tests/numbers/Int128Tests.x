@@ -102,6 +102,7 @@ class Int128Tests {
         testInt128OpModBig();
         // Multiply
         testInt128OpMultiplyLowOnly();
+        testInt128OpMultiplyNegative();
         testInt128OpMultiplyBig();
         testInt128OpMultiplyInPlace();
         // Negate
@@ -143,10 +144,22 @@ class Int128Tests {
         testInt128OpXor();
         testInt128OpXorInPlace();
 
+        // Number tests
+        testInt128toArray();
+
         // Stringable
         testAppendTo();
         testEstimateStringLength();
 
+    }
+
+    // ----- Number tests --------------------------------------------------------------------------
+
+    void testInt128toArray() {
+        Int128 value = -42;
+
+        assert new Int128(value.toBitArray()) == value;
+        assert new Int128(value.toByteArray()) == value;
     }
 
     // ----- comparison tests ----------------------------------------------------------------------
@@ -878,6 +891,14 @@ class Int128Tests {
         Int128 n = 1234;
         Int128 n2 = n * 10;
         assert n2 == 12340;
+    }
+
+    void testInt128OpMultiplyNegative() {
+        assert multiply(2, -2) == -4;
+
+        Int128 multiply(Int128 n1, Int128 n2) {
+            return n1 * n2;
+        }
     }
 
     void testInt128OpMultiplyBig() {

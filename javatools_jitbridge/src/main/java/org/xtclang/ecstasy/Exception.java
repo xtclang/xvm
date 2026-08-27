@@ -1,7 +1,5 @@
 package org.xtclang.ecstasy;
 
-import java.util.Objects;
-
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.Ctx.CtorCtx;
 
@@ -120,43 +118,38 @@ public class Exception extends nConst {
         return new Exception(ctx).$init(ctx, text, null);
     }
 
-    // ----- Orderable interface -------------------------------------------------------------------
+    // ----- Const interface -----------------------------------------------------------------------
 
     /**
-     * The native implementation of:
+     * Native implementation of:
      *
-     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
-     */
-    public static Ordered compare(Ctx ctx, nType type, Exception value1, Exception value2) {
-        int i = Long.compare(hashCode$p(ctx, type, value1), hashCode$p(ctx, type, value2));
-        return i < 0  ? Ordered.Lesser.$INSTANCE
-             : i == 0 ? Ordered.Equal.$INSTANCE
-                      : Ordered.Greater.$INSTANCE;
-    }
-
-    /**
-     * The native implementation of:
-     *
-     *  static <CompileType extends Exception> Boolean equals(CompileType value1, CompileType value2)
+     *      static <CompileType extends Exception> Boolean equals(CompileType value1,
+     *                                                            CompileType value2)
      */
     public static boolean equals$p(Ctx ctx, nType type, Exception value1, Exception value2) {
-        if (!nObject.equals$p(ctx, ((nObject) value1.text).$type(ctx), value1.text, value2.text)) {
-            return false;
-        }
-        if (!nObject.equals$p(ctx, ((nObject) value1.cause).$type(ctx), value1.cause, value2.cause)) {
-            return false;
-        }
-        return value1.$exception.equals(value2.$exception);
+        return value1 == value2;
     }
 
-    // ----- Hashable interface --------------------------------------------------------------------
+    /**
+     * Native implementation of:
+     *
+     *      static <CompileType extends Exception> Ordered compare(CompileType value1,
+     *                                                             CompileType value2)
+     */
+    public static Ordered compare(Ctx ctx, nType type, Exception value1, Exception value2) {
+        int result = Integer.compare(
+                System.identityHashCode(value1), System.identityHashCode(value2));
+        return result < 0  ? Ordered.Lesser.$INSTANCE
+             : result == 0 ? Ordered.Equal.$INSTANCE
+                           : Ordered.Greater.$INSTANCE;
+    }
 
     /**
-     * The native implementation of:
+     * Native implementation of:
      *
-     * static <CompileType extends Hashable> Int hashCode(CompileType value);;
+     *      static <CompileType extends Exception> Int64 hashCode(CompileType value)
      */
-    public static long hashCode$p(Ctx ctx, nType type, Exception ex) {
-        return Objects.hash(ex.text, ex.cause, ex.$exception);
+    public static long hashCode$p(Ctx ctx, nType type, Exception value) {
+        return System.identityHashCode(value);
     }
 }

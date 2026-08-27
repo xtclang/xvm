@@ -806,7 +806,12 @@ public class ParameterizedTypeConstant
             return typeJit;
         }
 
-        ConstantPool    pool           = getConstantPool();
+        ConstantPool pool = getConstantPool();
+        if (isTuple()) {
+            // Tuple has a variable number of parameters; every specialization uses nTuple
+            return m_typeJitCallable = pool.typeTuple();
+        }
+
         ClassStructure  clz            = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
         var             listTypeParams = clz.getTypeParamsAsList();
         var             listContribs   = clz.collectConditionalIncorporates(this);

@@ -200,10 +200,7 @@ public class FinallyEnd
                     case XvmPrimitive, NullableXvmPrimitive:
                         // store the return primitives (including any extensions) to the context,
                         // leaving the last one on the stack
-                        for (int j = retIndexes.length - 1; j >= 1 ; j--) {
-                            JitParamDesc retDesc = jmd.optimizedReturns[retIndexes[j]];
-                            bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
-                        }
+                        bctx.storeOptReturnsToContext(code, retIndexes, 1, retIndexes.length - 1);
                         // set the last primitive on the stack as the return value
                         Builder.addReturn(code, cd);
                         break;
@@ -223,10 +220,7 @@ public class FinallyEnd
 
                     case XvmPrimitive, NullableXvmPrimitive:
                         // store the return primitives (including any extensions) to the context
-                        for (int j = retIndexes.length - 1; j >= 0 ; j--) {
-                            JitParamDesc retDesc = jmd.optimizedReturns[retIndexes[j]];
-                            bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
-                        }
+                        bctx.storeOptReturnsToContext(code, retIndexes, 0, retIndexes.length);
                         break;
 
                     default:

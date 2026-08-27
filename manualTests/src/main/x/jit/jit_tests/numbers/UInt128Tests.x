@@ -128,10 +128,22 @@ class UInt128Tests {
         testUInt128OpXor();
         testUInt128OpXorInPlace();
 
+        // Number tests
+        testUInt128toArray();
+
         // Stringable
         testAppendTo();
         testEstimateStringLength();
 
+    }
+
+    // ----- Number tests --------------------------------------------------------------------------
+
+    void testUInt128toArray() {
+        UInt128 value = 0xFEDC_BA98_7654_3210_1234_5678_9ABC_DEF0;
+
+        assert new UInt128(value.toBitArray()) == value;
+        assert new UInt128(value.toByteArray()) == value;
     }
 
     // ----- comparison tests ----------------------------------------------------------------------

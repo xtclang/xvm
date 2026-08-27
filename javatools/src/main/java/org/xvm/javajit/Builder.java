@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -49,6 +49,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 import static org.xvm.asm.Constant.Format.Int128;
+import static org.xvm.asm.Constant.Format.Tuple;
 
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
@@ -291,7 +292,13 @@ public abstract class Builder {
 
         case FloatConstant floatConstant:
             return switch (floatConstant.getFormat()) {
-                case Float16, Float32 -> {
+                case Float16 -> {
+                    float value = floatConstant.getValue();
+                    // normalize the value produced by the legacy Float16 constant decoder
+                    code.loadConstant(Float.float16ToFloat(Float.floatToFloat16(value)));
+                    yield new SingleSlot(constant.getType(), Primitive, CD_float, "");
+                }
+                case Float32 -> {
                     code.loadConstant(floatConstant.getValue().floatValue());
                     yield new SingleSlot(constant.getType(), Primitive, CD_float, "");
                 }
@@ -378,16 +385,25 @@ public abstract class Builder {
         case ClassConstant _:
         case DecoratedClassConstant _: {
             IdentityConstant constId = (IdentityConstant) constant;
-            ConstantPool pool = typeSystem.pool();
-            TypeConstant type = constId.getValueType(pool, null);
-            String       name = ensureJitClassName(type);
-            // TODO GG the "e" class gen functionality must be merged into the "c" class result
-            if (!type.isA(pool.typeEnumeration())) {
-                name  = TypeSystem.classOfClass(name);
+            ConstantPool     pool    = typeSystem.pool();
+            TypeConstant     type    = constId.getValueType(pool, null);
+
+            if (type.isA(pool.typeEnumeration())) {
+                String    name = ensureJitClassName(type);
+                ClassDesc cd   = ClassDesc.of(name);
+                code.getstatic(cd, Instance, cd);
+                return new SingleSlot(type, Specific, cd, "");
             }
-            ClassDesc cd = ClassDesc.of(name);
-            code.getstatic(cd, Instance, cd);
-            return new SingleSlot(type, Specific, cd, "");
+
+            assert type.isA(pool.typeClass());
+
+            loadCtx(bctx, code);
+            loadTypeConstant(bctx, code, type.getParamType(0));
+            code.invokestatic(CD_nType, "$ensureType",
+                    MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+            loadCtx(bctx, code)
+                .invokevirtual(CD_nType, "$xvmClass", MethodTypeDesc.of(CD_Class, CD_Ctx));
+            return new SingleSlot(type, Specific, CD_Class, "");
         }
 
         case PropertyConstant propId: {
@@ -527,7 +543,9 @@ public abstract class Builder {
         case ArrayConstant arrayConst: {
             TypeConstant arrayType = arrayConst.getType();
             Constant[]   values    = arrayConst.getValue();
-            return loadArray(bctx, code, arrayType, values);
+            return arrayConst.getFormat() == Tuple
+                    ? loadTuple(bctx, code, arrayType, values)
+                    : loadArray(bctx, code, arrayType, values);
         }
 
         case MapConstant mapConstant: {
@@ -540,8 +558,7 @@ public abstract class Builder {
             var          constMap = mapConstant.getValue();
 
             // actual implementation is the ListMap
-            mapType = pool.ensureParameterizedTypeConstant(
-                pool.ensureEcstasyTypeConstant("maps.ListMap"), keyType, valType);
+            mapType = pool.ensureParameterizedTypeConstant(pool.typeListMap(), keyType, valType);
 
             TypeInfo       typeInfo = mapType.ensureTypeInfo();
             MethodConstant ctorId   = typeInfo.findConstructor(keysType, valsType.freeze(), pool.typeBoolean());
@@ -601,6 +618,33 @@ public abstract class Builder {
         code.invokestatic(CD_ArrayUInt8, "$fromLongs",
                 MethodTypeDesc.of(CD_ArrayUInt8, CD_Ctx, CD_long, CD_long.arrayType()));
         return new SingleSlot(bytesConstant.getType(), Specific, CD_ArrayUInt8, "");
+    }
+
+    private SingleSlot loadTuple(BuildContext bctx, CodeBuilder code, TypeConstant type,
+                                 Constant[] values) {
+        code.new_(CD_nTuple)
+            .dup();
+        loadCtx(bctx, code);
+        loadTypeConstant(bctx, code, type);
+        code.loadConstant(values.length)
+            .anewarray(CD_nObject);
+
+        for (int i = 0; i < values.length; i++) {
+            code.dup()
+                .loadConstant(i);
+
+            RegisterInfo valueReg = loadConstant(bctx, code, values[i]);
+            if (valueReg.flavor().isOptimized) {
+                box(code, valueReg);
+            } else if (valueReg.type().isJitInterface()) {
+                code.checkcast(CD_nObject);
+            }
+            code.aastore();
+        }
+
+        code.invokespecial(CD_nTuple, INIT_NAME,
+                MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
+        return new SingleSlot(type, Specific, CD_nTuple, "");
     }
 
     private SingleSlot loadArray(BuildContext bctx, CodeBuilder code, TypeConstant arrayType,
@@ -785,10 +829,15 @@ public abstract class Builder {
     }
 
     /**
-     * Build the code to load an XTC String value on the Java stack.
+     * Build the code to load an XTC String value on the Java stack. Note that String.of() is
+     * tolerant to the absence of Ctx argument.
      */
     public static void loadString(CodeBuilder code, String value, int ctxSlot) {
-        code.aload(ctxSlot);
+        if (ctxSlot >= 0) {
+            code.aload(ctxSlot);
+        } else {
+            code.aconst_null();
+        }
         code.ldc(value)
             .invokestatic(CD_String, "of", MD_StringOf);
     }
@@ -821,19 +870,32 @@ public abstract class Builder {
     public PropertyInfo loadProperty(CodeBuilder code, TypeConstant typeContainer,
                                      PropertyConstant propId, boolean allowUnboxing, int ctxSlot) {
         if (typeContainer.containsFormalType(true)) {
-            typeContainer = typeContainer.resolveConstraints().ensureAccess(Constants.Access.PRIVATE);
+            typeContainer = typeContainer.resolveConstraints().ensureAccess(Access.PRIVATE);
         }
 
-        PropertyInfo xvmInfo      = propId.getPropertyInfo(typeContainer);
-        TypeConstant typeJit      = typeContainer.getCallableJitType();
-        PropertyInfo jitInfo      = typeJit.equals(pool().typeObject()) // REVIEW GG
-                ? xvmInfo
-                : propId.getPropertyInfo(typeJit);
-// TODO JIT-names branch had this alternative definition for jitInfo:
-//      PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCallableJitType());
-        TypeConstant  typeOwner  = jitInfo.getOwnerType(this, typeContainer);
-        JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(this, typeContainer);
-        String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
+        PropertyInfo xvmInfo = propId.getPropertyInfo(typeContainer);
+        TypeConstant typeJit = typeContainer.getCallableJitType().ensureAccess(Access.PRIVATE);
+        PropertyInfo jitInfo = typeJit.ensureTypeInfo().findProperty(propId, true);
+        if (jitInfo == null) {
+            // a relational type can collapse to Object, which may not expose the property
+            jitInfo = xvmInfo;
+        }
+
+        TypeConstant  typeOwner    = typeJit;
+        JitMethodDesc jmdGet       = jitInfo.getGetterJitDesc(this, typeContainer);
+        boolean       isNative     = jitInfo.isNative();
+        boolean       invokeStatic = jmdGet.isOptimizedStatic && allowUnboxing;
+
+        if (!invokeStatic) {
+            // resolve the descriptor against the implementation owner
+            typeOwner = jitInfo.getOwnerType(this, typeContainer);
+            typeOwner = typeOwner.getCallableJitType();
+            jitInfo   = propId.getPropertyInfo(typeOwner);
+            jmdGet    = jitInfo.getGetterJitDesc(this, typeOwner);
+        }
+
+        String    getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
+        ClassDesc ownerCD    = ensureClassDesc(typeOwner);
 
         MethodTypeDesc md;
         if (jmdGet.isOptimized && allowUnboxing) {
@@ -843,18 +905,22 @@ public abstract class Builder {
             md = jmdGet.standardMD;
         }
 
+        // Note:
+        //   1) an optimized static getter is used only when the caller allows unboxing;
+        //   2) native accessors are hosted by their Java bridge class even when the Ecstasy owner
+        //      otherwise maps to a JIT interface
         code.aload(ctxSlot);
-        if (jmdGet.isOptimizedStatic && allowUnboxing) {
-            code.invokestatic(ensureClassDesc(typeContainer), getterName, md);
-        } else if (!jitInfo.isNative() && typeOwner.isJitInterface()) {
-            code.invokeinterface(ensureClassDesc(typeOwner), getterName, md);
+        if (invokeStatic) {
+            code.invokestatic(ownerCD, getterName, md);
+        } else if (!isNative && typeOwner.isJitInterface()) {
+            code.invokeinterface(ownerCD, getterName, md);
         } else {
-            code.invokevirtual(ensureClassDesc(typeOwner), getterName, md);
+            code.invokevirtual(ownerCD, getterName, md);
         }
 
         TypeConstant jitType = jitInfo.getType();
         TypeConstant xvmType = xvmInfo.getType();
-        if (!isJitAssignable(jitType, xvmType)) {
+        if (!jitType.isJitAssignableTo(xvmType)) {
             code.checkcast(ensureClassDesc(xvmType));
         }
         return xvmInfo;
@@ -1658,7 +1724,7 @@ public abstract class Builder {
         MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
 
         if (infoCtor == null) {
-            infoTarget = typeTarget.ensureAccess(Constants.Access.PRIVATE).ensureTypeInfo();
+            infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
             infoCtor   = infoTarget.getMethodById(idCtor);
         }
 
@@ -1710,23 +1776,11 @@ public abstract class Builder {
     }
 
     /**
-     * Check if the assignment of the variable of the `srcType` to the variable of `dstType`
-     * requires a "checkcast".
-     *
-     * @return true iff the assignment is JIT-valid, false if the "checkcast" opcode is necessary
-     */
-    public static boolean isJitAssignable(TypeConstant srcType, TypeConstant dstType) {
-        return srcType.isA(dstType) ||
-                !srcType.isJitL2Specialized() &&
-                srcType.getCallableJitType().isA(dstType.getCallableJitType());
-    }
-
-    /**
      * Primitive classes don't have fields; Char#codepoint and Bit#literal are represented by
      * pseudo-fields.
      */
     public boolean isPrimitivePseudoField(TypeConstant typeContainer, PropertyConstant propId) {
-        if (typeContainer.getAccess() != Constants.Access.STRUCT) {
+        if (typeContainer.getAccess() != Access.STRUCT) {
             return false;
         }
 
@@ -1753,13 +1807,31 @@ public abstract class Builder {
             : propId.getPropertyInfo(targetReg.type());                // "codepoint"
     }
 
+    /**
+     * Adjust the int value on the stack according to its type.
+     */
+    public static void adjustIntValue(CodeBuilder code, TypeConstant type) {
+        switch (type.getSingleUnderlyingClass(false).getName()) {
+            case "Bit"    -> code.i2b().ldc(0x01).iand();
+            case "Nibble" -> code.ldc(0x0F).iand();
+            case "Int8"   -> code.i2b();
+            case "UInt8"  -> code.ldc(0xFF).iand();
+            case "Int16"  -> code.i2s();
+            case "UInt16" -> code.ldc(0xFFFF).iand();
+            case "Int32",
+                 "UInt32",
+                 "Char"   -> {}
+            default       -> throw new IllegalStateException();
+        }
+    }
+
     // ----- TEMPORARY: debugging support ----------------------------------------------------------
 
     /**
      * Adds a log message generation (this also allows to break in the debugger).
      */
-    public static void addLog(CodeBuilder code, String message) {
-        code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
+    public static void addLog(CodeBuilder code, int ctxSlot, String message) {
+        code.aload(ctxSlot)
             .loadConstant(message)
             .invokevirtual(CD_Ctx, "log", MethodTypeDesc.of(CD_void, CD_JavaString));
     }
@@ -1863,6 +1935,7 @@ public abstract class Builder {
     public static final String N_nRef         = "org.xtclang.ecstasy.reflect.nRef";
     public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
+    public static final String N_nTuple       = "org.xtclang.ecstasy.nTuple";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
     public static final String N_nUtil        = "org.xtclang.ecstasy.nUtil";
 
@@ -1947,6 +2020,7 @@ public abstract class Builder {
     public static final ClassDesc CD_nException          = ClassDesc.of(N_nException);
     public static final ClassDesc CD_nObject             = ClassDesc.of(N_nObj);
     public static final ClassDesc CD_nRef                = ClassDesc.of(N_nRef);
+    public static final ClassDesc CD_nTuple              = ClassDesc.of(N_nTuple);
     public static final ClassDesc CD_nType               = ClassDesc.of(N_nType);
     public static final ClassDesc CD_nUtil               = ClassDesc.of(N_nUtil);
 

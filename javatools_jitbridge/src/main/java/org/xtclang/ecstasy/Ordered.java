@@ -25,7 +25,7 @@ public class Ordered
     public final String $symbol;
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
-        ConstantPool pool = $xvm().ecstasyPool;
+        ConstantPool pool = ctx.pool();
         return switch ((int) $ordinal) {
             case 0  -> pool.valLesser() .getType();
             case 1  -> pool.valEqual()  .getType();

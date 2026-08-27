@@ -411,7 +411,8 @@ public abstract class OpTest
                 code.ifne(labelTrue);
             }
         } else {
-            assert regArg.type().isNullable();
+            TypeConstant type = regArg.type().resolveConstraints();
+            assert type.isNullable() || type.isOnlyNullable();
 
             Builder.loadNull(code);
             if (fNot) {

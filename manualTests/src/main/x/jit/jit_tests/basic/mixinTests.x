@@ -7,6 +7,8 @@ package mixinTests {
         test2();
         test3();
         test4();
+        test5();
+        test6();
     }
 
     void test1() {
@@ -35,6 +37,21 @@ package mixinTests {
 
         Derived d = new Derived();
         assert d.f() == 42;
+    }
+
+    void test5() {
+        import t5.*;
+
+        Base base = new Base();
+        assert base.self().value() == 42;
+    }
+
+    void test6() {
+//        TODO: an explicit auto-narrowing mixin return retains the mixin descriptor
+//        import t6.*;
+//
+//        Base base = new Base();
+//        assert base.self().value() == 42;
     }
 
     package t1 {
@@ -101,6 +118,34 @@ package mixinTests {
 
         class Derived extends Base incorporates Mix1 {
             @Override Int f() = super() + 1;
+        }
+    }
+
+    package t5 {
+        interface Root {
+            Root self();
+        }
+
+        class Base implements Root incorporates Mix {
+            Int value() = 42;
+
+            @Override
+            Base self() = super().as(Base);
+        }
+
+        mixin Mix into Base {
+            @Override
+            Mix self() = this;
+        }
+    }
+
+    package t6 {
+        class Base incorporates Mix {
+            Int value() = 42;
+        }
+
+        mixin Mix into Base {
+            Mix! self() = this;
         }
     }
 }

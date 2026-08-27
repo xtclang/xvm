@@ -980,11 +980,10 @@ class UIntNTests {
     }
 
     void testMagnitude() {
-// TODO fix UIntN.magnitude
-//        UIntN n = 0;
-//        assert n.magnitude == 0;
-//        n = 100;
-//        assert n.magnitude == 100;
+        UIntN n = 0;
+        assert n.magnitude == 0;
+        n = 100;
+        assert n.magnitude == 100;
     }
 
     // ----- As Number tests -----------------------------------------------------------------------
@@ -1070,14 +1069,13 @@ class UIntNTests {
     }
 
     void testNegateAsNumber() {
-// TODO needs UIntNUmber to be compiled by the JIT because the neg() method is on UIntNumber
-//        UIntN  n1 = 1234;
-//        try {
-//            Number n2 = negateNumber(n1);
-//            assert as "Should have failed";
-//        } catch (Unsupported e) {
-//            // expected
-//        }
+        UIntN n1 = 1234;
+        try {
+            Number n2 = negateNumber(n1);
+            assert as "Should have failed";
+        } catch (Unsupported e) {
+            // expected
+        }
     }
 
     Number negateNumber(Number n) {
@@ -1215,39 +1213,35 @@ class UIntNTests {
     }
 
     void testMagnitudeAsNumber() {
-// TODO fix UIntN.magnitude
-//        UIntN   n1 = 0;
-//        Number n2 = getNumberMagnitude(n1);
-//        assert n2.is(UIntN);
-//        assert n2 == 0;
-//
-//        n1 = 100;
-//        n2 = getNumberMagnitude(n1);
-//        assert n2.is(UIntN);
-//        assert n2 == 100;
+        UIntN  n1 = 0;
+        Number n2 = getNumberMagnitude(n1);
+        assert n2.is(UIntN);
+        assert n2 == 0;
+
+        n1 = 100;
+        n2 = getNumberMagnitude(n1);
+        assert n2.is(UIntN);
+        assert n2 == 100;
     }
 
     Number getNumberMagnitude(Number n) {
-     TODO fix UIntN.magnitude
-//        return n.magnitude;
+        return n.magnitude;
     }
 
     // ----- As IntNumber tests --------------------------------------------------------------------
 
     void testAbsAsIntNumberPositive() {
-// TODO needs UIntNUmber to be compiled by the JIT because the abs() method is on UIntNumber
-//        UIntN      n1 = 10;
-//        IntNumber n2 = absIntNumber(n1);
-//        assert n2.is(UIntN);
-//        assert n2 == 10;
+        UIntN     n1 = 10;
+        IntNumber n2 = absIntNumber(n1);
+        assert n2.is(UIntN);
+        assert n2 == 10;
     }
 
     void testAbsAsIntNumberZero() {
-// TODO needs UIntNUmber to be compiled by the JIT because the abs() method is on UIntNumber
-//        UIntN      n1 = 0;
-//        IntNumber n2 = absIntNumber(n1);
-//        assert n2.is(UIntN);
-//        assert n2 == 0;
+        UIntN     n1 = 0;
+        IntNumber n2 = absIntNumber(n1);
+        assert n2.is(UIntN);
+        assert n2 == 0;
     }
 
     IntNumber absIntNumber(IntNumber n) {
@@ -1362,14 +1356,13 @@ class UIntNTests {
     }
 
     void testNegateAsIntNumber() {
-// TODO needs UIntNUmber to be compiled by the JIT because the neg() method is on UIntNumber
-//        UIntN n1 = 1234;
-//        try {
-//            IntNumber n2 = negateIntNumber(n1);
-//            assert as "Should have failed";
-//        } catch (Unsupported e) {
-//            // expected
-//        }
+        UIntN n1 = 1234;
+        try {
+            IntNumber n2 = negateIntNumber(n1);
+            assert as "Should have failed";
+        } catch (Unsupported e) {
+            // expected
+        }
     }
 
     IntNumber negateIntNumber(IntNumber n) {
@@ -1678,21 +1671,19 @@ class UIntNTests {
     }
 
     void testMagnitudeAsIntNumber() {
-// TODO fix UIntN.magnitude
-//        UIntN   n1 = 0;
-//        IntNumber n2 = getIntNumberMagnitude(n1);
-//        assert n2.is(UIntN);
-//        assert n2 == 0;
-//
-//        n1 = 100;
-//        n2 = getIntNumberMagnitude(n1);
-//        assert n2.is(UIntN);
-//        assert n2 == 100;
+        UIntN     n1 = 0;
+        IntNumber n2 = getIntNumberMagnitude(n1);
+        assert n2.is(UIntN);
+        assert n2 == 0;
+
+        n1 = 100;
+        n2 = getIntNumberMagnitude(n1);
+        assert n2.is(UIntN);
+        assert n2 == 100;
     }
 
     IntNumber getIntNumberMagnitude(IntNumber n) {
-     TODO fix UIntN.magnitude
-//        return n.magnitude;
+        return n.magnitude;
     }
 
     // ----- As Sequential tests -------------------------------------------------------------------

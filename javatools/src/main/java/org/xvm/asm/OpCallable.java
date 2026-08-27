@@ -109,6 +109,13 @@ public abstract class OpCallable extends Op {
         return false;
     }
 
+    /**
+     * @return true iff the op packages the callee's return values into a Tuple.
+     */
+    protected boolean isTupleReturn() {
+        return false;
+    }
+
     @Override
     public void resetSimulation() {
         if (isMultiReturn()) {
@@ -619,7 +626,10 @@ public abstract class OpCallable extends Op {
                 }
             }
         } else if (m_nRetValue != A_IGNORE) {
-            tmx.assign(getAddress(), m_nRetValue, atypeResult[0]);
+            TypeConstant typeResult = isTupleReturn()
+                    ? bctx.pool().ensureTupleType(atypeResult)
+                    : atypeResult[0];
+            tmx.assign(getAddress(), m_nRetValue, typeResult);
         }
     }
 
@@ -793,6 +803,11 @@ public abstract class OpCallable extends Op {
             jmdCall = JitMethodDesc.of(bctx.builder,
                     null, true, false, atypeParams, atypeReturns, atypeParams.length);
 
+            boolean fTuple = isTupleReturn();
+            if (fTuple) {
+                jmdCall = jmdCall.standardOnly();
+            }
+
             int[] anRet = isMultiReturn()
                     ? m_anRetValue
                     : m_nRetValue == Op.A_IGNORE
@@ -842,6 +857,8 @@ public abstract class OpCallable extends Op {
                 if (jmdCall.standardMD.returnType() != CD_void) {
                     Builder.pop(code, jmdCall.standardMD.returnType());
                 }
+            } else if (fTuple) {
+                bctx.assignTupleReturns(code, jmdCall, m_nRetValue);
             } else {
                 bctx.assignReturns(code, jmdCall, anRet.length, anRet, fCond);
             }
@@ -850,6 +867,10 @@ public abstract class OpCallable extends Op {
                 code.labelBinding(lblEnd);
             }
             return -1;
+        }
+
+        if (isTupleReturn()) {
+            jmdCall = jmdCall.standardOnly();
         }
 
         MethodTypeDesc mdCall;
@@ -880,7 +901,9 @@ public abstract class OpCallable extends Op {
                 ? NO_ARGS
                 : new int[] {m_nRetValue};
 
-        if (anRet.length == 0 && mdCall.returnType() != CD_void) {
+        if (isTupleReturn()) {
+            bctx.assignTupleReturns(code, jmdCall, m_nRetValue);
+        } else if (anRet.length == 0 && mdCall.returnType() != CD_void) {
             // there are no returns to be assigned, but the method has a return, so it must be
             // popped from the stack
             Builder.pop(code, mdCall.returnType());

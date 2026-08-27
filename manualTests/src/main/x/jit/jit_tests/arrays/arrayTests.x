@@ -10,7 +10,10 @@ package arrayTests {
         testConstStringArray();
         testAnonArrayVar();
         testNamedArrayVar();
-//        testDistinct(); // TODO: depends on the compilation of Collections.reduce()
+        testPrimitiveArrayVar();
+        testNullablePrimitiveArrayVar();
+        testDistinctPrimitive();
+        testDistinct();
         shouldIterateUsingForLoop();
         shouldBeReadOnly();
     }
@@ -62,14 +65,46 @@ package arrayTests {
         assert c[1] == 'b';
     }
 
-    void testDistinct() {
-        Int[] values = [1, 2, 1, 3, 2];
-        Int[] result = values.distinct().toArray();
+    void testPrimitiveArrayVar() {
+        Int[] values = makePrimitiveArray(1, 2);
+        assert values[0] == 1;
+        assert values[1] == 2;
 
-        assert result.size == 3;
-        assert result[0] == 1;
-        assert result[1] == 2;
-        assert result[2] == 3;
+        Int[] makePrimitiveArray(Int first, Int second) {
+            return [first, second];
+        }
+    }
+
+    void testNullablePrimitiveArrayVar() {
+        Array<Int?> values = makeNullablePrimitiveArray(1, Null);
+        assert values[0] == 1;
+        assert values[1] == Null;
+
+        Array<Int?> makeNullablePrimitiveArray(Int? first, Int? second) {
+            return [first, second];
+        }
+    }
+
+    void testDistinctPrimitive() {
+//        TODO: requires DeferredCollection compilation
+//        Int[] values = [1, 2, 1, 3, 2];
+//        Int[] result = values.distinct().toArray();
+//
+//        assert result.size == 3;
+//        assert result[0] == 1;
+//        assert result[1] == 2;
+//        assert result[2] == 3;
+    }
+
+    void testDistinct() {
+//         TODO: requires DeferredCollection compilation
+//         String[] values = ["one", "two", "one", "three", "two"];
+//         String[] result = values.distinct().toArray();
+//
+//         assert result.size == 3;
+//         assert result[0] == "one";
+//         assert result[1] == "two";
+//         assert result[2] == "three";
     }
 
     void shouldIterateUsingForLoop() {

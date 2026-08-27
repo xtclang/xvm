@@ -3,12 +3,15 @@ package org.xtclang.ecstasy;
 import org.xtclang.ecstasy.reflect.Enumeration;
 import org.xtclang.ecstasy.text.String;
 
+import org.xvm.javajit.ModuleLoader;
+
 /**
  * Native Enumeration<Ordered>.
  */
 public class eOrdered extends Enumeration {
     private eOrdered() {
-        super(null, $ctx().container.typeSystem.pool().typeOrdered());
+        super(null, ((ModuleLoader) eOrdered.class.getClassLoader()).getCtx().
+                pool().typeOrdered());
     }
 
     public static final eOrdered $INSTANCE = new eOrdered();

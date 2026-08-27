@@ -6,7 +6,6 @@ import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.IteratorᐸBitᐳ;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nType;
-import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Bit;
 import org.xtclang.ecstasy.numbers.Int64;
@@ -141,11 +140,6 @@ public class ArrayᐸBitᐳ
         return this;
     }
 
-    @Override
-    public ArrayᐸBitᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
-        return (ArrayᐸBitᐳ) super.slice(ctx, range);
-    }
-
     // ----- Array internals -----------------------------------------------------------------------
 
     @Override
@@ -183,18 +177,38 @@ public class ArrayᐸBitᐳ
         return $fromLongs(ctx, null, bits, values);
     }
 
+    // ----- helper methods ------------------------------------------------------------------------
+
     /**
      * Internal method to create a bit array from a long array.
      *
      * @param bits  the size of the array in bits
      */
     public static ArrayᐸBitᐳ $fromLongs(Ctx ctx, Mutability mutability, long bits, long... values) {
-        TypeConstant type  = ctx.container.typeSystem.pool().typeBitArray();
+        TypeConstant type  = ctx.pool().typeBitArray();
         ArrayᐸBitᐳ   array = $new$p(ctx, type, bits, false);
         array.$mut(mutability == null ? $CONSTANT : (int) mutability.$ordinal);
         array.$storage = values;
         array.$size((int) bits);
         return array;
+    }
+
+    /**
+     * Read a 64-bit segment of this array.
+     * Used by {@link org.xvm.javajit.builders.NumberBuilder#loadConstructorLong}.
+     *
+     * @param index  the index of the 64-bit segment
+     *
+     * @return the segment, with the first bit stored in its most significant position
+     */
+    public long $toLong(Ctx ctx, int index) {
+        long start = (long) index << 6;
+        long count = Math.min(size$get$p(ctx) - start, Long.SIZE);
+        long value = 0;
+        for (long offset = 0; offset < count; offset++) {
+            value |= (long) getElement$pi(ctx, start + offset) << (63 - offset);
+        }
+        return value;
     }
 
     @Override
@@ -221,7 +235,7 @@ public class ArrayᐸBitᐳ
 
         @Override
         public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeBit());
+            return nType.$ensureType(ctx, ctx.pool().typeBit());
         }
     }
 }

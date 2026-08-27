@@ -7,7 +7,6 @@ import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.IteratorᐸBooleanᐳ;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nType;
-import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Int64;
 
@@ -141,11 +140,6 @@ public class ArrayᐸBooleanᐳ
         return this;
     }
 
-    @Override
-    public ArrayᐸBooleanᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
-        return (ArrayᐸBooleanᐳ) super.slice(ctx, range);
-    }
-
     // ----- Array internals -----------------------------------------------------------------------
 
     @Override
@@ -202,7 +196,7 @@ public class ArrayᐸBooleanᐳ
 
         @Override
         public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeBoolean());
+            return nType.$ensureType(ctx, ctx.pool().typeBoolean());
         }
     }
 }

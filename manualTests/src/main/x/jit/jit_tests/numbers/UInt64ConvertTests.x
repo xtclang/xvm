@@ -104,6 +104,14 @@ class UInt64ConvertTests {
         testUInt64ToUInt128WithBoundsCheck(0x7FFFFFFF, 0x7FFFFFFF, False);
         testUInt64ToUInt128WithBoundsCheck(UInt64.MaxValue, UInt64.MaxValue, False);
 
+        testUInt64toArray();
+    }
+
+    void testUInt64toArray() {
+        UInt64 value = 42;
+
+        assert new UInt64(value.toBitArray()) == value;
+        assert new UInt64(value.toByteArray()) == value;
     }
 
     void testUInt64ToInt8(UInt64 a, Int8 expected) {

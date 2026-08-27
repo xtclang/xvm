@@ -32,11 +32,9 @@ public class nType
 
         assert !type.containsFormalType(true);
 
-        $ctx      = ctx;
         $dataType = type;
     }
 
-    public final Ctx          $ctx;
     public final TypeConstant $dataType;
 
     private Method equalsMethod;
@@ -119,8 +117,46 @@ public class nType
             return true;
         }
 
+        nType type1 = ((nObject) value1).$type(ctx);
+        nType type2 = ((nObject) value2).$type(ctx);
+        if ($dataType.isJitPrimitive()) {
+            if (!type1.$dataType.equals(type2.$dataType)) {
+                return false;
+            }
+            return switch (value1) {
+                case Bit n1     -> n1.$value == ((Bit)     value2).$value;
+                case Boolean b1 -> b1.$value == ((Boolean) value2).$value;
+                case Char c1    -> c1.$value == ((Char)    value2).$value;
+                case Nibble n1  -> n1.$value == ((Nibble)  value2).$value;
+                case Int8 n1    -> n1.$value == ((Int8)    value2).$value;
+                case Int16 n1   -> n1.$value == ((Int16)   value2).$value;
+                case Int32 n1   -> n1.$value == ((Int32)   value2).$value;
+                case Int64 n1   -> n1.$value == ((Int64)   value2).$value;
+                case UInt8 n1   -> n1.$value == ((UInt8)   value2).$value;
+                case UInt16 n1  -> n1.$value == ((UInt16)  value2).$value;
+                case UInt32 n1  -> n1.$value == ((UInt32)  value2).$value;
+                case UInt64 n1  -> n1.$value == ((UInt64)  value2).$value;
+
+                case Int128 n1 -> Int128.$equals(n1.$lowValue, n1.$highValue,
+                        ((Int128) value2).$lowValue, ((Int128) value2).$highValue);
+                case UInt128 n1 -> UInt128.$equals(n1.$lowValue, n1.$highValue,
+                        ((UInt128) value2).$lowValue, ((UInt128) value2).$highValue);
+
+                case Float16 n1 -> Float.compare(n1.$value, ((Float16) value2).$value) == 0;
+                case Float32 n1 -> Float.compare(n1.$value, ((Float32) value2).$value) == 0;
+                case Float64 n1 -> Double.compare(n1.$value, ((Float64) value2).$value) == 0;
+
+                case Dec32 n1 -> Dec32.$equals(n1.$bits, ((Dec32) value2).$bits);
+                case Dec64 n1 -> Dec64.$equals(n1.$bits, ((Dec64) value2).$bits);
+                case Dec128 n1 -> Dec128.$equals(n1.$lowBits, n1.$highBits,
+                        ((Dec128) value2).$lowBits, ((Dec128) value2).$highBits);
+
+                default -> throw new UnsupportedOperationException($dataType.getValueString());
+            };
+        }
+
         if (equalsMethod == null) {
-            equalsMethod = ensureMethod("equals$p", 2);
+            equalsMethod = ensureMethod(ctx, "equals$p", 2);
         }
 
         try {
@@ -128,7 +164,7 @@ public class nType
                     equalsMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
             return result.booleanValue();
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw Exception.$unsupported($ctx,
+            throw Exception.$unsupported(ctx,
                 "Failed to invoke 'equals()` on class " + $dataType.getValueString());
         }
     }
@@ -179,13 +215,13 @@ public class nType
         }
 
         if (compareMethod == null) {
-            compareMethod = ensureMethod("compare", 2);
+            compareMethod = ensureMethod(ctx, "compare", 2);
         }
 
         try {
             return (Ordered) compareMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw Exception.$unsupported($ctx,
+            throw Exception.$unsupported(ctx,
                 "Failed to invoke 'compare()` on class " + $dataType.getValueString());
         }
     }
@@ -223,46 +259,69 @@ public class nType
         }
 
         if (hashCodeMethod == null) {
-            hashCodeMethod = ensureMethod("hashCode$p", 1);
+            hashCodeMethod = ensureMethod(ctx, "hashCode$p", 1);
         }
 
         try {
             return (long) hashCodeMethod.invoke($xvmClass(ctx), ctx, this, value);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw Exception.$unsupported($ctx,
+            throw Exception.$unsupported(ctx,
                     "Failed to invoke 'hashCode$p()` on class " + $dataType.getValueString());
         }
 
     }
 
-    private Method ensureMethod(java.lang.String methodName, int valueCount) {
-        TypeSystem       typeSystem = $ctx.container.typeSystem;
-        java.lang.String clzName    = $dataType.ensureJitClassName(typeSystem);
-        java.lang.Class  clz        = $xvmClass($ctx).getClass();
-        java.lang.Class  valueClass;
+    private Method ensureMethod(Ctx ctx, java.lang.String methodName, int valueCount) {
+        TypeSystem       typeSystem = ctx.container.typeSystem;
+        java.lang.String className  = $dataType.ensureJitClassName(typeSystem);
+        java.lang.Class  targetClass;
         try {
-            valueClass = typeSystem.loader.loadClass(clzName);
+            targetClass = typeSystem.loader.loadClass(className);
         } catch (ClassNotFoundException e) {
-            throw Exception.$unsupported($ctx, "No such class " + clzName);
+            throw Exception.$unsupported(ctx, "No such class " + className);
         }
 
-        java.lang.Class[] paramClasses = new java.lang.Class[2 + valueCount];
-        paramClasses[0] = Ctx.class;
-        paramClasses[1] = nType.class;
-        for (int i = 2; i < paramClasses.length; i++) {
-            paramClasses[i] = valueClass;
-        }
+        int paramCount   = 2 + valueCount;
+        var paramClasses = new java.lang.Class[paramCount];
+        paramClasses[0]  = Ctx.class;
+        paramClasses[1]  = nType.class;
 
-        while (true) {
+        // native classes can provide the concrete funky implementation directly; walk the target
+        // hierarchy to account for an implementation inherited from a native Ecstasy superclass
+        java.lang.Class valueClass = targetClass;
+        do {
+            for (int i = 2; i < paramCount; i++) {
+                paramClasses[i] = valueClass;
+            }
+
             try {
-                return clz.getDeclaredMethod(methodName, paramClasses);
-            } catch (NoSuchMethodException e) {
-                clz = clz.getSuperclass();
-                if (clz == null) {
-                    throw Exception.$unsupported($ctx,
-                        "No method " + methodName + " on class " + $dataType.getValueString());
-                }
+                return valueClass.getDeclaredMethod(methodName, paramClasses);
+            } catch (NoSuchMethodException ignore) {
+                valueClass = valueClass.getSuperclass();
+            }
+        } while (valueClass != null);
+
+        // fall through to the class-of-class routing method; its value parameters use the funky
+        // declaration types rather than the concrete target type represented by paramClasses
+        java.lang.Class classOfClass = $xvmClass(ctx).getClass();
+        for (Method method : classOfClass.getDeclaredMethods()) {
+            if (!method.getName().equals(methodName) ||
+                    method.getParameterCount() != paramCount) {
+                continue;
+            }
+
+            java.lang.Class[] methodParams = method.getParameterTypes();
+            boolean           matches      = methodParams[0].equals(Ctx.class) &&
+                                             methodParams[1].equals(nType.class);
+            for (int i = 2; matches && i < methodParams.length; i++) {
+                matches = methodParams[i].isAssignableFrom(targetClass);
+            }
+            if (matches) {
+                return method;
             }
         }
+
+        throw Exception.$unsupported(ctx,
+            "No method " + methodName + " on class " + $dataType.getValueString());
     }
 }

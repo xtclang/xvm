@@ -7,7 +7,6 @@ import org.xtclang.ecstasy.IterableᐸCharᐳ;
 import org.xtclang.ecstasy.IteratorᐸCharᐳ;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nType;
-import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Int64;
 
@@ -178,11 +177,6 @@ public class ArrayᐸCharᐳ
     }
 
     @Override
-    public ArrayᐸCharᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
-        return (ArrayᐸCharᐳ) super.slice(ctx, range);
-    }
-
-    @Override
     public ArrayᐸCharᐳ freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
         return (ArrayᐸCharᐳ) super.freeze$p(ctx, inPlace, inPlace$dflt);
     }
@@ -263,7 +257,7 @@ public class ArrayᐸCharᐳ
 
         @Override
         public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeChar());
+            return nType.$ensureType(ctx, ctx.pool().typeChar());
         }
     }
 }

@@ -5,11 +5,15 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -75,6 +79,11 @@ public class Invoke_NT
     }
 
     @Override
+    protected boolean isTupleReturn() {
+        return true;
+    }
+
+    @Override
     public int process(Frame frame, int iPC) {
         try {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
@@ -118,6 +127,20 @@ public class Invoke_NT
     protected String getParamsString() {
         return getParamsString(m_anArgValue, m_aArgValue);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        computeInvokeTypes(bctx, m_anArgValue);
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildInvoke(bctx, code, m_anArgValue);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int[] m_anArgValue;
 

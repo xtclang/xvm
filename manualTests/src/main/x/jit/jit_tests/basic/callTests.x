@@ -27,6 +27,8 @@ package callTests {
             assert i3 == 33;
         }
         assert testConditional();
+        assert testConditionalNarrowing("hello") == 5;
+        assert testConditionalNarrowing(42) == 0;
 
         assert testStatic(1);
         assert !testStatic(-1);
@@ -72,6 +74,8 @@ package callTests {
 
         testSuperCall();
         testCovariantSuperCall();
+        testWidenedArgumentNarrowing();
+        testSpecializedCapRouting();
     }
 
     Int testStandardWithDefault(Int i, Int j = 2) = i + j;
@@ -103,6 +107,8 @@ package callTests {
             return False;
         }
     }
+
+    Int testConditionalNarrowing(Object value) = value.is(String)?.size : 0;
 
     static Boolean testStatic(Int i) = i > 0;
 
@@ -166,5 +172,42 @@ package callTests {
 
         Test result = new Test(42).self();
         assert result.value == 42;
+    }
+
+    void testWidenedArgumentNarrowing() {
+        Int size(String|Int value) {
+            if (value.is(String)) {
+                return stringSize(value);
+            }
+            return 0;
+        }
+
+        Int stringSize(String value = "") = value.size;
+
+        assert size("hello") == 5;
+        assert size(42) == 0;
+    }
+
+    void testSpecializedCapRouting() {
+        interface Transformer<Element> {
+            Element transform(Element value, Int count);
+
+            (Int, Element) transformMany(Element value, Int count);
+        }
+
+        class StringTransformer
+                implements Transformer<String> {
+            @Override
+            String transform(String value, Int count) = count == 2 ? value : "";
+
+            @Override
+            (Int, String) transformMany(String value, Int count) = (count, value);
+        }
+
+        Transformer<String> transformer = new StringTransformer();
+        assert transformer.transform("value", 2) == "value";
+
+        (Int count, String value) = transformer.transformMany("many", 3);
+        assert count == 3 && value == "many";
     }
 }

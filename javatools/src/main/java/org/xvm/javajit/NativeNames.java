@@ -24,6 +24,10 @@ public class NativeNames {
 
         reservedMethodName.put("Iterator/next/0", "next");
 
+        reservedMethodName.put("Freezable/freeze/1", "freeze");
+
+        reservedMethodName.put("Object/equals/2", "equals");
+
         reservedMethodName.put("reflect.Ref/get/0", "get");
         reservedMethodName.put("reflect.Ref/peek/0", "peek");
         reservedMethodName.put("reflect.Var/set/1", "set");
@@ -39,15 +43,35 @@ public class NativeNames {
         reservedMethodName.put("numbers.Bit/or/1",  "or");
         reservedMethodName.put("numbers.Bit/xor/1", "xor");
 
+        reservedMethodName.put("numbers.Nibble.values/=/0", "values$init");
+
         reservedMethodName.put("collections.Array/add/1",        "add");
         reservedMethodName.put("collections.Array/addAll/1",     "addAll");
         reservedMethodName.put("collections.Array/delete/1",     "delete");
+        reservedMethodName.put("collections.Array/elementAt/1",  "elementAt");
+        reservedMethodName.put("collections.Array/getElement/1", "getElement");
         reservedMethodName.put("collections.Array/insert/2",     "insert");
         reservedMethodName.put("collections.Array/insertAll/2",  "insertAll");
         reservedMethodName.put("collections.Array/reify/1",      "reify");
         reservedMethodName.put("collections.Array/removeAll/1",  "removeAll");
+        reservedMethodName.put("collections.Array/slice/1",      "slice");
+        reservedMethodName.put("collections.Array.FreezableArray/freeze/1", "freeze");
         reservedMethodName.put("collections.Collection/reify/0", "reify");
         reservedMethodName.put("collections.Hashable/hashCode/2", "hashCode");
+        reservedMethodName.put("collections.Tuple/add/2",         "add");
+        reservedMethodName.put("collections.Tuple/addAll/1",      "addAll");
+        reservedMethodName.put("collections.Tuple/elementAt/1",   "elementAt");
+        reservedMethodName.put("collections.Tuple/equals/2",      "equals");
+        reservedMethodName.put("collections.Tuple/freeze/1",      "freeze");
+        reservedMethodName.put("collections.Tuple/getElement/1",  "getElement");
+        reservedMethodName.put("collections.Tuple/remove/1",      "remove");
+        reservedMethodName.put("collections.Tuple/removeAll/1",   "removeAll");
+        reservedMethodName.put("collections.Tuple/replace/2",     "replace");
+        reservedMethodName.put("collections.Tuple/slice/1",       "slice");
+
+        reservedMethodName.put("collections.UniformIndexed/getElement/1", "getElement");
+        reservedMethodName.put("Range/getElement/1",       "getElement");
+        reservedMethodName.put("text.String/getElement/1", "getElement");
 
         reservedMethodName.put("numbers.Number/toInt8/2",    "toInt8$FP");
         reservedMethodName.put("numbers.Number/toInt16/2",   "toInt16$FP");
@@ -125,9 +149,10 @@ public class NativeNames {
             // there was no match for the exact type and method, try to match on super types
 
             ConstantPool pool = classId.getConstantPool();
-            if (classType.isA(pool.typeNumber()) || classType.isA(pool.typeFPNumber()) ||
-                    classType.isA(pool.ensureEcstasyTypeConstant("numbers.IntConvertible")) ||
-                    classType.isA(pool.ensureEcstasyTypeConstant("numbers.FPConvertible"))) {
+            if (    classType.isA(pool.typeNumber()) ||
+                    classType.isA(pool.typeFPNumber()) ||
+                    classType.isA(pool.typeIntConvertible()) ||
+                    classType.isA(pool.typeFPConvertible())) {
                 // the type is a Number or IntConvertible
                 key     = createKey("numbers.Number", methodId);
                 jitName = reservedMethodName.get(key);

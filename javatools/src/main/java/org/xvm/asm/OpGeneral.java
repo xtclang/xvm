@@ -253,12 +253,8 @@ public abstract class OpGeneral
                 } else {
                     code.invokevirtual(regTarget.cd(), sJitName, md);
                 }
-
-                TypeConstant typeReturn = method.getSignature().getRawReturns()[0]; // could differ from target
-                typeResult = typeReturn.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null);
-                if (!typeReturn.isA(typeResult)) {
-                    code.checkcast(bctx.builder.ensureClassDesc(typeResult));
-                }
+                bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
+                return -1;
             }
             bctx.storeValue(code, m_nRetValue, typeResult);
         } else { // unary op

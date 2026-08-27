@@ -2,6 +2,9 @@ package org.xtclang.ecstasy.numbers;
 
 import org.bouncycastle.util.Exceptions;
 
+import org.xtclang.ecstasy.collections.Array;
+import org.xtclang.ecstasy.collections.ArrayᐸNibbleᐳ;
+
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
@@ -79,6 +82,17 @@ public class Nibble extends UIntNumber {
         throw Exceptions.illegalArgumentException(msg, null);
     }
 
+    /**
+     * Native implementation of: "private static Nibble[] values = [0, ..., 15]"
+     *
+     * The naturally compiled initializer currently erases the array literal's element type to
+     * Object, resulting in an invalid attempt to pass an optimized Nibble value to Array.add(Object).
+     */
+    public static ArrayᐸNibbleᐳ values$init(Ctx ctx) {
+        return ArrayᐸNibbleᐳ.$fromLongs(ctx, Array.Mutability.Constant.$INSTANCE, 64,
+                0x0123_4567_89AB_CDEFL);
+    }
+
     @Override
     protected long[] $longValues() {
         return new long[]{(long) $value << 60};
@@ -87,164 +101,6 @@ public class Nibble extends UIntNumber {
     @Override
     protected long bitLength$get$p() {
         return 4;
-    }
-
-    // ----- conversion ----------------------------------------------------------------------------
-
-    /**
-     * The primitive implementation of Nibble toNibble()
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Nibble value as a Java {@code int}
-     */
-    public static int toNibble$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of Int8 toInt8(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Nibble value as a Java {@code int}
-     */
-    public static int toInt8$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of Int16 toInt16(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Nibble value as a Java {@code int}
-     */
-    public static int toInt16$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of Int32 toInt32(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Nibble value as a Java {@code int}
-     */
-    public static int toInt32$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of Int64 toInt64(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Nibble value as a Java long
-     */
-    public static long toInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of Int128 toInt128(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Nibble value as an Int128
-     */
-    public static long toInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        ctx.i0 = 0L;
-        return thi$ & 0xFL;
-    }
-
-    /**
-     * The primitive implementation of UInt8 toUInt8(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Nibble value as a Java {@code int}
-     */
-    public static int toUInt8$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of UInt16 toUInt16(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Nibble value as a Java {@code int}
-     */
-    public static int toUInt16$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of UInt32 toUInt32(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Nibble value as a Java {@code int}
-     */
-    public static int toUInt32$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of UInt64 toUInt64(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Nibble value as a Java long
-     */
-    public static long toUInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of UInt128 toUInt128(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Nibble value as a UInt128
-     */
-    public static long toUInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        ctx.i0 = 0L;
-        return thi$ & 0xFL;
     }
 
     // ----- debugging support ---------------------------------------------------------------------
