@@ -11,6 +11,7 @@ The `xtc` command is the unified command-line tool for working with Ecstasy proj
 | `xtc run` | Execute an Ecstasy module (alias: `xec`) |
 | `xtc test` | Run tests in an Ecstasy module using xunit |
 | `xtc disass` | Disassemble a compiled Ecstasy module |
+| `xtc bundle` | Merge compiled modules into a single multi-module `.xtc` file |
 
 ## xtc init - Project Creation
 
@@ -311,6 +312,62 @@ xtc disass [options] <module_file>
 xtc disass myapp.xtc
 xtc disass --files myapp.xtc
 xtc disass --findfile config.json myapp.xtc
+```
+
+## xtc bundle - Module Bundling
+
+Merges compiled modules into a single multi-module `.xtc` file (a "bundle"). The result is a
+self-contained module repository: both the runner and the compiler can resolve every bundled
+module from it by name, so one file can replace a `lib/` directory full of `.xtc` files.
+
+Multi-module bundle output is tagged as `FileTemplate.Kind.Library` in the `.xtc` header, with the
+real module names recorded separately from dependency fingerprints. Single-module output remains
+`Single`.
+
+With no explicit module selection, every non-system module found on the module path is bundled.
+System (`xtclang.org`) modules are never bundled implicitly; they remain external dependencies,
+resolved from the XDK at run time, exactly as with a lib directory. Pass `--include-system` to
+lift that exclusion when building a fully self-contained artifact (this is how
+`./gradlew xdk:bundleXdk` produces the single-file XDK, `xdk.xtc`).
+
+For the concepts, internal mechanics, and limitations, see [XTC Bundles](xtc-bundle.md).
+
+### Usage
+
+```bash
+xtc bundle [options] [<module_name_or_file> ...]
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-L <path>` | Module path to select modules from and resolve dependencies against |
+| `-o, --output <file>` | File (or directory) to write the bundle to; defaults to `<main>.bundle.xtc` |
+| `--main <module>` | Qualified name of the module to use as the bundle's main module; defaults to the only selected module that no other selected module imports |
+| `--include-system` | Also bundle system (`xtclang.org`) modules when selecting from the module path (used to build a fully self-contained single-file XDK) |
+
+Like the other verbs, `bundle` is quiet on success; add `-v` to see the bundled module list, the
+remaining external (run-time-resolved) dependencies, and warnings about modules that are present
+on the module path but not included in the bundle.
+
+### Examples
+
+```bash
+# Bundle all application modules from a lib directory (main module inferred)
+xtc bundle -L build/install/myapp/lib
+
+# Bundle with an explicit main module and output file
+xtc bundle -L lib --main kernel.xqiz.it -o myapp.xtc
+
+# Run an application directly from its bundle
+xec -L ./myapp.xtc ./myapp.xtc
+
+# Build the single-file XDK, then use it as the entire system library:
+# compile, run, or even boot a fully bundled deployment with no lib directories at all
+./gradlew xdk:bundleXdk
+java -jar javatools.jar build -L xdk.xtc MyApp.x
+java -jar javatools.jar run -L xdk.xtc -L myapp.xtc myapp.xtc
 ```
 
 ## IntelliJ IDEA Integration

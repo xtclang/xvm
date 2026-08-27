@@ -290,6 +290,25 @@ public class VersionTest {
         assertThrows(IllegalStateException.class, () -> { new Version("1.2.3B4+build!12345"); });
     }
 
+    @Test
+    public void testCiVersionSurvivesIntPartsReconstruction() {
+        // "CI" is the lowest legal pre-release category (part value -6); reconstructing a Version
+        // from int parts - which VersionTree iteration does internally - must accept it rather
+        // than reject it as illegal
+        Version ci = new Version(new int[] {1, 2, -6}, null);
+        assertEquals("1.2-CI", ci.toString());
+        assertTrue(ci.isSameAs(new Version("1.2-ci")));
+
+        VersionTree<String> tree = new VersionTree<>();
+        tree.put(new Version("1.2-ci"), "ci-build");
+        Iterator<Version> iter = tree.iterator();
+        assertTrue(iter.hasNext());
+        assertEquals("ci-build", tree.get(iter.next()));
+
+        // the NONE sentinel category below "CI" remains unconstructable from int parts
+        assertThrows(IllegalStateException.class, () -> new Version(new int[] {1, -7}, null));
+    }
+
     static VersionTree<String> genTree() {
         VersionTree<String> tree = new VersionTree<>();
         tree.put(new Version("1.0"), "one-oh");

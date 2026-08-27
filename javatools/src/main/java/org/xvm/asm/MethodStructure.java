@@ -1652,8 +1652,7 @@ public class MethodStructure
         assert parent != null;
 
         Component sibling = parent.getMethodByConstantMap().get(getIdentityConstant());
-        assert sibling != null;
-        return sibling;
+        return sibling == null ? this : sibling;
     }
 
     @Override

@@ -73,7 +73,6 @@ public class ModuleStructure
         }
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -282,12 +281,19 @@ public class ModuleStructure
     /**
      * Set the module version.
      *
-     * @param version  the version constant
+     * @param version  the version constant, or null
      */
     public void setVersion(Version version) {
-        assert !isFingerprint();
-        markModified();
-        m_constVersion = getConstantPool().ensureVersionConstant(version);
+        if (version == null) {
+            if (m_constVersion != null) {
+                markModified();
+                m_constVersion = null;
+            }
+        } else {
+            assert !isFingerprint();
+            markModified();
+            m_constVersion = getConstantPool().ensureVersionConstant(version);
+        }
     }
 
     /**
@@ -328,9 +334,7 @@ public class ModuleStructure
      */
     public List<Version> getFingerprintVersionPrefs() {
         assert isFingerprint();
-        List<Version> list = m_listImportPreferVers;
-        assert (list = Collections.unmodifiableList(list)) != null;
-        return list;
+        return Collections.unmodifiableList(m_listImportPreferVers);
     }
 
     /**
@@ -384,6 +388,50 @@ public class ModuleStructure
     }
 
     /**
+     * Create a detached copy of this module: a clone contained by its own single-module
+     * FileStructure, with fingerprints for every dependency of this module — including
+     * dependencies that are real (embedded) sibling modules in this module's container. The copy
+     * is indistinguishable from a module loaded from its own single-module file, which is what
+     * consumers of a module served out of a multi-module container ("bundle") generally expect.
+     *
+     * @return the detached module copy, owned by a new FileStructure
+     */
+    public ModuleStructure detachedCopy() {
+        return new FileStructure(this, /*fSynthesize*/ false).getModule();
+    }
+
+    /**
+     * Mark this module as an {@link ModuleType#Embedded embedded} module of its container. A real
+     * (non-fingerprint) module that is merged into a multi-module container ("bundle") as a
+     * non-main module must not remain {@link ModuleType#Primary}, which is reserved for the main
+     * module of a file structure.
+     *
+     * @return this ModuleStructure, for call chaining
+     */
+    public ModuleStructure markEmbedded() {
+        assert !isMainModule() && !isFingerprint();
+        if (m_moduletype != ModuleType.Embedded) {
+            m_moduletype = ModuleType.Embedded;
+            markModified();
+        }
+        return this;
+    }
+
+    /**
+     * Mark this module as the primary module of its container.
+     *
+     * @return this ModuleStructure, for call chaining
+     */
+    ModuleStructure markPrimary() {
+        assert getIdentityConstant().equals(getFileStructure().getModuleId());
+        if (m_moduletype != ModuleType.Primary) {
+            m_moduletype = ModuleType.Primary;
+            markModified();
+        }
+        return this;
+    }
+
+    /**
      * Specify the ModuleStructure that corresponds to the fingerprint.
      *
      * @param moduleActual  the actual ModuleStructure that the fingerprint is based on
@@ -429,7 +477,6 @@ public class ModuleStructure
         return clzInterface;
     }
 
-
     // ----- Version management --------------------------------------------------------------------
 
     /**
@@ -447,7 +494,7 @@ public class ModuleStructure
      * An implementation for {@link #getVersions()}
      */
     protected void collectVersions(VersionTree vtree) {
-        ModuleStructure module = this;
+        ModuleStructure module = (ModuleStructure) getEldestSibling();
         do {
             Version version = module.getVersion();
             if (version != null) {
@@ -469,8 +516,14 @@ public class ModuleStructure
     }
 
     /**
-     * Obtain the Version of this module. Do not use this method with a ModuleStructure for a
-     * fingerprint module, or an actual module that contains more than one version.
+     * Obtain the Version of this ModuleStructure.
+     *
+     * Do not use this method with a ModuleStructure for a fingerprint module; use
+     * {@link #getFingerprintOrigin} to obtain the actual ModuleStructure to examine its version, or
+     * {@link #getFingerprintVersions} to obtain the version constraints for the fingerprint.
+     *
+     * Do not use this method with an unresolved ModuleStructure, i.e. a ModuleStructure that may
+     * contain more than one version; use {@link #getVersions} instead.
      *
      * @return the Version of this module, or null if there is no version (or more than one version)
      */
@@ -518,7 +571,6 @@ public class ModuleStructure
         visitChildren(visitor, true, true);
         return mapConditions;
     }
-
 
     /**
      * Determine if the specified version is supported, either by that exact version, or by a
@@ -571,10 +623,12 @@ public class ModuleStructure
         }
 
         VersionTree<Boolean> vtree = getVersions();
-        ver = ver.normalize();
-        if (!vtree.contains(ver)) {
+        Version              match = vtree.selectVersion(ver, true);
+        if (match == null) {
             throw new IllegalArgumentException("version " + ver  + " does not exist in this module");
         }
+
+        ver = match;
 
         if (vtree.size() == 1) {
             // already done
@@ -615,7 +669,6 @@ public class ModuleStructure
         moduleClone.purgeVersionsExcept(version);
         return moduleClone;
     }
-
 
     // ----- Component methods ---------------------------------------------------------------------
 
@@ -688,10 +741,8 @@ public class ModuleStructure
     @Override
     protected void markModified() {
         super.markModified();
-
         m_abDigest = null;
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -841,7 +892,6 @@ public class ModuleStructure
         return sb.toString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -862,7 +912,6 @@ public class ModuleStructure
                 && Handy.equals(this.m_constDir, that.m_constDir);
     }
 
-
     // ----- ModuleType enumeration ----------------------------------------------------------------
 
     /**
@@ -877,7 +926,7 @@ public class ModuleStructure
      * A fingerprint module has three levels that indicate how desired or required it is:
      * <ul>
      * <li>Optional indicates that the dependency is supported, but leaves the decision regarding
-     *     whether or not to import the module to the linker;</li>
+     *     whether to import the module to the linker;</li>
      * <li>Desired also indicates that the dependency is supported, but even though the dependency
      *     is not required, the linker should make the best effort to obtain and link in the
      *     module;</li>
@@ -900,11 +949,10 @@ public class ModuleStructure
         }
 
         /**
-         * All of the Format enums.
+         * All Format enums, indexed by ordinal.
          */
         private static final ModuleType[] MODULE_TYPES = ModuleType.values();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -975,7 +1023,7 @@ public class ModuleStructure
      * <li>If the tree is empty, that indicates that the module structure does not contain version
      * information (the module information is not version labeled.)</li>
      * <li>If the tree contains one version, that indicates that the module structure contains a
-     * single version label, i.e. there is a single version of the module inside of the module
+     * single version label, i.e. there is a single version of the module inside the module
      * structure.</li>
      * <li>If the tree contains more than one version, that indicates that the module structure
      * contains multiple different versions of the module, and must be resolved in order to link the

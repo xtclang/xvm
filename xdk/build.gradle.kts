@@ -207,6 +207,42 @@ val prepareDistributionScripts = tasks.register<Copy>("prepareDistributionScript
 }
 
 /**
+ * Bundle every XDK module (including the system modules mack and _native) into a single
+ * self-contained xdk.xtc file. Opt-in: not wired into the default build/distribution lifecycle.
+ * The resulting file can serve as the entire XDK module path, e.g.:
+ *
+ *     java -jar javatools.jar run -L xdk.xtc app.xtc
+ */
+val bundleXdk = tasks.register<JavaExec>("bundleXdk") {
+    group = "distribution"
+    description = "Bundle all XDK modules into a single self-contained xdk.xtc"
+    dependsOn(tasks.installDist)
+
+    val installDir = layout.buildDirectory.dir("install/xdk")
+    val outputFile = layout.buildDirectory.file("bundle/xdk.xtc")
+
+    inputs.dir(installDir.map { it.dir("lib") })
+    inputs.file(installDir.map { it.file("javatools/javatools_turtle.xtc") })
+    inputs.file(installDir.map { it.file("javatools/javatools_bridge.xtc") })
+    outputs.file(outputFile)
+
+    classpath(configurations.xdkJavaTools)
+    mainClass = "org.xvm.tool.Launcher"
+    argumentProviders.add {
+        val install = installDir.get().asFile
+        listOf(
+            "bundle",
+            "--include-system",
+            "--main", "ecstasy.xtclang.org",
+            "-L", File(install, "lib").absolutePath,
+            "-L", File(install, "javatools/javatools_turtle.xtc").absolutePath,
+            "-L", File(install, "javatools/javatools_bridge.xtc").absolutePath,
+            "-o", outputFile.get().asFile.absolutePath,
+        )
+    }
+}
+
+/**
  * Propagate group and version to all subprojects (the XDK modules will get stamped with the Gradle project
  * version, as defined in VERSION in the repo root).
  */

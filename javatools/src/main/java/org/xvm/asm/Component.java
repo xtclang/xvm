@@ -353,7 +353,7 @@ public abstract class Component
     }
 
     /**
-     * Specify whether or not the component is synthetic.
+     * Specify whether the component is synthetic.
      *
      * @param fSynthetic  true to specify the component is synthetic; false otherwise
      */
@@ -617,8 +617,6 @@ public abstract class Component
      * "combined" component model, in which multiple alternatives may exist for the same component
      * identity.
      *
-     * <p/>REVIEW - how to toggle this?
-     *
      * @return true iff the component allows multiple conditional children to exist for the same
      *         identity
      */
@@ -632,13 +630,35 @@ public abstract class Component
      */
     protected Component getEldestSibling() {
         Component parent = getParent();
-        if (parent == null) /* || !isSiblingAllowed()) */ {
+        if (parent == null) {
             return this;
         }
 
-        Component sibling = parent.getChildByNameMap().get(getName());
-        assert sibling != null;
-        return sibling;
+        Component eldest = parent.getChild(getIdentityConstant());
+        if (eldest == null) {
+            return this;
+        }
+
+        // during the clone process, if we ask for the eldest, we'll get the original that this
+        // Component was cloned from, even though this Component is not its sibling (but its clone)
+        return eldest.containsSibling(this) ? eldest : this;
+    }
+
+    /**
+     * @param sibling  a Component
+     *
+     * @return `true` iff the specified Component is `this` or a sibling of `this`
+     */
+    protected boolean containsSibling(Component sibling) {
+        Component cur = this;
+        do {
+            if (cur == sibling) {
+                return true;
+            }
+            cur = cur.m_sibling;
+        } while (cur != null);
+
+        return false;
     }
 
     /**
@@ -654,7 +674,7 @@ public abstract class Component
      *
      * @param sibling  a reference to the next sibling (null indicates no more siblings)
      */
-    private void setNextSibling(Component sibling) {
+    protected void setNextSibling(Component sibling) {
         assert sibling == null || isSiblingAllowed();
         m_sibling = sibling;
     }
@@ -836,7 +856,7 @@ public abstract class Component
      */
     protected boolean addChild(Component child) {
         // if the child is a method, it can only be contained by a MultiMethodStructure
-        assert !(child instanceof MethodStructure);
+        assert !(child instanceof MethodStructure) && !(child instanceof ModuleStructure);
 
         Map<String, Component> kids  = ensureChildByNameMap();
         String                 sName = child.getName();
@@ -867,13 +887,11 @@ public abstract class Component
         // condition might not be available (resolved) when the kid is created, so defer the
         // check for the existence of the condition and the mutual exclusivity of the condition
         // until much later in the assembly
-        // if (child.m_cond == null)
-        //     {
+        // if (child.m_cond == null) {
         //     throw new IllegalStateException("cannot add child with same ID (" + id
         //             + ") if condition == null");
         // }
-        // if (sibling.m_cond == null)
-        //     {
+        // if (sibling.m_cond == null) {
         //     throw new IllegalStateException("cannot add child if sibling with same ID (" + id
         //             + ") has condition == null");
         // }
@@ -1325,6 +1343,21 @@ public abstract class Component
     }
 
     /**
+     * Obtain the child that is identified by the specified identity. If more than one child is
+     * a match, then a component representing the multiple siblings is created to represent the
+     * result.
+     *
+     * @param constId  the constant identifying the child
+     * @param clz      the expected type of the child
+     * @param <T>      the component type
+     *
+     * @return the child component, or null
+     */
+    public <T extends Component> T getChild(Constant constId, Class<T> clz) {
+        return clz.cast(getChild(constId));
+    }
+
+    /**
      * Find a child in the chain with the specified id.
      *
      * @param constId       the id to match
@@ -1563,10 +1596,7 @@ public abstract class Component
      * @return an immutable collection of the component's children
      */
     public Collection<? extends Component> children() {
-        Collection<Component> children = getChildByNameMap().values();
-
-        assert (children = Collections.unmodifiableCollection(children)) != null;
-        return children;
+        return Collections.unmodifiableCollection(getChildByNameMap().values());
     }
 
     /**
@@ -3516,13 +3546,12 @@ public abstract class Component
     private volatile byte[] m_abChildren;
 
     /**
-     * This holds all of the children of all of the siblings, except for methods (because they are
-     * identified by signature, not by name). Because a single child may turn out to be a child of
-     * more than one sibling (based on which condition applies), the child can only determine its
-     * real parent by asking the assumed parent's assumed parent for the child by the name of the
-     * assumed parent. Similarly, the child obtained by name from this map is just the first of the
-     * siblings by that name, only one of which (at most) is the child that is existent for a
-     * specified name.
+     * This holds the children of all siblings, except for methods (because they are identified by
+     * signature, not by name). Because a single child may turn out to be a child of more than one
+     * sibling (based on which condition applies), the child can only determine its real parent by
+     * asking the assumed parent's assumed parent for the child by the name of the assumed parent.
+     * Similarly, the child obtained by name from this map is just the first of the siblings by that
+     * name, only one of which (at most) is the child that is existent for a specified name.
      */
     private Map<String, Component> m_childByName;
 

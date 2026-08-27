@@ -375,6 +375,15 @@ class XdkIntegrationTest {
     }
 
     @Test
+    void testLauncherInvalidBundlerArgs() {
+        // Test that launcher handles invalid bundler args gracefully
+        String[] args = {Launcher.CMD_BUNDLE, "--bad-option"};
+
+        int result = Launcher.launch(args);
+        assertEquals(1, result, "Invalid bundler args should return exit code 1");
+    }
+
+    @Test
     void testModulePathResolution() {
         // Test that module path is properly resolved and includes xdk libraries
         CompilerOptions options = new CompilerOptions.Builder()

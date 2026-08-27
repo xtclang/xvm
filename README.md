@@ -236,6 +236,7 @@ The XDK provides the `xtc` unified command-line tool for working with Ecstasy pr
 | `xtc build` | Compile Ecstasy source files (legacy alias: `xcc`) |
 | `xtc run` | Execute an Ecstasy module (legacy alias: `xec`) |
 | `xtc test` | Run tests in an Ecstasy module using xunit |
+| `xtc bundle` | Merge compiled modules into a single multi-module `.xtc` file |
 
 For full CLI documentation, see the **[XTC CLI Reference](doc/xtc-cli.md)**.
 
