@@ -9,6 +9,14 @@ Baseline used for source references: local `origin/master`
 `145f12f51074bae5e073db6181b0d015414dda65`; re-run targeted tests before
 filing if master has moved.
 
+> **Master has moved (2026-08-27):** `origin/master` is now `82683bcd2` (PR #377
+> LSP support, PR #539 `cc183520c` this-escape fixes). Every per-row "applies
+> cleanly to `origin/master` at `61e555a68`" statement below was verified at that
+> OLDER hash and has NOT been re-verified against `82683bcd2`; re-run the
+> cherry-pick check before filing. PR #539 in particular reworked the owner-lazy
+> concern (`Lazy.Bound`), so rows touching runtime lazy caches are most likely to
+> have shifted.
+
 Scope decision: `plans/github-issue-breakdown.md` lists 19 Category A rows, but
 the last row is already extracted as PR #539. This file prepares the critical master issues still intended for manual filing
 (originally 18; rows 19 and 20 were graduated 2026-08-25 from the audit waves).
@@ -1821,10 +1829,67 @@ red-verified against the plain-lazy shape.
 
 **Dependencies/order:** Independent; can ride any ConstantPool-adjacent PR.
 
+## 27. DirRepository scan cache is not thread-safe under concurrent module lookup
+
+**Issue title:** `DirRepository`'s directory-scan cache uses plain unsynchronized
+`HashMap`/`TreeMap` rebuilt with `clear()`+`put()`, so concurrent module lookups
+corrupt it.
+
+**Status/category:** PROVEN red on master `82683bcd2`. The racing window is
+concurrent first-access module lookups on one on-disk repository - routine when
+two container-0 compiles (or two services) resolve modules from the same
+`DirRepository`.
+
+**Explanation:** The scan cache is a plain `HashMap modulesByFile` (a NON-final
+field reassigned wholesale by `rebuildCache`) and a plain `TreeMap modulesByName`
+(rebuilt with `clear()` then a `put()` loop). None of `loadModule`,
+`getModuleNames`, `ensureCache`, or `rebuildCache` is synchronized. A fresh
+repository has `lastScan == 0`, so `isCacheValid()` returns false and the FIRST
+concurrent access runs `rebuildCache` on every thread at once: concurrent
+`modulesByName.clear()`+`put()` on the shared `TreeMap`, a non-volatile
+reassignment of the `modulesByFile` field, all racing `get()` and the live
+`keySet()` view returned by `getModuleNames()`.
+
+**Master evidence:** `origin/master:DirRepository.java:440-441` (plain
+`HashMap`/`TreeMap`, `modulesByFile` non-final), `:147-184` (`rebuildCache`:
+`modulesByName.clear()` + `put()` loop + `modulesByFile = newModulesByFile`, all
+unsynchronized), `:65-69` (`getModuleNames` returns `unmodifiableSet(modulesByName
+.keySet())`, a fail-fast live view).
+
+**Failure mode:** PROVEN `java.util.ConcurrentModificationException` under a
+concurrent scan (see test below). A corrupted `HashMap` can additionally spin
+(infinite loop -> hung fiber) or silently drop entries (spurious "module not
+found").
+
+**Minimal master-portable fix strategy:** Coarse per-repository `synchronized` on
+`loadModule`/`getModuleNames`/`storeModule` - the correct granularity for a lookup
+cache (not fine-grained per-entry). Branch seed `ae5d7ad80`; one file.
+
+**Tests to add/run on master:** `org.xvm.asm.DirRepositoryConcurrentScanTest`
+(branch) - 8 latch-started threads x 80 iterations over a fresh repository.
+RED-verified on master `82683bcd2` (`ConcurrentModificationException`) in a
+scratch worktree with master-built modules parsed into the cache; GREEN on this
+branch (synchronized). NOTE: the test must feed the repository modules the target
+JVM can parse - master rejected the branch's `0.20260519` `.xtc` as
+"Unsupported .xtc version"; use modules built by the same tree.
+
+**Dependencies/order:** Independent; single-file fix.
+
 ## Items intentionally not in the 18
 
 - Utility constructor this-escape fixes are listed in Category A but already
   extracted as PR #539.
+- `MethodStructure.markNative()` is a non-atomic transition over non-volatile
+  `m_fNative`/`m_code`, and `ensureCode()` lazy-inits `m_code` unsynchronized - a
+  genuine data race by inspection (`origin/master:MethodStructure.java:3097` and
+  `:3123` fields, `markNative` `:1148`, `ensureCode` `:593`; `markNative` even
+  still carries dead debug code `int q = 0;`). NOT filed as a quick hunk: unlike
+  #27 there is no DETERMINISTIC red - `markNative()` runs at link time, mostly
+  before concurrent runtime access, so the marking-vs-`getOps()` window does not
+  reliably overlap, and the `m_code` lazy-init race needs precise timing to
+  observably crash. Candidate only; would need an instrumented/stress harness (or
+  making the two fields volatile + synchronizing the lazy init defensively), not a
+  filable red-proof hunk.
 - Issue #541 is a genuine master bug, but the docs explicitly say it is not a
   Category A quick extraction. It needs a wait-graph design, not a hunk.
 - JIT generated owner-bearing statics are must-fix but parked for a JIT rebase.

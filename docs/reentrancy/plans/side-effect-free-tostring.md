@@ -902,6 +902,18 @@ This is the same ratchet shape as the existing lint/parallelism scans.
 
 ## Migration Plan
 
+**Landed so far (commit 8382e0268, branch `lagergren/lazy-instance`):** the two
+ASM-constants leaves from slice 2 — `TypeInfoReal.toString` and
+`MethodInfo.toString`. Naming nuance discovered while landing: `TypeInfo`
+*already* declares `abstract toString(boolean fRuntime)` in master (fRuntime =
+"optimize the method call chains"), so the pure/forced split reused that existing
+ARITY (no-arg `toString()` = pure header; `toString(boolean)` = full dump) rather
+than adding a `describeForced()` method. Most OTHER flagged classes have no spare
+boolean overload, so they will still need an explicit `describeForced()`/`dump()`
+method as this plan's Pattern Set describes — the `toString(boolean)` shortcut is
+specific to `TypeInfo`. Scope/portability recorded in
+[tostring-purity-enhancement-scope.md](tostring-purity-enhancement-scope.md).
+
 Small, independently landable PR slices, worst offenders first because five
 root sites unblock most dependent rows:
 
