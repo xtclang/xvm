@@ -54,6 +54,31 @@ public class LazyTest {
     }
 
     @Test
+    public void testLazyOfBound() {
+        Lazy.Bound<OwnerState, String> lazy  = Lazy.ofBound(OwnerState::compute);
+        OwnerState                     owner = new OwnerState("owner");
+
+        assertFalse(lazy.isComputed());
+        assertEquals("owner:1", lazy.get(owner));
+        assertTrue(lazy.isComputed());
+
+        // Second call should not recompute.
+        assertEquals("owner:1", lazy.get(owner));
+        assertEquals(1, owner.counter.get());
+    }
+
+    @Test
+    public void testLazyOfBoundNull() {
+        Lazy.Bound<OwnerState, String> lazy  = Lazy.ofBound(owner -> null);
+        OwnerState                     owner = new OwnerState("owner");
+
+        assertFalse(lazy.isComputed());
+        assertNull(lazy.get(owner));
+        assertTrue(lazy.isComputed());
+        assertNull(lazy.get(owner));
+    }
+
+    @Test
     public void testLazyOfValue() {
         Lazy<String> lazy = Lazy.ofValue("precomputed");
 
@@ -171,6 +196,44 @@ public class LazyTest {
     }
 
     @Test
+    public void testBoundThreadSafety() throws InterruptedException {
+        Lazy.Bound<OwnerState, String> lazy  = Lazy.ofBound(OwnerState::compute);
+        OwnerState                     owner = new OwnerState("owner");
+
+        int threadCount = 10;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    assertEquals("owner:1", lazy.get(owner));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        startLatch.countDown();
+        doneLatch.await(5, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        assertEquals(1, owner.counter.get());
+    }
+
+    @Test
+    public void testBoundLazyRejectsDifferentOwnerAfterComputation() {
+        Lazy.Bound<OwnerState, String> lazy = Lazy.ofBound(OwnerState::compute);
+
+        assertEquals("one:1", lazy.get(new OwnerState("one")));
+        assertThrows(IllegalArgumentException.class, () -> lazy.get(new OwnerState("two")));
+    }
+
+    @Test
     public void testOfExpiringBasic() throws InterruptedException {
         AtomicInteger counter = new AtomicInteger(0);
         Supplier<Integer> expiring = Lazy.ofExpiring(counter::incrementAndGet, 50, TimeUnit.MILLISECONDS);
@@ -205,11 +268,25 @@ public class LazyTest {
     @Test
     public void testNullSupplierThrows() {
         assertThrows(NullPointerException.class, () -> Lazy.of(null));
+        assertThrows(NullPointerException.class, () -> Lazy.ofBound(null));
         assertThrows(NullPointerException.class, () -> Lazy.ofUnsynchronized(null));
         assertThrows(NullPointerException.class, () -> Lazy.ofNullable(null));
         assertThrows(NullPointerException.class, () -> Lazy.ofOptional(null));
         assertThrows(NullPointerException.class, () -> Lazy.ofExpiring(null, 1, TimeUnit.SECONDS));
         assertThrows(NullPointerException.class, () -> Lazy.ofExpiring(() -> "x", 1, null));
         assertThrows(NullPointerException.class, () -> Lazy.synchronizedSupplier(null));
+    }
+
+    private static class OwnerState {
+        private final String name;
+        private final AtomicInteger counter = new AtomicInteger();
+
+        OwnerState(String name) {
+            this.name = name;
+        }
+
+        String compute() {
+            return name + ':' + counter.incrementAndGet();
+        }
     }
 }

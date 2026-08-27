@@ -2,6 +2,9 @@ package org.xvm.util;
 
 import org.jetbrains.annotations.NotNull;
 
+import org.xvm.util.concurrent.VarHandles;
+
+import java.lang.invoke.VarHandle;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -58,6 +61,14 @@ import static java.util.Objects.requireNonNull;
  * public boolean hasComputedAnnotations() {
  *     return classAnnotations.isComputed();
  * }
+ *
+ * // Owner-derived lazy state can avoid capturing "this" during construction:
+ * private final Lazy.Bound<MyClass, Annotation[]> classAnnotations =
+ *         Lazy.ofBound(MyClass::collectAnnotations);
+ *
+ * public Annotation[] getClassAnnotations() {
+ *     return classAnnotations.get(this);
+ * }
  * }</pre>
  *
  * @param <T> the type of the lazily computed value
@@ -74,6 +85,20 @@ public abstract class Lazy<T> implements Supplier<T> {
      */
     public static <T> Lazy<T> of(Supplier<T> supplier) {
         return new ThreadSafeLazy<>(supplier);
+    }
+
+    /**
+     * Creates a thread-safe lazy value that receives its owner at access time and is bound to the
+     * first owner it computes from. Use this for final owner-derived lazy fields that would
+     * otherwise need a supplier capturing {@code this} during construction.
+     *
+     * @param function the owner-to-value function to compute the value (called at most once)
+     * @param <O> the owner type
+     * @param <T> the value type
+     * @return an owner-bound lazy holder for the value
+     */
+    public static <O, T> Bound<O, T> ofBound(Function<? super O, ? extends T> function) {
+        return new Bound<>(function);
     }
 
     /**
@@ -272,6 +297,83 @@ public abstract class Lazy<T> implements Supplier<T> {
         @Override
         public boolean isComputed() {
             return valueRef.get() != UNSET;
+        }
+    }
+
+    /**
+     * Thread-safe lazy implementation for values computed from an explicit owner passed at access
+     * time, bound to the first owner it computes from. This preserves final-field lazy caching
+     * without constructing a supplier that captures the owner from its constructor.
+     *
+     * <p>Instances are intended to be held in {@code final} fields of the owner they are bound to.
+     */
+    public static final class Bound<O, T> {
+        private static final Object UNSET = new Object();
+        private static final VarHandle VALUE = VarHandles.of(Bound.class, "value");
+
+        /**
+         * The computed value, or {@link #UNSET}; accessed through {@link #VALUE} so the fully
+         * computed value is published with volatile ordering.
+         */
+        @SuppressWarnings({"unused", "FieldMayBeFinal"}) // accessed via VALUE
+        private Object value = UNSET;
+
+        private O owner;
+        private Function<? super O, ? extends T> function;
+
+        Bound(Function<? super O, ? extends T> function) {
+            this.function = requireNonNull(function, "function");
+        }
+
+        /**
+         * Gets the lazily computed value, computing it from the owner if necessary.
+         *
+         * @param owner the owner used to compute the value on first access
+         *
+         * @return the value
+         */
+        @SuppressWarnings("unchecked")
+        public T get(O owner) {
+            requireNonNull(owner, "owner");
+
+            Object value = VALUE.getVolatile(this);
+            if (value != UNSET) {
+                checkOwner(owner);
+                return (T) value;
+            }
+
+            synchronized (this) {
+                value = VALUE.getVolatile(this);
+                if (value != UNSET) {
+                    checkOwner(owner);
+                    return (T) value;
+                }
+
+                value = function.apply(owner);
+                // The owner write must precede the value volatile-write so that a reader observing
+                // the value on the unsynchronized fast path also observes the owner.
+                this.owner = owner;
+                VALUE.setVolatile(this, value);
+                function = null; // Allow GC of the function after the value is computed.
+                return (T) value;
+            }
+        }
+
+        /**
+         * Returns true if the value has been computed.
+         *
+         * @return true if already computed, false if still deferred
+         */
+        public boolean isComputed() {
+            return VALUE.getVolatile(this) != UNSET;
+        }
+
+        private void checkOwner(O owner) {
+            O ownerExisting = this.owner;
+            if (ownerExisting != owner) {
+                throw new IllegalArgumentException(
+                        "Bound lazy value is already bound to a different owner");
+            }
         }
     }
 

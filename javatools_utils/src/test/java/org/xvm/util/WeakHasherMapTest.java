@@ -38,6 +38,23 @@ public class WeakHasherMapTest {
     }
 
     @Test
+    void shouldReturnLiveViews() {
+        Map<Integer, String> map = new WeakHasherMap<>(Hasher.natural());
+
+        var keys = map.keySet();
+        var values = map.values();
+        var entries = map.entrySet();
+
+        // assert only that the views are live/backed by the map; whether an
+        // implementation returns cached or fresh view instances is its own business
+
+        map.put(1, "hello");
+        assertTrue(keys.contains(1));
+        assertTrue(values.contains("hello"));
+        assertEquals("hello", entries.iterator().next().getValue());
+    }
+
+    @Test
     void souldRetainAll() {
         Map<Integer, String> map = new WeakHasherMap<>(Hasher.natural());
         Map<Integer, String> map2 = new HashMap<>();

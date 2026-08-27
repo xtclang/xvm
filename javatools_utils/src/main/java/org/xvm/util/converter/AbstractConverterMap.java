@@ -1,5 +1,7 @@
 package org.xvm.util.converter;
 
+import org.xvm.util.Lazy;
+
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -16,19 +18,29 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
     private final Map<SK, SV> storage;
 
     /**
-     * The converter keySet.
+     * Lazily computed and cached key set view. The view is created on first access rather than
+     * during base construction, because the view factories are overridable and must not run while
+     * a subclass is still initializing: the unbound method reference captures no instance, and the
+     * owner is supplied at access time. {@link Lazy.Bound} publishes the computed view with
+     * volatile ordering, so a concurrent reader always observes a fully constructed view no
+     * matter how a subclass implements its views, and computes at most once, so no duplicate view
+     * can be created under a racy first access. The holder itself is final, so there is no mutable
+     * cache field left to reason about.
      */
-    protected final Set<K> keys;
+    private final Lazy.Bound<AbstractConverterMap<K, V, SK, SV>, Set<K>> keys =
+            Lazy.ofBound(AbstractConverterMap::newKeySet);
 
     /**
-     * The converter values.
+     * Lazily computed and cached values view; see {@link #keys} for the caching contract.
      */
-    protected final Collection<V> values;
+    private final Lazy.Bound<AbstractConverterMap<K, V, SK, SV>, Collection<V>> values =
+            Lazy.ofBound(AbstractConverterMap::newValues);
 
     /**
-     * The converter entrySet.
+     * Lazily computed and cached entry set view; see {@link #keys} for the caching contract.
      */
-    protected final Set<Entry<K, V>> entries;
+    private final Lazy.Bound<AbstractConverterMap<K, V, SK, SV>, Set<Entry<K, V>>> entries =
+            Lazy.ofBound(AbstractConverterMap::newEntrySet);
 
     /**
      * Construct a {@link AbstractConverterMap}.
@@ -37,9 +49,6 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
      */
     protected AbstractConverterMap(Map<SK, SV> storage) {
         this.storage = storage;
-        keys = newKeySet();
-        values = newValues();
-        entries = newEntrySet();
     }
 
     /**
@@ -172,17 +181,17 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
 
     @Override
     public Set<K> keySet() {
-        return keys;
+        return keys.get(this);
     }
 
     @Override
     public Collection<V> values() {
-        return values;
+        return values.get(this);
     }
 
     @Override
     public Set<Entry<K, V>> entrySet() {
-        return entries;
+        return entries.get(this);
     }
 
     @Override
