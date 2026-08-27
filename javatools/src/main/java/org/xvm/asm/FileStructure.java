@@ -36,9 +36,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import static org.xvm.util.Handy.copyPut;
-import static org.xvm.util.Handy.copyRemap;
-import static org.xvm.util.Handy.copyRemove;
 import static org.xvm.util.Handy.intToHexString;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -1075,7 +1072,25 @@ public class FileStructure
         ModuleConstant midOld = (ModuleConstant) idOld;
         ModuleConstant midNew = (ModuleConstant) idNew;
         if (midNew != midOld) {
-            m_moduleById = copyRemap(getModuleByIdMap(), midOld, midNew);
+            var kids = getModuleByIdMap();
+            if (kids.containsKey(midOld)) {
+                var moduleOld  = kids.get(midOld);
+                var replaceNew = !midOld.equals(midNew) && kids.containsKey(midNew);
+                var modules    = new LinkedHashMap<ModuleConstant, ModuleStructure>(kids.size());
+                for (var entry : kids.entrySet()) {
+                    var id = entry.getKey();
+                    if (id.equals(midOld)) {
+                        if (!replaceNew) {
+                            modules.put(midNew, moduleOld);
+                        }
+                    } else if (replaceNew && id.equals(midNew)) {
+                        modules.put(midNew, moduleOld);
+                    } else {
+                        modules.put(id, entry.getValue());
+                    }
+                }
+                m_moduleById = Collections.unmodifiableMap(modules);
+            }
             if (m_idModule.equals(midOld)) {
                 m_idModule = midNew;
             }
@@ -1104,7 +1119,9 @@ public class FileStructure
         ModuleConstant                       id      = module.getIdentityConstant();
         ModuleStructure                      sibling = kids.get(id);
         if (sibling == null) {
-            m_moduleById = copyPut(kids, id, module);
+            var modules = new LinkedHashMap<ModuleConstant, ModuleStructure>(kids);
+            modules.put(id, module);
+            m_moduleById = Collections.unmodifiableMap(modules);
         } else if (isSiblingAllowed()) {
             linkSibling(module, sibling);
         } else {
@@ -1126,9 +1143,13 @@ public class FileStructure
         ModuleStructure                      sibling = kids.get(id);
         if (sibling != null) {
             if (sibling == child) {
-                m_moduleById = child.getNextSibling() == null
-                        ? copyRemove(kids, id) // the only sibling with that id
-                        : copyPut(kids, id, (ModuleStructure) child.getNextSibling());
+                var modules = new LinkedHashMap<ModuleConstant, ModuleStructure>(kids);
+                if (child.getNextSibling() == null) {
+                    modules.remove(id); // the only sibling with that id
+                } else {
+                    modules.put(id, (ModuleStructure) child.getNextSibling());
+                }
+                m_moduleById = Collections.unmodifiableMap(modules);
                 markModified();
             } else {
                 // the child to remove must be in the middle of the linked list
@@ -1150,8 +1171,9 @@ public class FileStructure
         assert childNew instanceof ModuleStructure;
         assert childNew.getParent() == this;
         assert childOld.getIdentityConstant().equals(childNew.getIdentityConstant());
-        m_moduleById = copyPut(getModuleByIdMap(), (ModuleConstant) childNew.getIdentityConstant(),
-                (ModuleStructure) childNew);
+        var modules = new LinkedHashMap<ModuleConstant, ModuleStructure>(getModuleByIdMap());
+        modules.put((ModuleConstant) childNew.getIdentityConstant(), (ModuleStructure) childNew);
+        m_moduleById = Collections.unmodifiableMap(modules);
     }
 
     @Override

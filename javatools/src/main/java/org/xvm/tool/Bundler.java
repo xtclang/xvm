@@ -83,8 +83,10 @@ public class Bundler extends Launcher<BundlerOptions> {
         // irrelevant here
         var bundle = new FileStructure(requireNonNull(moduleMain, "moduleMain"),
                 /*fSynthesize*/ false);
-        selection.values().stream()
-                .filter(module -> module != moduleMain)
+        selection.entrySet().stream()
+                .filter(entry -> entry.getValue() != moduleMain)
+                .sorted(Map.Entry.comparingByKey())
+                .map(Map.Entry::getValue)
                 .forEach(module -> bundle.merge(module, /*fSynthesize*/ false, /*fTakeFile*/ false));
 
         // non-main real modules of a persistent container are embedded modules, not primaries
