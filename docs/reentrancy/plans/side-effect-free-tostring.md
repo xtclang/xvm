@@ -922,14 +922,24 @@ constant array, AIOOBE swallowed by `catch(Throwable)`), and each gained an expl
 frame-parameterized forced overload (`toIdString(Frame, …)`, `getName(Frame, …)`).
 These two feed 31 of 38 op toStrings. Suites green, no op-dump golden regressed.
 
-**Still open in slice 1 (the riskier roots):** the
-`ParameterizedTypeConstant`/`TerminalTypeConstant` `getValueString` leaves and the
-`ObjectHandle`/`ClassComposition` handle roots (which depend on the leaves for full
-purity). The `getValueString` split is NOT a drop-in: it changes function-type
-output (`function R(P)` → structural `Function<…>`) and `getValueString` is the
-pervasive type-to-string method used in error messages, logging, and possibly
-production comparisons — so it needs the same production-use audit that gated the
-`Type.dump()` change before it can land.
+**Slice 1 now COMPLETE.** The riskier roots landed after a production-use audit:
+- `ParameterizedTypeConstant.getValueString` renders the structural `Function<…>`
+  form (pure); the pretty `function R(P)` form moved to an explicit
+  `describeForced()`. `TerminalTypeConstant.getValueString` is pure transitively.
+  Commit `a03a998f1`. The audit verdict was SAFE — the output change affects function
+  types only; no consumer parses/branches on `"function "`, keys a map/cache/equality
+  on the string, round-trips or serializes it (the pool serializes positions), and
+  the scalar-spelling `switch`/`equals` sites never traverse the function branch.
+- `ObjectHandle.toString` dropped the `getType().isImmutable()` recursion;
+  `ClassComposition.toString` is pure transitively (`a03a998f1`).
+- `ExceptionHandle.toString` reads `"text"` via a non-forcing `peekField` (guarded on
+  `ClassComposition.isFieldLayoutComputed()`), else `<text deferred>` (`6c1c7c686`).
+
+All gated with the unit suites + `xdk:installDist`. With the five/six roots pure, the
+80+ `DELEG`/`SUSPECT` dependent rows are pure transitively; slices 2–7 remaining are
+the explicit non-root sites (`MethodStructure.getDescription`, `BinaryAST`,
+`Contribution`, the `Frame`/`FiberQueue` short forms, `xFuture`/`xEnum`, JavaJIT) plus
+the `DisplayPurityTest` ratchet.
 
 Small, independently landable PR slices, worst offenders first because five
 root sites unblock most dependent rows:

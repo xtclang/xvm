@@ -265,10 +265,16 @@ dump moves to an explicit method Java never calls implicitly.
 no-arg = pure header, boolean overload = full dump), and the two AMBIENT op-display
 roots (`Argument.toIdString`, `OpVar.getName`, commit `a9e7d58c0` — pure `const:#n`
 /`name:#n` markers, no ambient fiber read, plus explicit `Frame`-parameterized
-forced overloads). **Still open:** the `getValueString` type leaves and the
-`ObjectHandle`/`ClassComposition` handle roots — the `getValueString` split changes
-function-type output (`function R(P)` → structural `Function<…>`) in error messages
-and logging, so it needs a `Type.dump()`-style production-use audit before landing.
+forced overloads). **Slice 1 is now complete:** the `getValueString` type leaves
+(`a03a998f1`, function types render structurally; pretty `function R(P)` → explicit
+`describeForced()`; a production-use audit confirmed SAFE — function-only output
+change, no parse/cache-key/equality/serialization consumer), the
+`ObjectHandle`/`ClassComposition` handle roots (`a03a998f1`), and
+`ExceptionHandle.toString` (`6c1c7c686`, non-forcing `peekField`). **Remaining:**
+slices 2–7 are the explicit non-root sites (`MethodStructure.getDescription`,
+`BinaryAST`, `Contribution`, `Frame`/`FiberQueue`, `xFuture`/`xEnum`, JavaJIT) — 80+
+`DELEG`/`SUSPECT` rows go pure transitively now that the roots are — plus the
+`DisplayPurityTest` ratchet.
 
 **Master port spec.** Follow the 7-slice migration in
 [side-effect-free-tostring.md](side-effect-free-tostring.md). Only ~6 root sites
