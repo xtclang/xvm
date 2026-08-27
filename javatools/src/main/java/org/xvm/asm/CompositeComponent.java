@@ -5,7 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.PrintWriter;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -30,7 +29,7 @@ public class CompositeComponent
      */
     protected CompositeComponent(Component parent, List<Component> siblings) {
         super(parent);
-        f_siblings = siblings;
+        f_siblings = List.copyOf(siblings);
     }
 
 
@@ -40,9 +39,7 @@ public class CompositeComponent
      * @return a read-only list of components that are represented by this composite component
      */
     public List<Component> components() {
-        List<Component> list = f_siblings;
-        assert (list = Collections.unmodifiableList(list)) != null;
-        return list;
+        return f_siblings;
     }
 
     // ----- Component methods ---------------------------------------------------------------------
@@ -390,6 +387,34 @@ public class CompositeComponent
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public CompositeComponent ensureMutable() {
+        if (!isReadOnly()) {
+            return this;
+        }
+
+        FileStructure file = new FileStructure(getFileStructure());
+        Component parent = (Component) getContaining();
+        Component parentCopy = parent.findCorrespondingStructure(file);
+        IdentityArrayList<Component> siblingCopies = new IdentityArrayList<>();
+        for (Component sibling : f_siblings) {
+            siblingCopies.add(sibling.findCorrespondingStructure(file));
+        }
+        return new CompositeComponent(parentCopy, siblingCopies);
+    }
+
+    @Override
+    public CompositeComponent ensureReadOnly() {
+        for (Component sibling : f_siblings) {
+            sibling.ensureReadOnly();
+        }
+        if (!isReadOnly()) {
+            prepareReadOnly();
+            markReadOnly();
+        }
+        return this;
+    }
 
     @Override
     public Iterable<? extends XvmStructure> getContained() {

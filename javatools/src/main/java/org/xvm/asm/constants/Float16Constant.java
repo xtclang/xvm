@@ -107,6 +107,16 @@ public class Float16Constant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public Float16Constant ensureMutable() {
+        return (Float16Constant) super.ensureMutable();
+    }
+
+    @Override
+    public Float16Constant ensureReadOnly() {
+        return (Float16Constant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());

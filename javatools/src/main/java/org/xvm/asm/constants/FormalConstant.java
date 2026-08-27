@@ -68,4 +68,18 @@ public abstract class FormalConstant
      * @return the resulting {@link ExprAST} or null if the conversion is not feasible
      */
     public abstract ExprAST toExprAst(Context ctx);
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public FormalConstant ensureMutable() {
+        return (FormalConstant) super.ensureMutable();
+    }
+
+    @Override
+    public FormalConstant ensureReadOnly() {
+        return (FormalConstant) super.ensureReadOnly();
+    }
+
 }

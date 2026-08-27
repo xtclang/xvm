@@ -312,6 +312,16 @@ public class FSNodeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public FSNodeConstant ensureMutable() {
+        return (FSNodeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public FSNodeConstant ensureReadOnly() {
+        return (FSNodeConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constName     = pool.register(m_constName);
         m_constCreated  = pool.register(m_constCreated);

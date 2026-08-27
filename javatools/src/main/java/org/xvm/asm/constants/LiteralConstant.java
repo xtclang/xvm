@@ -1617,6 +1617,16 @@ public class LiteralConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public LiteralConstant ensureMutable() {
+        return (LiteralConstant) super.ensureMutable();
+    }
+
+    @Override
+    public LiteralConstant ensureReadOnly() {
+        return (LiteralConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constStr = pool.register(m_constStr);
     }

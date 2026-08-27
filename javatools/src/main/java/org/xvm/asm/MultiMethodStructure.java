@@ -51,6 +51,16 @@ public class MultiMethodStructure
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public MultiMethodStructure ensureMutable() {
+        return (MultiMethodStructure) super.ensureMutable();
+    }
+
+    @Override
+    public MultiMethodStructure ensureReadOnly() {
+        return (MultiMethodStructure) super.ensureReadOnly();
+    }
+
+    @Override
     public MultiMethodConstant getIdentityConstant() {
         return (MultiMethodConstant) super.getIdentityConstant();
     }
@@ -96,6 +106,7 @@ public class MultiMethodStructure
     protected void replaceChildIdentityConstant(IdentityConstant idOld, IdentityConstant idNew) {
         assert idOld instanceof MethodConstant;
         assert idNew instanceof MethodConstant;
+        verifyMutable();
 
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;
         if (map != null) {
@@ -124,6 +135,7 @@ public class MultiMethodStructure
     protected boolean addChild(Component child) {
         // MultiMethodStructure can only hold MethodStructures
         assert child instanceof MethodStructure;
+        verifyMutable();
 
         Map<MethodConstant, MethodStructure> kids    = ensureMethodByConstantMap();
         MethodStructure                      method  = (MethodStructure) child;
@@ -154,6 +166,7 @@ public class MultiMethodStructure
     public void removeChild(Component child) {
         assert child instanceof MethodStructure;
         assert child.getParent() == this;
+        verifyMutable();
 
         Map<MethodConstant, MethodStructure> kids = ensureMethodByConstantMap();
 
@@ -258,6 +271,8 @@ public class MultiMethodStructure
      */
     public MethodStructure createMethod(boolean fFunction, Access access, Annotation[] annotations,
             Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper) {
+        verifyMutable();
+
         int nFlags   = Format.METHOD.ordinal() | access.FLAGS | (fFunction ? Component.STATIC_BIT : 0);
         int cReturns = aReturns.length;
         int cParams  = aParams.length;
@@ -313,6 +328,7 @@ public class MultiMethodStructure
      */
     public MethodStructure createLambda(TypeConstant[] atypeParams, String[] asParams) {
         assert "->".equals(getName());
+        verifyMutable();
 
         int nMax = 0;
         for (MethodConstant id : ensureMethodByConstantMap().keySet()) {
@@ -346,10 +362,7 @@ public class MultiMethodStructure
      * Helper method to return a collection of methods.
      */
     public Collection<MethodStructure> methods() {
-        Collection<MethodStructure> methods = getMethodByConstantMap().values();
-
-        assert (methods = Collections.unmodifiableCollection(methods)) != null;
-        return methods;
+        return Collections.unmodifiableCollection(getMethodByConstantMap().values());
     }
 
     /**
@@ -363,7 +376,9 @@ public class MultiMethodStructure
     public Map<MethodConstant, MethodStructure> getMethodByConstantMap() {
         ensureChildren();
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;
-        return map == null ? Collections.emptyMap() : map;
+        return map == null
+                ? Collections.emptyMap()
+                : Collections.unmodifiableMap(map);
     }
 
     /**
@@ -376,6 +391,7 @@ public class MultiMethodStructure
      *         necessary
      */
     protected Map<MethodConstant, MethodStructure> ensureMethodByConstantMap() {
+        verifyMutable();
         ensureChildren();
 
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;

@@ -181,6 +181,16 @@ public class ChildClassConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public ChildClassConstant ensureMutable() {
+        return (ChildClassConstant) super.ensureMutable();
+    }
+
+    @Override
+    public ChildClassConstant ensureReadOnly() {
+        return (ChildClassConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constParent = pool.register(m_constParent);
         m_constName   = pool.register(m_constName);

@@ -165,6 +165,16 @@ public class FileStoreConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public FileStoreConstant ensureMutable() {
+        return (FileStoreConstant) super.ensureMutable();
+    }
+
+    @Override
+    public FileStoreConstant ensureReadOnly() {
+        return (FileStoreConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constPath = pool.register(m_constPath);
         m_constDir  = pool.register(m_constDir);

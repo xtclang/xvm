@@ -2042,6 +2042,16 @@ public class TerminalTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public TerminalTypeConstant ensureMutable() {
+        return (TerminalTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public TerminalTypeConstant ensureReadOnly() {
+        return (TerminalTypeConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constId = pool.register(ensureResolvedConstant());
     }

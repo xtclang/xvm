@@ -224,6 +224,16 @@ public class DecimalConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public DecimalConstant ensureMutable() {
+        return (DecimalConstant) super.ensureMutable();
+    }
+
+    @Override
+    public DecimalConstant ensureReadOnly() {
+        return (DecimalConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());

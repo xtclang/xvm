@@ -118,7 +118,10 @@ public class PropertyStructure
 
     public void setVarAccess(Access access) {
         assert access == null || access.ordinal() >= getAccess().ordinal();
-        m_accessVar = access;
+        if (m_accessVar != access) {
+            verifyMutable();
+            m_accessVar = access;
+        }
     }
 
     /**
@@ -152,9 +155,11 @@ public class PropertyStructure
      */
     public void setType(TypeConstant type) {
         assert type != null;
-        m_type = type;
-
-        getIdentityConstant().invalidateCache();
+        if (!type.equals(m_type)) {
+            verifyMutable();
+            m_type = type;
+            getIdentityConstant().invalidateCache();
+        }
     }
 
     /**
@@ -197,7 +202,7 @@ public class PropertyStructure
             aAnno = m_aPropAnno;
             assert aAnno != null;
         }
-        return aAnno;
+        return isReadOnly() ? aAnno.clone() : aAnno;
     }
 
     /**
@@ -294,7 +299,7 @@ public class PropertyStructure
             aAnno = m_aRefAnno;
             assert aAnno != null;
         }
-        return aAnno;
+        return isReadOnly() ? aAnno.clone() : aAnno;
     }
 
     private void buildAnnotationArrays() {
@@ -356,7 +361,10 @@ public class PropertyStructure
      *                  be used to provide the initial value for the property
      */
     public void setInitialValue(Constant constVal) {
-        m_constVal = constVal;
+        if (m_constVal != constVal) {
+            verifyMutable();
+            m_constVal = constVal;
+        }
     }
 
     /**
@@ -441,7 +449,10 @@ public class PropertyStructure
      * Mark the accessors for the property as native.
      */
     public void markNative() {
-        m_fNative = true;
+        if (!m_fNative) {
+            verifyMutable();
+            m_fNative = true;
+        }
     }
 
     /**
@@ -696,6 +707,28 @@ public class PropertyStructure
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public PropertyStructure ensureMutable() {
+        return (PropertyStructure) super.ensureMutable();
+    }
+
+    @Override
+    public PropertyStructure ensureReadOnly() {
+        return (PropertyStructure) super.ensureReadOnly();
+    }
+
+    @Override
+    protected void prepareReadOnly() {
+        super.prepareReadOnly();
+
+        if (m_aPropAnno != null) {
+            m_aPropAnno = m_aPropAnno.clone();
+        }
+        if (m_aRefAnno != null) {
+            m_aRefAnno = m_aRefAnno.clone();
+        }
+    }
 
     @Override
     protected void disassemble(DataInput in)

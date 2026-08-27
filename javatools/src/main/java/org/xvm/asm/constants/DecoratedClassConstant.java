@@ -154,6 +154,16 @@ public class DecoratedClassConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public DecoratedClassConstant ensureMutable() {
+        return (DecoratedClassConstant) super.ensureMutable();
+    }
+
+    @Override
+    public DecoratedClassConstant ensureReadOnly() {
+        return (DecoratedClassConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_type = pool.register(m_type);
     }

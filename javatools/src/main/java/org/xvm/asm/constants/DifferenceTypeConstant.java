@@ -513,4 +513,18 @@ public class DifferenceTypeConstant
     public String getValueString() {
         return m_constType1.getValueString() + " - " + m_constType2.getValueString();
     }
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public DifferenceTypeConstant ensureMutable() {
+        return (DifferenceTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public DifferenceTypeConstant ensureReadOnly() {
+        return (DifferenceTypeConstant) super.ensureReadOnly();
+    }
+
 }

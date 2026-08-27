@@ -172,6 +172,16 @@ public class VersionMatchesCondition
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public VersionMatchesCondition ensureMutable() {
+        return (VersionMatchesCondition) super.ensureMutable();
+    }
+
+    @Override
+    public VersionMatchesCondition ensureReadOnly() {
+        return (VersionMatchesCondition) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constStruct = pool.register(m_constStruct);
         m_constVer    = pool.register(m_constVer);

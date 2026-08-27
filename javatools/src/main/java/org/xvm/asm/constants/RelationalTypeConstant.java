@@ -687,6 +687,16 @@ public abstract class RelationalTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public RelationalTypeConstant ensureMutable() {
+        return (RelationalTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public RelationalTypeConstant ensureReadOnly() {
+        return (RelationalTypeConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constType1 = pool.register(m_constType1);
         m_constType2 = pool.register(m_constType2);

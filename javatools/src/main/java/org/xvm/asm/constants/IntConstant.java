@@ -1146,6 +1146,16 @@ public class IntConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public IntConstant ensureMutable() {
+        return (IntConstant) super.ensureMutable();
+    }
+
+    @Override
+    public IntConstant ensureReadOnly() {
+        return (IntConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());

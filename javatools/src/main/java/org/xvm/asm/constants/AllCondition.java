@@ -335,4 +335,18 @@ public class AllCondition
 
         return aconstMerged;
     }
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public AllCondition ensureMutable() {
+        return (AllCondition) super.ensureMutable();
+    }
+
+    @Override
+    public AllCondition ensureReadOnly() {
+        return (AllCondition) super.ensureReadOnly();
+    }
+
 }

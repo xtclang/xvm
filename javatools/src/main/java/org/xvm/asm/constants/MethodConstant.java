@@ -172,6 +172,7 @@ public class MethodConstant
         assert isLambda();
         assert isNascent();
         assert sig != null;
+        verifyMutable();
         m_constSig = sig;
     }
 
@@ -620,6 +621,16 @@ public class MethodConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public MethodConstant ensureMutable() {
+        return (MethodConstant) super.ensureMutable();
+    }
+
+    @Override
+    public MethodConstant ensureReadOnly() {
+        return (MethodConstant) super.ensureReadOnly();
+    }
 
     @Override
     protected void registerConstants(ConstantPool pool) {

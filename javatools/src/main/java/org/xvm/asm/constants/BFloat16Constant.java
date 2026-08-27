@@ -103,6 +103,16 @@ public class BFloat16Constant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public BFloat16Constant ensureMutable() {
+        return (BFloat16Constant) super.ensureMutable();
+    }
+
+    @Override
+    public BFloat16Constant ensureReadOnly() {
+        return (BFloat16Constant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());

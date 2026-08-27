@@ -183,6 +183,35 @@ public class FileStructure
     }
 
     /**
+     * Copy an entire FileStructure, including every module, version, fingerprint, and nested
+     * structure that it contains.
+     *
+     * @param that  the FileStructure to copy
+     */
+    public FileStructure(FileStructure that) {
+        this(that.getModule(), false);
+
+        ModuleStructure moduleMain = that.getModule();
+        for (ModuleStructure moduleFirst : that.children()) {
+            for (ModuleStructure module = moduleFirst; module != null;
+                    module = (ModuleStructure) module.getNextSibling()) {
+                if (module != moduleMain) {
+                    merge(module, false, false);
+                }
+            }
+        }
+
+        for (Constant constant : that.getConstantPool().getConstants()) {
+            m_pool.register(constant);
+        }
+
+        m_kind    = that.m_kind;
+        m_fLinked = that.m_fLinked;
+        m_errs    = that.m_errs;
+        resetModified();
+    }
+
+    /**
      * Merge the specified module into this FileStructure.
      * <p>
      * A fingerprint child with the merged module's id is superseded by the real module. The
@@ -198,6 +227,8 @@ public class FileStructure
      *                     and the merged module becomes this FileStructure's main module
      */
     public void merge(ModuleStructure module, boolean fSynthesize, boolean fTakeFile) {
+        verifyMutable();
+
         ModuleStructure moduleClone = module.cloneBody();
         moduleClone.setContaining(this);
 
@@ -316,6 +347,11 @@ public class FileStructure
      */
     public void writeTo(DataOutput out)
             throws IOException {
+        if (isReadOnly()) {
+            ensureMutable().writeTo(out);
+            return;
+        }
+
         reregisterConstants(true);
         assemble(out);
         resetModified();
@@ -348,6 +384,7 @@ public class FileStructure
         }
 
         if (m_kind != kind) {
+            verifyMutable();
             m_kind = kind;
             markModified();
         }
@@ -692,6 +729,8 @@ public class FileStructure
             }
         }
 
+        verifyMutable();
+
         ModuleConstant idMissing = findMissing(repository, new HashSet<>(), fRuntime);
         if (idMissing == null) {
             idMissing = linkModules(repository, this, new HashSet<>(), fRuntime);
@@ -872,6 +911,8 @@ public class FileStructure
      * @param listUnlinked  the list of "raw" modules to replace the fingerprint with
      */
     public void replace(List<ModuleStructure> listUnlinked) {
+        verifyMutable();
+
         List<ModuleStructure> listLinked = new ArrayList<>();
         for (ModuleStructure moduleUnlinked : listUnlinked) {
             ModuleStructure moduleLinked = moduleUnlinked.cloneBody();
@@ -906,7 +947,10 @@ public class FileStructure
      * Mark this FileStructure as linked.
      */
     public void markLinked() {
-        m_fLinked = true;
+        if (!m_fLinked) {
+            verifyMutable();
+            m_fLinked = true;
+        }
     }
 
     // ----- FileStructure methods -----------------------------------------------------------------
@@ -1028,6 +1072,8 @@ public class FileStructure
      *         new (versioned) id
      */
     public ModuleStructure replaceModuleId(ModuleConstant idNew) {
+        verifyMutable();
+
         ModuleStructure module = getModule();
         ModuleConstant  idOld  = module.getIdentityConstant();
 
@@ -1072,6 +1118,7 @@ public class FileStructure
         ModuleConstant midOld = (ModuleConstant) idOld;
         ModuleConstant midNew = (ModuleConstant) idNew;
         if (midNew != midOld) {
+            verifyMutable();
             var kids = getModuleByIdMap();
             if (kids.containsKey(midOld)) {
                 var moduleOld  = kids.get(midOld);
@@ -1113,6 +1160,7 @@ public class FileStructure
     public boolean addChild(Component child) {
         // FileStructure can only hold ModuleStructures
         assert child instanceof ModuleStructure;
+        verifyMutable();
 
         Map<ModuleConstant, ModuleStructure> kids    = getModuleByIdMap();
         ModuleStructure                      module  = (ModuleStructure) child;
@@ -1136,6 +1184,7 @@ public class FileStructure
     public void removeChild(Component child) {
         assert child instanceof ModuleStructure;
         assert child.getParent() == this;
+        verifyMutable();
 
         Map<ModuleConstant, ModuleStructure> kids    = getModuleByIdMap();
         ModuleStructure                      module  = (ModuleStructure) child;
@@ -1171,6 +1220,7 @@ public class FileStructure
         assert childNew instanceof ModuleStructure;
         assert childNew.getParent() == this;
         assert childOld.getIdentityConstant().equals(childNew.getIdentityConstant());
+        verifyMutable();
         var modules = new LinkedHashMap<ModuleConstant, ModuleStructure>(getModuleByIdMap());
         modules.put((ModuleConstant) childNew.getIdentityConstant(), (ModuleStructure) childNew);
         m_moduleById = Collections.unmodifiableMap(modules);
@@ -1223,6 +1273,21 @@ public class FileStructure
     }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public FileStructure ensureMutable() {
+        return (FileStructure) super.ensureMutable();
+    }
+
+    @Override
+    public FileStructure ensureReadOnly() {
+        return (FileStructure) super.ensureReadOnly();
+    }
+
+    @Override
+    protected FileStructure findCorrespondingStructure(FileStructure file) {
+        return file;
+    }
 
     @Override
     public FileStructure getFileStructure() {
@@ -1282,6 +1347,8 @@ public class FileStructure
      * Re-registers all referenced constants with the pool.
      */
     public void reregisterConstants(boolean fOptimize) {
+        verifyMutable();
+
         ConstantPool pool = m_pool;
         pool.preRegisterAll();
         registerConstants(pool);
@@ -1407,7 +1474,10 @@ public class FileStructure
 
     @Override
     public void setErrorListener(ErrorListener errs) {
-        m_errs = errs;
+        if (m_errs != errs) {
+            verifyMutable();
+            m_errs = errs;
+        }
     }
 
     // ----- Object methods ------------------------------------------------------------------------

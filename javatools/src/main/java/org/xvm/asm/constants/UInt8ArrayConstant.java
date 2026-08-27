@@ -107,6 +107,16 @@ public class UInt8ArrayConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public UInt8ArrayConstant ensureMutable() {
+        return (UInt8ArrayConstant) super.ensureMutable();
+    }
+
+    @Override
+    public UInt8ArrayConstant ensureReadOnly() {
+        return (UInt8ArrayConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());

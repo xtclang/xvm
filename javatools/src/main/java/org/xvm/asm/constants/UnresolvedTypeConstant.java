@@ -67,6 +67,7 @@ public class UnresolvedTypeConstant
      * Mark this unresolved type as recursive.
      */
     public void markRecursive() {
+        verifyMutable();
         m_fRecursive = true;
     }
 
@@ -96,6 +97,7 @@ public class UnresolvedTypeConstant
     public void resolve(Constant constant) {
         if (!m_fRecursive) {
             assert m_type == null || m_type == constant;
+            verifyMutable();
             m_type = (TypeConstant) constant;
         }
     }
@@ -485,6 +487,16 @@ public class UnresolvedTypeConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public UnresolvedTypeConstant ensureMutable() {
+        return (UnresolvedTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public UnresolvedTypeConstant ensureReadOnly() {
+        return (UnresolvedTypeConstant) super.ensureReadOnly();
+    }
 
     @Override
     protected void registerConstants(ConstantPool pool) {

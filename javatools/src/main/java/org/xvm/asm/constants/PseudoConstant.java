@@ -64,6 +64,16 @@ public abstract class PseudoConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public PseudoConstant ensureMutable() {
+        return (PseudoConstant) super.ensureMutable();
+    }
+
+    @Override
+    public PseudoConstant ensureReadOnly() {
+        return (PseudoConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         // this protected method must be present here to make it accessible to other classes in this

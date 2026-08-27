@@ -63,6 +63,16 @@ public class HandleConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public HandleConstant ensureMutable() {
+        return (HandleConstant) super.ensureMutable();
+    }
+
+    @Override
+    public HandleConstant ensureReadOnly() {
+        return (HandleConstant) super.ensureReadOnly();
+    }
+
+    @Override
     public String getDescription() {
         return getValueString();
     }

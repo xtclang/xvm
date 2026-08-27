@@ -1095,4 +1095,18 @@ public class UnionTypeConstant
             ? m_constType2.getValueString() + '?'
             : m_constType1.getValueString() + " | " + m_constType2.getValueString();
     }
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public UnionTypeConstant ensureMutable() {
+        return (UnionTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public UnionTypeConstant ensureReadOnly() {
+        return (UnionTypeConstant) super.ensureReadOnly();
+    }
+
 }

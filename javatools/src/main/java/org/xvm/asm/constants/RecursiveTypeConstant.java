@@ -308,6 +308,16 @@ public class RecursiveTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public RecursiveTypeConstant ensureMutable() {
+        return (RecursiveTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public RecursiveTypeConstant ensureReadOnly() {
+        return (RecursiveTypeConstant) super.ensureReadOnly();
+    }
+
+    @Override
     public boolean validate(ErrorListener errs) {
         return false;
     }

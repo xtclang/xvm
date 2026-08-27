@@ -155,6 +155,16 @@ public class InnerChildTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public InnerChildTypeConstant ensureMutable() {
+        return (InnerChildTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public InnerChildTypeConstant ensureReadOnly() {
+        return (InnerChildTypeConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 

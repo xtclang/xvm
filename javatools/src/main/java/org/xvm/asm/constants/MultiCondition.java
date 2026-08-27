@@ -274,6 +274,16 @@ public abstract class MultiCondition
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public MultiCondition ensureMutable() {
+        return (MultiCondition) super.ensureMutable();
+    }
+
+    @Override
+    public MultiCondition ensureReadOnly() {
+        return (MultiCondition) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_aconstCond = registerConstants(pool, m_aconstCond);
     }

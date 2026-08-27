@@ -56,11 +56,24 @@ public class TypedefStructure
      */
     public void setType(TypeConstant type) {
         assert type != null;
-        m_type = type;
+        if (!type.equals(m_type)) {
+            verifyMutable();
+            m_type = type;
+        }
     }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public TypedefStructure ensureMutable() {
+        return (TypedefStructure) super.ensureMutable();
+    }
+
+    @Override
+    public TypedefStructure ensureReadOnly() {
+        return (TypedefStructure) super.ensureReadOnly();
+    }
 
     @Override
     protected void disassemble(DataInput in)

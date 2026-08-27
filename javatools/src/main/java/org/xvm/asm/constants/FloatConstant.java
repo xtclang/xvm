@@ -29,4 +29,18 @@ public abstract class FloatConstant
      */
     @Override
     public abstract Float getValue();
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public FloatConstant ensureMutable() {
+        return (FloatConstant) super.ensureMutable();
+    }
+
+    @Override
+    public FloatConstant ensureReadOnly() {
+        return (FloatConstant) super.ensureReadOnly();
+    }
+
 }

@@ -749,6 +749,16 @@ public class SignatureConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public SignatureConstant ensureMutable() {
+        return (SignatureConstant) super.ensureMutable();
+    }
+
+    @Override
+    public SignatureConstant ensureReadOnly() {
+        return (SignatureConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constName     = pool.register(m_constName);
         m_aconstParams  = TypeConstant.registerTypeConstants(pool, m_aconstParams);

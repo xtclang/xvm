@@ -122,7 +122,7 @@ public class Parameter
      * @return an array of Annotation structures that represent all annotations of the parameter
      */
     public Annotation[] getAnnotations() {
-        return m_aAnnotations;
+        return isReadOnly() ? m_aAnnotations.clone() : m_aAnnotations;
     }
 
     /**
@@ -132,6 +132,7 @@ public class Parameter
      */
     public void addAnnotation(Annotation anno) {
         assert isParameter();
+        verifyMutable();
 
         int cAnnos = m_aAnnotations.length;
         if (cAnnos == 0) {
@@ -151,6 +152,8 @@ public class Parameter
      *         later in order to resolve annotations
      */
     public boolean resolveAnnotations() {
+        verifyMutable();
+
         TypeConstant typeParam = m_constType;
         if (typeParam.containsUnresolved()) {
             return false;
@@ -291,6 +294,7 @@ public class Parameter
      * available.
      */
     public void markDefaultValue() {
+        verifyMutable();
         m_fHasDefault = true;
     }
 
@@ -318,6 +322,7 @@ public class Parameter
     public void setDefaultValue(Constant constDefault) {
         assert hasDefaultValue();
         assert constDefault != null;
+        verifyMutable();
         m_constDefault = constDefault;
     }
 
@@ -327,6 +332,7 @@ public class Parameter
      */
     public void markImplicitDeref() {
         assert getType().isA(getConstantPool().typeRef());
+        verifyMutable();
         m_fImplicitDeref = true;
     }
 
@@ -350,6 +356,8 @@ public class Parameter
         assert isImplicitDeref();
 
         if (m_regDeref == null) {
+            verifyMutable();
+
             TypeConstant typeVar = getType();
             TypeConstant typeVal = typeVar.getParamType(0);
             Register     reg     = new Register(typeVal, null, method);
@@ -374,13 +382,38 @@ public class Parameter
             throw new IllegalStateException(e);
         }
 
-        m_fImplicitDeref = false;
-        m_regDeref       = null;
+        that.m_fImplicitDeref = false;
+        that.m_regDeref       = null;
         return that;
     }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public Parameter ensureMutable() {
+        return (Parameter) super.ensureMutable();
+    }
+
+    @Override
+    public Parameter ensureReadOnly() {
+        if (!isReadOnly()) {
+            m_aAnnotations = m_aAnnotations.clone();
+        }
+        return (Parameter) super.ensureReadOnly();
+    }
+
+    @Override
+    protected Parameter findCorrespondingStructure(FileStructure file) {
+        if (!(getContaining() instanceof MethodStructure method)) {
+            throw new IllegalStateException("parameter is not contained by a method");
+        }
+
+        MethodStructure methodCopy = (MethodStructure) method.findCorrespondingStructure(file);
+        return isParameter()
+                ? methodCopy.getParam(getIndex())
+                : methodCopy.getReturn(getIndex());
+    }
 
     @Override
     protected void markModified() {
@@ -395,6 +428,8 @@ public class Parameter
 
     @Override
     protected void registerConstants(ConstantPool pool) {
+        verifyMutable();
+
         m_aAnnotations = Constant.registerConstants(pool, m_aAnnotations);
         m_constType    = pool.register(m_constType);
         m_constName    = pool.register(m_constName);

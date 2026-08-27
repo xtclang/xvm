@@ -159,7 +159,9 @@ public class ModuleStructure
         if (mapDependencies == null) {
             mapDependencies = m_mapDependencies = collectModuleDependencies();
         }
-        return mapDependencies;
+        return isReadOnly()
+                ? Collections.unmodifiableMap(mapDependencies)
+                : mapDependencies;
     }
 
     /**
@@ -203,7 +205,7 @@ public class ModuleStructure
                 throw new RuntimeException(e);
             }
         }
-        return abDigest;
+        return isReadOnly() ? abDigest.clone() : abDigest;
     }
 
     /**
@@ -247,8 +249,11 @@ public class ModuleStructure
      * @param constDir  the literal constant indicating the source directory, or null
      */
     public void setSourceDir(LiteralConstant constDir) {
-        m_constDir = constDir;
-        markModified();
+        if (m_constDir != constDir) {
+            verifyMutable();
+            m_constDir = constDir;
+            markModified();
+        }
     }
 
     /**
@@ -266,8 +271,11 @@ public class ModuleStructure
      * @param constTimestamp  the literal constant indicating the compile date/time, or null
      */
     public void setTimestamp(LiteralConstant constTimestamp) {
-        m_constTimestamp = constTimestamp;
-        markModified();
+        if (m_constTimestamp != constTimestamp) {
+            verifyMutable();
+            m_constTimestamp = constTimestamp;
+            markModified();
+        }
     }
 
     /**
@@ -286,11 +294,13 @@ public class ModuleStructure
     public void setVersion(Version version) {
         if (version == null) {
             if (m_constVersion != null) {
+                verifyMutable();
                 markModified();
                 m_constVersion = null;
             }
         } else {
             assert !isFingerprint();
+            verifyMutable();
             markModified();
             m_constVersion = getConstantPool().ensureVersionConstant(version);
         }
@@ -322,6 +332,7 @@ public class ModuleStructure
      */
     public void setFingerprintVersions(VersionTree<Boolean> vtreeAllow) {
         assert isFingerprint();
+        verifyMutable();
         m_vtreeImportAllowVers.clear();
         m_vtreeImportAllowVers.putAll(vtreeAllow);
         markModified();
@@ -344,6 +355,7 @@ public class ModuleStructure
      */
     public void setFingerprintVersionPrefs(List<Version> listPrefer) {
         assert isFingerprint();
+        verifyMutable();
         m_listImportPreferVers.clear();
         m_listImportPreferVers.addAll(listPrefer);
         markModified();
@@ -362,6 +374,7 @@ public class ModuleStructure
     public void fingerprintDesired() {
         assert isFingerprint();
         if (m_moduletype == ModuleType.Optional) {
+            verifyMutable();
             m_moduletype = ModuleType.Desired;
             markModified();
         }
@@ -373,6 +386,7 @@ public class ModuleStructure
     public void fingerprintRequired() {
         assert isFingerprint();
         if (m_moduletype == ModuleType.Optional || m_moduletype == ModuleType.Desired) {
+            verifyMutable();
             m_moduletype = ModuleType.Required;
             markModified();
         }
@@ -411,6 +425,7 @@ public class ModuleStructure
     public ModuleStructure markEmbedded() {
         assert !isMainModule() && !isFingerprint();
         if (m_moduletype != ModuleType.Embedded) {
+            verifyMutable();
             m_moduletype = ModuleType.Embedded;
             markModified();
         }
@@ -425,6 +440,7 @@ public class ModuleStructure
     ModuleStructure markPrimary() {
         assert getIdentityConstant().equals(getFileStructure().getModuleId());
         if (m_moduletype != ModuleType.Primary) {
+            verifyMutable();
             m_moduletype = ModuleType.Primary;
             markModified();
         }
@@ -438,7 +454,10 @@ public class ModuleStructure
      */
     public void setFingerprintOrigin(ModuleStructure moduleActual) {
         assert isFingerprint();
-        m_moduleActual = moduleActual;
+        if (m_moduleActual != moduleActual) {
+            verifyMutable();
+            m_moduleActual = moduleActual;
+        }
     }
 
     /**
@@ -610,6 +629,8 @@ public class ModuleStructure
             return;
         }
 
+        verifyMutable();
+
         // this has to find just the components that have the specified version label, and
         // remove it from just those components, and then remove those components if they no
         // longer have any version label
@@ -634,6 +655,8 @@ public class ModuleStructure
             // already done
             return;
         }
+
+        verifyMutable();
 
         // this has to go to every component, and remove every version except the specified version,
         // and then remove those components if they no longer have any version label
@@ -719,6 +742,13 @@ public class ModuleStructure
             that.m_listImportPreferVers.addAll(this.m_listImportPreferVers);
         }
 
+        that.m_moduleActual    = null;
+        that.m_pkgImport       = null;
+        that.m_abDigest        = null;
+        that.m_mapCondNames    = null;
+        that.m_mapDependencies = null;
+        that.m_vtree           = null;
+
         return that;
     }
 
@@ -745,6 +775,36 @@ public class ModuleStructure
     }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public ModuleStructure ensureMutable() {
+        return (ModuleStructure) super.ensureMutable();
+    }
+
+    @Override
+    public ModuleStructure ensureReadOnly() {
+        return (ModuleStructure) super.ensureReadOnly();
+    }
+
+    @Override
+    protected void prepareReadOnly() {
+        super.prepareReadOnly();
+
+        getVersions().ensureReadOnly();
+        if (isFingerprint()) {
+            m_vtreeImportAllowVers.ensureReadOnly();
+        }
+        if (m_mapDependencies != null) {
+            m_mapDependencies = Collections.unmodifiableMap(new HashMap<>(m_mapDependencies));
+        }
+        if (m_mapCondNames == null) {
+            m_mapCondNames = collectConditionalNames();
+        }
+        m_mapCondNames = Collections.unmodifiableMap(new HashMap<>(m_mapCondNames));
+        if (m_abDigest != null) {
+            m_abDigest = m_abDigest.clone();
+        }
+    }
 
     @Override
     protected void disassemble(DataInput in)

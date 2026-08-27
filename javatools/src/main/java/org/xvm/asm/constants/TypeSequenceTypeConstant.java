@@ -294,4 +294,18 @@ public class TypeSequenceTypeConstant
     public String getValueString() {
         return "Tuple<...>";
     }
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public TypeSequenceTypeConstant ensureMutable() {
+        return (TypeSequenceTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public TypeSequenceTypeConstant ensureReadOnly() {
+        return (TypeSequenceTypeConstant) super.ensureReadOnly();
+    }
+
 }

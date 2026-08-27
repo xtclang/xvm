@@ -201,6 +201,16 @@ public class CharConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public CharConstant ensureMutable() {
+        return (CharConstant) super.ensureMutable();
+    }
+
+    @Override
+    public CharConstant ensureReadOnly() {
+        return (CharConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());

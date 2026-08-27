@@ -164,6 +164,16 @@ public class PureIdentityConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public PureIdentityConstant ensureMutable() {
+        return (PureIdentityConstant) super.ensureMutable();
+    }
+
+    @Override
+    public PureIdentityConstant ensureReadOnly() {
+        return (PureIdentityConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_type = pool.register(m_type);
     }

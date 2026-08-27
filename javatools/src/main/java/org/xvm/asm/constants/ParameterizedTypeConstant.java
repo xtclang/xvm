@@ -1044,6 +1044,16 @@ public class ParameterizedTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public ParameterizedTypeConstant ensureMutable() {
+        return (ParameterizedTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public ParameterizedTypeConstant ensureReadOnly() {
+        return (ParameterizedTypeConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constType   = pool.register(m_constType);
         m_atypeParams = registerTypeConstants(pool, m_atypeParams);

@@ -100,6 +100,16 @@ public class Float32Constant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public Float32Constant ensureMutable() {
+        return (Float32Constant) super.ensureMutable();
+    }
+
+    @Override
+    public Float32Constant ensureReadOnly() {
+        return (Float32Constant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());

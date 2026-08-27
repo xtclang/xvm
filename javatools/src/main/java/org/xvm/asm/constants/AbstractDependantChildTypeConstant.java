@@ -270,4 +270,18 @@ public abstract class AbstractDependantChildTypeConstant
         }
         return Usage.NO;
     }
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public AbstractDependantChildTypeConstant ensureMutable() {
+        return (AbstractDependantChildTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public AbstractDependantChildTypeConstant ensureReadOnly() {
+        return (AbstractDependantChildTypeConstant) super.ensureReadOnly();
+    }
+
 }

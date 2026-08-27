@@ -28,6 +28,19 @@ public class PackageStructure
     }
 
 
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public PackageStructure ensureMutable() {
+        return (PackageStructure) super.ensureMutable();
+    }
+
+    @Override
+    public PackageStructure ensureReadOnly() {
+        return (PackageStructure) super.ensureReadOnly();
+    }
+
+
     // ----- accessors --------------------------------------------------------------------------------------
 
     /**
@@ -109,6 +122,7 @@ public class PackageStructure
     public void setImportedModuleInjector(SingletonConstant constInjector, List<Injection> listInject) {
         assert isModuleImport();
         assert listInject == null || constInjector != null;
+        verifyMutable();
 
         findContribution(Composition.Import).addInjector(constInjector, listInject);
     }

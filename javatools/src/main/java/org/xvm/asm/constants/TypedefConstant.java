@@ -142,6 +142,16 @@ public class TypedefConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public TypedefConstant ensureMutable() {
+        return (TypedefConstant) super.ensureMutable();
+    }
+
+    @Override
+    public TypedefConstant ensureReadOnly() {
+        return (TypedefConstant) super.ensureReadOnly();
+    }
+
+    @Override
     public String getDescription() {
         return "typedef name=" + getValueString();
     }

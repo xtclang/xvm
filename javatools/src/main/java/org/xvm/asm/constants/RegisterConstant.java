@@ -126,6 +126,16 @@ public class RegisterConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public RegisterConstant ensureMutable() {
+        return (RegisterConstant) super.ensureMutable();
+    }
+
+    @Override
+    public RegisterConstant ensureReadOnly() {
+        return (RegisterConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         super.assemble(out);

@@ -306,6 +306,16 @@ public abstract class AbstractDependantTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public AbstractDependantTypeConstant ensureMutable() {
+        return (AbstractDependantTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public AbstractDependantTypeConstant ensureReadOnly() {
+        return (AbstractDependantTypeConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_typeParent = pool.register(m_typeParent);
     }

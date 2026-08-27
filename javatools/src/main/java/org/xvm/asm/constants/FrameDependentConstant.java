@@ -33,4 +33,18 @@ public abstract class FrameDependentConstant
      * @return the ObjectHandle (can be a DeferredCallHandle)
      */
     public abstract ObjectHandle getHandle(Frame frame);
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public FrameDependentConstant ensureMutable() {
+        return (FrameDependentConstant) super.ensureMutable();
+    }
+
+    @Override
+    public FrameDependentConstant ensureReadOnly() {
+        return (FrameDependentConstant) super.ensureReadOnly();
+    }
+
 }

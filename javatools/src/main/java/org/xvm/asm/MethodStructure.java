@@ -12,6 +12,7 @@ import java.io.PrintWriter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -19,6 +20,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import java.util.stream.Stream;
 
 import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.Op.Prefix;
@@ -114,6 +117,8 @@ public class MethodStructure
         m_aAnnotations = annotations;
         m_aReturns     = aReturns;
         m_aParams      = aParams;
+        adoptParameters(aReturns);
+        adoptParameters(aParams);
 
         if (aReturns.length > 0 && aReturns[0].isConditionalReturn()) {
             setConditionalReturn(true);
@@ -136,6 +141,17 @@ public class MethodStructure
         m_cDefaultParams = cDefaultParams;
         m_FHasCode       = fHasCode;
         m_FUsesSuper     = fUsesSuper;
+    }
+
+    /**
+     * Establish this method as the containing XVM structure for each parameter.
+     *
+     * @param parameters  the parameters to adopt
+     */
+    private void adoptParameters(Parameter[] parameters) {
+        for (Parameter parameter : parameters) {
+            parameter.setContaining(this);
+        }
     }
 
 
@@ -233,7 +249,9 @@ public class MethodStructure
      *         null during assembly before the annotations have been split out from the return types
      */
     public Annotation[] getAnnotations() {
-        return m_aAnnotations;
+        return isReadOnly() && m_aAnnotations != null
+                ? m_aAnnotations.clone()
+                : m_aAnnotations;
     }
 
     /**
@@ -243,6 +261,7 @@ public class MethodStructure
         assert new HashSet<>(Arrays.asList(annotations)).equals(
                new HashSet<>(Arrays.asList(m_aAnnotations)));
 
+        verifyMutable();
         m_aAnnotations = annotations;
     }
 
@@ -276,6 +295,8 @@ public class MethodStructure
      *         later in order to resolve annotations
      */
     public boolean resolveAnnotations() {
+        verifyMutable();
+
         boolean fVoid = getReturnCount() == 0;
         int     cMove = 0;
         for (Annotation annotation : m_aAnnotations) {
@@ -366,7 +387,10 @@ public class MethodStructure
         TypeConstant type = annotations.length == 0
                 ? ret.getType()
                 : pool.ensureAnnotatedTypeConstant(ret.getType(), annotations);
-        m_aReturns[iRet] = new Parameter(pool, type, ret.getName(), ret.getDefaultValue(), true, iRet, false);
+        Parameter replacement = new Parameter(
+                pool, type, ret.getName(), ret.getDefaultValue(), true, iRet, false);
+        replacement.setContaining(this);
+        m_aReturns[iRet] = replacement;
 
         rebuildIdentityConstant();
     }
@@ -409,10 +433,13 @@ public class MethodStructure
      */
     public void configureLambda(Parameter[] aParams, int cFormal, Parameter[] aReturns) {
         assert getIdentityConstant().isLambda() && getIdentityConstant().isNascent();
+        verifyMutable();
 
         m_aParams     = aParams;
         m_cTypeParams = cFormal;
         m_aReturns    = aReturns;
+        adoptParameters(aParams);
+        adoptParameters(aReturns);
     }
 
     /**
@@ -437,14 +464,15 @@ public class MethodStructure
      * @return a list of Parameter structures that represent all return values of the method
      */
     public List<Parameter> getReturns() {
-        return Arrays.asList(m_aReturns);
+        List<Parameter> returns = Arrays.asList(m_aReturns);
+        return isReadOnly() ? Collections.unmodifiableList(returns) : returns;
     }
 
     /**
      * @return an array of Parameter structures that represent all return values of the method
      */
     public Parameter[] getReturnArray() {
-        return m_aReturns;
+        return isReadOnly() ? m_aReturns.clone() : m_aReturns;
     }
 
     /**
@@ -553,14 +581,15 @@ public class MethodStructure
      * @return a list of Parameter structures that represent all parameters of the method
      */
     public List<Parameter> getParams() {
-        return Arrays.asList(m_aParams);
+        List<Parameter> params = Arrays.asList(m_aParams);
+        return isReadOnly() ? Collections.unmodifiableList(params) : params;
     }
 
     /**
      * @return an array of Parameter structures that represent all parameters of the method
      */
     public Parameter[] getParamArray() {
-        return m_aParams;
+        return isReadOnly() ? m_aParams.clone() : m_aParams;
     }
 
     /**
@@ -608,6 +637,8 @@ public class MethodStructure
      * @return a new and empty Code object
      */
     public Code createCode() {
+        verifyMutable();
+
         Code code;
 
         resetRuntimeInfo();
@@ -681,6 +712,7 @@ public class MethodStructure
      */
     public void setAst(BinaryAST astRoot, RegisterAST[] aAstParams) {
         if (astRoot != m_ast || aAstParams != m_aAstParams) {
+            verifyMutable();
             m_ast        = astRoot;
             m_aAstParams = aAstParams;
             m_abAst      = null;        // force a re-build of the binary form of the AST
@@ -691,7 +723,9 @@ public class MethodStructure
      * @return the array of constants that are referenced by the code in this method
      */
     public Constant[] getLocalConstants() {
-        return m_aconstLocal;
+        return isReadOnly() && m_aconstLocal != null
+                ? m_aconstLocal.clone()
+                : m_aconstLocal;
     }
 
     /**
@@ -729,6 +763,7 @@ public class MethodStructure
      *                    source code
      */
     public void configureSource(String sSrc, int iFirstLine) {
+        verifyMutable();
         if (sSrc == null) {
             m_source = null;
         } else {
@@ -1047,6 +1082,7 @@ public class MethodStructure
      * Discard any runtime information.
      */
     public void resetRuntimeInfo() {
+        verifyMutable();
         m_code    = null;
         m_cVars   = 0;
         m_cScopes = 0;
@@ -1059,6 +1095,8 @@ public class MethodStructure
     }
 
     public void forceAssembly(ConstantPool pool) {
+        verifyMutable();
+
         // if we need to reassemble, we're going to throw away the bytes, so make sure that we have
         // the deserialized form of those bytes ensured so that we can recreate the "new" version of
         // the bytes
@@ -1136,6 +1174,9 @@ public class MethodStructure
      * @param fAbstract  pass true to mark the method as abstract
      */
     public void setAbstract(boolean fAbstract) {
+        if (fAbstract != isAbstract()) {
+            verifyMutable();
+        }
         if (fAbstract) {
             m_aconstLocal = null;
             m_abOps       = null;
@@ -1159,6 +1200,7 @@ public class MethodStructure
      * Specifies that the method implementation is provided directly by the runtime, aka "native".
      */
     public void markNative() {
+        verifyMutable();
         setAbstract(false);
         resetRuntimeInfo();
 
@@ -1180,7 +1222,10 @@ public class MethodStructure
      * Specifies that the method implementation is generated by the runtime, aka "transient".
      */
     public void markTransient() {
-        m_fTransient = true;
+        if (!m_fTransient) {
+            verifyMutable();
+            m_fTransient = true;
+        }
     }
 
     /**
@@ -1322,6 +1367,7 @@ public class MethodStructure
      */
     public void setConstructFinally(MethodStructure structFinally) {
         assert isConstructor();
+        verifyMutable();
 
         m_structFinally = structFinally;
         m_idFinally     = structFinally.getIdentityConstant();
@@ -1557,6 +1603,7 @@ public class MethodStructure
      */
     public void setShorthandInitialization(MethodConstant idSuper, Constant[] aconstSuper) {
         assert isShorthandConstructor();
+        verifyMutable();
 
         m_idSuper     = idSuper;
         m_aconstSuper = aconstSuper == null ? Constant.NO_CONSTS : aconstSuper;
@@ -1601,6 +1648,7 @@ public class MethodStructure
      *         registers
      */
     public synchronized int getUnassignedRegisterIndex() {
+        verifyMutable();
         return m_nNextUnassignedIndex++;
     }
 
@@ -1615,6 +1663,8 @@ public class MethodStructure
     @Override
     public void setConditionalReturn(boolean fConditional) {
         if (fConditional != isConditionalReturn()) {
+            verifyMutable();
+
             // verify that the first return value is a boolean
             Parameter paramOld = m_aReturns[0];
             if (!(paramOld.getType().isEcstasy("Boolean"))) {
@@ -1622,8 +1672,10 @@ public class MethodStructure
             }
 
             // change the first return value as specified
-            m_aReturns[0] = new Parameter(getConstantPool(), paramOld.getType(), paramOld.getName(),
-                    paramOld.getDefaultValue(), true, 0, fConditional);
+            Parameter replacement = new Parameter(getConstantPool(), paramOld.getType(),
+                    paramOld.getName(), paramOld.getDefaultValue(), true, 0, fConditional);
+            replacement.setContaining(this);
+            m_aReturns[0] = replacement;
 
             super.setConditionalReturn(fConditional);
         }
@@ -1641,6 +1693,8 @@ public class MethodStructure
 
     @Override
     public void addAnnotation(Annotation annotation) {
+        verifyMutable();
+
         TypeConstant typeAnno = annotation.getAnnotationType();
         if (typeAnno.getExplicitClassFormat() != Format.ANNOTATION ||
                 !typeAnno.getExplicitClassInto().isIntoMethodType()) {
@@ -1748,7 +1802,7 @@ public class MethodStructure
             Parameter[] aReturns = new Parameter[cReturns];
             for (int i = 0; i < cReturns; i++) {
                 Parameter param = this.m_aReturns[i].cloneBody();
-                param.setContaining(this);
+                param.setContaining(that);
                 aReturns[i] = param;
             }
             that.m_aReturns = aReturns;
@@ -1759,7 +1813,7 @@ public class MethodStructure
             Parameter[] aParams = new Parameter[cParams];
             for (int i = 0; i < cParams; i++) {
                 Parameter param = this.m_aParams[i].cloneBody();
-                param.setContaining(this);
+                param.setContaining(that);
                 aParams[i] = param;
             }
             that.m_aParams = aParams;
@@ -1838,6 +1892,48 @@ public class MethodStructure
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public MethodStructure ensureMutable() {
+        return (MethodStructure) super.ensureMutable();
+    }
+
+    @Override
+    public MethodStructure ensureReadOnly() {
+        return (MethodStructure) super.ensureReadOnly();
+    }
+
+    @Override
+    protected void prepareReadOnly() {
+        super.prepareReadOnly();
+
+        if (m_aAnnotations != null) {
+            m_aAnnotations = m_aAnnotations.clone();
+        }
+        if (m_aReturns != null) {
+            m_aReturns = m_aReturns.clone();
+        }
+        if (m_aParams != null) {
+            m_aParams = m_aParams.clone();
+        }
+        if (m_aconstLocal != null) {
+            m_aconstLocal = m_aconstLocal.clone();
+        }
+        if (m_aconstSuper != null) {
+            m_aconstSuper = m_aconstSuper.clone();
+        }
+        if (m_aAstParams != null) {
+            m_aAstParams = m_aAstParams.clone();
+        }
+        if (m_code != null) {
+            m_code.prepareReadOnly();
+        }
+    }
+
+    @Override
+    protected MethodStructure findCorrespondingStructure(FileStructure file) {
+        return (MethodStructure) super.findCorrespondingStructure(file);
+    }
 
     @Override
     public MethodConstant getIdentityConstant() {
@@ -1944,6 +2040,8 @@ public class MethodStructure
         m_abAst          = abAST;
         m_FHasCode       = abOps != null || abAST != null;
         m_source         = source.isPresent() ? source : null;
+        adoptParameters(aReturns);
+        adoptParameters(aParams);
     }
 
     @Override
@@ -2089,9 +2187,10 @@ public class MethodStructure
 
     @Override
     public Iterable<? extends XvmStructure> getContained() {
-        return getAnnotationCount() == 0
-                ? super.getContained()
-                : containedWith(Arrays.asList(m_aAnnotations));
+        return containedWith(() -> Stream.<XvmStructure>concat(
+                Stream.<XvmStructure>concat(
+                        Arrays.stream(m_aAnnotations), Arrays.stream(m_aReturns)),
+                Arrays.stream(m_aParams)).iterator());
     }
 
     @Override
@@ -2232,6 +2331,7 @@ public class MethodStructure
          * @param nLine  the new line number
          */
         public void updateLineNumber(int nLine) {
+            f_method.verifyMutable();
             m_nCurLine = nLine;
         }
 
@@ -2243,6 +2343,7 @@ public class MethodStructure
          * @return this
          */
         public Code add(Op op) {
+            f_method.verifyMutable();
             ensureAppending();
 
             int nLineDelta = m_nCurLine - m_nPrevLine;
@@ -2346,7 +2447,8 @@ public class MethodStructure
          * @return the array of Ops that make up the Code
          */
         public Op[] getAssembledOps() {
-            return ensureOps();
+            Op[] ops = ensureOps();
+            return f_method.isReadOnly() ? ops.clone() : ops;
         }
 
         /**
@@ -2513,6 +2615,18 @@ public class MethodStructure
 
             if (m_listOps == null) {
                 m_listOps = new ArrayList<>();
+            }
+        }
+
+        /**
+         * Detach mutable arrays or collections that may previously have been returned to a caller.
+         */
+        private void prepareReadOnly() {
+            if (m_listOps != null) {
+                m_listOps = new ArrayList<>(m_listOps);
+            }
+            if (m_aop != null) {
+                m_aop = m_aop.clone();
             }
         }
 

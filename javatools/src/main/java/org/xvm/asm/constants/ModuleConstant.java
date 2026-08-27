@@ -285,6 +285,16 @@ public class ModuleConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public ModuleConstant ensureMutable() {
+        return (ModuleConstant) super.ensureMutable();
+    }
+
+    @Override
+    public ModuleConstant ensureReadOnly() {
+        return (ModuleConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constName    = pool.register(m_constName);
         m_constVersion = pool.register(m_constVersion);

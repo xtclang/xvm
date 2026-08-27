@@ -106,6 +106,16 @@ public class RegExConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public RegExConstant ensureMutable() {
+        return (RegExConstant) super.ensureMutable();
+    }
+
+    @Override
+    public RegExConstant ensureReadOnly() {
+        return (RegExConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());

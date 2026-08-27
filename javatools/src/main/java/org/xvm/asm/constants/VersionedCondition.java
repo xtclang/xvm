@@ -175,6 +175,16 @@ public class VersionedCondition
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public VersionedCondition ensureMutable() {
+        return (VersionedCondition) super.ensureMutable();
+    }
+
+    @Override
+    public VersionedCondition ensureReadOnly() {
+        return (VersionedCondition) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constVer = pool.register(m_constVer);
     }

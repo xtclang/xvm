@@ -261,6 +261,16 @@ public class AccessTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public AccessTypeConstant ensureMutable() {
+        return (AccessTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public AccessTypeConstant ensureReadOnly() {
+        return (AccessTypeConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constType = pool.register(m_constType);
     }

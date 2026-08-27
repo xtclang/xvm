@@ -160,6 +160,16 @@ public class ServiceTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public ServiceTypeConstant ensureMutable() {
+        return (ServiceTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public ServiceTypeConstant ensureReadOnly() {
+        return (ServiceTypeConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constType = pool.register(m_constType);
     }

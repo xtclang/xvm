@@ -218,6 +218,16 @@ public class TypeParameterConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public TypeParameterConstant ensureMutable() {
+        return (TypeParameterConstant) super.ensureMutable();
+    }
+
+    @Override
+    public TypeParameterConstant ensureReadOnly() {
+        return (TypeParameterConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 

@@ -286,6 +286,16 @@ public class Annotation
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public Annotation ensureMutable() {
+        return (Annotation) super.ensureMutable();
+    }
+
+    @Override
+    public Annotation ensureReadOnly() {
+        return (Annotation) super.ensureReadOnly();
+    }
+
+    @Override
     protected void markModified() {
         // annotations are basically constants
         throw new UnsupportedOperationException();

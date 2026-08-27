@@ -195,6 +195,8 @@ public class ConstantPool
                 return constant;
             }
 
+            verifyMutable();
+
             if (constant.getContaining() != this) {
                 constant = (T) constant.adoptedBy(this);
             }
@@ -2489,6 +2491,21 @@ public class ConstantPool
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public ConstantPool ensureMutable() {
+        return (ConstantPool) super.ensureMutable();
+    }
+
+    @Override
+    public ConstantPool ensureReadOnly() {
+        return (ConstantPool) super.ensureReadOnly();
+    }
+
+    @Override
+    protected ConstantPool findCorrespondingStructure(FileStructure file) {
+        return file.getConstantPool();
+    }
+
+    @Override
     public ConstantPool getConstantPool() {
         return this;
     }
@@ -3643,7 +3660,10 @@ public class ConstantPool
     }
 
     public void setNakedRefType(TypeConstant typeNakedRef) {
-        m_typeNakedRef = typeNakedRef;
+        if (m_typeNakedRef != typeNakedRef) {
+            verifyMutable();
+            m_typeNakedRef = typeNakedRef;
+        }
     }
 
     public TypeInfo getNakedRefInfo(TypeConstant typeReferent) {

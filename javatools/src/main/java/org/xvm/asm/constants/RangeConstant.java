@@ -328,6 +328,16 @@ public class RangeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public RangeConstant ensureMutable() {
+        return (RangeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public RangeConstant ensureReadOnly() {
+        return (RangeConstant) super.ensureReadOnly();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_const1 = pool.register(m_const1);
         m_const2 = pool.register(m_const2);

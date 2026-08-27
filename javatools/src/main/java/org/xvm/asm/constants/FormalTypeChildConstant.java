@@ -197,6 +197,16 @@ public class FormalTypeChildConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    public FormalTypeChildConstant ensureMutable() {
+        return (FormalTypeChildConstant) super.ensureMutable();
+    }
+
+    @Override
+    public FormalTypeChildConstant ensureReadOnly() {
+        return (FormalTypeChildConstant) super.ensureReadOnly();
+    }
+
+    @Override
     public String getDescription() {
         return "parent=" + getParentConstant() + ", child=" + getName();
     }

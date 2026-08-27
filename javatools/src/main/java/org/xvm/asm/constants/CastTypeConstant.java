@@ -123,5 +123,20 @@ public class CastTypeConstant
             + m_constType2.getValueString() + ")";
     }
 
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public CastTypeConstant ensureMutable() {
+        return (CastTypeConstant) super.ensureMutable();
+    }
+
+    @Override
+    public CastTypeConstant ensureReadOnly() {
+        return (CastTypeConstant) super.ensureReadOnly();
+    }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
     private final TypeConstant f_constType1Orig;
 }
