@@ -1,17 +1,14 @@
 package org.xvm.javajit;
 
-import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.util.function.Function;
 
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.ByteHashCollector;
 
-import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_JavaObject;
@@ -143,21 +140,6 @@ public final class Ctx {
     // ----- Container and Service support ---------------------------------------------------------
 
     /**
-     * Helper method to retrieve a constant at the specified index from the ConstantPool associated
-     * with the specified class.
-     */
-    public Constant getConstant(String className, int index) {
-        ModuleLoader loader;
-        if (index < 0) {
-            loader = container.xvm.nativeTypeSystem.findOwnerLoader(className);
-            index = -index;
-        } else {
-            loader = container.typeSystem.findOwnerLoader(className);
-        }
-        return loader.module.getConstantPool().getConstant(index);
-    }
-
-    /**
      * @return the container's type system ConstantPool
      */
     public ConstantPool pool() {
@@ -187,9 +169,6 @@ public final class Ctx {
     // ----- Ctx method descriptors ----------------------------------------------------------------
 
     public static final MethodTypeDesc MD_log = MethodTypeDesc.of(CD_void, CD_JavaString);
-
-    public static final MethodTypeDesc MD_getConstant = MethodTypeDesc.of(
-        ClassDesc.of(Constant.class.getName()), CD_JavaString, CD_int);
 
     public static MethodTypeDesc MD_inject = MethodTypeDesc.of(
         CD_JavaObject, CD_TypeConstant, CD_JavaString, CD_JavaObject);

@@ -54,7 +54,6 @@ import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.NativeNames;
-import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
@@ -675,7 +674,12 @@ public class CommonBuilder
             }
         }
 
-        ClassDesc CD_this = art.CD();
+        ClassDesc      CD_this          = art.CD();
+        ClassDesc      cdClassLoader    = ClassDesc.of(ClassLoader.class.getName());
+        ClassDesc      cdModuleLoader   = ClassDesc.of(ModuleLoader.class.getName());
+        MethodTypeDesc mdGetConstant    = MethodTypeDesc.of(
+                ClassDesc.of(Constant.class.getName()), CD_int);
+
         classBuilder.withMethodBody(ConstantDescs.CLASS_INIT_NAME, MTD_void,
                 ClassFile.ACC_STATIC | ClassFile.ACC_PUBLIC, code -> {
             prependCLInit(code);
@@ -691,15 +695,26 @@ public class CommonBuilder
             code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
                 .astore(ctxSlot);
 
+            int loaderSlot = code.allocateLocal(TypeKind.REFERENCE);
+            if (isDebugInfo()) {
+                code.localVariable(loaderSlot, "loader", cdModuleLoader, startScope, endScope);
+            }
+
+            // use the fact that this class is loaded by the corresponding ModuleLoader
+            code.ldc(CD_this)
+                .invokevirtual(ConstantDescs.CD_Class, "getClassLoader",
+                        MethodTypeDesc.of(cdClassLoader))
+                .checkcast(cdModuleLoader)
+                .astore(loaderSlot);
+
             // initialize synthetic "TypeConstant" and other static "Constant" fields; to make the
             // jasm look neater generate the assignments in the lexicographical order; additionally,
             // handle the case where new constants keep getting added as a side-effect of doing this
             // work
-            String       className = art.className();
-            ModuleLoader loader    = typeSystem.findOwnerLoader(className);
-            boolean      nativeTS  = typeSystem instanceof NativeTypeSystem;
-            ConstantPool pool      = loader.module.getConstantPool();
-            int          emitted   = 0;
+            TypeSystem   ts      = typeSystem;
+            ModuleLoader loader  = ts.findOwnerLoader(art.className());
+            ConstantPool pool    = loader.module.getConstantPool();
+            int          emitted = 0;
             while (emitted < constants.size()) {
                 // create a snapshot of the work to do RIGHT AT THIS MOMENT IN TIME so that if other
                 // things get appended to the map in the process, we don't accidentally trigger a
@@ -715,15 +730,10 @@ public class CommonBuilder
                         assert type.isShared(pool);
                         type = pool.register(type);
 
-                        int index = type.getPosition();
-                        if (nativeTS) {
-                            index = -index;
-                        }
-                        code.aload(ctxSlot)
-                            .loadConstant(className)
-                            .loadConstant(index)
-                            .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
-                            .checkcast(CD_TypeConstant)                               // <- type
+                        code.aload(loaderSlot)
+                            .loadConstant(type.getPosition())
+                            .invokevirtual(cdModuleLoader, "getConstant", mdGetConstant) // <- const
+                            .checkcast(CD_TypeConstant)                                  // <- type
                             .putstatic(CD_this, name, CD_TypeConstant);
                     } else if (constant instanceof LiteralConstant literal &&
                             (literal.getFormat() == Constant.Format.IntLiteral ||
@@ -744,7 +754,6 @@ public class CommonBuilder
             }
 
             // add static field initialization
-            TypeSystem ts = typeSystem;
             for (PropertyInfo prop : props) {
                 String jitName = prop.getIdentity().ensureJitPropertyName(ts);
                 if (prop.isInjected()) {
@@ -795,15 +804,14 @@ public class CommonBuilder
                         code.putstatic(CD_this, jitName, reg.cd());
                     }
                 } else {
-                    MethodConstant initializer = prop.getInitializer();
-                    MethodBody     body        = new MethodBody(
-                            (MethodStructure) initializer.getComponent());
-                    JitMethodDesc  jmd         = body.getJitDesc(this, thisType);
-                    TypeConstant   type        = prop.getType();
-                    JitTypeDesc    jtd         = type.getJitDesc(this);
+                    MethodConstant init = prop.getInitializer();
+                    MethodBody     body = new MethodBody((MethodStructure) init.getComponent());
+                    JitMethodDesc  jmd  = body.getJitDesc(this, thisType);
+                    TypeConstant   type = prop.getType();
+                    JitTypeDesc    jtd  = type.getJitDesc(this);
 
                     code.aload(ctxSlot)
-                        .invokestatic(CD_this, initializer.ensureJitMethodName(ts), jmd.standardMD);
+                        .invokestatic(CD_this, init.ensureJitMethodName(ts), jmd.standardMD);
 
                     switch (jtd.flavor) {
                     case Specific, Widened:
@@ -812,8 +820,7 @@ public class CommonBuilder
 
                     case Primitive:
                         unbox(code, type);
-                        code.putstatic(CD_this, jitName,
-                                JitTypeDesc.getPrimitiveFieldClass(type));
+                        code.putstatic(CD_this, jitName, JitTypeDesc.getPrimitiveFieldClass(type));
                         break;
 
                     case XvmPrimitive:

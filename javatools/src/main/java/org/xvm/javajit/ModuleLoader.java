@@ -18,6 +18,7 @@ import java.util.Map;
 
 import java.util.function.Predicate;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ModuleStructure;
 
 import static org.xvm.util.Handy.isHexit;
@@ -110,6 +111,15 @@ public class ModuleLoader
     @Override
     public String toString() {
         return module.toString();
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * Retrieve a constant at the specified index from the ConstantPool associated with this module.
+     */
+    public Constant getConstant(int index) {
+        return module.getConstantPool().getConstant(index);
     }
 
     // ----- debugging -----------------------------------------------------------------------------

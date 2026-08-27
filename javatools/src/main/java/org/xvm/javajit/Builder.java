@@ -829,10 +829,15 @@ public abstract class Builder {
     }
 
     /**
-     * Build the code to load an XTC String value on the Java stack.
+     * Build the code to load an XTC String value on the Java stack. Note that String.of() is
+     * tolerant to the absence of Ctx argument.
      */
     public static void loadString(CodeBuilder code, String value, int ctxSlot) {
-        code.aload(ctxSlot);
+        if (ctxSlot >= 0) {
+            code.aload(ctxSlot);
+        } else {
+            code.aconst_null();
+        }
         code.ldc(value)
             .invokestatic(CD_String, "of", MD_StringOf);
     }
