@@ -108,7 +108,7 @@ public class Container
 
     // ----- invocation ----------------------------------------------------------------------------
 
-    void newFiber(Runnable task) {
+    public void newFiber(Runnable task) {
         ScopedValue.where(xvm.Current, new Ctx(xvm, this)).run(task);
     }
 
