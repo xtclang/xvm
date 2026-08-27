@@ -914,6 +914,23 @@ method as this plan's Pattern Set describes — the `toString(boolean)` shortcut
 specific to `TypeInfo`. Scope/portability recorded in
 [tostring-purity-enhancement-scope.md](tostring-purity-enhancement-scope.md).
 
+**Also landed (commit `a9e7d58c0`):** the two AMBIENT op-display roots from slice 1
+— `Argument.toIdString` and `OpVar.getName`. The pure form now renders a
+`const:#n` / `name:#n` marker with NO ambient `ServiceContext.getCurrentContext()`
+lookup (which read an unrelated observing-thread fiber and indexed the wrong
+constant array, AIOOBE swallowed by `catch(Throwable)`), and each gained an explicit
+frame-parameterized forced overload (`toIdString(Frame, …)`, `getName(Frame, …)`).
+These two feed 31 of 38 op toStrings. Suites green, no op-dump golden regressed.
+
+**Still open in slice 1 (the riskier roots):** the
+`ParameterizedTypeConstant`/`TerminalTypeConstant` `getValueString` leaves and the
+`ObjectHandle`/`ClassComposition` handle roots (which depend on the leaves for full
+purity). The `getValueString` split is NOT a drop-in: it changes function-type
+output (`function R(P)` → structural `Function<…>`) and `getValueString` is the
+pervasive type-to-string method used in error messages, logging, and possibly
+production comparisons — so it needs the same production-use audit that gated the
+`Type.dump()` change before it can land.
+
 Small, independently landable PR slices, worst offenders first because five
 root sites unblock most dependent rows:
 

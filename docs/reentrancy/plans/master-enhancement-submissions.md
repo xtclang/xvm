@@ -258,12 +258,17 @@ merely inspecting a value in the Variables view changes it. The fix is a pure/
 forced split: the implicit renderer shows already-computed state only; the full
 dump moves to an explicit method Java never calls implicitly.
 
-**Status.** The two ASM-constants leaves (`TypeInfoReal.toString`,
-`MethodInfo.toString`) are **already landed** on this branch (commit `8382e0268`)
-with scope documented for master in
-[tostring-purity-enhancement-scope.md](tostring-purity-enhancement-scope.md). The
-`TypeInfo` case reused master's *pre-existing* `toString(boolean fRuntime)` arity
-(no-arg = pure header, boolean overload = full dump) — nothing new invented.
+**Status.** Landed on this branch so far: the two ASM-constants leaves
+(`TypeInfoReal.toString`, `MethodInfo.toString`, commit `8382e0268`, scope in
+[tostring-purity-enhancement-scope.md](tostring-purity-enhancement-scope.md); the
+`TypeInfo` case reused master's *pre-existing* `toString(boolean fRuntime)` arity —
+no-arg = pure header, boolean overload = full dump), and the two AMBIENT op-display
+roots (`Argument.toIdString`, `OpVar.getName`, commit `a9e7d58c0` — pure `const:#n`
+/`name:#n` markers, no ambient fiber read, plus explicit `Frame`-parameterized
+forced overloads). **Still open:** the `getValueString` type leaves and the
+`ObjectHandle`/`ClassComposition` handle roots — the `getValueString` split changes
+function-type output (`function R(P)` → structural `Function<…>`) in error messages
+and logging, so it needs a `Type.dump()`-style production-use audit before landing.
 
 **Master port spec.** Follow the 7-slice migration in
 [side-effect-free-tostring.md](side-effect-free-tostring.md). Only ~6 root sites
