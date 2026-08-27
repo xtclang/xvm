@@ -63,7 +63,7 @@ on:
                 description: 'Run manual tests in parallel mode'
                 type: boolean
                 required: false
-                default: true
+                default: false
             include-lang:
                 description: 'Include lang projects in build and run tree-sitter validation'
                 type: boolean
@@ -85,8 +85,9 @@ env:
     ORG_GRADLE_PROJECT_includeBuildAttachLang: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true') }}
 
     skip_manual_tests: ${{ github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true' }}
-    # Default to parallel mode (true) for push/PR events; for workflow_dispatch, use the input value
-    run_manual_tests_parallel: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.parallel-test-mode == true || github.event.inputs.parallel-test-mode == 'true' }}
+    # TODO: Temporarily keep CI manual tests sequential until the runtime INSTANCE/template startup
+    # race is fixed. Manual workflow_dispatch runs can still opt into parallel mode to reproduce it.
+    run_manual_tests_parallel: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.parallel-test-mode == true || github.event.inputs.parallel-test-mode == 'true') }}
     trigger_publishing: ${{ github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true' }}
     GRADLE_CACHE_INSPECT_ENABLED: false
 
