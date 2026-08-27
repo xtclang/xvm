@@ -20,8 +20,9 @@ public class VersionTree<V>
      * Construct an empty {@link VersionTree}.
      */
     public VersionTree() {
-        // Avoid calling the public clear() mutation hook from the constructor; subclasses must not
-        // observe this tree before its root node exists.
+        // reentrancy-safe construction: initialize the fields directly instead of calling the
+        // overridable clear()/put()/putAll() (which would be a 'this' escape before a subclass is
+        // fully initialized - the -Werror this-escape lint and AsmConstructorEscapeTest enforce this).
         root  = new Node<>(null, 0);
         count = 0;
     }
@@ -33,7 +34,7 @@ public class VersionTree<V>
      */
     public VersionTree(VersionTree<V> orig) {
         this();
-        putAll(orig);
+        orig.forEach(ver -> putInternal(ver, orig.get(ver)));
     }
 
     /**
@@ -44,7 +45,7 @@ public class VersionTree<V>
      */
     public VersionTree(Version ver, V value) {
         this();
-        put(ver, value);
+        putInternal(ver, value);
     }
 
     // ----- VersionTree API -----------------------------------------------------------------------
@@ -307,6 +308,16 @@ public class VersionTree<V>
      */
     public VersionTree<V> put(Version ver, V value) {
         verifyMutable();
+        putInternal(ver, value);
+        return this;
+    }
+
+    /**
+     * The core of {@link #put} with no mutability check and no overridable dispatch, so constructors
+     * can populate the tree without a 'this' escape (see the constructors and
+     * AsmConstructorEscapeTest).
+     */
+    private void putInternal(Version ver, V value) {
         if (value == null) {
             throw new IllegalArgumentException("value cannot be null");
         }
@@ -316,8 +327,6 @@ public class VersionTree<V>
             ++count;
         }
         node.value = value;
-
-        return this;
     }
 
     /**
@@ -451,10 +460,12 @@ public class VersionTree<V>
 
     @Override
     public int hashCode() {
-        int nHash = 0;
+        // Order-sensitive (the tree is ordered and equals() compares entries in iteration order), so
+        // this is a List-style sequence hash rather than AbstractMap's order-insensitive sum. equals()
+        // compares versions via withoutBuildString(), so the hash must too.
+        int nHash = 1;
         for (Version ver : this) {
-            nHash = 31 * nHash + ver.hashCode();
-            nHash = 31 * nHash + Objects.hashCode(get(ver));
+            nHash = 31 * nHash + Objects.hash(ver.withoutBuildString(), get(ver));
         }
         return nHash;
     }

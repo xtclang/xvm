@@ -339,13 +339,13 @@ public class AsmConstructorEscapeTest {
 
     private static final class ClearTrackingVersionTree<V> extends VersionTree<V> {
         @Override
-        public void clear() {
+        public VersionTree<V> clear() {
             if (!constructed) {
                 throw new IllegalStateException("clear called before subclass construction");
             }
 
             ++clearCalls;
-            super.clear();
+            return super.clear();
         }
 
         private boolean constructed = true;

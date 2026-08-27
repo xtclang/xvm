@@ -40,10 +40,14 @@ public final class ImmutableTypeConstant
         if (constType == null) {
             throw new IllegalArgumentException("type required");
         }
-        if (!constType.isSingleUnderlyingClass(true) && !constType.containsUnresolved()) {
-            if (!constType.isSingleDefiningConstant()) { // TODO GG remove this carve-out
-                throw new IllegalArgumentException("immutability cannot be specified for type: " + constType);
-            }
+        // The three guards are AND'd, so their order does not change the result - but evaluate the
+        // resolution-free ones (isSingleDefiningConstant / containsUnresolved) FIRST so a formal or
+        // not-yet-linked type short-circuits before isSingleUnderlyingClass(), which resolves the
+        // underlying class and throws "missing class" during multi-module merge/adoption.
+        if (!constType.isSingleDefiningConstant()   // TODO GG remove this carve-out
+                && !constType.containsUnresolved()
+                && !constType.isSingleUnderlyingClass(true)) {
+            throw new IllegalArgumentException("immutability cannot be specified for type: " + constType);
         }
 
         m_constType = constType;

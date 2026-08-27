@@ -48,6 +48,15 @@ public final class FormalTypeChildConstant
         super(pool, constParent, sName, ParentFormat.FORMAL_CHILD);
     }
 
+    /**
+     * Adoption constructor: re-homes an already-validated formal child into a new pool without
+     * re-running the resolution-dependent parent validation (see {@link #copyForAdoption}).
+     */
+    private FormalTypeChildConstant(ConstantPool pool, FormalConstant constParent, String sName,
+                                    boolean fValidate) {
+        super(pool, constParent, sName, ParentFormat.FORMAL_CHILD, fValidate);
+    }
+
     @Override
     protected void checkParent(IdentityConstant idParent) {
         validateParent(ParentFormat.FORMAL_CHILD, idParent);
@@ -178,8 +187,10 @@ public final class FormalTypeChildConstant
     @Override
     protected FormalTypeChildConstant copyForAdoption(AdoptionContext context) {
         // Preserve the formal-child format; inherited property caches are owner/type-system helper
-        // state and are intentionally left empty on the adopted copy.
-        return new FormalTypeChildConstant(context.pool(), getParentConstant(), getName());
+        // state and are intentionally left empty on the adopted copy. Skip parent re-validation
+        // (fValidate=false): the source is already valid, and validateParent's isFormalType() check
+        // resolves the parent structure, which is unavailable mid-merge before the module is linked.
+        return new FormalTypeChildConstant(context.pool(), getParentConstant(), getName(), false);
     }
 
 

@@ -50,11 +50,6 @@ import static org.xvm.util.Handy.writeUtf8String;
  * FileStructure is generally used as a container of one module, which may have dependencies on
  * other modules, some of which may be wholly embedded into the file structure. In other words, the
  * FileStructure is the "module container".
- *
- * FileStructure is final because its constructors have to create the root-owned ConstantPool,
- * root ModuleStructure, and deserialized child graph with this object as the owner. Allowing a
- * subclass would make those owner links observable before subclass construction completed; the
- * XvmStructure model already treats FileStructure as the root envelope, not an extension point.
  */
 public final class FileStructure
         extends Component {
@@ -226,14 +221,32 @@ public final class FileStructure
 
         ConstantPool pool = m_pool;
 
+        var fileSource = module.getFileStructure();
+
+        // E3: no ambient pool. This branch deleted ConstantPool.withPool/getCurrentPool, so every
+        // enclosed operation threads `pool` explicitly (registerConstants(pool) etc. already do) - the
+        // ambient try-with-resources wrapper master used here is dead weight now.
         // add fingerprints
-        for (ModuleStructure moduleChild : module.getFileStructure().children()) {
-            if (moduleChild.isFingerprint() && getModule(moduleChild.getIdentityConstant()) == null) {
-                ModuleStructure moduleChildClone = moduleChild.cloneBody();
-                moduleChildClone.setContaining(this);
-                addChild(moduleChildClone);
-                moduleChildClone.registerConstants(pool);
-            }
+        fileSource.children().stream()
+                .filter(child -> child.isFingerprint() && getModule(child.getIdentityConstant()) == null)
+                .map(ModuleStructure::cloneBody)
+                .forEach(clone -> {
+                    clone.setContaining(this);
+                    addChild(clone);
+                    clone.registerConstants(pool);
+                });
+
+        // if the source is a multi-module container, dependencies of the merged module may be
+        // present there as real (embedded) sibling modules rather than fingerprints; those
+        // dependencies must still be represented here, or the merged clone's constants cannot
+        // be re-registered against this pool and the module is unlinkable when detached
+        if (fileSource.isBundle()) {
+            module.collectDependencies().keySet().stream()
+                    .filter(id -> !id.equals(module.getIdentityConstant()) && getModule(id) == null)
+                    .map(fileSource::getModule)
+                    .filter(sibling -> sibling != null && !sibling.isFingerprint())
+                    .forEach(sibling ->
+                            ensureModule(sibling.getIdentityConstant().getName()).fingerprintRequired());
         }
 
         moduleClone.registerConstants(pool);
@@ -254,6 +267,13 @@ public final class FileStructure
             m_file     = module.getFileStructure().m_file;
             moduleClone.markPrimary();
         }
+    }
+
+    @Override
+    protected FileStructure cloneBody() {
+        // the file structure is the root of the component hierarchy and is never body-cloned;
+        // module surgery goes through merge/link paths that clone the modules, not the root
+        throw new UnsupportedOperationException();
     }
 
     // ----- serialization -------------------------------------------------------------------------
@@ -612,9 +632,15 @@ public final class FileStructure
      * @return an unmodifiable set of the module ids contained within this FileStructure
      */
     public Set<ModuleConstant> moduleIds() {
-        // unconditional wrapper: the read-only contract must not evaporate under -da; the raw
-        // keySet() view would let a caller remove modules from the live module map
-        return Collections.unmodifiableSet(f_moduleById.keySet());
+        return getModuleByIdMap().keySet();
+    }
+
+    /**
+     * @return a read-only map containing ModuleStructure keyed by ModuleConstant
+     */
+    Map<ModuleConstant, ModuleStructure> getModuleByIdMap() {
+        ensureChildren();
+        return m_moduleById;
     }
 
     /**
@@ -1010,6 +1036,7 @@ public final class FileStructure
      *         new (versioned) id
      */
     public ModuleStructure replaceModuleId(ModuleConstant idNew) {
+        // a runtime-published pool is frozen; module-id surgery must not mutate it (issue 543)
         m_pool.assertMutableBeforeRuntimePublished("module id replacement");
 
         ModuleStructure module = getModule();
@@ -1030,14 +1057,6 @@ public final class FileStructure
             throw new RuntimeException(e);
         }
     }
-
-    @Override
-    protected FileStructure cloneBody() {
-        // the file structure is the root of the component hierarchy and is never body-cloned;
-        // module surgery goes through merge/link paths that clone the modules, not the root
-        throw new UnsupportedOperationException();
-    }
-
 
     // ----- Component methods ---------------------------------------------------------------------
 
@@ -1277,6 +1296,13 @@ public final class FileStructure
         ConstantPool pool = m_pool;
         pool.preRegisterAll();
         registerConstants(pool);
+        if (m_idModule != null) {
+            // After a (bundle) merge, the primary module id may be a pre-adoption instance: this
+            // branch's clone-free constant adoption re-interns merged constants into new instances,
+            // so m_idModule can end up un-positioned. Re-register it against the interned copy so
+            // assemble() can write its position instead of -1.
+            m_idModule = (ModuleConstant) pool.register(m_idModule);
+        }
         pool.postRegisterAll(fOptimize);
     }
 
@@ -1382,9 +1408,9 @@ public final class FileStructure
 
     @Override
     public ErrorListener getErrorListener() {
+        // E3: no ambient pool to consult (master's version fell back to getCurrentPool()'s listener
+        // when it differed from m_pool); with the ambient bridge deleted, fall through to RUNTIME.
         ErrorListener errs = m_errs;
-        // Diagnostics belong to this file owner. Redirecting through the ambient current pool
-        // can send errors to another FileStructure's listener, or crash when no pool is bound.
         return errs == null ? ErrorListener.RUNTIME : errs;
     }
 

@@ -51,9 +51,28 @@ public sealed class PropertyConstant
             IdentityConstant constParent,
             String           sName,
             ParentFormat     format) {
+        this(pool, constParent, sName, format, true);
+    }
+
+    /**
+     * Construction that can skip {@link #validateParent}. Adoption (copyForAdoption) re-homes an
+     * ALREADY-VALIDATED constant into a new pool, and validateParent's {@code isFormalType()} check
+     * resolves the parent's {@code PropertyStructure} - which is not available during multi-module
+     * merge/adoption (before the module is linked). Re-validating a valid source constant would then
+     * spuriously fail, so adoption passes {@code fValidate == false}. Direct construction always
+     * validates.
+     */
+    protected PropertyConstant(
+            ConstantPool     pool,
+            IdentityConstant constParent,
+            String           sName,
+            ParentFormat     format,
+            boolean          fValidate) {
         super(pool, constParent, sName);
 
-        validateParent(format, constParent);
+        if (fValidate) {
+            validateParent(format, constParent);
+        }
     }
 
     /**
