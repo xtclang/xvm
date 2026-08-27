@@ -313,7 +313,7 @@ public abstract class Lazy<T> implements Supplier<T> {
 
         /**
          * The computed value, or {@link #UNSET}; accessed through {@link #VALUE} so the fully
-         * computed value is published with release/acquire ordering.
+         * computed value is published with volatile ordering.
          */
         @SuppressWarnings({"unused", "FieldMayBeFinal"}) // accessed via VALUE
         private Object value = UNSET;
@@ -336,24 +336,24 @@ public abstract class Lazy<T> implements Supplier<T> {
         public T get(O owner) {
             requireNonNull(owner, "owner");
 
-            Object value = VALUE.getAcquire(this);
+            Object value = VALUE.getVolatile(this);
             if (value != UNSET) {
                 checkOwner(owner);
                 return (T) value;
             }
 
             synchronized (this) {
-                value = VALUE.getAcquire(this);
+                value = VALUE.getVolatile(this);
                 if (value != UNSET) {
                     checkOwner(owner);
                     return (T) value;
                 }
 
                 value = function.apply(owner);
-                // The owner write must precede the value release-write so that a reader observing
+                // The owner write must precede the value volatile-write so that a reader observing
                 // the value on the unsynchronized fast path also observes the owner.
                 this.owner = owner;
-                VALUE.setRelease(this, value);
+                VALUE.setVolatile(this, value);
                 function = null; // Allow GC of the function after the value is computed.
                 return (T) value;
             }
@@ -365,7 +365,7 @@ public abstract class Lazy<T> implements Supplier<T> {
          * @return true if already computed, false if still deferred
          */
         public boolean isComputed() {
-            return VALUE.getAcquire(this) != UNSET;
+            return VALUE.getVolatile(this) != UNSET;
         }
 
         private void checkOwner(O owner) {

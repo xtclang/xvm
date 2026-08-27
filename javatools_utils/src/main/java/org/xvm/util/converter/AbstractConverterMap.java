@@ -22,7 +22,7 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
      * during base construction, because the view factories are overridable and must not run while
      * a subclass is still initializing: the unbound method reference captures no instance, and the
      * owner is supplied at access time. {@link Lazy.Bound} publishes the computed view with
-     * release/acquire ordering, so a concurrent reader always observes a fully constructed view no
+     * volatile ordering, so a concurrent reader always observes a fully constructed view no
      * matter how a subclass implements its views, and computes at most once, so no duplicate view
      * can be created under a racy first access. The holder itself is final, so there is no mutable
      * cache field left to reason about.
