@@ -436,10 +436,11 @@ public abstract class ObjectHandle
 
     @Override
     public String toString() {
-        TypeComposition clz = getComposition();
-
-        // don't add "immutable" for immutable types
-        return "(" + (isMutable() || clz.getType().isImmutable() ? "" : "immutable ") + clz + ") ";
+        // PURE: mutability from the handle's own flag only. The former "|| clz.getType().isImmutable()"
+        // resolved getType() and recursed through isImmutable() for relational types; drop it. The
+        // composition label is pure now that ParameterizedTypeConstant.getValueString renders
+        // structurally. See docs/reentrancy/plans/side-effect-free-tostring.md.
+        return "(" + (isMutable() ? "" : "immutable ") + getComposition() + ") ";
     }
 
     public static class GenericHandle

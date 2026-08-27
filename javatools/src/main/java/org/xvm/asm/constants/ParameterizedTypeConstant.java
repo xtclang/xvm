@@ -1004,65 +1004,78 @@ public final class ParameterizedTypeConstant
 
     @Override
     public String getValueString() {
-        var sb = new StringBuilder();
+        // PURE: render this constant's own fields structurally (e.g. Function<Tuple<P>, Tuple<R>>).
+        // The prettier "function R(P)" spelling for function types requires
+        // m_constType.isA(pool.typeFunction()) - which interns the canonical Function type and
+        // mutates relation caches - so it lives in the explicit describeForced() below, which is
+        // never called implicitly. See docs/reentrancy/plans/side-effect-free-tostring.md.
+        return m_constType.getValueString()
+                + '<'
+                + Arrays.stream(atypeParams())
+                        .map(TypeConstant::getValueString)
+                        .collect(Collectors.joining(", "))
+                + '>';
+    }
 
+    /**
+     * Forced, prettier display: function types render as {@code "function R(P)"} instead of the
+     * structural {@code Function<...>} form that {@link #getValueString()} produces. This consults the
+     * pool ({@code isA(typeFunction)}, {@code extractFunctionParams/Returns}) and so may intern the
+     * canonical Function type and compute relations - it is therefore an EXPLICIT diagnostic variant,
+     * never called from a {@code toString()}/{@code getValueString()} path.
+     */
+    public String describeForced() {
         ConstantPool pool = getConstantPool();
-        if (m_constType.isA(pool.typeFunction())) {
-            sb.append("function ");
+        if (!m_constType.isA(pool.typeFunction())) {
+            return getValueString();
+        }
 
-            TypeConstant[] atypeParams  = pool.extractFunctionParams(this);
-            TypeConstant[] atypeReturns = pool.extractFunctionReturns(this);
-            int            cParams      = atypeParams.length;
-            int            cReturns     = atypeReturns.length;
+        var            sb           = new StringBuilder("function ");
+        TypeConstant[] atypeParams  = pool.extractFunctionParams(this);
+        TypeConstant[] atypeReturns = pool.extractFunctionReturns(this);
+        int            cParams      = atypeParams.length;
+        int            cReturns     = atypeReturns.length;
 
-            switch (cReturns) {
-            case 0:
-                sb.append("void");
-                break;
+        switch (cReturns) {
+        case 0:
+            sb.append("void");
+            break;
 
-            case 1:
-                sb.append(atypeReturns[0].getValueString());
-                break;
+        case 1:
+            sb.append(atypeReturns[0].getValueString());
+            break;
 
-            default:
-                sb.append('(');
-                for (int i = 0; i < cReturns; i++) {
-                    if (i > 0) {
-                        sb.append(", ");
-                    }
-                    sb.append(atypeReturns[i].getValueString());
-                }
-                sb.append(')');
-                break;
-            }
-
+        default:
             sb.append('(');
-            switch (cParams) {
-            case 0:
-                break;
-
-            case 1:
-                sb.append(atypeParams[0].getValueString());
-                break;
-
-            default:
-                for (int i = 0; i < cParams; i++) {
-                    if (i > 0) {
-                        sb.append(", ");
-                    }
-                    sb.append(atypeParams[i].getValueString());
+            for (int i = 0; i < cReturns; i++) {
+                if (i > 0) {
+                    sb.append(", ");
                 }
-                break;
+                sb.append(atypeReturns[i].getValueString());
             }
             sb.append(')');
-        } else {
-            sb.append(m_constType.getValueString())
-              .append('<')
-              .append(Arrays.stream(atypeParams())
-                      .map(TypeConstant::getValueString)
-                      .collect(Collectors.joining(", ")))
-              .append('>');
+            break;
         }
+
+        sb.append('(');
+        switch (cParams) {
+        case 0:
+            break;
+
+        case 1:
+            sb.append(atypeParams[0].getValueString());
+            break;
+
+        default:
+            for (int i = 0; i < cParams; i++) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+                sb.append(atypeParams[i].getValueString());
+            }
+            break;
+        }
+        sb.append(')');
 
         return sb.toString();
     }
