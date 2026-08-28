@@ -569,3 +569,110 @@ buffers only), and one unified diagnostic sink spanning compile+run.
    path and never passes `-L` flags for the prototype/bridge.
 6. Build it on the **hardened shared-state substrate** (§4) so the concurrency/no-leak promise
    holds under real load.
+
+---
+
+## 7. Review of the actual `cpurdy/LSPAPI` branch, and what we incorporated (2026-08-28)
+
+The branch landed: 3 commits off master (`cb407577b`), adding
+`javatools/src/main/java/org/xvm/api/ToolConnector.java` (348 lines) and a stub
+`lib_runner` Ecstasy module (`runner.x`, 12 lines). It is an API SURFACE — every body is
+`// TODO GG`: both `compile(...)` overloads, both `run(...)` overloads, the container-zero
+bring-up inside `ensureConnector()`, and `runner.x`'s `run()` itself.
+
+### 7.1 Why the bodies are empty — and why that is our opening
+
+`run()` cannot be written on master, because master lacks exactly the two pieces this
+branch built:
+
+| Needed by `ToolConnector.run()` | master | this branch |
+|---|---|---|
+| `NestedContainer.createForHost(...)` — a Java host creating a child container | **absent** | present |
+| `Container.runModule(...)` returning `CompletableFuture<ObjectHandle>` | **absent** | present |
+
+So the surface he is designing sits directly on top of the linchpin we already have. That
+is the practical alignment story: **his API shape + our working substrate.**
+
+### 7.2 What `lib_runner` is for
+
+`runner.xtclang.org` is the long-running Ecstasy application that occupies **Container 0**.
+Filled out, its `run(String[] args)` becomes a container FACTORY and supervisor: it uses the
+Ecstasy-side `Container.Linker` API (`lib_ecstasy/src/main/x/ecstasy/mgmt/Container.x:187`)
+to create a child container per requested module run, hand it its injections/console/
+filesystem, start it, and report status back. The Java `ToolConnector` then does not create
+containers at all — it asks the resident Ecstasy runner to do it.
+
+Why that is needed on master: master's `Connector` can start ONE main container and run it.
+To run many modules over time in one warm JVM you need something that can create children on
+demand, and on master the only API that can is the Ecstasy-side `Container.Linker`. Hence a
+guest host module.
+
+**We do not need `lib_runner` for XtcEngine**, because `NestedContainer.createForHost(...)`
+gives Java the same capability directly — no guest module, no cross-language handshake.
+The two approaches are both valid and worth keeping distinct:
+
+- *Runner-in-container-0 (his):* container lifecycle policy lives in Ecstasy. Natural place
+  to express per-run resource policy, custom injectors, and supervision in the language
+  itself; costs an extra module and a Java↔Ecstasy protocol.
+- *Java-host nested containers (ours):* fewer moving parts, no guest module, and the host
+  keeps direct typed handles (`RunControl`) on each run. Better for an embedding API whose
+  callers are Java tools (LSP server, Gradle plugin, test runner).
+
+They are not exclusive: a filled-out `lib_runner` could itself be launched by XtcEngine as
+just another nested container when someone wants Ecstasy-side supervision.
+
+### 7.3 What we ADOPTED into `XtcEngine` (commit `d85a54728`)
+
+1. **Caller-supplied `ErrorListener` on compile.** His API threads an `ErrorListener` through
+   every compile/run entry point; that is right, and it was already our own standing TODO
+   (§4.6). `XtcEngine.compile(ErrorListener, SourceUnit...)` now streams diagnostics to the
+   caller's sink as they are produced, while still collecting them into `CompileResult`.
+   **The listener is TOTAL, never null** — the no-listener overload passes
+   `ErrorListener.BLACKHOLE`. Nullable-listener plumbing is exactly the pattern that spread
+   null checks through the older code; a devnull implementation removes the question.
+2. **`Compiler` now takes the `ErrorListener` INTERFACE**, not the concrete `ErrorList`.
+   `ErrorList` is merely the collecting implementation; `StageMgr`, `validate(...)` and
+   `logDeferredAsErrors(...)` already spoke the interface, and the one `ErrorList`-only call
+   (`getSeverity().compareTo(ERROR) < 0`) is precisely `!hasSeriousErrors()`.
+3. **`RunControl`** — our form of his `Control`: `running()`, `whenStarted()`,
+   `whenStopped()`, `result()`, `error()`, `kill()`, plus the underlying completion future.
+   A completion future answers "is it done"; a long-running host also needs to ASK about a
+   run it started (LSP cancelling a stale run; a test runner enforcing a timeout). `kill()`
+   documents honestly that it cancels the caller's wait and releases the container, but does
+   not yet force-unwind a fiber mid-execution — that needs
+   `Container.terminate(ServiceContext)` wired to a cooperative cancellation check.
+4. **JFR events** (`org.xvm.Compile`, `org.xvm.Run`) — the first concrete piece of the
+   unified-telemetry plan (`plans/unified-logging-jfr-telemetry.md`), so compile and run cost
+   are visible to standard JDK tooling with no bespoke timing. Free when JFR is not recording.
+5. **`@NotNull`/`@Nullable`** across the API surface, using the jetbrains annotations already
+   on the `compileOnly` classpath.
+
+### 7.4 What we should ASK HIM to change (concrete, small)
+
+- **The singleton is not thread-safe as written, though its javadoc promises it is**
+  ("The methods on the ToolConnector itself can be assumed to be thread-safe and
+  concurrent"). Three specific defects: `Singleton.instance` is not `final` (the holder idiom
+  requires it); **`private static Object LOCK` is not `final`** — a reassignable lock breaks
+  mutual exclusion; and `configured`/`cfgRepo`/`cfgInjector`/`connector` are non-volatile
+  mutable fields that `isConfigured()`, `verifyConfigured()` and `getConfiguredRepository()`
+  read WITHOUT holding the lock. Minimum fix: `static final` both, and make the config fields
+  final-after-configure (or volatile) with all reads inside the lock.
+- **Prefer an instance to a process-global singleton.** One-time global `configure(...)`
+  prevents two LSP workspaces, two XDK versions, or two tests from coexisting in a JVM, and
+  cannot be reset. A builder returning an `AutoCloseable` instance supports the same
+  "one shared connector" usage (the caller just holds one) without foreclosing the rest.
+- **`Map<String, List<String>> injections` is a mutable collection parameter** — the caller
+  retains a live alias into the engine's configuration. Prefer immutable value records passed
+  as varargs, matching `SourceUnit`.
+- **Do not return `null`/`false` for a failed compile.** `compile(String, ...)` returning
+  `null` and `compile(File, ...)` returning `boolean` discard the diagnostics unless the
+  caller happened to pass a listener. A result object that always carries diagnostics (our
+  `CompileResult`) makes the failure self-describing.
+- **Keep the error-code vocabulary** (`TC-01`…`TC-99` with documented `%1`/`%2` params) — it
+  is a genuinely good idea and the thing tools should switch on instead of parsing messages.
+  Our `Diagnostic` already carries a `code`, so the two are compatible.
+
+### 7.5 Still open on our side
+
+`compile(Path...)` for on-disk module directory trees (backlog FW3) remains the gap that
+matters for both his `compile(File, ...)` and our Gradle-plugin warm-compile phase.
