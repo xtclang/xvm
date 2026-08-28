@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -233,10 +234,18 @@ public class MainContainer
                 return iResult;
             });
 
-            m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE);
+            futureResult = m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE);
         } catch (Exception e) {
             throw new RuntimeException("failed to run: " + f_idModule + ". Cause: " + e.getMessage());
         }
+    }
+
+    /**
+     * @return the future that completes when the module's run() finishes - the event-driven
+     *         completion signal an embedding host needs, which was previously discarded
+     */
+    public CompletableFuture<ObjectHandle> futureResult() {
+        return futureResult;
     }
 
     /**
@@ -264,5 +273,8 @@ public class MainContainer
      * The return value from the "main" method. The value of "1" indicates that the method has
      * completed abnormally.
      */
+    /** completes when the module's run() finishes; previously discarded by invoke0 */
+    private CompletableFuture<ObjectHandle> futureResult;
+
     private int m_nResult = 1;
 }

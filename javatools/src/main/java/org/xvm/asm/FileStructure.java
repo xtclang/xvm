@@ -1392,8 +1392,11 @@ public class FileStructure
     public ErrorListener getErrorListener() {
         ErrorListener errs = m_errs;
         if (errs == null) {
+            // MASTER BUG (found by the embedding POC): getCurrentPool() is an ambient thread-local
+            // that is simply NULL on any thread with no pool bound - which is every Java host thread
+            // driving the runtime directly. Dereferencing it NPEs inside a diagnostic accessor.
             ConstantPool poolCurrent = ConstantPool.getCurrentPool();
-            if (poolCurrent != m_pool) {
+            if (poolCurrent != null && poolCurrent != m_pool) {
                 errs = poolCurrent.getErrorListener();
             }
         }

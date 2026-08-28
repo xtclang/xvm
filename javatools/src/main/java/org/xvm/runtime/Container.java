@@ -46,6 +46,12 @@ import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
 
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
+import org.xvm.asm.constants.SignatureConstant;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+
 import org.xvm.util.concurrent.ConcurrentWeakHasherMap;
 
 
@@ -106,6 +112,58 @@ public abstract class Container
             }
         }
         return ctx;
+    }
+
+    /**
+     * Run a method of this container's module, returning the EVENT-DRIVEN completion future.
+     *
+     * <p>This is the embedding hook: a Java host that creates a container needs to know when the
+     * module finished and what it returned. The future completes normally with the {@code run()}
+     * result and exceptionally if the module threw.</p>
+     *
+     * @param sMethodName  the module method to invoke (typically "run")
+     * @param ahArg        the arguments
+     *
+     * @return the run-completion future
+     */
+    public CompletableFuture<ObjectHandle> runModule(String sMethodName, ObjectHandle... ahArg) {
+        ServiceContext ctx      = ensureServiceContext();
+        ModuleConstant idModule = getModule();
+        MethodConstant idMethod = findModuleMethod(sMethodName, ahArg);
+        if (idMethod == null) {
+            return CompletableFuture.failedFuture(new IllegalStateException(
+                    "Missing \"" + sMethodName + "\" method for " + idModule.getValueString()));
+        }
+
+        TypeComposition   clzModule = resolveClass(idModule.getType());
+        SignatureConstant sigMethod = idMethod.getSignature();
+        CallChain         chain     = clzModule.getMethodCallChain(sigMethod);
+        boolean           fReturn   = sigMethod.getReturnCount() > 0;
+
+        // NOTE (master port): master's NativeFunctionHandle takes only the operation and binds to
+        // xRTFunction.INSTANCE.f_container - the process-static template instance. The reference
+        // implementation passes the owning container explicitly (that static was removed there).
+        // Fine for a single native plane; see the POC's known-limitations note.
+        FunctionHandle hInstantiateAndRun = new xRTFunction.NativeFunctionHandle((frame, ah, iRet) -> {
+            SingletonConstant idSingleton = frame.poolContext().ensureSingletonConstConstant(idModule);
+            ObjectHandle      hModule     = frame.getConstHandle(idSingleton);
+            int               iReturn     = fReturn ? Op.A_STACK : Op.A_IGNORE;
+
+            Frame.Continuation invoke = frameCaller -> {
+                ObjectHandle target = frameCaller.popStack();
+                // NOTE (master port): the reference implementation additionally calls
+                // frameCaller.poolContext().markRuntimePublished(...) here. Master has no
+                // pool-publication fence, so that line is deliberately omitted.
+                return chain.invoke(frameCaller, target, ahArg, iReturn);
+            };
+            if (Op.isDeferred(hModule)) {
+                return hModule.proceed(frame, invoke);
+            }
+            frame.pushStack(hModule);
+            return invoke.proceed(frame);
+        });
+
+        return ctx.callLater(hInstantiateAndRun, Utils.OBJECTS_NONE);
     }
 
     /**

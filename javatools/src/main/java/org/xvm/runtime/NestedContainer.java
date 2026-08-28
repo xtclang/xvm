@@ -45,6 +45,27 @@ public class NestedContainer
         f_listShared = listShared;
     }
 
+    /**
+     * Create a container owned by a JAVA host rather than by a guest Ecstasy provider - the linchpin
+     * for embedding. A host container passes a null provider, which also selects the injection
+     * fallback in {@link #getInjectable}: a host is trusted, so it inherits the parent plane's
+     * standard resources (Console, clock, ...) instead of being sandboxed to an empty resource map.
+     *
+     * @param containerParent  the parent container (typically the native plane)
+     * @param idModule         the module to run
+     * @param listShared       modules shared with the parent
+     *
+     * @return the registered nested container
+     */
+    public static NestedContainer createForHost(Container containerParent, ModuleConstant idModule,
+                                                List<ModuleConstant> listShared) {
+        // NOTE (master port): master's registerContainer returns void (the reference returns the
+        // container and enforces single-root), so register then return.
+        NestedContainer container = new NestedContainer(containerParent, idModule, null, listShared);
+        containerParent.f_runtime.registerContainer(container);
+        return container;
+    }
+
 
     // ----- NestedContainer API -------------------------------------------------------------------
 
@@ -126,9 +147,21 @@ public class NestedContainer
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts) {
         InjectionSupplier supplier = f_mapResources.get(new InjectionKey(sName, type));
-        return supplier == null
-                ? type.isNullable() ? xNullable.NULL : null
-                : supplier.supply(frame, hOpts);
+        if (supplier != null) {
+            return supplier.supply(frame, hOpts);
+        }
+
+        if (f_hProvider == null) {
+            // Trusted HOST container (created by createForHost): no guest provider populated the
+            // resource map, so fall back to the parent/native plane for the standard resources.
+            // Without this a host-run module gets no Console and dies with "Invalid resource".
+            // Guest containers (f_hProvider != null) keep master's strict sandbox.
+            ObjectHandle hResource = f_parent.getInjectable(frame, sName, type, hOpts);
+            if (hResource != null) {
+                return hResource;
+            }
+        }
+        return type.isNullable() ? xNullable.NULL : null;
     }
 
     @Override
