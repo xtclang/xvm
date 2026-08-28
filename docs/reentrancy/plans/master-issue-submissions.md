@@ -1916,6 +1916,21 @@ cannot reproduce" shape.
 
 **Minimal master-portable fix strategy:** make BOTH fields `volatile`
 (`m_fNative`, `m_code`); that alone gives the visibility edge and is behavior-neutral.
+
+**Two corrections learned by implementing the branch-side half (2026-08-28):**
+
+1. A writer-side guard on `markNative()` must NOT be phrased as "refuse once code exists".
+   Replacing an Ecstasy body with a native implementation is the method's whole purpose -
+   `xConst` marks `equals`/`compare`/`hashCode` native and those DO have code - so a
+   has-code guard rejects the legitimate use. The hazard is not that code exists, it is
+   that READERS exist, so the correct condition is runtime publication, the same one
+   `forceAssembly` already uses.
+2. That guard is therefore **not portable to master today**: `ConstantPool
+   .isRuntimePublished()` / `isRuntimeSynthesisWindowOpen()` do not exist there (verified:
+   zero occurrences), because master has no concept of a pool becoming published. Master's
+   portable fix is the two `volatile` fields ONLY; the guard becomes expressible once
+   enhancement E3's publication tracking lands. Recorded so a porter does not try to carry
+   the guard across and find nothing to test against.
 Optionally follow with a double-checked/synchronized `ensureCode()` to also remove the
 duplicate-construction window. Note this branch already had `m_code` volatile and has
 now made `m_fNative` volatile too; master needs both. Unrelated but adjacent: master's

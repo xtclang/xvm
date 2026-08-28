@@ -1194,6 +1194,21 @@ public final class MethodStructure
      * Specifies that the method implementation is provided directly by the runtime, aka "native".
      */
     public void markNative() {
+        // Writer-side diagnostic, mirroring forceAssembly(...). This is a multi-step transition over
+        // state that executing code reads (m_fNative, and resetRuntimeInfo() clears cached runtime
+        // info), so on a runtime-published pool it races the readers exactly as reassembly does.
+        //
+        // NOTE on the guard's shape: it is deliberately NOT "refuse once code exists". Replacing an
+        // Ecstasy body with a native implementation is the method's whole purpose - xConst marks
+        // equals/compare/hashCode native, and those DO have code - so a has-code guard would reject
+        // the legitimate use. The hazard is not that code exists; it is that readers exist. Hence the
+        // publication test, which is the same condition forceAssembly uses.
+        ConstantPool pool = getConstantPool();
+        if (pool != null && pool.isRuntimePublished() && !pool.isRuntimeSynthesisWindowOpen()) {
+            throw new IllegalStateException("markNative after runtime publication: "
+                    + getIdentityConstant().getValueString());
+        }
+
         setAbstract(false);
         resetRuntimeInfo();
 

@@ -148,12 +148,15 @@ sweep. **The 2026-08-26 counts underneath this section are stale where they conf
     `public ListMap<...>` returns are `MethodStructure.resolveTypeParameters` and
     `ModuleInfo.classNodes`, neither of which is the flagged metadata-getter shape).
 - **SHOULD-FIX still open (actionable, small) — re-verified in-tree 2026-08-28:**
-  - `markNative()`'s other half: refuse the transition once code exists (a
-    `forceAssembly`-shaped throw at the head of `markNative()`). Confirmed still open -
-    the method is `setAbstract`/`resetRuntimeInfo`/two field writes with no guard; the
-    existing `forceAssembly` throws (`:1085`, `:1093`) are a DIFFERENT concern
-    (assembly after runtime publication). Deferred because it is a BEHAVIOR change,
-    unlike the volatile that landed.
+  - ~~`markNative()`'s other half~~ **DONE 2026-08-28**, and the board's prescription
+    was WRONG as written. "Refuse the transition once code exists" would reject the
+    legitimate use: replacing an Ecstasy body with a native one is what `markNative` is
+    FOR (`xConst` marks `equals`/`compare`/`hashCode` native, and those have code). The
+    hazard is not that code exists, it is that READERS exist - so the guard tests runtime
+    publication, exactly as `forceAssembly` does, and lives at the head of `markNative()`.
+    Verified not to fire during a real boot (`xdk:installDist` green) and gated.
+    Master-portability note recorded on bug row 28: the guard needs E3's publication
+    marker, which master does not have, so master's portable fix stays the volatiles.
   - Family C array deferral (tracked in the array-exposure docs).
   - **CORRECTION:** `Utils.log`'s real closure is **DONE**, not open. `Utils.log` now
     takes an explicit `ServiceContext`, the `Frame` overload derives it, and
