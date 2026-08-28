@@ -679,7 +679,15 @@ public class xTuple
 
     public static class TupleHandle
             extends ObjectHandle {
-        public ObjectHandle[] m_ahValue;
+        /**
+         * The tuple's element storage, shared by every {@code cloneAs} view. FINAL because
+         * {@link #supportsMutableViews()} asserts it is "never swapped after construction" and
+         * that assertion is what makes the mutable-view opt-in sound: if one view could rebind
+         * this reference, sibling views would keep the old array and the freeze cell would be
+         * authoritative over storage nobody was looking at any more. Public because seven files
+         * outside this one read it; final so none of them - or this one - can rebind it.
+         */
+        public final ObjectHandle[] m_ahValue;
 
         /**
          * The tuple's values, copied for use as (or growth into) a callee register file. The ISA

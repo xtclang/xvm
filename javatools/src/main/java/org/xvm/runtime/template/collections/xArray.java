@@ -979,7 +979,14 @@ public class xArray
          */
         private final ArrayState f_state;
 
-        public JavaLong m_hHash;
+        /**
+         * Cached hash. Private because only this file computes or reads it, and deliberately
+         * NOT routed into the shared {@code ArrayState} cell: a {@code cloneAs} view gets its
+         * own copy of this reference, but the array contents are frozen by the time a hash is
+         * taken, so two views can only ever compute the SAME value. Duplicating the work at
+         * worst once per view is cheaper than a shared cell on every array handle.
+         */
+        private JavaLong m_hHash;
 
         protected ArrayHandle(TypeComposition clzArray, DelegateHandle hDelegate,
                               Mutability mutability) {

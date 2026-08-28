@@ -1203,37 +1203,58 @@ public class ConstantAdoptionTest {
         floatNIn[0]     = 32;
         float128In[0]   = 33;
 
-        assertArrayEquals(new byte[] {1, 2, 3}, byteString.getValue());
-        assertArrayEquals(new byte[] {4, 5}, floatN.getValue());
-        assertEquals(6, float128.getValue()[0]);
+        assertArrayEquals(new byte[] {1, 2, 3}, byteString.getValue().copy());
+        assertArrayEquals(new byte[] {4, 5}, floatN.getValue().copy());
+        assertEquals(6, float128.getValue().get(0));
     }
 
     /**
-     * Shallow adoption cloned the constant object but shared the final byte[] backing store. The
-     * target-pool copy must have the same bytes and independent storage so source mutation cannot
-     * change target hash/equality value after adoption.
+     * The guarantee this test pins CHANGED on 2026-08-28, and deliberately.
+     *
+     * <p>It used to assert that adoption gives the target pool INDEPENDENT byte storage, and it
+     * proved that by mutating the source constant's bytes through {@code getValue()} and checking
+     * the adopted copy did not move. That test was necessary precisely because the payload was a
+     * raw {@code byte[]} that any holder could write.</p>
+     *
+     * <p>The payload is now a {@link org.xvm.util.FrozenByteArray}: there is no API that writes it,
+     * so the mutation the old test performed no longer compiles. Independence is therefore no longer
+     * required, and {@code copyForAdoption} now SHARES the frozen payload between pools instead of
+     * reconstructing it - the copy existed only to defend against a write that can no longer happen.
+     * The invariant that actually matters, that adoption cannot change either constant's
+     * hash/equality value, is now structural rather than tested.</p>
+     *
+     * <p>What is still worth pinning: the adopted constant belongs to the target pool, carries equal
+     * contents, and shares - not copies - the payload, so a future change that silently reintroduces
+     * a defensive copy shows up here as a deliberate decision rather than drift.</p>
      */
     @Test
-    public void adoptedArrayBackedValueConstantsDoNotShareByteStorage() {
+    public void adoptedArrayBackedValueConstantsShareFrozenByteStorage() {
         var sourcePool = new FileStructure("source").getConstantPool();
         var targetPool = new FileStructure("target").getConstantPool();
         var byteString = sourcePool.ensureByteStringConstant(new byte[] {1, 2, 3});
         var floatN     = sourcePool.ensureFloatNConstant(new byte[] {4, 5});
-        var float128   = sourcePool.ensureFloat128Constant(new byte[16]);
+        var float128In = new byte[16];
 
-        float128.getValue()[0] = 6;
+        float128In[0] = 6;
+        var float128 = sourcePool.ensureFloat128Constant(float128In);
 
         var adoptedByteString = adopt(byteString, targetPool);
         var adoptedFloatN     = adopt(floatN, targetPool);
         var adoptedFloat128   = adopt(float128, targetPool);
 
-        byteString.getValue()[0] = 31;
-        floatN.getValue()[0]     = 32;
-        float128.getValue()[0]   = 33;
+        // contents survive adoption
+        assertArrayEquals(new byte[] {1, 2, 3}, adoptedByteString.getValue().copy());
+        assertArrayEquals(new byte[] {4, 5}, adoptedFloatN.getValue().copy());
+        assertEquals(6, adoptedFloat128.getValue().get(0));
 
-        assertArrayEquals(new byte[] {1, 2, 3}, adoptedByteString.getValue());
-        assertArrayEquals(new byte[] {4, 5}, adoptedFloatN.getValue());
-        assertEquals(6, adoptedFloat128.getValue()[0]);
+        // and the payload is SHARED, not copied - safe because it is frozen
+        assertSame(byteString.getValue(), adoptedByteString.getValue());
+        assertSame(floatN.getValue(), adoptedFloatN.getValue());
+        assertSame(float128.getValue(), adoptedFloat128.getValue());
+
+        // the source pool's own array is still insulated from the caller's
+        float128In[0] = 33;
+        assertEquals(6, adoptedFloat128.getValue().get(0));
     }
 
     /**
