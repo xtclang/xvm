@@ -80,7 +80,7 @@ public final class FrozenArray<T>
      * @return a frozen view backed by a private copy
      */
     public static <T> FrozenArray<T> copyOf(T[] aElem) {
-        return new FrozenArray<>(requireNonNull(aElem, "aElem").clone());
+        return new FrozenArray<>(copyArray(requireNonNull(aElem, "aElem")));
     }
 
     /**
@@ -118,7 +118,7 @@ public final class FrozenArray<T>
      * @return a fresh array containing the elements; the caller owns it
      */
     public T[] copy() {
-        return f_aElem.clone();
+        return copyArray(f_aElem);
     }
 
     /**
@@ -159,6 +159,18 @@ public final class FrozenArray<T>
                 return f_aElem[iNext++];
             }
         };
+    }
+
+    /**
+     * Copy an array without {@code Object.clone()}. {@link Arrays#copyOf} is the equivalent
+     * same-length copy and preserves the runtime component type, so no cast is needed.
+     *
+     * @param aElem  the array to copy
+     *
+     * @return a fresh array with the same elements and the same runtime component type
+     */
+    private static <T> T[] copyArray(T[] aElem) {
+        return Arrays.copyOf(aElem, aElem.length);
     }
 
     @Override
