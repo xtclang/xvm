@@ -1890,7 +1890,8 @@ JVM can parse - master rejected the branch's `0.20260519` `.xtc` as
 `ensureCode()` lazy-initializes `m_code` unsynchronized, so a concurrent reader can
 observe a torn native/code state.
 
-**Status/category:** Data race provable by inspection (JMM), master-verbatim. Not
+**Status/category:** Data race provable by inspection (JMM), master-verbatim. **FILED as
+PR #549** (the two `volatile` modifiers + a reflection regression pin). Not
 reachable in a strictly single-threaded link-then-run sequence; reachable as soon as
 any second thread touches a `MethodStructure` while another marks it native or forces
 its code - i.e. concurrent compile/link, warm reuse, or a JIT/interpreter mix.
