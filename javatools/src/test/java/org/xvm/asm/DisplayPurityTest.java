@@ -88,9 +88,7 @@ public class DisplayPurityTest {
      * Fixing a site means DELETING its line here - the test fails if a baseline entry no longer
      * violates, which is what makes this a ratchet rather than a snapshot.
      */
-    private static final Set<String> BASELINE = Set.of(
-            "org/xvm/runtime/template/_native/reflect/xRTType.java#toString:handleDataType",
-            "org/xvm/runtime/template/annotations/xFuture.java#toString:toSafeString");
+    private static final Set<String> BASELINE = Set.of();
 
     // Known coverage gap (deliberate): xEnum.EnumHandle.toString forces the lazy EnumInfo through a
     // plain getName() call. "getName(" is far too common a token to ban globally, so that site is not

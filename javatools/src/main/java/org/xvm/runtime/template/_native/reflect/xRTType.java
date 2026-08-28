@@ -1926,7 +1926,15 @@ public class xRTType
 
         @Override
         public String toString() {
-            return "(Type) " + getDataType().getValueString();
+            // PURE: read the foreign type, or the composition's type directly. getDataType() goes
+            // through getType() -> augmentType() -> TypeConstant.freeze() ->
+            // pool.ensureImmutableTypeConstant(...), so rendering a Type handle in a debugger
+            // interned a new immutable type constant into the pool - perturbing exactly the pool
+            // races under investigation. See docs/reentrancy/plans/side-effect-free-tostring.md.
+            TypeConstant type = f_typeForeign == null ? getComposition().getType() : f_typeForeign;
+            return "(Type) " + (type.getParamsCount() > 0
+                    ? type.getParamType(0).getValueString()
+                    : type.getValueString());
         }
 
         private final TypeConstant f_typeForeign;

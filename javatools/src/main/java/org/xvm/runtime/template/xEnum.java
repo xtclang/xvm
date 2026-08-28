@@ -336,6 +336,20 @@ public class xEnum
     }
 
     /**
+     * The non-forcing peek of {@link #getNameByOrdinal}: {@code enumInfo()} forces the template's
+     * lazy {@code EnumInfo} (walking the class-structure children to build the names and the enum
+     * handle list), so display code must not call it. Renders an ordinal marker until the info is
+     * built. See docs/reentrancy/plans/side-effect-free-tostring.md.
+     *
+     * @param ix  the ordinal
+     *
+     * @return the enum value's name, or an {@code <enum ordinal=N>} marker if not yet computed
+     */
+    public String peekNameByOrdinal(int ix) {
+        return f_enumInfo.isComputed() ? getNameByOrdinal(ix) : "<enum ordinal=" + ix + '>';
+    }
+
+    /**
      * @return a list of enum names
      */
     public List<String> getNames() {
@@ -419,7 +433,10 @@ public class xEnum
 
         @Override
         public String toString() {
-            return getName();
+            // PURE: getName() -> getNameByOrdinal() -> enumInfo() forces the template's lazy
+            // EnumInfo, so stepping over an EnumHandle in a debugger warmed owner-local metadata
+            // mid-race. Render the name only once that info is already built.
+            return getTemplate().peekNameByOrdinal(m_index);
         }
 
         protected int m_index;

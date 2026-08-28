@@ -879,9 +879,18 @@ public class xFuture
 
         @Override
         public String toString() {
+            // PURE: state-only. toSafeString() calls getFuture().get() - it JOINS the future (and on
+            // a failed/cancelled one allocates a fresh xException handle in the owning container via
+            // Utils.translate), so merely rendering a future in a debugger consumed its completion
+            // path and allocated owner-bearing objects. getNow(null) reads an already-completed value
+            // without blocking, and the exceptional/cancelled cases are reported as state rather than
+            // by materializing the exception. See docs/reentrancy/plans/side-effect-free-tostring.md.
+            var future = getFuture();
             return "(" + getComposition() + ") " + (
-                    getFuture().isDone() ? "Completed: " + toSafeString(): "Not completed"
-                    );
+                    !future.isDone()                    ? "Not completed"
+                  : future.isCancelled()                ? "Cancelled"
+                  : future.isCompletedExceptionally()   ? "Completed exceptionally"
+                  : "Completed: " + future.getNow(null));
         }
 
         protected String toSafeString() {
