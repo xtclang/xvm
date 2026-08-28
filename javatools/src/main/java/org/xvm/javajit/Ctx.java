@@ -1,5 +1,7 @@
 package org.xvm.javajit;
 
+import java.lang.invoke.MethodHandle;
+
 import java.lang.constant.MethodTypeDesc;
 
 import java.util.function.Function;
@@ -9,6 +11,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.ByteHashCollector;
 
+import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_JavaObject;
@@ -133,12 +136,19 @@ public final class Ctx {
     }
 
     /**
-     * Injection helper.
+     * Resolve a dynamic injection using the container's injector.
      */
     public Object inject(TypeConstant resourceType, String resourceName, Object opts) {
         Function supplier = container.injector.supplierOf(resourceType, resourceName);
 
         return supplier == null ? null : supplier.apply(opts);
+    }
+
+    /**
+     * Resolve a static injection, caching the resulting value for this context's container.
+     */
+    public Object injectStatic(MethodHandle injection) {
+        return container.computeInjection(injection);
     }
 
     public ByteHashCollector createHashCollector() {
@@ -152,10 +162,13 @@ public final class Ctx {
         System.err.println(message);
     }
 
-    // ----- Ctx method descriptors ----------------------------------------------------------------
+    // ----- method descriptors --------------------------------------------------------------------
 
     public static final MethodTypeDesc MD_log = MethodTypeDesc.of(CD_void, CD_JavaString);
 
-    public static MethodTypeDesc MD_inject = MethodTypeDesc.of(
-        CD_JavaObject, CD_TypeConstant, CD_JavaString, CD_JavaObject);
+    public static final MethodTypeDesc MD_inject = MethodTypeDesc.of(
+            CD_JavaObject, CD_TypeConstant, CD_JavaString, CD_JavaObject);
+
+    public static final MethodTypeDesc MD_injectStatic =
+            MethodTypeDesc.of(CD_JavaObject, CD_MethodHandle);
 }

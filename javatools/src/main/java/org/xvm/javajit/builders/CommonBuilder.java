@@ -622,13 +622,20 @@ public class CommonBuilder
      * Assemble the field(s) for the specified Ecstasy property.
      */
     protected void assembleField(ClassBuilder classBuilder, PropertyInfo prop) {
-        String      jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
-        JitTypeDesc jtd     = prop.getType().getJitDesc(this);
+        String jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
         int flags = ClassFile.ACC_PUBLIC;
         if (prop.isConstant()) {
             flags |= ClassFile.ACC_STATIC;
         }
+
+        if (prop.isInjected() && prop.isConstant()) {
+            // the generated class can be shared by containers, so store the computation means
+            classBuilder.withField(jitName, ConstantDescs.CD_MethodHandle, flags);
+            return;
+        }
+
+        JitTypeDesc jtd = prop.getType().getJitDesc(this);
         switch (jtd.flavor) {
         case Specific, Widened:
             classBuilder.withField(jitName, jtd.cd, flags);
@@ -665,20 +672,20 @@ public class CommonBuilder
      * initializer.
      */
     protected void assembleCLInit(ClassBuilder classBuilder) {
-        // ensure all injection types are added before we generate the TypeConstant fields
         List<PropertyInfo>     props     = lazyList(constProperties);
         Map<Constant, Integer> constants = this.constants;
+
+        // ensure all injection types are added before we generate the TypeConstant fields
         for (PropertyInfo prop : props) {
             if (prop.isInjected()) {
                 constants.computeIfAbsent(prop.getType(), _ -> constants.size());
             }
         }
 
-        ClassDesc      CD_this          = art.CD();
-        ClassDesc      cdClassLoader    = ClassDesc.of(ClassLoader.class.getName());
-        ClassDesc      cdModuleLoader   = ClassDesc.of(ModuleLoader.class.getName());
-        MethodTypeDesc mdGetConstant    = MethodTypeDesc.of(
-                ClassDesc.of(Constant.class.getName()), CD_int);
+        ClassDesc      CD_this        = art.CD();
+        ClassDesc      cdClassLoader  = ClassDesc.of(ClassLoader.class.getName());
+        ClassDesc      cdModuleLoader = ClassDesc.of(ModuleLoader.class.getName());
+        MethodTypeDesc mdGetConstant  = MethodTypeDesc.of(ClassDesc.of(Constant.class.getName()), CD_int);
 
         classBuilder.withMethodBody(ConstantDescs.CLASS_INIT_NAME, MTD_void,
                 ClassFile.ACC_STATIC | ClassFile.ACC_PUBLIC, code -> {
@@ -757,19 +764,23 @@ public class CommonBuilder
 
             // add static field initialization
             for (PropertyInfo prop : props) {
-                String jitName = prop.getIdentity().ensureJitPropertyName(ts);
                 if (prop.isInjected()) {
-                    // this.[jitName] = ctx.inject(type, name, opts);
+                    // compose the MethodHandle in <clinit>; the injected value is computed later
+                    // through Ctx.injectStatic() and cached by the container
+                    String    jitName   = prop.getIdentity().ensureJitPropertyName(ts);
                     Injection injection = computeInjection(code, prop);
-                    ClassDesc cd        = ensureClassDesc(injection.resourceType);
-                    code.aload(ctxSlot);
-                    loadTypeConstant(code, injection.resourceType);
-                    code.ldc(injection.resourceName());
-                    injection.optsLoader.run();
-                    code.invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
-                        .checkcast(cd)
-                        .putstatic(CD_this, jitName, cd);
-                } else if (prop.getInitializer() == null) {
+                    loadTypeConstant(code, injection.resourceType()); // resourceType
+                    code.ldc(injection.resourceName());               // resourceName
+                    injection.optsLoader.run();                       // opts
+                    code.invokestatic(CD_Container, "createInjectionHandle",
+                                MethodTypeDesc.of(ConstantDescs.CD_MethodHandle,
+                                        CD_TypeConstant, CD_JavaString, CD_JavaObject))
+                        .putstatic(CD_this, jitName, ConstantDescs.CD_MethodHandle);
+                    continue;
+                }
+
+                String jitName = prop.getIdentity().ensureJitPropertyName(ts);
+                if (prop.getInitializer() == null) {
                     RegisterInfo reg = loadConstant(code, prop.getInitialValue());
                     if (reg instanceof ExtendedSlot extSlot) {
                         assert extSlot.flavor() == NullablePrimitive;
@@ -1032,6 +1043,11 @@ public class CommonBuilder
      * Assemble the property accessors for the "Impl" shape.
      */
     protected void assembleProperty(ClassBuilder classBuilder, PropertyInfo prop) {
+        if (prop.isInjected() && prop.isConstant()) {
+            // reads go directly through Ctx.injectStatic(); no property getter is required
+            return;
+        }
+
         MethodInfo getterInfo = typeInfo.getMethodById(prop.getGetterId());
         if (getterInfo == null) {
             if (prop.hasField() && shouldGenerate(prop.getFieldIdentity())) {
