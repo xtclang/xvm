@@ -14,6 +14,7 @@ import java.util.Set;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
 import org.xvm.asm.Version;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -116,13 +117,13 @@ public final class AllCondition
         ConditionalConstant   condLast = acondOld[cConds-1];
         switch (condLast) {
             case AnyCondition condAny when condAny.isOnlyVersions() -> {
-                ConditionalConstant[] acondNew = acondOld.clone();
+                ConditionalConstant[] acondNew = copyOf(acondOld);
                 acondNew[cConds-1] = condAny.addVersion(ver);
                 return new AllCondition(acondNew);
             }
             case VersionedCondition condVer -> {
                 ConstantPool          pool     = getConstantPool();
-                ConditionalConstant[] acondNew = acondOld.clone();
+                ConditionalConstant[] acondNew = copyOf(acondOld);
                 acondNew[cConds-1] = new AnyCondition(pool, condVer, pool.ensureVersionedCondition(ver));
                 return new AllCondition(acondNew);
             }
@@ -149,7 +150,7 @@ public final class AllCondition
         return switch (acondOld[cConds-1]) {
             case AnyCondition condAny -> {
                 assert condAny.versions().contains(ver);
-                ConditionalConstant[] acondNew = acondOld.clone();
+                ConditionalConstant[] acondNew = copyOf(acondOld);
                 acondNew[cConds-1] = condAny.removeVersion(ver);
                 yield new AllCondition(acondNew);
             }

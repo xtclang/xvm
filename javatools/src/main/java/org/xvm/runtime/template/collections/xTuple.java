@@ -38,6 +38,7 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import org.xvm.util.Lazy;
+import static org.xvm.util.Handy.copyOf;
 
 /**
  * Native Tuple implementation.
@@ -136,7 +137,7 @@ public class xTuple
         // this method is called from ServiceContext.validatePassThrough(); see if we can freeze all
         // the tuple values (implementing AutoFreezable(False) contract)
         TupleHandle    hTuple  = (TupleHandle) hTarget;
-        ObjectHandle[] ahValue = hTuple.m_ahValue.clone();
+        ObjectHandle[] ahValue = copyOf(hTuple.m_ahValue);
 
         switch (frame.f_context.validatePassThrough(frame, ctxTarget, null, ahValue, fResponse)) {
         case Op.R_NEXT:
@@ -363,7 +364,7 @@ public class xTuple
                     xException.typeMismatch(frame, hValue.getType(), typeParam));
         }
 
-        ahValue = ahValue.clone();
+        ahValue = copyOf(ahValue);
         ahValue[(int) lIndex] = hValue;
 
         return frame.assignValue(iReturn, makeHandle(clzThis, ahValue));
@@ -384,7 +385,7 @@ public class xTuple
                     return frameCaller.assignValue(iReturn, hTuple);
                 };
             } else {
-                ahValue  = hTuple.m_ahValue.clone();
+                ahValue  = copyOf(hTuple.m_ahValue);
                 stepNext = frameCaller -> frameCaller.assignValue(iReturn,
                                 makeImmutableHandle(hTuple.getComposition(), ahValue));
             }
@@ -555,7 +556,7 @@ public class xTuple
             if (cCommon == 0) {
                 atypeCommon = atype1;
             } else {
-                TypeConstant[] atypeC = atype1.clone();
+                TypeConstant[] atypeC = copyOf(atype1);
                 System.arraycopy(atypeCommon, 0, atypeC, 0, cCommon);
                 atypeCommon = atypeC;
             }
@@ -688,7 +689,7 @@ public class xTuple
          * tuple. This mirrors the {@code xRTMethod.invokeInvoke} reflection-path fix.
          */
         public ObjectHandle[] valuesCopy() {
-            return m_ahValue.clone();
+            return copyOf(m_ahValue);
         }
 
         protected TupleHandle(TypeComposition clazz, ObjectHandle[] ahValue, boolean fMutable) {
@@ -746,7 +747,7 @@ public class xTuple
                     TypeConstant typeResolved = typeVal.widenEnumValueTypes();
                     if (typeResolved != typeOrig) {
                         if (atypeActual == null) {
-                            atypeActual = atypeOrig.clone();
+                            atypeActual = copyOf(atypeOrig);
                         }
                         atypeActual[i] = typeResolved;
                     }

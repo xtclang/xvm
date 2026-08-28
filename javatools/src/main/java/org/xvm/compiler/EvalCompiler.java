@@ -41,6 +41,7 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
+import static org.xvm.util.Handy.copyOf;
 
 /**
  * The compiler of the "eval" script used by the debugger.
@@ -156,7 +157,7 @@ public class EvalCompiler {
      * @return the lambda arguments indexes
      */
     public int[] getArgs() {
-        return m_aiArg.clone();
+        return copyOf(m_aiArg);
     }
 
     /**

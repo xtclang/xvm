@@ -54,6 +54,7 @@ import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -4307,7 +4308,7 @@ public class ConstantPool
             // The implicit metadata is static process-wide data. Freeze the map shape after class
             // initialization so nobody can accidentally mutate the shared catalog at runtime.
             for (Map.Entry<String, String[]> entry : mapImplicits.entrySet()) {
-                String[]      asParts = entry.getValue().clone();
+                String[]      asParts = copyOf(entry.getValue());
                 StringBuilder sb     = new StringBuilder();
                 boolean       fFirst = true;
                 mapFrozen.put(entry.getKey(), asParts);

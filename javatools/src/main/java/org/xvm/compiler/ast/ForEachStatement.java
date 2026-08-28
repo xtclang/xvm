@@ -51,6 +51,7 @@ import org.xvm.compiler.ast.Expression.Assignable;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -473,7 +474,7 @@ public final class ForEachStatement
                         assert atypeRVals.length >= cLVals;
 
                         if (fConvert) {
-                            atypeRVals = atypeRVals.clone();
+                            atypeRVals = copyOf(atypeRVals);
                             for (int i = 0; i < cLVals; i++) {
                                 TypeConstant typeR = atypeRVals[i];
                                 TypeConstant typeL = atypeLVals[i];

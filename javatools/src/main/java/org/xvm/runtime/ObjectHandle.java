@@ -35,6 +35,7 @@ import org.xvm.runtime.template.text.xChar;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.Handy;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -797,7 +798,7 @@ public abstract class ObjectHandle
                 return m_aFields;
             }
 
-            ObjectHandle[] aView = m_aFields.clone();
+            ObjectHandle[] aView = copyOf(m_aFields);
             for (int i = 0, c = aView.length; i < c; ++i) {
                 ObjectHandle hOverride = aOverrides[i];
                 if (hOverride != null) {
@@ -870,7 +871,7 @@ public abstract class ObjectHandle
             ObjectHandle[] aCurrent = m_aFieldOverrides;
             ObjectHandle[] aUpdated = aCurrent == null
                     ? new ObjectHandle[m_aFields.length]
-                    : aCurrent.clone();
+                    : copyOf(aCurrent);
             aUpdated[iPos] = hValue;
             m_aFieldOverrides = aUpdated;
         }

@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code Utils.ensureSize} hands the array through unchanged whenever the callee needs no extra
  * registers, the tuple's storage became the callee frame's register file ({@code f_ahVar}), and
  * any parameter reassignment inside the invoked method wrote into the caller's - possibly
- * immutable, possibly const-heap-cached - tuple. {@code xRTFunction.invokeInvoke} already cloned
+ * immutable, possibly const-heap-cached - tuple. {@code xRTFunction.invokeInvoke} already copied
  * in exactly this case, proving the hazard was known.
  *
  * A full red/green execution test (invoke a method reflectively, reassign a parameter, assert the
@@ -36,7 +36,7 @@ public class MethodInvokeArgumentAliasingTest {
     /**
      * The reason the boundary must copy: {@code ensureSize} is a grow-only operation and
      * deliberately returns the caller's array when it is already big enough. If this contract
-     * ever changes to always copy, the defensive clones at the reflection boundaries become
+     * ever changes to always copy, the defensive copies at the reflection boundaries become
      * redundant rather than wrong; while it holds, they are load-bearing.
      */
     @Test
@@ -50,7 +50,7 @@ public class MethodInvokeArgumentAliasingTest {
     }
 
     /**
-     * The reflection invoke path must clone the tuple's storage before handing it to the call
+     * The reflection invoke path must copy the tuple's storage before handing it to the call
      * chain. Red on master: {@code invokeInvoke} passed {@code hTuple.m_ahValue} through raw
      * (with an in-code {@code TODO GG+CP do we need to check these?} asking exactly this
      * question).
@@ -60,8 +60,9 @@ public class MethodInvokeArgumentAliasingTest {
         var source = Files.readString(sourceFor("org/xvm/runtime/template/_native/reflect/xRTMethod.java"));
         var body   = methodBody(source, "public int invokeInvoke");
 
-        assertTrue(Pattern.compile("m_ahValue\\s*\\.\\s*clone\\s*\\(\\)").matcher(body).find(),
-                "xRTMethod.invokeInvoke must clone the tuple storage before it becomes the"
+        assertTrue(Pattern.compile("copyOf\\s*\\(\\s*hTuple\\s*\\.\\s*m_ahValue\\s*\\)"
+                        + "|m_ahValue\\s*\\.\\s*clone\\s*\\(\\)").matcher(body).find(),
+                "xRTMethod.invokeInvoke must copy the tuple storage before it becomes the"
                         + " callee register file");
         assertFalse(Pattern.compile("=\\s*hTuple\\s*\\.\\s*m_ahValue\\s*;").matcher(body).find(),
                 "xRTMethod.invokeInvoke must not hand the caller tuple's own array to the"
@@ -77,7 +78,7 @@ public class MethodInvokeArgumentAliasingTest {
         var source = Files.readString(sourceFor("org/xvm/runtime/template/_native/reflect/xRTFunction.java"));
         var body   = methodBody(source, "public int invokeInvoke");
 
-        assertTrue(Pattern.compile("\\.\\s*clone\\s*\\(\\)").matcher(body).find(),
+        assertTrue(Pattern.compile("copyOf\\s*\\(|\\.\\s*clone\\s*\\(\\)").matcher(body).find(),
                 "xRTFunction.invokeInvoke must keep cloning the tuple storage when the callee"
                         + " needs no extra registers");
     }

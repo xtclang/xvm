@@ -38,6 +38,7 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.ast.Expression.Assignable;
 
 import org.xvm.util.Severity;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -134,7 +135,7 @@ public final class ReturnStatement
             TypeConstant typeRet = aRetTypes[i];
             if (typeRet.containsAutoNarrowing(false)) {
                 if (fClone) {
-                    aRetTypes = aRetTypes.clone();
+                    aRetTypes = copyOf(aRetTypes);
                     fClone    = false;
                 }
                 aRetTypes[i] = typeRet.resolveAutoNarrowing(pool, false, ctx.getThisType(), null);

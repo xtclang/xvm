@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import static org.xvm.util.Handy.isDigit;
 import static org.xvm.util.Handy.quotedChar;
 import static org.xvm.util.Handy.quotedString;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -607,7 +608,7 @@ public class Version
      * @return the version as an array of ints
      */
     protected int[] getIntArray() {
-        return ints.clone();
+        return copyOf(ints);
     }
 
     // ----- fields --------------------------------------------------------------------------------

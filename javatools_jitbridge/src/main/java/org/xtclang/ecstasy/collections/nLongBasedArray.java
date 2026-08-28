@@ -19,6 +19,7 @@ import org.xvm.util.ByteHashCollector;
 
 import static java.lang.Math.max;
 import static java.lang.System.arraycopy;
+import static org.xvm.util.Handy.copyOf;
 
 /**
  * An {@link Array} implementation where the elements are mapped into an array of Java {@code long}
@@ -275,7 +276,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
                 return that.$delegate.freeze$p(ctx, inPlace, inPlace$dflt);
             }
             if ($storage != null) {
-                that.$storage = $storage.clone();
+                that.$storage = copyOf($storage);
             }
             return that;
         } catch (CloneNotSupportedException e) {

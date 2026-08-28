@@ -34,6 +34,7 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.util.Lazy;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -213,7 +214,7 @@ public class xRTMethod
         // frame's register file (f_ahVar), so any parameter reassignment inside the invoked
         // method would write into the caller's - possibly immutable, possibly const-heap-cached -
         // tuple (see the equivalent defensive copy in xRTFunction.invokeInvoke)
-        ObjectHandle[] ahPass = hTuple.m_ahValue.clone();
+        ObjectHandle[] ahPass = copyOf(hTuple.m_ahValue);
         CallChain      chain  = hMethod.getCallChain(frame, hTarget);
 
         return chain.invokeT(frame, hTarget, ahPass, iReturn);

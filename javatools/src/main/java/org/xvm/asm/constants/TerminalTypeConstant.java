@@ -33,6 +33,7 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -698,7 +699,7 @@ public sealed class TerminalTypeConstant
                 }
                 if (typeTarget.isAnnotated()) {
                     typeCtx = pool.ensureAnnotatedTypeConstant(typeCtx,
-                                    typeTarget.getAnnotations().clone());
+                                    copyOf(typeTarget.getAnnotations()));
                 }
                 return typeCtx;
             }

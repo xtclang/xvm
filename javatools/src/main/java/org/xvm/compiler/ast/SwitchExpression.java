@@ -27,6 +27,7 @@ import org.xvm.compiler.Token;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -171,7 +172,7 @@ public final class SwitchExpression
                 if (fValid && mgr.hasTypeConditions() && cCases == 1 &&
                         mgr.addTypeInference(ctxScope, stmtPrev, errs)) {
                     if (atypeReqScoped != null && atypeReqScoped.length > 0) {
-                        atypeReqScoped = atypeReqScoped.clone();
+                        atypeReqScoped = copyOf(atypeReqScoped);
 
                         for (int i = 0, c = atypeReqScoped.length; i < c; i++) {
                             atypeReqScoped[i] = ctxScope.resolveFormalType(atypeReqScoped[i]);

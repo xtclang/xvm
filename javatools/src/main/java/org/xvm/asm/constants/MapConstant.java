@@ -22,6 +22,7 @@ import org.xvm.util.Hash;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -242,7 +243,7 @@ public final class MapConstant
             Constant constNewKey = constOldKey.resolveTypedefs();
             if (constNewKey != constOldKey) {
                 if (aconstNewKey == null) {
-                    aconstNewKey = aconstOldKey.clone();
+                    aconstNewKey = copyOf(aconstOldKey);
                 }
                 aconstNewKey[i] = constNewKey;
             }
@@ -256,7 +257,7 @@ public final class MapConstant
             Constant constNewVal = constOldVal.resolveTypedefs();
             if (constNewVal != constOldVal) {
                 if (aconstNewVal == null) {
-                    aconstNewVal = aconstOldVal.clone();
+                    aconstNewVal = copyOf(aconstOldVal);
                 }
                 aconstNewVal[i] = constNewVal;
             }

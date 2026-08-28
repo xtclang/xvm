@@ -29,6 +29,7 @@ import org.xvm.type.Decimal64;
 
 import org.xvm.util.Hash;
 import org.xvm.util.PackedInteger;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -748,7 +749,7 @@ public abstract class Constant
             T constNew = pool.register(constOld);
             if (constOld != constNew) {
                 if (aconstNew == null) {
-                    aconstNew = aconst.clone();
+                    aconstNew = copyOf(aconst);
                 }
                 aconstNew[i] = constNew;
             }

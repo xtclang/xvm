@@ -114,6 +114,7 @@ import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyAddAll;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -1018,7 +1019,7 @@ public abstract sealed class TypeConstant
                 TypeConstant te2 = atype2[i];
                 if (!te1.equals(te2)) {
                     if (!fClone) {
-                        atype2 = atype2.clone();
+                        atype2 = copyOf(atype2);
                         fClone = true;
                     }
                     atype2[i] = te1.combine(pool, te2);

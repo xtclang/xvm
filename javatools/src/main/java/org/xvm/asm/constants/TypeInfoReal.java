@@ -37,6 +37,7 @@ import org.xvm.compiler.Constants;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -997,12 +998,12 @@ public final class TypeInfoReal
 
     @Override
     public Annotation[] getClassAnnotations() {
-        return f_aannoClass.length == 0 ? f_aannoClass : f_aannoClass.clone();
+        return f_aannoClass.length == 0 ? f_aannoClass : copyOf(f_aannoClass);
     }
 
     @Override
     public Annotation[] getMixinAnnotations() {
-        return f_aannoMixin.length == 0 ? f_aannoMixin : f_aannoMixin.clone();
+        return f_aannoMixin.length == 0 ? f_aannoMixin : copyOf(f_aannoMixin);
     }
 
     @Override

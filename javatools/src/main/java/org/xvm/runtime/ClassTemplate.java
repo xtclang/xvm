@@ -66,6 +66,7 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 import org.xvm.util.Handy;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -703,7 +704,7 @@ public abstract class ClassTemplate
      * @return the implicit field names
      */
     public String[] getImplicitFields() {
-        return f_asFieldsImplicit.length == 0 ? f_asFieldsImplicit : f_asFieldsImplicit.clone();
+        return f_asFieldsImplicit.length == 0 ? f_asFieldsImplicit : copyOf(f_asFieldsImplicit);
     }
 
     /**

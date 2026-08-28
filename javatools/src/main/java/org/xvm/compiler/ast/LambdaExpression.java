@@ -66,6 +66,7 @@ import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -1242,7 +1243,7 @@ public final class LambdaExpression
             }
             if (typeNew != typeOld) {
                 if (atypeRets == atype) {
-                    atypeRets = atype.clone();
+                    atypeRets = copyOf(atype);
                 }
                 atypeRets[i] = typeNew;
             }

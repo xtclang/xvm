@@ -37,6 +37,7 @@ import org.xvm.compiler.Token;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -643,7 +644,7 @@ public abstract sealed class Expression
                     TypeConstant typeInferred = inferTypeFromRequired(atypeActual[i], atypeRequired[i]);
                     if (typeInferred != null) {
                         if (atypeInferred == atypeActual) {
-                            atypeInferred = atypeInferred.clone();
+                            atypeInferred = copyOf(atypeInferred);
                         }
                         atypeInferred[i] = typeInferred;
                     }
@@ -781,7 +782,7 @@ public abstract sealed class Expression
 
                 if (!typeActual.equals(typeImm)) {
                     if (fCloneActual) {
-                        atypeActual  = atypeActual.clone();
+                        atypeActual  = copyOf(atypeActual);
                         fCloneActual = false;
                     }
                     atypeActual[i] = typeImm;
@@ -818,7 +819,7 @@ public abstract sealed class Expression
                             System.err.println("No conversion found for " + constVal);
                         } else {
                             if (fCloneActual) {
-                                atypeActual  = atypeActual.clone();
+                                atypeActual  = copyOf(atypeActual);
                                 fCloneActual = false;
                             }
                             atypeActual[i] = constConv.getType().freeze();

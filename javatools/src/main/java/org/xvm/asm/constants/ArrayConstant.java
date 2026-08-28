@@ -16,6 +16,7 @@ import org.xvm.util.Hash;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -155,7 +156,7 @@ public final class ArrayConstant
      */
     @Override
     public Constant[] getValue() {
-        return m_aconstVal.length == 0 ? m_aconstVal : m_aconstVal.clone();
+        return m_aconstVal.length == 0 ? m_aconstVal : copyOf(m_aconstVal);
     }
 
 
@@ -211,7 +212,7 @@ public final class ArrayConstant
             Constant constNew = constOld.resolveTypedefs();
             if (constNew != constOld) {
                 if (aconstNew == null) {
-                    aconstNew = aconstOld.clone();
+                    aconstNew = copyOf(aconstOld);
                 }
                 aconstNew[i] = constNew;
             }

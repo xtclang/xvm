@@ -65,6 +65,7 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.util.Severity;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -545,7 +546,7 @@ public final class InvocationExpression
             }
         } else {
             typeFn      = null;
-            atypeReturn = atypeRequired == null ? TypeConstant.NO_TYPES : atypeRequired.clone();
+            atypeReturn = atypeRequired == null ? TypeConstant.NO_TYPES : copyOf(atypeRequired);
         }
 
         int     cRequired  = atypeReturn.length;
@@ -662,7 +663,7 @@ public final class InvocationExpression
                         TypeConstant typeRetR = typeRet.resolveGenerics(pool, ctx.getThisType());
                         if (typeRetR != typeRet) {
                             if (atypeReturn == atypeRequired) {
-                                atypeReturn = atypeRequired.clone();
+                                atypeReturn = copyOf(atypeRequired);
                             }
                             atypeReturn[i] = typeRetR;
                         }
@@ -786,7 +787,7 @@ public final class InvocationExpression
 
                         atypeParams = resolveTypes(resolver, atype);
                     } else {
-                        atypeParams = atypeParams.clone();
+                        atypeParams = copyOf(atypeParams);
                     }
                 } else {
                     atypeParams = TypeConstant.NO_TYPES;
@@ -1060,7 +1061,7 @@ public final class InvocationExpression
                 // this expression will produce the result as "@Future Var<T>"
                 m_fAutoFuture = true;
                 if (atypeResult.length > 0) {
-                    atypeResult = atypeResult.clone(); // don't mess up the actual types
+                    atypeResult = copyOf(atypeResult); // don't mess up the actual types
                     for (int i = 0, c = atypeResult.length; i < c; i++) {
                         atypeResult[i] = pool.ensureFuture(atypeResult[i]);
                     }
@@ -2918,7 +2919,7 @@ public final class InvocationExpression
                 TypeConstant typeResolved = typeOriginal.resolveGenerics(pool, resolver);
                 if (typeResolved != typeOriginal) {
                     if (atypeResolved == atype) {
-                        atypeResolved = atype.clone();
+                        atypeResolved = copyOf(atype);
                     }
                     atypeResolved[i] = typeResolved;
                 }

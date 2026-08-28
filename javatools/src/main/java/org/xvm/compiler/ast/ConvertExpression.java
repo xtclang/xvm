@@ -27,6 +27,7 @@ import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Var;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -79,7 +80,7 @@ public final class ConvertExpression
             exprConv.finishValidation(null, null, type, expr.getTypeFit().addConversion(), val, errs);
         } else {
             Constant[]     aVal  = null;
-            TypeConstant[] aType = expr.getTypes().clone();
+            TypeConstant[] aType = copyOf(expr.getTypes());
             for (int i = 0, c = aidConv.length; i < c; i++) {
                 MethodConstant idConv = aidConv[i];
                 if (idConv != null) {
@@ -88,7 +89,7 @@ public final class ConvertExpression
             }
 
             if (expr.isConstant()) {
-                aVal = expr.toConstants().clone();
+                aVal = copyOf(expr.toConstants());
                 for (int i = 0, c = aType.length; i < c; i++) {
                     MethodConstant idConv = aidConv[i];
                     if (idConv != null) {
@@ -187,7 +188,7 @@ public final class ConvertExpression
         MethodConstant[] aidConv   = m_aidConv;
         int              cConvs    = aidConv.length;
         Expression       expr      = getUnderlyingExpression();
-        Assignable[]     aLValTemp = aLVal.clone();
+        Assignable[]     aLValTemp = copyOf(aLVal);
 
         // create a temporary to hold the Boolean result for a conditional call, if necessary
         boolean  fCond   = isConditionalResult();

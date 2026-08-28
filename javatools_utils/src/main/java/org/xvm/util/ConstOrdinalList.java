@@ -22,6 +22,7 @@ import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.PackedInteger.packedLength;
 import static org.xvm.util.PackedInteger.unpackInt;
 import static org.xvm.util.PackedInteger.writeLong;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -132,7 +133,7 @@ public class ConstOrdinalList
      * @return a copy of this ConstIntList's compressed data in its binary form
      */
     public byte[] getBytes() {
-        return m_ab.clone();
+        return copyOf(m_ab);
     }
 
 

@@ -34,6 +34,7 @@ import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -1494,7 +1495,7 @@ public class PropertyInfo
                         ixTail = 0;
                     } else if (implTail == Implementation.Native) {
                         // replace the "native" method with a field access
-                        chain = chain.clone();
+                        chain = copyOf(chain);
                     } else {
                         MethodBody[] chainNew = new MethodBody[cBodies + 1];
                         System.arraycopy(chain, 0, chainNew, 0, cBodies);

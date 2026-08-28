@@ -20,6 +20,7 @@ import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Return_1;
 import org.xvm.asm.op.Return_N;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -554,7 +555,7 @@ public final class TernaryExpression
                  : typeElse.isAssignableTo(typeThen) ? atypeThen
                                                      : atypeRequired;
         } else {
-            TypeConstant[] atypeResult = atypeRequired.clone();
+            TypeConstant[] atypeResult = copyOf(atypeRequired);
 
             for (int i = 0; i < cRequired; i++) {
                 TypeConstant typeReq  = atypeRequired[i];

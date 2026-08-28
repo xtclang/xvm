@@ -26,6 +26,7 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.AsyncHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -335,7 +336,7 @@ public class Proxy
                     ObjectHandle hValueNew = convertValue(hProxy, hValueOld);
                     if (hValueNew != hValueOld) {
                         if (ahValueNew == ahValueOld) {
-                            ahValueNew = ahValueOld.clone();
+                            ahValueNew = copyOf(ahValueOld);
                         }
                         ahValueNew[i] = hValueNew;
                     }

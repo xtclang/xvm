@@ -35,6 +35,7 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendList;
 import static org.xvm.util.Handy.startList;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -241,7 +242,7 @@ public class MethodInfo
             } else  if (tailBase.isInto() && !tailAdd.equals(tailBase)) {
                 // the "into" from the add narrows the "into" from the base, so use it instead of
                 // the "into" from the base
-                aBase = aBase.clone();
+                aBase = copyOf(aBase);
                 aBase[cBase-1] = tailAdd;
                 --cAdd;
             } else if (cAdd == 1) {
@@ -493,7 +494,7 @@ public class MethodInfo
         MethodBody bodyCap    = getHead();
         Object     nidTarget  = idProp.appendNestedIdentity(pool, bodyCap.getNarrowingNestedIdentity()).
                                     resolveNestedIdentity(pool, null);
-        MethodBody[] chainNew = getChain().clone();
+        MethodBody[] chainNew = copyOf(getChain());
         chainNew[0] = new MethodBody(bodyCap.getIdentity(), bodyCap.getSignature(),
                                      Implementation.Capped, MethodBody.Target.narrowing(nidTarget));
         return MethodInfo.create(chainNew, f_nRank);
@@ -585,7 +586,7 @@ public class MethodInfo
      * to be exploded.
      */
     public MethodInfo rebaseInto() {
-        MethodBody[] aBodyNew = m_aBody.clone();
+        MethodBody[] aBodyNew = copyOf(m_aBody);
         int          cBodies  = aBodyNew.length;
         MethodBody   tail     = aBodyNew[cBodies-1];
         assert tail.isInto();

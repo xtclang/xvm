@@ -44,6 +44,7 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import org.xvm.util.Lazy;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -251,7 +252,7 @@ public class xRTFunction
         int            cArgs   = ahArg.length;
         int            cParams = hFunc.getParamCount();
         int            cVars   = hFunc.getVarCount();
-        ObjectHandle[] ahVar   = cArgs == cVars ? ahArg.clone() : Utils.ensureSize(ahArg, cVars);
+        ObjectHandle[] ahVar   = cArgs == cVars ? copyOf(ahArg) : Utils.ensureSize(ahArg, cVars);
 
         if (cArgs != cParams) {
             boolean fValid = cArgs < cParams;

@@ -15,6 +15,7 @@ import org.xvm.compiler.ast.AstNode;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.quotedString;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -246,7 +247,7 @@ public interface ErrorListener {
          * @return the error message parameters
          */
         public Object[] getParams() {
-            return m_aoParam == null ? null : m_aoParam.clone();
+            return m_aoParam == null ? null : copyOf(m_aoParam);
         }
 
         /**

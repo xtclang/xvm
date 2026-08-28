@@ -57,6 +57,7 @@ import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -635,7 +636,7 @@ public abstract class OpCallable extends Op {
                 if (resolver == null) {
                     resolver = bctx.createTypeResolver(
                             (MethodStructure) idMethod.getComponent(), anArgValue);
-                    atypeResult = atypeResult.clone();
+                    atypeResult = copyOf(atypeResult);
                 }
                 atypeResult[i] = type.resolveGenerics(bctx.pool(), resolver);
             }

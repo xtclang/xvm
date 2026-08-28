@@ -2,6 +2,7 @@ package org.xvm.util;
 
 
 import java.util.ArrayList;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -34,7 +35,7 @@ public class ConsoleLog {
                 advance();
                 ofStart = of+1;
             } else if (!Character.isDefined(ch) || Character.isISOControl(ch)) {
-                ach = ach.clone();
+                ach = copyOf(ach);
                 ach[of] = '?';
             }
             ++of;

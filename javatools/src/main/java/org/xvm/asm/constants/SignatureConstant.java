@@ -30,6 +30,7 @@ import org.xvm.util.Hash;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -293,7 +294,7 @@ public final class SignatureConstant
             TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
             if (constOriginal != constResolved) {
                 if (aconstParamResolved == aconstParamOriginal) {
-                    aconstParamResolved = aconstParamOriginal.clone();
+                    aconstParamResolved = copyOf(aconstParamOriginal);
                     fDiff               = true;
                 }
                 aconstParamResolved[i] = constResolved;
@@ -307,7 +308,7 @@ public final class SignatureConstant
             TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
             if (constOriginal != constResolved) {
                 if (aconstReturnResolved == aconstReturnOriginal) {
-                    aconstReturnResolved = aconstReturnOriginal.clone();
+                    aconstReturnResolved = copyOf(aconstReturnOriginal);
                     fDiff                = true;
                 }
                 aconstReturnResolved[i] = constResolved;
@@ -343,7 +344,7 @@ public final class SignatureConstant
             TypeConstant constNew = transform.apply(constOld);
             if (constNew != constOld) {
                 if (atypeNewParams == atypeOldParams) {
-                    atypeNewParams = atypeOldParams.clone();
+                    atypeNewParams = copyOf(atypeOldParams);
                     fDiff          = true;
                 }
                 atypeNewParams[i] = constNew;
@@ -358,7 +359,7 @@ public final class SignatureConstant
             TypeConstant constNew = transform.apply(constOld);
             if (constNew != constOld) {
                 if (atypeNewReturns == atypeOldReturns) {
-                    atypeNewReturns = atypeOldReturns.clone();
+                    atypeNewReturns = copyOf(atypeOldReturns);
                     fDiff           = true;
                 }
                 atypeNewReturns[i] = constNew;

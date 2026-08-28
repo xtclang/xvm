@@ -45,6 +45,7 @@ import org.xvm.compiler.ast.Expression.Assignable;
 import org.xvm.compiler.ast.Expression.TypeFit;
 
 import org.xvm.util.Severity;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -977,7 +978,7 @@ public final class AssignmentStatement
             if (aAstLVal[i] == BinaryAST.POISON) {
                 if (!fReplaced) {
                     fReplaced = true;
-                    aAstLVal  = aAstLVal.clone();
+                    aAstLVal  = copyOf(aAstLVal);
                 }
                 aAstLVal[i] = aAstLValExpr[i];
             }

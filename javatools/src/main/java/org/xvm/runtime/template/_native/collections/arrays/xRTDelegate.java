@@ -37,6 +37,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.util.Lazy;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -151,7 +152,7 @@ public class xRTDelegate
         } else {
             ahValue = mutability == Mutability.Constant
                 ? ahContent
-                : ahContent.clone();
+                : copyOf(ahContent);
         }
         return new GenericArrayDelegate(clzDelegate, ahValue, cSize, mutability);
     }

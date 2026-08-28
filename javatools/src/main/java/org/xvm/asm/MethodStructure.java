@@ -71,6 +71,7 @@ import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -1805,7 +1806,7 @@ public final class MethodStructure
         m_aconstSuper    = that.m_aconstSuper;
         m_abOps          = that.m_abOps;
         m_abAst          = that.m_abAst;
-        m_aconstLocal    = that.m_aconstLocal == null ? null : that.m_aconstLocal.clone();
+        m_aconstLocal    = that.m_aconstLocal == null ? null : copyOf(that.m_aconstLocal);
         m_registry       = that.m_registry;
         m_ast            = that.m_ast;
         m_aAstParams     = that.m_aAstParams;

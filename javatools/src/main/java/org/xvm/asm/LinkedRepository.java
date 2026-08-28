@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -37,7 +38,7 @@ public class LinkedRepository
             assert repo != null;
         }
 
-        this.repos       = repos.clone();
+        this.repos       = copyOf(repos);
         this.readThrough = fReadThrough;
     }
 

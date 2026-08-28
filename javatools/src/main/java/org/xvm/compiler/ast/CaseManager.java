@@ -44,6 +44,7 @@ import org.xvm.util.ListMap;
 import org.xvm.util.ListSet;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
+import static org.xvm.util.Handy.copyOf;
 
 
 /**
@@ -464,7 +465,7 @@ public class CaseManager<CookieType> {
                             lRange |= 1L << i;
 
                             if (atypeAlt == null) {
-                                atypeAlt = m_atypeCond.clone();
+                                atypeAlt = copyOf(m_atypeCond);
                             }
                             atypeAlt[i] = typeRange;
                         }

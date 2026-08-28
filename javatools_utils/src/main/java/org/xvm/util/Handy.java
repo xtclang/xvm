@@ -1947,11 +1947,79 @@ public final class Handy {
     public static <T> T[] replace(final T[] aoOrig, T[] aoCur, int i, T o) {
         if (o != (aoCur == null ? aoOrig : aoCur)[i]) {
             if (aoCur == null) {
-                aoCur = aoOrig.clone();
+                aoCur = copyOf(aoOrig);
             }
             aoCur[i] = o;
         }
         return aoCur;
+    }
+
+    /**
+     * Copy an array. This is the ONE place the repo expresses "duplicate this array", so the
+     * underlying mechanism can be changed - back to {@code Object.clone()}, or to anything else -
+     * by editing these methods rather than hundreds of call sites.
+     *
+     * <p>The implementation is {@link Arrays#copyOf}, not {@code array.clone()}: the clone
+     * retirement campaign removes the {@code clone} idiom even where it is only an array copy, so
+     * that {@code Cloneable} has no foothold to argue from. For a same-length one-dimensional copy
+     * the two are equivalent, and {@link Arrays#copyOf} preserves the runtime component type, so
+     * the generic form needs no cast.</p>
+     *
+     * <p>Taking the array as a PARAMETER also makes this safe where inlining
+     * {@code Arrays.copyOf(expr, expr.length)} would not be: the argument is evaluated exactly
+     * once, so a method-call receiver is not called twice and a volatile field is not read twice
+     * (two reads could otherwise yield different arrays and mis-size the copy).</p>
+     *
+     * @param array  the array to copy
+     *
+     * @return a new array with the same length, component type, and elements
+     */
+    public static <T> T[] copyOf(T[] array) {
+        return Arrays.copyOf(array, array.length);
+    }
+
+    /**
+     * Copy a {@code byte[]}. See {@link #copyOf(Object[])} for why this exists.
+     *
+     * @param array  the array to copy
+     *
+     * @return a new array with the same length and elements
+     */
+    public static byte[] copyOf(byte[] array) {
+        return Arrays.copyOf(array, array.length);
+    }
+
+    /**
+     * Copy a {@code char[]}. See {@link #copyOf(Object[])} for why this exists.
+     *
+     * @param array  the array to copy
+     *
+     * @return a new array with the same length and elements
+     */
+    public static char[] copyOf(char[] array) {
+        return Arrays.copyOf(array, array.length);
+    }
+
+    /**
+     * Copy an {@code int[]}. See {@link #copyOf(Object[])} for why this exists.
+     *
+     * @param array  the array to copy
+     *
+     * @return a new array with the same length and elements
+     */
+    public static int[] copyOf(int[] array) {
+        return Arrays.copyOf(array, array.length);
+    }
+
+    /**
+     * Copy a {@code long[]}. See {@link #copyOf(Object[])} for why this exists.
+     *
+     * @param array  the array to copy
+     *
+     * @return a new array with the same length and elements
+     */
+    public static long[] copyOf(long[] array) {
+        return Arrays.copyOf(array, array.length);
     }
 
     /**
@@ -2067,7 +2135,7 @@ public final class Handy {
     public static <T> T[] cow(T[] orig, T[] curr, int index, T val) {
         if (curr[index] != val) {
             if (curr == orig) {
-                curr = orig.clone();
+                curr = copyOf(orig);
             }
             curr[index] = val;
         }
