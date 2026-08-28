@@ -14,12 +14,15 @@ This is a planning document only. Nothing here is filed; nothing is pushed. Each
 enhancement lands as its own reviewed slice (or sequence of slices), independent
 of adopting the whole branch.
 
-> **⚠️ Commit hashes below are PRE-REBASE and no longer resolve.** On 2026-08-28 this branch was
-> rebased onto `origin/master` `82683bcd2`, which rewrote all 297 commits. Cite-by-**subject** is
-> therefore authoritative here, not cite-by-hash: resolve any commit named below with
-> `git log --oneline --all --grep '<subject>'`, or `git log --oneline master..HEAD` to list the
-> current branch history. The hashes are retained only as a stable record of WHICH change is meant
-> (they still resolve in the pre-rebase reflog / the `backup/pre-rebase-master` tag).
+> **⚠️ Branch commit hashes below are PRE-REBASE and no longer resolve.** On 2026-08-28 this branch
+> was rebased onto `origin/master` `82683bcd2`, which rewrote all 297 commits. The short hashes are
+> kept as stable *identifiers* (they remain reachable via the `backup/pre-rebase-master` tag), but
+> the **authoritative** reference is the commit SUBJECT, which survives a rebase. Every cited hash is
+> mapped to its subject in the [appendix table](#appendix-commit-hash-resolution-table) at the end of
+> this document; resolve one with
+> `git log --oneline master..HEAD --fixed-strings --grep '<subject>'`.
+> Hashes of MASTER commits (`82683bcd2`, `61e555a68`, `cc183520c`, `145f12f51`) are unaffected and
+> still resolve normally.
 
 Baseline for source references: `origin/master` `82683bcd2` (advanced from
 `61e555a68` on 2026-08-27 by PR #377 (LSP/IntelliJ/VS Code support) and PR #539
@@ -482,3 +485,99 @@ the structural enhancements.
   proof; this file tracks the design change, that file tracks the bug.
 - Re-verify every commit hash against the branch before porting; these are source
   references, not prepared patches.
+
+---
+
+## Appendix: commit-hash resolution table
+
+The 2026-08-28 rebase onto `origin/master` `82683bcd2` rewrote all 297 branch commits, so the
+short hashes used as identifiers throughout this document no longer resolve on the branch.
+Subjects DO survive a rebase, so resolve any row with:
+
+```
+git log --oneline master..HEAD --fixed-strings --grep '<subject>'
+```
+
+(The pre-rebase hashes remain reachable via the `backup/pre-rebase-master` tag.)
+
+| Cited hash | Commit subject (authoritative) |
+|---|---|
+| `01b5123ea` | Should-fix #4: ClassStructure.getTypeParams returns an immutable Map view |
+| `029ff4138` | Refuse view cloning of live-lifecycle arrays, tuples, functions |
+| `03555b779` | Embedding API 1/N: expose the run-completion future (issue 543 1a/1b) |
+| `08553d149` | Use owner lazy class composition helpers |
+| `0aa9a86cd` | Harden owner-sensitive lazy caches |
+| `0af827c72` | Retire Cloneable from the structure family |
+| `0bbfc98c4` | Refuse view cloning of array delegates |
+| `0d0a7ddcc` | Make TypeInfoReal member-map getters read-only views |
+| `0fb5d2cf0` | Finish owner-local lazy cache diagnostics |
+| `1608848a4` | AST clone eradication 2/N: copy constructors for the Statement family |
+| `178988f7d` | Measure + pin the #2 shared-pool leak (frozen-annex Phase C gate) |
+| `1e1bacaaa` | Record sealed stages 1-4, default-deny landing, and PR 16 narrative |
+| `1ea9c0632` | AST clone eradication 1/N: deepCopy walk over a parity-checked copy bridge |
+| `1f1b5de6e` | Safely publish class field layouts |
+| `23e2307d6` | Display purity slice 3a: Annotation + Contribution (ratchet 7 -> 4) |
+| `2485d9bac` | Remove container construction owner escapes |
+| `25371b397` | Retire Cloneable from Token, Source, and MethodStructure.Source |
+| `2716435f1` | Restrict ambient current pool lookup |
+| `33aa1aa06` | Safely publish class composition helpers |
+| `35a55b81f` | Array stage 3, Family A: freeze SignatureConstant type storage |
+| `3d1647463` | Synchronize runtime container registry lookup |
+| `3e4305fe2` | Delete the ConstantPool ambient-pool bridge entirely |
+| `4740995de` | Make runtime pool publication guard unconditional |
+| `4c6521dd9` | Use metadata owners instead of current pool |
+| `4f35e55a6` | Display purity slice 2: ASM constants (ratchet 10 -> 7) |
+| `4f72cbb3f` | Build the foreign-reference detector (world X-ray slice 3) |
+| `566a69464` | Freeze static constant-pool metadata |
+| `5d5773979` | Use receiver pool for function compatibility |
+| `5f5117e07` | Remove remaining fInstance template roles |
+| `5fce7b9ae` | Use explicit pool for nested identity resolution |
+| `632cac927` | Guard HandleConstant against raw cross-container serving |
+| `63ee73a86` | Display purity slice 5: runtime templates - BASELINE NOW EMPTY |
+| `64922284e` | Type-comparison corpus: a working gate for pool/type-system changes |
+| `6c1c7c686` | Side-effect-free toString: ExceptionHandle reads text without forcing the layout |
+| `73398ef28` | Record Lazy.ofOwner follow-up for converter map views |
+| `78b9ae951` | UPSTREAM (not a branch commit): the PR that introduced `TypeInfoReal`, squash-merged into master - see the E5 provenance note |
+| `7ce5662d1` | Refuse view cloning of register-bound refs |
+| `80999b393` | Remove unused template INSTANCE fields |
+| `8382e0268` | Make TypeInfo.toString() pure (header only); full dump on explicit overload |
+| `84fa61534` | Remove current pool lookup getter |
+| `86ce6a23f` | Embedding API 3/N: XtcEngine first-class in-memory compile + run |
+| `87f751125` | Array stage 3, Family B: freeze ParameterizedTypeConstant parameter storage |
+| `8ba3e0184` | Safely publish optimized metadata chains |
+| `8cd0d92ac` | Fence runtime-published pool mutation |
+| `8d9474c91` | Safely publish TypeInfoReal caches |
+| `93c36fbf6` | Remove leaf native template INSTANCE fields |
+| `9c5e351f3` | Publish normalized type cache safely |
+| `9d99789d3` | Use owner lazy property struct views |
+| `9f5773910` | Narrow ambient constant pool runtime scopes |
+| `a03a998f1` | Side-effect-free toString: pure getValueString type leaf + ObjectHandle root |
+| `a31f37ebf` | Avoid native container startup this escape |
+| `a3e0a4c5e` | Close the clone-view family: hoist the freeze cell, tuples and functions share views |
+| `a54565af3` | AST clone eradication 5/5: Cloneable, clone(), and the bridge are gone |
+| `a700cca30` | Display purity slice 3b: MethodStructure + BinaryAST (ratchet 4 -> 2) |
+| `a87ad44a1` | XtcEngine: compile(SourceUnit...) instead of compile(Map) |
+| `a9e7d58c0` | Side-effect-free toString: the two AMBIENT op-display roots |
+| `aade77699` | Remove array leaf template INSTANCE fields |
+| `ac339e9d4` | AST clone eradication 3/N: copy constructors for the Expression family |
+| `ac428aeca` | Enforce the container model: one root per runtime, everything else nested |
+| `b834d3353` | Update Lazy.ofOwner follow-up: API rides with PR #539 |
+| `be0270e0d` | Deprecate ambient current pool lookup |
+| `beecae682` | Display purity: land the enforcement ratchet + name/conformance rules |
+| `c66230c28` | Adopt master's reviewed Lazy.Bound (PR #539); replace branch Lazy.Owner |
+| `c93b5ad61` | Use file-owned diagnostics instead of current pool |
+| `cb91df6d1` | Add FrozenArray, the stage-3 shared-metadata representation |
+| `cd432c873` | Record the sealing campaign's designed end state |
+| `d2165e4f8` | Share freeze state across object views |
+| `d360c0033` | AST clone eradication 4/N: type expressions, Parameter, VersionOverride, EvalStatement |
+| `d58ebfea0` | Use receiver pool for folded numeric ranges |
+| `db4ae7900` | Default-deny view cloning of mutable handles |
+| `dc3e0d90d` | Name every message-less UnsupportedOperationException in the runtime |
+| `dc95e08e6` | Remove dead fInstance constructor flags |
+| `dd94d6425` | Share the lazy initialization guard across views |
+| `e36efeea0` | Should-fix #5 (1/2): read-only views for genuinely-live leaky getters |
+| `e78d7100b` | Should-fix #5 (2/2): asm map getters - inherent-freeze where possible |
+| `e856d85ce` | Require explicit pool for type substitutability |
+| `eaf3214d6` | Safely publish property metadata caches |
+| `f4df60ed1` | Refuse view cloning of Mutable arrays |
+| `f5d3e45eb` | Embedding API 2/N: Java host can create and run nested containers (the linchpin) |
