@@ -63,12 +63,21 @@ surface graduate into individual rows on the bug list.
 | E6 | AST clone eradication (`Cloneable` → copy constructors) | wide, mechanical | Medium | The AST node classes; parity-checked copy bridge | [clone-free-adoption-plan.md](clone-free-adoption-plan.md) |
 | E7 | Frozen shared metadata + refuse unsafe view cloning | wide | Medium-High | `TypeConstant`/`SignatureConstant` storage, handle view machinery | [xvm-memory-model-hygiene.md](xvm-memory-model-hygiene.md) |
 | E8 | Diagnostics: named exceptions, world X-ray, unified logging/JFR | additive | Low | Existing exception sites; JFR | [unified-logging-jfr-telemetry.md](unified-logging-jfr-telemetry.md) |
+| E9 | Constructor `this`-escape elimination + fatal lint | wide, local fixes | Low-Medium | master's own PR #539 precedent; javac lint | [lint-parallelism-risk-audit.md](../lint-parallelism-risk-audit.md) |
+| E10 | Switch-fallthrough gate + arrow-form migration | small | Low | javac lint | [lint-parallelism-risk-audit.md](../lint-parallelism-risk-audit.md) |
+| E11 | Retire stringly/cast-based dispatch (typed payloads, generics, nullness) | wide | Medium | the existing class trees; jetbrains annotations already on the classpath | [generics-api-audit.md](../generics-api-audit.md), [nullness-annotation-audit.md](../nullness-annotation-audit.md) |
+| E12 | The gates that make the rest verifiable (test infrastructure) | additive | Low | JUnit; the built XDK | (this file) |
 
-Recommended landing order: **E5 → E1 → E4 → E2 → E3 → E6/E7 → E8.** Rationale in
-each entry's "Ordering." E5 first because it is small, self-contained, and makes
-debugging every later slice safer; E3 last of the structural set because the
-freeze-on-publish half depends on the ambient-pool elimination half and benefits
-from E2's sealing.
+Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
+
+E12 (the gates) first because it is purely additive and makes every later slice
+judgeable by whether it keeps them green. E9/E10 next: both are small, and a lint that
+is fatal from the start prevents the regressions the later, wider slices could
+otherwise introduce. Then E5, which is self-contained and makes debugging everything
+after it safer. E2 and E11 are the two halves of the same idea (seal the hierarchies;
+give the payloads types) and are best landed adjacent. E3 comes last of the structural
+set because its freeze-on-publish half depends on the ambient-pool elimination half and
+benefits from E2's sealing.
 
 ---
 
@@ -469,6 +478,117 @@ plane layered over existing log sites — no refactor of the sites themselves.
 the structural enhancements.
 
 ---
+
+---
+
+## E9 — Constructor `this`-escape elimination, with the lint made fatal
+
+**What it is.** A constructor that calls an overridable method, or hands `this` to anything, lets a
+subclass (or another thread) observe a half-built object. This branch swept those out of the ASM and
+runtime construction paths and then **turned the compiler check on permanently**: the build adds
+`-Xlint:this-escape` unconditionally, so under `-Werror` a new escape fails the build.
+
+**Design flaw removed.** Partially-constructed objects escaping into overridable code or into shared
+state. The failure is a field that is null "impossibly", or a subclass hook running before its own
+fields exist — intermittent, and traced back to construction only with difficulty.
+
+**Relationship to master.** Master already fixed the *utility* classes (PR #539,
+"Fix concrete utility this-escape hazards"), which shows the concern is accepted. What master does
+NOT have is (a) the same treatment for the ASM/runtime constructors and (b) the lint itself. Compare
+`build-logic/common-plugins/src/main/kotlin/org.xtclang.build.java.gradle.kts`: this branch adds
+`-Xlint:this-escape` outside the `lintSnapshot` guard; master has no such line.
+
+**Width.** ~23 commits, but each site is small and local (extract a private helper, initialise fields
+directly, make the class final where nothing extends it).
+
+**Master port spec.** Land the lint LAST: fix the escapes first with the lint as a warning, then flip
+it on so it cannot regress. Worked example already ported: `VersionTree`'s constructors called the
+overridable `clear()`/`put()`/`putAll()`; they now initialise fields directly and use a private
+`putInternal`, with `AsmConstructorEscapeTest` pinning that a subclass's `clear()` is not called
+during construction.
+
+**Gate.** The lint itself, once fatal, is the gate; `AsmConstructorEscapeTest` covers the behavioural
+half.
+
+---
+
+## E10 — Switch-fallthrough gate, and arrow-form migration
+
+**What it is.** In Java an accidental missing `break` and a deliberate cascade are syntactically
+identical. This branch classified **every** fallthrough site in the composite build (84: 81 main + 3
+test), marked the intentional ones, fixed four missing markers, and then made `-Xlint:fallthrough`
+fatal — so a forgotten `break` now fails the build instantly. Arrow-form (`case X ->`) migration
+shrinks the remaining suppression list over time, because arrow form *cannot* fall through.
+
+**Design flaw removed.** A state machine that silently skips or repeats a stage. In runtime/compiler
+code those stages are owner-sensitive, so the corruption appears far from the missing `break`.
+
+**Width.** Small: two build-config lines plus the marker/annotation pass.
+
+**Master port spec.** Same order as E9 — classify and mark first (the reviewed suppressions are the
+documentation), then turn the lint fatal. Master has no `-Xlint:fallthrough` line at all.
+
+**Evidence it is honest, not cosmetic.** Re-verified 2026-08-28 by deleting all 55 suppressions and
+letting the fatal lint identify the real ones: **54 are genuine cascades, 1 was stale**. None of the
+54 switches on a sealed hierarchy — they are enums (`Composition` ×9, `Token.Id` ×5, `Format` ×3),
+state-machine stages, chars and Strings. So this is complementary to E2, not a subset of it: sealing
+fixes CLASS dispatch, this covers protocol machines over scalars.
+
+---
+
+## E11 — Retire stringly-typed and cast-based dispatch
+
+**What it is.** Dispatch decided by `String` comparison, by `instanceof` cascades over an untyped
+payload, or by casting `Object` and hoping — replaced with typed payloads (sealed unions, records)
+and real generics, so the compiler checks what the code previously asserted at runtime.
+
+**Design flaw removed.** This is the "Python in Java" complaint stated precisely: when a type
+distinction is expressed as a string or an `Object` cast, the compiler cannot prove the dispatch is
+complete or the payload well-formed, so a wrong branch is indistinguishable from a right one until it
+fails at runtime — often as a `ClassCastException` far from the decision.
+
+**Width.** ~17 commits. Notable: `MethodBody`'s target payload typed as a sealed union (which
+surfaced the hash/equality gap that became bug-list row 11), the `DefiningConstant` union conversion
+done at a file boundary to avoid a 150-call-site return-type change, and the format-switch retirement
+in `TerminalTypeConstant`.
+
+**Relationship to E2.** E2 seals the hierarchies so switches can be exhaustive; E11 is the other half
+— giving the *payloads* types so there is something meaningful to switch on. They are best landed
+adjacent, and both are bug-finding: the compile errors are the yield.
+
+**Also in scope: nullness annotations.** `org.jetbrains.annotations` is already a `compileOnly`
+dependency on master and used in a handful of places. The branch's position, worth stating: prefer
+making a value **total** over annotating it as nullable — a no-op implementation
+(`ErrorListener.BLACKHOLE`) or `Optional` for genuine absence removes the question, and `@NotNull`/
+`@Nullable` document what remains.
+
+---
+
+## E12 — The gates that make the rest verifiable
+
+**What it is.** The test infrastructure this branch built so the other enhancements could be landed
+with evidence rather than assertion. Portable independently of any of them, and arguably the safest
+thing to land on master first, because it is additive.
+
+| Gate | What it pins |
+|---|---|
+| `TypeComparisonCorpusTest` | interning identity, order-sensitive parameterized-type equality, `isA` relations, nullable widening — the properties a pool/type change could silently break |
+| `DisplayPurityTest` | static banned-callee scan of display bodies, with a baseline that must shrink (E5's ratchet) |
+| `DisplayPurityRuntimeTest` | EMPIRICAL purity: renders 100+ live objects and asserts the shared pool does not grow, **with a negative control** proving the instrument works |
+| `SharedPoolGrowthCharacterizationTest` | measures and PINS the shared-pool leak, flipping to assert-bounded when E3 Part B lands |
+| `AsmConstructorEscapeTest` | E9's behavioural half |
+| `DirRepositoryConcurrentScanTest` | the concurrent-scan race (bug row 27; PR #547) |
+| `FileStructureErrorListenerTest` | the ambient-pool NPE (bug row 29; PR #548) |
+| same-JVM sequential/nested stress harness | cross-container bleed, the E1 failure mode |
+
+**Why it matters as its own entry.** Two of these turned "we think this is a bug" into "here is a
+red test on master" (rows 27 and 29), and one (the negative control) exists specifically so a green
+result cannot be mistaken for a working instrument. A reviewer can adopt the gates without adopting
+any of the refactors, and then judge each refactor by whether it keeps them green.
+
+**Master port spec.** Each test is standalone; the two that need built XDK modules guard with
+`assumeTrue`, and must be fed modules the running JVM can parse (a `.xtc` from a different format
+version fails to parse and would make the test vacuously green).
 
 ## Notes on portability
 
