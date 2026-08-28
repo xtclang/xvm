@@ -114,6 +114,59 @@ category below is marked `must audit`, it becomes `must fix` as soon as a test,
 diagnostic, or code inspection proves owner sharing, cross-request reuse, or
 runtime publication.
 
+### 2026-08-28 sweep (post rebase-onto-master + display-purity campaign)
+
+Each claim below was re-verified against the tree, not carried over from the previous
+sweep. **The 2026-08-26 counts underneath this section are stale where they conflict.**
+
+- **MUST-AUDIT: 0 open.** MA1-MA5 all remain closed as audits; residues are parked to
+  the JIT rows (J21-J24), not open audits.
+- **MUST-FIX: 7 open, unchanged** — MF1 (injector deadlock, filed as master issue
+  #541, needs a wait-graph design, not a hunk); MF2-MF6 (the JIT cluster J21-J24,
+  unfiled AND unfixed, parked for the JIT rebase); MF7 (ConstantPool transactional /
+  freeze-on-publish rewrite = enhancement-list **E3 Part B**). None is a small hunk.
+- **SHOULD-FIX closed since the last sweep** (verified in-tree today):
+  - **Side-effect-free `toString`/display path — DONE.** This was parked "near the end
+    of the should queue"; the whole campaign landed, including the two enforcement
+    gates. `DisplayPurityTest` runs with an EMPTY baseline and
+    `DisplayPurityRuntimeTest` proves it empirically (pool does not grow while
+    rendering 100+ live objects; carries a negative control). See
+    `plans/side-effect-free-tostring.md`.
+  - **MA5's 8 leaky getters — DONE (8/8 verified fenced).** Includes the two that a
+    naive grep reports as live: `ModuleStructure.collectModuleDependencies` wraps at
+    its `return`, and `ConstantPool.getJitPrimitiveTypes` caches an already-
+    `unmodifiableSet` value.
+  - **MA4's 3 ambient `getCurrentContext()` readers — effectively closed.**
+    `Argument`/`OpVar` no longer read ambient context at all (they take an explicit
+    `Frame` in the forced overload); `Utils.log` no longer NPEs on a null ambient.
+  - **MA2's `markNative()` residual — half done.** `m_fNative` is now `volatile`
+    (`m_code` already was), closing the visibility pair.
+  - **DirRepository scan-cache race — DONE and PROVEN**, filed as master bug row 27
+    (red on master `82683bcd2` with `ConcurrentModificationException`, green here).
+  - **Array Stage 3 `ListMap`-getter remnant — appears closed**: no public
+    `ListMap`-typed getter remains on `TypeInfo*`/`ClassStructure` (the two surviving
+    `public ListMap<...>` returns are `MethodStructure.resolveTypeParameters` and
+    `ModuleInfo.classNodes`, neither of which is the flagged metadata-getter shape).
+- **SHOULD-FIX still open (actionable, small):**
+  - `markNative()`'s other half: refuse the transition once code exists (a
+    `forceAssembly`-shaped throw). Deferred because it is a BEHAVIOR change, unlike
+    the volatile.
+  - `Utils.log`'s real closure: thread `Frame`/`ServiceContext` explicitly instead of
+    the ambient fallback.
+  - Arrow-form switch migration remnant (the protocol machines kept as gated statement
+    switches by policy).
+  - Family C array deferral; the sealed-hierarchy `Op` split.
+- **New master bug filed today: row 28** — `MethodStructure` native/code state
+  published with no happens-before edge. Master is worse than this branch was: BOTH
+  `m_fNative` and `m_code` are non-volatile there AND `ensureCode()` lazy-inits
+  unsynchronized. Filed on JMM/inspection evidence (like rows 19/26) with an honest
+  no-deterministic-red statement.
+- **Documentation defect fixed:** the rebase rewrote all 297 branch commits, so every
+  hash cited in `plans/master-issue-submissions.md` and
+  `plans/master-enhancement-submissions.md` was dead. Both now carry a hash→subject
+  resolution appendix (subjects survive rebases) and a warning; all cited hashes are
+  covered and the branch subjects verified to resolve.
+
 ### 2026-08-26 reconciliation (post embedding-API)
 
 Backlog swept after the embedding-API wave shipped. Net state:
