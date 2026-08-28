@@ -193,6 +193,90 @@ sweep. **The 2026-08-26 counts underneath this section are stale where they conf
   resolution appendix (subjects survive rebases) and a warning; all cited hashes are
   covered and the branch subjects verified to resolve.
 
+### 2026-08-28 sweep B (clone retirement + stage-4 primitive escapes)
+
+Later the same day. Everything below was verified in-tree, not carried over.
+
+**CLOSED this wave:**
+
+- **Clone idiom retired repo-wide — DONE.** All 63 array `.clone()` sites in main
+  sources now route through `Handy.copyOf` (generic + byte/char/int/long overloads).
+  `Object.clone()` survives in exactly ONE place: `ObjectHandle.cloneAs`, the
+  documented island. The helper exists rather than inlining `Arrays.copyOf(x, x.length)`
+  for a load-bearing reason: it takes the array as a PARAMETER, so the argument is
+  evaluated once — inlining would double-call a method receiver (`getChain().clone()`)
+  and double-read a volatile field, where two reads can yield different arrays and
+  mis-size the copy. It is also the single line to edit if the mechanism must change back.
+- **Stage-4 primitive raw-array escapes — DONE (9/9).** `FrozenArray<T>` is generic and
+  cannot hold primitives, so nine escapes were unclosable AND invisible to the ratchet.
+  Added `FrozenByteArray`/`FrozenCharArray`/`FrozenIntArray` and closed all nine. Three
+  were pool-interned payloads whose hash is cached over their contents, so a consumer
+  writing through the alias could silently invalidate hash/equality for every holder.
+  `xString` handed out the `char[]` backing an Ecstasy String — and the crypto templates
+  passed that same array to Java `KeyStore` APIs, which may retain or zero it. See
+  `array-element-exposure-audit.md` (Stage 4 Candidate Survey).
+- **Escape ratchet raised 115 → 134, the ONE sanctioned raise**, with per-site
+  justification recorded in `FrozenArrayEscapeRatchetTest`'s javadoc. Read the increase
+  correctly: the metric became more honest, not the exposure worse. A raw `byte[]` getter
+  was an unbounded UNCOUNTED escape to every consumer; it is now a frozen payload with a
+  few counted zero-copy reads inside the class that owns it. Net exposure fell.
+- **New master bug: row 30 — `Version.isSameAs()` indexes the wrong array.** Found while
+  surveying `Version.getIntArray()` as a `FrozenIntArray` candidate. The remainder loop
+  selects the longer array into `remaining`, iterates to ITS length, then indexes
+  `thatInts` anyway. `"1.2.3".isSameAs("1.2")` throws `ArrayIndexOutOfBoundsException`
+  instead of returning false, and `"1.2.0".isSameAs("1.2")` throws instead of returning
+  true — so the trailing-zeros semantic the method exists to provide never works in that
+  direction. **FILED as PR #550** (one word + regression test), verified red on master.
+
+**NEW MUST-AUDIT: MA6 — `ObjectHandle` per-view field classification.**
+
+Retiring the last `Object.clone()` is NOT a copy-constructor job; see
+`objecthandle-clone-island-resolution.md` for why that would make things worse across a
+49-subclass hierarchy whose copy must be exhaustive. The real defect is that a shallow
+copy of a VIEW splits per-view state from shared storage — the freeze-split family.
+
+The audit: enumerate every field across the 49 `ObjectHandle` subclasses and classify each
+as (a) view-identity (`m_clazz`, overwritten by `cloneAs`), (b) deliberately shared
+reference, (c) immutable value, or (d) **per-view mutable state**. Category (d) is the bug
+list; each entry moves into a shared cell following the `FreezeCell`/`ArrayState` precedent.
+
+This becomes MUST-FIX for any category (d) field found, per this list's own rule. When (d)
+is empty the shallow copy is provably harmless, the island is proof-defended rather than
+convention-defended, and `supportsMutableViews()` default-deny becomes retirable with
+evidence. Two known starting entries, both needing verification rather than assumption:
+`GenericHandle.m_aFieldOverrides` (cloneAs copies the reference, so views share one override
+array — whether writes through one view should be visible through the other is unestablished)
+and `m_owner`.
+
+**NEW SHOULD-FIX: SF-Lazy — convert one-shot lazy-init fields to `final Lazy`, SCOPED.**
+
+Census: 49 `if (field == null) { … field = … } return field;` sites across 27 files. The
+naive reading — "these could all be `final Lazy`" — is wrong, and the disqualifiers are
+hard, not stylistic:
+
+1. **Reset/invalidated fields (8 sites): impossible.** A `final Lazy` cannot be cleared.
+   `Scope.m_scopeChild`, `LambdaExpression.m_lambda`, the `m_listContinues` family.
+   `ModuleStructure.m_abDigest` and `MethodStructure.resetRuntimeInfo` are the same shape.
+2. **Externally supplied values: does not fit.** `NativeContainer.m_hRootDir` is assigned
+   from a different method with a caller-supplied value; `Lazy` needs a self-contained
+   `Supplier`.
+3. **Not actually caches.** `Frame.m_continuation` is plain mutable state — a census false
+   positive. The 34 "never reset" figure is an upper bound and needs per-site reading.
+4. **Instance count is the deciding axis.** `Lazy` costs an object plus an internal
+   `AtomicReference` per field per instance. Fine on a `Container` (one per runtime); a
+   regression on `Op`, `Frame`, `Parameter`, or any handle. The tree already records this
+   judgement in `xString`: *"benign race can only compute the same value twice, while Lazy
+   would add two objects to every StringHandle."* Honour that precedent.
+5. **Reentrancy.** `Lazy.of` synchronizes, and type resolution is recursive (`MethodInfo`'s
+   own "turtles" comment). Recursive computes need `ofUnsynchronized`, or they risk
+   deadlock.
+
+**Therefore the scope is:** long-lived, low-cardinality owners only — containers, templates,
+module/file structures, pool-level caches — where the field is computed once from a
+self-contained supplier and never reset. Explicitly OUT of scope: anything on `Op`, `Frame`,
+`Parameter`, `ObjectHandle` subclasses, or per-`Constant` instances. Land incrementally, one
+owner class per slice, each with a test pinning compute-once. Not a sweep.
+
 ### 2026-08-26 reconciliation (post embedding-API)
 
 Backlog swept after the embedding-API wave shipped. Net state:
