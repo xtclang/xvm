@@ -1392,8 +1392,13 @@ public class FileStructure
     public ErrorListener getErrorListener() {
         ErrorListener errs = m_errs;
         if (errs == null) {
+            // getCurrentPool() is an AMBIENT thread-local: it is null on any thread that has not had
+            // a pool pushed onto it, which is every thread driving the compiler or runtime from
+            // ordinary Java code. Dereferencing it unconditionally turned this diagnostic accessor
+            // into an NPE source. Ownership belongs in a parameter, not a thread-local - see the PR
+            // discussion - but the null guard is the minimal, behaviour-preserving fix.
             ConstantPool poolCurrent = ConstantPool.getCurrentPool();
-            if (poolCurrent != m_pool) {
+            if (poolCurrent != null && poolCurrent != m_pool) {
                 errs = poolCurrent.getErrorListener();
             }
         }
