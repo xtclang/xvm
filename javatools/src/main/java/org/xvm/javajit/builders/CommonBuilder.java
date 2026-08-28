@@ -8,6 +8,8 @@ import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
+import java.lang.constant.DirectMethodHandleDesc.Kind;
+import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayList;
@@ -64,6 +66,7 @@ import org.xvm.javajit.registers.SingleSlot;
 import org.xvm.util.ByteHashCollector;
 import org.xvm.util.ShallowSizeOf;
 
+import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
@@ -629,9 +632,9 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
 
-        if (prop.isInjected() && prop.isConstant()) {
+        if (isContainerScoped(prop)) {
             // the generated class can be shared by containers, so store the computation means
-            classBuilder.withField(jitName, ConstantDescs.CD_MethodHandle, flags);
+            classBuilder.withField(jitName, CD_MethodHandle, flags);
             return;
         }
 
@@ -766,20 +769,35 @@ public class CommonBuilder
             for (PropertyInfo prop : props) {
                 if (prop.isInjected()) {
                     // compose the MethodHandle in <clinit>; the injected value is computed later
-                    // through Ctx.injectStatic() and cached by the container
+                    // through Ctx.getStatic() and cached by the container
                     String    jitName   = prop.getIdentity().ensureJitPropertyName(ts);
                     Injection injection = computeInjection(code, prop);
                     loadTypeConstant(code, injection.resourceType()); // resourceType
                     code.ldc(injection.resourceName());               // resourceName
                     injection.optsLoader.run();                       // opts
                     code.invokestatic(CD_Container, "createInjectionHandle",
-                                MethodTypeDesc.of(ConstantDescs.CD_MethodHandle,
+                                MethodTypeDesc.of(CD_MethodHandle,
                                         CD_TypeConstant, CD_JavaString, CD_JavaObject))
-                        .putstatic(CD_this, jitName, ConstantDescs.CD_MethodHandle);
+                        .putstatic(CD_this, jitName, CD_MethodHandle);
                     continue;
                 }
 
                 String jitName = prop.getIdentity().ensureJitPropertyName(ts);
+                if (isContainerScoped(prop)) {
+                    // store the initializer as a container-independent computation; its result can
+                    // be a service and therefore cannot be shared across containers using this class
+                    MethodConstant initId   = prop.getInitializer();
+                    String         initName = initId.ensureJitMethodName(ts);
+                    MethodBody     body     = new MethodBody((MethodStructure) initId.getComponent());
+                    JitMethodDesc  jmd      = body.getJitDesc(this, thisType);
+
+                    code.ldc(MethodHandleDesc.ofMethod(Kind.STATIC, CD_this, initName, jmd.standardMD))
+                        .invokestatic(CD_Container, "createInitializerHandle",
+                                MethodTypeDesc.of(CD_MethodHandle, CD_MethodHandle))
+                        .putstatic(CD_this, jitName, CD_MethodHandle);
+                    continue;
+                }
+
                 if (prop.getInitializer() == null) {
                     RegisterInfo reg = loadConstant(code, prop.getInitialValue());
                     if (reg instanceof ExtendedSlot extSlot) {
@@ -1043,8 +1061,8 @@ public class CommonBuilder
      * Assemble the property accessors for the "Impl" shape.
      */
     protected void assembleProperty(ClassBuilder classBuilder, PropertyInfo prop) {
-        if (prop.isInjected() && prop.isConstant()) {
-            // reads go directly through Ctx.injectStatic(); no property getter is required
+        if (isContainerScoped(prop)) {
+            // reads go directly through Ctx.getStatic(); no property getter is required
             return;
         }
 

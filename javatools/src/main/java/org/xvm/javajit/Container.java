@@ -83,9 +83,15 @@ public class Container
     public final long id;
 
     /**
-     * Values of static injected properties scoped to this Container.
+     * Static property values scoped to this Container.
      */
-    private final Map<MethodHandle, Object> staticInjections = new ConcurrentHashMap<>();
+    private final Map<MethodHandle, Object> staticValues = new ConcurrentHashMap<>();
+
+    /**
+     * Handle used to adapt a static property initializer by obtaining the current Ctx from its
+     * Container argument.
+     */
+    private static final MethodHandle GetCtx;
 
     /**
      * Handles used to compose: container -> container.injector.supplierOf(type, name).apply(opts)
@@ -136,14 +142,14 @@ public class Container
         ScopedValue.where(xvm.Current, new Ctx(xvm, this)).run(task);
     }
 
-    // ----- injection support ---------------------------------------------------------------------
+    // ----- static property support ---------------------------------------------------------------
 
     /**
-     * Obtain the value produced by the specified injection handle, computing it at most once for
+     * Obtain the value produced by the specified computation handle, computing it at most once for
      * this container. Every container uses the same handle to obtain and cache its own value.
      */
-    public Object computeInjection(MethodHandle injection) {
-        return staticInjections.computeIfAbsent(injection, handle -> {
+    public Object computeStatic(MethodHandle computation) {
+        return staticValues.computeIfAbsent(computation, handle -> {
             try {
                 return handle.invokeExact(this);
             } catch (RuntimeException | Error e) {
@@ -158,8 +164,8 @@ public class Container
      * Create a MethodHandle of type {@code (Container)Object} that computes an injected value as:
      * {@code container.injector.supplierOf(resourceType, resourceName).apply(opts)}.
      *
-     * The Container remains an argument rather than being bound into the handle, allowing the
-     * generated class containing the handle to be shared by multiple Containers.
+     * The container remains an argument rather than being bound into the handle, allowing the
+     * generated class containing the handle to be shared by multiple containers.
      *
      * This method is used by {@link org.xvm.javajit.builders.CommonBuilder#assembleCLInit}.
      */
@@ -171,6 +177,20 @@ public class Container
 
         MethodHandle apply = MethodHandles.insertArguments(Apply, 1, opts);
         return MethodHandles.filterArguments(apply, 0, supplier);
+    }
+
+    /**
+     * Create a MethodHandle of type {@code (Container)Object} that computes a call to the static
+     * property initializer "init" as {@code init(Ctx)}.
+     *
+     * The container remains an argument rather than being bound into the handle, allowing the
+     * generated class containing the handle to be shared by multiple containers.
+     *
+     * This method is used by {@link org.xvm.javajit.builders.CommonBuilder#assembleCLInit}.
+     */
+    public static MethodHandle createInitializerHandle(MethodHandle initializer) {
+        initializer = initializer.asType(MethodType.methodType(Object.class, Ctx.class));
+        return MethodHandles.filterArguments(initializer, 0, GetCtx);
     }
 
     // ----- LinkerContext interface ---------------------------------------------------------------
@@ -205,11 +225,16 @@ public class Container
     static {
         MethodHandles.Lookup lookup = MethodHandles.lookup();
         try {
+            MethodHandle getXvm = lookup.findGetter(Container.class, "xvm", Xvm.class);
+            MethodHandle getCtx = lookup.findVirtual(Xvm.class, "getCtx",
+                                        MethodType.methodType(Ctx.class));
+
+            GetCtx      = MethodHandles.filterArguments(getCtx, 0, getXvm);
             GetInjector = lookup.findGetter(Container.class, "injector", Injector.class);
             SupplierOf  = lookup.findVirtual(Injector.class, "supplierOf",
-                    MethodType.methodType(Function.class, TypeConstant.class, String.class));
+                                MethodType.methodType(Function.class, TypeConstant.class, String.class));
             Apply       = lookup.findVirtual(Function.class, "apply",
-                    MethodType.methodType(Object.class, Object.class));
+                                MethodType.methodType(Object.class, Object.class));
         } catch (NoSuchFieldException | NoSuchMethodException | IllegalAccessException e) {
             throw new ExceptionInInitializerError(e);
         }

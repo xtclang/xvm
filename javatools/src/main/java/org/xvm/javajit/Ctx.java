@@ -145,10 +145,10 @@ public final class Ctx {
     }
 
     /**
-     * Resolve a static injection, caching the resulting value for this context's container.
+     * Resolve a container-scoped static value, caching the result for this context's container.
      */
-    public Object injectStatic(MethodHandle injection) {
-        return container.computeInjection(injection);
+    public Object getStatic(MethodHandle computation) {
+        return container.computeStatic(computation);
     }
 
     public ByteHashCollector createHashCollector() {
@@ -169,6 +169,6 @@ public final class Ctx {
     public static final MethodTypeDesc MD_inject = MethodTypeDesc.of(
             CD_JavaObject, CD_TypeConstant, CD_JavaString, CD_JavaObject);
 
-    public static final MethodTypeDesc MD_injectStatic =
+    public static final MethodTypeDesc MD_getStatic =
             MethodTypeDesc.of(CD_JavaObject, CD_MethodHandle);
 }
