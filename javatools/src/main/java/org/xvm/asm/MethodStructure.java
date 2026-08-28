@@ -3247,7 +3247,12 @@ public final class MethodStructure
      * True iff the method has been marked as "native". This is not part of the persistent method
      * structure; it exists only to support the prototype interpreter implementation.
      */
-    private transient boolean m_fNative;
+    // volatile: markNative() flips this in a multi-step transition while another thread may be in
+    // getOps() -> ensureCode(). Without a happens-before edge that reader can observe the stale
+    // native=false together with a null m_code and die. m_code is already volatile; this closes the
+    // other half of the pair. (MA2 residual - the remaining half, refusing markNative() once code
+    // exists with a forceAssembly-shaped throw, is a behavior change and stays open.)
+    private transient volatile boolean m_fNative;
 
     /**
      * True iff the method has been marked as "transient". This is not part of the persistent method

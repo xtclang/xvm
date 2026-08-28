@@ -470,6 +470,10 @@ public abstract class Utils {
         long           lFiberId;
 
         if (frame == null) {
+            // no frame: fall back to the ambient context. This is the last ambient reader in the
+            // runtime (MA4); the real closure is to pass the Frame/ServiceContext explicitly, but
+            // until then the ambient lookup can legitimately return null (any thread with no fiber
+            // bound), and a DIAGNOSTIC must never take down its caller with an NPE.
             context  = ServiceContext.getCurrentContext();
             lFiberId = -1;
         } else {
@@ -477,8 +481,10 @@ public abstract class Utils {
             lFiberId = frame.f_fiber.getId();
         }
 
-        System.out.println(new Timestamp(context.f_container.currentTimeMillis())
-            + " " + context + ", fiber " + lFiberId + ": " + sMsg);
+        System.out.println((context == null
+                ? "<no context>"
+                : new Timestamp(context.f_container.currentTimeMillis()) + " " + context)
+            + ", fiber " + lFiberId + ": " + sMsg);
     }
 
 

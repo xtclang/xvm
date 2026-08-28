@@ -1884,21 +1884,58 @@ JVM can parse - master rejected the branch's `0.20260519` `.xtc` as
 
 **Dependencies/order:** Independent; single-file fix.
 
+## 28. MethodStructure native/code state is published without a happens-before edge
+
+**Issue title:** `MethodStructure.m_fNative` and `m_code` are non-volatile and
+`ensureCode()` lazy-initializes `m_code` unsynchronized, so a concurrent reader can
+observe a torn native/code state.
+
+**Status/category:** Data race provable by inspection (JMM), master-verbatim. Not
+reachable in a strictly single-threaded link-then-run sequence; reachable as soon as
+any second thread touches a `MethodStructure` while another marks it native or forces
+its code - i.e. concurrent compile/link, warm reuse, or a JIT/interpreter mix.
+
+**Explanation:** `markNative()` performs a multi-step transition (`setAbstract(false)`,
+`resetRuntimeInfo()`, then `m_fNative = true`, `m_fTransient = true`) over a plain
+non-volatile field. `ensureCode()` reads `isNative()`, then lazily creates `m_code`
+with a plain read/write pair. There is no happens-before edge on either field, so a
+racing reader can (a) observe the stale `native == false` together with a `m_code`
+that is still null and take the wrong branch, and (b) publish/observe a partially
+constructed `Code` object through the non-volatile field. `getOps()` turns the null
+case into a hard `IllegalStateException`.
+
+**Master evidence:** `origin/master:MethodStructure.java:3097`
+(`private transient Code m_code;` - non-volatile), `:3123`
+(`private transient boolean m_fNative;` - non-volatile), `markNative()` `:1149-1157`,
+`ensureCode()` `:593-602` (unsynchronized lazy init), `getOps()` `:637`.
+
+**Failure mode:** intermittent, non-reproducible `IllegalStateException` from
+`getOps()` ("Method ... has no code"), duplicate `Code` construction, or use of a
+partially published `Code` - all timing-dependent, and all of the "single crash dump,
+cannot reproduce" shape.
+
+**Minimal master-portable fix strategy:** make BOTH fields `volatile`
+(`m_fNative`, `m_code`); that alone gives the visibility edge and is behavior-neutral.
+Optionally follow with a double-checked/synchronized `ensureCode()` to also remove the
+duplicate-construction window. Note this branch already had `m_code` volatile and has
+now made `m_fNative` volatile too; master needs both. Unrelated but adjacent: master's
+`markNative()` still carries dead debug code (`int q= 0;` at `:1154`) that should go.
+
+**Tests to add/run on master:** no deterministic red is available - the transition runs
+at link time, so the racing window does not reliably overlap in a normal run. This row
+is filed on JMM/inspection evidence (like rows 19 and 26), with the fix being
+behavior-neutral and cheap. A probabilistic hammer (N threads calling `markNative()`
+against N threads calling `getOps()` on the same structure) reproduces it only under
+instrumentation/`-XX:+StressLCM`-style perturbation.
+
+**Dependencies/order:** Independent; two-word fix, no API change.
+
 ## Items intentionally not in the 18
 
 - Utility constructor this-escape fixes are listed in Category A but already
   extracted as PR #539.
-- `MethodStructure.markNative()` is a non-atomic transition over non-volatile
-  `m_fNative`/`m_code`, and `ensureCode()` lazy-inits `m_code` unsynchronized - a
-  genuine data race by inspection (`origin/master:MethodStructure.java:3097` and
-  `:3123` fields, `markNative` `:1148`, `ensureCode` `:593`; `markNative` even
-  still carries dead debug code `int q = 0;`). NOT filed as a quick hunk: unlike
-  #27 there is no DETERMINISTIC red - `markNative()` runs at link time, mostly
-  before concurrent runtime access, so the marking-vs-`getOps()` window does not
-  reliably overlap, and the `m_code` lazy-init race needs precise timing to
-  observably crash. Candidate only; would need an instrumented/stress harness (or
-  making the two fields volatile + synchronizing the lazy init defensively), not a
-  filable red-proof hunk.
+- (`MethodStructure` native/code visibility was previously parked here as
+  "candidate only"; it is now filed properly as row **28** below.)
 - Issue #541 is a genuine master bug, but the docs explicitly say it is not a
   Category A quick extraction. It needs a wait-graph design, not a hunk.
 - JIT generated owner-bearing statics are must-fix but parked for a JIT rebase.
