@@ -45,6 +45,36 @@ public class CallChain {
         f_aMethods = new MethodBody[] {new MethodBody(method)};
     }
 
+    // ----- chain access ---------------------------------------------------------------------------
+    //
+    // The chain stays a MethodBody[]: a depth-indexed super-call walk on the dispatch hot path is
+    // exactly what an array is for, and these accessors are trivially inlined. What the raw array did
+    // NOT give us is one place for the access rules - the head and the bounds check were open-coded
+    // at 28 sites, and inconsistently (getTop() guarded the empty chain; getProperty() did not, so it
+    // threw AIOOBE where the others returned null). Routing every access through two accessors fixes
+    // that, and means the storage could later become a FrozenArray by changing two methods rather
+    // than twenty-eight.
+
+    /**
+     * @return the first body in the chain, or null if the chain is empty
+     *
+     * <p>protected rather than private so the nested {@code FieldAccessChain} subclass inherits it;
+     * a private member is not inherited, and the subclass is static so it has no enclosing instance
+     * to fall back on.</p>
+     */
+    protected MethodBody head() {
+        return f_aMethods.length == 0 ? null : f_aMethods[0];
+    }
+
+    /**
+     * @param nDepth  the chain depth
+     *
+     * @return the body at that depth, or null if the depth is outside the chain
+     */
+    protected MethodBody bodyAt(int nDepth) {
+        return nDepth < 0 || nDepth >= f_aMethods.length ? null : f_aMethods[nDepth];
+    }
+
     /**
      * @return the chain depth
      */
@@ -67,8 +97,9 @@ public class CallChain {
             return m_FAtomic.booleanValue();
         }
 
-        if (f_aMethods.length > 0 && f_aMethods[0].getImplementation() == Implementation.Delegating) {
-            PropertyConstant  idDelegate   = f_aMethods[0].getPropertyConstant();
+        MethodBody bodyHead = head();
+        if (bodyHead != null && bodyHead.getImplementation() == Implementation.Delegating) {
+            PropertyConstant  idDelegate   = bodyHead.getPropertyConstant();
             PropertyStructure propDelegate = (PropertyStructure) idDelegate.getComponent();
             return m_FAtomic = propDelegate != null && propDelegate.isAtomic();
         }
@@ -80,8 +111,9 @@ public class CallChain {
      * @return the method at the specified depth
      */
     public MethodStructure getMethod(int nDepth) {
-        return nDepth < f_aMethods.length
-                ? f_aMethods[nDepth].getMethodStructure()
+        MethodBody bodyAtDepth = bodyAt(nDepth);
+        return bodyAtDepth != null
+                ? bodyAtDepth.getMethodStructure()
                 : null;
     }
 
@@ -89,9 +121,8 @@ public class CallChain {
      * @return the top method
      */
     public MethodStructure getTop() {
-        return f_aMethods.length == 0
-                ? null
-                : f_aMethods[0].getMethodStructure();
+        MethodBody bodyHead = head();
+        return bodyHead == null ? null : bodyHead.getMethodStructure();
     }
 
     /**
@@ -115,8 +146,8 @@ public class CallChain {
      * @return true iff the chain is native
      */
     public boolean isNative() {
-        return f_aMethods.length == 0 ||
-               f_aMethods[0].getImplementation() == Implementation.Native;
+        MethodBody bodyHead = head();
+        return bodyHead == null || bodyHead.getImplementation() == Implementation.Native;
     }
 
     /**
@@ -130,15 +161,20 @@ public class CallChain {
      * @return true iff the chain represents an explicit implementation
      */
     public boolean isExplicit() {
-        return f_aMethods.length > 0 &&
-               f_aMethods[0].getImplementation() == Implementation.Explicit;
+        MethodBody bodyHead = head();
+        return bodyHead != null && bodyHead.getImplementation() == Implementation.Explicit;
     }
 
     /**
      * @return the property this chain represents access to
      */
     public PropertyStructure getProperty() {
-        return (PropertyStructure) f_aMethods[0].getIdentity().getNamespace().getComponent();
+        // was an unguarded f_aMethods[0]: every other head access checks for the empty chain, so an
+        // empty one AIOOBE'd here rather than reporting the same "no such thing" the others do
+        MethodBody bodyHead = head();
+        return bodyHead == null
+                ? null
+                : (PropertyStructure) bodyHead.getIdentity().getNamespace().getComponent();
     }
 
     /**
@@ -266,12 +302,13 @@ public class CallChain {
      */
     public int callSuper01(Frame frame, int iReturn) {
         int nDepth = frame.m_nChainDepth + 1;
-        if (nDepth >= f_aMethods.length) {
+        MethodBody bodySuperCheck = bodyAt(nDepth);
+        if (bodySuperCheck == null) {
             return missingSuper(frame);
         }
 
         ObjectHandle hThis     = frame.getThis();
-        MethodBody   bodySuper = f_aMethods[nDepth];
+        MethodBody   bodySuper = bodySuperCheck;
 
         switch (bodySuper.getImplementation()) {
         case Field:
@@ -333,12 +370,13 @@ public class CallChain {
      */
     public int callSuper11(Frame frame, ObjectHandle hArg, int iReturn) {
         int nDepth = frame.m_nChainDepth + 1;
-        if (nDepth >= f_aMethods.length) {
+        MethodBody bodySuperCheck = bodyAt(nDepth);
+        if (bodySuperCheck == null) {
             return missingSuper(frame);
         }
 
         ObjectHandle hThis     = frame.getThis();
-        MethodBody   bodySuper = f_aMethods[nDepth];
+        MethodBody   bodySuper = bodySuperCheck;
 
         switch (bodySuper.getImplementation()) {
         case Field:
@@ -396,12 +434,13 @@ public class CallChain {
      */
     public int callSuperN1(Frame frame, ObjectHandle[] ahArg, int iReturn, boolean fReturnTuple) {
         int nDepth = frame.m_nChainDepth + 1;
-        if (nDepth >= f_aMethods.length) {
+        MethodBody bodySuperCheck = bodyAt(nDepth);
+        if (bodySuperCheck == null) {
             return missingSuper(frame);
         }
 
         ObjectHandle    hThis       = frame.getThis();
-        MethodBody      bodySuper   = f_aMethods[nDepth];
+        MethodBody      bodySuper   = bodySuperCheck;
         MethodStructure methodSuper = bodySuper.getMethodStructure();
 
         switch (bodySuper.getImplementation()) {
@@ -464,12 +503,13 @@ public class CallChain {
      */
     public int callSuperNN(Frame frame, ObjectHandle[] ahArg, int[] aiReturn) {
         int nDepth = frame.m_nChainDepth + 1;
-        if (nDepth >= f_aMethods.length) {
+        MethodBody bodySuperCheck = bodyAt(nDepth);
+        if (bodySuperCheck == null) {
             return missingSuper(frame);
         }
 
         ObjectHandle    hThis       = frame.getThis();
-        MethodBody      bodySuper   = f_aMethods[nDepth];
+        MethodBody      bodySuper   = bodySuperCheck;
         MethodStructure methodSuper = bodySuper.getMethodStructure();
 
         switch (bodySuper.getImplementation()) {
@@ -518,7 +558,7 @@ public class CallChain {
      * Raise a "missing super" exception.
      */
     private int missingSuper(Frame frame) {
-        SignatureConstant sig = f_aMethods[0].getSignature().removeAutoNarrowing();
+        SignatureConstant sig = head().getSignature().removeAutoNarrowing();
 
         return frame.raiseException(xException.makeHandle(frame,
             "Missing super() implementation for \"" + sig.getValueString() +
@@ -544,7 +584,7 @@ public class CallChain {
         @Override
         public int invoke(Frame frame, ObjectHandle hTarget, int iReturn) {
             return hTarget.getTemplate().getFieldValue(frame, hTarget,
-                f_aMethods[0].getPropertyConstant(), iReturn);
+                head().getPropertyConstant(), iReturn);
         }
 
         @Override
@@ -552,7 +592,7 @@ public class CallChain {
             assert iReturn == Op.A_IGNORE;
 
             return hTarget.getTemplate().setFieldValue(frame, hTarget,
-                f_aMethods[0].getPropertyConstant(), hArg);
+                head().getPropertyConstant(), hArg);
         }
 
         @Override
@@ -560,7 +600,7 @@ public class CallChain {
             assert ahArg.length > 1 && iReturn == Op.A_IGNORE;
 
             return hTarget.getTemplate().setFieldValue(frame, hTarget,
-                f_aMethods[0].getPropertyConstant(), ahArg[0]);
+                head().getPropertyConstant(), ahArg[0]);
         }
 
         @Override
@@ -750,7 +790,7 @@ public class CallChain {
     public String toString() {
         return f_aMethods.length == 0
             ? "empty"
-            : f_aMethods[0].getIdentity().getSignature().getValueString() +
+            : head().getIdentity().getSignature().getValueString() +
                 (isNative()
                     ? "; native"
                     : "; depth=" + getDepth());
