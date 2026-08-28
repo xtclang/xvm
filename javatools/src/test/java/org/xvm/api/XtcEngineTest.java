@@ -80,9 +80,63 @@ public class XtcEngineTest {
             assertNotNull(control.whenStarted());
             assertTrue(control.whenStopped().isPresent(), "a finished run has a stop time");
             assertTrue(control.error().isEmpty(), () -> "run failed: " + control.error());
-            // KNOWN GAP (tracked): the module's Int run() value does not reach the host - the
-            // completion tuple comes back EMPTY, so result() is empty. Compile + run + completion
-            // all work; only the return-value plumbing in Container.runModule is unfinished.
+            assertEquals(42L, control.result().orElseThrow(),
+                    "the module's Int run() result must reach the host");
+        }
+    }
+
+    /**
+     * The run-completion future must carry the module's actual {@code run()} return value.
+     * Regression guard for two distinct defects fixed together: {@code callLater} hardcodes
+     * {@code cReturns = 0} (so the future completed with an EMPTY tuple), and the native
+     * instantiate-and-run op ignored the caller-designated return slot in favour of the stack
+     * (so even with a return requested, the value landed where the future never reads).
+     */
+    @Test
+    public void theRunResultReachesTheHost() throws Exception {
+        try (XtcEngine engine = engine()) {
+            for (long expected : new long[] {0L, 1L, 42L, 1234567890123L}) {
+                String name = "Ret" + expected;
+                var result = engine.compile(name,
+                        "module " + name + " {\n"
+                      + "    Int run() {\n"
+                      + "        return " + expected + ";\n"
+                      + "    }\n"
+                      + "}\n");
+                assertTrue(result.isSuccess(), () -> "compile failed: " + result.diagnostics());
+
+                var control = engine.start(result, name);
+                control.completion().get(60, TimeUnit.SECONDS);
+
+                assertTrue(control.error().isEmpty(), () -> "run failed: " + control.error());
+                assertEquals(expected, control.result().orElseThrow(),
+                        "the exact Int returned by run() must reach the host");
+            }
+        }
+    }
+
+    /**
+     * A void run() must complete cleanly and report NO result - "returned nothing" must not be
+     * confused with "failed".
+     */
+    @Test
+    public void aVoidRunCompletesWithNoResult() throws Exception {
+        try (XtcEngine engine = engine()) {
+            var result = engine.compile("VoidPoc",
+                    "module VoidPoc {\n"
+                  + "    void run() {\n"
+                  + "        @Inject Console console;\n"
+                  + "        console.print(\"void run executed\");\n"
+                  + "    }\n"
+                  + "}\n");
+            assertTrue(result.isSuccess(), () -> "compile failed: " + result.diagnostics());
+
+            var control = engine.start(result, "VoidPoc");
+            control.completion().get(60, TimeUnit.SECONDS);
+
+            assertTrue(control.error().isEmpty(), () -> "run failed: " + control.error());
+            assertFalse(control.running(), "the run should have finished");
+            assertTrue(control.result().isEmpty(), "a void run() reports no result");
         }
     }
 
@@ -133,7 +187,8 @@ public class XtcEngineTest {
                 control.completion().get(60, TimeUnit.SECONDS);
                 assertTrue(control.error().isEmpty(),
                         () -> "warm run " + name + " failed: " + control.error());
-                assertFalse(control.running(), "each warm run must finish");
+                assertEquals((long) i, control.result().orElseThrow(),
+                        "each warm run must return its own result");
             }
         }
     }

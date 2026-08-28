@@ -147,7 +147,10 @@ public abstract class Container
         FunctionHandle hInstantiateAndRun = new xRTFunction.NativeFunctionHandle((frame, ah, iRet) -> {
             SingletonConstant idSingleton = frame.poolContext().ensureSingletonConstConstant(idModule);
             ObjectHandle      hModule     = frame.getConstHandle(idSingleton);
-            int               iReturn     = fReturn ? Op.A_STACK : Op.A_IGNORE;
+            // Return into the slot the CALLER designated (iRet), not the stack: the service entry
+            // frame completes the future from f_ahVar[0], so a hardcoded A_STACK would push the
+            // result somewhere the future never reads and the caller would see an empty result.
+            int               iReturn     = fReturn ? iRet : Op.A_IGNORE;
 
             Frame.Continuation invoke = frameCaller -> {
                 ObjectHandle target = frameCaller.popStack();
@@ -163,7 +166,10 @@ public abstract class Container
             return invoke.proceed(frame);
         });
 
-        return ctx.callLater(hInstantiateAndRun, Utils.OBJECTS_NONE);
+        // NOT callLater(...): that hardcodes cReturns=0, so the future would complete with an EMPTY
+        // tuple and the module's run() result would be dropped. Ask for the return value the method
+        // actually declares, so an embedding host can read the exit code.
+        return ctx.postRequest(null, hInstantiateAndRun, Utils.OBJECTS_NONE, fReturn ? 1 : 0);
     }
 
     /**

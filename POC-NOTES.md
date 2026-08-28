@@ -24,6 +24,7 @@ green. (Run them SEPARATELY; in one invocation the test's module reads race inst
 | `Container` | add `runModule(String, ObjectHandle...)` returning the completion future |
 | `NestedContainer` | add `createForHost(...)`; add a parent injection fallback **only** for host containers (`f_hProvider == null`), else a host-run module gets no `Console` |
 | `FileStructure` | **master bug fix** — see below |
+| `DirRepository` | **master bug fix** — synchronize the scan cache (see below) |
 | `api/XtcEngine.java` | new: the engine itself (compile pipeline + run + `RunControl` + JFR events) |
 
 Deliberately NOT lifted from the reference branch: pool-publication fencing
@@ -49,13 +50,26 @@ consult an ambient thread-local — this is a concrete instance of the ambient-o
 **Worth filing as a master bug**: the reproduction is simply "call the embedding API from a Java
 thread", and `XtcEngineTest` is the red proof.
 
+## Second master bug fixed here: `DirRepository` scan cache is not thread-safe
+
+`loadModule`/`getModuleNames`/`storeModule` were unsynchronized over a plain `HashMap` (a non-final
+field reassigned wholesale) and a plain `TreeMap` (rebuilt with `clear()` + a `put()` loop). Two
+parallel compiles resolving library modules race those rebuilds against `get()` and against the live
+`keySet()` view `getModuleNames()` returns - proven red on master with a
+`ConcurrentModificationException` by `DirRepositoryConcurrentScanTest`, which is included here and
+now passes.
+
+This is **the last remaining blocker for parallel compiles**: the other one the audit identified,
+the static compiler counters, is already fixed on master by #538 (all four are `AtomicInteger`).
+
 ## Known gaps (to address after review)
 
-1. **A module's `run()` return value does not reach the host.** The completion future yields the
-   invocation's return TUPLE, and that tuple comes back EMPTY even for `Int run() { return 42; }`.
-   `RunControl.result()` therefore returns empty. Compile, run, and completion all work; only the
-   return-value plumbing in `Container.runModule` is unfinished. `result()` already unwraps a
-   `TupleHandle` correctly once the value is populated.
+1. ~~A module's `run()` return value does not reach the host.~~ **FIXED** - two distinct defects,
+   both now covered by tests: `callLater` hardcodes `cReturns = 0`, so the future completed with an
+   EMPTY tuple (`runModule` now calls `postRequest(..., fReturn ? 1 : 0)` directly); and the native
+   instantiate-and-run op ignored the caller-designated return slot in favour of `A_STACK`, so even
+   with a return requested the value landed where the future never reads (it now returns into
+   `iRet`).
 2. **`RunControl.kill()` does not force-unwind a running fiber.** It cancels the caller's wait and
    releases the container; real cancellation needs `Container.terminate(ServiceContext)` wired to a
    cooperative check.
