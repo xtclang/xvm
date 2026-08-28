@@ -12,6 +12,7 @@ package propertyInitTests {
         testMethodResultProperty();
         testDefaultProperty();
         testNullablePropertyTarget();
+        testStaticServiceProperty();
     }
 
     void testSimple() {
@@ -99,6 +100,27 @@ package propertyInitTests {
 
         assert read(new Test("set")) == "set";
         assert read(Null) == Null;
+    }
+
+    void testStaticServiceProperty() {
+        assert Test.counter.next() == 1;
+        assert Test.counter.next() == 2;
+
+        class Test {
+            static Counter counter = new CounterService();
+        }
+    }
+
+    interface Counter {
+        Int next();
+    }
+
+    service CounterService
+            implements Counter {
+        Int count;
+
+        @Override
+        Int next() = ++count;
     }
 
     class Test() {

@@ -329,7 +329,7 @@ public abstract class Builder {
                 TypeConstant propType  = singleton.getType();
                 JitTypeDesc  jtd       = propType.getJitDesc(this);
 
-                if (propInfo.isInjected()) {
+                if (isContainerScoped(propInfo)) {
                     assert !jtd.flavor.isOptimized;
 
                     // instead of holding the value, the field contains a container-independent
@@ -337,7 +337,7 @@ public abstract class Builder {
                     code.aload(bctx.ctxSlot(code))
                         .getstatic(ensureClassDesc(ownerType),
                                 propId.ensureJitPropertyName(typeSystem), CD_MethodHandle)
-                        .invokevirtual(CD_Ctx, "injectStatic", Ctx.MD_injectStatic);
+                        .invokevirtual(CD_Ctx, "getStatic", Ctx.MD_getStatic);
                     code.checkcast(jtd.cd);
                     return new SingleSlot(propType, jtd.flavor, jtd.cd, "");
                 }
@@ -608,6 +608,20 @@ public abstract class Builder {
         }
 
         throw new UnsupportedOperationException(constant.toString());
+    }
+
+    /**
+     * Determine whether the value of the specified static property must be scoped to a Container.
+     * An injected value is always container-specific. An initializer can produce either a const or
+     * a service; unless its declared type guarantees a const result, the value must be assumed to be
+     * a service and initialized separately for each Container.
+     *
+     * @return true iff the static field holds a computation handle instead of the property value
+     */
+    protected boolean isContainerScoped(PropertyInfo prop) {
+        return prop.isConstant() &&
+                (prop.isInjected() ||
+                 prop.getInitializer() != null && !prop.getType().isConst());
     }
 
     private SingleSlot loadUInt8Array(BuildContext bctx, CodeBuilder code,
