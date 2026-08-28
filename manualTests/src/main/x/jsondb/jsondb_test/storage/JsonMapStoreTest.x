@@ -521,4 +521,136 @@ class JsonMapStoreTest {
             }
         }
     }
+
+    /**
+     * Regression test for a `keys.size == size` desync in `JsonMapStore` -- distinct from the
+     * (fixed) `keysAt()` merge-ordering bug above.
+     *
+     * When the store grew from the Small to the Medium model, both the `commit()` and the
+     * `retainTx()` transition paths rewrote history entries to the `OffHeap` marker
+     * *unconditionally* -- including `Deleted` tombstones. Since `OffHeap != Deleted`, every
+     * previously-removed key became visible to `keysAt()` again, while `sizeAt()` (which
+     * tracks `sizeByTx`) still correctly excluded it, so `keysAt()`'s `assert keys.size ==
+     * size` failed and the store stayed desynced (`keysAt() > sizeAt()` by the number of
+     * resurrected tombstones).
+     *
+     * Seen in the field on the hottest DBMap as `"keys.size == size": keys.size=296,
+     * size=284` in an accumulated `--jsondb` run (durable log and `sizeByTx` agreed at 284;
+     * `history` reported 12 extra live entries -- resurrected deletes).
+     *
+     * Several `Client`s drive overlapping insert/delete/rollback transactions against one
+     * store (with the model thresholds injected low, so it crosses to Medium mid-run) while
+     * a reader repeatedly checks, inside a single read transaction, that `mapData.size`
+     * equals the iterated key count; `keysAt()`'s own internal assertion also surfaces here.
+     */
+    @Test
+    @TestInjectables(Map:[JsonMapStore.ConfigSmallModelMaxFiles ="10",
+                          JsonMapStore.ConfigMediumModelMaxFiles ="2000000",
+                          JsonMapStore.ConfigSmallModelMaxBytes  ="200000000",
+                          JsonMapStore.ConfigMediumModelMaxBytes ="400000000"])
+    void shouldKeepSizeAndKeysConsistentUnderConcurrentTransactions() {
+        assert TestClient boot := clientProvider.getClient();
+        jsondb.Catalog<TestSchema> catalog = boot.catalog;
+        TestSchema                 schema  = boot.testSchema;
+
+        // >10 distinct key-files => store transitions Small -> Medium, so values go
+        // off-heap and prepare()/keysAt() must loadValueFromOffHeap() (a real await).
+        Int seedCount = 40;
+        for (Int i : 0 ..< seedCount) {
+            schema.mapData.put($"seed-{i}", "s");
+        }
+        assert schema.mapData.size == seedCount;
+
+        Int writerCount    = 6;
+        Int itersPerWriter = 30;
+        Int keysPerTx      = 4;
+
+        TxWorker[] writers = new TxWorker[writerCount]
+                (i -> new TxWorker(catalog.createClient().as(TestClient), i));
+        TxWorker sampler = new TxWorker(catalog.createClient().as(TestClient), 99);
+
+        @Future Int       badSamples = sampler.checkParity(400);
+        @Volatile Int     finished   = 0;
+        @Future   Tuple<> writersDone;
+        for (Int i : 0 ..< writerCount) {
+            @Future Int c = writers[i].runWrites(itersPerWriter, keysPerTx);
+            &c.whenComplete((n, e) -> {
+                if (++finished == writerCount) { &writersDone.set(()); }
+            });
+        }
+
+        Tuple<> joined = writersDone;
+        Int     bad    = badSamples;
+
+        Int finalSize = schema.mapData.size;
+        Int finalKeys = schema.mapData.keys.toArray().size;
+        assert finalKeys == finalSize
+                as $"final size/keys desynced: size={finalSize} keys={finalKeys}";
+        assert bad == 0
+                as $"sizeAt()/keysAt() disagreed on {bad} of 400 in-flight reads";
+    }
+
+/**
+ * Drives its own `Client` so several instances hit one `JsonMapStore` concurrently.
+ */
+static service TxWorker {
+    construct(TestClient client, Int id) {
+        this.client = client;
+        this.id     = id;
+    }
+
+    private TestClient client;
+    private Int        id;
+
+    /**
+     * `iterations` transactions: each inserts `keysPerTx` fresh keys and (from iteration 2 on)
+     * deletes 2 keys committed 2 iterations earlier. Every 3rd transaction rolls back.
+     * Returns the net committed key count.
+     */
+    Int runWrites(Int iterations, Int keysPerTx) {
+        Connection<TestSchema> conn   = client.ensureConnection();
+        TestSchema             schema = client.testSchema;
+        Int committed = 0;
+        for (Int i : 0 ..< iterations) {
+            Boolean roll = (i % 3) == 2;
+            using (val tx = conn.createTransaction()) {
+                for (Int j : 0 ..< keysPerTx) {
+                    schema.mapData.put($"w{id}-{i}-{j}", "v");
+                }
+                if (i >= 2) {
+                    schema.mapData.remove($"w{id}-{i-2}-0");
+                    schema.mapData.remove($"w{id}-{i-2}-1");
+                }
+                if (roll) {
+                    tx.rollbackOnly = True;
+                }
+            }
+            if (!roll) {
+                committed += (i >= 2 ? keysPerTx - 2 : keysPerTx);
+            }
+        }
+        return committed;
+    }
+
+    /**
+     * `samples` times: inside one read transaction (single read view), compare `mapData.size`
+     * (→ `sizeAt`) with the iterated key count (→ `keysAt`). Returns the mismatch count;
+     * `keysAt()`'s internal `assert keys.size == size` throws straight out if tripped.
+     */
+    Int checkParity(Int samples) {
+        Connection<TestSchema> conn   = client.ensureConnection();
+        TestSchema             schema = client.testSchema;
+        Int bad = 0;
+        for (Int i : 0 ..< samples) {
+            using (conn.createTransaction()) {
+                Int kc = schema.mapData.keys.toArray().size;
+                Int sz = schema.mapData.size;
+                if (kc != sz) {
+                    ++bad;
+                }
+            }
+        }
+        return bad;
+    }
+}
 }
