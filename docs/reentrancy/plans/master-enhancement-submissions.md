@@ -14,6 +14,13 @@ This is a planning document only. Nothing here is filed; nothing is pushed. Each
 enhancement lands as its own reviewed slice (or sequence of slices), independent
 of adopting the whole branch.
 
+> **⚠️ Commit hashes below are PRE-REBASE and no longer resolve.** On 2026-08-28 this branch was
+> rebased onto `origin/master` `82683bcd2`, which rewrote all 297 commits. Cite-by-**subject** is
+> therefore authoritative here, not cite-by-hash: resolve any commit named below with
+> `git log --oneline --all --grep '<subject>'`, or `git log --oneline master..HEAD` to list the
+> current branch history. The hashes are retained only as a stable record of WHICH change is meant
+> (they still resolve in the pre-rebase reflog / the `backup/pre-rebase-master` tag).
+
 Baseline for source references: `origin/master` `82683bcd2` (advanced from
 `61e555a68` on 2026-08-27 by PR #377 (LSP/IntelliJ/VS Code support) and PR #539
 (`cc183520c`, "Fix concrete utility this-escape hazards" — which is where the
@@ -109,22 +116,42 @@ made the cross-container bleed reproducible.
 
 ## E2 — Seal the hierarchies and make dispatch exhaustive
 
-**What it is.** Master models its core trees (`TypeConstant`, `IdentityConstant`
-/`ValueConstant`, `Component`, `BinaryAST`, the composition subtree, the parser
-AST, `MethodBody`'s target payload, `RegisterInfo`) as open class hierarchies and
-dispatches over them with instanceof trees and `switch` statements that carry a
-silent `default`. This branch made every such tree `sealed ... permits` and
-converted the dispatch sites to **exhaustive pattern switches**, then gated switch
-fallthrough as a build error.
+**The two headline trees are the ConstantPool's constant hierarchy and the AST nodes.**
+
+- **ConstantPool constants** — `TypeConstant` and its ~20 subtypes, plus
+  `IdentityConstant`/`ValueConstant` and the condition/pseudo/frame-dependent families. This is the
+  structure everything else in the compiler and runtime dispatches over, and the one the audit calls
+  the most brittle on master (see [constant-pool-state-audit.md](../constant-pool-state-audit.md)).
+- **AST nodes** — the `BinaryAST` tree (plus closing the `NodeType` factory) and the parser AST.
+
+Also covered: `Component`, the composition subtree, `MethodBody`'s target payload, `RegisterInfo`.
+
+**What it is.** Master models all of those as OPEN class hierarchies and dispatches over them with
+instanceof trees and `switch` statements carrying a silent `default`. This branch made every such
+tree `sealed ... permits` and converted the dispatch sites to **exhaustive pattern switches**, then
+gated switch fallthrough as a build error.
 
 **Design flaw removed.** "Python in Java": promoting every type distinction to a
 runtime cast + instanceof/`default` means the compiler cannot prove a dispatch is
 complete. A newly-added subtype, or a case the author forgot, compiles cleanly and
 fails (or silently mis-handles) at runtime. **Sealing + exhaustive switches turn
 every such gap into a compile error** — and turning them on **surfaces the
-incompleteness bugs that were already there**. That is the high-value part: the
-missing cases the compiler now flags become concrete fixes (several graduated onto
-the bug list).
+incompleteness bugs that were already there**. That is the high-value part.
+
+**Incompleteness this actually surfaced** (the evidence a reviewer should weigh — these are master
+defects found BY the conversion, not invented by it):
+
+| Surfaced defect | Became |
+|---|---|
+| `ConstantPool.f_implicits` is a plain `HashMap` written from concurrent service threads (verbatim on master) | bug-list row **19** — implicit-identity cache written from concurrent service threads |
+| Delegation synthesis publishes method code BEFORE assembly (`publish` at master `:2958`/`:3009` vs assembly at `:2980`/`:3135`) | bug-list row **20** — delegation synthesis publishes half-built method code |
+| `MethodBody`'s untyped target payload had no coherent hash/equality contract until it was typed as a sealed union | part of bug-list row **11** — hash/equality contracts |
+| Silent-`default` identity dispatch sites that never handled several real subtypes | fixed in-place by the conversion waves ("retire the remaining silent-default identity dispatch sites"; "close the last three non-sealed hatches") |
+
+Each of those was invisible to the instanceof/`default` style precisely because a missing case is
+indistinguishable from a deliberate fall-through. Expect the same on master: **the port's yield is
+the compile errors**, and each one should be triaged as a potential bug rather than silenced with a
+`default`.
 
 **Width.** Very wide — every subtype declaration gains a `permits`, every dispatch
 site becomes a pattern switch. But it is compiler-guided and mechanical: you
@@ -133,18 +160,23 @@ cannot miss a site, because the build fails until each is exhaustive.
 **Master port spec.**
 1. Confirm master's Java level supports `sealed` + pattern switch (JEP 409/441).
    It does; no toolchain change.
-2. Port in the branch's wave order, one tree per slice, each independently
-   reviewable: `TypeConstant` (`298067019`), `IdentityConstant`/`ValueConstant`
-   (`cace6570a`), `Component` (`07ed937b3`), `BinaryAST` + close the `NodeType`
-   factory (`dc39387bd`), condition/pseudo/frame-dependent/`TypeInfo` families
-   (`e59d4f82d`), the composition subtree (`6ba9dc8a2`), the parser AST
-   (`2ac9c107c`), `MethodBody` sealed union (`63bf6713a`), `RegisterInfo` +
-   exhaustive JIT null-dispatch (`b9b0c48cf`).
-3. Convert the dispatch sites in lockstep: `78111b85f`, `4ce7e6942` (planCodeGen),
-   `10e246135` (assert-guarded cascades → checked pattern switches), `10ba2869d`
-   (relation-calculus format switches), `ab5788584` (last non-sealed hatches).
-4. Land the guard last: gate switch fallthrough as a build error (`1b19e4d9f`).
-   Until then it stays a warning so slices can land incrementally.
+2. Port in the branch's wave order, one tree per slice, each independently reviewable. Commits are
+   named by SUBJECT (the rebase rewrote all hashes — resolve with
+   `git log --oneline --all --grep '<subject>'`):
+   *"Seal the TypeConstant tree"* → *"Seal the IdentityConstant and ValueConstant trees"* →
+   *"Seal the Component tree"* → *"Seal the BinaryAST tree and close the NodeType factory"* →
+   *"Seal condition, pseudo, frame-dependent, and TypeInfo families"* →
+   *"Seal the delegating composition subtree; finalize composition leaves"* →
+   *"Seal-convert wave E: the parser AST tree"* →
+   *"Type the MethodBody target payload as a sealed union"* →
+   *"Seal RegisterInfo and make the JIT null-check dispatch exhaustive"*.
+3. Convert the dispatch sites in lockstep: *"Replace silent-default dispatch with exhaustive pattern
+   switches"*, *"Make planCodeGen exhaustive over the defining-constant union"*, *"Convert
+   assert-guarded cascades to checked pattern switches"*, *"Retire the relation-calculus format
+   switches too"*, *"Retire the remaining silent-default identity dispatch sites"*, *"Close the last
+   three non-sealed hatches"*.
+4. Land the guard last: *"Gate switch fallthrough as a build error"*. Until then it stays a warning
+   so slices can land incrementally.
 5. **Each missing case the compiler flags is a bug** — file it on the bug list
    with its own red proof rather than papering it with a `default`.
 
