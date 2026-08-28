@@ -502,6 +502,19 @@ so the decision is not silently re-litigated:
   genuinely safe on a `FrozenArray` and is not safe on a raw array. All 10
   consumers are verified read-only, so this is defense-in-depth, not a live bug
   — which is why it stays deferred, with the escape ratchet standing in.
+- `PropertyInfo.m_aBody` is `MethodInfo`'s **twin** (already `final`, one write,
+  5 read-only consumers, no lazy cache) and is the only trivial conversion left
+  in the whole codebase. If Family C is ever resumed, the two land together.
+- **Two known gaps in `FrozenArray` itself**, both recorded in the stage-4 survey
+  in [array-element-exposure-audit.md](../array-element-exposure-audit.md):
+  (a) it is generic, so **9 primitive-array escapes are unclosable and invisible
+  to the ratchet** — proposed fix is `FrozenByteArray`/`FrozenCharArray`/
+  `FrozenIntArray`, three of which would close `ConstantPool`-interned constants
+  and two of which would *remove* a per-call defensive clone; and (b) the seven
+  `MethodStructure`/`Annotation`/`Parameter` array fields are non-final for
+  load-bearing protocol reasons (two-phase disassembly, `registerConstants`
+  in-place rewriting, clone-then-owner-fixup) that tie them to **E3/E6/E9**
+  rather than to E7.
 
 **Reuses.** The existing constant/handle classes; only their storage
 representation and clone policy change. Backlog:
