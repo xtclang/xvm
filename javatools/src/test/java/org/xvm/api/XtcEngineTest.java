@@ -3,6 +3,7 @@ package org.xvm.api;
 
 import java.io.File;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import java.util.ArrayList;
@@ -316,5 +317,51 @@ public class XtcEngineTest {
         var repo = new DirRepository(out, true);
         assertTrue(repo.getModuleNames().stream().anyMatch(n -> n.startsWith("DiskPoc")),
                 () -> "the written module must reload: " + repo.getModuleNames());
+    }
+
+    /**
+     * Compile from ON-DISK source - the shape an LSP workspace and a build tool actually have
+     * (directories of .x files, not one string). Goes through ModuleInfo into the SAME pipeline as
+     * the in-memory path, and the result runs identically.
+     */
+    @Test
+    public void compilesAModuleFromDisk(@TempDir Path tempDir) throws Exception {
+        Path src = tempDir.resolve("DiskSrc.x");
+        Files.writeString(src,
+                "module DiskSrc {\n"
+              + "    Int run() {\n"
+              + "        return 11;\n"
+              + "    }\n"
+              + "}\n");
+
+        try (XtcEngine engine = engine()) {
+            var result = engine.compile(src);
+
+            assertTrue(result.isSuccess(), () -> "compile failed: " + result.diagnostics());
+            assertEquals(1, result.modules().size());
+
+            var control = engine.start(result, "DiskSrc");
+            control.completion().get(60, TimeUnit.SECONDS);
+            assertTrue(control.error().isEmpty(), () -> "run failed: " + control.error());
+            assertEquals(11L, control.result().orElseThrow(),
+                    "a module compiled from disk runs exactly like an in-memory one");
+        }
+    }
+
+    /**
+     * Pointing the tool at a path that is not a module is ordinary USER error: it must produce a
+     * DIAGNOSTIC, not blow up. An LSP cannot die because someone opened the wrong directory.
+     */
+    @Test
+    public void aPathThatIsNotAModuleIsADiagnosticNotACrash(@TempDir Path tempDir) throws Exception {
+        Path notAModule = tempDir.resolve("empty-dir");
+        Files.createDirectories(notAModule);
+
+        try (XtcEngine engine = engine()) {
+            var result = engine.compile(notAModule);       // must not throw
+
+            assertFalse(result.isSuccess(), "a non-module path cannot compile successfully");
+            assertFalse(result.diagnostics().isEmpty(), "and must say why");
+        }
     }
 }

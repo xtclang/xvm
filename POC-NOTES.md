@@ -34,7 +34,7 @@ navigation) — the compiler-API surface the adapter would query — plus the sm
 
 ---
 
-## What is proven — 9 green tests (`org.xvm.api.XtcEngineTest`)
+## What is proven — 11 green tests (`org.xvm.api.XtcEngineTest`)
 
 | Test | Proves |
 |---|---|
@@ -47,6 +47,8 @@ navigation) — the compiler-API surface the adapter would query — plus the sm
 | `compiledModulesCanBeSyncedToDiskAndReloaded` | `writeTo(dir)` → reload via a plain `DirRepository` |
 | `reportsCompileDiagnosticsAndStreamsThemToTheCaller` | diagnostics stream to the caller's sink |
 | `theEngineIsUsableThroughTheToolApiContractAlone` | the `ToolApi` contract is sufficient by itself |
+| `compilesAModuleFromDisk` | **`compile(Path...)`** - on-disk source compiles and runs identically |
+| `aPathThatIsNotAModuleIsADiagnosticNotACrash` | a bad path is a diagnostic, not an exception |
 
 Gate: `./gradlew xdk:installDist`, then `./gradlew :javatools:test :javatools_utils:test` — green.
 Run them as **separate invocations**; in one invocation the test's module reads race
@@ -101,10 +103,13 @@ sealing, display purity. None is needed here.
 
 ## Known gaps
 
-1. **No `compile(Path...)` source-tree entry point** — only in-memory sources. An LSP workspace and
-   the Gradle plugin both want on-disk module directory trees. `org.xvm.tool.ModuleInfo` already
-   walks a module directory into a parsed node tree, so this is wiring, not new compiler work.
-   **Biggest remaining gap; low difficulty.**
+1. ~~No `compile(Path...)` source-tree entry point.~~ **DONE.** `ModuleInfo` walks a module file or
+   directory into the same `TypeCompositionStatement` the in-memory path produces, so both entry
+   points now share ONE pipeline - the load-bearing stage order exists in a single place. A path that
+   is not a module produces a diagnostic rather than an exception (`ModuleInfo` signals bad input by
+   throwing `IllegalArgumentException`; an LSP must not die because someone opened the wrong
+   directory). `compile(...)` propagates the `IOException` that `ModuleRepository.storeModule`
+   declares, rather than wrapping it in an unchecked exception.
 2. **Diagnostics carry `line` but no column/end position.** LSP wants a `Range` to underline. Needs
    checking whether `ErrorInfo` carries start/end offsets.
 3. **No incremental or cancellable compile.** An LSP recompiles per keystroke; today each call is a

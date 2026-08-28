@@ -64,8 +64,14 @@ public interface ToolApi
      * @param units  the module sources (name + text) as immutable value records
      *
      * @return the compile result, which always carries its diagnostics
+     *
+     * @throws IOException  if the compiled modules cannot be stored; the underlying
+     *                      {@code ModuleRepository.storeModule} declares this, and it is propagated
+     *                      rather than wrapped in an unchecked exception so a caller that can handle
+     *                      a failed write is given the chance to
      */
-    @NotNull CompileResult compile(@NotNull ErrorListener errs, @NotNull SourceUnit @NotNull... units);
+    @NotNull CompileResult compile(@NotNull ErrorListener errs, @NotNull SourceUnit @NotNull... units)
+            throws IOException;
 
     // ----- run -----------------------------------------------------------------------------------
 

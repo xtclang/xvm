@@ -6,6 +6,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
+import java.nio.file.Path;
+
 import java.time.Instant;
 
 import java.util.ArrayList;
@@ -15,6 +17,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 import java.util.concurrent.CompletableFuture;
+
+import java.util.function.Function;
 
 import java.util.stream.Collectors;
 
@@ -45,6 +49,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
+import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
@@ -55,6 +60,8 @@ import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.NestedContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Runtime;
+
+import org.xvm.tool.ModuleInfo;
 
 import org.xvm.runtime.template.collections.xTuple;
 
@@ -130,7 +137,8 @@ public final class XtcEngine
      *
      * @return the compile result: the compiled modules (empty on failure) plus all diagnostics
      */
-    public @NotNull CompileResult compile(@NotNull String sModuleName, @NotNull String sSource) {
+    public @NotNull CompileResult compile(@NotNull String sModuleName, @NotNull String sSource)
+            throws IOException {
         return compile(new SourceUnit(sModuleName, sSource));
     }
 
@@ -167,7 +175,8 @@ public final class XtcEngine
      *
      * @return the compile result
      */
-    public @NotNull CompileResult compile(@NotNull SourceUnit @NotNull... units) {
+    public @NotNull CompileResult compile(@NotNull SourceUnit @NotNull... units)
+            throws IOException {
         return compile(ErrorListener.BLACKHOLE, units);
     }
 
@@ -194,7 +203,8 @@ public final class XtcEngine
      */
     @Override
     public @NotNull CompileResult compile(@NotNull ErrorListener errsCaller,
-                                          @NotNull SourceUnit @NotNull... units) {
+                                          @NotNull SourceUnit @NotNull... units)
+            throws IOException {
         Objects.requireNonNull(errsCaller, "errsCaller (use ErrorListener.BLACKHOLE to discard)");
         Objects.requireNonNull(units, "units");
 
@@ -202,15 +212,99 @@ public final class XtcEngine
         event.modules = Arrays.stream(units).map(SourceUnit::moduleName).collect(Collectors.joining(","));
         event.begin();
         try {
-            return compileInternal(errsCaller, event, units);
+            return compileInternal(errsCaller, event, errs -> Arrays.stream(units)
+                    .map(unit -> parseModule(unit.source(), errs))
+                    .toList());
         } finally {
             event.commit();
         }
     }
 
+    /**
+     * Compile one or more modules from ON-DISK SOURCE: either a module's {@code .x} file or the
+     * directory tree containing it.
+     *
+     * <p>This is the entry point a build tool and an LSP workspace actually need - a workspace is
+     * directories of {@code .x} files, not a single string. It is NOT a shell-out to the launcher:
+     * {@link ModuleInfo} walks the source tree into the same parsed module statement that the
+     * in-memory path produces, and both then share one pipeline.</p>
+     *
+     * @param errsCaller  the caller's diagnostic sink; {@link ErrorListener#BLACKHOLE} to discard
+     * @param paths       module source files or directories
+     *
+     * @return the compile result
+     */
+    public @NotNull CompileResult compile(@NotNull ErrorListener errsCaller,
+                                          @NotNull Path @NotNull... paths)
+            throws IOException {
+        Objects.requireNonNull(errsCaller, "errsCaller (use ErrorListener.BLACKHOLE to discard)");
+        Objects.requireNonNull(paths, "paths");
+
+        var event     = new CompileEvent();
+        event.modules = Arrays.stream(paths).map(Path::toString).collect(Collectors.joining(","));
+        event.begin();
+        try {
+            return compileInternal(errsCaller, event, errs -> Arrays.stream(paths)
+                    .map(path -> parseModuleTree(path, errs))
+                    .toList());
+        } finally {
+            event.commit();
+        }
+    }
+
+    /** Compile on-disk source with diagnostics collected only. */
+    public @NotNull CompileResult compile(@NotNull Path @NotNull... paths)
+            throws IOException {
+        return compile(ErrorListener.BLACKHOLE, paths);
+    }
+
+    /**
+     * Walk an on-disk module (a {@code .x} file, or the directory containing it) into the same
+     * parsed module statement the in-memory path produces.
+     *
+     * @return the module statement, or null if it could not be parsed or is not a module
+     */
+    private static @Nullable TypeCompositionStatement parseModuleTree(@NotNull Path path,
+                                                                      @NotNull ErrorListener errs) {
+        try {
+            var  info = new ModuleInfo(path.toFile(), true);
+            var  node = info.getSourceTree(errs);
+            TypeCompositionStatement stmtModule = node == null ? null : node.type();
+            if (stmtModule == null) {
+                // EVERY failure path here must log: the contract is that a failed compile is
+                // self-describing, so returning null silently would leave the caller with
+                // "it didn't work" and nothing else.
+                errs.log(Severity.ERROR, Compiler.MODULE_MISSING, new Object[] {path.toString()}, null);
+                return null;
+            }
+            if (stmtModule.getCategory().getId() != Token.Id.MODULE) {
+                errs.log(Severity.ERROR, Compiler.MODULE_MISSING, new Object[] {path.toString()}, null);
+                return null;
+            }
+            return stmtModule;
+        } catch (IllegalArgumentException e) {
+            // ModuleInfo validates its input by throwing IllegalArgumentException ("Unable to
+            // identify a module directory for ..."). Pointing a tool at a path that is not a module
+            // is ordinary USER error, so it becomes a diagnostic: an LSP must not die because
+            // someone opened the wrong directory. The catch is deliberately narrow - it does not
+            // swallow arbitrary RuntimeExceptions, which would hide real defects.
+            errs.log(Severity.ERROR, Compiler.MODULE_MISSING, new Object[] {path.toString()}, null);
+            return null;
+        }
+    }
+
+    /**
+     * The one compile pipeline. Both entry points - in-memory {@link SourceUnit}s and on-disk source
+     * trees - reduce to a list of parsed module statements and share everything from here on, so the
+     * load-bearing stage ORDER exists in exactly one place.
+     *
+     * @param parse  produces the module statements to compile, logging to the supplied listener
+     */
     private @NotNull CompileResult compileInternal(@NotNull ErrorListener errsCaller,
                                                    @NotNull CompileEvent event,
-                                                   @NotNull SourceUnit @NotNull... units) {
+                                                   @NotNull Function<ErrorListener,
+                                                            List<TypeCompositionStatement>> parse)
+            throws IOException {
         // Always tee - never a null listener to test for. This IS an ErrorList (master's Compiler
         // takes the concrete type), so it both collects for the CompileResult and forwards every
         // diagnostic to the caller's sink, which may be BLACKHOLE.
@@ -231,9 +325,11 @@ public final class XtcEngine
         // repoBuild before anything is compiled against them - the Launcher's prelinkSystemLibraries step
         prelinkSystemLibraries(repoCompile);
 
-        // stage 1: parse each source and create its initial module structure in the build repo
-        for (var unit : units) {
-            TypeCompositionStatement stmtModule = parseModule(unit.source(), errs);
+        // stage 1: obtain each module's parsed statement and create its initial structure in the
+        // build repo. Where the statement CAME from - an in-memory string or an on-disk tree walked
+        // by ModuleInfo - is the caller's business and the only thing that differs between the two
+        // public entry points.
+        for (TypeCompositionStatement stmtModule : parse.apply(errs)) {
             if (stmtModule == null) {
                 continue; // parse errors already in errs
             }
@@ -242,11 +338,10 @@ public final class XtcEngine
             if (struct == null) {
                 continue;
             }
-            try {
-                repoBuild.storeModule(struct.getModule());
-            } catch (Exception e) {
-                throw new IllegalStateException("storing module " + unit.moduleName(), e);
-            }
+            // ModuleRepository.storeModule DECLARES IOException; propagate it rather than wrapping
+            // it in an unchecked exception, so a caller that can handle a failed write is given the
+            // chance to (and one that cannot is not surprised by a RuntimeException).
+            repoBuild.storeModule(struct.getModule());
             compilers.add(compiler);
         }
 
