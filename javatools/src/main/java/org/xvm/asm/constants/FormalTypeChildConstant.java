@@ -49,12 +49,14 @@ public final class FormalTypeChildConstant
     }
 
     /**
-     * Adoption constructor: re-homes an already-validated formal child into a new pool without
-     * re-running the resolution-dependent parent validation (see {@link #copyForAdoption}).
+     * Adoption constructor: re-homes an already-validated formal child into a new pool, validating
+     * the parent whenever its structure is resolvable and skipping the check only mid-merge, when
+     * the module is not yet linked and formal-ness is unknowable (see {@link #copyForAdoption} and
+     * {@code PropertyConstant.validateParentIfKnowable}).
      */
     private FormalTypeChildConstant(ConstantPool pool, FormalConstant constParent, String sName,
-                                    boolean fValidate) {
-        super(pool, constParent, sName, ParentFormat.FORMAL_CHILD, fValidate);
+                                    boolean fStrict) {
+        super(pool, constParent, sName, ParentFormat.FORMAL_CHILD, fStrict);
     }
 
     @Override
@@ -187,9 +189,10 @@ public final class FormalTypeChildConstant
     @Override
     protected FormalTypeChildConstant copyForAdoption(AdoptionContext context) {
         // Preserve the formal-child format; inherited property caches are owner/type-system helper
-        // state and are intentionally left empty on the adopted copy. Skip parent re-validation
-        // (fValidate=false): the source is already valid, and validateParent's isFormalType() check
-        // resolves the parent structure, which is unavailable mid-merge before the module is linked.
+        // state and are intentionally left empty on the adopted copy. Non-strict parent checking:
+        // the source is already valid, and validateParent's isFormalType() resolves the parent
+        // structure, which is unavailable mid-merge - so the check still runs whenever that structure
+        // IS resolvable, and is skipped only when formal-ness is genuinely unknowable.
         return new FormalTypeChildConstant(context.pool(), getParentConstant(), getName(), false);
     }
 

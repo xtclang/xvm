@@ -1671,7 +1671,9 @@ public abstract sealed class TypeConstant
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
     public TypeInfo ensureTypeInfo() {
-        return ensureTypeInfo(getErrorListener());
+        // pass this type's own pool explicitly, so a foreign pool's work is still routed to that
+        // pool's listener without consulting an ambient "current pool" (E3)
+        return ensureTypeInfo(getErrorListener(getConstantPool()));
     }
 
     /**

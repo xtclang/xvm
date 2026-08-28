@@ -55,24 +55,46 @@ public sealed class PropertyConstant
     }
 
     /**
-     * Construction that can skip {@link #validateParent}. Adoption (copyForAdoption) re-homes an
-     * ALREADY-VALIDATED constant into a new pool, and validateParent's {@code isFormalType()} check
-     * resolves the parent's {@code PropertyStructure} - which is not available during multi-module
-     * merge/adoption (before the module is linked). Re-validating a valid source constant would then
-     * spuriously fail, so adoption passes {@code fValidate == false}. Direct construction always
-     * validates.
+     * Construction with a relaxed parent check for ADOPTION. Direct construction ({@code fStrict})
+     * always validates. Adoption re-homes an ALREADY-VALIDATED constant into a new pool, where
+     * {@link #validateParent}'s {@code isFormalType()} test resolves the parent's
+     * {@code PropertyStructure} - which is not available mid-merge, before the module is linked. So
+     * adoption validates whenever the structure IS resolvable and skips only the genuinely
+     * unknowable case; it does not blanket-skip. See {@link #validateParentIfKnowable}.
      */
     protected PropertyConstant(
             ConstantPool     pool,
             IdentityConstant constParent,
             String           sName,
             ParentFormat     format,
-            boolean          fValidate) {
+            boolean          fStrict) {
         super(pool, constParent, sName);
 
-        if (fValidate) {
+        if (fStrict) {
             validateParent(format, constParent);
+        } else {
+            validateParentIfKnowable(format, constParent);
         }
+    }
+
+    /**
+     * Best-effort parent validation for adoption: identical to {@link #validateParent} except that a
+     * formal-child parent whose {@code PropertyStructure} is not resolvable yet is accepted rather
+     * than rejected. {@code isFormalType()} cannot distinguish "not a formal type" from "not knowable
+     * yet" - both read as false - so validating unconditionally here would spuriously fail a valid
+     * constant being re-homed mid-merge, while skipping unconditionally would stop catching a
+     * genuinely invalid parent. Checking resolvability first gives both.
+     *
+     * @param format     the parent format rule to apply
+     * @param idParent   the parent identity to check
+     */
+    protected static void validateParentIfKnowable(ParentFormat format, IdentityConstant idParent) {
+        if (format == ParentFormat.FORMAL_CHILD
+                && idParent instanceof PropertyConstant constParent
+                && constParent.getComponent() == null) {
+            return;     // not linked yet: the formal-ness of this parent is unknowable, not false
+        }
+        validateParent(format, idParent);
     }
 
     /**

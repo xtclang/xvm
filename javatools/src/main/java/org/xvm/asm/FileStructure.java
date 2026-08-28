@@ -1408,9 +1408,19 @@ public final class FileStructure
 
     @Override
     public ErrorListener getErrorListener() {
-        // E3: no ambient pool to consult (master's version fell back to getCurrentPool()'s listener
-        // when it differed from m_pool); with the ambient bridge deleted, fall through to RUNTIME.
+        return getErrorListener(null);
+    }
+
+    @Override
+    public ErrorListener getErrorListener(ConstantPool poolCaller) {
+        // Master consulted ConstantPool.getCurrentPool() here - an ambient thread-local that this
+        // branch deleted (E3). Rather than dropping that routing, the caller now states its pool
+        // explicitly: a foreign pool's work is still reported through that pool's listener, but the
+        // ownership is a parameter instead of a hidden thread-local that can name the wrong pool.
         ErrorListener errs = m_errs;
+        if (errs == null && poolCaller != null && poolCaller != m_pool) {
+            errs = poolCaller.getErrorListener();
+        }
         return errs == null ? ErrorListener.RUNTIME : errs;
     }
 

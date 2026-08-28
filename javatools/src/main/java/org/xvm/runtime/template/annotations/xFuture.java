@@ -889,7 +889,10 @@ public class xFuture
             return "(" + getComposition() + ") " + (
                     !future.isDone()                    ? "Not completed"
                   : future.isCancelled()                ? "Cancelled"
-                  : future.isCompletedExceptionally()   ? "Completed exceptionally"
+                    // exceptionNow() returns the EXISTING throwable of an already-failed future: no
+                    // join, and no Utils.translate allocating a fresh exception handle - so the
+                    // failure is still reported in full, purely.
+                  : future.isCompletedExceptionally()   ? "Completed exceptionally: " + future.exceptionNow()
                   : "Completed: " + future.getNow(null));
         }
 

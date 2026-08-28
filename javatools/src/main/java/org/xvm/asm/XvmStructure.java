@@ -418,6 +418,19 @@ public abstract class XvmStructure
     }
 
     /**
+     * The explicitly-owned form of {@link #getErrorListener()}: the caller states which pool its work
+     * belongs to, instead of the structure guessing from an ambient thread-local "current pool" (this
+     * branch deleted {@code ConstantPool.getCurrentPool()}; ownership is always a parameter).
+     *
+     * @param pool  the pool the caller is working against, or null if unknown
+     *
+     * @return the error listener to report that pool's work through
+     */
+    public ErrorListener getErrorListener(ConstantPool pool) {
+        return m_xsParent.getErrorListener(pool);
+    }
+
+    /**
      * Specify an error listener.
      *
      * @param errs  the error listener

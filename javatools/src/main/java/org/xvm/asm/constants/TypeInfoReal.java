@@ -2166,7 +2166,19 @@ public final class TypeInfoReal
         // format, flags - nothing that forces chains, resolves identities, or grows the pool, so a
         // debugger (which calls toString() implicitly) can render a TypeInfo safely. The FULL member
         // dump is the toString(boolean) overload, which Java never calls implicitly.
-        return isPlaceHolder() ? "Placeholder" : appendHeader(new StringBuilder()).toString();
+        if (isPlaceHolder()) {
+            return "Placeholder";
+        }
+
+        // Show as much as is FREE: the member counts are .size() reads on final, already-built maps -
+        // no walk, no forcing - so the pure rendering still tells you how big the type is, even
+        // though it deliberately does not enumerate the members. (Counts are added HERE rather than
+        // in appendHeader so the full toString(boolean) dump stays byte-identical for Type.dump().)
+        return appendHeader(new StringBuilder())
+                .append(" params=").append(f_mapTypeParams.size())
+                .append(", props=").append(f_mapProps.size())
+                .append(", methods=").append(f_mapMethods.size())
+                .toString();
     }
 
     /** Append the pure one-line header (identity, progress, format, flags). Shared by {@link

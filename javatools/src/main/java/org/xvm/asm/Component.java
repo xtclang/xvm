@@ -3381,9 +3381,11 @@ public abstract sealed class Component
             } else {
                 if (m_typeContrib != null) {
                     // PURE: render the contributed type verbatim. resolveTypedefs() can BUILD new
-                    // TypeConstants (interning into the pool) mid-render. See
+                    // TypeConstants (interning into the pool) mid-render. The "type=" prefix is kept
+                    // (it is what TypeConstant.getDescription() contributed) so only the typedef
+                    // RESOLUTION is lost, not the shape of the output. See
                     // docs/reentrancy/plans/side-effect-free-tostring.md.
-                    sb.append(m_typeContrib.getValueString());
+                    sb.append("type=").append(m_typeContrib.getValueString());
                 }
 
                 if (m_composition == Composition.Annotation && m_annotation != null) {
