@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -100,15 +101,15 @@ import org.xvm.util.Severity;
  */
 public final class XtcEngine
         implements AutoCloseable {
-    private final ModuleRepository f_repoLibrary;
-    private final Runtime          f_runtime;
-    private final NativeContainer  f_containerNative;
+    private final ModuleRepository repoLibrary;
+    private final Runtime          runtime;
+    private final NativeContainer  containerNative;
 
-    private XtcEngine(ModuleRepository repoLibrary) {
-        f_repoLibrary     = repoLibrary;
-        f_runtime         = new Runtime();
-        f_runtime.start();
-        f_containerNative = NativeContainer.create(f_runtime, repoLibrary);
+    private XtcEngine(@NotNull ModuleRepository repoLibrary) {
+        this.repoLibrary = Objects.requireNonNull(repoLibrary, "repoLibrary");
+        this.runtime     = new Runtime();
+        this.runtime.start();
+        this.containerNative = NativeContainer.create(this.runtime, this.repoLibrary);
     }
 
     public static @NotNull Builder builder() {
@@ -218,7 +219,7 @@ public final class XtcEngine
         // compiled so its NakedRef type can be injected across them all (see below). The caller never
         // has to name the turtle/native-bridge modules per request the way the CLI does with -L flags;
         // the engine already resolved them when it booted its native container from this same path.
-        var repoCompile = new LinkedRepository(true, repoBuild, f_repoLibrary);
+        var repoCompile = new LinkedRepository(true, repoBuild, repoLibrary);
         var compilers   = new ArrayList<Compiler>();
 
         // pre-load and link the system libraries (ecstasy + turtle prototype) so they are cached into
@@ -297,7 +298,7 @@ public final class XtcEngine
         }
     }
 
-    private static TypeCompositionStatement parseModule(String sSource, ErrorListener errs) {
+    private static @Nullable TypeCompositionStatement parseModule(String sSource, ErrorListener errs) {
         Statement stmt;
         try {
             stmt = new Parser(new Source(sSource), errs).parseSource();
@@ -397,9 +398,9 @@ public final class XtcEngine
         // turtle prototype (whose pool already carries the NakedRef type) into a fresh combined pool, so
         // an assembled app module runs here exactly as a module loaded from disk would - no hand-patching
         // of the run-time pool is needed (that is the whole point of assembling the module at compile).
-        var             repoRun   = new LinkedRepository(result.buildRepository(), f_repoLibrary);
+        var             repoRun   = new LinkedRepository(result.buildRepository(), repoLibrary);
         ModuleStructure moduleApp = repoRun.loadModule(sModuleName);
-        FileStructure   struct    = f_containerNative.createFileStructure(moduleApp);
+        FileStructure   struct    = containerNative.createFileStructure(moduleApp);
 
         ModuleConstant idMissing = struct.linkModules(repoRun, true);
         if (idMissing != null) {
@@ -407,7 +408,7 @@ public final class XtcEngine
                     new IllegalStateException("missing dependency: " + idMissing.getName()));
         }
 
-        Container containerRun = NestedContainer.createForHost(f_containerNative, struct.getModuleId(), List.of());
+        Container containerRun = NestedContainer.createForHost(containerNative, struct.getModuleId(), List.of());
         return containerRun.runModule("run");
     }
 
@@ -453,18 +454,19 @@ public final class XtcEngine
         /** @return when the run started */
         @NotNull Instant whenStarted();
 
-        /** @return when the run stopped, or null while it is still running */
-        @Nullable Instant whenStopped();
+        /** @return when the run stopped, or empty while it is still running */
+        @NotNull Optional<Instant> whenStopped();
 
         /**
-         * @return the module's {@code run()} result once it has completed normally, else null. An
+         * @return the module's {@code run()} result once it has completed normally, else empty. An
          *         Ecstasy {@code Int} exit code arrives as a {@code Long}, matching the upstream
-         *         {@code Control.result()} contract.
+         *         {@code Control.result()} contract - but as an {@link Optional}, so "still running",
+         *         "failed" and "returned null" cannot be confused with each other.
          */
-        @Nullable Long result();
+        @NotNull Optional<Long> result();
 
-        /** @return the failure if the run completed exceptionally, else null */
-        @Nullable Throwable error();
+        /** @return the failure if the run completed exceptionally, else empty */
+        @NotNull Optional<Throwable> error();
 
         /**
          * Stop the run as promptly as the runtime allows.
@@ -483,59 +485,61 @@ public final class XtcEngine
 
     private static final class RunControlImpl
             implements RunControl {
-        private final Instant                         f_whenStarted;
-        private final CompletableFuture<ObjectHandle> f_future;
-        private volatile Instant                      m_whenStopped;
+        private final Instant                         whenStarted;
+        private final CompletableFuture<ObjectHandle> future;
+        private volatile Instant                      whenStopped;
 
-        RunControlImpl(Instant whenStarted, CompletableFuture<ObjectHandle> future) {
-            f_whenStarted = whenStarted;
-            f_future      = future;
+        RunControlImpl(@NotNull Instant whenStarted, @NotNull CompletableFuture<ObjectHandle> future) {
+            this.whenStarted = whenStarted;
+            this.future      = future;
         }
 
         void stop() {
-            m_whenStopped = Instant.now();
+            whenStopped = Instant.now();
         }
 
         @Override
         public boolean running() {
-            return !f_future.isDone();
+            return !future.isDone();
         }
 
         @Override
         public Instant whenStarted() {
-            return f_whenStarted;
+            return whenStarted;
         }
 
         @Override
-        public Instant whenStopped() {
-            return m_whenStopped;
+        public @NotNull Optional<Instant> whenStopped() {
+            return Optional.ofNullable(whenStopped);
         }
 
         @Override
-        public Long result() {
-            if (!f_future.isDone() || f_future.isCompletedExceptionally()) {
-                return null;
+        public @NotNull Optional<Long> result() {
+            if (!future.isDone() || future.isCompletedExceptionally()) {
+                return Optional.empty();
             }
             // getNow cannot block here: the future is already completed normally
-            return f_future.getNow(null) instanceof ObjectHandle.JavaLong hLong ? hLong.getValue() : null;
+            return future.getNow(null) instanceof ObjectHandle.JavaLong hLong
+                    ? Optional.of(hLong.getValue())
+                    : Optional.empty();
         }
 
         @Override
-        public Throwable error() {
-            return f_future.isCompletedExceptionally() && !f_future.isCancelled()
-                    ? f_future.exceptionNow()
-                    : null;
+        public @NotNull Optional<Throwable> error() {
+            return future.isCompletedExceptionally() && !future.isCancelled()
+                    ? Optional.of(future.exceptionNow())
+                    : Optional.empty();
         }
 
         @Override
         public void kill() {
-            f_future.cancel(true);
+            future.cancel(true);
             stop();
         }
 
         @Override
         public CompletableFuture<ObjectHandle> completion() {
-            return f_future;
+            return future;
         }
     }
 
@@ -543,7 +547,7 @@ public final class XtcEngine
 
     @Override
     public void close() {
-        f_runtime.shutdownXVM();
+        runtime.shutdownXVM();
     }
 
     // ----- diagnostics ---------------------------------------------------------------------------
@@ -600,10 +604,13 @@ public final class XtcEngine
     @Label("XTC Compile")
     @Category({"Ecstasy", "Engine"})
     static final class CompileEvent extends Event {
-        @Label("Modules")     String modules;
-        @Label("Compiled")    int    compiled;
-        @Label("Diagnostics") int    diagnostics;
-        @Label("Success")     boolean success;
+        // DELIBERATELY non-final: JFR populates an event by field assignment between begin() and
+        // commit(), and reads the fields reflectively at commit time - they cannot be final. This is
+        // the only mutable state in this class; everything else here is final or an immutable record.
+        @Label("Modules")     private String  modules;
+        @Label("Compiled")    private int     compiled;
+        @Label("Diagnostics") private int     diagnostics;
+        @Label("Success")     private boolean success;
     }
 
     /**
@@ -615,8 +622,9 @@ public final class XtcEngine
     @Label("XTC Run")
     @Category({"Ecstasy", "Engine"})
     static final class RunEvent extends Event {
-        @Label("Module")    String  module;
-        @Label("Succeeded") boolean succeeded;
+        // non-final for the same JFR reason as CompileEvent above
+        @Label("Module")    private String  module;
+        @Label("Succeeded") private boolean succeeded;
     }
 
     /**
@@ -691,18 +699,18 @@ public final class XtcEngine
     // ----- builder -------------------------------------------------------------------------------
 
     public static final class Builder {
-        private final List<File> f_modulePath = new ArrayList<>();
+        private final List<File> modulePath = new ArrayList<>();
 
         public @NotNull Builder modulePath(@NotNull File @NotNull... dirs) {
             for (File dir : dirs) {
-                f_modulePath.add(Objects.requireNonNull(dir, "module path dir"));
+                modulePath.add(Objects.requireNonNull(dir, "module path dir"));
             }
             return this;
         }
 
         public @NotNull XtcEngine build() {
             var repositories = new ArrayList<ModuleRepository>();
-            for (File dir : f_modulePath) {
+            for (File dir : modulePath) {
                 if (dir.isDirectory()) {
                     repositories.add(new DirRepository(dir, true));
                 }
