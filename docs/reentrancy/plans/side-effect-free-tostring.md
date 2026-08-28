@@ -404,6 +404,49 @@ One shared vocabulary so dumps are grep-able:
    route through the frame-parameterized renderers rather than thread-locals,
    and must not force.
 
+### Naming Rule For The Forced Variant
+
+The Pattern Set above sanctions several shapes, which is correct (different sites need different
+mechanisms) — but the NAME of a forced variant follows one rule, in this precedence order:
+
+1. **A pre-existing arity that already means "full/rich" wins.** If the class already declares an
+   overload whose documented meaning is the rich rendering, use it rather than inventing a name —
+   `TypeInfo.toString(boolean fRuntime)` is exactly this (master already had it; no-arg became the
+   pure header, the overload stayed the full dump).
+2. **An explicit context parameter wins over a new name.** Where the impurity was *ambient* context,
+   the forced variant is the same method taking that context explicitly:
+   `Argument.toIdString(Frame, …)`, `OpVar.getName(Frame, …)`. (Pattern 6.)
+3. **Otherwise `describeForced(...)`**, or the existing `dump()` plane on `XvmStructure`.
+4. **No forced variant at all** when nothing needs the rich form. Prefer deleting it: a public impure
+   method with no caller is dead surface. `ParameterizedTypeConstant` is the worked example — an
+   interim `describeForced()` was added and then removed, because the pure structural `Function<…>`
+   spelling is also what the runtime already prints (`reflect/Type.x`), so dropping it made the
+   compiler CONSISTENT with the runtime instead of preserving a second spelling.
+
+`dump()`/`describeForced()` may call `toString()`; never the reverse.
+
+### Pattern Conformance Of Landed Sites
+
+| Landed site | Pattern | Shape |
+|---|---|---|
+| `TypeInfoReal.toString` | 5 + naming rule 1 | no-arg = pure header; `toString(boolean)` = full dump |
+| `MethodInfo.toString` | — (already pure output) | delegates to an `appendTo(StringBuilder)` primitive |
+| `Argument.toIdString` | 6 + naming rule 2 | `const:#n` marker; `toIdString(Frame, …)` forced |
+| `OpVar.getName` | 6 + naming rule 2 | `name:#n` marker; `getName(Frame, …)` forced |
+| `ParameterizedTypeConstant.getValueString` | 3 + naming rule 4 | structural only; no forced variant (deleted) |
+| `ObjectHandle.toString` | 3 | handle's own `m_fMutable` flag; no type resolution |
+| `ClassComposition.toString` | — (pure transitively) | unchanged; pure once the type leaf is |
+| `ExceptionHandle.toString` | 1 | `peekField` guarded on `isFieldLayoutComputed()`, else `<text deferred>` |
+
+### Enforcement Status
+
+`DisplayPurityTest` (javatools/src/test/java/org/xvm/asm/DisplayPurityTest.java) is the executable
+form of this contract: it greps the banned-callee tokens inside display-method bodies and holds a
+BASELINE of the violations that still exist. It fails both on a NEW violation and on a STALE baseline
+entry, so each fixed slice must delete its baseline line and the gate tightens monotonically. The scan
+is textual, not transitive, so known-impure *helpers* (`toSafeString`, `isExplicitAbstract`,
+`reportUnimplemented`, `getDataType`, …) are themselves banned tokens.
+
 ### Forced Variants And Diagnostic Quality
 
 The fix must not degrade log or diagnostic quality. Every rendering that
