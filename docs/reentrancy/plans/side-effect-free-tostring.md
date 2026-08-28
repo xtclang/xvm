@@ -404,6 +404,55 @@ One shared vocabulary so dumps are grep-able:
    route through the frame-parameterized renderers rather than thread-locals,
    and must not force.
 
+### The Resulting API
+
+The solution is deliberately small: no framework, no base class, no annotations. It is three kinds of
+method plus a marker vocabulary, and it exists because **most display impurity turned out to be
+incidental rather than inherent** — a cached resolution, or an interned key used only for a
+comparison. Where that was true the information was KEPT in the pure path; only genuinely-deferred
+state (a lazy split, a field layout, an `EnumInfo`, source normalization) needs a peek.
+
+**1. Peek accessors — non-forcing reads of deferred state** (Pattern 1). Each returns a
+"not computed" sentinel instead of building anything:
+
+| Accessor | Returns when not computed |
+|---|---|
+| `Lazy.Bound.isComputed()` (master #539, reused) | `false` |
+| `ClassComposition.isFieldLayoutComputed()` (package-private) | `false` |
+| `GenericHandle.peekField(String)` (protected) | `null` |
+| `PropertyStructure.peekPropertyAnnotations()` | `null` |
+| `MethodStructure.Source.peekLineCount()` | `-1` |
+| `xEnum.peekNameByOrdinal(int)` | `"<enum ordinal=N>"` |
+
+**2. Resolve-without-store — read the resolution, never write it back** (Pattern 2). The write-back
+is pure caching, so dropping it costs nothing and the rendered output is unchanged:
+
+- `Annotation.peekAnnotationName()` and private `Annotation.peekAnnotationClass()` — versus
+  `getAnnotationClass()`, which stores into `m_constClass`.
+- `TerminalTypeConstant.getValueString()` reads `resolve()` into a local — versus
+  `ensureResolvedConstant()`, which stores into `m_constId`.
+
+Corollary: compare annotation classes **by name**, never by interned identity — that removes the
+`getImplicitlyImportedIdentity` / `clzInject` / `clzOverride` / `clzRO` interning entirely.
+
+**3. Explicit forced variants — the rich rendering Java never calls implicitly** (Patterns 5/6):
+
+- `TypeInfo.toString(boolean fRuntime)` — the pre-existing arity; no-arg is the pure header.
+- `Argument.toIdString(Frame, Argument, int)` and
+  `OpVar.getName(Frame, Constant[], StringConstant, int)` — the ambient `ServiceContext` lookup
+  replaced by an explicitly-supplied `Frame`.
+
+**4. Marker vocabulary** — what a pure renderer prints when the state is not built:
+`const:#n`, `name:#n`, `<text deferred>`, `<enum ordinal=N>`, `line-count=<deferred>`.
+
+**5. Two gates**, because either alone is insufficient:
+
+- `DisplayPurityTest` — static; greps banned callees inside display bodies; BASELINE now empty.
+  Textual, so it cannot see impurity behind a helper.
+- `DisplayPurityRuntimeTest` — empirical; renders 100+ live type-system objects three times and
+  asserts the shared `ConstantPool` does not grow, with a negative control proving `pool.size()`
+  actually detects interning. This is what catches the transitive cases the static gate cannot.
+
 ### Naming Rule For The Forced Variant
 
 The Pattern Set above sanctions several shapes, which is correct (different sites need different

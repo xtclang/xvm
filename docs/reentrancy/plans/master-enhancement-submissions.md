@@ -288,6 +288,35 @@ reading without storing and comparing by NAME, rather than exiled to a forced va
 genuinely-deferred state (lazy annotation split, field layout, `EnumInfo`, source normalization) is
 peekable, which is why the pure renderings lose nothing once the state exists.
 
+**The API this adds to master** (small and self-contained — no framework, no base class, no
+annotations; three kinds of method plus markers). The key insight for a reviewer: **most of the
+impurity was incidental, not inherent** — a cached resolution, or an interned key used only as a
+comparison target — so the displayed information is KEPT, not dropped:
+
+1. *Peek accessors* (non-forcing reads of deferred state, each with a "not computed" sentinel):
+   `Lazy.Bound.isComputed()` (already on master via PR #539),
+   `ClassComposition.isFieldLayoutComputed()` (package-private), `GenericHandle.peekField(String)`
+   (protected), `PropertyStructure.peekPropertyAnnotations()`,
+   `MethodStructure.Source.peekLineCount()`, `xEnum.peekNameByOrdinal(int)`.
+2. *Resolve-without-store*: `Annotation.peekAnnotationName()` / private `peekAnnotationClass()` and
+   an inlined resolve in `TerminalTypeConstant.getValueString()` — versus `getAnnotationClass()` /
+   `ensureResolvedConstant()`, which write the resolution back. Corollary: compare annotation classes
+   **by name**, which removes the `getImplicitlyImportedIdentity`/`clz*()` interning outright.
+3. *Explicit forced variants*: `TypeInfo.toString(boolean fRuntime)` (master's pre-existing arity),
+   `Argument.toIdString(Frame, …)`, `OpVar.getName(Frame, …)`.
+4. *Markers*: `const:#n`, `name:#n`, `<text deferred>`, `<enum ordinal=N>`, `line-count=<deferred>`.
+5. *Two gates*: `DisplayPurityTest` (static banned-callee scan, empty baseline) **and**
+   `DisplayPurityRuntimeTest` (empirical — renders 100+ live objects and asserts the shared
+   `ConstantPool` does not grow, with a negative control proving the instrument works). The static
+   gate is textual and cannot see impurity behind a helper; the empirical one is what catches it.
+
+Behavior changes a master reviewer should know about: function types render structurally
+(`Function<…>`) instead of `function R(P)` — which matches what the runtime's `reflect/Type.x` already
+prints; a typedef'd annotation/constraint renders under its typedef name; and `BinaryAST.toString`
+no longer nags to stderr (its `reportUnimplemented` helper and static set are deleted — note this
+class is expected to be retired anyway). No consumer parses, caches, keys, or serializes any of these
+strings (audited).
+
 **Master port spec.** Follow the 7-slice migration in
 [side-effect-free-tostring.md](side-effect-free-tostring.md). Only ~6 root sites
 matter; 80+ flagged rows go pure transitively once the roots are fixed:
