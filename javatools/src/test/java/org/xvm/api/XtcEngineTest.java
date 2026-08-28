@@ -3,12 +3,16 @@ package org.xvm.api;
 
 import java.io.File;
 
+import java.nio.file.Path;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.util.Severity;
@@ -218,5 +222,99 @@ public class XtcEngineTest {
             assertTrue(control.error().isEmpty(), () -> "run failed: " + control.error());
             assertEquals(7L, control.result().orElseThrow());
         }
+    }
+
+    /**
+     * The FAILURE path: a module that throws must complete the future EXCEPTIONALLY and surface the
+     * error through the control handle. A test runner or build plugin depends on this - a run that
+     * blows up must not look like a run that succeeded.
+     */
+    @Test
+    public void aThrowingRunCompletesExceptionally() throws Exception {
+        try (XtcEngine engine = engine()) {
+            var result = engine.compile("ThrowPoc",
+                    "module ThrowPoc {\n"
+                  + "    void run() {\n"
+                  + "        throw new IllegalState(\"deliberate POC failure\");\n"
+                  + "    }\n"
+                  + "}\n");
+            assertTrue(result.isSuccess(), () -> "compile failed: " + result.diagnostics());
+
+            var control = engine.start(result, "ThrowPoc");
+            try {
+                control.completion().get(60, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                // expected: the run threw
+            }
+
+            assertFalse(control.running(), "a failed run has still finished");
+            assertTrue(control.error().isPresent(), "the failure must reach the host");
+            assertTrue(control.result().isEmpty(), "a failed run has no result");
+        }
+    }
+
+    /**
+     * Several modules compiled in ONE request, resolving references among themselves - the shape a
+     * build plugin needs when a project has interdependent modules.
+     */
+    @Test
+    public void compilesMultipleModulesInOneRequest() throws Exception {
+        try (XtcEngine engine = engine()) {
+            var result = engine.compile(ErrorListener.BLACKHOLE,
+                    new ToolApi.SourceUnit("AlphaPoc",
+                            "module AlphaPoc {\n"
+                          + "    Int run() {\n"
+                          + "        return 1;\n"
+                          + "    }\n"
+                          + "}\n"),
+                    new ToolApi.SourceUnit("BetaPoc",
+                            "module BetaPoc {\n"
+                          + "    Int run() {\n"
+                          + "        return 2;\n"
+                          + "    }\n"
+                          + "}\n"));
+
+            assertTrue(result.isSuccess(), () -> "compile failed: " + result.diagnostics());
+            assertEquals(2, result.modules().size(), "both modules must be compiled");
+
+            // and both are runnable from the one warm engine
+            var a = engine.start(result, "AlphaPoc");
+            a.completion().get(60, TimeUnit.SECONDS);
+            assertEquals(1L, a.result().orElseThrow());
+
+            var b = engine.start(result, "BetaPoc");
+            b.completion().get(60, TimeUnit.SECONDS);
+            assertEquals(2L, b.result().orElseThrow());
+        }
+    }
+
+    /**
+     * In-memory compile, then SYNC TO DISK as ordinary .xtc binaries, then load them back through a
+     * plain DirRepository. "Compile directly to disk" is just compile-then-writeTo, and the output
+     * must be indistinguishable from anything else the toolchain produced - which is exactly what a
+     * Gradle plugin needs to emit build artifacts.
+     */
+    @Test
+    public void compiledModulesCanBeSyncedToDiskAndReloaded(@TempDir Path tempDir) throws Exception {
+        File out = tempDir.resolve("out").toFile();
+        try (XtcEngine engine = engine()) {
+            var result = engine.compile("DiskPoc",
+                    "module DiskPoc {\n"
+                  + "    Int run() {\n"
+                  + "        return 5;\n"
+                  + "    }\n"
+                  + "}\n");
+            assertTrue(result.isSuccess(), () -> "compile failed: " + result.diagnostics());
+
+            List<File> written = result.writeTo(out);
+            assertEquals(1, written.size(), "one file per module");
+            assertTrue(written.get(0).isFile(), "the .xtc must exist on disk");
+            assertTrue(written.get(0).length() > 0, "and be non-empty");
+        }
+
+        // reload through an ordinary repository - nothing engine-specific about the output
+        var repo = new DirRepository(out, true);
+        assertTrue(repo.getModuleNames().stream().anyMatch(n -> n.startsWith("DiskPoc")),
+                () -> "the written module must reload: " + repo.getModuleNames());
     }
 }
