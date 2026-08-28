@@ -47,8 +47,8 @@ public class Injector {
      *
      * @return a supplier Function, or null if that Resource cannot be supplied
      */
-    public Function supplierOf(TypeConstant resoureType, String resourceName) {
-        return supplierOf(new Resource(resoureType, resourceName));
+    public Function supplierOf(TypeConstant resourceType, String resourceName) {
+        return supplierOf(new Resource(resourceType, resourceName));
     }
 
     /**
