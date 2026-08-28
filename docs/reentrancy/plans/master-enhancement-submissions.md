@@ -434,6 +434,29 @@ cloning = cross-container aliasing and mid-race mutation of interned metadata.
 
 **Width.** Wide across the constants + handle-view surface.
 
+**What `FrozenArray` is.** Not a JDK type — this branch created it
+(`javatools_utils/src/main/java/org/xvm/util/FrozenArray.java`, introduced by
+"Add FrozenArray, the stage-3 shared-metadata representation"). It is a
+`public final class FrozenArray<T> implements Iterable<T>`: an immutable,
+index-addressable wrapper over a Java array, for metadata shared across threads,
+containers, and interned constants. API: `adopt(T[])` (wrap, taking ownership)
+vs `copyOf(T[])` (wrap a private copy), `get/size/isEmpty/iterator/stream/copy/
+contentEquals`, and `unsafeArray()`.
+
+Three design choices a porter must not "fix":
+- **Deliberately not a `List`.** `AbstractList` invites `set()`-shaped
+  confusion, and `Arrays.asList` views are precisely the live-writable hazard
+  being removed (Families A and B each killed one).
+- **`unsafeArray()` is an intentional escape hatch, not an oversight.** Hot
+  consumers — hashing, serialization, `System.arraycopy`, the JIT build path —
+  would take a measurable hit from a per-call copy. Callers must not write to
+  or hand out the result. `FrozenArrayEscapeRatchetTest` pins the escape count
+  as a **down-only ceiling (115)**, so the contract cannot erode silently and
+  tier-2 sites can tighten incrementally.
+- **No `equals`/`hashCode` override.** Wrapper identity is not element
+  equality, and the owning constants already hash their elements through
+  `unsafeArray()`. `contentEquals` is the explicit opt-in.
+
 **Master port spec.**
 1. Add `FrozenArray` (`cb91df6d1`) — a new leaf type, no master refactor needed.
 2. Freeze `SignatureConstant` (`35a55b81f`) then `ParameterizedTypeConstant`
@@ -445,6 +468,33 @@ cloning = cross-container aliasing and mid-race mutation of interned metadata.
    getters that hand out live collections): `e36efeea0`, `e78d7100b`,
    `01b5123ea` (`ClassStructure.getTypeParams` immutable `Map` view — note the
    `ListMap`-is-load-bearing caveat), `0d0a7ddcc`.
+5. Land the **`CallChain` encapsulation** (`ec43d7dfb`) — it stands on its own
+   and is worth porting whether or not Family C is ever converted. It routes 28
+   open-coded accesses to `f_aMethods` (`.length` ×12, `[0]` ×11, `[nDepth]`
+   ×5) through two accessors, `head()` and `bodyAt(int)`, both `protected` so
+   the nested `FieldAccessChain` subclass inherits them. It also fixes a real
+   inconsistency it exposed: `getTop()` guarded the empty chain but
+   `getProperty()` indexed `[0]` unguarded, so it threw `ArrayIndexOutOfBounds`
+   where its siblings returned null, and empty chains ARE constructible. Master
+   carries the same shape, so this is portable as a standalone cleanup.
+
+**Family C (MethodBody chains) — deliberately NOT in this port.** Evaluated and
+deferred; see `array-element-exposure-audit.md`. Two things a porter should know
+so the decision is not silently re-litigated:
+- Step 5 above **invalidated the width half of the deferral rationale** ("`CallChain`
+  must keep raw-array indexing"). The `CallChain` field conversion is now a
+  2-method change, not 28 sites.
+- But `CallChain` was never the exposure. `f_aMethods` is `protected final`,
+  per-composition, and does not escape. The genuine Family C exposure is
+  **`MethodInfo`** — interned in `TypeInfo`, shared across containers — whose
+  `getChain()` returns `m_aBody` raw to 10 call sites and whose
+  `ensureOptimizedMethodChain()` returns the `m_aBodyResolved` cache raw to 4
+  more. Ledger rows 44/51 made that cache safely *published*; they did not make
+  it *immutable*. The sharpest instance is `BuildContext.callChain`, a
+  `public final MethodBody[]` holding the escaped array: `public final` would be
+  genuinely safe on a `FrozenArray` and is not safe on a raw array. All 10
+  consumers are verified read-only, so this is defense-in-depth, not a live bug
+  — which is why it stays deferred, with the escape ratchet standing in.
 
 **Reuses.** The existing constant/handle classes; only their storage
 representation and clone policy change. Backlog:

@@ -687,6 +687,38 @@ harness added early so the category stays closed after it is emptied.
   the conversion is defense-in-depth only. Per the series' own lean rule
   ("if it grows beyond a day, drop it"), the read-only verification plus the
   escape ratchet stand in for the wrapper.
+- **Family C deferral rationale PARTLY INVALIDATED 2026-08-28** (`ec43d7dfb`).
+  The load-bearing half of the deferral was "`CallChain` must keep raw-array
+  indexing for dispatch", which priced the conversion at 28 open-coded accesses
+  (`.length` x12, `[0]` x11, `[nDepth]` x5). Those are now routed through two
+  accessors, `head()` and `bodyAt(int)`, so the *width* argument no longer
+  holds - the field conversion is a 2-method change plus a small boundary
+  (constructor adoption, `MethodBody.isFieldChain(...)`, `PropertyComposition`).
+  The encapsulation also fixed a real inconsistency it exposed: `getTop()`
+  guarded the empty chain but `getProperty()` indexed `[0]` unguarded, so it
+  threw `ArrayIndexOutOfBounds` where its siblings returned null, and empty
+  chains ARE constructible.
+- **Family C re-priced 2026-08-28 - and `CallChain` is the wrong target.**
+  `CallChain.f_aMethods` is `protected final` and, after `ec43d7dfb`, never read
+  outside its two accessors: it does not escape, and each `CallChain` is
+  per-composition. The genuine Family C exposure is **`MethodInfo`**, which is
+  interned in `TypeInfo` and shared across containers:
+  - `getChain()` returns `m_aBody` **raw** to 10 call sites
+    (`TypeInfoReal` x3, `MethodInfo` x2, `TypeConstant` x3, `BuildContext`,
+    `MethodDeclarationStatement`).
+  - `ensureOptimizedMethodChain()` returns the `m_aBodyResolved` cache **raw**
+    to 4 external consumers. Ledger rows 44/51 made that cache safely
+    *published*; they did not make it *immutable*, so every consumer still holds
+    a writable alias of interned runtime metadata.
+  - `BuildContext.callChain` is a **`public final MethodBody[]`** holding the
+    escaped array - a public mutable alias of shared metadata, and the exact
+    hazard shape stage 3 exists to remove. `public final` on a `FrozenArray`
+    would be genuinely safe; on `MethodBody[]` it is not.
+  All 10 consumers re-verified read-only (`Handy.prepend` and
+  `Collections.addAll` copy out; the rest are for-each or indexing), so the
+  conversion is behavior-preserving and the value is structural enforcement,
+  not a bug fix. Priority order if resumed: `MethodInfo.m_aBody` (the shared
+  one) > `m_aBodyResolved` > `CallChain.f_aMethods` (now trivial, lowest value).
 - **Escape ratchet standing**: `FrozenArrayEscapeRatchetTest` pins the
   `unsafeArray()` count (115) as a ceiling that only moves down, so the
   stage-3 contract cannot erode and tier-2 sites can tighten incrementally.
