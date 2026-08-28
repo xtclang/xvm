@@ -924,12 +924,17 @@ These two feed 31 of 38 op toStrings. Suites green, no op-dump golden regressed.
 
 **Slice 1 now COMPLETE.** The riskier roots landed after a production-use audit:
 - `ParameterizedTypeConstant.getValueString` renders the structural `Function<…>`
-  form (pure); the pretty `function R(P)` form moved to an explicit
-  `describeForced()`. `TerminalTypeConstant.getValueString` is pure transitively.
-  Commit `a03a998f1`. The audit verdict was SAFE — the output change affects function
-  types only; no consumer parses/branches on `"function "`, keys a map/cache/equality
-  on the string, round-trips or serializes it (the pool serializes positions), and
-  the scalar-spelling `switch`/`equals` sites never traverse the function branch.
+  form (pure). The pretty `function R(P)` form was **dropped**, not preserved: an
+  interim `describeForced()` was removed (commit after `a03a998f1`) because nothing
+  needs it and the structural form is what the runtime already prints
+  (`reflect/Type.x` renders `Function<…>`), so dropping it makes the compiler's type
+  spelling CONSISTENT with the runtime instead of diverging. `TerminalTypeConstant
+  .getValueString` is pure transitively. The audit verdict was SAFE — the output
+  change affects function types only; no consumer parses/branches on `"function "`,
+  keys a map/cache/equality on the string, round-trips or serializes it (the pool
+  serializes positions), and the scalar-spelling `switch`/`equals` sites never
+  traverse the function branch. If a nicer function rendering is ever wanted, it
+  belongs in the compiler's error-message formatter, not a general constant method.
 - `ObjectHandle.toString` dropped the `getType().isImmutable()` recursion;
   `ClassComposition.toString` is pure transitively (`a03a998f1`).
 - `ExceptionHandle.toString` reads `"text"` via a non-forcing `peekField` (guarded on

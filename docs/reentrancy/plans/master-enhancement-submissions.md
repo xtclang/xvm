@@ -266,9 +266,10 @@ no-arg = pure header, boolean overload = full dump), and the two AMBIENT op-disp
 roots (`Argument.toIdString`, `OpVar.getName`, commit `a9e7d58c0` — pure `const:#n`
 /`name:#n` markers, no ambient fiber read, plus explicit `Frame`-parameterized
 forced overloads). **Slice 1 is now complete:** the `getValueString` type leaves
-(`a03a998f1`, function types render structurally; pretty `function R(P)` → explicit
-`describeForced()`; a production-use audit confirmed SAFE — function-only output
-change, no parse/cache-key/equality/serialization consumer), the
+(`a03a998f1`, function types render structurally as `Function<…>`; the pretty
+`function R(P)` form was DROPPED — consistent with the runtime's `reflect/Type.x`
+rendering — after a production-use audit confirmed SAFE: function-only output change,
+no parse/cache-key/equality/serialization consumer), the
 `ObjectHandle`/`ClassComposition` handle roots (`a03a998f1`), and
 `ExceptionHandle.toString` (`6c1c7c686`, non-forcing `peekField`). **Remaining:**
 slices 2–7 are the explicit non-root sites (`MethodStructure.getDescription`,
