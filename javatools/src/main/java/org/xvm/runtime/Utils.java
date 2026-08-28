@@ -458,27 +458,32 @@ public abstract class Utils {
     }
 
     /**
-     * Log a given message for a given frame to System.out.
+     * Log a given message for a given frame to System.out. The frame supplies the owning context and
+     * fiber explicitly; a null frame logs without them rather than consulting ambient state.
      */
     public static void log(Frame frame, String sMsg) {
+        log(frame == null ? null : frame.f_context,
+            frame == null ? -1 : frame.f_fiber.getId(), sMsg);
+    }
+
+    /**
+     * Log a given message against an EXPLICITLY supplied owner to System.out.
+     *
+     * <p>This is the MA4 closure for the runtime's last ambient reader: the previous version fell
+     * back to {@code ServiceContext.getCurrentContext()} when it had no frame, which is the same
+     * hidden-ownership pattern this branch removed from the ConstantPool - the thread-local names
+     * whatever fiber happens to be current on the OBSERVING thread, not the one the message is
+     * about, and it can simply be null (any thread with no fiber bound), which made a diagnostic
+     * NPE its own caller. Ownership is now a parameter.</p>
+     *
+     * @param context   the owning service context, or null if the message has no owner
+     * @param lFiberId  the owning fiber's id, or -1 if none
+     * @param sMsg      the message
+     */
+    public static void log(ServiceContext context, long lFiberId, String sMsg) {
         if (sMsg.charAt(0) == '\n') {
             System.out.println();
             sMsg = sMsg.substring(1);
-        }
-
-        ServiceContext context;
-        long           lFiberId;
-
-        if (frame == null) {
-            // no frame: fall back to the ambient context. This is the last ambient reader in the
-            // runtime (MA4); the real closure is to pass the Frame/ServiceContext explicitly, but
-            // until then the ambient lookup can legitimately return null (any thread with no fiber
-            // bound), and a DIAGNOSTIC must never take down its caller with an NPE.
-            context  = ServiceContext.getCurrentContext();
-            lFiberId = -1;
-        } else {
-            context  = frame.f_context;
-            lFiberId = frame.f_fiber.getId();
         }
 
         System.out.println((context == null

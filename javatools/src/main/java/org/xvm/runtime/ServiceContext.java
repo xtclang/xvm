@@ -167,12 +167,14 @@ public class ServiceContext {
         return Collections.unmodifiableSet(f_setFibers);
     }
 
-    /**
-     * @return the ServiceContext associated with the current Java thread
-     */
-    public static ServiceContext getCurrentContext() {
-        return s_tloContext.get()[0];
-    }
+    // NOTE: the public ambient accessor `getCurrentContext()` has been REMOVED (MA4 closure). It
+    // returned "whatever fiber happens to be bound on the calling thread", which is the same
+    // hidden-ownership hazard this branch deleted from the ConstantPool (`getCurrentPool()`): the
+    // observing thread is frequently not the one the caller means, and the value can simply be null.
+    // Its last two readers were display code (Argument/OpVar, which now take an explicit Frame) and
+    // Utils.log (which now takes an explicit ServiceContext). The thread-local below remains: it is
+    // how drainWork() BINDS the executing context, which is legitimate - only the ambient READ was
+    // the hazard. DisplayPurityTest bans the accessor by name so it cannot quietly come back.
 
     /**
      * Note: the value of {@link Synchronicity#Concurrent Concurrent} here actually means
