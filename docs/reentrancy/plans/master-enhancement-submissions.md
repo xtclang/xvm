@@ -271,11 +271,22 @@ forced overloads). **Slice 1 is now complete:** the `getValueString` type leaves
 rendering — after a production-use audit confirmed SAFE: function-only output change,
 no parse/cache-key/equality/serialization consumer), the
 `ObjectHandle`/`ClassComposition` handle roots (`a03a998f1`), and
-`ExceptionHandle.toString` (`6c1c7c686`, non-forcing `peekField`). **Remaining:**
-slices 2–7 are the explicit non-root sites (`MethodStructure.getDescription`,
-`BinaryAST`, `Contribution`, `Frame`/`FiberQueue`, `xFuture`/`xEnum`, JavaJIT) — 80+
-`DELEG`/`SUSPECT` rows go pure transitively now that the roots are — plus the
-`DisplayPurityTest` ratchet.
+`ExceptionHandle.toString` (`6c1c7c686`, non-forcing `peekField`).
+
+**E5 is now essentially COMPLETE on this branch.** Every display site the inventory flagged is
+pure — the remaining ones landed in `4f35e55a6` (ParamInfo, TerminalTypeConstant, PropertyBody),
+`23e2307d6` (Annotation, Contribution), `a700cca30` (MethodStructure, BinaryAST) and `63ee73a86`
+(xRTType, xFuture, xEnum) — and the enforcement ratchet `DisplayPurityTest` (`beecae682`) now runs
+with an EMPTY baseline, so any display method that acquires an impure callee fails the build. Only
+the inventory's SUSPECT/racy-read rows (`Frame`/`FiberQueue`/`ServiceContext` short forms, JavaJIT)
+remain, and those are read-only rather than mutating.
+
+Two findings worth carrying to master with the port: (1) most of the impurity was **incidental, not
+inherent** — caching a resolution (`ensureResolvedConstant`, `getAnnotationClass`) or interning a
+comparison key (`getImplicitlyImportedIdentity`, `clzInject`) — so the information could be kept by
+reading without storing and comparing by NAME, rather than exiled to a forced variant; and (2) the
+genuinely-deferred state (lazy annotation split, field layout, `EnumInfo`, source normalization) is
+peekable, which is why the pure renderings lose nothing once the state exists.
 
 **Master port spec.** Follow the 7-slice migration in
 [side-effect-free-tostring.md](side-effect-free-tostring.md). Only ~6 root sites

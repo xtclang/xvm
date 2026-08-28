@@ -447,6 +447,11 @@ entry, so each fixed slice must delete its baseline line and the gate tightens m
 is textual, not transitive, so known-impure *helpers* (`toSafeString`, `isExplicitAbstract`,
 `reportUnimplemented`, `getDataType`, …) are themselves banned tokens.
 
+**Status: the BASELINE is now EMPTY.** Every site the inventory flagged is pure, so the gate is
+unconditional — any display method that acquires an impure callee fails the build outright. The one
+site the gate cannot detect (`xEnum.EnumHandle.toString`, whose forcing hid behind a plain
+`getName()`) was closed by hand.
+
 ### Forced Variants And Diagnostic Quality
 
 The fix must not degrade log or diagnostic quality. Every rendering that
@@ -984,10 +989,31 @@ These two feed 31 of 38 op toStrings. Suites green, no op-dump golden regressed.
   `ClassComposition.isFieldLayoutComputed()`), else `<text deferred>` (`6c1c7c686`).
 
 All gated with the unit suites + `xdk:installDist`. With the five/six roots pure, the
-80+ `DELEG`/`SUSPECT` dependent rows are pure transitively; slices 2–7 remaining are
-the explicit non-root sites (`MethodStructure.getDescription`, `BinaryAST`,
-`Contribution`, the `Frame`/`FiberQueue` short forms, `xFuture`/`xEnum`, JavaJIT) plus
-the `DisplayPurityTest` ratchet.
+80+ `DELEG`/`SUSPECT` dependent rows are pure transitively.
+
+**The remaining flagged sites then landed, and the ratchet's BASELINE is now EMPTY:**
+
+| Site | Was | Now | Commit |
+|---|---|---|---|
+| `ParamInfo.toString` | `pool.typeObject()` interned; `isTuple()` resolved a typedef | compares the constraint's value string | `4f35e55a6` |
+| `TerminalTypeConstant.getValueString` | `ensureResolvedConstant()` wrote back `m_constId` | reads `resolve()` into a local; output byte-identical | `4f35e55a6` |
+| `PropertyBody.toString` | 4 flag helpers forced the annotation split + interned a comparison identity | reads the ALREADY-SPLIT annotations, compares by NAME — flags retained | `4f35e55a6` |
+| `Annotation.getValueString`/`getDescription` | `getAnnotationClass()` resolve-and-stored | new private `peekAnnotationClass()` (resolve, don't store) | `23e2307d6` |
+| `Contribution.toString` | `resolveTypedefs()` built new TypeConstants; unguarded `getDefiningConstant()` threw | renders `getValueString()`; guarded by `isSingleDefiningConstant()`; both `fFirst` loops modernized to `Collectors.joining` | `23e2307d6` |
+| `MethodStructure.getDescription` | `getLineCount()` → `normalize()` interned a StringConstant PER SOURCE LINE | new non-forcing `Source.peekLineCount()`, else `line-count=<deferred>` | `a700cca30` |
+| `BinaryAST.toString` | `reportUnimplemented(...)` mutated a process-global set + wrote stderr | renders `nodeType().name()`; the helper and its static set are deleted | `a700cca30` |
+| `xRTType.TypeHandle.toString` | `getDataType()` → `augmentType` → `freeze()` interned an immutable type | reads the foreign/composition type directly | `63ee73a86` |
+| `xFuture.FutureHandle.toString` | `toSafeString()` JOINED the future and could allocate an exception handle | state-only; `getNow(null)` for an already-completed value | `63ee73a86` |
+| `xEnum.EnumHandle.toString` | `getName()` forced the template's lazy `EnumInfo` | new non-forcing `peekNameByOrdinal()`, else `<enum ordinal=N>` | `63ee73a86` |
+
+Supporting pure accessors added along the way: `Annotation.peekAnnotationName()`,
+`PropertyStructure.peekPropertyAnnotations()`, `MethodStructure.Source.peekLineCount()`,
+`xEnum.peekNameByOrdinal()`, `GenericHandle.peekField()`,
+`ClassComposition.isFieldLayoutComputed()`, and `FrozenArray.stream()`.
+
+Deliberately still open (not display-purity blockers): the `Frame`/`FiberQueue`/`ServiceContext`
+short forms and the JavaJIT rows, which the inventory classifies as SUSPECT/racy-read rather than
+mutating, plus slice 6's SUSPECT closure.
 
 Small, independently landable PR slices, worst offenders first because five
 root sites unblock most dependent rows:
