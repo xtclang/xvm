@@ -102,7 +102,7 @@ import org.xvm.util.Severity;
  * in a follow-up so the per-request shape here does not calcify into the contract.</p>
  */
 public final class XtcEngine
-        implements AutoCloseable {
+        implements ToolApi {
     private final ModuleRepository repoLibrary;
     private final Runtime          runtime;
     private final NativeContainer  containerNative;
@@ -192,6 +192,7 @@ public final class XtcEngine
      *
      * @return the compile result
      */
+    @Override
     public @NotNull CompileResult compile(@NotNull ErrorListener errsCaller,
                                           @NotNull SourceUnit @NotNull... units) {
         Objects.requireNonNull(errsCaller, "errsCaller (use ErrorListener.BLACKHOLE to discard)");
@@ -392,7 +393,8 @@ public final class XtcEngine
      *
      * @return the run-completion future
      */
-    public @NotNull CompletableFuture<ObjectHandle> run(@NotNull CompileResult result, @NotNull String sModuleName) {
+    public @NotNull CompletableFuture<ObjectHandle> run(@NotNull ToolApi.CompileResult result,
+                                                       @NotNull String sModuleName) {
         boolean fFound = result.modules().stream().anyMatch(id -> id.getName().equals(sModuleName));
         if (!fFound) {
             throw new IllegalArgumentException("module not in compile result: " + sModuleName);
@@ -430,7 +432,9 @@ public final class XtcEngine
      *
      * @return a control handle for the running module
      */
-    public @NotNull RunControl start(@NotNull CompileResult result, @NotNull String sModuleName) {
+    @Override
+    public @NotNull ToolApi.RunControl start(@NotNull ToolApi.CompileResult result,
+                                            @NotNull String sModuleName) {
         var event = new RunEvent();
         event.module = sModuleName;
         event.begin();
@@ -447,48 +451,9 @@ public final class XtcEngine
         return control;
     }
 
-    /**
-     * Management and monitoring for a running module - the engine's form of the upstream
-     * {@code ToolConnector.Control}.
-     */
-    public interface RunControl {
-        /** @return true iff the module is still running */
-        boolean running();
-
-        /** @return when the run started */
-        @NotNull Instant whenStarted();
-
-        /** @return when the run stopped, or empty while it is still running */
-        @NotNull Optional<Instant> whenStopped();
-
-        /**
-         * @return the module's {@code run()} result once it has completed normally, else empty. An
-         *         Ecstasy {@code Int} exit code arrives as a {@code Long}, matching the upstream
-         *         {@code Control.result()} contract - but as an {@link Optional}, so "still running",
-         *         "failed" and "returned null" cannot be confused with each other.
-         */
-        @NotNull Optional<Long> result();
-
-        /** @return the failure if the run completed exceptionally, else empty */
-        @NotNull Optional<Throwable> error();
-
-        /**
-         * Stop the run as promptly as the runtime allows.
-         *
-         * <p>Honest limitation: this cancels the completion future so the CALLER stops waiting, and
-         * the container is released for collection. It does not yet forcibly unwind a fiber that is
-         * mid-execution - that needs the runtime's own termination path
-         * ({@code Container.terminate(ServiceContext)}) wired to a cooperative cancellation check,
-         * which is deliberately not faked here.</p>
-         */
-        void kill();
-
-        /** @return the event-driven completion future, for callers that prefer to await it */
-        @NotNull CompletableFuture<ObjectHandle> completion();
-    }
 
     private static final class RunControlImpl
-            implements RunControl {
+            implements ToolApi.RunControl {
         private final Instant                         whenStarted;
         private final CompletableFuture<ObjectHandle> future;
         private volatile Instant                      whenStopped;
@@ -629,28 +594,7 @@ public final class XtcEngine
         @Label("Succeeded") private boolean succeeded;
     }
 
-    /**
-     * One in-memory module source to compile: the module's name plus its source text. An immutable
-     * value record - the API never takes a mutable collection of sources.
-     *
-     * @param moduleName  the module's name (for diagnostics/labels)
-     * @param source      the module source text
-     */
-    public record SourceUnit(@NotNull String moduleName, @NotNull String source) {
-    }
 
-    /**
-     * A structured compile/run diagnostic (the LSP-facing shape).
-     *
-     * @param severity  the severity
-     * @param code      the message code
-     * @param message   the rendered message text
-     * @param source    the source name/uri, or null
-     * @param line      the 1-based line, or 0 if unknown
-     */
-    public record Diagnostic(@NotNull Severity severity, @NotNull String code, @NotNull String message,
-                            @Nullable String source, int line) {
-    }
 
     /**
      * The outcome of a {@link #compile}: the compiled module ids (empty on failure), every diagnostic
@@ -665,7 +609,9 @@ public final class XtcEngine
      * {@code engine.compile(...).writeTo(dir)}: compile in memory, then persist.</p>
      */
     public record CompileResult(@NotNull List<ModuleConstant> modules, @NotNull List<Diagnostic> diagnostics,
-                                @NotNull BuildRepository buildRepository) {
+                                @NotNull BuildRepository buildRepository)
+            implements ToolApi.CompileResult {
+        @Override
         public boolean isSuccess() {
             return !modules.isEmpty()
                 && diagnostics.stream().noneMatch(d -> d.severity().ordinal() >= Severity.ERROR.ordinal());

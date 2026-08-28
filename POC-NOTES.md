@@ -25,7 +25,8 @@ green. (Run them SEPARATELY; in one invocation the test's module reads race inst
 | `NestedContainer` | add `createForHost(...)`; add a parent injection fallback **only** for host containers (`f_hProvider == null`), else a host-run module gets no `Console` |
 | `FileStructure` | **master bug fix** — see below |
 | `DirRepository` | **master bug fix** — synchronize the scan cache (see below) |
-| `api/XtcEngine.java` | new: the engine itself (compile pipeline + run + `RunControl` + JFR events) |
+| `api/ToolApi.java` | new: the named CONTRACT a tool embeds (compile + run + shared types) |
+| `api/XtcEngine.java` | new: the engine - one implementation of `ToolApi` |
 
 Deliberately NOT lifted from the reference branch: pool-publication fencing
 (`markRuntimePublished`), the INSTANCE-removal/owner-lazy work, sealing, display purity. None is

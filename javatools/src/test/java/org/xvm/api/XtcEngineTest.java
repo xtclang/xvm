@@ -150,7 +150,7 @@ public class XtcEngineTest {
                 return false;
             };
 
-            var result = engine.compile(sink, new XtcEngine.SourceUnit("BadPoc", """
+            var result = engine.compile(sink, new ToolApi.SourceUnit("BadPoc", """
                     module BadPoc {
                         void run() {
                             this_is_not_a_thing();
@@ -190,6 +190,33 @@ public class XtcEngineTest {
                 assertEquals((long) i, control.result().orElseThrow(),
                         "each warm run must return its own result");
             }
+        }
+    }
+
+    /**
+     * The engine must be usable through the {@link ToolApi} contract alone - that is the point of
+     * naming the contract: a caller (or the upstream ToolConnector) can be written against the
+     * interface and satisfied by any implementation.
+     */
+    @Test
+    public void theEngineIsUsableThroughTheToolApiContractAlone() throws Exception {
+        try (ToolApi api = engine()) {                       // <- interface type, not XtcEngine
+            ToolApi.CompileResult result = api.compile(ErrorListener.BLACKHOLE,
+                    new ToolApi.SourceUnit("ApiPoc",
+                            "module ApiPoc {\n"
+                          + "    Int run() {\n"
+                          + "        return 7;\n"
+                          + "    }\n"
+                          + "}\n"));
+
+            assertTrue(result.isSuccess(), () -> "compile failed: " + result.diagnostics());
+            assertFalse(result.modules().isEmpty());
+
+            ToolApi.RunControl control = api.start(result, "ApiPoc");
+            control.completion().get(60, TimeUnit.SECONDS);
+
+            assertTrue(control.error().isEmpty(), () -> "run failed: " + control.error());
+            assertEquals(7L, control.result().orElseThrow());
         }
     }
 }
