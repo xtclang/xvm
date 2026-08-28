@@ -3106,7 +3106,12 @@ public class MethodStructure
     /**
      * The method's code (for assembling new code).
      */
-    private transient Code m_code;
+    // volatile: ensureCode() lazily creates this while other threads may be reading it, and
+    // markNative()/resetRuntimeInfo() mutate the surrounding state. Without a happens-before edge a
+    // reader can observe a PARTIALLY CONSTRUCTED Code through this reference. See also m_fNative:
+    // the two are read together (ensureCode tests isNative() first), so they must be published
+    // together or a reader can pair a stale flag with a null/incomplete object.
+    private transient volatile Code m_code;
 
     /**
      * The method's AST.
@@ -3132,7 +3137,12 @@ public class MethodStructure
      * True iff the method has been marked as "native". This is not part of the persistent method
      * structure; it exists only to support the prototype interpreter implementation.
      */
-    private transient boolean m_fNative;
+    // volatile: markNative() flips this as part of a multi-step transition (setAbstract,
+    // resetRuntimeInfo, then two field writes) while another thread may be inside
+    // getOps() -> ensureCode(), which reads isNative() before touching m_code. With no edge, that
+    // reader can see the stale native=false together with a null m_code and take the wrong branch -
+    // surfacing as getOps()'s "has no code" IllegalStateException.
+    private transient volatile boolean m_fNative;
 
     /**
      * True iff the method has been marked as "transient". This is not part of the persistent method
