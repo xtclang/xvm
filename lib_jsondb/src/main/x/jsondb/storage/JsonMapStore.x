@@ -871,7 +871,11 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 // other entries in the history will be moved OffHeap during maintenance
                 for ((Int txId, Array<Key> keys) : updatedKeysByTx) {
                     for (Key key : keys) {
-                        if (History valueHistory := history.get(key)) {
+                        // don't replace `Deleted` keys; let them be; replacing them with `OffHeap`
+                        // marker would resurrect them later
+                        if (History valueHistory := history.get(key),
+                                MapValue current := valueHistory.get(txId),
+                                current != Deleted) {
                             valueHistory.put(txId, OffHeap);
                         }
                     }
@@ -943,10 +947,13 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         if (modelAtCleanup != modelNow) {
             // the model has changed since the last clean-up
             if (modelAtCleanup <= Small && modelNow == Medium) {
-                // The model has grown to Medium, mark all history values as OffHeap
+                // the model has grown to Medium, mark all real history values as `OffHeap`;
+                // all `Deleted` values must be left intact
                 for ((Key key, History valueHistory) : history) {
                     for (Map.Entry<Int, MapValue> entry : valueHistory.entries) {
-                        entry.value = OffHeap;
+                        if (entry.value != Deleted) {
+                            entry.value = OffHeap;
+                        }
                     }
                 }
             } else if (modelAtCleanup <= Medium && modelNow == Large) {

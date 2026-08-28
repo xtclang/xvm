@@ -521,4 +521,75 @@ class JsonMapStoreTest {
             }
         }
     }
+
+    /**
+     * Regression test for the commit path replacing a `Deleted` marker during a Small-to-Medium
+     * transition.
+     */
+    @Test
+    void shouldPreserveDeletedMarkerWhenCommitTransitionsToMedium() {
+        assert TestClient client := clientProvider.getClient();
+        TestSchema        schema = client.testSchema;
+        JsonMapStore<String, String> store =
+                schema.getMapStore().as(protected JsonMapStore<String, String>);
+
+        String key = "delete-me";
+        schema.mapData.put(key, "v");
+        assert store.model == Small;
+
+        // make the delete itself cross the size threshold
+        store.smallModelBytesMax = store.bytesUsed;
+        schema.mapData.remove(key);
+
+        assert store.model == Medium;
+        assert Boolean offHeap := store.isValueOffHeap(store.lastCommit, key);
+        assert !offHeap;
+        assert schema.mapData.contains(key) == False;
+
+        String[] keys = schema.mapData.keys.toArray();
+        assert keys.size == schema.mapData.size == 0;
+        assert !keys.contains(key);
+    }
+
+    /**
+     * Regression test for the maintenance path replacing an existing `Deleted` marker after a
+     * Small-to-Medium transition.
+     */
+    @Test
+    void shouldPreserveDeletedMarkerWhenMaintenanceTransitionsToMedium() {
+        assert TestClient client := clientProvider.getClient();
+        TestSchema        schema = client.testSchema;
+        JsonMapStore<String, String> store =
+                schema.getMapStore().as(protected JsonMapStore<String, String>);
+        TxManager<TestSchema> txMgr = schema.txManager.as(protected TxManager<TestSchema>);
+
+        store.smallModelFilesMax = 10;
+        for (Int i : 0 ..< 10) {
+            schema.mapData.put($"seed-{i}", "s");
+        }
+        schema.mapData.remove("seed-0");
+        assert store.model == Small;
+        Int deleteTx = store.lastCommit;
+
+        // transition in a separate commit so that only maintenance processes the tombstone
+        schema.mapData.put("overflow-x", "v");
+        assert store.model == Medium;
+        assert Boolean offHeap := store.isValueOffHeap(deleteTx, "seed-0");
+        assert !offHeap;
+        assert schema.mapData.contains("seed-0") == False;
+
+        ArrayOrderedSet<Int> txSet =
+                new ArrayOrderedSet<Int>(txMgr.byReadId.keys.toArray(Constant));
+        store.modelAtCleanup = Small;
+        store.retainTx(txSet);
+
+        assert offHeap := store.isValueOffHeap(deleteTx, "seed-0");
+        assert !offHeap;
+        assert schema.mapData.contains("seed-0") == False;
+
+        String[] keys = schema.mapData.keys.toArray();
+        assert keys.size == schema.mapData.size == 10;
+        assert !keys.contains("seed-0");
+        assert keys.contains("overflow-x");
+    }
 }
