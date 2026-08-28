@@ -725,3 +725,104 @@ harness added early so the category stays closed after it is emptied.
 - Annotation params stay gated on the builder-state redesign; TypeInfo
   annotation arrays already closed by stage-2 cloning. Stage 3 is therefore
   COMPLETE for the families the audit priced as worth the width.
+
+## Stage 4 Candidate Survey (2026-08-28)
+
+Complete sweep for **direct field escapes** — accessors whose body hands out
+stored array state rather than a fresh allocation. Detector: `public|protected`
+accessor returning `T[]`, widened by hand for lazy-compute bodies
+(`ModuleStructure.getDigest`) and delegating ones (`FSNodeConstant.getFileBytes`).
+Factories (`toByteArray`, `grow`, `reverse`, `extractBits`, `getBits(handle,…)`)
+are NOT escapes and are excluded.
+
+### Object arrays — 9 escapes, exactly ONE trivial
+
+| Site | Field | Verdict |
+| --- | --- | --- |
+| `PropertyInfo.getPropertyBodies()` | `private final PropertyBody[] m_aBody` | **TRIVIAL — the one clean candidate** |
+| `MethodInfo.getChain()` | `private final MethodBody[] m_aBody` | Family C; 10 consumers |
+| `MethodStructure.getParamArray()` | `m_aParams` | Non-final, reassigned — see below |
+| `MethodStructure.getReturnArray()` | `m_aReturns` | ditto |
+| `MethodStructure.getAnnotations()` | `m_aAnnotations` | ditto |
+| `MethodStructure.getLocalConstants()` | `m_aconstLocal` | ditto |
+| `Parameter.getAnnotations()` | `m_aAnnotations` | ditto |
+| `Annotation.getParams()` | `m_aParams` | ditto |
+| `PropertyStructure.peekPropertyAnnotations()` | `m_aPropAnno` | `transient`, rebuilt |
+
+**`PropertyInfo.m_aBody` is the single trivial conversion**: already `final`,
+**one** write (the constructor), 5 consumers all verified read-only
+(`TypeInfoReal` for-each; `PropertyClassTypeConstant` and `UnionTypeConstant`×2
+index; `PropertyInfo.create` uses `Handy.prepend`, which copies out), and —
+unlike `MethodInfo` — **no lazy resolved cache**, so none of the row 44/51
+publication subtleties apply. It is an interned `TypeInfo` member with the same
+cross-container sharing profile as `MethodInfo`, so it belongs to Family C and
+should land WITH it, not alone: converting only the easy twin leaves the ratchet
+counting the harder one indefinitely.
+
+### Why the structure-type fields are not final (investigated, not assumed)
+
+The seven `MethodStructure`/`Parameter`/`Annotation`/`PropertyStructure` fields
+are non-final for **three distinct structural reasons**, each already mapped to
+an existing enhancement. This is why they are not cheap `FrozenArray` targets:
+
+1. **Two-phase deserialization** (`MethodStructure:2023` in `disassemble`,
+   `Annotation.resolveConstants:109/115`). A `Component` is constructed from the
+   stream header before its body is read, and the binary stores constant
+   *indices* (`m_aiParam`) that cannot be resolved to `Constant` objects until
+   the whole pool has been read. A constructor cannot fill these fields because
+   the data does not exist yet. Making them final requires a **builder/two-object
+   split** across the `Component` disassembly contract — wide, and a format-protocol
+   change, not an initialization tidy-up.
+2. **`registerConstants(pool)` rewrites the field by design**
+   (`Annotation:369`, `m_aParams = registerConstants(pool, m_aParams)`): the
+   assembly pass replaces each constant with its pool-interned equivalent,
+   mutating a nominally-immutable interned constant. This is an **E3** hazard and
+   the codebase already half-knows it — `resolveParams:220` guards with
+   `isHashCached()` and, when the hash has been observed, returns a *different*
+   pooled `Annotation` instead of mutating ("we must never change the
+   hashCode/equality for already registered constants"). The field is non-final
+   because the design is *mutate-until-first-observation* rather than
+   *never-mutate*; the immutable path already exists beside it.
+3. **Clone-based copying with owner fix-up** (`MethodStructure:1803` copy
+   constructor aliases, then `cloneBody:1832` / `copyParametersBeforePublication:1860`
+   overwrite via `copyParametersFor(that, …)`). Construct-then-fix-up, because
+   the copy helper needs the fully-constructed target as the `Parameter` owner.
+   This is the **E6** target — but note the trap: hoisting `copyParametersFor(this, …)`
+   into the constructor makes it a **`this`-escape**, since the helper calls
+   `source[i].copyFor(method)` on a partially-constructed method. That collides
+   with **E9**'s fatal this-escape lint. So (3) is fixable only as E6+E9 together.
+
+Net: the non-finality is load-bearing protocol, not sloppiness. These fields
+follow E3/E6/E9 and cannot be picked off individually by stage 4.
+
+### Primitive arrays — the `FrozenArray<T>` gap
+
+`FrozenArray<T>` is generic and therefore cannot hold primitives at all, so
+these escapes are currently **unclosable** and invisible to the ratchet.
+Proposed (user, 2026-08-28): add primitive specializations. The survey supports
+three, and the motivation is stronger than for the object case, because two
+sites are **already paying a defensive copy on every call** that a frozen type
+would eliminate:
+
+| Proposed type | Site | Today |
+| --- | --- | --- |
+| `FrozenByteArray` | `UInt8ArrayConstant.getValue()` | **raw escape**, pool-interned constant |
+| | `FPNConstant.getValue()` | **raw escape**, pool-interned constant |
+| | `Float128Constant.getValue()` | **raw escape**, pool-interned constant |
+| | `FSNodeConstant.getFileBytes()` | transitively the same field |
+| | `ModuleStructure.getDigest()` | **raw escape** after lazy compute |
+| `FrozenCharArray` | `xString.getValue()` | **raw escape** of immutable-String backing |
+| `FrozenIntArray` | `BindFunctionAST.getIndexes()` | **raw escape** |
+| | `Version.getIntArray()` | `ints.clone()` — **copy on each of 14 call sites** |
+| | `EvalCompiler.getArgs()` | `m_aiArg.clone()` — **copy on each of 4 call sites** |
+
+The byte/char rows are the higher-value half: three of them are **`ConstantPool`-
+interned constants**, the strongest form of the shared-metadata hazard — a
+mutable alias of storage every container shares. The int rows are where the
+copy-avoidance argument bites: `Version.getIntArray()` and `EvalCompiler.getArgs()`
+clone *because there is no frozen type to hand back*, which is precisely the
+scattered-`.clone()`-convention tax stage 3 exists to retire.
+
+Cost note: primitive specializations cannot share an interface with
+`FrozenArray<T>` beyond a marker (no generic `get`), so this is three small
+independent classes plus three ratchet counters, not one generic addition.
