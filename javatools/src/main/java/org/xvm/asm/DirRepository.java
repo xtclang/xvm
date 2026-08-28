@@ -25,6 +25,22 @@ import java.util.TreeMap;
 /**
  * A simple ModuleRepository that manages its contents in a directory.
  */
+/*
+ * THREAD SAFETY: the three public entry points below are synchronized on the repository.
+ *
+ * The scan cache is a plain HashMap (modulesByFile, a non-final field reassigned wholesale) and a
+ * plain TreeMap (modulesByName, rebuilt with clear() + a put() loop). Concurrent callers - two
+ * parallel compiles resolving library modules, say - otherwise race those rebuilds against get()
+ * and against the live keySet() view getModuleNames() hands out, which throws
+ * ConcurrentModificationException (and can spin or silently drop entries).
+ *
+ * A coarse per-repository lock is the right granularity here, not a pessimisation: this is a
+ * directory-scan cache consulted once per module lookup, not a hot inner loop. Note that swapping
+ * in concurrent maps, or copy-on-write with a volatile swap, would NOT be sufficient on its own,
+ * because ModuleInfo.ensureModule() ALSO lazily deserializes ("if (module == null) module =
+ * tryLoad()") - two threads would still duplicate that work and could publish a half-built module.
+ * The lock covers both the cache rebuild and the lazy materialization reached through it.
+ */
 public class DirRepository
         implements ModuleRepository {
     // ----- constructors  -------------------------------------------------------------------------
@@ -63,20 +79,20 @@ public class DirRepository
     // ----- ModuleRepository API ------------------------------------------------------------------
 
     @Override
-    public Set<String> getModuleNames() {
+    public synchronized Set<String> getModuleNames() {
         ensureCache();
         return Collections.unmodifiableSet(modulesByName.keySet());
     }
 
     @Override
-    public ModuleStructure loadModule(String sModule) {
+    public synchronized ModuleStructure loadModule(String sModule) {
         ensureCache();
         ModuleInfo info = modulesByName.get(sModule);
         return info == null ? null : info.ensureModule();
     }
 
     @Override
-    public void storeModule(ModuleStructure module)
+    public synchronized void storeModule(ModuleStructure module)
             throws IOException {
         if (m_fRO) {
             throw new IOException("repository is read-only: " + this);
