@@ -1,85 +1,117 @@
-# XtcEngine POC on master — status and known gaps
+# XtcEngine POC on master — status, and how it relates to the LSP
 
-Branch: `lagergren/xtc-engine-poc`, based on `origin/master` `82683bcd2`.
-Goal: prove a warm, in-process compile+run engine works on master, so a Gradle plugin (and an
-LSP server) can stop forking a JVM per invocation.
+Branch: `lagergren/xtc-engine-poc` (PR #546), based on `master`.
 
-## What is proven (3 green tests, `org.xvm.api.XtcEngineTest`)
+**Goal:** prove a warm, in-process compile+run engine works on `master`, so tooling stops forking a
+JVM and re-bootstrapping the runtime for every operation.
 
-1. **Compile Ecstasy source held in a String** — no files, no CLI.
-2. **Run the compiled module in a nested container**, in the same JVM, and await event-driven
-   completion.
-3. **One warm engine serves repeated compile+run cycles** — the runtime bootstrap is paid once.
-4. **Diagnostics stream to the caller's own `ErrorListener`** as they are produced, and a failed
-   compile is self-describing (the result always carries diagnostics).
+---
 
-Gate: `./gradlew xdk:installDist` then `./gradlew :javatools:test :javatools_utils:test` — both
-green. (Run them SEPARATELY; in one invocation the test's module reads race installDist's writes.)
+## Why this is (essentially) all that was missing for the LSP
 
-## What was changed on master (deliberately minimal — 5 files)
+The LSP is **already built**, in `lang/`: `lsp-server` (full lsp4j protocol, `publishDiagnostics`,
+document services), `dap-server`, `intellij-plugin`, `tree-sitter` grammar, and the VS Code
+extension. Language intelligence is served through a pluggable **`Adapter`**:
+
+| Adapter | Backend | Status |
+|---|---|---|
+| `MockAdapter` | regex | testing/fallback |
+| `TreeSitterAdapter` | tree-sitter | **works today** — "syntax-aware (~80% LSP features)" |
+| `XdkAdapter` | **XDK compiler** | **STUB** — *"all methods log but return empty results"* |
+
+So the editor half, the protocol half, and the syntactic half are done. The one hole is the
+**compiler-backed adapter** — the thing that needs to actually *compile* a buffer and hand back real
+diagnostics, and to *run* a module. That is exactly what this POC supplies:
+
+- `compile(...)` over in-memory buffers → structured `Diagnostic`s (severity, **code**, message,
+  source, line), streamed to the caller's `ErrorListener` as produced → feeds `publishDiagnostics`.
+- `start(...)` → a `RunControl` for running/debugging a module from the editor.
+
+**In short: `lang` owns the LSP; this owns compile-and-run. Together they close the `XdkAdapter`
+stub.** What remains beyond that is genuinely semantic (hover, type inference, cross-file
+navigation) — the compiler-API surface the adapter would query — plus the small items in
+"Known gaps" below.
+
+---
+
+## What is proven — 9 green tests (`org.xvm.api.XtcEngineTest`)
+
+| Test | Proves |
+|---|---|
+| `compilesAndRunsAModuleHeldInAString` | compile from a `String` + run in one JVM, no CLI |
+| `theRunResultReachesTheHost` | the module's `Int run()` value reaches the host, exactly |
+| `aVoidRunCompletesWithNoResult` | "returned nothing" ≠ "failed" |
+| `aThrowingRunCompletesExceptionally` | the **failure path**: a throwing run surfaces its error |
+| `oneWarmEngineServesRepeatedCompileAndRunCycles` | repeated compile→run on ONE warm engine |
+| `compilesMultipleModulesInOneRequest` | several modules per request, all runnable |
+| `compiledModulesCanBeSyncedToDiskAndReloaded` | `writeTo(dir)` → reload via a plain `DirRepository` |
+| `reportsCompileDiagnosticsAndStreamsThemToTheCaller` | diagnostics stream to the caller's sink |
+| `theEngineIsUsableThroughTheToolApiContractAlone` | the `ToolApi` contract is sufficient by itself |
+
+Gate: `./gradlew xdk:installDist`, then `./gradlew :javatools:test :javatools_utils:test` — green.
+Run them as **separate invocations**; in one invocation the test's module reads race
+`installDist`'s writes.
+
+---
+
+## What changed on master (deliberately minimal)
 
 | File | Change |
 |---|---|
-| `MainContainer` | capture the `callLater` future that was being discarded; add `futureResult()` |
-| `Container` | add `runModule(String, ObjectHandle...)` returning the completion future |
-| `NestedContainer` | add `createForHost(...)`; add a parent injection fallback **only** for host containers (`f_hProvider == null`), else a host-run module gets no `Console` |
-| `FileStructure` | **master bug fix** — see below |
-| `DirRepository` | **master bug fix** — synchronize the scan cache (see below) |
-| `api/ToolApi.java` | new: the named CONTRACT a tool embeds (compile + run + shared types) |
-| `api/XtcEngine.java` | new: the engine - one implementation of `ToolApi` |
+| `MainContainer` | capture the `callLater` future that was being **discarded**; expose `futureResult()` |
+| `Container` | `runModule(...)` returning the completion future, asking for the return value the method declares |
+| `NestedContainer` | `createForHost(...)`; parent injection fallback **only** for host containers |
+| `FileStructure` | **master bug fix** — ambient-pool NPE (below) |
+| `DirRepository` | **master bug fix** — synchronize the scan cache (also standalone as PR #547) |
+| `api/ToolApi.java` | new — the named CONTRACT a tool embeds |
+| `api/XtcEngine.java` | new — the engine; one implementation of `ToolApi` |
 
-Deliberately NOT lifted from the reference branch: pool-publication fencing
-(`markRuntimePublished`), the INSTANCE-removal/owner-lazy work, sealing, display purity. None is
-needed for the POC.
+Deliberately **not** lifted from the reference branch: pool-publication fencing, INSTANCE removal,
+sealing, display purity. None is needed here.
 
-## Master bug found by the POC (deterministic, with a red proof)
+---
 
-`FileStructure.getErrorListener()` read the ambient `ConstantPool.getCurrentPool()` and
-dereferenced it **without a null check**. That thread-local is null on any thread with no pool
-bound — i.e. every Java host thread driving the runtime — so the embedding path NPE'd inside a
-*diagnostic accessor*:
+## Master bugs found and fixed on the way
 
-```
-NullPointerException: Cannot invoke "ConstantPool.getErrorListener()" because "poolCurrent" is null
-  at FileStructure.getErrorListener(FileStructure.java:1397)
-  at TypeConstant.ensureTypeInfo(TypeConstant.java:1659)
-  at Container.findModuleMethod(Container.java:252)
-```
+1. **`FileStructure.getErrorListener()` NPE'd on the embedding path.** It read the ambient
+   `ConstantPool.getCurrentPool()` and dereferenced it with no null check; that thread-local is null
+   on any thread with no pool bound — i.e. every Java host thread — so the API died inside a
+   *diagnostic accessor*. Null-guarded here; the real fix is passing the pool explicitly.
+2. **`DirRepository`'s scan cache was not thread-safe** — unsynchronized `HashMap`/`TreeMap` rebuilt
+   with `clear()`+`put()`, plus a live `keySet()` view handed to callers. Proven red with a
+   `ConcurrentModificationException`. Submitted standalone as **PR #547**.
+3. **A module's `run()` return value never reached the host** — two separate defects:
+   `callLater` hardcodes `cReturns = 0` (so the future completed with an empty tuple), and the
+   native instantiate-and-run op ignored the caller-designated return slot in favour of `A_STACK`.
+   Both fixed, both covered by tests.
 
-Fixed here with a null guard (one line). The deeper fix is to pass the pool EXPLICITLY rather than
-consult an ambient thread-local — this is a concrete instance of the ambient-ownership hazard.
-**Worth filing as a master bug**: the reproduction is simply "call the embedding API from a Java
-thread", and `XtcEngineTest` is the red proof.
+---
 
-## Second master bug fixed here: `DirRepository` scan cache is not thread-safe
+## Modes: what works today
 
-`loadModule`/`getModuleNames`/`storeModule` were unsynchronized over a plain `HashMap` (a non-final
-field reassigned wholesale) and a plain `TreeMap` (rebuilt with `clear()` + a `put()` loop). Two
-parallel compiles resolving library modules race those rebuilds against `get()` and against the live
-`keySet()` view `getModuleNames()` returns - proven red on master with a
-`ConcurrentModificationException` by `DirRepositoryConcurrentScanTest`, which is included here and
-now passes.
+| Mode | Status | Notes |
+|---|---|---|
+| **Sequential compile** | ✅ proven | multiple modules per request too |
+| **Sequential run** | ✅ proven | results and failures both surface |
+| **Interleaved compile+run, one warm engine** | ✅ proven | the actual point of the API |
+| **Parallel compile** | ⚠️ unblocked, untested | both known blockers now closed: `DirRepository` here/#547, and the static compiler counters already on master via #538 |
+| **Parallel run** | ❌ | needs the shared-pool publication work; the deep one |
 
-This is **the last remaining blocker for parallel compiles**: the other one the audit identified,
-the static compiler counters, is already fixed on master by #538 (all four are `AtomicInteger`).
+---
 
-## Known gaps (to address after review)
+## Known gaps
 
-1. ~~A module's `run()` return value does not reach the host.~~ **FIXED** - two distinct defects,
-   both now covered by tests: `callLater` hardcodes `cReturns = 0`, so the future completed with an
-   EMPTY tuple (`runModule` now calls `postRequest(..., fReturn ? 1 : 0)` directly); and the native
-   instantiate-and-run op ignored the caller-designated return slot in favour of `A_STACK`, so even
-   with a return requested the value landed where the future never reads (it now returns into
-   `iRet`).
-2. **`RunControl.kill()` does not force-unwind a running fiber.** It cancels the caller's wait and
-   releases the container; real cancellation needs `Container.terminate(ServiceContext)` wired to a
-   cooperative check.
-3. **`NativeFunctionHandle` binds to `xRTFunction.INSTANCE.f_container`** on master (a process-static
-   template instance). Fine for a single native plane; it is the static-INSTANCE ownership hazard,
-   and would need attention before multiple planes or heavy concurrency.
-4. **No `compile(Path...)` source-tree entry point yet** — only in-memory sources. This is what the
-   Gradle plugin's warm-compile phase and an LSP workspace both need next.
-5. **No pool-publication fence.** Master has none, so a long-running host doing many compiles/runs
-   over one shared pool is exposed to the interning/publication races documented separately. The POC
-   does sequential work and does not hit them; a production plugin should be re-checked under
-   parallel load.
+1. **No `compile(Path...)` source-tree entry point** — only in-memory sources. An LSP workspace and
+   the Gradle plugin both want on-disk module directory trees. `org.xvm.tool.ModuleInfo` already
+   walks a module directory into a parsed node tree, so this is wiring, not new compiler work.
+   **Biggest remaining gap; low difficulty.**
+2. **Diagnostics carry `line` but no column/end position.** LSP wants a `Range` to underline. Needs
+   checking whether `ErrorInfo` carries start/end offsets.
+3. **No incremental or cancellable compile.** An LSP recompiles per keystroke; today each call is a
+   whole-module compile. `RunControl.kill()` likewise cancels the caller's wait but does not unwind
+   a running fiber.
+4. **`NativeFunctionHandle` binds to `xRTFunction.INSTANCE.f_container`** on master (a process-static
+   template instance) — fine for a single native plane.
+5. **No pool-publication fence.** Sequential work is fine; the shared pool grows slowly
+   (~1–2 constants per distinct-typed run, measured separately), which matters for an all-day daemon
+   more than for a build invocation.
