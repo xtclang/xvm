@@ -16,6 +16,15 @@ filing if master has moved.
 > cherry-pick check before filing. PR #539 in particular reworked the owner-lazy
 > concern (`Lazy.Bound`), so rows touching runtime lazy caches are most likely to
 > have shifted.
+>
+> **Branch seed hashes are also stale (2026-08-28):** the rebase onto `82683bcd2`
+> rewrote all 297 branch commits, so the "source-only clean from `<hash>`" cherry-pick
+> SEEDS cited in the rows below no longer resolve on the branch. They are kept as
+> identifiers; the authoritative reference is the commit SUBJECT, mapped for every
+> cited hash in the [appendix table](#appendix-commit-hash-resolution-table) at the end
+> of this document (all branch seeds verified to resolve). The pre-rebase hashes remain
+> reachable via the `backup/pre-rebase-master` tag, so an existing scratch worktree
+> still works.
 
 Scope decision: `plans/github-issue-breakdown.md` lists 19 Category A rows, but
 the last row is already extracted as PR #539. This file prepares the critical master issues still intended for manual filing
@@ -1910,3 +1919,55 @@ JVM can parse - master rejected the branch's `0.20260519` `.xtc` as
 - Do not use branch-only `OwnershipDiagnostics`, `NativeTemplates`,
   `Lazy.Owner`, sealing, or broad clone-free adoption helpers unless the issue
   explicitly says the tiny helper is the prerequisite.
+
+---
+
+## Appendix: commit-hash resolution table
+
+The 2026-08-28 rebase onto `origin/master` `82683bcd2` rewrote all 297 branch commits, so the
+cherry-pick SEED hashes cited in the rows above no longer resolve on the branch. Commit
+SUBJECTS survive a rebase, so resolve any seed with:
+
+```
+git log --oneline master..HEAD --fixed-strings --grep '<subject>'
+```
+
+The pre-rebase hashes remain reachable via the `backup/pre-rebase-master` tag, so an existing
+scratch worktree still works. Hashes of MASTER commits are unaffected and still resolve.
+
+| Cited hash | Kind | Commit subject (authoritative) |
+|---|---|---|
+| `0231a8771` | branch seed (rewritten) | Stop fabricating self targets in MethodBody owned copies |
+| `0af827c72` | branch seed (rewritten) | Retire Cloneable from the structure family |
+| `145f12f51074bae5e073db6181b0d015414dda65` | master (still valid) | Fix interpreter xConstrainedInteger toNibble conversion (#536) |
+| `25371b397` | branch seed (rewritten) | Retire Cloneable from Token, Source, and MethodStructure.Source |
+| `26ce54466` | branch seed (rewritten) | Fix alarm callback registry race and cancel leak |
+| `33323ffe1` | branch seed (rewritten) | Report JIT unhandled exceptions as failures |
+| `3e09abc32` | branch seed (rewritten) | Preserve main container startup failure causes |
+| `5311da1ac` | branch seed (rewritten) | Rollback native callback registration failures |
+| `536067f5e` | branch seed (rewritten) | Make method op-assembly failures terminal |
+| `5b9d577da` | branch seed (rewritten) | Add jsondb rollback failure regression test |
+| `5d9a5f395` | branch seed (rewritten) | Fix runtime-lazy delegation synthesis: assemble before publish, lock-free |
+| `61e555a68` | master (still valid) | Fix keysAt() undercount in JsonMapStore when the last pending mod sorts before the final history key (#542) |
+| `61e555a68cd82a866f82aea40a3bb97a424a3809` | master (still valid) | Fix keysAt() undercount in JsonMapStore when the last pending mod sorts before the final history key (#542) |
+| `632cac927` | branch seed (rewritten) | Guard HandleConstant against raw cross-container serving |
+| `6496f5303` | branch seed (rewritten) | Fix Future.and completion failure handling |
+| `796f13465` | branch seed (rewritten) | Report worker runtime failures through join |
+| `7ce5662d1` | branch seed (rewritten) | Refuse view cloning of register-bound refs |
+| `8077ad6c0` | branch seed (rewritten) | Close the conditional must-audit rows; fix the graduated findings |
+| `82683bcd2` | master (still valid) | Add 'xtc bundle': merge compiled modules into a single multi-module .xtc (#525) |
+| `8a45ba708` | branch seed (rewritten) | Observe raw file submit write failures |
+| `9456d6727` | branch seed (rewritten) | Tighten lint and constructor escape audit |
+| `979784a1a` | branch seed (rewritten) | Preserve cause for requested module loads |
+| `a11765c86` | branch seed (rewritten) | Harden runtime op publication |
+| `a935bc553` | branch seed (rewritten) | Retain jsondb rollback failure after failed commit |
+| `ae5d7ad80` | branch seed (rewritten) | Thread-safe DirRepository scan cache (concurrent-compile must-fix #8) |
+| `b00654356` | branch seed (rewritten) | Make compiler codegen failures terminal |
+| `c5c40d443` | branch seed (rewritten) | Share atomic and injected handle cells across views |
+| `c621b1dca` | branch seed (rewritten) | Fix finalizer chain append and null-padding NPEs |
+| `cc183520c` | master (still valid) | Fix concrete utility this-escape hazards (#539) |
+| `d2165e4f8` | branch seed (rewritten) | Share freeze state across object views |
+| `f4744cb1e` | branch seed (rewritten) | Preserve JIT bridge language exceptions |
+| `f4df60ed1` | branch seed (rewritten) | Refuse view cloning of Mutable arrays |
+| `f835b3693` | branch seed (rewritten) | Copy super parameters for short-hand property overrides |
+| `ff8cc479a` | branch seed (rewritten) | Clone reflection invoke arguments before frame reuse |
