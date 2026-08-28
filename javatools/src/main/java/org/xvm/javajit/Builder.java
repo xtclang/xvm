@@ -324,22 +324,37 @@ public abstract class Builder {
 
         case SingletonConstant singleton: {
             if (singleton.getClassConstant() instanceof PropertyConstant propId) {
-                TypeConstant type = singleton.getType();
-                JitTypeDesc  jtd  = type.getJitDesc(this);
+                TypeConstant ownerType = propId.getClassIdentity().getType();
+                PropertyInfo propInfo  = propId.getPropertyInfo(ownerType);
+                TypeConstant propType  = singleton.getType();
+                JitTypeDesc  jtd       = propType.getJitDesc(this);
+
+                if (propInfo.isInjected()) {
+                    assert !jtd.flavor.isOptimized;
+
+                    // instead of holding the value, the field contains a container-independent
+                    // MethodHandle used to compute the value and cache it at the container
+                    code.aload(bctx.ctxSlot(code))
+                        .getstatic(ensureClassDesc(ownerType),
+                                propId.ensureJitPropertyName(typeSystem), CD_MethodHandle)
+                        .invokevirtual(CD_Ctx, "injectStatic", Ctx.MD_injectStatic);
+                    code.checkcast(jtd.cd);
+                    return new SingleSlot(propType, jtd.flavor, jtd.cd, "");
+                }
 
                 switch (jtd.flavor) {
                 case Specific, Widened, Primitive:
                     code.getstatic(ensureClassDesc(propId.getClassIdentity().getType()),
                         propId.ensureJitPropertyName(typeSystem), jtd.cd);
-                    return new SingleSlot(type, jtd.flavor, jtd.cd, "");
+                    return new SingleSlot(propType, jtd.flavor, jtd.cd, "");
 
                 case XvmPrimitive:
-                    ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(type);
+                    ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(propType);
                     String      name  = propId.ensureJitPropertyName(typeSystem) + "$";
                     for (int i = 0; i < cds.length; i++) {
                         code.getstatic(jtd.cd, name + i, cds[i]);
                     }
-                    return new MultiSlot(bctx, jtd.flavor, type, jtd.cd, cds);
+                    return new MultiSlot(bctx, jtd.flavor, propType, jtd.cd, cds);
 
                 default:
                     throw new UnsupportedOperationException("Load property singleton " +

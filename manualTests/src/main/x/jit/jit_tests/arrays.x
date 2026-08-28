@@ -3,9 +3,10 @@
  */
 package arrays {
 
+    static @Inject Console console;
+
     public const TestRunner {
         Boolean run() {
-            @Inject Console console;
             console.print(">>>> Running arrays tests >>>>");
 
             Boolean passed = True;
