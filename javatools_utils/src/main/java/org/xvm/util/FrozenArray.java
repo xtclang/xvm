@@ -5,6 +5,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import java.util.stream.Stream;
+
 import static java.util.Objects.requireNonNull;
 
 
@@ -93,6 +95,14 @@ public final class FrozenArray<T>
      */
     public T get(int i) {
         return f_aElem[i];
+    }
+
+    /**
+     * @return a sequential {@link Stream} over the elements; the array is immutable, so the stream
+     *         cannot observe a concurrent modification
+     */
+    public Stream<T> stream() {
+        return Arrays.stream(f_aElem);
     }
 
     /**

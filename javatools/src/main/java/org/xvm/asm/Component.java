@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -22,6 +23,7 @@ import java.util.Set;
 
 import java.util.function.Consumer;
 
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -3365,54 +3367,31 @@ public abstract sealed class Component
             if (m_composition == Composition.Incorporates && m_mapParams != null) {
                 TypeConstant constMixin = m_typeContrib;
                 sb.append("conditional ")
-                  .append(constMixin.getDefiningConstant())
-                  .append('<');
-
-                boolean fFirst = true;
-                for (TypeConstant constParam : constMixin.getParamTypesArray()) {
-                    if (fFirst) {
-                        fFirst = false;
-                    } else {
-                        sb.append(", ");
-                    }
-
-                    sb.append(constParam.getValueString());
-
-                    // extract the type name from the type param
-                    if (constParam.isSingleDefiningConstant()
-                            && constParam.getDefiningConstant() instanceof PropertyConstant idProp) {
-                        StringConstant constName       = idProp.getNameConstant();
-                        TypeConstant   constConstraint = m_mapParams.get(constName);
-                        if (constConstraint != null) {
-                            sb.append(" extends ")
-                              .append(constConstraint.getValueString());
-                        }
-                    }
-                }
-
-                sb.append('>');
+                  // guarded: getDefiningConstant() THROWS for an unresolved or relational type, and a
+                  // throwing toString() takes down the rendering of every container holding this
+                  // object. See docs/reentrancy/plans/side-effect-free-tostring.md.
+                  .append(constMixin.isSingleDefiningConstant()
+                          ? constMixin.getDefiningConstant()
+                          : constMixin.getValueString())
+                  .append('<')
+                  .append(constMixin.getParamTypesArray().stream()
+                          .map(this::renderTypeParam)
+                          .collect(Collectors.joining(", ")))
+                  .append('>');
             } else {
                 if (m_typeContrib != null) {
-                    sb.append(m_typeContrib.resolveTypedefs().getDescription());
+                    // PURE: render the contributed type verbatim. resolveTypedefs() can BUILD new
+                    // TypeConstants (interning into the pool) mid-render. See
+                    // docs/reentrancy/plans/side-effect-free-tostring.md.
+                    sb.append(m_typeContrib.getValueString());
                 }
 
                 if (m_composition == Composition.Annotation && m_annotation != null) {
                     Constant[] aconstArgs = m_annotation.getParams();
                     if (aconstArgs.length > 0) {
-                        sb.append('(');
-
-                        boolean fFirst = true;
-                        for (Constant constParam : aconstArgs) {
-                            if (fFirst) {
-                                fFirst = false;
-                            } else {
-                                sb.append(", ");
-                            }
-
-                            sb.append(constParam.getValueString());
-                        }
-
-                        sb.append(')');
+                        sb.append(Arrays.stream(aconstArgs)
+                                .map(Constant::getValueString)
+                                .collect(Collectors.joining(", ", "(", ")")));
                     }
                 } else if (m_composition == Composition.Delegates) {
                     sb.append('(')
@@ -3422,6 +3401,22 @@ public abstract sealed class Component
             }
 
             return sb.toString();
+        }
+
+        /**
+         * Render one conditional-incorporates type parameter: its value string plus, when the
+         * parameter names a property with a declared constraint, an {@code " extends <constraint>"}
+         * suffix.
+         */
+        private String renderTypeParam(TypeConstant constParam) {
+            if (constParam.isSingleDefiningConstant()
+                    && constParam.getDefiningConstant() instanceof PropertyConstant idProp) {
+                TypeConstant constConstraint = m_mapParams.get(idProp.getNameConstant());
+                if (constConstraint != null) {
+                    return constParam.getValueString() + " extends " + constConstraint.getValueString();
+                }
+            }
+            return constParam.getValueString();
         }
 
         /**

@@ -12,8 +12,8 @@ import java.util.stream.Collectors;
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.HandleConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -158,13 +158,25 @@ public class Annotation
      * @return the annotation class's simple name, or null if it is not available purely
      */
     public String peekAnnotationName() {
-        Constant constClass = m_constClass;
-        Constant resolved   = constClass.resolve();   // pure chain-walk; deliberately NOT stored
-        Constant constUse   = resolved == null ? constClass : resolved;
+        Constant constUse = peekAnnotationClass();
 
         return constUse instanceof IdentityConstant id ? id.getName()
              : constUse instanceof UnresolvedNameConstant unresolved ? unresolved.getName()
              : null;
+    }
+
+    /**
+     * The display-safe counterpart of {@link #getAnnotationClass()}: it reads the resolution but
+     * deliberately does NOT store it back into {@code m_constClass}, and does not unwrap a typedef
+     * (which would resolve the referred-to type). A typedef'd annotation therefore renders under its
+     * typedef name - honest, and pure.
+     *
+     * @return the annotation class constant to render
+     */
+    private Constant peekAnnotationClass() {
+        Constant constClass = m_constClass;
+        Constant resolved   = constClass.resolve();   // pure chain-walk; deliberately NOT stored
+        return resolved == null ? constClass : resolved;
     }
 
     /**
@@ -326,7 +338,7 @@ public class Annotation
         var sb = new StringBuilder();
 
         sb.append('@')
-          .append(getAnnotationClass().getValueString());
+          .append(peekAnnotationClass().getValueString());
 
         if (m_aParams.length > 0) {
             sb.append('(')
@@ -387,7 +399,7 @@ public class Annotation
         int cParams = m_aParams.length;
 
         sb.append("class=")
-          .append(getAnnotationClass().getValueString())
+          .append(peekAnnotationClass().getValueString())
           .append(", params=")
           .append(cParams);
 
