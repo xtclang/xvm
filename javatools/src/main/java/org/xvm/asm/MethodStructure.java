@@ -19,6 +19,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.Op.Prefix;
@@ -591,15 +592,26 @@ public class MethodStructure
      * @return a Code object, or null iff this MethodStructure has been marked as native
      */
     public Code ensureCode() {
-        if (isNative() || !hasCode()) {
-            return null;
-        }
+        while (true) {
+            CodeState state = m_codeState;
+            if (state.isNative() || !hasCode(state)) {
+                return null;
+            }
 
-        Code code = m_code;
-        if (code == null) {
-            m_code = code = new Code(this);
+            Code code = state.code();
+            if (code != null) {
+                return code;
+            }
+
+            // CAS rather than a plain write: a plain write publishes a whole CodeState and could
+            // therefore clobber a concurrent markNative(), resurrecting isNative=false. Losing the
+            // race costs a discarded Code, which is safe - Code(MethodStructure) only DECODES the
+            // op bytes; it does not mutate the method.
+            code = new Code(this);
+            if (CODE_STATE.compareAndSet(this, state, new CodeState(false, code))) {
+                return code;
+            }
         }
-        return code;
     }
 
     /**
@@ -612,12 +624,12 @@ public class MethodStructure
 
         resetRuntimeInfo();
 
-        m_fNative     = false;
         m_aconstLocal = null;
         m_abOps       = null;
         m_abAst       = null;
         m_ast         = null;
-        m_code = code = new Code(this);
+        code          = new Code(this);
+        m_codeState   = new CodeState(false, code);
 
         markModified();
 
@@ -1047,14 +1059,13 @@ public class MethodStructure
      * Discard any runtime information.
      */
     public void resetRuntimeInfo() {
-        m_code    = null;
-        m_cVars   = 0;
-        m_cScopes = 0;
-        m_fNative = false;
+        m_cVars     = 0;
+        m_cScopes   = 0;
+        m_codeState = CodeState.NONE;
     }
 
     boolean needsReassembly() {
-        return m_code != null && m_abOps == null
+        return m_codeState.code() != null && m_abOps == null
             || m_ast  != null && m_abAst == null;
     }
 
@@ -1071,7 +1082,7 @@ public class MethodStructure
             }
         }
 
-        Code      code = m_code;
+        Code      code = m_codeState.code();
         BinaryAST ast  = m_ast;
         if (code != null || ast != null) {
             m_abOps = null;
@@ -1108,7 +1119,7 @@ public class MethodStructure
 
             m_registry = null;
 
-            assert (m_code == null) == (m_abOps == null);
+            assert (m_codeState.code() == null) == (m_abOps == null);
             assert (m_ast  == null) == (m_abAst == null);
         }
     }
@@ -1140,9 +1151,8 @@ public class MethodStructure
             m_aconstLocal = null;
             m_abOps       = null;
             m_abAst       = null;
-            m_code        = null;
             m_ast         = null;
-            m_fNative     = false;
+            m_codeState   = CodeState.NONE;
         }
 
         super.setAbstract(fAbstract);
@@ -1152,7 +1162,7 @@ public class MethodStructure
      * @return true iff the method has been marked as native
      */
     public boolean isNative() {
-        return m_fNative;
+        return m_codeState.isNative();
     }
 
     /**
@@ -1160,12 +1170,15 @@ public class MethodStructure
      */
     public void markNative() {
         setAbstract(false);
-        resetRuntimeInfo();
 
-        if (getName().equals("compare") && getIdentityConstant().getNamespace().getName().equals("Const")) {
-            int q= 0;
-        }
-        m_fNative    = true;
+        // Publish the whole transition in ONE write. The previous shape called resetRuntimeInfo(),
+        // which cleared the code AND set native=false, and only then set native=true - so the
+        // object was observably (native=false, code=null) in between. A concurrent reader in
+        // ensureCode() landing in that window takes the "build the Code" branch for a method that
+        // is about to be native, and the failure surfaces later as getOps()'s "has no code".
+        m_cVars      = 0;
+        m_cScopes    = 0;
+        m_codeState  = new CodeState(true, null);
         m_fTransient = true;
     }
 
@@ -1331,11 +1344,22 @@ public class MethodStructure
      * @return true iff this method has code
      */
     public boolean hasCode() {
+        return hasCode(m_codeState);
+    }
+
+    /**
+     * @param state  an already-read {@link CodeState} snapshot, so a caller holding one does not
+     *               take a second, possibly inconsistent, read
+     *
+     * @return true iff this method has code
+     */
+    private boolean hasCode(CodeState state) {
         if (m_FHasCode != null) {
             return m_FHasCode.booleanValue();
         }
 
-        return m_code != null && m_code.hasOps();
+        Code code = state.code();
+        return code != null && code.hasOps();
     }
 
     /**
@@ -1525,7 +1549,7 @@ public class MethodStructure
      * @return the corresponding line number (one-based) of zero if the line cannot be calculated
      */
     public int calculateLineNumber(int iPC) {
-        Code code = m_code;
+        Code code = m_codeState.code();
         if (code == null) {
             return 0;
         }
@@ -1765,12 +1789,11 @@ public class MethodStructure
             that.m_aParams = aParams;
         }
 
-        if (this.m_abOps == null && this.m_code != null) {
-            // m_code is a mutable object, and tied back to the MethodStructure, so explicitly clone it
-            that.m_code = this.m_code.cloneOnto(that);
-        } else {
-            that.m_code = null;
-        }
+        // the Code is a mutable object tied back to its MethodStructure, so it is explicitly
+        // cloned onto the copy; the native flag travels with it in the same snapshot
+        Code codeThis = this.m_codeState.code();
+        that.m_codeState = new CodeState(this.m_codeState.isNative(),
+                this.m_abOps == null && codeThis != null ? codeThis.cloneOnto(that) : null);
 
         // REVIEW is it necessary to explicitly clone the AST? we treat it as immutable data, but it
         //        will hold references to Constants from the pool -- does that matter?
@@ -1984,9 +2007,10 @@ public class MethodStructure
             ConstantRegistry registry = new ConstantRegistry(this, pool);
             m_registry = registry;
 
-            if (m_code != null) {
-                m_code.prepareOps();
-                m_code.registerConstants(registry);
+            Code codeReg = m_codeState.code();
+            if (codeReg != null) {
+                codeReg.prepareOps();
+                codeReg.registerConstants(registry);
             }
 
             if (m_ast != null) {
@@ -2041,9 +2065,10 @@ public class MethodStructure
         }
 
         // produce the op bytes if necessary
-        if (m_abOps == null && m_code != null) {
+        Code codeAsm = m_codeState.code();
+        if (m_abOps == null && codeAsm != null) {
             try {
-                m_code.ensureAssembled(m_registry);
+                codeAsm.ensureAssembled(m_registry);
             } catch (UnsupportedOperationException e) {
                 System.err.println("Error in MethodStructure.assemble() of ops for "
                                        + this.getParent().getContainingClass().getName() + "."
@@ -3104,14 +3129,27 @@ public class MethodStructure
     transient ConstantRegistry m_registry;
 
     /**
-     * The method's code (for assembling new code).
+     * The method's code (for assembling new code) together with the "native" flag, held as ONE
+     * immutable snapshot behind a single volatile reference.
+     *
+     * <p>These were two independent fields, and they are always read TOGETHER - {@code ensureCode()}
+     * tests {@code isNative()} before touching the code. Marking each field {@code volatile}
+     * individually is NOT sufficient for that: it makes each write visible, but a reader still
+     * takes two separate reads, and {@code markNative()} is a multi-step transition. Interleaving
+     * lets a reader observe {@code (native=false, code=null)} - a pair that was never a settled
+     * state - and take the "build the Code" branch for a method that is about to be native. One
+     * volatile reference to an immutable record gives readers an atomic snapshot and writers a
+     * single publish.</p>
      */
-    // volatile: ensureCode() lazily creates this while other threads may be reading it, and
-    // markNative()/resetRuntimeInfo() mutate the surrounding state. Without a happens-before edge a
-    // reader can observe a PARTIALLY CONSTRUCTED Code through this reference. See also m_fNative:
-    // the two are read together (ensureCode tests isNative() first), so they must be published
-    // together or a reader can pair a stale flag with a null/incomplete object.
-    private transient volatile Code m_code;
+    private record CodeState(boolean isNative, Code code) {
+        static final CodeState NONE = new CodeState(false, null);
+    }
+
+    private static final AtomicReferenceFieldUpdater<MethodStructure, CodeState> CODE_STATE =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    MethodStructure.class, CodeState.class, "m_codeState");
+
+    private transient volatile CodeState m_codeState = CodeState.NONE;
 
     /**
      * The method's AST.
@@ -3132,17 +3170,6 @@ public class MethodStructure
      * The max number of scopes used by the method. Calculated from the ops.
      */
     transient int m_cScopes;
-
-    /**
-     * True iff the method has been marked as "native". This is not part of the persistent method
-     * structure; it exists only to support the prototype interpreter implementation.
-     */
-    // volatile: markNative() flips this as part of a multi-step transition (setAbstract,
-    // resetRuntimeInfo, then two field writes) while another thread may be inside
-    // getOps() -> ensureCode(), which reads isNative() before touching m_code. With no edge, that
-    // reader can see the stale native=false together with a null m_code and take the wrong branch -
-    // surfacing as getOps()'s "has no code" IllegalStateException.
-    private transient volatile boolean m_fNative;
 
     /**
      * True iff the method has been marked as "transient". This is not part of the persistent method
