@@ -153,9 +153,27 @@ sweep. **The 2026-08-26 counts underneath this section are stale where they conf
     the volatile.
   - `Utils.log`'s real closure: thread `Frame`/`ServiceContext` explicitly instead of
     the ambient fallback.
-  - Arrow-form switch migration remnant (the protocol machines kept as gated statement
-    switches by policy).
-  - Family C array deferral; the sealed-hierarchy `Op` split.
+  - Family C array deferral.
+- **CLOSED by verification, not by work:**
+  - **Arrow-switch remnant — verified, effectively closed.** Rather than trust the
+    by-policy claim, all 55 `@SuppressWarnings("fallthrough")` were removed and the
+    FATAL fallthrough lint was allowed to identify the real ones (iterating, because
+    the compiler aborts on the first fatal error - an early "38 are stale" reading was
+    an artifact of that). Result: **54 are genuine cascades, 1 was stale**
+    (`NamedTypeExpression`, removed). None of the 54 switches on a sealed hierarchy:
+    they are enums (`Composition` x9, `Token.Id` x5, `Format` x3, `Relation`),
+    state-machine stages/counters (`stageNext`, `m_stage`, `nState`, `ixStep++`),
+    chars (Lexer), Strings and ints. Sealing fixes CLASS dispatch; these are protocol
+    machines over scalars where the fallthrough is the intended semantics.
+  - **Sealed `Op` split — measured and RECOMMENDED AGAINST** (see the 2026-08-28
+    section in `sealed-hierarchy-audit.md`). `Op` is dispatched by OPCODE, not class:
+    824 opcode sites versus 14 `instanceof` checks, execution via virtual
+    `op.process(...)`, construction via a `switch (nOp)` factory. Direction A (move the
+    15 direct subclasses up) is cheap but yields no exhaustiveness; Direction B (one
+    package) needs a **210-entry permits clause** and import rewrites in 177 + 196
+    files. The hazard sealing removes - a silently-unhandled subtype - does not exist
+    here, because an unknown opcode already fails loudly in the factory. Decided, not
+    deferred.
 - **New master bug filed today: row 28** — `MethodStructure` native/code state
   published with no happens-before edge. Master is worse than this branch was: BOTH
   `m_fNative` and `m_code` are non-volatile there AND `ensureCode()` lazy-inits

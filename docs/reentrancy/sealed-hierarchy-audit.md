@@ -1036,6 +1036,38 @@ UnsupportedOperationExceptions** in the runtime.
 Still open from this document's plan: `Op` (package split) and
 `TypeComposition`'s root (see the optional follow-up row in the backlog).
 
+### 2026-08-28 `Op` sealing: measured, and RECOMMENDED AGAINST
+
+The `Op` split was re-examined with numbers rather than left as a vague "large, defer".
+Both directions were measured; neither is worth it, and the reason is not the size —
+it is that **`Op` is not dispatched by class at all**:
+
+- **Dispatch evidence:** 824 opcode sites (`getOpCode()` / `case OP_*`) versus **14**
+  `instanceof` checks against any `Op` subtype. Execution is
+  `op.process(frame, iPCLast)` — a virtual call — and construction is a
+  `switch (nOp) { case OP_NOP: return new Nop(); ... }` factory keyed on the byte.
+  Sealing pays off where code does `instanceof` cascades over a class tree (that is
+  what made `TypeConstant`/`IdentityConstant` worth it); `Op` dispatches on an integer
+  opcode, so an exhaustive `permits` clause buys essentially nothing.
+- **Direction A** — move the 15 concrete ops that extend `Op` directly
+  (`Throw`, `Label`, `Guarded`, `GuardStart`, `Nop`, `SynInit`, `Assert`, `Enter`,
+  `OpSwitch`, `JumpInt`, `GP_DivRem`, `FinallyEnd`, `MoveThis`, `Exit`, `Redundant`)
+  up into `org.xvm.asm`: only 15 file moves and **no name collisions**, but it does NOT
+  deliver exhaustive dispatch — the 11 intermediate bases (`OpVar`, `OpCallable`,
+  `OpInvocable`, …) would have to stay `non-sealed` because their ~200 subclasses
+  remain in `org.xvm.asm.op`, so every switch keeps an open hole. Cost without benefit.
+- **Direction B** — move `Op` + the 11 bases DOWN into `org.xvm.asm.op` so one package
+  holds everything: this *would* seal properly, but it means a **210-entry `permits`
+  clause**, and it rewrites imports in **177 files** (`import org.xvm.asm.Op`) plus
+  **196** more that import an `Op*` base. A 210-name permits list that no switch will
+  ever enumerate is not a design improvement.
+
+**Verdict: do not seal `Op`.** The hazard sealing removes (a silently-unhandled
+subtype) does not exist here: an unknown opcode already fails loudly in the factory,
+which is the property sealing would have been buying. Recorded so this is a decided
+question rather than a perpetually deferred one. `TypeComposition`'s root and the
+compiler `AstNode` tree remain genuinely open.
+
 ### 2026-08-25 Cascade Conversion Wave
 
 The remaining convertible cascades were re-scanned (97 raw same-subject
