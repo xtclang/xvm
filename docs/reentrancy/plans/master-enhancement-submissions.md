@@ -444,9 +444,16 @@ vs `copyOf(T[])` (wrap a private copy), `get/size/isEmpty/iterator/stream/copy/
 contentEquals`, and `unsafeArray()`.
 
 Three design choices a porter must not "fix":
-- **Deliberately not a `List`.** `AbstractList` invites `set()`-shaped
-  confusion, and `Arrays.asList` views are precisely the live-writable hazard
-  being removed (Families A and B each killed one).
+- **Deliberately not a `List`** — and not for the reason the original javadoc
+  gave (corrected 2026-08-28). Extending `AbstractList` would *not* permit
+  mutation; its mutators already throw. The two real reasons: (a) **zero-copy
+  interop with `T[]`** is the point — 115 hot sites need the actual array, and
+  no `List` yields one without `toArray()` copying per call, while
+  `Arrays.asList` avoids the copy only by being live-writable, which is
+  precisely the hazard removed (Families A and B each killed one); and (b)
+  `List` **mandates element-wise `equals`/`hashCode`**, which this type
+  deliberately refuses. Only weakly: `List` advertises mutators, so read-only
+  would be a runtime (`UOE`) rather than compile-time contract.
 - **`unsafeArray()` is an intentional escape hatch, not an oversight.** Hot
   consumers — hashing, serialization, `System.arraycopy`, the JIT build path —
   would take a measurable hit from a per-call copy. Callers must not write to

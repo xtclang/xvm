@@ -23,8 +23,17 @@ import static java.util.Objects.requireNonNull;
  *
  * <p>Deliberate design points, per the audit:</p>
  * <ul>
- *   <li>NOT a {@code List}: {@code AbstractList} invites {@code set()}-shaped confusion, and
- *       {@code Arrays.asList} views are exactly the live-writable hazard being removed.</li>
+ *   <li>NOT a {@code List}, for two structural reasons and one weak one. (a) Zero-copy
+ *       interop with {@code T[]} is the point: the hot consumers below need the actual array,
+ *       and no {@code List} can produce one without {@code toArray()} copying on every call,
+ *       whereas {@code Arrays.asList} avoids the copy only by being live-writable - exactly
+ *       the hazard being removed. (b) {@code List} mandates element-wise {@code equals}/
+ *       {@code hashCode}, which this type deliberately refuses (see below); implementing
+ *       {@code List} without them would violate the interface contract. (c) Weakly,
+ *       {@code List} carries mutators in its API, so read-only-ness would be enforced at
+ *       runtime ({@code UnsupportedOperationException}) rather than at compile time. Note
+ *       that extending {@code AbstractList} would NOT permit mutation - its mutators already
+ *       throw - so the objection is about the advertised surface, not about safety.</li>
  *   <li>{@link #unsafeArray()} is the documented escape hatch for hot consumers (hash
  *       computation, serialization, {@code System.arraycopy}, the JIT build path) where a
  *       per-call copy would be a measurable regression. Callers of {@code unsafeArray()} MUST
