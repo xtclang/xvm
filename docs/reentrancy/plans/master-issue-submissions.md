@@ -1844,7 +1844,7 @@ red-verified against the plain-lazy shape.
 `HashMap`/`TreeMap` rebuilt with `clear()`+`put()`, so concurrent module lookups
 corrupt it.
 
-**Status/category:** PROVEN red on master `82683bcd2`. The racing window is
+**Status/category:** PROVEN red on master `82683bcd2`. **FILED as PR #547** (fix + test). The racing window is
 concurrent first-access module lookups on one on-disk repository - routine when
 two container-0 compiles (or two services) resolve modules from the same
 `DirRepository`.
@@ -1929,6 +1929,42 @@ against N threads calling `getOps()` on the same structure) reproduces it only u
 instrumentation/`-XX:+StressLCM`-style perturbation.
 
 **Dependencies/order:** Independent; two-word fix, no API change.
+
+## 29. FileStructure.getErrorListener() NPEs when no ambient pool is bound
+
+**Issue title:** `FileStructure.getErrorListener()` dereferences the ambient
+`ConstantPool.getCurrentPool()` without a null check.
+
+**Status/category:** PROVEN red on master with a two-line repro. **FILED as PR #548**
+(fix + test). Reachable from any thread that has not had a pool pushed onto it.
+
+**Explanation:** the accessor falls back to the ambient "current pool" when no explicit
+listener is set, and calls `poolCurrent.getErrorListener()` unconditionally.
+`getCurrentPool()` is a thread-local that is simply null on any thread that did not go
+through the code which pushes a pool - which is every thread driving the compiler or
+runtime from ordinary Java code (an embedding host, a build tool, a test harness).
+Because this is a DIAGNOSTIC accessor, the failure is an NPE thrown from the very code
+meant to report problems, surfacing far from its cause.
+
+**Master evidence:** `origin/master:FileStructure.java:1392-1401`.
+
+**Failure mode:** `NullPointerException: Cannot invoke
+"ConstantPool.getErrorListener()" because "poolCurrent" is null`, observed via
+`TypeConstant.ensureTypeInfo` -> `XvmStructure.getErrorListener` -> here.
+
+**Minimal master-portable fix strategy:** null-guard the ambient lookup and fall
+through to `ErrorListener.RUNTIME`, which is what the method already does when nothing
+else is available. Behaviour is unchanged when a pool IS bound. The DEEPER fix - and
+the reason this bug exists - is that pool ownership is expressed as a thread-local
+rather than a parameter; passing the pool explicitly (this branch's E3) makes the whole
+family unrepresentable rather than guarded against.
+
+**Tests to add/run on master:** `org.xvm.asm.FileStructureErrorListenerTest` - construct
+a `FileStructure`, ask it for its `ErrorListener` from an ordinary thread. Verified to
+fail on master and pass with the guard; a second case pins that an explicitly supplied
+listener still wins.
+
+**Dependencies/order:** Independent; one-line fix.
 
 ## Items intentionally not in the 18
 
