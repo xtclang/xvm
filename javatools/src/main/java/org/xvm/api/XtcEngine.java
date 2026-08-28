@@ -6,16 +6,30 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
+import java.time.Instant;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
 import java.util.concurrent.CompletableFuture;
 
+import java.util.stream.Collectors;
+
+import jdk.jfr.Category;
+import jdk.jfr.Event;
+import jdk.jfr.Label;
+import jdk.jfr.Name;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
@@ -97,7 +111,7 @@ public final class XtcEngine
         f_containerNative = NativeContainer.create(f_runtime, repoLibrary);
     }
 
-    public static Builder builder() {
+    public static @NotNull Builder builder() {
         return new Builder();
     }
 
@@ -111,7 +125,7 @@ public final class XtcEngine
      *
      * @return the compile result: the compiled modules (empty on failure) plus all diagnostics
      */
-    public CompileResult compile(String sModuleName, String sSource) {
+    public @NotNull CompileResult compile(@NotNull String sModuleName, @NotNull String sSource) {
         return compile(new SourceUnit(sModuleName, sSource));
     }
 
@@ -148,8 +162,54 @@ public final class XtcEngine
      *
      * @return the compile result
      */
-    public CompileResult compile(SourceUnit... units) {
-        var errs      = new ErrorList(Integer.MAX_VALUE);
+    public @NotNull CompileResult compile(@NotNull SourceUnit @NotNull... units) {
+        return compile(ErrorListener.BLACKHOLE, units);
+    }
+
+    /**
+     * Compile one or more in-memory module sources, streaming every diagnostic to the CALLER's own
+     * {@link ErrorListener} as it is produced, in addition to collecting them into the returned
+     * {@link CompileResult}.
+     *
+     * <p>This is the {@code ToolConnector}-shaped entry point (cpurdy/LSPAPI passes an
+     * {@code ErrorListener} to every compile/run): a long-running host - an LSP server, a build
+     * daemon, a test runner - already owns a diagnostic sink and wants messages as they happen,
+     * correlated with its own request id, rather than only as a batch at the end. The returned
+     * result still carries the full {@link Diagnostic} list, so a caller that wants the batch form
+     * (or wants both) is unaffected.</p>
+     *
+     * <p>The listener is never null: pass {@link ErrorListener#BLACKHOLE} (what the no-listener
+     * overload uses) to discard the stream. Making it total removes the null-check-at-every-use
+     * pattern that the glued-on {@code ErrorListener} plumbing spread through the older code.</p>
+     *
+     * @param errsCaller  the caller's diagnostic sink; {@link ErrorListener#BLACKHOLE} to discard
+     * @param units       the module sources to compile
+     *
+     * @return the compile result
+     */
+    public @NotNull CompileResult compile(@NotNull ErrorListener errsCaller,
+                                          @NotNull SourceUnit @NotNull... units) {
+        Objects.requireNonNull(errsCaller, "errsCaller (use ErrorListener.BLACKHOLE to discard)");
+        Objects.requireNonNull(units, "units");
+
+        var event     = new CompileEvent();
+        event.modules = Arrays.stream(units).map(SourceUnit::moduleName).collect(Collectors.joining(","));
+        event.begin();
+        try {
+            return compileInternal(errsCaller, event, units);
+        } finally {
+            event.commit();
+        }
+    }
+
+    private @NotNull CompileResult compileInternal(@NotNull ErrorListener errsCaller,
+                                                   @NotNull CompileEvent event,
+                                                   @NotNull SourceUnit @NotNull... units) {
+        var errsCollect = new ErrorList(Integer.MAX_VALUE);
+        // Always tee - never a null listener to test for. The ErrorList stays the PRIMARY so its
+        // abort/serious-error semantics keep driving the compiler stages; the caller's sink (possibly
+        // BLACKHOLE) just observes.
+        ErrorListener errs = new TeeErrorListener(errsCollect, errsCaller);
         var repoBuild = new BuildRepository();
 
         // A read-through library repo with the build repo at the front: exactly the shape the CLI
@@ -204,7 +264,7 @@ public final class XtcEngine
         // the assembled (deserialized) module is then identical to loading a module off disk.
         var modules    = new ArrayList<ModuleConstant>();
         var repoResult = new BuildRepository();
-        if (!errs.hasSeriousErrors()) {
+        if (!errsCollect.hasSeriousErrors()) {
             for (var compiler : compilers) {
                 FileStructure struct = compiler.getFileStructure();
                 if (struct != null) {
@@ -214,7 +274,11 @@ public final class XtcEngine
                 }
             }
         }
-        return new CompileResult(List.copyOf(modules), diagnostics(errs), repoResult);
+        var result = new CompileResult(List.copyOf(modules), diagnostics(errsCollect), repoResult);
+        event.compiled    = result.modules().size();
+        event.diagnostics = result.diagnostics().size();
+        event.success     = result.isSuccess();
+        return result;
     }
 
     /**
@@ -233,7 +297,7 @@ public final class XtcEngine
         }
     }
 
-    private static TypeCompositionStatement parseModule(String sSource, ErrorList errs) {
+    private static TypeCompositionStatement parseModule(String sSource, ErrorListener errs) {
         Statement stmt;
         try {
             stmt = new Parser(new Source(sSource), errs).parseSource();
@@ -323,7 +387,7 @@ public final class XtcEngine
      *
      * @return the run-completion future
      */
-    public CompletableFuture<ObjectHandle> run(CompileResult result, String sModuleName) {
+    public @NotNull CompletableFuture<ObjectHandle> run(@NotNull CompileResult result, @NotNull String sModuleName) {
         boolean fFound = result.modules().stream().anyMatch(id -> id.getName().equals(sModuleName));
         if (!fFound) {
             throw new IllegalArgumentException("module not in compile result: " + sModuleName);
@@ -347,6 +411,134 @@ public final class XtcEngine
         return containerRun.runModule("run");
     }
 
+    /**
+     * Run a compiled module and return a {@link RunControl} - the same shape the upstream
+     * {@code ToolConnector.Control} defines - instead of a bare future.
+     *
+     * <p>A completion future answers "is it done, and what did it return"; a long-running host also
+     * needs to ASK about a run it started: is it still going, when did it start and stop, and can I
+     * stop it. An LSP cancelling a stale run, or a test runner enforcing a timeout, needs exactly
+     * that. The future is still available from {@link RunControl#completion()}, so nothing is lost.</p>
+     *
+     * @param result       a successful {@link #compile} result containing the module
+     * @param sModuleName  the module to run
+     *
+     * @return a control handle for the running module
+     */
+    public @NotNull RunControl start(@NotNull CompileResult result, @NotNull String sModuleName) {
+        var event = new RunEvent();
+        event.module = sModuleName;
+        event.begin();
+
+        Instant                         whenStarted = Instant.now();
+        CompletableFuture<ObjectHandle> future      = run(result, sModuleName);
+        var                             control     = new RunControlImpl(whenStarted, future);
+
+        future.whenComplete((handle, error) -> {
+            control.stop();
+            event.succeeded = error == null;
+            event.commit();
+        });
+        return control;
+    }
+
+    /**
+     * Management and monitoring for a running module - the engine's form of the upstream
+     * {@code ToolConnector.Control}.
+     */
+    public interface RunControl {
+        /** @return true iff the module is still running */
+        boolean running();
+
+        /** @return when the run started */
+        @NotNull Instant whenStarted();
+
+        /** @return when the run stopped, or null while it is still running */
+        @Nullable Instant whenStopped();
+
+        /**
+         * @return the module's {@code run()} result once it has completed normally, else null. An
+         *         Ecstasy {@code Int} exit code arrives as a {@code Long}, matching the upstream
+         *         {@code Control.result()} contract.
+         */
+        @Nullable Long result();
+
+        /** @return the failure if the run completed exceptionally, else null */
+        @Nullable Throwable error();
+
+        /**
+         * Stop the run as promptly as the runtime allows.
+         *
+         * <p>Honest limitation: this cancels the completion future so the CALLER stops waiting, and
+         * the container is released for collection. It does not yet forcibly unwind a fiber that is
+         * mid-execution - that needs the runtime's own termination path
+         * ({@code Container.terminate(ServiceContext)}) wired to a cooperative cancellation check,
+         * which is deliberately not faked here.</p>
+         */
+        void kill();
+
+        /** @return the event-driven completion future, for callers that prefer to await it */
+        @NotNull CompletableFuture<ObjectHandle> completion();
+    }
+
+    private static final class RunControlImpl
+            implements RunControl {
+        private final Instant                         f_whenStarted;
+        private final CompletableFuture<ObjectHandle> f_future;
+        private volatile Instant                      m_whenStopped;
+
+        RunControlImpl(Instant whenStarted, CompletableFuture<ObjectHandle> future) {
+            f_whenStarted = whenStarted;
+            f_future      = future;
+        }
+
+        void stop() {
+            m_whenStopped = Instant.now();
+        }
+
+        @Override
+        public boolean running() {
+            return !f_future.isDone();
+        }
+
+        @Override
+        public Instant whenStarted() {
+            return f_whenStarted;
+        }
+
+        @Override
+        public Instant whenStopped() {
+            return m_whenStopped;
+        }
+
+        @Override
+        public Long result() {
+            if (!f_future.isDone() || f_future.isCompletedExceptionally()) {
+                return null;
+            }
+            // getNow cannot block here: the future is already completed normally
+            return f_future.getNow(null) instanceof ObjectHandle.JavaLong hLong ? hLong.getValue() : null;
+        }
+
+        @Override
+        public Throwable error() {
+            return f_future.isCompletedExceptionally() && !f_future.isCancelled()
+                    ? f_future.exceptionNow()
+                    : null;
+        }
+
+        @Override
+        public void kill() {
+            f_future.cancel(true);
+            stop();
+        }
+
+        @Override
+        public CompletableFuture<ObjectHandle> completion() {
+            return f_future;
+        }
+    }
+
     // ----- lifecycle -----------------------------------------------------------------------------
 
     @Override
@@ -367,13 +559,74 @@ public final class XtcEngine
     }
 
     /**
+     * Forwards every diagnostic to a second listener while keeping the first as the authority for
+     * abort/serious-error decisions. Used to stream compile diagnostics to a caller's sink without
+     * giving up the engine's own collection of them.
+     */
+    private record TeeErrorListener(ErrorList primary, ErrorListener secondary)
+            implements ErrorListener {
+        @Override
+        public boolean log(ErrorInfo err) {
+            boolean fAbort = primary.log(err);
+            secondary.log(err);
+            return fAbort;
+        }
+
+        @Override
+        public boolean isAbortDesired() {
+            return primary.isAbortDesired();
+        }
+
+        @Override
+        public boolean hasSeriousErrors() {
+            return primary.hasSeriousErrors();
+        }
+
+        @Override
+        public boolean isSilent() {
+            return primary.isSilent();
+        }
+    }
+
+    // ----- JFR telemetry -------------------------------------------------------------------------
+
+    /**
+     * A compile, as a JFR event: the first concrete piece of the unified-telemetry plan
+     * (docs/reentrancy/plans/unified-logging-jfr-telemetry.md). A long-running host - LSP server,
+     * build daemon, test runner - can then profile compile cost and diagnostic volume with standard
+     * JDK tooling instead of bespoke timing. Events cost nothing when JFR is not recording.
+     */
+    @Name("org.xvm.Compile")
+    @Label("XTC Compile")
+    @Category({"Ecstasy", "Engine"})
+    static final class CompileEvent extends Event {
+        @Label("Modules")     String modules;
+        @Label("Compiled")    int    compiled;
+        @Label("Diagnostics") int    diagnostics;
+        @Label("Success")     boolean success;
+    }
+
+    /**
+     * A nested-container run, as a JFR event. Duration spans the run's whole lifetime (the event is
+     * committed when the completion future settles), so a host sees run cost without instrumenting
+     * the runtime itself.
+     */
+    @Name("org.xvm.Run")
+    @Label("XTC Run")
+    @Category({"Ecstasy", "Engine"})
+    static final class RunEvent extends Event {
+        @Label("Module")    String  module;
+        @Label("Succeeded") boolean succeeded;
+    }
+
+    /**
      * One in-memory module source to compile: the module's name plus its source text. An immutable
      * value record - the API never takes a mutable collection of sources.
      *
      * @param moduleName  the module's name (for diagnostics/labels)
      * @param source      the module source text
      */
-    public record SourceUnit(String moduleName, String source) {
+    public record SourceUnit(@NotNull String moduleName, @NotNull String source) {
     }
 
     /**
@@ -385,7 +638,8 @@ public final class XtcEngine
      * @param source    the source name/uri, or null
      * @param line      the 1-based line, or 0 if unknown
      */
-    public record Diagnostic(Severity severity, String code, String message, String source, int line) {
+    public record Diagnostic(@NotNull Severity severity, @NotNull String code, @NotNull String message,
+                            @Nullable String source, int line) {
     }
 
     /**
@@ -400,8 +654,8 @@ public final class XtcEngine
      * compiled modules out as {@code .xtc} files. "Compile directly to disk" is therefore just
      * {@code engine.compile(...).writeTo(dir)}: compile in memory, then persist.</p>
      */
-    public record CompileResult(List<ModuleConstant> modules, List<Diagnostic> diagnostics,
-                                BuildRepository buildRepository) {
+    public record CompileResult(@NotNull List<ModuleConstant> modules, @NotNull List<Diagnostic> diagnostics,
+                                @NotNull BuildRepository buildRepository) {
         public boolean isSuccess() {
             return !modules.isEmpty()
                 && diagnostics.stream().noneMatch(d -> d.severity().ordinal() >= Severity.ERROR.ordinal());
@@ -417,7 +671,7 @@ public final class XtcEngine
          *
          * @return the files written, one per module
          */
-        public List<File> writeTo(File dir) throws IOException {
+        public @NotNull List<File> writeTo(@NotNull File dir) throws IOException {
             if (!isSuccess()) {
                 throw new IllegalStateException("cannot persist a failed compilation: " + diagnostics);
             }
@@ -439,14 +693,14 @@ public final class XtcEngine
     public static final class Builder {
         private final List<File> f_modulePath = new ArrayList<>();
 
-        public Builder modulePath(File... dirs) {
+        public @NotNull Builder modulePath(@NotNull File @NotNull... dirs) {
             for (File dir : dirs) {
                 f_modulePath.add(Objects.requireNonNull(dir, "module path dir"));
             }
             return this;
         }
 
-        public XtcEngine build() {
+        public @NotNull XtcEngine build() {
             var repositories = new ArrayList<ModuleRepository>();
             for (File dir : f_modulePath) {
                 if (dir.isDirectory()) {
