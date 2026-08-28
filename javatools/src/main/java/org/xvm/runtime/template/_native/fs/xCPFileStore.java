@@ -79,8 +79,9 @@ public class xCPFileStore
         case "loadFile": {
             ConstantHandle hNode     = (ConstantHandle) hArg;
             FSNodeConstant constNode = (FSNodeConstant) hNode.getConstant();
+            // copy(): the handle owns its storage, and the payload is pool-interned
             ObjectHandle   hBinary   = xArray.makeByteArrayHandle(
-                    frame.container(), constNode.getFileBytes(), Mutability.Constant);
+                    frame.container(), constNode.getFileBytes().copy(), Mutability.Constant);
             return frame.assignValue(iReturn, hBinary);
         }
         }
@@ -143,7 +144,7 @@ public class xCPFileStore
             return lSum;
 
         case FSFile:
-            return node.getFileBytes().length;
+            return node.getFileBytes().size();
 
         case FSLink:
             return calcSize(node.getLinkTarget());

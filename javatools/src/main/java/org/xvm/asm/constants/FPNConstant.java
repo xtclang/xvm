@@ -12,6 +12,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.byteArrayToHexString;
+import org.xvm.util.FrozenByteArray;
 
 
 /**
@@ -64,13 +65,27 @@ public final class FPNConstant
         }
 
         m_fmt   = format;
-        m_abVal = Arrays.copyOf(abVal, abVal.length);
+        m_abVal = FrozenByteArray.copyOf(abVal);
+    }
+
+    /**
+     * Internal: construct over an already-frozen payload, sharing it rather than copying.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the constant
+     * @param abVal   the frozen encoded value
+     */
+    private FPNConstant(ConstantPool pool, Format format, FrozenByteArray abVal) {
+        super(pool);
+        m_fmt   = format;
+        m_abVal = abVal;
     }
 
     @Override
     protected FPNConstant copyForAdoption(AdoptionContext context) {
-        // The logical value is the format plus encoded bytes. Shallow adoption would share the final
-        // mutable byte[] between pools; reconstructing keeps each owner insulated.
+        // The logical value is the format plus encoded bytes. The payload is frozen, so the
+        // adopting pool's constant can SHARE it; the copy that previously insulated each owner
+        // existed only because the byte[] was mutable and writable through either holder.
         return new FPNConstant(context.pool(), m_fmt, m_abVal);
     }
 
@@ -96,10 +111,11 @@ public final class FPNConstant
 
     /**
      * {@inheritDoc}
-     * @return  the constant's value as a byte array, which must be treated as an immutable
+     * @return  the constant's encoded value; frozen, so the immutability the caller was previously
+     *          asked to honour by convention is now structural
      */
     @Override
-    public byte[] getValue() {
+    public FrozenByteArray getValue() {
         return m_abVal;
     }
 
@@ -119,18 +135,18 @@ public final class FPNConstant
         // note: this is a simple byte-wise comparison; it does not actually determine the floating
         // point values represented by the bytes
 
-        byte[] abThis = this.m_abVal;
-        byte[] abThat = ((FPNConstant) that).m_abVal;
+        FrozenByteArray abThis = this.m_abVal;
+        FrozenByteArray abThat = ((FPNConstant) that).m_abVal;
 
-        int cbThis = abThis.length;
-        int cbThat = abThat.length;
+        int cbThis = abThis.size();
+        int cbThat = abThat.size();
         if (cbThis != cbThat) {
             return cbThis - cbThat;
         }
 
         for (int of = 0; of < cbThis; ++of) {
-            if (abThis[of] != abThat[of]) {
-                return (abThis[of] & 0xFF) - (abThat[of] & 0xFF);
+            if (abThis.get(of) != abThat.get(of)) {
+                return (abThis.get(of) & 0xFF) - (abThat.get(of) & 0xFF);
             }
         }
 
@@ -150,13 +166,13 @@ public final class FPNConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        out.writeByte(Integer.numberOfTrailingZeros(Integer.highestOneBit(m_abVal.length)));
-        out.write(m_abVal);
+        out.writeByte(Integer.numberOfTrailingZeros(Integer.highestOneBit(m_abVal.size())));
+        out.write(m_abVal.unsafeArray());
     }
 
     @Override
     public String getDescription() {
-        return "bytes=" + byteArrayToHexString(m_abVal);
+        return "bytes=" + byteArrayToHexString(m_abVal.unsafeArray());
     }
 
 
@@ -164,7 +180,7 @@ public final class FPNConstant
 
     @Override
     public int computeHashCode() {
-        return Hash.of(m_abVal);
+        return Hash.of(m_abVal.unsafeArray());
     }
 
 
@@ -176,7 +192,9 @@ public final class FPNConstant
     private final Format m_fmt;
 
     /**
-     * The constant value.
+     * The constant value. Frozen: pool-interned and shared across every consumer and container,
+     * and {@link #computeHashCode} hashes its contents, so a mutable alias could silently
+     * invalidate hash/equality for every holder.
      */
-    private final byte[] m_abVal;
+    private final FrozenByteArray m_abVal;
 }

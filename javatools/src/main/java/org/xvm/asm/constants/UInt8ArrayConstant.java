@@ -14,6 +14,7 @@ import org.xvm.util.Hash;
 import static org.xvm.util.Handy.byteArrayToHexString;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
+import org.xvm.util.FrozenByteArray;
 
 
 /**
@@ -39,7 +40,7 @@ public final class UInt8ArrayConstant
         int    cb = readMagnitude(in);
         byte[] ab = new byte[cb];
         in.readFully(ab);
-        m_abVal = ab;
+        m_abVal = FrozenByteArray.adopt(ab);
     }
 
     /**
@@ -53,13 +54,25 @@ public final class UInt8ArrayConstant
         super(pool);
 
         assert abVal != null;
-        m_abVal = Arrays.copyOf(abVal, abVal.length);
+        m_abVal = FrozenByteArray.copyOf(abVal);
+    }
+
+    /**
+     * Internal: construct over an already-frozen payload, sharing it rather than copying.
+     *
+     * @param pool   the ConstantPool that will contain this Constant
+     * @param abVal  the frozen octet string value
+     */
+    private UInt8ArrayConstant(ConstantPool pool, FrozenByteArray abVal) {
+        super(pool);
+        m_abVal = abVal;
     }
 
     @Override
     protected UInt8ArrayConstant copyForAdoption(AdoptionContext context) {
-        // The logical value is the byte sequence. Shallow adoption would share the final mutable
-        // byte[] between pools; reconstructing keeps each owner insulated with identical contents.
+        // The logical value is the byte sequence. The payload is frozen, so the adopting pool's
+        // constant can SHARE it: the copy that previously insulated each owner existed only
+        // because the byte[] was mutable and shared storage could be written through either.
         return new UInt8ArrayConstant(context.pool(), m_abVal);
     }
 
@@ -73,11 +86,11 @@ public final class UInt8ArrayConstant
 
     /**
      * {@inheritDoc}
-     * @return  the constant's octet string value as a <tt>byte[]</tt>; the caller must treat the
-     *          returned value as immutable
+     * @return  the constant's octet string value; frozen, so the immutability the caller was
+     *          previously asked to honour by convention is now structural
      */
     @Override
-    public byte[] getValue() {
+    public FrozenByteArray getValue() {
         return m_abVal;
     }
 
@@ -94,14 +107,14 @@ public final class UInt8ArrayConstant
         if (!(that instanceof UInt8ArrayConstant)) {
             return -1;
         }
-        byte[] abThis = this.m_abVal;
-        byte[] abThat = ((UInt8ArrayConstant) that).m_abVal;
+        FrozenByteArray abThis = this.m_abVal;
+        FrozenByteArray abThat = ((UInt8ArrayConstant) that).m_abVal;
 
-        int cbThis  = abThis.length;
-        int cbThat  = abThat.length;
+        int cbThis  = abThis.size();
+        int cbThat  = abThat.size();
         for (int of = 0, cb = Math.min(cbThis, cbThat); of < cb; ++of) {
-            if (abThis[of] != abThat[of]) {
-                return (abThis[of] & 0xFF) - (abThat[of] & 0xFF);
+            if (abThis.get(of) != abThat.get(of)) {
+                return (abThis.get(of) & 0xFF) - (abThat.get(of) & 0xFF);
             }
         }
         return cbThis - cbThat;
@@ -109,7 +122,7 @@ public final class UInt8ArrayConstant
 
     @Override
     public String getValueString() {
-        return byteArrayToHexString(m_abVal);
+        return byteArrayToHexString(m_abVal.unsafeArray());
     }
 
 
@@ -119,7 +132,7 @@ public final class UInt8ArrayConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        final byte[] ab = m_abVal;
+        final byte[] ab = m_abVal.unsafeArray();
         writePackedLong(out, ab.length);
         out.write(ab);
     }
@@ -134,14 +147,16 @@ public final class UInt8ArrayConstant
 
     @Override
     protected int computeHashCode() {
-        return Hash.of(m_abVal);
+        return Hash.of(m_abVal.unsafeArray());
     }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The constant octet string value stored as a <tt>byte[]</tt>.
+     * The constant octet string value. Frozen: this is pool-interned and shared across every
+     * consumer and container, and {@link #computeHashCode} caches a hash over its contents, so a
+     * mutable alias could silently invalidate hash/equality for every holder of the constant.
      */
-    private final byte[] m_abVal;
+    private final FrozenByteArray m_abVal;
 }

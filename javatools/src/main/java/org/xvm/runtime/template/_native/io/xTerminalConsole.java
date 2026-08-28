@@ -235,7 +235,7 @@ public class xTerminalConsole
     }
 
     private static final Frame.Continuation PRINT = frameCaller -> {
-        char[] ach = ((StringHandle) frameCaller.popStack()).getValue();
+        char[] ach = ((StringHandle) frameCaller.popStack()).getValue().unsafeArray();
         CONSOLE_LOG.log(ach, false);
         CONSOLE_OUT.print(ach);
         CONSOLE_OUT.flush();
@@ -243,7 +243,7 @@ public class xTerminalConsole
     };
 
     private static final Frame.Continuation PRINTLN = frameCaller -> {
-        char[] ach = ((StringHandle) frameCaller.popStack()).getValue();
+        char[] ach = ((StringHandle) frameCaller.popStack()).getValue().unsafeArray();
         CONSOLE_LOG.log(ach, true);
         CONSOLE_OUT.println(ach);
         CONSOLE_OUT.flush();

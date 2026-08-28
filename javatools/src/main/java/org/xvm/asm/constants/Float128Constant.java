@@ -13,6 +13,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.byteArrayToHexString;
+import org.xvm.util.FrozenByteArray;
 
 
 /**
@@ -37,7 +38,7 @@ public final class Float128Constant
 
         byte[] ab = new byte[16];
         in.readFully(ab);
-        m_abVal = ab;
+        m_abVal = FrozenByteArray.adopt(ab);
     }
 
     /**
@@ -51,13 +52,25 @@ public final class Float128Constant
         if (abVal == null || abVal.length != 16) {
             throw new ArithmeticException("Float128Constant requires an array of 16 bytes");
         }
-        m_abVal = Arrays.copyOf(abVal, abVal.length);
+        m_abVal = FrozenByteArray.copyOf(abVal);
+    }
+
+    /**
+     * Internal: construct over an already-frozen payload, sharing it rather than copying.
+     *
+     * @param pool   the ConstantPool that will contain this Constant
+     * @param abVal  the frozen encoded value
+     */
+    private Float128Constant(ConstantPool pool, FrozenByteArray abVal) {
+        super(pool);
+        m_abVal = abVal;
     }
 
     @Override
     protected Float128Constant copyForAdoption(AdoptionContext context) {
-        // The logical value is the encoded 128-bit float. Shallow adoption would share the final
-        // mutable byte[] between pools; reconstructing keeps each owner insulated.
+        // The logical value is the encoded 128-bit float. The payload is frozen, so the adopting
+        // pool's constant can SHARE it; the copy that previously insulated each owner existed only
+        // because the byte[] was mutable and writable through either holder.
         return new Float128Constant(context.pool(), m_abVal);
     }
 
@@ -80,10 +93,11 @@ public final class Float128Constant
 
     /**
      * {@inheritDoc}
-     * @return  the constant's value as a byte array, which must be treated as an immutable
+     * @return  the constant's encoded value; frozen, so the immutability the caller was previously
+     *          asked to honour by convention is now structural
      */
     @Override
-    public byte[] getValue() {
+    public FrozenByteArray getValue() {
         return m_abVal;
     }
 
@@ -105,12 +119,12 @@ public final class Float128Constant
         if (!(that instanceof Float128Constant)) {
             return -1;
         }
-        byte[] abThis = this.m_abVal;
-        byte[] abThat = ((Float128Constant) that).m_abVal;
+        FrozenByteArray abThis = this.m_abVal;
+        FrozenByteArray abThat = ((Float128Constant) that).m_abVal;
 
         for (int of = 0; of < 16; ++of) {
-            if (abThis[of] != abThat[of]) {
-                return (abThis[of] & 0xFF) - (abThat[of] & 0xFF);
+            if (abThis.get(of) != abThat.get(of)) {
+                return (abThis.get(of) & 0xFF) - (abThat.get(of) & 0xFF);
             }
         }
         return 0;
@@ -129,12 +143,12 @@ public final class Float128Constant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        out.write(m_abVal);
+        out.write(m_abVal.unsafeArray());
     }
 
     @Override
     public String getDescription() {
-        return "bytes=" + byteArrayToHexString(m_abVal);
+        return "bytes=" + byteArrayToHexString(m_abVal.unsafeArray());
     }
 
 
@@ -142,14 +156,16 @@ public final class Float128Constant
 
     @Override
     public int computeHashCode() {
-        return Hash.of(m_abVal);
+        return Hash.of(m_abVal.unsafeArray());
     }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The constant value.
+     * The constant value. Frozen: pool-interned and shared across every consumer and container,
+     * and {@link #computeHashCode} hashes its contents, so a mutable alias could silently
+     * invalidate hash/equality for every holder.
      */
-    private final byte[] m_abVal;
+    private final FrozenByteArray m_abVal;
 }

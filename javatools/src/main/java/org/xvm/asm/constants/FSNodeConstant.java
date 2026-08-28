@@ -19,6 +19,7 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
+import org.xvm.util.FrozenByteArray;
 
 
 /**
@@ -213,7 +214,11 @@ public final class FSNodeConstant
         return aFSNode;
     }
 
-    public byte[] getFileBytes() {
+    /**
+     * @return the file's contents; frozen, because this delegates straight to the pool-interned
+     *         {@link UInt8ArrayConstant} payload and previously handed out a mutable alias of it
+     */
+    public FrozenByteArray getFileBytes() {
         assert m_fmt == Format.FSFile;
 
         return ((UInt8ArrayConstant) m_constData).getValue();

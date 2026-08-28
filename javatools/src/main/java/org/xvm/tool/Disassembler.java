@@ -193,7 +193,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
 
                 case FSFile:
                     aflags[i] |= FILE;
-                    int size = fsNode.getFileBytes().length;
+                    int size = fsNode.getFileBytes().size();
                     if (size > maxSize) {
                         maxSize = size;
                     }
@@ -270,7 +270,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
 
         // size
         String sizeText = fsNode.getFormat() == Format.FSFile
-                ? String.valueOf(fsNode.getFileBytes().length)
+                ? String.valueOf(fsNode.getFileBytes().size())
                 : "";
         for (int i = 0, c = Math.max(0, sizeLen - sizeText.length()); i < c; ++i) {
             buf.append(' ');
@@ -409,7 +409,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
             switch (constant.getFormat()) {
             case FSFile -> {
                 var fsnode = (FSNodeConstant) constant;
-                if (fsnode.getName().equals(findName) && Arrays.equals(fsnode.getFileBytes(), findBytes)) {
+                if (fsnode.getName().equals(findName) && Arrays.equals(fsnode.getFileBytes().unsafeArray(), findBytes)) {
                     out("File constant [" + constant.getPosition() + "] matches file name and contents");
                     if (!fsnode.getCreated().equals(findCreated)) {
                         out("  -> File creation " + findCreated + " does not match constant: " + fsnode.getCreated());
@@ -427,7 +427,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
                 }
             }
             case UInt8Array -> {
-                if (findSize > 0 && Arrays.equals(((UInt8ArrayConstant) constant).getValue(), findBytes)) {
+                if (findSize > 0 && Arrays.equals(((UInt8ArrayConstant) constant).getValue().unsafeArray(), findBytes)) {
                     out("Byte[] constant [" + constant.getPosition() + "] matches file contents");
                     ++matches;
                 }

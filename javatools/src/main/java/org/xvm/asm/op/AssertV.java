@@ -172,7 +172,7 @@ public class AssertV
          */
         protected boolean updateResult(Frame frameCaller) {
             StringHandle hMsg = (StringHandle) frameCaller.popStack();
-            char[]       ach  = hMsg.getValue();
+            char[]       ach  = hMsg.getValue().unsafeArray();
 
             if (ach.length > MAX_VAL) {
                 sb.append(ach, 0, MAX_VAL)

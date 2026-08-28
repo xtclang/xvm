@@ -51,6 +51,7 @@ import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
+import org.xvm.util.FrozenByteArray;
 
 /**
  * Base class for JIT class builders.
@@ -577,14 +578,15 @@ public abstract class Builder {
 
     private SingleSlot loadUInt8Array(BuildContext bctx, CodeBuilder code,
                                       UInt8ArrayConstant bytesConstant) {
-        byte[] bytes  = bytesConstant.getValue();
-        long[] values = new long[(bytes.length + 7) >>> 3];
-        for (int i = 0; i < bytes.length; i++) {
-            values[i >>> 3] |= (long) (bytes[i] & 0xFF) << ((7 - (i & 7)) << 3);
+        FrozenByteArray bytes  = bytesConstant.getValue();
+        int             cBytes = bytes.size();
+        long[]          values = new long[(cBytes + 7) >>> 3];
+        for (int i = 0; i < cBytes; i++) {
+            values[i >>> 3] |= (long) (bytes.get(i) & 0xFF) << ((7 - (i & 7)) << 3);
         }
 
         loadCtx(bctx, code);
-        code.loadConstant((long) bytes.length) // size in bytes
+        code.loadConstant((long) cBytes) // size in bytes
             .loadConstant(values.length)
             .newarray(TypeKind.LONG);
 

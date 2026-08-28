@@ -540,7 +540,7 @@ public class Xvm {
     boolean sameModule(ModuleStructure module1, ModuleStructure module2) {
         return module1.isRefined() && module2.isRefined()
             && module1.getName().equals(module2.getName())
-            && Arrays.equals(module1.getDigest(), module2.getDigest());
+            && module1.getDigest().contentEquals(module2.getDigest());
     }
 
     /**

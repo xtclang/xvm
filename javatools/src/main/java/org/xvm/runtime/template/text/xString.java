@@ -40,6 +40,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
 
 import org.xvm.util.Handy;
 import org.xvm.util.Lazy;
+import org.xvm.util.FrozenCharArray;
 
 
 /**
@@ -122,11 +123,12 @@ public class xString
 
         switch (sPropName) {
         case "size":
-            return frame.assignValue(iReturn, xInt64.makeHandle(frame, hThis.m_achValue.length));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, hThis.m_achValue.size()));
 
         case "chars":
             return frame.assignValue(iReturn,
-                    xArray.makeCharArrayHandle(frame.container(), hThis.m_achValue, Mutability.Constant));
+                    xArray.makeCharArrayHandle(frame.container(), hThis.m_achValue.copy(),
+                            Mutability.Constant));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -152,7 +154,7 @@ public class xString
                     // (Boolean, Int) indexOf(Char value, Int startAt)
                     char chValue = (char) hChar.getValue();
 
-                    ofResult = indexOf(hThis.m_achValue, chValue, ofStart);
+                    ofResult = indexOf(hThis.m_achValue.unsafeArray(), chValue, ofStart);
                 } else {
                     // (Boolean, Int) indexOf(String value, Int startAt)
                     String sValue = ((StringHandle) hValue).getStringValue();
@@ -173,12 +175,12 @@ public class xString
 
     @Override
     public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
-        char[] ach = ((StringHandle) hTarget).getValue();
-        int    nIx = (int) lIndex;
+        FrozenCharArray ach = ((StringHandle) hTarget).getValue();
+        int             nIx = (int) lIndex;
 
-        return nIx < 0 || nIx >= ach.length
-                ? frame.raiseException(xException.outOfBounds(frame, lIndex, ach.length))
-                : frame.assignValue(iReturn, xChar.makeHandle(frame, ach[nIx]));
+        return nIx < 0 || nIx >= ach.size()
+                ? frame.raiseException(xException.outOfBounds(frame, lIndex, ach.size()))
+                : frame.assignValue(iReturn, xChar.makeHandle(frame, ach.get(nIx)));
     }
 
     @Override
@@ -193,7 +195,7 @@ public class xString
 
     @Override
     public long size(ObjectHandle hTarget) {
-        return ((StringHandle) hTarget).getValue().length;
+        return ((StringHandle) hTarget).getValue().size();
     }
 
 
@@ -212,7 +214,8 @@ public class xString
         StringHandle h2 = (StringHandle) hValue2;
 
         return frame.assignValue(iReturn,
-                xOrdered.makeHandle(frame, Arrays.compare(h1.m_achValue, h2.m_achValue)));
+                xOrdered.makeHandle(frame,
+                        Arrays.compare(h1.m_achValue.unsafeArray(), h2.m_achValue.unsafeArray())));
     }
 
     @Override
@@ -220,7 +223,7 @@ public class xString
         StringHandle h1 = (StringHandle) hValue1;
         StringHandle h2 = (StringHandle) hValue2;
 
-        return Arrays.equals(h1.m_achValue, h2.m_achValue);
+        return h1.m_achValue.contentEquals(h2.m_achValue);
     }
 
     @Override
@@ -249,8 +252,8 @@ public class xString
     }
 
     private static StringHandle concat(StringHandle h1, StringHandle h2) {
-        char[] ach1 = h1.m_achValue;
-        char[] ach2 = h2.m_achValue;
+        char[] ach1 = h1.m_achValue.unsafeArray();
+        char[] ach2 = h2.m_achValue.unsafeArray();
 
         int c1 = ach1.length;
         int c2 = ach2.length;
@@ -314,7 +317,7 @@ public class xString
 
     public static class StringHandle
             extends ObjectHandle {
-        private final     char[]   m_achValue;
+        private final     FrozenCharArray m_achValue;
 
         // Per-handle memoization intentionally does not use Lazy: these values are immutable and a
         // benign race can only compute the same value twice, while Lazy would add two objects to
@@ -325,23 +328,27 @@ public class xString
         protected StringHandle(TypeComposition clazz, char[] achValue) {
             super(clazz);
 
-            m_achValue = achValue;
+            m_achValue = FrozenCharArray.adopt(achValue);
         }
 
-        public char[] getValue() {
+        /**
+         * @return the character data; frozen, because an Ecstasy String is immutable and this
+         *         previously handed out a mutable alias of the very array backing that guarantee
+         */
+        public FrozenCharArray getValue() {
             return m_achValue;
         }
 
         public String getStringValue() {
             String sValue = m_sValue;
             if (sValue == null) {
-                m_sValue = sValue = new String(m_achValue);
+                m_sValue = sValue = m_achValue.asString();
             }
             return sValue;
         }
 
         public int calcHashCode() {
-            char[] ach  = m_achValue;
+            char[] ach  = m_achValue.unsafeArray();
             int    cch  = ach.length;
             int    hash = 982_451_653;
             if (cch <= 0x40) {
@@ -375,7 +382,7 @@ public class xString
         @Override
         public boolean equals(Object obj) {
             if (obj instanceof StringHandle that) {
-                return Arrays.equals(this.m_achValue, that.m_achValue);
+                return this.m_achValue.contentEquals(that.m_achValue);
             }
             return false;
         }

@@ -56,8 +56,10 @@ public class xByteArray
     @Override
     public int createConstHandle(Frame frame, Constant constant) {
         if (constant instanceof UInt8ArrayConstant constBytes) {
+            // copy(): the handle owns its storage, and this constant is pool-interned - handing
+            // the handle the constant's own array aliased shared metadata into the runtime
             return frame.pushStack(makeByteArrayHandle(
-                    frame.container(), constBytes.getValue(), Mutability.Constant));
+                    frame.container(), constBytes.getValue().copy(), Mutability.Constant));
         }
 
         return super.createConstHandle(frame, constant);

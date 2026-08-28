@@ -199,7 +199,7 @@ public class xRTCertificateManager
         String       sDName      = ((StringHandle) ahArg[3]).getStringValue();
         String       sProvider   = ((StringHandle) hMgr.getField(0)).getStringValue();
         String       sStorePath  = hStorePath.getStringValue();
-        char[]       achPwd      = hPwd.getValue();
+        char[]       achPwd      = hPwd.getValue().copy();
 
         try {
             KeyStoreOperations.deleteKeyStoreEntry(sStorePath, achPwd, sName);
@@ -365,7 +365,7 @@ public class xRTCertificateManager
     private ExceptionHandle invokeRevokeCertificate(Frame frame, ServiceHandle hMgr,
                                                     ObjectHandle[] ahArg) {
         String sPath     = ((StringHandle) ahArg[0]).getStringValue();
-        char[] achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
+        char[] achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue().copy();
         String sName     = ((StringHandle) ahArg[2]).getStringValue();
         String sProvider = ((StringHandle) hMgr.getField(0)).getStringValue();
 
@@ -435,7 +435,7 @@ public class xRTCertificateManager
      */
     private ExceptionHandle invokeCreateSymmetricKey(Frame frame, ObjectHandle[] ahArg) {
         String sPath  = ((StringHandle) ahArg[0]).getStringValue();
-        char[] achPwd = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
+        char[] achPwd = xRTKeyStore.getPassword(frame, ahArg[1]).getValue().copy();
         String sName  = ((StringHandle) ahArg[2]).getStringValue();
 
         try {
@@ -462,7 +462,7 @@ public class xRTCertificateManager
      */
     private ExceptionHandle invokeCreatePassword(Frame frame, ObjectHandle[] ahArg) {
         String sPath     = ((StringHandle) ahArg[0]).getStringValue();
-        char[] achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
+        char[] achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue().copy();
         String sName     = ((StringHandle) ahArg[2]).getStringValue();
         String sPwdValue = ((StringHandle) ahArg[3]).getStringValue();
 
@@ -510,7 +510,7 @@ public class xRTCertificateManager
 
     private Key loadKey(ObjectHandle hPathOrStore, StringHandle hPwd, StringHandle hName)
             throws GeneralSecurityException, IOException {
-        char[] achPwd = hPwd.getValue();
+        char[] achPwd = hPwd.getValue().copy();
         String sKey   = hName.getStringValue();
 
         KeyStore keyStore;
@@ -546,8 +546,8 @@ public class xRTCertificateManager
      */
     private ExceptionHandle invokeEncryptKeystore(Frame frame, ObjectHandle[] ahArg) {
         String sPath     = ((StringHandle) ahArg[0]).getStringValue();
-        char[] achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
-        char[] achPwdNew = ((StringHandle) ahArg[2]).getValue();
+        char[] achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue().copy();
+        char[] achPwdNew = ((StringHandle) ahArg[2]).getValue().copy();
 
         try {
             KeyStoreOperations.changeStorePassword(sPath, achPwd, achPwdNew);

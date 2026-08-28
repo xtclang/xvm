@@ -37,6 +37,7 @@ import org.xvm.runtime.template.numbers.xUInt32;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.Handy;
+import org.xvm.util.FrozenCharArray;
 
 
 /**
@@ -88,12 +89,12 @@ public class xChar
         }
 
         if (hArg instanceof StringHandle hText) {
-            char[] ach = hText.getValue();
-            if (ach.length != 1) {
-                return frame.raiseException("illegal argument: String has length=" + ach.length);
+            FrozenCharArray ach = hText.getValue();
+            if (ach.size() != 1) {
+                return frame.raiseException("illegal argument: String has length=" + ach.size());
             }
 
-            return constructHandle(frame, ach[0], iReturn);
+            return constructHandle(frame, ach.get(0), iReturn);
         }
 
         byte[] ab = xByteArray.getBytes((ArrayHandle) hArg);

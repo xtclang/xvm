@@ -31,6 +31,7 @@ import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
+import org.xvm.util.FrozenByteArray;
 
 
 /**
@@ -187,10 +188,10 @@ public final class ModuleStructure
      *
      * @return a digest value that acts as strong hash of the module
      */
-    public byte[] getDigest() {
+    public FrozenByteArray getDigest() {
         assert !isFingerprint();
 
-        byte[] abDigest = m_abDigest;
+        FrozenByteArray abDigest = m_abDigest;
         if (abDigest == null) {
             try {
                 DigestOutputStream dos = new DigestOutputStream(OutputStream.nullOutputStream(),
@@ -200,7 +201,7 @@ public final class ModuleStructure
                 assembleChildren(out);
                 out.close();
 
-                abDigest = m_abDigest = dos.getMessageDigest().digest();
+                abDigest = m_abDigest = FrozenByteArray.adopt(dos.getMessageDigest().digest());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -1021,7 +1022,13 @@ public final class ModuleStructure
     /**
      * Cached crypto-digest of this module structure.
      */
-    private transient byte[] m_abDigest;
+    /**
+     * The lazily computed SHA-256 digest. Frozen for two reasons: the accessor handed out a
+     * mutable alias of the cached value, and - because {@link FrozenByteArray} holds its storage
+     * in a final field - even this unsynchronized lazy publication now safely publishes the
+     * CONTENTS, where a racily published raw byte[] could be observed partially zeroed.
+     */
+    private transient FrozenByteArray m_abDigest;
 
     /**
      * @see {@link #getConditionalNames()}

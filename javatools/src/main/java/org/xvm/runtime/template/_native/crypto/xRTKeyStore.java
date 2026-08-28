@@ -123,7 +123,7 @@ public class xRTKeyStore
     public ObjectHandle ensureKeyStore(Frame frame, ArrayHandle hContent, StringHandle hPwd) {
         try {
             byte[] abStore = xByteArray.getBytes(hContent);
-            char[] achPwd  = hPwd.getValue();
+            char[] achPwd  = hPwd.getValue().copy();
 
             KeyStore    keyStore = KeyStore.getInstance("PKCS12");
             InputStream in       = new ByteArrayInputStream(abStore);

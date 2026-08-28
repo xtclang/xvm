@@ -14,6 +14,7 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.BindFunctionExpr;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
+import org.xvm.util.FrozenIntArray;
 
 
 /**
@@ -22,7 +23,7 @@ import static org.xvm.util.Handy.writePackedLong;
 public final class BindFunctionAST
         extends ExprAST {
     private ExprAST      target;
-    private int[]        indexes;
+    private FrozenIntArray indexes;
     private ExprAST[]    args;
     private TypeConstant type;
 
@@ -40,7 +41,7 @@ public final class BindFunctionAST
                 Arrays.stream(args).allMatch(Objects::nonNull);
 
         this.target  = target;
-        this.indexes = indexes;
+        this.indexes = FrozenIntArray.copyOf(indexes);
         this.args    = args;
         this.type    = type;
     }
@@ -60,7 +61,11 @@ public final class BindFunctionAST
         return target;
     }
 
-    public int[] getIndexes() {
+    /**
+     * @return the bound-argument indexes; frozen, because this handed out a mutable alias of the
+     *         AST node's own storage
+     */
+    public FrozenIntArray getIndexes() {
         return indexes;
     }
 
@@ -75,15 +80,18 @@ public final class BindFunctionAST
 
         int count = readMagnitude(in);
         if (count == 0) {
-            indexes = new int[0];
+            indexes = FrozenIntArray.EMPTY;
             args    = NO_EXPRS;
         } else {
-            indexes = new int[count];
-            args    = new ExprAST[count];
+            // build into a local, then adopt: the frozen wrapper is published complete rather
+            // than filled in place after construction
+            int[] aiIndex = new int[count];
+            args = new ExprAST[count];
             for (int i = 0; i < count; ++i) {
-                indexes[i] = readMagnitude(in);
+                aiIndex[i] = readMagnitude(in);
                 args[i]    = readExprAST(in, res);
             }
+            indexes = FrozenIntArray.adopt(aiIndex);
         }
         type = res.getConstant(readMagnitude(in), TypeConstant.class);
     }
@@ -100,10 +108,10 @@ public final class BindFunctionAST
             throws IOException {
         target.writeExpr(out, res);
 
-        int count = indexes.length;
+        int count = indexes.size();
         writePackedLong(out, count);
         for (int i = 0; i < count; ++i) {
-            writePackedLong(out, indexes[i]);
+            writePackedLong(out, indexes.get(i));
             args[i].writeExpr(out, res);
         }
         writePackedLong(out, res.indexOf(type));
@@ -114,12 +122,12 @@ public final class BindFunctionAST
         StringBuilder buf = new StringBuilder("&");
         buf.append(target)
            .append("(");
-        if (indexes.length > 0) {
-            for (int i = 0, argIx = 0, max = Arrays.stream(indexes).max().getAsInt(); argIx <= max; i++) {
+        if (!indexes.isEmpty()) {
+            for (int i = 0, argIx = 0, max = indexes.stream().max().getAsInt(); argIx <= max; i++) {
                 if (argIx != 0) {
                     buf.append(", ");
                 }
-                if (i == indexes[argIx]) {
+                if (i == indexes.get(argIx)) {
                     buf.append(args[i]);
                     argIx++;
                 } else {
