@@ -107,6 +107,9 @@ without its listed dependency.
 | 19 | Extract from `8077ad6c0`: the one-line `f_implicits` `ConcurrentHashMap` conversion plus `implicitIdentityCacheIsConcurrentSafe()`. | `org.xvm.asm.ConstantPoolDiagnosticsTest.implicitIdentityCacheIsConcurrentSafe()` fails on the plain-`HashMap` shape (verified by reverting the fix). | Ready after manual review; the test's master form drops the branch-only surrounding cases. |
 | 20 | Extract from `5d9a5f395`: the detached-build factories, the copy-on-write publish primitives, and the reworked `ensure*Delegation` - WITHOUT the synthesis window (`openRuntimeSynthesisWindow` exists only because of this branch's publication marker; master has no marker). | `org.xvm.asm.DelegationSynthesisTest` concurrent hammer (probabilistic red: half-built method observed / null multimethod); the deterministic marker test is branch-only. | Needs a filtered master patch; the mechanics (detached build, `publishRuntimeChild`, `publishOrAdoptSynthesizedMethod`, volatile maps) are additive and portable. |
 | 30 | Source-only clean; one-word fix in `Version.isSameAs`. | `org.xvm.asm.VersionTest.testIsSameAsAcrossDifferingPartCounts` fails with `ArrayIndexOutOfBoundsException` at `Version.java:492` on the unfixed source. | Ready after manual review. |
+| 31 | Source-only clean; add 16 `case` labels to `Op.toName`. | `Op.toName(0xDD)` throws `IllegalStateException: op=0xdd` while `toName(0x01)` returns `LINE_1`; 16 opcodes reachable via `instantiate` are absent from `toName`. | Ready after manual review. |
+| 32 | Needs a product decision (add the pool case, or reject in the Lexer) before a patch. | `pool.ensureLiteralConstant(Format.TimeZone, "x")` throws `IllegalStateException: unsupported format: TimeZone` where `Date`/`Time`/`Duration` succeed. | Report first, patch after the behaviour decision. |
+| 33 | Source-only; two one-line fixes, but the guard fix needs a surfaced-set review. | `fieldsForNames(AstNode.class, "noSuchFieldAnywhere")` returns `fields[0]=null` instead of throwing; `isInstance(AstNode.class)` observed `false` where `isAssignableFrom` is `true`. | Null-check fix ready; guard fix needs review. |
 
 ## Reuse Exposure Categories
 
@@ -2033,6 +2036,179 @@ equal-length pairs as a control. Verified red on the unfixed source (AIOOBE at
 **How it was found:** while surveying `Version.getIntArray()` as a `FrozenIntArray`
 candidate - the accessor clones on all 13 of its call sites. Reading the consumers
 to prove they were read-only surfaced the defect.
+
+## 31. Op.toString() throws IllegalStateException on 16 live opcodes
+
+**Issue title:** `Op.toName()` has drifted 16 opcodes behind `Op.instantiate()`, so
+`Op.toString()` throws on every one of them - including inside error reporting.
+
+**Status/category:** PROVEN red on master, empirically, not by inspection.
+
+**Explanation:** `Op.instantiate()` switches over 215 opcodes; `Op.toName()` over 201.
+The 16 in the gap are all reachable - they have classes and constants and are
+instantiated:
+
+```
+OP_IIP_AND OP_IIP_MOD OP_IIP_OR OP_IIP_SHL OP_IIP_SHR OP_IIP_USHR OP_IIP_XOR
+OP_PIP_AND OP_PIP_DIV OP_PIP_MOD OP_PIP_MUL OP_PIP_OR OP_PIP_SHL OP_PIP_SHR
+OP_PIP_USHR OP_PIP_XOR
+```
+
+`Op.toString()` is `toName(getOpCode())` and `toName`'s default throws, so
+`toString()` on any of these throws. **`toString()` is called implicitly by
+debuggers, loggers and string concatenation**, which makes this worse than an
+ordinary missing case.
+
+The sharper consequence is diagnostic masking. Fifteen sites build an error message
+with `toName(getOpCode())`, e.g. `OpInPlaceAssign.java:224`:
+
+```java
+default -> throw new UnsupportedOperationException(toName(getOpCode()));
+```
+
+`OpInPlaceAssign` IS the `IIP_*` family. So on exactly the opcodes that reach that
+line, constructing the intended `UnsupportedOperationException` instead throws
+`IllegalStateException: op=0xdd`, and the real diagnostic is destroyed at the moment
+it is needed. Same shape at `OpGeneral` (3), `OpVar` (2), `OpIndex` (2),
+`OpCondJump`, `OpJump`, `OpSwitch`, `GP_DivRem`, `OpCallable` (2).
+
+`OP_NEWC_T` and `OP_NEWCG_T` are the reverse drift: named by `toName`, never
+instantiated - dead constants.
+
+**Master evidence:** `origin/master:javatools/src/main/java/org/xvm/asm/Op.java` -
+verified `instantiate=215 toName=201 missing=16`, identical to the branch.
+
+**Failure mode:** observed directly -
+
+```
+Op.toName(0xDD)  ->  java.lang.IllegalStateException: op=0xdd
+Op.toName(0x01)  ->  LINE_1
+```
+
+**Minimal master-portable fix strategy:** add the 16 missing `case` labels to
+`toName`, and delete or implement `OP_NEWC_T`/`OP_NEWCG_T`. The durable fix is to
+stop maintaining two parallel 200-case switches over the same enum-shaped domain -
+see `object-typing-static-safety-study.md`, which proposes moving opcode name and
+factory onto one carrier so they cannot drift.
+
+**Tests to add/run on master:** a table test asserting every opcode `instantiate`
+accepts also has a name, i.e. `instantiate`'s case set is a subset of `toName`'s.
+That is a ratchet, not a spot check: it fails on the next divergence too.
+
+**Dependencies/order:** Independent.
+
+## 32. Format.TimeZone is produced by the compiler and rejected by the pool
+
+**Issue title:** A `TimeZone:` literal lexes and parses, then dies in
+`ConstantPool.ensureLiteralConstant` with an internal `IllegalStateException`.
+
+**Status/category:** PROVEN red on master, empirically. A user-facing compiler crash,
+not an internal-only hazard.
+
+**Explanation:** the path is complete right up to the pool:
+
+- `Lexer.java:1022` - `case "TimeZone": return eatTimeZone(lInitPos);`
+- `LiteralExpression.java:365` - `pool.ensureLiteralConstant(Format.TimeZone, ...)`
+- `ConstantPool.ensureLiteralConstant(Format, String, Object)` - its switch handles
+  `IntLiteral, FPLiteral, Date, TimeOfDay, Time, Duration, Path, RegEx`. **`TimeZone`
+  is absent**, so it reaches `default: throw new IllegalStateException(...)`.
+
+`LiteralConstant.java` contains no reference to `TimeZone` at all. Its siblings
+`Date`, `Time` and `Duration` are handled in both places; `TimeZone` was missed in
+both, which is why the omission is invisible from either end.
+
+**Master evidence:** `origin/master` - `ensureLiteralConstant` has zero `case TimeZone`
+labels, identical to the branch.
+
+**Failure mode:** observed directly -
+
+```
+Date      -> Date{value="x"}
+Time      -> Time{value="x"}
+Duration  -> Duration{value="x"}
+TimeZone  -> java.lang.IllegalStateException: unsupported format: TimeZone
+```
+
+So a source file containing a `TimeZone:` literal fails compilation with an internal
+exception rather than a diagnostic - or, if the intent is that the literal is not
+supported, the Lexer should never have accepted it.
+
+**Minimal master-portable fix strategy:** decide which end is right. Either add
+`case TimeZone:` alongside `Date`/`Time`/`Duration` in `ensureLiteralConstant` (and
+check `disassemble`, which also omits it), or remove the Lexer/Parser support so the
+literal is rejected with a proper compiler diagnostic. **This needs a product answer,
+not just a code fix** - hence filing it as a report rather than a patch.
+
+**Tests to add/run on master:** a round-trip test per literal format that the Lexer
+accepts, asserting the pool accepts it too. That closes the whole class, not just
+`TimeZone`.
+
+**Dependencies/order:** Independent; needs a decision on intended behaviour.
+
+## 33. AstNode.fieldsForNames has a dead type guard and returns null holes
+
+**Issue title:** `AstNode.fieldsForNames()` validates field types with a check that is
+always false, and its not-found path tests the wrong variable, so a missing child
+field becomes a null array slot instead of an error.
+
+**Status/category:** PROVEN red on master, empirically. Two defects in one method;
+neither is currently reachable as a crash, but both defeat the diagnostics they exist
+to provide.
+
+**Explanation:** the method builds the reflective child-field model used by the AST
+(65 call sites).
+
+**Defect A - the type guard never fires:**
+
+```java
+if (!field.getType().isInstance(AstNode.class) && field.getType().isInstance(List.class)) {
+    throw new IllegalStateException("unsupported field type ...");
+}
+```
+
+`Class.isInstance(x)` asks whether the OBJECT `x` is an instance of that class. Here
+`x` is `AstNode.class`, a `Class` object, so the test asks whether the `Class` object
+is an instance of the field's type - false for every realistic field type. Observed:
+`AstNode.class.isInstance(AstNode.class)` is `false`, while the intended
+`AstNode.class.isAssignableFrom(AstNode.class)` is `true`. The guard is dead in both
+conjuncts, so an unsupported field type is silently accepted.
+
+**Defect B - the not-found path tests the wrong variable:**
+
+```java
+clzTry = clzTry.getSuperclass();
+if (clz == null) {                       // should be clzTry
+    throw new IllegalStateException(eOrig);
+}
+```
+
+`clz` is the method parameter and is never null there. When a named field exists
+nowhere in the hierarchy, `clzTry` walks to null, the loop exits, and `fields[i]` is
+left **null**. Observed:
+
+```
+fieldsForNames(AstNode.class, "noSuchFieldAnywhere") -> length=1, fields[0]=null
+```
+
+The saved `NoSuchFieldException` naming the missing field is discarded. A renamed or
+deleted child field therefore surfaces later as an opaque failure at the point the
+null slot is dereferenced, instead of immediately as "no such field <name>".
+
+**Master evidence:** `origin/master:javatools/src/main/java/org/xvm/compiler/ast/AstNode.java:1889`
+(guard) and `:1902` (null check) - identical to the branch.
+
+**Minimal master-portable fix strategy:** replace both `isInstance` calls with
+`isAssignableFrom` on the correct operand order, and fix `clz == null` to
+`clzTry == null`. Expect the corrected guard to start firing on fields the dead
+version let through - that surfaced set needs review before the fix lands, since it
+may be legitimate usage the guard was wrong about rather than real violations.
+
+**Tests to add/run on master:** assert `fieldsForNames` throws a named
+`IllegalStateException` for a missing field rather than returning a null slot, and
+that a valid `AstNode`/`List` field is accepted.
+
+**Dependencies/order:** Independent. Land the null-check fix first; the guard fix
+needs the surfaced-set review above.
 
 ## Items intentionally not in the 18
 

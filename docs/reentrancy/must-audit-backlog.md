@@ -277,6 +277,69 @@ self-contained supplier and never reset. Explicitly OUT of scope: anything on `O
 `Parameter`, `ObjectHandle` subclasses, or per-`Constant` instances. Land incrementally, one
 owner class per slice, each with a test pinning compute-once. Not a sweep.
 
+### 2026-08-28 sweep C (object-typing study + three new master bugs)
+
+**NEW MASTER BUGS, all verified empirically rather than by inspection, all identical on
+master.** Found by the object-typing study
+([object-typing-static-safety-study.md](object-typing-static-safety-study.md)), which is
+itself the design record for SF-Typing below.
+
+- **Row 31 - `Op.toString()` throws on 16 live opcodes.** `Op.instantiate` switches 215
+  opcodes, `Op.toName` 201; the 16 in the gap (`IIP_*`/`PIP_*` bitwise, shift, mod) all
+  have classes and are instantiated. `toString()` is `toName(getOpCode())`, and `toName`'s
+  default throws. Observed: `Op.toName(0xDD)` -> `IllegalStateException: op=0xdd`. Worse
+  than a missing case because **`toString()` is called implicitly by debuggers and
+  loggers** - the same reason the display-purity campaign exists. And 15 sites build error
+  messages with `toName(getOpCode())`, including `OpInPlaceAssign.java:224`, which IS the
+  `IIP_*` family: on exactly those opcodes, constructing the intended
+  `UnsupportedOperationException` throws instead, destroying the real diagnostic.
+- **Row 32 - `Format.TimeZone` is lexed by the compiler and rejected by the pool.**
+  `Lexer.java:1022` accepts it, `LiteralExpression.java:365` hands it to
+  `ensureLiteralConstant`, whose switch omits it, so it hits `default: throw`. Observed:
+  `Date`/`Time`/`Duration` succeed, `TimeZone` throws `IllegalStateException: unsupported
+  format: TimeZone`. A user-facing compiler crash. Needs a product decision (support it,
+  or reject it in the Lexer with a diagnostic), so filed as a report rather than a patch.
+- **Row 33 - `AstNode.fieldsForNames` has a dead guard and returns null holes.** The type
+  guard uses `field.getType().isInstance(AstNode.class)`, which asks whether the CLASS
+  OBJECT is an instance - always false, so the guard never fires. And the not-found path
+  tests `clz == null` (the never-null parameter) instead of `clzTry`, so a field missing
+  from the whole hierarchy leaves a **null slot** and discards the saved
+  `NoSuchFieldException` naming it. Observed both directly.
+
+**NEW SHOULD-FIX: SF-Typing — retire Object-typed, cast-based dispatch.**
+
+Full analysis and staged plan in the study. Five ranked items; the top two are large but
+mechanical, and the fourth is nearly free:
+
+1. Retire the `Format`-string-concatenation dispatch in constant folding - 5 methods,
+   **1,279 `case "…"` labels** switching on `getFormat().name() + op.TEXT +
+   that.getFormat().name()`. `IntConstant.apply` alone is 609 lines.
+2. Type the nested-identity union (`Object nid`) - variants are
+   `String | Integer | SignatureConstant | NestedIdentity | null`, used as a key in **79**
+   `Map<Object, …>` declarations.
+3. Close the `Format`-enum / class-hierarchy drift - 107 formats vs 89 classes.
+4. `ValueConstant<V>` - only **6** call sites affected (all in `CaseManager.covers()`), and
+   verified by `javap` to be bytecode-identical, since the `Object getValue()` bridge
+   already exists. Cheapest real win on the list.
+5. Covariant `IdentityConstant.getComponent()` - **8 overrides remove 222 downcasts**.
+
+**Two amendments to existing plans, recorded so they are not silently re-derived:**
+
+- **E2 is wrong that sealing fixes the format switches.** `Constant.Format` is a FINER
+  partition than the class tree (107 vs 89), so those switches remain unwritable by hand
+  after sealing. Separately, `Component` is already fully sealed and still carries 394
+  downcasts, because the pressure is on lookup RETURN TYPES, not on dispatch.
+- **Ranking by cast count inverts the correct priority.** `runtime/template/**` holds 46%
+  of all casts and 83% of handle casts, but `jit-implications.md:17-40` establishes the JIT
+  uses none of `Frame`/`ObjectHandle`/`ClassTemplate`. The staged plan is therefore
+  `asm`-first, and `ClassTemplate<H extends ObjectHandle>` - which would collapse 561
+  `(X) hTarget` casts - is deliberately deprioritised despite being the largest number.
+
+The study also agrees with the existing **do-not-seal-`Op`** verdict and proposes a
+cheaper mechanism instead (an `enum` split; `A_LABEL` and `CONSTANT_OFFSET` are both `-16`,
+and `R_NEXT..R_RESET` reuse the same integers as `A_STACK..A_STRUCT`). It explicitly
+recommends AGAINST the `ArgId` record union on interpreter hot-path cost.
+
 ### 2026-08-26 reconciliation (post embedding-API)
 
 Backlog swept after the embedding-API wave shipped. Net state:
