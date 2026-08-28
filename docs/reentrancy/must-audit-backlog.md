@@ -147,13 +147,18 @@ sweep. **The 2026-08-26 counts underneath this section are stale where they conf
     `ListMap`-typed getter remains on `TypeInfo*`/`ClassStructure` (the two surviving
     `public ListMap<...>` returns are `MethodStructure.resolveTypeParameters` and
     `ModuleInfo.classNodes`, neither of which is the flagged metadata-getter shape).
-- **SHOULD-FIX still open (actionable, small):**
+- **SHOULD-FIX still open (actionable, small) — re-verified in-tree 2026-08-28:**
   - `markNative()`'s other half: refuse the transition once code exists (a
-    `forceAssembly`-shaped throw). Deferred because it is a BEHAVIOR change, unlike
-    the volatile.
-  - `Utils.log`'s real closure: thread `Frame`/`ServiceContext` explicitly instead of
-    the ambient fallback.
-  - Family C array deferral.
+    `forceAssembly`-shaped throw at the head of `markNative()`). Confirmed still open -
+    the method is `setAbstract`/`resetRuntimeInfo`/two field writes with no guard; the
+    existing `forceAssembly` throws (`:1085`, `:1093`) are a DIFFERENT concern
+    (assembly after runtime publication). Deferred because it is a BEHAVIOR change,
+    unlike the volatile that landed.
+  - Family C array deferral (tracked in the array-exposure docs).
+  - **CORRECTION:** `Utils.log`'s real closure is **DONE**, not open. `Utils.log` now
+    takes an explicit `ServiceContext`, the `Frame` overload derives it, and
+    `ServiceContext.getCurrentContext()` was removed outright once it had no callers -
+    the only surviving mention is a historical comment. MA4 is fully closed.
 - **CLOSED by verification, not by work:**
   - **Arrow-switch remnant — verified, effectively closed.** Rather than trust the
     by-policy claim, all 55 `@SuppressWarnings("fallthrough")` were removed and the
