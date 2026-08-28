@@ -106,6 +106,7 @@ without its listed dependency.
 | 18 | Extract from `c621b1dca`; real conflict in `xRTFunction.java`. | `org.xvm.runtime.template._native.reflect.FinalizerChainTest.chainAppendsAtTailInsteadOfDroppingLinkedFinalizers()` fails under both `-ea` and `-da`. | Needs exact master hunk before filing. |
 | 19 | Extract from `8077ad6c0`: the one-line `f_implicits` `ConcurrentHashMap` conversion plus `implicitIdentityCacheIsConcurrentSafe()`. | `org.xvm.asm.ConstantPoolDiagnosticsTest.implicitIdentityCacheIsConcurrentSafe()` fails on the plain-`HashMap` shape (verified by reverting the fix). | Ready after manual review; the test's master form drops the branch-only surrounding cases. |
 | 20 | Extract from `5d9a5f395`: the detached-build factories, the copy-on-write publish primitives, and the reworked `ensure*Delegation` - WITHOUT the synthesis window (`openRuntimeSynthesisWindow` exists only because of this branch's publication marker; master has no marker). | `org.xvm.asm.DelegationSynthesisTest` concurrent hammer (probabilistic red: half-built method observed / null multimethod); the deterministic marker test is branch-only. | Needs a filtered master patch; the mechanics (detached build, `publishRuntimeChild`, `publishOrAdoptSynthesizedMethod`, volatile maps) are additive and portable. |
+| 30 | Source-only clean; one-word fix in `Version.isSameAs`. | `org.xvm.asm.VersionTest.testIsSameAsAcrossDifferingPartCounts` fails with `ArrayIndexOutOfBoundsException` at `Version.java:492` on the unfixed source. | Ready after manual review. |
 
 ## Reuse Exposure Categories
 
@@ -1981,6 +1982,57 @@ fail on master and pass with the guard; a second case pins that an explicitly su
 listener still wins.
 
 **Dependencies/order:** Independent; one-line fix.
+
+## 30. Version.isSameAs() indexes the wrong array and throws on the longer receiver
+
+**Issue title:** `Version.isSameAs()` reads past the end of `thatInts` whenever the
+receiver has more version parts than the argument.
+
+**Status/category:** PROVEN red on master. Pure logic bug, no concurrency, no
+container reuse - a one-word fix with a wrong answer AND a crash behind it.
+
+**Explanation:** the method compares the shared prefix, then requires every part
+beyond it to be zero, so that `1.2.0` and `1.2` are the same version. The remainder
+loop selects the longer of the two arrays into `remaining` and iterates to ITS
+length - then indexes `thatInts` anyway:
+
+```java
+int[] remaining = cThis > cThat ? thisInts : thatInts;
+for (int i = cShared, c = remaining.length; i < c; ++i) {
+    if (thatInts[i] != 0) {          // <-- should be remaining[i]
+```
+
+`remaining` is computed and never used. When the receiver is the longer of the two,
+`c` is the receiver's length while the indexed array is the argument's, so the read
+runs off the end. The reversed direction works only by accident, because there
+`remaining` and `thatInts` are the same array.
+
+**Master evidence:** `origin/master:javatools/src/main/java/org/xvm/asm/Version.java:489-495`
+- byte-identical to the branch before the fix.
+
+**Failure mode:** two distinct wrong behaviours, both observed:
+- `new Version("1.2.3").isSameAs(new Version("1.2"))` throws
+  `ArrayIndexOutOfBoundsException: Index 2 out of bounds for length 2` instead of
+  returning `false`.
+- `new Version("1.2.0").isSameAs(new Version("1.2"))` throws instead of returning
+  `true` - so the "trailing zeros are ignorable" semantic the method exists to
+  provide never works in that direction.
+
+**Minimal master-portable fix strategy:** index `remaining[i]` instead of
+`thatInts[i]`. One word. No signature, semantic, or performance change; the
+already-correct direction is unaffected because `remaining == thatInts` there.
+
+**Tests to add/run on master:**
+`org.xvm.asm.VersionTest.testIsSameAsAcrossDifferingPartCounts` - covers both
+directions, multiple trailing zeros, a non-zero part past the shared prefix, and
+equal-length pairs as a control. Verified red on the unfixed source (AIOOBE at
+`Version.java:492`) and green with the fix.
+
+**Dependencies/order:** Independent; one-word fix.
+
+**How it was found:** while surveying `Version.getIntArray()` as a `FrozenIntArray`
+candidate - the accessor clones on all 13 of its call sites. Reading the consumers
+to prove they were read-only surfaced the defect.
 
 ## Items intentionally not in the 18
 

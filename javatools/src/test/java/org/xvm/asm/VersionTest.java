@@ -322,6 +322,40 @@ public class VersionTest {
         assertThrows(IllegalStateException.class, () -> new Version(new int[] {1, -7}, null));
     }
 
+    /**
+     * {@code isSameAs} compares the shared version parts and then requires every part beyond the
+     * shared prefix to be zero, so "1.2.0" and "1.2" are the same version.
+     *
+     * <p>The remainder loop selected the longer array into {@code remaining}, iterated to ITS
+     * length, and then indexed {@code thatInts} anyway. Whenever the receiver was the longer of
+     * the two, that read ran past the end of {@code thatInts}: "1.2.3".isSameAs("1.2") threw
+     * {@link ArrayIndexOutOfBoundsException} rather than returning false, and "1.2.0".isSameAs("1.2")
+     * threw rather than returning true. The reversed direction worked by accident, because there
+     * {@code remaining} IS {@code thatInts}.</p>
+     */
+    @Test
+    public void testIsSameAsAcrossDifferingPartCounts() {
+        // the receiver is longer - the direction that used to throw
+        assertTrue(new Version("1.2.0").isSameAs(new Version("1.2")));
+        assertFalse(new Version("1.2.3").isSameAs(new Version("1.2")));
+
+        // the argument is longer - the direction that always worked
+        assertTrue(new Version("1.2").isSameAs(new Version("1.2.0")));
+        assertFalse(new Version("1.2").isSameAs(new Version("1.2.3")));
+
+        // trailing zeros are ignorable however many there are, in both directions
+        assertTrue(new Version("1.2.0.0").isSameAs(new Version("1.2")));
+        assertTrue(new Version("1.2").isSameAs(new Version("1.2.0.0")));
+
+        // a non-zero part anywhere past the shared prefix still differs
+        assertFalse(new Version("1.2.0.1").isSameAs(new Version("1.2")));
+        assertFalse(new Version("1.2").isSameAs(new Version("1.2.0.1")));
+
+        // equal-length versions are unaffected by the remainder loop
+        assertTrue(new Version("1.2.3").isSameAs(new Version("1.2.3")));
+        assertFalse(new Version("1.2.3").isSameAs(new Version("1.2.4")));
+    }
+
     static VersionTree<String> genTree() {
         VersionTree<String> tree = new VersionTree<>();
         tree.put(new Version("1.0"), "one-oh");
