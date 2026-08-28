@@ -310,6 +310,14 @@ comparison target — so the displayed information is KEPT, not dropped:
    `ConstantPool` does not grow, with a negative control proving the instrument works). The static
    gate is textual and cannot see impurity behind a helper; the empirical one is what catches it.
 
+Provenance note (verified against `origin/master` `82683bcd2`): `TypeInfoReal` is **master's own**
+class, not a branch invention — upstream `78b9ae951` split `TypeInfo` into the interface class plus
+the `TypeInfoReal` implementation, and it predates this branch's fork point (`145f12f51`). The E5
+change makes `TypeInfo.toString()` abstract so every subclass must supply a pure header; master has
+exactly ONE subclass (`TypeInfoReal`), the same set this branch's `sealed … permits TypeInfoReal`
+enumerates, so that re-abstraction ports cleanly. Sealing (E2) only makes the guarantee
+compiler-enforced; it is not a prerequisite for E5.
+
 Behavior changes a master reviewer should know about: function types render structurally
 (`Function<…>`) instead of `function R(P)` — which matches what the runtime's `reflect/Type.x` already
 prints; a typedef'd annotation/constraint renders under its typedef name; and `BinaryAST.toString`
