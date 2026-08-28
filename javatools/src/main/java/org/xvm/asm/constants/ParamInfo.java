@@ -111,11 +111,14 @@ public class ParamInfo {
         sb.append("<")
           .append(isActualTypeSpecified() ? getActualType().getValueString() : getName());
 
-        TypeConstant typeConstraint = getConstraintType();
-        if (!typeConstraint.equals(typeConstraint.getConstantPool().typeObject()) &&
-            !typeConstraint.isTuple()) {
+        // PURE: suppress the "extends" clause by comparing the constraint's already-present value
+        // string. The old test called pool.typeObject() (lazily INTERNS the canonical Object type) and
+        // isTuple() (resolves a typedef'd terminal, writing back m_constId) - so rendering one
+        // type-parameter row mutated the pool. See docs/reentrancy/plans/side-effect-free-tostring.md.
+        String sConstraint = getConstraintType().getValueString();
+        if (!"Object".equals(sConstraint) && !sConstraint.startsWith("Tuple")) {
             sb.append(" extends ")
-              .append(typeConstraint.getValueString());
+              .append(sConstraint);
         }
 
         sb.append(">");

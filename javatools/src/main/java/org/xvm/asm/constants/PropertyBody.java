@@ -544,17 +544,31 @@ public class PropertyBody
             sb.append(", has-code");
         }
 
-        if (isInjected()) {
-            sb.append(", @Inject");
-        }
-        if (isExplicitAbstract()) {
-            sb.append(", @Abstract");
-        }
-        if (isExplicitOverride()) {
-            sb.append(", @Override");
-        }
-        if (isExplicitReadOnly()) {
-            sb.append(", @RO");
+        // PURE, without losing the information: the @Inject/@Abstract/@Override/@RO flags are read
+        // from the ALREADY-SPLIT annotations and compared by NAME. The old
+        // isInjected()/isExplicitAbstract()/isExplicitOverride()/isExplicitReadOnly() helpers forced
+        // the structure's lazy annotation split AND interned a comparison identity
+        // (getImplicitlyImportedIdentity / clzInject / clzOverride / clzRO), plus getAnnotationClass()
+        // resolve-and-stored - all of which is gratuitous for a name test. When the split has not been
+        // computed yet, the flags are simply not shown rather than forced. See
+        // docs/reentrancy/plans/side-effect-free-tostring.md.
+        PropertyStructure structProp = m_structProp;
+        Annotation[] annotations = structProp == null || m_impl == Implementation.FromInto
+                ? null
+                : structProp.peekPropertyAnnotations();
+        if (annotations != null) {
+            for (Annotation annotation : annotations) {
+                String sAnno = annotation.peekAnnotationName();
+                if (sAnno != null) {
+                    switch (sAnno) {
+                    case "Inject"   -> sb.append(", @Inject");
+                    case "Abstract" -> sb.append(", @Abstract");
+                    case "Override" -> sb.append(", @Override");
+                    case "RO"       -> sb.append(", @RO");
+                    default         -> { }
+                    }
+                }
+            }
         }
 
         if (m_constInitVal != null) {

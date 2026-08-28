@@ -234,6 +234,18 @@ public final class PropertyStructure
     }
 
     /**
+     * The non-forcing peek of {@link #getPropertyAnnotations()}: display code renders the
+     * annotations when the lazy split has ALREADY been built, and renders nothing rather than
+     * triggering {@code buildAnnotationArrays()} itself. See
+     * docs/reentrancy/plans/side-effect-free-tostring.md.
+     *
+     * @return the property annotations, or null if the annotation split is not computed yet
+     */
+    public Annotation[] peekPropertyAnnotations() {
+        return m_aPropAnno;
+    }
+
+    /**
      * @return true if the property is annotated by "@RO"
      */
     public boolean isExplicitReadOnly() {

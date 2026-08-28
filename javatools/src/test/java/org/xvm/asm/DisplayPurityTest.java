@@ -94,9 +94,6 @@ public class DisplayPurityTest {
             "org/xvm/asm/Component.java#toString:resolve*",
             "org/xvm/asm/MethodStructure.java#getDescription:sourceNormalize",
             "org/xvm/asm/ast/BinaryAST.java#toString:reportUnimplemented",
-            "org/xvm/asm/constants/ParamInfo.java#toString:canonicalPoolType",
-            "org/xvm/asm/constants/PropertyBody.java#toString:annotationFlags",
-            "org/xvm/asm/constants/TerminalTypeConstant.java#getValueString:ensureResolved",
             "org/xvm/runtime/template/_native/reflect/xRTType.java#toString:handleDataType",
             "org/xvm/runtime/template/annotations/xFuture.java#toString:toSafeString");
 

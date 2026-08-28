@@ -2025,7 +2025,13 @@ public sealed class TerminalTypeConstant
 
     @Override
     public String getValueString() {
-        return ensureResolvedConstant().getValueString();
+        // PURE: read the resolution, never STORE it. ensureResolvedConstant() writes the resolved
+        // constant back into m_constId, so rendering a type mutated it; resolve()/unwrap() itself is
+        // a pure chain-walk, so render from a local instead. See
+        // docs/reentrancy/plans/side-effect-free-tostring.md.
+        Constant constId  = m_constId;
+        Constant resolved = constId.resolve();
+        return (resolved == null ? constId : resolved).getValueString();
     }
 
 

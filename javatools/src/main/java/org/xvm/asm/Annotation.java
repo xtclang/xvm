@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -144,6 +145,26 @@ public class Annotation
         }
 
         return constClass;
+    }
+
+    /**
+     * The annotation class's simple name, read WITHOUT the resolve-and-store that
+     * {@link #getAnnotationClass()} performs (it writes the resolved constant back into
+     * {@code m_constClass}). Display code compares annotation class NAMES instead of interned
+     * identities, which avoids both that write-back and the pool interning that
+     * {@code getImplicitlyImportedIdentity} would do to build a comparison target. See
+     * docs/reentrancy/plans/side-effect-free-tostring.md.
+     *
+     * @return the annotation class's simple name, or null if it is not available purely
+     */
+    public String peekAnnotationName() {
+        Constant constClass = m_constClass;
+        Constant resolved   = constClass.resolve();   // pure chain-walk; deliberately NOT stored
+        Constant constUse   = resolved == null ? constClass : resolved;
+
+        return constUse instanceof IdentityConstant id ? id.getName()
+             : constUse instanceof UnresolvedNameConstant unresolved ? unresolved.getName()
+             : null;
     }
 
     /**
