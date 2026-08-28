@@ -89,8 +89,6 @@ public class DisplayPurityTest {
      * violates, which is what makes this a ratchet rather than a snapshot.
      */
     private static final Set<String> BASELINE = Set.of(
-            "org/xvm/asm/MethodStructure.java#getDescription:sourceNormalize",
-            "org/xvm/asm/ast/BinaryAST.java#toString:reportUnimplemented",
             "org/xvm/runtime/template/_native/reflect/xRTType.java#toString:handleDataType",
             "org/xvm/runtime/template/annotations/xFuture.java#toString:toSafeString");
 

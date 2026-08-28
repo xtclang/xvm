@@ -2202,10 +2202,12 @@ public final class MethodStructure
           .append(fSrc);
 
         if (fSrc) {
+            // PURE: getLineCount() would normalize() the source, interning a StringConstant per line
+            int cLines = m_source.peekLineCount();
             sb.append(", line-number=")
               .append(m_source.getLineNumber())
               .append(", line-count=")
-              .append(m_source.getLineCount());
+              .append(cLines < 0 ? "<deferred>" : cLines);
         }
 
         return sb.toString();
@@ -2934,6 +2936,19 @@ public final class MethodStructure
         public int getLineCount() {
             normalize();
             return m_aconstSrc == null ? 0 : m_aconstSrc.length;
+        }
+
+        /**
+         * The non-forcing peek of {@link #getLineCount()}: {@code normalize()} interns one
+         * {@code StringConstant} PER SOURCE LINE into the pool (and writes {@code m_aconstSrc}/
+         * {@code m_anIndents}), so rendering a method in a debugger would grow the pool by the size
+         * of its source. Display code reports the count only when the source is already normalized.
+         * See docs/reentrancy/plans/side-effect-free-tostring.md.
+         *
+         * @return the line count, or -1 if the source has not been normalized yet
+         */
+        public int peekLineCount() {
+            return m_aconstSrc == null ? -1 : m_aconstSrc.length;
         }
 
         /**

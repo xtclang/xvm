@@ -5,10 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.Set;
-
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.xvm.asm.Constant;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -72,7 +68,11 @@ public abstract sealed class BinaryAST
      */
     @Override
     public String toString() {
-        reportUnimplemented("TODO implement toString() for " + this.getClass().getSimpleName());
+        // PURE: render the node type only. This used to nag through a reportUnimplemented(...) helper
+        // (since removed, it had no other caller) that mutated a process-global set and wrote to
+        // stderr - so merely expanding an AST node in a debugger produced console output and global
+        // state churn. A missing toString() override is a TODO for a verifier pass, not something a
+        // display method should report. See docs/reentrancy/plans/side-effect-free-tostring.md.
         return nodeType().name();
     }
 
@@ -279,16 +279,6 @@ public abstract sealed class BinaryAST
     public static final ExprAST        POISON    = PoisonAST.INSTANCE;
 
 
-    // ----- internal ------------------------------------------------------------------------------
-
-    // any thread stringifying an AST node may add to this debug-only dedupe set concurrently
-    private static final Set<String> ALREADY_DISPLAYED = ConcurrentHashMap.newKeySet();
-
-    static void reportUnimplemented(String msg) {
-        if (ALREADY_DISPLAYED.add(msg)) {
-            System.err.println(msg);
-        }
-    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
