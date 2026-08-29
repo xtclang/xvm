@@ -341,6 +341,69 @@ subtle `equals`/`hashCode` slip produces wrong answers rather than a crash — t
 as `unlinkSibling`, at 76× the surface. It needs its own dedicated pass with an equality-contract
 test written **first**, not a pass tacked onto the end of a session.
 
+## What is actually left, measured — and it is not what the raw counts say
+
+Re-measured at `c75e855b9`, after T1/T2/T3/T7. The headline numbers in this document's baseline
+are misleading, and correcting them changes the plan.
+
+### `instanceof` is mostly NOT a problem
+
+| Shape | Count | Target? |
+| --- | --- | --- |
+| Pattern form, binds a variable (`x instanceof Foo f`) | **1027** | **No** — this IS the modern idiom |
+| Plain test, no binding | 558 | mostly fine (genuine predicates) |
+| In an `else if` chain | **98** | **Yes** — dispatch pretending to be control flow |
+
+So "1594 instanceof" is not a backlog of 1594 problems. It is **98**, concentrated in
+`NameExpression` (8), `CaseManager` (7), `xRTType` (6), `ClassStructure` (5). Those want a sealed
+hierarchy plus an exhaustive switch (E2), not casting work.
+
+### Casts split into three shapes, each needing a DIFFERENT mechanism
+
+**A. Covariant narrowing — the subclass knows its own type.** Proven: 120 casts removed (T1: 91,
+T3: 29). Applies where a subclass can restate a supertype's return.
+
+**B. Typed accessor pairs — a PREDICATE establishes the type.** This is the seam the study missed,
+and it filed these under "cannot be typed" (§4.3, "metadata-predicated casts"). That verdict is
+wrong: they can be typed, just not by narrowing a return. The pattern is
+
+```java
+// today - 32 sites in TerminalTypeConstant alone
+if (!isSingleDefiningConstant()) {
+    TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+```
+
+The predicate `isSingleDefiningConstant()` already establishes what the constant is; the cast is
+the caller re-asserting what the guard just proved. The fix is an accessor that does both:
+
+```java
+/** @return the TypedefConstant this type resolves to; only valid when !isSingleDefiningConstant() */
+protected TypedefConstant ensureResolvedTypedef() {
+    assert !isSingleDefiningConstant();
+    return (TypedefConstant) ensureResolvedConstant();
+}
+```
+
+One internal cast replacing 32 — the same trade as T1, reached by a different route. **This is the
+best available ratio right now** and it is bounded to one file.
+
+**C. Dispatch relocation — the receiver is passed as a parameter.** The `ObjectHandle` family. Not
+fixable by generics (see the unlock section above); needs dispatch moved onto the handle. The
+endgame, not the next step.
+
+### Recommended order
+
+1. **B on `TerminalTypeConstant`** — 32 casts, one file, bounded, mechanical. Do this next.
+2. **Re-run the narrowing survey with a guard filter.** The survey that produced this section
+   ranked candidates by "what fraction of casts target one type", and that metric is WRONG on its
+   own: `ensureResolvedConstant` scored 100% purity yet must not be narrowed, because the casts
+   are all inside one guarded branch while the method genuinely returns several types. The metric
+   needs a second question — *is the cast guarded by a predicate?* — which separates shape A from
+   shape B.
+3. **The 98 `else if` chains** — sealed + exhaustive switch. Depends on E2's sealing, already
+   partly landed.
+4. **C** — after the `asm` half is finished.
+
 ## Explicitly NOT doing
 
 - **`ClassTemplate<H extends ObjectHandle>`** — would collapse 561 `(X) hTarget` casts, the
