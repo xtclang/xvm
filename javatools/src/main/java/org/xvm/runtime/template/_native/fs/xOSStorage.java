@@ -70,10 +70,14 @@ public class xOSStorage
         markNativeMethod("find", new String[] {"_native.fs.OSFileStore", "text.String"}, null);
         markNativeMethod1("names", SELF, STRING_TYPE, null,
                 (frame, hStorage, hPathString, iReturn) -> names(frame, hPathString, iReturn));
-        markNativeMethod("createDir", STRING, BOOLEAN);
-        markNativeMethod("createFile", STRING, BOOLEAN);
-        markNativeMethod("delete", STRING, BOOLEAN);
-        markNativeMethod("watch", STRING, VOID);
+        markNativeMethod1("createDir", SELF, STRING_TYPE, BOOLEAN,
+                (frame, hStorage, hPath, iReturn) -> createDir(frame, hPath, iReturn));
+        markNativeMethod1("createFile", SELF, STRING_TYPE, BOOLEAN,
+                (frame, hStorage, hPath, iReturn) -> createFile(frame, hPath, iReturn));
+        markNativeMethod1("delete", SELF, STRING_TYPE, BOOLEAN,
+                (frame, hStorage, hPath, iReturn) -> delete(frame, hPath, iReturn));
+        markNativeMethod1("watch", SELF, STRING_TYPE, VOID,
+                (frame, hStorage, hPathDir, iReturn) -> watch(frame, hStorage, hPathDir));
         markNativeMethod("unwatch", STRING, VOID);
         markNativeMethod("instance", VOID, THIS);
 
@@ -134,6 +138,67 @@ public class xOSStorage
         }
     }
 
+    /** Native {@code createFile(String pathString)}. */
+    private static int createFile(Frame frame, StringHandle hPathString, int iReturn) {
+        try {
+            Path path = Paths.get(hPathString.getStringValue());
+            if (Files.exists(path) && !Files.isDirectory(path)) {
+                return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
+            }
+
+            Path parent = path.getParent();
+            if (!Files.exists(parent)) {
+                return frame.raiseException(xException.ioException(frame,
+                        "Cannot create file, parent directory does not exist: " + path));
+            }
+            if (!Files.isDirectory(parent)) {
+                return frame.raiseException(xException.ioException(frame,
+                        "Cannot create file, parent is not a directory: " + path));
+            }
+            return frame.assignValue(iReturn,
+                xBoolean.makeHandle(frame, path.toFile().createNewFile()));
+        } catch (IOException|InvalidPathException e) {
+            return frame.raiseException(xException.ioException(frame, e.getMessage()));
+        }
+    }
+
+    /** Native {@code createDir(String pathString)}. */
+    private static int createDir(Frame frame, StringHandle hPathString, int iReturn) {
+        try {
+            Path path = Paths.get(hPathString.getStringValue());
+            if (Files.exists(path) && Files.isDirectory(path)) {
+                return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
+            }
+
+            return frame.assignValue(iReturn,
+                xBoolean.makeHandle(frame, path.toFile().mkdirs()));
+        } catch (InvalidPathException e) {
+            return frame.raiseException(xException.ioException(frame, e.getMessage()));
+        }
+    }
+
+    /** Native {@code delete(String pathString)}. */
+    private static int delete(Frame frame, StringHandle hPathString, int iReturn) {
+        Path path = Paths.get(hPathString.getStringValue());
+        if (!Files.exists(path)) {
+            return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
+        }
+
+        return frame.assignValue(iReturn,
+            xBoolean.makeHandle(frame, path.toFile().delete()));
+    }
+
+    /** Native {@code watch(String pathStringDir)}; needs the receiver to register the watch. */
+    private int watch(Frame frame, ServiceHandle hStorage, StringHandle hPathStringDir) {
+        try {
+            Path pathDir = Paths.get(hPathStringDir.getStringValue());
+            ensureWatchDaemon().register(pathDir, hStorage);
+            return Op.R_NEXT;
+        } catch (IOException|InvalidPathException e) {
+            return frame.raiseException(xException.ioException(frame, e.getMessage()));
+        }
+    }
+
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn) {
@@ -144,72 +209,6 @@ public class xOSStorage
                 call1(frame, hTarget, new ObjectHandle[] {hArg}, iReturn);
         }
 
-        switch (method.getName()) {
-        case "createFile": { // (pathString)
-            StringHandle hPathString = (StringHandle) hArg;
-
-            try {
-                Path path = Paths.get(hPathString.getStringValue());
-                if (Files.exists(path) && !Files.isDirectory(path)) {
-                    return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
-                }
-
-                Path parent = path.getParent();
-                if (!Files.exists(parent)) {
-                    return frame.raiseException(xException.ioException(frame,
-                            "Cannot create file, parent directory does not exist: " + path));
-                }
-                if (!Files.isDirectory(parent)) {
-                    return frame.raiseException(xException.ioException(frame,
-                            "Cannot create file, parent is not a directory: " + path));
-                }
-                return frame.assignValue(iReturn,
-                    xBoolean.makeHandle(frame, path.toFile().createNewFile()));
-            } catch (IOException|InvalidPathException e) {
-                return frame.raiseException(xException.ioException(frame, e.getMessage()));
-            }
-        }
-
-        case "createDir": { // (pathString)
-            StringHandle hPathString = (StringHandle) hArg;
-
-            try {
-                Path path = Paths.get(hPathString.getStringValue());
-                if (Files.exists(path) && Files.isDirectory(path)) {
-                    return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
-                }
-
-                return frame.assignValue(iReturn,
-                    xBoolean.makeHandle(frame, path.toFile().mkdirs()));
-            } catch (InvalidPathException e) {
-                return frame.raiseException(xException.ioException(frame, e.getMessage()));
-            }
-        }
-
-        case "delete": { // (pathString)
-            StringHandle hPathString = (StringHandle) hArg;
-
-            Path path = Paths.get(hPathString.getStringValue());
-            if (!Files.exists(path)) {
-                return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
-            }
-
-            return frame.assignValue(iReturn,
-                xBoolean.makeHandle(frame, path.toFile().delete()));
-        }
-
-        case "watch": { // (pathStringDir)
-            StringHandle hPathStringDir = (StringHandle) hArg;
-
-            try {
-                Path pathDir = Paths.get(hPathStringDir.getStringValue());
-                ensureWatchDaemon().register(pathDir, hStorage);
-                return Op.R_NEXT;
-            } catch (IOException|InvalidPathException e) {
-                return frame.raiseException(xException.ioException(frame, e.getMessage()));
-            }
-        }
-        }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
     }
 
