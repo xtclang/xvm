@@ -8,6 +8,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.ast.UnaryOpExprAST.Operator;
+
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -34,7 +36,7 @@ import org.xvm.util.PackedInteger;
  * </ul>
  */
 public final class ToIntExpression
-        extends SyntheticExpression {
+        extends UnaryOpExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -45,7 +47,7 @@ public final class ToIntExpression
      * @param errs        the error list to log to
      */
     private ToIntExpression(Expression expr, PackedInteger pintOffset) {
-        super(expr);
+        super(expr, Operator.ToInt);
 
         m_pintOffset = pintOffset;
     }

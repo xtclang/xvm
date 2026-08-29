@@ -8,6 +8,8 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.UnaryOpExprAST.Operator;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Var_T;
@@ -17,11 +19,11 @@ import org.xvm.asm.op.Var_T;
  * A tuple packing expression. This packs the multiple values from the sub-expression into a tuple.
  */
 public final class PackExpression
-        extends SyntheticExpression {
+        extends UnaryOpExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     private PackExpression(Expression expr) {
-        super(expr);
+        super(expr, Operator.Pack);
     }
 
     public static PackExpression create(Expression expr, ErrorListener errs) {

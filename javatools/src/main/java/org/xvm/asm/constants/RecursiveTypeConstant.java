@@ -117,7 +117,7 @@ public final class RecursiveTypeConstant
     }
 
     @Override
-    public Constant getDefiningConstant() {
+    public DefiningConstant getDefiningConstant() {
         throw new IllegalStateException();
     }
 

@@ -26,6 +26,7 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.DefiningConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -517,7 +518,7 @@ public non-sealed class MethodDeclarationStatement
                         }
 
                         if (type.getFormat() == Format.TerminalType) {
-                            Constant constReturn = type.getDefiningConstant();
+                            DefiningConstant constReturn = type.getDefiningConstant();
                             if (constReturn.getFormat() == Format.Property
                                     && "Referent".equals(((PropertyConstant) constReturn).getName())) {
                                 // replace the Referent with the actual property type

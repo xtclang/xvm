@@ -130,7 +130,7 @@ public abstract sealed class AbstractDependantTypeConstant
     }
 
     @Override
-    public Constant getDefiningConstant() {
+    public IdentityConstant getDefiningConstant() {
         return getSingleUnderlyingClass(true);
     }
 

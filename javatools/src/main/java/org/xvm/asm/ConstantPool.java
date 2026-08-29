@@ -2191,7 +2191,7 @@ public class ConstantPool
      *
      * @return an auto-narrowing class type constant that represents the type of "this"
      */
-    public TypeConstant ensureThisTypeConstant(Constant constClass, Access access) {
+    public TypeConstant ensureThisTypeConstant(DefiningConstant constClass, Access access) {
         ThisClassConstant constId = switch (constClass) {
             case ThisClassConstant constant    -> constant;
             case NativeRebaseConstant constant -> ensureThisClassConstant(constant.getClassConstant());
@@ -3736,8 +3736,8 @@ public class ConstantPool
                                                         boolean fMethod) {
         // the only modification that is allowed on the Function is "this:class"
         if (typeLeft.isSingleDefiningConstant() && typeRight.isSingleDefiningConstant()) {
-            Constant constIdLeft  = typeLeft.getDefiningConstant();
-            Constant constIdRight = typeRight.getDefiningConstant();
+            DefiningConstant constIdLeft  = typeLeft.getDefiningConstant();
+            DefiningConstant constIdRight = typeRight.getDefiningConstant();
             if (constIdLeft.getFormat()  == Format.ThisClass &&
                 constIdRight.getFormat() == Format.ThisClass) {
                 // to allow assignment of this:class(X) to this:class(Function),

@@ -190,7 +190,7 @@ public abstract sealed class RelationalTypeConstant
     }
 
     @Override
-    public Constant getDefiningConstant() {
+    public DefiningConstant getDefiningConstant() {
         throw new UnsupportedOperationException();
     }
 

@@ -25,4 +25,49 @@ public sealed interface DefiningConstant
      * @return the value of this constant, in some sort of human-readable form
      */
     String getValueString();
+
+    /**
+     * @return the type that this constant defines
+     */
+    TypeConstant getType();
+
+    /**
+     * Narrow a constant that is known to define a type.
+     *
+     * <p>Two producers of a defining constant - {@code TerminalTypeConstant} and
+     * {@code UnresolvedTypeConstant} - read their constant out of a field declared {@code Constant},
+     * so neither can prove the narrowing statically. The invariant that makes it safe is
+     * {@code TerminalTypeConstant}'s own constructor guard, {@code Format.isTypeable()}: every
+     * format it admits - Module, Package, Class, Typedef, Property, the formal types, the pseudo
+     * classes, the keywords and UnresolvedName - is implemented by a class in one of this union's
+     * two branches. {@code TypeableFormatsAreDefiningConstantsTest} pins that.</p>
+     *
+     * <p>Doing the check here rather than at each consumer is the point: it converts the unchecked
+     * casts those consumers used to write into a single checked conversion that names what went
+     * wrong if the invariant is ever broken.</p>
+     *
+     * @param constant  a constant that must define a type
+     *
+     * @return the same constant, typed
+     */
+    /**
+     * @return this defining constant as a {@link Constant}
+     */
+    default Constant asConstant() {
+        // exhaustive over the union's two branches, both of which extend Constant, so this
+        // conversion needs no cast and no default: adding a branch that is not a Constant would
+        // fail to compile here rather than at some consumer
+        return switch (this) {
+            case IdentityConstant constId -> constId;
+            case PseudoConstant   constId -> constId;
+        };
+    }
+
+    static DefiningConstant of(Constant constant) {
+        if (constant instanceof DefiningConstant defining) {
+            return defining;
+        }
+        throw new IllegalStateException("not a defining constant: "
+                + (constant == null ? "null" : constant.getFormat() + " " + constant.getClass()));
+    }
 }

@@ -150,7 +150,7 @@ public final class PropertyClassTypeConstant
     }
 
     @Override
-    public Constant getDefiningConstant() {
+    public PropertyConstant getDefiningConstant() {
         return getPropertyInfo().getIdentity();
     }
 

@@ -2119,7 +2119,7 @@ public abstract class ClassTemplate
             }
             TypeConstant typeAnno = getClassType(sName.substring(1, ofEnd), template);
             TypeConstant typeMain = getClassType(sName.substring(ofEnd + 1), template);
-            return pool.ensureAnnotatedTypeConstant(typeAnno.getDefiningConstant(), null, typeMain);
+            return pool.ensureAnnotatedTypeConstant(typeAnno.getDefiningConstant().asConstant(), null, typeMain);
         }
 
         boolean fNullable = sName.endsWith("?");

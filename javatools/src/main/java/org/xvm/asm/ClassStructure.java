@@ -366,9 +366,12 @@ public sealed class ClassStructure
             public void accept(Constant c) {
                 if (c instanceof TypeConstant t) {
                     if (t.isGenericType()) {
-                        Constant constId = t.getDefiningConstant();
-                        if (constId.getFormat() == Constant.Format.Property) {
-                            String sName = ((PropertyConstant) constId).getName();
+                        // NOT instanceof PropertyConstant alone: FormalTypeChildConstant
+                        // extends it but carries Format.FormalTypeChild, and a formal type child
+                        // is not a generic type parameter of this class
+                        if (t.getDefiningConstant() instanceof PropertyConstant idProp
+                                && idProp.getFormat() == Constant.Format.Property) {
+                            String sName = idProp.getName();
                             if (!getFormalType().containsGenericParam(sName)
                                     && asName[0] == null) {
                                 asName[0] = sName;
@@ -2082,7 +2085,7 @@ public sealed class ClassStructure
                                              boolean fAllowInto) {
         assert typeLeft.isSingleDefiningConstant();
 
-        Constant         constIdLeft = typeLeft.getDefiningConstant();
+        DefiningConstant constIdLeft = typeLeft.getDefiningConstant();
         IdentityConstant idClzRight  = getIdentityConstant();
 
         // virtual children implement an implicit "Inner" interface, and are contained inside a

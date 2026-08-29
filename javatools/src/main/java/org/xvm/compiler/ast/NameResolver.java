@@ -23,6 +23,7 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.XvmStructure;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.DefiningConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -466,7 +467,7 @@ public class NameResolver
 
             TypeConstant typeParam = type.getParamType(0);
             if (typeParam.isSingleDefiningConstant()) {
-                id = typeParam.getDefiningConstant();
+                id = typeParam.getDefiningConstant().asConstant();
                 component = id instanceof IdentityConstant constId ? constId.getComponent() : null;
             } else {
                 throw new IllegalStateException("not a single defining constant: " + typeParam);
@@ -531,7 +532,7 @@ public class NameResolver
         if (typeConstraint.isSingleDefiningConstant()) {
             // try to use the constraint type
             // (e.g. CompileType.Key where CompileType is known to be a Map)
-            Constant id         = typeConstraint.getDefiningConstant();
+            DefiningConstant id = typeConstraint.getDefiningConstant();
             Component component = id instanceof IdentityConstant constId
                     ? constId.getComponent()
                     : id instanceof PseudoConstant constPseudo

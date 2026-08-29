@@ -13,6 +13,7 @@ import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.DefiningConstant;
 import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -404,7 +405,7 @@ public class xRTTypeTemplate
     public int invokeFromProperty(Frame frame, TypeTemplateHandle hType, int[] aiReturn) {
         TypeConstant type = hType.getDataType();
         if (type.isSingleDefiningConstant()) {
-            Constant constDef = type.getDefiningConstant();
+            DefiningConstant constDef = type.getDefiningConstant();
             if (constDef instanceof PropertyConstant idProp) {
                 TypeConstant  typeTarget = idProp.getClassIdentity().getType();
                 TypeInfo      infoTarget = typeTarget.ensureTypeInfo();

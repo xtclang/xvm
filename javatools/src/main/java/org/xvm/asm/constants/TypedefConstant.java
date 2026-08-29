@@ -69,7 +69,7 @@ public final class TypedefConstant
                 public void accept(Constant constant) {
                     if (constant instanceof UnresolvedTypeConstant typeU) {
                         if (typeU.isSingleDefiningConstant()) {
-                            constant = typeU.getDefiningConstant();
+                            constant = typeU.getDefiningConstant().asConstant();
                             if (constant == constSelf) {
                                 TypeConstant typeRecursive = new RecursiveTypeConstant(pool, constSelf);
 

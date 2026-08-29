@@ -101,7 +101,7 @@ public sealed class TerminalTypeConstant
 
     @Override
     public boolean isShared(ConstantPool poolOther) {
-        DefiningConstant defining = asDefining(m_constId);
+        DefiningConstant defining = DefiningConstant.of(m_constId);
         return switch (defining) {
             case NativeRebaseConstant ignored -> true;
             case KeywordConstant ignored      -> true;
@@ -132,7 +132,7 @@ public sealed class TerminalTypeConstant
 
     @Override
     public boolean isComposedOfAny(Set<IdentityConstant> setIds) {
-        DefiningConstant defining = asDefining(ensureResolvedConstant());
+        DefiningConstant defining = DefiningConstant.of(ensureResolvedConstant());
         return switch (defining) {
             case NativeRebaseConstant ignored  -> false;
             case KeywordConstant ignored       -> false;
@@ -177,7 +177,7 @@ public sealed class TerminalTypeConstant
             return type.isImmutable();
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             case ModuleConstant _, PackageConstant _ -> true;
 
@@ -226,7 +226,7 @@ public sealed class TerminalTypeConstant
             return type.isService();
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             case ModuleConstant _, PackageConstant _ -> false;
             case KeywordConstant ignored             -> false;
@@ -288,7 +288,7 @@ public sealed class TerminalTypeConstant
             return 0;
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             case ModuleConstant _, PackageConstant _ -> 0;
 
@@ -334,7 +334,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().containsGenericParam(sName);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         if (defining instanceof FormalConstant constant) {
             return constant.getConstraintType().containsGenericParam(sName);
         }
@@ -378,7 +378,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().getGenericParamType(sName, listParams);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         if (defining instanceof FormalConstant constant) {
             assert listParams.isEmpty();
 
@@ -423,11 +423,11 @@ public sealed class TerminalTypeConstant
     }
 
     @Override
-    public Constant getDefiningConstant() {
+    public DefiningConstant getDefiningConstant() {
         Constant constId = ensureResolvedConstant();
         return constId.getFormat() == Format.Typedef
                 ? ((TypedefConstant) constId).getReferredToType().getDefiningConstant()
-                : constId;
+                : DefiningConstant.of(constId);
     }
 
     /**
@@ -477,7 +477,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().resolveContributedName(sName, access, idMethod, collector);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             case FormalConstant _, KeywordConstant _ -> ResolutionResult.UNKNOWN;
 
@@ -546,7 +546,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().resolveGenerics(pool, resolver);
         }
 
-        Constant constId = getDefiningConstant();
+        DefiningConstant constId = getDefiningConstant();
         if (constId instanceof FormalConstant constFormal) {
             TypeConstant typeResolved = constFormal.resolve(resolver);
             if (typeResolved != null) {
@@ -566,7 +566,7 @@ public sealed class TerminalTypeConstant
         }
 
         if (!fPendingOnly) {
-            Constant constId = getDefiningConstant();
+            DefiningConstant constId = getDefiningConstant();
             if (constId instanceof FormalConstant constFormal) {
                 return constFormal.getConstraintType().resolveConstraints(fPendingOnly);
             }
@@ -577,7 +577,7 @@ public sealed class TerminalTypeConstant
     @Override
     public TypeConstant resolveDynamicConstraints(Register register) {
         if (isSingleDefiningConstant()) {
-            Constant constId = getDefiningConstant();
+            DefiningConstant constId = getDefiningConstant();
             if (constId instanceof DynamicFormalConstant constDynamic) {
                 if (register == null || constDynamic.getRegister() == register) {
                     return constDynamic.getConstraintType();
@@ -590,7 +590,7 @@ public sealed class TerminalTypeConstant
 
     @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams) {
-        DefiningConstant defining = asDefining(ensureResolvedConstant());
+        DefiningConstant defining = DefiningConstant.of(ensureResolvedConstant());
         IdentityConstant idClz;
         switch (defining) {
         case ModuleConstant ignored     -> { return this; }
@@ -636,7 +636,7 @@ public sealed class TerminalTypeConstant
 
     @Override
     public TypeConstant[] collectGenericParameters() {
-        DefiningConstant defining = asDefining(ensureResolvedConstant());
+        DefiningConstant defining = DefiningConstant.of(ensureResolvedConstant());
         IdentityConstant idClz;
         switch (defining) {
         case FormalConstant ignored     -> { return TypeConstant.NO_TYPES; }
@@ -697,7 +697,7 @@ public sealed class TerminalTypeConstant
                     resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx);
         }
 
-        switch (definingConstant()) {
+        switch (getDefiningConstant()) {
         case ThisClassConstant constant: {
             IdentityConstant idClass  = constant.getDeclarationLevelClass();
             TypeConstant     typeDecl = idClass.getType();
@@ -763,7 +763,7 @@ public sealed class TerminalTypeConstant
 
     @Override
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName) {
-        switch (definingConstant()) {
+        switch (getDefiningConstant()) {
         case TypeParameterConstant idTypeParam: {
             MethodConstant idMethod = idTypeParam.getMethod();
             MethodStructure       method      = idMethod.getComponent();
@@ -851,7 +851,7 @@ public sealed class TerminalTypeConstant
         // tuple" for every format it never listed; here the formal-constant category is one
         // arm instead of four formats, and an unlisted defining-constant kind is a compile
         // error instead of a silently wrong answer
-        return switch (definingConstant()) {
+        return switch (getDefiningConstant()) {
             case FormalConstant constant      -> constant.getConstraintType().isTuple();
             case NativeRebaseConstant constant-> isTupleClass(constant.getClassConstant());
             case ClassConstant constant       -> isTupleClass(constant);
@@ -878,31 +878,6 @@ public sealed class TerminalTypeConstant
             throw new IllegalStateException("no ClassStructure for " + idClz);
         }
         return clz.isTuple();
-    }
-
-    /**
-     * @return the single defining constant, typed as the sealed {@link DefiningConstant}
-     *         union; a defining constant is always an identity or a pseudo constant, and the
-     *         checked conversion here fails loudly on a corrupt pool instead of letting every
-     *         caller re-derive (or silently mis-derive) the union from a format switch
-     */
-    private DefiningConstant definingConstant() {
-        return asDefining(getDefiningConstant());
-    }
-
-    /**
-     * Type the specified constant as the sealed {@link DefiningConstant} union, preserving the
-     * historical diagnostic for a corrupt pool.
-     *
-     * @param constant  the constant to type
-     *
-     * @return the constant, typed as the union
-     */
-    private static DefiningConstant asDefining(Constant constant) {
-        if (constant instanceof DefiningConstant defining) {
-            return defining;
-        }
-        throw new IllegalStateException("unexpected defining constant: " + constant);
     }
 
     @Override
@@ -1002,9 +977,9 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().extendsClass(constClass);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         if (defining instanceof KeywordConstant constKeyword) {
-            defining = asDefining(constKeyword.getBaseType().getDefiningConstant());
+            defining = constKeyword.getBaseType().getDefiningConstant();
         }
         DefiningConstant resolved = defining;
         return switch (resolved) {
@@ -1110,7 +1085,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().getCategory();
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             // modules and packages are always class types (not interface types)
             case ModuleConstant _, PackageConstant _ -> Category.CLASS;
@@ -1163,7 +1138,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().isSingleUnderlyingClass(fAllowInterface);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             // modules, packages, and native rebases are always class types (not interfaces)
             case NativeRebaseConstant ignored        -> true;
@@ -1210,7 +1185,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().getSingleUnderlyingClass(fAllowInterface);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             // modules, packages, and native rebases are always class types (not interfaces)
             case NativeRebaseConstant constant -> constant;
@@ -1246,7 +1221,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().isExplicitClassIdentity(fAllowParams);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             case ModuleConstant _, PackageConstant _, ClassConstant _, ThisClassConstant _,
                  ParentClassConstant _, ChildClassConstant _ -> true;
@@ -1268,7 +1243,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().getExplicitClassFormat();
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             case ModuleConstant ignored  -> Component.Format.MODULE;
             case PackageConstant ignored -> Component.Format.PACKAGE;
@@ -1303,7 +1278,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().getExplicitClassInto(fResolve);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         ClassStructure structMixin = switch (defining) {
             // note: native rebase constants kept the historical refusal below
             case NativeRebaseConstant constant ->
@@ -1382,7 +1357,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().isConst();
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             case ModuleConstant _, PackageConstant _ -> true;
 
@@ -1462,7 +1437,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().ensureTypeInfoInternal(errs);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             case ModuleConstant _, PackageConstant _, ClassConstant _ ->
                 super.buildTypeInfo(errs);
@@ -1545,7 +1520,7 @@ public sealed class TerminalTypeConstant
         }
 
         if (isSingleDefiningConstant()) {
-            Constant constLeft = getDefiningConstant();
+            DefiningConstant constLeft = getDefiningConstant();
             if (constLeft instanceof KeywordConstant) {
                 if (constLeft.getFormat() == Format.IsClass) {
                     return typeRight.getCategory() == Category.CLASS
@@ -1607,16 +1582,15 @@ public sealed class TerminalTypeConstant
             return false;
         }
 
-        Constant constIdThis = this.getDefiningConstant();
-        Constant constIdBase = typeBase.getDefiningConstant();
+        DefiningConstant constIdThis = this.getDefiningConstant();
+        DefiningConstant constIdBase = typeBase.getDefiningConstant();
 
         if (constIdThis.getFormat() != constIdBase.getFormat()) {
             return false;
         }
 
         // the formats were just checked equal, so the base's kind decides both sides
-        DefiningConstant definingBase = asDefining(constIdBase);
-        return switch (definingBase) {
+        return switch (constIdBase) {
             case ModuleConstant _, PackageConstant _ -> false;
 
             // native rebase and class compare by type on both sides (formats match)
@@ -1642,7 +1616,7 @@ public sealed class TerminalTypeConstant
                  MethodConstant _, MultiMethodConstant _, PureIdentityConstant _,
                  TypedefConstant _, SignatureConstant _, UnresolvedNameConstant _,
                  ExpressionConstant _, DeferredValueConstant _ ->
-                throw new IllegalStateException("unexpected constant: " + definingBase);
+                throw new IllegalStateException("unexpected constant: " + constIdBase);
         };
     }
 
@@ -1650,7 +1624,7 @@ public sealed class TerminalTypeConstant
      * @return true iff the two pseudo constants are congruent and their declaration-level
      *         classes' types are compatible in either direction
      */
-    private static boolean congruentDeclarations(PseudoConstant constBase, Constant constIdThis) {
+    private static boolean congruentDeclarations(PseudoConstant constBase, DefiningConstant constIdThis) {
         PseudoConstant constThis = (PseudoConstant) constIdThis;
         if (constBase.isCongruentWith(constThis)) {
             // the declaration types must be compatible
@@ -1670,7 +1644,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             case NativeRebaseConstant constant ->
                 interfaceAssignableFrom(constant.getClassConstant(), typeRight, accessLeft, listLeft);
@@ -1720,7 +1694,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().containsSubstitutableMethod(signature, access, fFunction, listParams);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             case NativeRebaseConstant constant -> classContainsSubstitutableMethod(
                     constant.getClassConstant(), signature, access, fFunction, listParams);
@@ -1771,7 +1745,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().checkConsumption(sTypeName, access, listParams);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             // formal types and keywords do not consume
             case ModuleConstant _, PackageConstant _, FormalConstant _, KeywordConstant _ ->
@@ -1856,7 +1830,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().checkProduction(sTypeName, access, listParams);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             case ModuleConstant _, PackageConstant _, KeywordConstant _ -> Usage.NO;
 
@@ -1958,7 +1932,7 @@ public sealed class TerminalTypeConstant
             return constId.getReferredToType().getTemplate(container);
         }
 
-        DefiningConstant defining = definingConstant();
+        DefiningConstant defining = getDefiningConstant();
         return switch (defining) {
             case NativeRebaseConstant constant ->
                 container.getTemplate(constant.getClassConstant());
@@ -2076,7 +2050,7 @@ public sealed class TerminalTypeConstant
                 return constId.getReferredToType().validate(errs) && super.validate(errs);
             }
 
-            DefiningConstant defining = definingConstant();
+            DefiningConstant defining = getDefiningConstant();
             switch (defining) {
             case ModuleConstant _, PackageConstant _, ClassConstant _, FormalConstant _,
                  ThisClassConstant _, ParentClassConstant _, ChildClassConstant _ -> {

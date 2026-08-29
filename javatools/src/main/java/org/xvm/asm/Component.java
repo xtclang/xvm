@@ -2074,7 +2074,7 @@ public abstract sealed class Component
                                 typeParent.getSingleUnderlyingClass(true).getComponent();
                         typeFormal = clzParent.getFormalType().resolveGenericType(sName);
                     }
-                    collector.resolvedConstant(typeFormal.getDefiningConstant());
+                    collector.resolvedConstant(typeFormal.getDefiningConstant().asConstant());
                     return ResolutionResult.RESOLVED;
                 }
             }

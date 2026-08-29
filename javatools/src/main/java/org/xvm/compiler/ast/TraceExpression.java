@@ -7,6 +7,8 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.UnaryOpExprAST.Operator;
+
 import org.xvm.asm.constants.TypeConstant;
 
 
@@ -15,7 +17,7 @@ import org.xvm.asm.constants.TypeConstant;
  * traceability.
  */
 public final class TraceExpression
-        extends SyntheticExpression {
+        extends UnaryOpExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -24,7 +26,7 @@ public final class TraceExpression
      * @param expr  the expression to trace
      */
     private TraceExpression(Expression expr) {
-        super(expr);
+        super(expr, Operator.Trace);
     }
 
     public static TraceExpression create(Expression expr) {

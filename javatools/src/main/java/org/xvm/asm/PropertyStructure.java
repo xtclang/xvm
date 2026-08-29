@@ -15,6 +15,7 @@ import java.util.Set;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DeferredValueConstant;
+import org.xvm.asm.constants.DefiningConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RegisterConstant;
@@ -558,7 +559,7 @@ public final class PropertyStructure
 
                     structAnno = null;
                     if (typeExtends.isExplicitClassIdentity(true)) {
-                        Constant constExtends = typeExtends.getDefiningConstant();
+                        DefiningConstant constExtends = typeExtends.getDefiningConstant();
                         if (constExtends instanceof IdentityConstant idExtends) {
                             structAnno = (ClassStructure) idExtends.getComponent();
                         }

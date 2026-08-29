@@ -54,7 +54,7 @@ public class SealedParserAstTest {
         assertEquals(1, cHatches);
         // the root plus its permitted closure (EvalStatement is outside the sealed walk,
         // reachable only through the documented hatch)
-        assertEquals(96, seen.size(),
+        assertEquals(97, seen.size(),
                 "the parser AST tree drifted; update the sealed-hierarchy audit wave E");
     }
 }

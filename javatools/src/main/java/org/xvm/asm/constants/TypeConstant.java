@@ -697,7 +697,7 @@ public abstract sealed class TypeConstant
      *
      * @throws UnsupportedOperationException if there is not a single defining constant
      */
-    public Constant getDefiningConstant() {
+    public DefiningConstant getDefiningConstant() {
         return getUnderlyingType().getDefiningConstant();
     }
 
@@ -6127,8 +6127,8 @@ public abstract sealed class TypeConstant
         assert !typeLeft.isRelationalType() && typeLeft.isSingleDefiningConstant();
         assert !typeRight.isRelationalType() && typeRight.isSingleDefiningConstant();
 
-        Constant constIdLeft  = typeLeft.getDefiningConstant();
-        Constant constIdRight = typeRight.getDefiningConstant();
+        DefiningConstant constIdLeft  = typeLeft.getDefiningConstant();
+        DefiningConstant constIdRight = typeRight.getDefiningConstant();
 
         Format format;
         switch (format = constIdRight.getFormat()) {
@@ -6432,11 +6432,8 @@ public abstract sealed class TypeConstant
         // typeRight must be a non-relational one
         assert !typeRight.isRelationalType() && typeRight.isSingleDefiningConstant();
 
-        Constant constIdRight = typeRight.getDefiningConstant();
-        if (!(constIdRight instanceof DefiningConstant definingRight)) {
-            throw new IllegalStateException("unexpected constant: " + constIdRight);
-        }
-        return switch (definingRight) {
+        DefiningConstant constIdRight = typeRight.getDefiningConstant();
+        return switch (constIdRight) {
             case ModuleConstant _, PackageConstant _, FormalConstant _ ->
                 Relation.INCOMPATIBLE;
 

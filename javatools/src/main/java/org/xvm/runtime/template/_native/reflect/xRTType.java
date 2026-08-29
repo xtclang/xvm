@@ -20,6 +20,7 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.DefiningConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -1277,7 +1278,7 @@ public class xRTType
         if (!hType.isForeign()) {
             TypeConstant type = hType.getDataType();
             if (type.isSingleDefiningConstant()) {
-                Constant constDef = type.getDefiningConstant();
+                DefiningConstant constDef = type.getDefiningConstant();
                 if (constDef instanceof PropertyConstant idProp) {
                     TypeConstant typeParent = idProp.getParentConstant().getType();
                     PropertyInfo infoProp   = frame.poolContext().ensureAccessTypeConstant(
@@ -1327,7 +1328,7 @@ public class xRTType
         TypeConstant type  = hType.getUnsafeDataType();
 
         if (type.isSingleDefiningConstant()) {
-            Constant id = type.getDefiningConstant();
+            DefiningConstant id = type.getDefiningConstant();
             switch (id.getFormat()) {
             case Module:
             case Package:

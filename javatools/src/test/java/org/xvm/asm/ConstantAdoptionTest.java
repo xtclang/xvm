@@ -175,9 +175,9 @@ public class ConstantAdoptionTest {
 
         assertNotSame(source, registered);
         assertSame(targetPool, registered.getConstantPool());
-        assertSame(targetPool, registered.getDefiningConstant().getConstantPool());
+        assertSame(targetPool, registered.getDefiningConstant().asConstant().getConstantPool());
         assertEquals(source.getValueString(), registered.getValueString());
-        assertSame(registered, targetPool.ensureTerminalTypeConstant(registered.getDefiningConstant()));
+        assertSame(registered, targetPool.ensureTerminalTypeConstant(registered.getDefiningConstant().asConstant()));
     }
 
     /**
