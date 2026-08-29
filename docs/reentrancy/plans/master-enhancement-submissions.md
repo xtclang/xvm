@@ -76,6 +76,7 @@ surface graduate into individual rows on the bug list.
 | E19 | Retire String dispatch for native methods | 76 sites, 542 labels — NOT one PR | High | `MethodStructure`, the template tree | (this file) |
 | E20 | `Format` vs class hierarchy: pin the 4 divergences, then audit 154 sites | step 1 is one test; steps 2-3 are 6 small PRs | Low (step 1) | `Constant.Format`, the 4 divergent pairs | (this file) |
 | E21 | Type `getDefiningConstant()` as the identity/pseudo union | 17 files; deletes a 33-site workaround layer | Medium | `TypeConstant`, `TerminalTypeConstant` | (this file) |
+| E22 | **The real one**: `ObjectHandle` as calling convention — 1,439 casts (50%) | multi-PR programme; needs a design decision | High | `ClassTemplate`'s 37-method protocol, `ObjectHandle` | (this file) |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -1230,6 +1231,73 @@ on a new divergence. That is the durable part: the invariant is checked rather t
 
 **Order matters.** Do NOT start at step 3. An audit without step 2 has to re-derive intent at every
 site from surrounding context, which is exactly how the `COMPILER-145` failure above gets written.
+
+---
+
+## E22 — The actual architecture: `ObjectHandle` is the calling convention
+
+**Why the earlier items kept under-delivering, stated plainly.** Narrowing a producer's return type
+(E21 and its predecessors) can only remove a cast when a *method result* is cast to *exactly* the
+narrowed type. A census of all 2,879 casts in `javatools` says that is the minority case:
+
+| what is being cast | count | share |
+| --- | --- | --- |
+| **a variable, field, or parameter** | **1,879** | **65%** |
+| a method result | 1,000 | 35% |
+
+For the 65%, the type was destroyed at the **signature and storage** layer, long before any
+accessor. No return-type narrowing can reach them. That is structural, not an oversight, and it is
+why E21 deleted a 33-site workaround layer yet moved the cast total by one.
+
+### Where the mass actually is
+
+**1,439 casts - half of every cast in `javatools` - target a handle type.** Their sources:
+
+| source | count |
+| --- | --- |
+| an `ObjectHandle`-typed local or parameter (`hTarget`, `hArg`) | 987 |
+| a field read | 192 |
+| an element of an `ObjectHandle[]` | 191 |
+
+Because the runtime's calling convention is untyped: **801** `ObjectHandle hTarget` parameters,
+**323** `ObjectHandle hArg`, **245** `ObjectHandle[] ahArg`. `ClassTemplate` declares a **37-method
+receiver-typed protocol** (`invokeAdd`, `invokeSub`, `invokeNative1`, …), every one taking
+`ObjectHandle hTarget`, and the first act of nearly every override is to cast it back to the type
+the template already knows it must be.
+
+### Two shapes, both costed
+
+**A - dispatch on the receiver.** Move the protocol onto the handle so `this` carries the type.
+Already half-built: four `invokeNative*` entry points delegate this way, and `xRegEx` is the worked
+example - **6 receiver casts to 1**.
+
+- addressable: **322** receiver casts, in files where the handle is 1:1 with the template
+- **blocked: 269**, where one handle serves many templates (`JavaLong` alone backs a dozen integer
+  templates, 63 casts; `ViewHandle` 30; `IntNHandle` 29; `GenericHandle` 25). This blocker is
+  structural - a shared handle cannot host one template's operator bodies.
+- cost: the operation bodies move onto handle classes, which cuts against "dispatch on the
+  receiver, operations on the template".
+
+**B - make the template generic**, `ClassTemplate<H extends ObjectHandle>`, so overrides declare
+`invokeAdd(Frame, IntNHandle, …)`.
+
+- **184** override bodies become cast-free
+- but **122** dispatch sites hold the template as `ClassTemplate<?>` and would each need an
+  **unchecked** cast
+
+B therefore trades ~322 *checked* casts for 122 *unchecked* ones. That is not obviously a win, and
+unchecked casts are the more dangerous kind. My earlier one-line prediction that a generic template
+"fails identically" was too strong - it does not fail, it trades - but it is not free either.
+
+### What this needs
+
+A decision, not a mechanical sweep. A is safer and proven but reaches 322 of 591 and moves
+operations onto handles; B reaches more bodies but pushes unchecked casts into the dispatch core.
+Either is a multi-PR programme, and the shared-handle 269 are out of reach for both without
+splitting handle classes per template - a third, larger change.
+
+**Do not start either as a "cleanup".** The measurement above is the deliverable; the choice is an
+architectural one for the maintainer.
 
 ---
 
