@@ -85,103 +85,6 @@ public class xRegEx
         return frame.assignValue(iReturn, makeHandle(regex, nFlags));
     }
 
-    @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        RegExHandle hPattern = (RegExHandle) hTarget;
-        if ("pattern".equals(sPropName)) {
-            return frame.assignValue(iReturn, xString.makeHandle(frame, hPattern.f_regex));
-        }
-
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-    }
-
-    @Override
-    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn) {
-        switch (method.getName()) {
-        case "append": {
-            RegExHandle hRegEx = (RegExHandle) hTarget;
-            String      regex  = hRegEx.getRegex() + ((RegExHandle) hArg).getRegex();
-            long        nFlags = hRegEx.getFlags();
-            return frame.assignValue(iReturn, makeHandle(regex, nFlags));
-        }
-        case "appendTo": {
-            StringHandle hRegex = xString.makeHandle(frame, ((RegExHandle) hTarget).getRegex());
-            return xString.callAppendTo(frame, hRegex, hArg, iReturn);
-        }
-        }
-
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
-    }
-
-    @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn) {
-        switch (method.getName()) {
-        case "replaceAll": {
-            StringHandle hText       = (StringHandle) ahArg[0];
-            String       text        = hText.getStringValue();
-            String       replacement = ((StringHandle) ahArg[1]).getStringValue();
-            Matcher      matcher     = ((RegExHandle) hTarget).getPattern().matcher(text);
-            StringHandle hResult     = xString.makeHandle(frame, matcher.replaceAll(replacement));
-            return frame.assignValue(iReturn, hResult);
-        }
-        }
-
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-    }
-
-    @Override
-    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                              ObjectHandle[] ahArg, int[] aiReturn) {
-        RegExHandle hRegEx = (RegExHandle) hTarget;
-        switch (method.getName()) {
-        case "match": {
-            StringHandle hText   = (StringHandle) ahArg[0];
-            Pattern      pattern = hRegEx.getPattern();
-            Matcher      matcher = pattern.matcher(hText.getStringValue());
-            if (matcher.matches()) {
-                MatchResult result = matcher.toMatchResult();
-                return Utils.assignConditionalResult(
-                    frame,
-                    createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
-                    aiReturn);
-            }
-            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
-        }
-        case "matchPrefix": {
-            StringHandle hText   = (StringHandle) ahArg[0];
-            Pattern      pattern = hRegEx.getPattern();
-            Matcher      matcher = pattern.matcher(hText.getStringValue());
-            if (matcher.lookingAt()) {
-                MatchResult result = matcher.toMatchResult();
-                return Utils.assignConditionalResult(
-                    frame,
-                    createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
-                    aiReturn);
-            }
-            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
-        }
-        case "find": {
-            StringHandle  hText   = (StringHandle) ahArg[0];
-            Pattern       pattern = hRegEx.getPattern();
-            Matcher       matcher = pattern.matcher(hText.getStringValue());
-            ObjectHandle  hStart  = ahArg[1];
-            long          nStart  = hStart instanceof JavaLong hInt
-                                                ? hInt.getValue()
-                                                : 0L;
-            if (matcher.find((int) nStart)) {
-                MatchResult result = matcher.toMatchResult();
-                return Utils.assignConditionalResult(
-                    frame,
-                    createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
-                    aiReturn);
-            }
-            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
-        }
-        }
-        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
-    }
 
     @Override
     public int createConstHandle(Frame frame, Constant constant) {
@@ -246,6 +149,113 @@ public class xRegEx
      */
     public static class RegExHandle
             extends ObjectHandle {
+        /*
+         * Native dispatch lives here rather than on xRegEx: `this` is already a RegExHandle, so
+         * every cast the template versions opened with is gone by construction. Operations that
+         * genuinely belong to the template - the handle factories - are reached back through
+         * getTemplate(xRegEx.class). See ObjectHandle's dispatch defaults.
+         */
+
+
+        @Override
+        public int invokeNativeN(Frame frame, MethodStructure method,
+                                     ObjectHandle[] ahArg, int iReturn) {
+            switch (method.getName()) {
+            case "replaceAll": {
+                StringHandle hText       = (StringHandle) ahArg[0];
+                String       text        = hText.getStringValue();
+                String       replacement = ((StringHandle) ahArg[1]).getStringValue();
+                Matcher      matcher     = this.getPattern().matcher(text);
+                StringHandle hResult     = xString.makeHandle(frame, matcher.replaceAll(replacement));
+                return frame.assignValue(iReturn, hResult);
+            }
+            }
+
+            return super.invokeNativeN(frame, method, ahArg, iReturn);
+        }
+
+        @Override
+        public int invokeNativeNN(Frame frame, MethodStructure method,
+                                     ObjectHandle[] ahArg, int[] aiReturn) {
+            RegExHandle hRegEx = this;
+            switch (method.getName()) {
+            case "match": {
+                StringHandle hText   = (StringHandle) ahArg[0];
+                Pattern      pattern = hRegEx.getPattern();
+                Matcher      matcher = pattern.matcher(hText.getStringValue());
+                if (matcher.matches()) {
+                    MatchResult result = matcher.toMatchResult();
+                    return Utils.assignConditionalResult(
+                        frame,
+                        getTemplate(xRegEx.class).createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
+                        aiReturn);
+                }
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
+            }
+            case "matchPrefix": {
+                StringHandle hText   = (StringHandle) ahArg[0];
+                Pattern      pattern = hRegEx.getPattern();
+                Matcher      matcher = pattern.matcher(hText.getStringValue());
+                if (matcher.lookingAt()) {
+                    MatchResult result = matcher.toMatchResult();
+                    return Utils.assignConditionalResult(
+                        frame,
+                        getTemplate(xRegEx.class).createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
+                        aiReturn);
+                }
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
+            }
+            case "find": {
+                StringHandle  hText   = (StringHandle) ahArg[0];
+                Pattern       pattern = hRegEx.getPattern();
+                Matcher       matcher = pattern.matcher(hText.getStringValue());
+                ObjectHandle  hStart  = ahArg[1];
+                long          nStart  = hStart instanceof JavaLong hInt
+                                                    ? hInt.getValue()
+                                                    : 0L;
+                if (matcher.find((int) nStart)) {
+                    MatchResult result = matcher.toMatchResult();
+                    return Utils.assignConditionalResult(
+                        frame,
+                        getTemplate(xRegEx.class).createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
+                        aiReturn);
+                }
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
+            }
+            }
+            return super.invokeNativeNN(frame, method, ahArg, aiReturn);
+        }
+
+        @Override
+        public int invokeNativeGet(Frame frame, String sPropName, int iReturn) {
+            if ("pattern".equals(sPropName)) {
+                return frame.assignValue(iReturn, xString.makeHandle(frame, f_regex));
+            }
+
+            return super.invokeNativeGet(frame, sPropName, iReturn);
+        }
+
+        @Override
+        public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hArg,
+                                 int iReturn) {
+            switch (method.getName()) {
+            case "append": {
+                String regex  = getRegex() + ((RegExHandle) hArg).getRegex();
+                long   nFlags = getFlags();
+                // the handle reaches its own template for the factory - this is what the
+                // existing getTemplate(Class<T>) accessor is for
+                return frame.assignValue(iReturn,
+                        getTemplate(xRegEx.class).makeHandle(regex, nFlags));
+            }
+            case "appendTo": {
+                StringHandle hRegex = xString.makeHandle(frame, getRegex());
+                return xString.callAppendTo(frame, hRegex, hArg, iReturn);
+            }
+            }
+
+            return super.invokeNative1(frame, method, hArg, iReturn);
+        }
+
         /**
          * The compiled regular expression {@link Pattern}.
          */

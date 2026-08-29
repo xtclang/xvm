@@ -21,6 +21,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.Nid;
+import org.xvm.asm.MethodStructure;
 
 import org.xvm.runtime.ClassComposition.FieldInfo;
 
@@ -205,6 +206,82 @@ public abstract class ObjectHandle
     public TypeComposition getComposition() {
         return m_clazz;
     }
+
+    // ----- native dispatch -----------------------------------------------------------------------
+
+    /*
+     * Dispatch of a native method belongs on the RECEIVER, not on an object the receiver hands the
+     * call to. Today every one of these arrives at the template as
+     *
+     *     hTarget.getTemplate().invokeNative1(frame, method, hTarget, hArg, iReturn)
+     *
+     * - the handle produces the template and then passes ITSELF back as a parameter - and the
+     * template's first act is to cast that parameter back to the type it already was. These four
+     * defaults reproduce exactly that call, so nothing changes until a handle class overrides one;
+     * a handle that does gets `this` already correctly typed, with no cast and no type parameter.
+     *
+     * Deliberately only these four. 107 methods take an `ObjectHandle hTarget`, and giving all of
+     * them a default here would drag the whole ClassTemplate API onto this class. The line is that
+     * DISPATCH belongs on the receiver while OPERATIONS - hashing, rendering, arithmetic, field
+     * access - belong on the template, which is why buildHashCode and invokeAdd are not here.
+     */
+
+    /**
+     * Invoke a native method with a single argument on this handle.
+     *
+     * @param frame    the current frame
+     * @param method   the method to invoke
+     * @param hArg     the argument
+     * @param iReturn  the register to place the result into
+     *
+     * @return one of the {@code Op.R_*} values
+     */
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hArg, int iReturn) {
+        return getTemplate().invokeNative1(frame, method, this, hArg, iReturn);
+    }
+
+    /**
+     * Invoke a native method with any number of arguments and one return on this handle.
+     *
+     * @param frame    the current frame
+     * @param method   the method to invoke
+     * @param ahArg    the arguments
+     * @param iReturn  the register to place the result into
+     *
+     * @return one of the {@code Op.R_*} values
+     */
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle[] ahArg, int iReturn) {
+        return getTemplate().invokeNativeN(frame, method, this, ahArg, iReturn);
+    }
+
+    /**
+     * Invoke a native method with any number of arguments and returns on this handle.
+     *
+     * @param frame     the current frame
+     * @param method    the method to invoke
+     * @param ahArg     the arguments
+     * @param aiReturn  the registers to place the results into
+     *
+     * @return one of the {@code Op.R_*} values
+     */
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle[] ahArg,
+                              int[] aiReturn) {
+        return getTemplate().invokeNativeNN(frame, method, this, ahArg, aiReturn);
+    }
+
+    /**
+     * Read a native property from this handle.
+     *
+     * @param frame      the current frame
+     * @param sPropName  the property name
+     * @param iReturn    the register to place the result into
+     *
+     * @return one of the {@code Op.R_*} values
+     */
+    public int invokeNativeGet(Frame frame, String sPropName, int iReturn) {
+        return getTemplate().invokeNativeGet(frame, sPropName, this, iReturn);
+    }
+
 
     /**
      * @return the underlying template for this handle
