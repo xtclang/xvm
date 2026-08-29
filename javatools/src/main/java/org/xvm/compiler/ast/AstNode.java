@@ -1873,22 +1873,26 @@ public abstract class AstNode
      *
      * @return an array of fields corresponding to the specified names on the specified class
      */
-    protected static Field[] fieldsForNames(Class clz, String... names) {
+    protected static Field[] fieldsForNames(Class<?> clz, String... names) {
         if (names == null || names.length == 0) {
             return NO_FIELDS;
         }
 
         Field[] fields = new Field[names.length];
         NextField: for (int i = 0, c = fields.length; i < c; ++i) {
-            Class                clzTry = clz;
+            Class<?>             clzTry = clz;
             NoSuchFieldException eOrig  = null;
             while (clzTry != null) {
                 try {
                     Field field = clzTry.getDeclaredField(names[i]);
                     assert field != null;
-                    if (!field.getType().isInstance(AstNode.class) && field.getType().isInstance(List.class)) {
+                    // isAssignableFrom, not isInstance: isInstance(X.class) asks whether the
+                    // CLASS OBJECT is an instance, which is not the question here
+                    Class<?> clzField = field.getType();
+                    if (!AstNode.class.isAssignableFrom(clzField)
+                            && !List.class.isAssignableFrom(clzField)) {
                         throw new IllegalStateException("unsupported field type "
-                                + field.getType().getSimpleName() + " on field "
+                                + clzField.getSimpleName() + " on field "
                                 + clzTry.getSimpleName() + '.' + names[i]);
                     }
                     fields[i] = field;
@@ -1898,8 +1902,9 @@ public abstract class AstNode
                         eOrig = e;
                     }
 
+                    // clzTry, not clz: clz is the parameter and is never null here
                     clzTry = clzTry.getSuperclass();
-                    if (clz == null) {
+                    if (clzTry == null) {
                         throw new IllegalStateException(eOrig);
                     }
                 } catch (SecurityException e) {
