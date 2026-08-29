@@ -552,6 +552,83 @@ endgame, not the next step.
    partly landed.
 4. **C** — after the `asm` half is finished.
 
+## T8 — Retire the runtime-only handle model, incrementally
+
+**The measurement that makes this tractable:** 482 `(XHandle) hTarget` casts across 83 template
+files — but only **four** dispatch entry points (`invokeNative1`, `invokeNativeN`,
+`invokeNativeNN`, `invokeNativeGet`), and every one funnels through the same shape at
+`CallChain.java:185-246`:
+
+```java
+hTarget.getTemplate().invokeNative1(frame, method, hTarget, hArg, iReturn)
+```
+
+The handle produces the template and passes **itself** back as a parameter. Every one of the 482
+casts exists to undo that.
+
+### Why generics cannot fix it (settled, do not retry)
+
+`ClassTemplate<H extends ObjectHandle>` fails because `getTemplate()` erases: nothing can prove the
+returned template's `H` matches `hTarget`'s type. This is not speculation — it is the identical
+"no typed path from producer to consumer" failure that made `ComponentTemplateHandle<C>` remove
+**zero** casts (see the negative result above), and it would fail the same way after a far larger
+edit.
+
+### The incremental mechanism
+
+Give `ObjectHandle` a **default that delegates**, so nothing changes until a handle opts in:
+
+```java
+// ObjectHandle — default behaviour is exactly today's behaviour
+public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hArg, int iReturn) {
+    return getTemplate().invokeNative1(frame, method, this, hArg, iReturn);
+}
+```
+
+`CallChain` then calls `hTarget.invokeNative1(frame, method, hArg, iReturn)`. Any single handle
+class can now override it and handle its own natives with `this` **already the right type** — no
+cast, no generic, nothing to erase — while the other 82 keep delegating, unchanged and untouched.
+
+```java
+final class StringHandle extends ObjectHandle {
+    @Override int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hArg, int iReturn) {
+        char[] ach = m_achValue;   // `this` IS a StringHandle
+    }
+}
+```
+
+**This is the property that matters: it is one handle class per commit, each independently
+revertible.** The earlier assessment called this "a project, not a task" — that was wrong about
+the shape. It is a project only in total; each step is small.
+
+### Ranked by yield
+
+| Handle | Casts recovered |
+| --- | --- |
+| `IntNHandle` | 46 |
+| `ViewHandle` | 30 |
+| `ServiceHandle` | 28 |
+| `LongArrayHandle` | 28 |
+| `ArrayHandle` | 28 |
+| `LongLongHandle` | 27 |
+| `GenericHandle` | 24 |
+| `FloatHandle` | 19 |
+
+**Eight classes recover 230 of 482 — roughly half.** The tail is a long list of 1-3 cast classes
+that can be left alone indefinitely without loss.
+
+### The two real costs, stated up front
+
+1. **Templates hold per-container state** (`f_container`, the owner-local `Lazy.Bound` caches this
+   branch introduced) that handles do not. A moved method reaches it through `getTemplate()`, so
+   the move is mechanical but each method grows one indirection.
+2. **This is the interpreter's hot path.** A virtual call on `ObjectHandle` replaces a virtual call
+   on `ClassTemplate` — same count, but the receiver changes and the call sites are megamorphic
+   either way. Worth measuring on the first conversion rather than assuming.
+
+**Verification is unchanged and non-negotiable: `xdk:installDist` per step**, since these paths are
+what the interpreter runs.
+
 ## Explicitly NOT doing
 
 - **`ClassTemplate<H extends ObjectHandle>`** — would collapse 561 `(X) hTarget` casts, the
