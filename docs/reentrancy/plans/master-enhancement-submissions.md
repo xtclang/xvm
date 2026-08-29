@@ -74,6 +74,8 @@ surface graduate into individual rows on the bug list.
 | E17 | Separate the colliding `A_*` / `R_*` integer protocols | 10 constants, one file | Low | `Op` | (this file) |
 | E18 | Close the closeable switches; ratchet the rest (format completeness) | one test + 11 small switches | Low | `Constant.Format`, the sealed trees | (this file) |
 | E19 | Retire String dispatch for native methods | 76 sites, 542 labels — NOT one PR | High | `MethodStructure`, the template tree | (this file) |
+| E20 | `Format` vs class hierarchy: pin the 4 divergences, then audit 154 sites | step 1 is one test; steps 2-3 are 6 small PRs | Low (step 1) | `Constant.Format`, the 4 divergent pairs | (this file) |
+| E21 | Type `getDefiningConstant()` as the identity/pseudo union | 17 files; deletes a 33-site workaround layer | Medium | `TypeConstant`, `TerminalTypeConstant` | (this file) |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -1167,6 +1169,67 @@ the "did I cover every native?" question answerable at build time rather than by
 **Width: large.** 76 sites across the template tree. **This one should NOT be attempted as a single
 PR**; it is listed here so the measurement is recorded and so nobody starts it without knowing the
 size. The right first step is one template converted as a worked example, exactly as E15 did.
+
+---
+
+## E20 — The two taxonomies: `Format` vs the Java class hierarchy
+
+This one is not gratuitous, and understanding why matters for fixing it safely.
+
+`Constant.Format` is the **wire tag**. `Constant.assemble` writes
+`out.writeByte(getFormat().ordinal())`, so a format is a slot in the binary encoding. The Java
+class hierarchy is the **behaviour-reuse axis**. Those are genuinely orthogonal, and in four places
+they deliberately disagree:
+
+| Subclass | extends | but its format is | not |
+| --- | --- | --- | --- |
+| `FormalTypeChildConstant` | `PropertyConstant` | `FormalTypeChild` | `Property` |
+| `NativeRebaseConstant` | `ClassConstant` | `NativeClass` | `Class` |
+| `RecursiveTypeConstant` | `TerminalTypeConstant` | `RecursiveType` | `TerminalType` |
+| `CastTypeConstant` | `IntersectionTypeConstant` | `CastType` | `IntersectionType` |
+
+Each reuses its parent's behaviour while needing its own slot on disk. That is a reasonable thing
+to want. **The defect is that nothing marks where the two axes diverge**, so the codebase spells
+the same intent two ways and they are not the same predicate:
+
+```java
+constId.getFormat() == Format.Property     // excludes FormalTypeChildConstant
+constId instanceof PropertyConstant        // INCLUDES FormalTypeChildConstant
+```
+
+**154 `instanceof`/`case` sites** sit on those four superclasses, against **28** sites using the
+format equality. Every one of the 182 picked a spelling, and nothing in the source says the choice
+was load-bearing.
+
+### This is live, not theoretical
+
+Rewriting one such site - `ClassStructure`'s generic-parameter visitor - from the format check to
+the "obviously equivalent" `instanceof` makes the Ecstasy library fail to compile with
+`COMPILER-145: Unresolvable type parameter(s): OuterType`, because a formal type child is then
+mistaken for a generic type parameter. The full Java unit suite stays green; only
+`xdk:installDist` catches it.
+
+### The incremental path
+
+**Step 1 - pin it (one test file, landable today).** `ConstantFormatHierarchyTest` asserts the
+divergence set is exactly those four, and separately that every constant whose format is
+`isTypeable()` is an identity or pseudo constant. A fifth divergence then has to be a decision
+rather than a surprise. Master-portable as-is: it names no type that master lacks.
+
+**Step 2 - name the predicate (one small PR per pair).** The reason sites guess is that neither
+spelling says what is meant. Give each divergent parent an intention-revealing query -
+`isFormalTypeChild()`, `isNativeRebase()` - so a site can say which axis it is on instead of
+encoding it in a choice of syntax.
+
+**Step 3 - audit per superclass (four PRs, sized 75 / 63 / 8 / 8 sites).** With step 2 in place
+each site becomes a local yes/no question, reviewable independently. Do the two small ones first;
+they are 16 sites total and will calibrate the review rule for the large ones.
+
+**Step 4 - stop it recurring.** New constant classes are rare, and step 1's ratchet already fails
+on a new divergence. That is the durable part: the invariant is checked rather than remembered.
+
+**Order matters.** Do NOT start at step 3. An audit without step 2 has to re-derive intent at every
+site from surrounding context, which is exactly how the `COMPILER-145` failure above gets written.
 
 ---
 
