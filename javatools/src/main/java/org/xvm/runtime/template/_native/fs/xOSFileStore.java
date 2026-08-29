@@ -20,6 +20,7 @@ import org.xvm.asm.Op;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeType;
 import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xBoolean;
@@ -39,14 +40,24 @@ public class xOSFileStore
         super(container, structure);
     }
 
+    /** The receiver type; this template does not narrow it - createHandle takes an ObjectHandle. */
+    private static final NativeType<ObjectHandle> SELF =
+            NativeType.of("_native.fs.OSFileStore", ObjectHandle.class);
+
+    /** The {@code text.String} parameter type, carrying the handle class that represents it. */
+    private static final NativeType<StringHandle> STRING_TYPE =
+            NativeType.of("text.String", StringHandle.class);
+
     @Override
     public void initNative() {
         markNativeProperty("capacity");
         markNativeProperty("bytesFree");
         markNativeProperty("bytesUsed");
 
-        markNativeMethod("dirFor", STRING, null);
-        markNativeMethod("fileFor", STRING, null);
+        markNativeMethod1("dirFor", SELF, STRING_TYPE, null,
+                (frame, hStore, hPath, iReturn) -> nodeFor(frame, hStore, hPath, true, iReturn));
+        markNativeMethod1("fileFor", SELF, STRING_TYPE, null,
+                (frame, hStore, hPath, iReturn) -> nodeFor(frame, hStore, hPath, false, iReturn));
         markNativeMethod("linkAsFile", STRING, null);
         markNativeMethod("copyOrMove", null, null);
 
@@ -81,31 +92,20 @@ public class xOSFileStore
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
     }
 
-    @Override
-    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn) {
-        switch (method.getName()) {
-        case "dirFor": { // (pathString)
-            StringHandle hPathString = (StringHandle) hArg;
-            try {
-                Path path = Paths.get(hPathString.getStringValue());
-                return xOSFileNode.createHandle(frame, hTarget, path, true, iReturn);
-            } catch (InvalidPathException e) {
-                return frame.raiseException(xException.ioException(frame, e.getMessage()));
-            }
+    /**
+     * The shared body of the native {@code dirFor} and {@code fileFor}, bound with typed handles.
+     *
+     * <p>This template is not a service and has no async guard, so with both natives bound its
+     * {@code invokeNative1} override held nothing but a dispatch switch and was removed entirely.</p>
+     */
+    private static int nodeFor(Frame frame, ObjectHandle hStore, StringHandle hPathString,
+                               boolean fDir, int iReturn) {
+        try {
+            Path path = Paths.get(hPathString.getStringValue());
+            return xOSFileNode.createHandle(frame, hStore, path, fDir, iReturn);
+        } catch (InvalidPathException e) {
+            return frame.raiseException(xException.ioException(frame, e.getMessage()));
         }
-        case "fileFor": { // (pathString)
-            StringHandle hPathString = (StringHandle) hArg;
-            try {
-                Path path = Paths.get(hPathString.getStringValue());
-                return xOSFileNode.createHandle(frame, hTarget, path, false, iReturn);
-            } catch (InvalidPathException e) {
-                return frame.raiseException(xException.ioException(frame, e.getMessage()));
-            }
-        }
-        }
-
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
     }
 
     @Override
