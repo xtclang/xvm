@@ -70,6 +70,7 @@ surface graduate into individual rows on the bug list.
 | E13 | Latent typing hazards: shapes that permit a defect no caller commits | tiny, per-item | Low | the existing signatures | [static-typing-campaign.md](static-typing-campaign.md) |
 | E14 | Static typing campaign: replace `Object`-rooted dispatch with real types | 5 independent slices | Low → Medium-High | the existing class trees; javac generics + sealed | [static-typing-campaign.md](static-typing-campaign.md) |
 | E15 | Dispatch native calls through the receiver instead of past it | mechanism + 1 file per commit | Low / Low-Medium | `ObjectHandle`, `CallChain`, the existing `getTemplate(Class<T>)` | [static-typing-campaign.md](static-typing-campaign.md) (T8) |
+| E16 | Split native FUNCTION dispatch from native METHOD dispatch (retire the nullable receiver) | 3 templates + 12 call sites | Low | `ClassTemplate`, `asm/op/Call_*` | (this file) |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -978,6 +979,74 @@ establishes which.
 
 `xUnconstrainedInteger` (10) and `BaseInt128` (7) were the top of the earlier ranking and are both
 **blocked** - their handles are shared. That is the correction in one line.
+
+---
+
+## E16 — Split native FUNCTION dispatch from native METHOD dispatch
+
+**The null is not data; it is a mode flag.** Every native call reaches a template through one
+signature, and "this is a function, so there is no receiver" is encoded by passing `null`:
+
+```java
+// asm/op/Call_1N.java and eleven siblings
+invokeNativeN(frame, function, null, ahArg, m_nRetValue);
+
+// runtime/template/numbers/BaseBinaryFP.java:143
+// hTarget could be null for a native function call
+double d = hTarget == null ? 0 : ((FloatHandle) hTarget).getValue();
+```
+
+That comment is the design: one method serving two different operations, told apart at run time by
+a null check that every implementer must remember to write.
+
+**The callers are already perfectly disjoint**, which is what makes the fix clean rather than
+speculative:
+
+| Caller | Passes a target | Passes null |
+| --- | --- | --- |
+| the twelve `Call_*` ops (function path) | **0** | **12** |
+| `CallChain` (method path) | all | **0** |
+
+So the two paths never mix. They are two operations wearing one signature.
+
+### The fix
+
+Give the function path its own methods, and the receiver stops being nullable:
+
+```java
+// method - the receiver is guaranteed present, by construction
+int invokeNative1(Frame, MethodStructure, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
+int invokeNativeN(Frame, MethodStructure, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn);
+
+// function - there is no receiver, so none is named
+int invokeNativeFunction1(Frame, MethodStructure, ObjectHandle hArg, int iReturn);
+int invokeNativeFunctionN(Frame, MethodStructure, ObjectHandle[] ahArg, int iReturn);
+```
+
+`Call_*` calls the function form; `CallChain` calls the method form. Nothing passes null, nothing
+checks for it, and a template that only serves functions implements only the function form -
+`xRTFunction` currently expresses that with three `assert hTarget == null` statements, which the
+split makes unnecessary.
+
+### Width: three templates
+
+Only **3** templates carry the guard at all: `BaseBinaryFP` (`:143`), `BaseDecFP` (`:162`) and
+`xRTFunction` (three asserts). Plus twelve one-line call-site changes in `asm/op/Call_*` and the
+new signatures on `ClassTemplate`. **Port difficulty: Low.**
+
+### Why it matters beyond tidiness
+
+1. **It removes a whole class of "forgot the null check".** Today every native template author must
+   know that `hTarget` may be null and remember to guard. The two that do are the two that happen
+   to serve both paths; nothing tells anyone else.
+2. **It unblocks E15's quirk 7.** With `hTarget` non-nullable, receiver dispatch becomes available
+   to `BaseBinaryFP` (9 casts) and `BaseDecFP` (9) - the two highest-yield candidates that quirk 7
+   disqualified. **+18 casts, and more importantly the disqualification stops being structural.**
+3. **The nullability is currently invisible.** The parameter is `ObjectHandle hTarget` with no
+   annotation; the only statement of the contract is a comment in one template. Splitting the
+   method states it in the signature, where it cannot be missed or drift.
+
+**Land it before E15's remaining conversions**, not after: it changes which files qualify.
 
 ---
 
