@@ -423,7 +423,7 @@ public final class AnnotatedTypeConstant
         ClassStructure   struct;
         try {
             idBase = (IdentityConstant) typeBase.getDefiningConstant();
-            struct = (ClassStructure)   idBase.getComponent();
+            struct = (ClassStructure) idBase.getComponent();
         } catch (RuntimeException e) {
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
         }

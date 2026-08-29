@@ -231,7 +231,7 @@ public class xRTClassTemplate
                     ahParam = Utils.OBJECTS_NONE;
                 } else {
                     ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
-                    ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
+                    ClassStructure clzAnno = idAnno.getComponent();
                     if (clzAnno == null) {
                         return frameCaller.raiseException(
                                 "unknown annotation " + idAnno.getValueString());

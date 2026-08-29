@@ -1474,7 +1474,7 @@ public final class InvocationExpression
                     // this is a method call; the method itself is a property or a register
                     Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk, errs);
                     if (m_argMethod instanceof PropertyConstant idProp) {
-                        PropertyStructure prop = (PropertyStructure) idProp.getComponent();
+                        PropertyStructure prop = idProp.getComponent();
                         if (prop.isConstant() && prop.hasInitialValue()) {
                             MethodConstant idMethod = (MethodConstant) prop.getInitialValue();
 
@@ -2535,7 +2535,7 @@ public final class InvocationExpression
     private MethodStructure getMethod(Context ctx, MethodConstant idMethod) {
         MethodStructure method = m_method;
         if (method == null) {
-            method = (MethodStructure) idMethod.getComponent();
+            method = idMethod.getComponent();
             if (method == null) {
                 TypeConstant type = m_targetInfo.getTargetType();
                 TypeInfo     info = getTypeInfo(ctx, type, ErrorListener.BLACKHOLE);
@@ -2568,7 +2568,7 @@ public final class InvocationExpression
      * @return a PropertyStructure for the specified id
      */
     private PropertyStructure getProperty(Context ctx, PropertyConstant idProp) {
-        PropertyStructure prop = (PropertyStructure) idProp.getComponent();
+        PropertyStructure prop = idProp.getComponent();
         if (prop == null) {
             TypeConstant type = m_targetInfo.getTargetType();
             TypeInfo     info = getTypeInfo(ctx, type, ErrorListener.BLACKHOLE);
@@ -2636,7 +2636,7 @@ public final class InvocationExpression
                                         TypeConstant[] atypeReturn, ErrorListener errs) {
         ConstantPool      pool  = pool();
         String            sName = idProp.getName();
-        PropertyStructure prop  = (PropertyStructure) idProp.getComponent();
+        PropertyStructure prop  = idProp.getComponent();
 
         if (!prop.isConstant()) {
             expr.log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY,

@@ -139,7 +139,7 @@ public abstract class OpInvocable extends Op {
         context.setOpInfo(this, Category.Composition, clazz);
 
         MethodConstant  idMethod = frame.getConstant(m_nMethodId, MethodConstant.class);
-        MethodStructure method   = (MethodStructure) idMethod.getComponent();
+        MethodStructure method   = idMethod.getComponent();
 
         // deliberately NOT cached on this op: decoded ops are shared across containers, and a
         // runtime write here - even a convergent toString-only one - is the exact pattern the

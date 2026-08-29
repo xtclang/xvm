@@ -538,7 +538,7 @@ public final class PropertyDeclarationStatement
             ConstantPool pool = pool();
             for (Annotation anno : aAnno) {
                 ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
-                ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
+                ClassStructure clzAnno = idAnno.getComponent();
 
                 if (clzAnno.getFormat() != Format.ANNOTATION) {
                     findAnnotationExpression(anno, annotations).
@@ -580,7 +580,7 @@ public final class PropertyDeclarationStatement
         for (int iA = 0, c = aAnno.length; iA < c; iA++) {
             Annotation     anno    = aAnno[iA];
             ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
-            ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
+            ClassStructure clzAnno = idAnno.getComponent();
             if (clzAnno.getFormat() != Format.ANNOTATION) {
                 findAnnotationExpression(anno, annotations).
                     log(errs, Severity.ERROR, Constants.VE_CLASS_NOT_ANNOTATION,

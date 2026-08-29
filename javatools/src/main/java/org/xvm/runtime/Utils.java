@@ -998,7 +998,7 @@ public abstract class Utils {
 
         case Class: {
             ClassConstant idClz = (ClassConstant) constValue;
-            ClassStructure clz  = (ClassStructure) idClz.getComponent();
+            ClassStructure clz  = idClz.getComponent();
 
             assert clz.isSingleton();
 
@@ -1030,7 +1030,7 @@ public abstract class Utils {
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     private static int callPropertyInitializer(Frame frame, PropertyConstant idProp) {
-        PropertyStructure prop = (PropertyStructure) idProp.getComponent();
+        PropertyStructure prop = idProp.getComponent();
 
         if (prop.isInjected()) {
             TypeConstant typeRef = frame.poolContext().ensureAnnotatedTypeConstant(
@@ -1529,7 +1529,7 @@ public abstract class Utils {
                     int        cArgs = anno.getParams().length;
 
                     ClassConstant  idAnno     = (ClassConstant) anno.getAnnotationClass();
-                    ClassStructure structAnno = (ClassStructure) idAnno.getComponent();
+                    ClassStructure structAnno = idAnno.getComponent();
 
                     // should be one and only one constructor
                     constructAnno = structAnno.findMethod("construct", m -> true);

@@ -160,7 +160,7 @@ public class xModule
         // TODO GG: how to cache the result?
         Container       container = frame.f_context.f_container;
         ModuleConstant  idModule  = (ModuleConstant) hTarget.getId();
-        ModuleStructure module    = (ModuleStructure) idModule.getComponent();
+        ModuleStructure module    = idModule.getComponent();
         TypeComposition clzMap    = container.resolveClass(ensureListMapType(container));
 
         // starting with this module, find all module dependencies, and the shortest path to each

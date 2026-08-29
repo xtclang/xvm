@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ClassStructure;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -86,8 +87,10 @@ public final class DecoratedClassConstant
     }
 
     @Override
-    public Component getComponent() {
-        return getClassIdentityConstant().getComponent();
+    public ClassStructure getComponent() {
+        // the delegate is typed IdentityConstant, so the narrowing costs one cast HERE, which is
+        // the whole point: one internal cast in place of one at every call site
+        return (ClassStructure) getClassIdentityConstant().getComponent();
     }
 
     @Override

@@ -174,7 +174,7 @@ public abstract sealed class IdentityConstant
             ClassConstant idThis = (ClassConstant) this;
             ClassConstant idThat = (ClassConstant) idClass;
 
-            ClassStructure clzThis = (ClassStructure) idThis.getComponent();
+            ClassStructure clzThis = idThis.getComponent();
             if (clzThis.isAnonInnerClass()) {
                 return false;
             }
@@ -187,7 +187,7 @@ public abstract sealed class IdentityConstant
                     return true;
                 }
 
-                ClassStructure clzThat = (ClassStructure) idBaseThat.getComponent();
+                ClassStructure clzThat = idBaseThat.getComponent();
                 if (clzThat.hasContribution(idBaseThis)) {
                     return true;
                 }

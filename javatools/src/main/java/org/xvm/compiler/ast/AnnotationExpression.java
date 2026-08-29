@@ -305,7 +305,7 @@ public final class AnnotationExpression
                                 exprName.getMeaning() == NameExpression.Meaning.Method) {
                             MethodConstant idMethod = (MethodConstant)
                                 exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
-                            method = (MethodStructure) idMethod.getComponent();
+                            method = idMethod.getComponent();
                         } else if (exprNew instanceof LambdaExpression exprLambda) {
                             method = exprLambda.getLambda();
 
@@ -380,7 +380,7 @@ public final class AnnotationExpression
         }
 
         if (cArgs > 0 && containsNamedArgs(listArgs)) {
-            MethodStructure method = (MethodStructure) idConstruct.getComponent();
+            MethodStructure method = idConstruct.getComponent();
             if (method == null) {
                 return null;
             }

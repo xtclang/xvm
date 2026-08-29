@@ -766,7 +766,7 @@ public abstract class Container
             }
 
             ModuleConstant  idModule = getModule();
-            ModuleStructure module   = (ModuleStructure) idModule.getComponent();
+            ModuleStructure module   = idModule.getComponent();
 
             Map<ModuleConstant, String> mapModules = module.collectDependencies();
             int                         cModules   = mapModules.size();

@@ -2825,7 +2825,7 @@ public final class TypeCompositionStatement
         } else {
             for (int iSuper = 0, cSupers = listContribs.size(); iSuper < cSupers; iSuper++) {
                 MethodConstant  idSuper        = listIds.get(iSuper);
-                MethodStructure constructSuper = (MethodStructure) idSuper.getComponent();
+                MethodStructure constructSuper = idSuper.getComponent();
 
                 // a no-op super constructor in the same module con be safely skipped
                 if (constructSuper.isNoOp() &&

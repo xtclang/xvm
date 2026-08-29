@@ -49,7 +49,7 @@ public class xEnumValue
     protected int getPropertyEnumeration(Frame frame, ClassHandle hClass, int iReturn) {
         TypeConstant   typeEnumValue  = getClassType(hClass);
         ClassConstant  idEnumValue    = (ClassConstant) typeEnumValue.getDefiningConstant();
-        ClassStructure clzEnumValue   = (ClassStructure) idEnumValue.getComponent();
+        ClassStructure clzEnumValue   = idEnumValue.getComponent();
         ClassStructure clzEnumeration = clzEnumValue.getSuper();
 
         return frame.assignDeferredValue(iReturn,
@@ -62,7 +62,7 @@ public class xEnumValue
     protected int getPropertyValue(Frame frame, ClassHandle hClass, int iReturn) {
         TypeConstant   typeEnumValue  = getClassType(hClass);
         ClassConstant  idEnumValue    = (ClassConstant) typeEnumValue.getDefiningConstant();
-        ClassStructure clzEnumValue   = (ClassStructure) idEnumValue.getComponent();
+        ClassStructure clzEnumValue   = idEnumValue.getComponent();
         ClassStructure clzEnumeration = clzEnumValue.getSuper();
         xEnum          template       = (xEnum) frame.f_context.f_container.
                                             getTemplate(clzEnumeration.getIdentityConstant());

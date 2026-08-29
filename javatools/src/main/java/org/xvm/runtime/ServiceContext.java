@@ -1395,7 +1395,7 @@ public class ServiceContext {
                 MethodConstant  idMethod  = hFunction.getMethodId();
                 MethodStructure method    = idMethod == null
                         ? null
-                        : (MethodStructure) idMethod.getComponent();
+                        : idMethod.getComponent();
                 if (method != null && nRegister < method.getTypeParamCount() &&
                         method.getParam(nRegister).getName().equals(constTypeParam.getName())) {
                     return ahArg[nRegister].getType().getParamType(0);

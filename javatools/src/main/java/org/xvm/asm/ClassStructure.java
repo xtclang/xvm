@@ -1076,7 +1076,7 @@ public sealed class ClassStructure
                         return true;
                     }
 
-                    structCur = (ClassStructure) constSuper.getComponent();
+                    structCur = constSuper.getComponent();
                     continue NextSuper;
                 }
             }
@@ -2341,7 +2341,7 @@ public sealed class ClassStructure
 
                 TypeConstant typeResolved = contrib.resolveType(pool, this, listRight);
 
-                relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
+                relation = relation.bestOf((constContrib.getComponent()).
                         findUnionContribution(pool, typeLeft, typeResolved.getParamTypes()));
                 if (relation == Relation.IS_A) {
                     return Relation.IS_A;
@@ -2914,7 +2914,7 @@ public sealed class ClassStructure
                     field.constInit = constInit;
                 }
             } else if (idInit != null) {
-                MethodStructure methodInit = (MethodStructure) idInit.getComponent();
+                MethodStructure methodInit = idInit.getComponent();
                 if (methodInit.isFunction()) {
                     code.add(new Call_01(idInit, idField));
                 } else {

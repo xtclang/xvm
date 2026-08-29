@@ -31,21 +31,36 @@ after sealing. E2 does not subsume this work.
 
 ## Tasks
 
-### T1 — Covariant `IdentityConstant.getComponent()` — **IN PROGRESS**
+### T1 — Covariant `IdentityConstant.getComponent()` — **DONE**
 
-The best ratio in the study: **8 declarative overrides address 222 cast sites.** The creation
+**The study's "222 cast sites" was an over-projection, and the reason matters.** That grep
+matched `getComponent()` on *any* receiver, but there are at least four unrelated methods with
+that name: `IdentityConstant.getComponent()`, `Component.getComponent()`,
+`ChildInfo.getComponent()`, and the runtime handles' (`ComponentTemplateHandle`). Narrowing the
+identity hierarchy can only reach its own.
+
+Actual result: **8 overrides, 99 casts deleted, 8 restored, net 91 removed.** The 131 survivors
+are the other methods — 40+ on runtime handles (`hComponent`, `hMethod`, `hTemplate`), 16 bare
+calls on AST statements, and ~30 with a receiver statically typed `IdentityConstant`, where
+subclass narrowing genuinely cannot apply. `Component.getComponent()` and
+`ChildInfo.getComponent()` are separate narrowing opportunities, now folded into T3. The creation
 side is already typed (`createClass → ClassStructure`, `createMethod → MethodStructure`, …), so
 the asymmetry is exactly *you know what you made, and forget it the moment you look it up*.
 
 Pure covariant narrowing: source- and binary-compatible, javac generates the bridge, free at
 runtime. Land one constant type per commit, deleting casts as they become redundant.
 
-- [ ] `ClassConstant.getComponent() → ClassStructure`
-- [ ] `MethodConstant.getComponent() → MethodStructure`
-- [ ] `PropertyConstant.getComponent() → PropertyStructure`
-- [ ] `ModuleConstant`, `PackageConstant`, `TypedefConstant`, `MultiMethodConstant`
-- [ ] Delete the 222 now-redundant casts
+- [x] `ClassConstant → ClassStructure`, `MethodConstant → MethodStructure`,
+      `PropertyConstant → PropertyStructure`, `ModuleConstant`, `PackageConstant`,
+      `TypedefConstant`, `MultiMethodConstant`, `DecoratedClassConstant`
+- [x] Delete the now-redundant casts (91 net)
 - [ ] Ratchet test pinning the narrowed return types
+
+**Lesson for T3 and after:** a blanket regex over a method *name* is not safe when the name is
+overloaded across unrelated hierarchies. The bulk deletion silently stripped casts from two
+other `getComponent()` methods and my auto-repair then guessed the wrong types, stacking
+duplicate casts. The compiler caught every one — but the cheap version of that lesson is to
+scope the deletion by receiver type, or to delete per-package with a compile between.
 
 ### T2 — `ValueConstant<V>` — **IN PROGRESS**
 
@@ -84,6 +99,34 @@ cannot be added without a home. Prerequisite for T6.
 The biggest prize and the biggest job: 5 methods, **1,279** `case "…"` labels switching on
 `getFormat().name() + op.TEXT + that.getFormat().name()`. `IntConstant.apply` alone is **609
 lines**, and 277 of its 550 labels share one 1-line body. Blocked on T5.
+
+### T7 — Retire raw types and make them non-recompilable
+
+Small, self-contained, and it closes the class permanently rather than just tidying it. The
+population is already tiny — which is the argument for finishing it now, while it is cheap:
+
+| Shape | Count |
+| --- | --- |
+| Raw `Class` locals/fields | 10 |
+| Raw `Class` parameters | 1 |
+| Raw `List`/`Map`/`Set`/`Collection`/`Iterator` declarations | 5 |
+| `@SuppressWarnings("unchecked")` | 14 |
+| `@SuppressWarnings("rawtypes")` | 0 |
+
+The build already runs `-Xlint:this-escape` and `-Xlint:fallthrough` as first-class lints;
+`rawtypes` is simply not among them.
+
+- [ ] Parameterise the raw `Class` uses (`AstNode.fieldsForNames(Class clz, …)` is one)
+- [ ] Parameterise the raw collection declarations
+- [ ] Review each `@SuppressWarnings("unchecked")`: delete the ones generics can now express,
+      and leave a recorded reason at the ones that are genuinely erasure-bound
+- [ ] Enable `-Xlint:rawtypes` in `org.xtclang.build.java.gradle.kts` so a new raw type does
+      not compile
+
+Where generics *fold away* complexity rather than merely decorating it — a `Class<T>` that
+removes a downcast at the call site, a typed carrier that removes an `instanceof` chain — take
+it. Where a type parameter would only push the cast one level out, do not: that is ceremony,
+not safety.
 
 ## Explicitly NOT doing
 

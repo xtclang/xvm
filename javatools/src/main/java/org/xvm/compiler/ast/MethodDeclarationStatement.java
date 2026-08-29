@@ -1059,7 +1059,7 @@ public non-sealed class MethodDeclarationStatement
                     continue;
                 }
 
-                ClassStructure clzMixin = (ClassStructure) constClass.getComponent();
+                ClassStructure clzMixin = constClass.getComponent();
                 if (clzMixin == null) {
                     // no class for the annotation yet; try others or come back later
                     continue;

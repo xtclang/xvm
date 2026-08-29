@@ -252,7 +252,7 @@ public class xRTMethod
         ConstantPool    pool      = frame.poolContext();
         Container       container = frame.f_context.f_container;
         TypeConstant    type      = idMethod.getSignature().asMethodType(pool, typeTarget);
-        MethodStructure method    = (MethodStructure) idMethod.getComponent();
+        MethodStructure method    = idMethod.getComponent();
 
         if (method == null) {
             TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
@@ -324,7 +324,7 @@ public class xRTMethod
             MethodConstant  idMethod = getMethodId();
             MethodStructure method   = getMethod();
             if (method == null) {
-                method = (MethodStructure) idMethod.getComponent();
+                method = idMethod.getComponent();
             }
 
             CallChain chain;

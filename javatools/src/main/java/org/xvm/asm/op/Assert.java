@@ -122,7 +122,7 @@ public class Assert
         }
 
         MethodConstant   idConstruct = frame.getConstant(m_nConstructor, MethodConstant.class);
-        MethodStructure  construct   = (MethodStructure) idConstruct.getComponent();
+        MethodStructure  construct   = idConstruct.getComponent();
         ClassConstant    constClz    = (ClassConstant) idConstruct.getNamespace();
         ClassTemplate    template    = frame.ensureTemplate(constClz);
         ClassComposition clzTarget   = template.getCanonicalClass(frame.f_context.f_container);

@@ -669,7 +669,7 @@ public sealed class NameExpression
             switch (m_plan) {
             case Singleton:
             case PropertyDeref:
-                PropertyStructure prop = (PropertyStructure) id.getComponent();
+                PropertyStructure prop = id.getComponent();
                 if (prop.isRuntimeConstant()) {
                     constVal = prop.getInitialValue();
                     if (constVal instanceof DeferredValueConstant &&
@@ -765,7 +765,7 @@ public sealed class NameExpression
                 } else if (!idProp.getComponent().isStatic() && m_plan != Plan.PropertySelf) {
                     // we don't need "this" to access a property on a singleton unless it's
                     // within an initializer (to avoid a circular reference)
-                    PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+                    PropertyStructure prop   = idProp.getComponent();
                     MethodStructure   method = ctx.getMethod();
                     if (prop.getParent() instanceof ClassStructure clzParent &&
                             clzParent.isSingleton() &&
@@ -1879,7 +1879,7 @@ public sealed class NameExpression
 
                 case MultiMethod: {
                     MultiMethodConstant  idMM = (MultiMethodConstant) constant;
-                    MultiMethodStructure mms  = (MultiMethodStructure) idMM.getComponent();
+                    MultiMethodStructure mms  = idMM.getComponent();
 
                     Collection<MethodStructure> methods = mms.methods();
 
@@ -1904,7 +1904,7 @@ public sealed class NameExpression
                     //      (ii) use it in code gen
                     //      (iii) mark "this" (and outer "this") as being used
                     MultiMethodConstant  idMM = (MultiMethodConstant) id;
-                    MultiMethodStructure mms  = (MultiMethodStructure) idMM.getComponent();
+                    MultiMethodStructure mms  = idMM.getComponent();
 
                     Collection<MethodStructure> methods = mms.methods();
 
@@ -2410,7 +2410,7 @@ public sealed class NameExpression
                             ClassConstant  idBase  = fMate
                                 ? ((ClassConstant) idThis).getOutermost()
                                 : ((ClassConstant) idTarget).getAutoNarrowingBase();
-                            ClassStructure clzBase = (ClassStructure) idBase.getComponent();
+                            ClassStructure clzBase = idBase.getComponent();
                             boolean        fFormal = !(component instanceof MethodStructure method &&
                                                        method.isFunction());
                             type = pool.ensureVirtualTypeConstant(clzBase, clzTarget,
@@ -2523,7 +2523,7 @@ public sealed class NameExpression
                 return idProp.getConstraintType();
             }
 
-            PropertyStructure prop = (PropertyStructure) idProp.getComponent();
+            PropertyStructure prop = idProp.getComponent();
             if (prop.isConstant() && !fSuppressDeref) {
                 assert !m_fAssignable || prop.isLazy();
                 m_plan = prop.hasInitialValue() ? Plan.PropertyDeref : Plan.Singleton;
@@ -2737,7 +2737,7 @@ public sealed class NameExpression
         case MethodConstant _: {
             // the constant refers to a method or function
             MethodConstant  idMethod = (MethodConstant) argRaw;
-            MethodStructure method   = (MethodStructure) idMethod.getComponent();
+            MethodStructure method   = idMethod.getComponent();
             TypeConstant    typeFn;
 
             if (idMethod.isFunction()) {

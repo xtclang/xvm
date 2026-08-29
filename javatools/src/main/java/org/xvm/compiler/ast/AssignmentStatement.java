@@ -856,7 +856,7 @@ public final class AssignmentStatement
                         // check if an assignment such as "c.p += k" or "p += k" is for an
                         // atomic property
                         PropertyConstant  idProp = LVal.getProperty();
-                        PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+                        PropertyStructure prop   = idProp.getComponent();
                         if (prop != null && prop.isAtomic()) {
                             MethodConstant idOp = findAtomicInPlaceAssignMethod(ctx, LVal.getType());
                             if (idOp != null) {

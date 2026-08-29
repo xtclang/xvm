@@ -80,7 +80,7 @@ public class Construct_0
         if (idConstructor == null) {
             idConstructor = (MethodConstant) aconst[CONSTANT_OFFSET - m_nFunctionId];
         }
-        MethodStructure constructor  = (MethodStructure) idConstructor.getComponent();
+        MethodStructure constructor  = idConstructor.getComponent();
         return constructor != null && constructor.isNoOp();
     }
 

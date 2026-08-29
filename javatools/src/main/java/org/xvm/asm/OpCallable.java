@@ -361,7 +361,7 @@ public abstract class OpCallable extends Op {
         }
 
         if (constructor == null) {
-            constructor = (MethodStructure) idCtor.getComponent();
+            constructor = idCtor.getComponent();
             if (constructor == null) {
                 constructor = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE).
                     findCallable(idCtor.getSignature().resolveGenericTypes(pool, resolver));
@@ -403,7 +403,7 @@ public abstract class OpCallable extends Op {
 
                 TypeConstant typeTarget = idTarget.getFormalType().resolveGenerics(pool, resolver);
 
-                function = (MethodStructure) idFunction.getComponent();
+                function = idFunction.getComponent();
                 if (function == null) {
                     function = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE).
                         findCallable(idFunction.getSignature().resolveGenericTypes(pool, resolver));
@@ -450,7 +450,7 @@ public abstract class OpCallable extends Op {
 
         case Method: {
             if (function == null) {
-                function = (MethodStructure) idFunction.getComponent();
+                function = idFunction.getComponent();
                 assert !function.isNative();
 
                 // since the function is never native, no need to save the template
@@ -635,7 +635,7 @@ public abstract class OpCallable extends Op {
             if (type.containsTypeParameter(true)) {
                 if (resolver == null) {
                     resolver = bctx.createTypeResolver(
-                            (MethodStructure) idMethod.getComponent(), anArgValue);
+                            idMethod.getComponent(), anArgValue);
                     atypeResult = copyOf(atypeResult);
                 }
                 atypeResult[i] = type.resolveGenerics(bctx.pool(), resolver);

@@ -59,7 +59,7 @@ public final class InvokeExprAST
 
     @Override
     public boolean isConditional() {
-        MethodStructure struct = (MethodStructure) method.getComponent();
+        MethodStructure struct = method.getComponent();
         return struct.isConditionalReturn();
     }
 

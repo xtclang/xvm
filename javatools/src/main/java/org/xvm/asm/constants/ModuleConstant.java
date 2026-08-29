@@ -181,8 +181,14 @@ public final class ModuleConstant
         return list;
     }
 
+    /**
+     * Covariant narrowing: a module identity always names a ModuleStructure, which this method
+     * already built and then discarded the type of.
+     *
+     * @return the ModuleStructure this identity names
+     */
     @Override
-    public Component getComponent() {
+    public ModuleStructure getComponent() {
         ModuleStructure struct = getFileStructure().getModule(this);
         if (struct == null) {
             return null;

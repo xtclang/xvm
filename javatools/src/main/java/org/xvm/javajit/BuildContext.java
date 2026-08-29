@@ -1126,7 +1126,7 @@ public class BuildContext {
                 }
             } else if (isSpecialized &&
                     constant instanceof MethodConstant methodId && methodId.isLambda()) {
-                MethodStructure   lambda = (MethodStructure) methodId.getComponent();
+                MethodStructure   lambda = methodId.getComponent();
                 SignatureConstant sig    = lambda.resolveSignature(pool(), thisType);
                 type = lambda.isFunction()
                         ? sig.asFunctionType()

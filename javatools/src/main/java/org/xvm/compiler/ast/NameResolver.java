@@ -291,7 +291,7 @@ public class NameResolver
                 } else if (structure instanceof TypeParameterConstant constTypeParam) {
                     MethodConstant  idMethod  = constTypeParam.getMethod();
                     int             nRegister = constTypeParam.getRegister();
-                    MethodStructure method    = (MethodStructure) idMethod.getComponent();
+                    MethodStructure method    = idMethod.getComponent();
                     TypeConstant    typeParam = method == null
                             ? idMethod.getRawParams().get(nRegister)
                             : method.getParam(nRegister).getType();

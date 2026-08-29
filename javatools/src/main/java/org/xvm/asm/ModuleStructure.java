@@ -743,7 +743,7 @@ public final class ModuleStructure
     public PackageStructure getImportedPackage(ModuleConstant idMainModule) {
         PackageStructure pkg = m_pkgImport;
         if (pkg == null) {
-            ModuleStructure moduleMain = (ModuleStructure) idMainModule.getComponent();
+            ModuleStructure moduleMain = idMainModule.getComponent();
 
             String sPath = moduleMain.collectDependencies().get(getIdentityConstant());
             assert sPath != null;

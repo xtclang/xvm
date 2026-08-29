@@ -1180,7 +1180,7 @@ public final class TypeInfoReal
             MethodConstant idMethod) {
         // since a property inside of the method cannot be virtual, we can do
         // a quick check to eliminate the full scan below for 99.9% of scenarios
-        MethodStructure method = (MethodStructure) idMethod.getComponent();
+        MethodStructure method = idMethod.getComponent();
         if (method != null && !method.hasChildren()) {
             return Collections.emptyMap();
         }
@@ -1277,7 +1277,7 @@ public final class TypeInfoReal
 
         IdentityConstant idParent = id.getClassIdentity();
         if (!idParent.equals(getIdentity())) {
-            PropertyStructure prop = (PropertyStructure) id.getComponent();
+            PropertyStructure prop = id.getComponent();
             if (prop != null && prop.getAccess() == Access.PRIVATE) {
                 // drill down to the TypeInfo for the corresponding class in the hierarchy
                 // that has this non-virtual private property

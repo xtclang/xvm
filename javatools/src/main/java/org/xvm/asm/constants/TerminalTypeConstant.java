@@ -302,7 +302,7 @@ public sealed class TerminalTypeConstant
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             // examine the structure to determine if it represents a class or interface (TODO GG - is this comment just wrong?)
             case ClassConstant constant ->
-                ((ClassStructure) constant.getComponent()).getTypeParamCount();
+                (constant.getComponent()).getTypeParamCount();
 
             case ThisClassConstant constant -> declaredTypeParamCount(constant);
             case ParentClassConstant constant -> declaredTypeParamCount(constant);
@@ -749,7 +749,7 @@ public sealed class TerminalTypeConstant
         switch (definingConstant()) {
         case TypeParameterConstant idTypeParam: {
             MethodConstant idMethod = idTypeParam.getMethod();
-            MethodStructure       method      = (MethodStructure) idMethod.getComponent();
+            MethodStructure       method      = idMethod.getComponent();
             if (method != null) {
                 Parameter param = method.getParam(idTypeParam.getRegister());
                 if (param.getName().equals(sFormalName)) {
@@ -995,11 +995,11 @@ public sealed class TerminalTypeConstant
             case NativeRebaseConstant constant ->
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             case ModuleConstant constant ->
-                ((ClassStructure) constant.getComponent()).extendsClass(constClass);
+                (constant.getComponent()).extendsClass(constClass);
             case PackageConstant constant ->
-                ((ClassStructure) constant.getComponent()).extendsClass(constClass);
+                (constant.getComponent()).extendsClass(constClass);
             case ClassConstant constant ->
-                ((ClassStructure) constant.getComponent()).extendsClass(constClass);
+                (constant.getComponent()).extendsClass(constClass);
 
             case FormalConstant constant ->
                 constant.getConstraintType().extendsClass(constClass);
@@ -1103,7 +1103,7 @@ public sealed class TerminalTypeConstant
 
             case ClassConstant constant -> {
                 // examine the structure to determine if it represents a class or interface
-                ClassStructure clz = (ClassStructure) constant.getComponent();
+                ClassStructure clz = constant.getComponent();
                 if (clz == null) {
                     throw new IllegalStateException("missing class for constant: " + constant);
                 }
@@ -1292,7 +1292,7 @@ public sealed class TerminalTypeConstant
             case NativeRebaseConstant constant ->
                 throw new IllegalStateException("no class format for: " + constant);
             // get the class referred to
-            case ClassConstant constant -> (ClassStructure) constant.getComponent();
+            case ClassConstant constant -> constant.getComponent();
 
             case ThisClassConstant constant ->
                 (ClassStructure) constant.getDeclarationLevelClass().getComponent();
@@ -1376,7 +1376,7 @@ public sealed class TerminalTypeConstant
 
             case NativeRebaseConstant ignored -> false;
             case ClassConstant constant ->
-                ((ClassStructure) constant.getComponent()).isConst();
+                (constant.getComponent()).isConst();
 
             case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
                  PureIdentityConstant _, TypedefConstant _, SignatureConstant _,

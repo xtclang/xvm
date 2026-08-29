@@ -84,7 +84,7 @@ public final class MethodBindingConstant
     public ObjectHandle getHandle(Frame frame) {
         GenericHandle   hThis    = (GenericHandle) frame.getThis();
         MethodConstant  idMethod = m_idMethod;
-        MethodStructure method   = (MethodStructure) idMethod.getComponent();
+        MethodStructure method   = idMethod.getComponent();
         ObjectHandle    hTarget;
         CallChain       chain;
 

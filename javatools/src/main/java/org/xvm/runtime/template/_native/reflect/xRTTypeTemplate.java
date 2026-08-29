@@ -762,7 +762,7 @@ public class xRTTypeTemplate
 
                 if (cArgs > 0) {
                     ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
-                    ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
+                    ClassStructure clzAnno = idAnno.getComponent();
 
                     constructor = clzAnno.findMethod("construct", cArgs);
                     if (constructor == null) {
@@ -826,7 +826,7 @@ public class xRTTypeTemplate
 
                 Annotation     anno    = aAnno[iAnno];
                 ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
-                ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
+                ClassStructure clzAnno = idAnno.getComponent();
 
                 ComponentTemplateHandle hAnnoClass = xRTComponentTemplate.
                         makeComponentHandle(frameCaller.container(), clzAnno);

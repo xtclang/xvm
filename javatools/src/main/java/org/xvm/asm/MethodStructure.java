@@ -1359,7 +1359,7 @@ public final class MethodStructure
             if (m_idFinally == null) {
                 return null;
             }
-            m_structFinally = structFinally = (MethodStructure) m_idFinally.getComponent();
+            m_structFinally = structFinally = m_idFinally.getComponent();
         }
 
         return structFinally;
@@ -1621,7 +1621,7 @@ public final class MethodStructure
     public void collectDefaultParams(Constant[] aconstArgs, Map<String, Constant> mapValues) {
         // recurse "depth-first" to give precedence to subclasses
         if (m_idSuper != null) {
-            MethodStructure ctorSuper = (MethodStructure) m_idSuper.getComponent();
+            MethodStructure ctorSuper = m_idSuper.getComponent();
             ctorSuper.collectDefaultParams(m_aconstSuper, mapValues);
         }
 

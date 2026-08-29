@@ -766,7 +766,7 @@ public abstract sealed class TypeConstant
             if (idThis.equals(idObject)) {
                 return true;
             }
-            ClassStructure clzObject = (ClassStructure) idObject.getComponent();
+            ClassStructure clzObject = idObject.getComponent();
             return clzObject.hasContribution(idThis);
         }
         return false;
@@ -2154,7 +2154,7 @@ public abstract sealed class TypeConstant
         ClassStructure   struct;
         try {
             constId = (IdentityConstant) getDefiningConstant();
-            struct  = (ClassStructure)   constId.getComponent();
+            struct  = (ClassStructure) constId.getComponent();
         } catch (RuntimeException e) {
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
         }
@@ -3867,7 +3867,7 @@ public abstract sealed class TypeConstant
         // the custom logic will get overlaid later by layerOnMethods(); the base accessors need to
         // be added at this point so that they will get picked up in that layer-on processing
         if (struct.getFormat() != Component.Format.INTERFACE) {
-            PropertyStructure prop = (PropertyStructure) idProp.getComponent();
+            PropertyStructure prop = idProp.getComponent();
             if (prop != null) {
                 MethodConstant idGet      = info.getGetterId();
                 MethodConstant idSet      = info.getSetterId();
@@ -6441,7 +6441,7 @@ public abstract sealed class TypeConstant
 
             // continue recursively with the right side analysis (the class arm covers the
             // native rebase, which behaved identically under the old format switch)
-            case ClassConstant constant -> ((ClassStructure) constant.getComponent())
+            case ClassConstant constant -> (constant.getComponent())
                     .findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
 
             case ThisClassConstant idRight ->

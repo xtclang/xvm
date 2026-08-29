@@ -167,7 +167,7 @@ public final class SequentialAssignExpression
                 exprName.getMeaning() == NameExpression.Meaning.Property) {
             PropertyConstant idProp = (PropertyConstant)
                     exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
-            PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+            PropertyStructure prop   = idProp.getComponent();
             if (prop != null && prop.isAtomic()) {
                 String sMethod, sOp;
                 switch (op) {

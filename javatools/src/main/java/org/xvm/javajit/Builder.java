@@ -438,7 +438,7 @@ public abstract class Builder {
             MethodBody   body;
             TypeConstant sigType; // function or method type
             if (methodId.isLambda()) {
-                MethodStructure lambda = (MethodStructure) methodId.getComponent();
+                MethodStructure lambda = methodId.getComponent();
                 jitName = methodId.ensureJitMethodName(typeSystem).replace("->", LAMBDA);
                 body    = new MethodBody(lambda);
                 sigType = body.asFunctionType(pool(), containerType);

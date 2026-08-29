@@ -100,7 +100,7 @@ public class CallChain {
         MethodBody bodyHead = head();
         if (bodyHead != null && bodyHead.getImplementation() == Implementation.Delegating) {
             PropertyConstant  idDelegate   = bodyHead.getPropertyConstant();
-            PropertyStructure propDelegate = (PropertyStructure) idDelegate.getComponent();
+            PropertyStructure propDelegate = idDelegate.getComponent();
             return m_FAtomic = propDelegate != null && propDelegate.isAtomic();
         }
 

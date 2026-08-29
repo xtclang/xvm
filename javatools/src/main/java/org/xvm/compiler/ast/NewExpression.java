@@ -658,7 +658,7 @@ public final class NewExpression
         }
 
         if (constructor == null) {
-            constructor = (MethodStructure) idConstruct.getComponent();
+            constructor = idConstruct.getComponent();
             if (constructor == null) {
                 constructor = infoTarget.getMethodById(idConstruct).
                                 getTopmostMethodStructure(infoTarget);
@@ -1216,7 +1216,7 @@ public final class NewExpression
         ClassStructure clz = (ClassStructure) anon.getComponent();
         MethodConstant id  = pool().ensureMethodConstant(clz.getIdentityConstant(), "construct",
                 TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
-        MethodStructure constrDefault = (MethodStructure) id.getComponent();
+        MethodStructure constrDefault = id.getComponent();
         if (constrDefault != null) {
             clz.getChild("construct").removeChild(constrDefault);
         }

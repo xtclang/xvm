@@ -97,7 +97,7 @@ public final class ArrayTypeExpression
      */
     public MethodConstant getSupplyConstructor() {
         ClassConstant  idArray  = pool().clzArray();
-        ClassStructure clzArray = (ClassStructure) idArray.getComponent();
+        ClassStructure clzArray = idArray.getComponent();
 
         return clzArray.findMethod("construct", 2, pool().typeInt64()).getIdentityConstant();
     }

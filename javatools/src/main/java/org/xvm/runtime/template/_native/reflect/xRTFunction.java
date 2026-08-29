@@ -115,7 +115,7 @@ public class xRTFunction
     @Override
     public int createConstHandle(Frame frame, Constant constant) {
         if (constant instanceof MethodConstant idFunc) {
-            MethodStructure structFunc = (MethodStructure) idFunc.getComponent();
+            MethodStructure structFunc = idFunc.getComponent();
 
             assert structFunc.isFunction();
 

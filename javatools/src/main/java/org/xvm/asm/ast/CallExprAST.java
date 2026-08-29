@@ -58,7 +58,7 @@ public final class CallExprAST
     public boolean isConditional() {
         if (function instanceof ConstantExprAST constExpr) {
             MethodConstant  methodConst  = (MethodConstant) constExpr.getValue();
-            MethodStructure methodStruct = (MethodStructure) methodConst.getComponent();
+            MethodStructure methodStruct = methodConst.getComponent();
             return methodStruct.isConditionalReturn();
         }
         return false;
