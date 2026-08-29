@@ -230,6 +230,89 @@ catching — by a raw type, an `Object` parameter, a hand-maintained parallel sw
 guard written against the wrong overload. That is the argument for this campaign, and it is
 stronger than any cast count.
 
+## The `ObjectHandle` unlock: it is not a generics problem
+
+The 1212 `(XHandle) hTarget` casts are the largest single population in the tree, and the study
+deprioritised them as "the path the JIT does not use". That was the right call on priority but it
+left the more useful question unasked: **what would actually fix them?**
+
+**`ClassTemplate<H extends ObjectHandle>` will not.** The reason is visible in one line —
+`CallChain.java:185`:
+
+```java
+hTarget.getTemplate().invokeNative1(frame, method, hTarget, hArg, iReturn)
+```
+
+The handle produces the template and then **passes itself back as a parameter**. `getTemplate()`
+returns an erased `ClassTemplate`, so nothing can prove the returned template's `H` is
+`hTarget`'s type. It is the same "no typed path from producer to consumer" failure that made
+`ComponentTemplateHandle<C>` remove zero casts — and it would fail the same way, after a much
+larger edit. Worth knowing *before* attempting it.
+
+**The actual unlock is dispatch LOCATION, not type parameters.** That line is `this`-dispatch
+written the long way: the receiver is being handed to a separate object as an argument. If native
+dispatch lived on the handle, `this` would be the typed receiver:
+
+```java
+// today, in xString
+char[] ach = ((StringHandle) hTarget).getValue();
+
+// with dispatch on the handle - no cast, no generic, nothing to erase
+final class StringHandle extends ObjectHandle {
+    @Override int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hArg, int iReturn) {
+        char[] ach = m_achValue;   // `this` IS a StringHandle
+    }
+}
+```
+
+Casts disappear **by construction** rather than by generics. Nothing needs a type parameter,
+because nothing is being passed.
+
+**Why it is still not cheap.** Templates carry per-container state — `f_container`, the owner-local
+`Lazy.Bound` caches this branch introduced — that handles do not. Moving dispatch onto handles
+means every moved method reaches back through `getTemplate()` for that state, so the refactor is
+mechanical but enormous, and it touches the interpreter's hottest path. It is a project, not a
+task, and it should not start until the `asm` half of this campaign is finished.
+
+**What the codebase already does, and the asymmetry that suggests the next step.** There is
+already a `Class<T>` reflective-cast accessor for the template side, used ~100 times:
+
+```java
+public <T extends ClassTemplate> T getTemplate(Class<T> clzTemplate) {
+    return clzTemplate.cast(getComposition().getTemplate());
+}
+```
+
+There is no symmetric helper for the handle side. Adding one would make the casts greppable and
+give a better failure message, but it must be judged honestly: `clz.cast(x)` and `(X) x` throw the
+same `ClassCastException` at the same moment, so it buys **inspectability, not safety**. That is
+worth doing only as instrumentation to size the dispatch-relocation project — for example, to
+count which handle types actually reach which templates — not as a fix.
+
+## T4 — assessment before starting
+
+The `Object nid` union is the study's rank 2 and it is **wider and more delicate than its
+description suggests**. The five variants are confirmed:
+
+| Variant | Produced by |
+| --- | --- |
+| `null` | a non-nested identity |
+| `String` | `PropertyConstant` — the property name |
+| `Integer` | `MethodConstant` when `isLambda()` — `Integer.valueOf(m_iLambda)` |
+| `SignatureConstant` | `MethodConstant` otherwise |
+| `NestedIdentity` | any identity, when recursively nested |
+
+They are used as **map keys** in ~76 declarations (`Map<Object, ParamInfo>` ×27,
+`Map<Object, MethodInfo>` ×14, `Map<Object, PropertyInfo>` ×13, `Map<Object, FieldInfo>` ×8, …).
+
+**The delicate part, which the cast count does not show:** the union works today *because* the
+variants are mutually unequal by Java's own `equals` — a `String` never equals a
+`SignatureConstant`, an `Integer` never equals a `NestedIdentity`. Any sealed carrier must
+preserve that exactly, or lookups silently start hitting or missing. This is a change where a
+subtle `equals`/`hashCode` slip produces wrong answers rather than a crash — the same failure mode
+as `unlinkSibling`, at 76× the surface. It needs its own dedicated pass with an equality-contract
+test written **first**, not a pass tacked onto the end of a session.
+
 ## Explicitly NOT doing
 
 - **`ClassTemplate<H extends ObjectHandle>`** — would collapse 561 `(X) hTarget` casts, the
