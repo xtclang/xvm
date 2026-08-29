@@ -63,9 +63,12 @@ public class xOSStorage
 
     @Override
     public void initNative() {
-        markNativeProperty("homeDir");
-        markNativeProperty("curDir");
-        markNativeProperty("tmpDir");
+        markNativeProperty("homeDir", SELF, (frame, hStorage, iReturn) ->
+                dirForProperty(frame, hStorage, "user.home", iReturn));
+        markNativeProperty("curDir", SELF, (frame, hStorage, iReturn) ->
+                dirForProperty(frame, hStorage, "user.dir", iReturn));
+        markNativeProperty("tmpDir", SELF, (frame, hStorage, iReturn) ->
+                dirForProperty(frame, hStorage, "java.io.tmpdir", iReturn));
 
         markNativeMethod("find", new String[] {"_native.fs.OSFileStore", "text.String"}, null);
         markNativeMethod1("names", SELF, STRING_TYPE, null,
@@ -95,26 +98,18 @@ public class xOSStorage
         return super.getPropertyValue(frame, hTarget, idProp, iReturn);
     }
 
-    @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        ServiceHandle hStorage = (ServiceHandle) hTarget;
-        ObjectHandle  hStore   = hStorage.getField(frame, "fileStore");
+    /**
+     * The shared body of the {@code homeDir}, {@code curDir} and {@code tmpDir} native properties,
+     * which differ only in which system property names the directory.
+     *
+     * <p>The resulting handles are cached by {@code Container.initResources()}.</p>
+     */
+    private static int dirForProperty(Frame frame, ServiceHandle hStorage, String sProperty,
+                                      int iReturn) {
+        ObjectHandle hStore = hStorage.getField(frame, "fileStore");
 
-        // the handles below are cached by the Container.initResources()
-        switch (sPropName) {
-        case "homeDir":
-            return xOSDirectory.getInstance(frame.container()).createHandle(frame, hStore,
-                Paths.get(System.getProperty("user.home")), iReturn);
-
-        case "curDir":
-            return xOSDirectory.getInstance(frame.container()).createHandle(frame, hStore,
-                Paths.get(System.getProperty("user.dir")), iReturn);
-
-        case "tmpDir":
-            return xOSDirectory.getInstance(frame.container()).createHandle(frame, hStore,
-                Paths.get(System.getProperty("java.io.tmpdir")), iReturn);
-        }
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        return xOSDirectory.getInstance(frame.container()).createHandle(frame, hStore,
+                Paths.get(System.getProperty(sProperty)), iReturn);
     }
 
     /**

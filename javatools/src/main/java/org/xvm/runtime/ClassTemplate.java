@@ -1125,6 +1125,11 @@ public abstract class ClassTemplate
             return frame.assignValue(iReturn, type.ensureTypeHandle(frame.f_context.f_container));
         }
 
+        NativeMethod.BoundGet<?> bound = f_mapBoundGet.get(sPropName);
+        if (bound != null) {
+            return bound.dispatch(frame, hTarget, iReturn);
+        }
+
         return frame.raiseException("Unknown native property: \"" + sPropName + "\" on " + this);
     }
 
@@ -2130,6 +2135,9 @@ public abstract class ClassTemplate
     private final Map<MethodStructure, NativeMethod.Bound1<?, ?>> f_mapBound1 =
             new ConcurrentHashMap<>();
 
+    /** Native property getters bound to a typed handler, keyed by property name. */
+    private final Map<String, NativeMethod.BoundGet<?>> f_mapBoundGet = new ConcurrentHashMap<>();
+
     /**
      * Get a class type for the specified name in the context of the specified template.
      */
@@ -2228,6 +2236,19 @@ public abstract class ClassTemplate
      *       then we will mark the property as @Unassigned, which will retain the property field,
      *       but will exempt it from the post-construction assignability check.
      */
+    /**
+     * Declare a native property, bound to a typed getter.
+     *
+     * @param sPropName  the property name
+     * @param selfType   the receiver's type
+     * @param getter     the typed implementation
+     */
+    protected <T extends ObjectHandle> void markNativeProperty(
+            String sPropName, NativeType<T> selfType, NativeMethod.Getter<T> getter) {
+        markNativeProperty(sPropName);
+        f_mapBoundGet.put(sPropName, new NativeMethod.BoundGet<>(selfType, getter));
+    }
+
     public void markNativeProperty(String sPropName) {
         PropertyStructure prop = getStructure().findPropertyDeep(sPropName);
         if (prop == null) {

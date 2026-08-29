@@ -31,13 +31,14 @@ public final class NativeMethod {
     }
 
     /**
-     * A native method taking no arguments.
+     * A native property getter. Keyed by property name rather than by {@link MethodStructure},
+     * because that is what {@code invokeNativeGet} dispatches on.
      *
      * @param <T>  the receiver's handle type
      */
     @FunctionalInterface
-    public interface Zero<T extends ObjectHandle> {
-        int invoke(Frame frame, T hTarget, int iReturn);
+    public interface Getter<T extends ObjectHandle> {
+        int get(Frame frame, T hTarget, int iReturn);
     }
 
     /**
@@ -49,6 +50,13 @@ public final class NativeMethod {
             NativeType<T> self, NativeType<A> arg, One<T, A> handler) {
         int dispatch(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
             return handler.invoke(frame, self.cast(hTarget), arg.cast(hArg), iReturn);
+        }
+    }
+
+    /** One bound property getter. */
+    record BoundGet<T extends ObjectHandle>(NativeType<T> self, Getter<T> getter) {
+        int dispatch(Frame frame, ObjectHandle hTarget, int iReturn) {
+            return getter.get(frame, self.cast(hTarget), iReturn);
         }
     }
 }
