@@ -30,19 +30,19 @@ public class xRTPackageTemplate
     // ----- ObjectHandle support ------------------------------------------------------------------
 
     /**
-     * Obtain a {@link ComponentTemplateHandle} for the specified {@link PackageStructure}.
+     * Obtain a {@link ComponentTemplateHandle<?>} for the specified {@link PackageStructure}.
      *
-     * @param pkg  the {@link PackageStructure} to obtain a {@link ComponentTemplateHandle} for
+     * @param pkg  the {@link PackageStructure} to obtain a {@link ComponentTemplateHandle<?>} for
      *
-     * @return the resulting {@link ComponentTemplateHandle}
+     * @return the resulting {@link ComponentTemplateHandle<?>}
      */
-    public static ComponentTemplateHandle makeHandle(Container container, PackageStructure pkg) {
+    public static ComponentTemplateHandle<PackageStructure> makeHandle(Container container, PackageStructure pkg) {
         // note: no need to initialize the struct because there are no natural fields
         xRTPackageTemplate template = container.getTemplate("_native.reflect.RTPackageTemplate",
                 xRTPackageTemplate.class);
         TypeComposition clz = template.ensureClass(container,
                 template.getCanonicalType(), template.f_typePackageTemplate.get(template));
-        return new ComponentTemplateHandle(clz, pkg);
+        return new ComponentTemplateHandle<>(clz, pkg);
     }
 
 

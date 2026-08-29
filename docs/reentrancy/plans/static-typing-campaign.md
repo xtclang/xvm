@@ -118,7 +118,29 @@ into a syntax error, because the line numbers had already shifted. **The rule th
 is: delete only where the receiver's static type is one of the narrowed classes, or delete one
 file at a time with a compile between.** A regex over a method name is not scoped by anything.
 
-- [ ] `ComponentTemplateHandle<C extends Component>` (~43 casts)
+- [x] `ComponentTemplateHandle<C extends Component>` — **done, and it removed ZERO casts.**
+      Recording the negative result, because the projection was wrong and the reason generalises.
+
+      The handle now carries what it holds and the seven per-kind factories declare what they
+      produce (`xRTClassTemplate.makeHandle → ComponentTemplateHandle<ClassStructure>`, …).
+      `makeComponentHandle` returns `<?>`, because it dispatches on a runtime `getFormat()` and
+      genuinely cannot promise a type.
+
+      But **every one of the 26 consumers obtains its handle by downcasting an `ObjectHandle`**
+      from the runtime's argument array — measured: 26 downcast sites, **0** that call a typed
+      factory and use the result. So there is no typed path for the parameter to flow along.
+      Making the downcast parameterised — `(ComponentTemplateHandle<PropertyStructure>) hTarget`
+      — would be an UNCHECKED cast: it trades a checked `ClassCastException` that fires at the
+      right moment for one that succeeds and defers the failure. **Strictly worse.** The
+      consumers therefore use `ComponentTemplateHandle<?>`, which removes the raw type and keeps
+      the checked cast exactly where it was.
+
+      **The generalisable lesson:** a type parameter only pays where there is a typed *path* from
+      producer to consumer. Here the path runs through `ObjectHandle[]`, which erases everything
+      at the boundary — so this cannot pay until `ClassTemplate<H extends ObjectHandle>` lands,
+      and that is deliberately out of scope (561 casts, on the path the JIT does not use). The
+      generic is kept because it makes the producers honest and costs nothing, not because it
+      removed anything.
 - [ ] Narrow the `IdentityConstant` accessors that force casts (`getClassConstant`, …)
 
 ### T3 (original scope) — Covariant `Component` child lookup

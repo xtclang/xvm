@@ -330,7 +330,7 @@ public class xRTTypeTemplate
             Constant[]       aconstArg  = annotation.getParams();
             int              cArgs      = aconstArg.length;
 
-            ComponentTemplateHandle hClass = xRTComponentTemplate.makeComponentHandle(
+            ComponentTemplateHandle<?> hClass = xRTComponentTemplate.makeComponentHandle(
                     frame.container(), idClass.getComponent());
 
             ObjectHandle[] ahArg;
@@ -390,7 +390,7 @@ public class xRTTypeTemplate
                     xException.invalidType(frame, "Unknown type " + type.getValueString()));
         }
 
-        ComponentTemplateHandle hClass =
+        ComponentTemplateHandle<?> hClass =
                 xRTComponentTemplate.makeComponentHandle(frame.container(), clz);
 
         return type.isAnnotated()
@@ -515,7 +515,7 @@ public class xRTTypeTemplate
      */
     public int invokeAnnotate(Frame frame, TypeTemplateHandle hType, GenericHandle hAnno, int iReturn) {
         TypeConstant            typeThis  = hType.getDataType();
-        ComponentTemplateHandle hTemplate = (ComponentTemplateHandle) hAnno.getField(frame, "template");
+        ComponentTemplateHandle<?> hTemplate = (ComponentTemplateHandle<?>) hAnno.getField(frame, "template");
         ClassStructure          clzMixin  = (ClassStructure) hTemplate.getComponent();
         IdentityConstant        idMixin   = clzMixin.getIdentityConstant();
         TypeConstant            typeInto  = clzMixin.getTypeInto();
@@ -713,7 +713,7 @@ public class xRTTypeTemplate
      */
     public static class CreateAnnotationComposition
             implements Frame.Continuation {
-        public CreateAnnotationComposition(ComponentTemplateHandle hClass, Annotation[] aAnno,
+        public CreateAnnotationComposition(ComponentTemplateHandle<?> hClass, Annotation[] aAnno,
                                            int[] aiReturn) {
             this.hClass   = hClass;
             this.aAnno    = aAnno;
@@ -828,7 +828,7 @@ public class xRTTypeTemplate
                 ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
                 ClassStructure clzAnno = idAnno.getComponent();
 
-                ComponentTemplateHandle hAnnoClass = xRTComponentTemplate.
+                ComponentTemplateHandle<?> hAnnoClass = xRTComponentTemplate.
                         makeComponentHandle(frameCaller.container(), clzAnno);
 
                 int iResult = Utils.constructAnnotationTemplate(
@@ -860,7 +860,7 @@ public class xRTTypeTemplate
         enum Stage {ArgValue, Argument, Template}
         private Stage stageNext;
 
-        private final ComponentTemplateHandle hClass;
+        private final ComponentTemplateHandle<?> hClass;
         private final Annotation[]            aAnno;
         private final int[]                   aiReturn;
         private final ObjectHandle[]          ahAnno;

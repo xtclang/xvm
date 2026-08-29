@@ -48,7 +48,7 @@ public class xRTPropertyTemplate
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        ComponentTemplateHandle hProp = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hProp = (ComponentTemplateHandle<?>) hTarget;
         switch (sPropName) {
         case "type":
             return getPropertyType(frame, hProp, iReturn);
@@ -66,7 +66,7 @@ public class xRTPropertyTemplate
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn) {
-        ComponentTemplateHandle hProp = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hProp = (ComponentTemplateHandle<?>) hTarget;
         switch (method.getName()) {
         case "hasInitialValue":
             return invokeInitialValue(frame, hProp, aiReturn);
@@ -84,7 +84,7 @@ public class xRTPropertyTemplate
     /**
      * Implements property: {@code type.get()}.
      */
-    public int getPropertyType(Frame frame, ComponentTemplateHandle hProp, int iReturn) {
+    public int getPropertyType(Frame frame, ComponentTemplateHandle<?> hProp, int iReturn) {
         PropertyStructure prop = (PropertyStructure) hProp.getComponent();
 
         return frame.assignValue(iReturn,
@@ -94,7 +94,7 @@ public class xRTPropertyTemplate
     /**
      * Implements property: {@code isConstant.get()}.
      */
-    public int getPropertyIsConstant(Frame frame, ComponentTemplateHandle hProp, int iReturn) {
+    public int getPropertyIsConstant(Frame frame, ComponentTemplateHandle<?> hProp, int iReturn) {
         PropertyStructure prop = (PropertyStructure) hProp.getComponent();
 
         return frame.assignValue(iReturn, xBoolean.makeHandle(frame, prop.isConstant()));
@@ -103,7 +103,7 @@ public class xRTPropertyTemplate
     /**
      * Implements property: {@code immutable AnnotationTemplate[] annotations.get()}.
      */
-    public int getPropertyAnnotations(Frame frame, ComponentTemplateHandle hProp, int iReturn) {
+    public int getPropertyAnnotations(Frame frame, ComponentTemplateHandle<?> hProp, int iReturn) {
         Container         container = frame.f_context.f_container;
         PropertyStructure prop      = (PropertyStructure) hProp.getComponent();
         TypeComposition   clzArray  = xRTClassTemplate.ensureAnnotationTemplateArrayComposition(container);
@@ -122,7 +122,7 @@ public class xRTPropertyTemplate
             Constant[]       aconstArg = anno.getParams();
             int              cArgs     = aconstArg.length;
 
-            ComponentTemplateHandle hClass =
+            ComponentTemplateHandle<?> hClass =
                     xRTComponentTemplate.makeComponentHandle(container, idClass.getComponent());
 
             ObjectHandle[] ahArg;
@@ -153,7 +153,7 @@ public class xRTPropertyTemplate
     /**
      * Implements method: {@code conditional Const hasInitialValue()}.
      */
-    public int invokeInitialValue(Frame frame, ComponentTemplateHandle hProp, int[] aiReturn) {
+    public int invokeInitialValue(Frame frame, ComponentTemplateHandle<?> hProp, int[] aiReturn) {
         PropertyStructure prop = (PropertyStructure) hProp.getComponent();
 
         if (prop.hasInitialValue()) {
@@ -197,8 +197,8 @@ public class xRTPropertyTemplate
      *
      * @return the newly created handle
      */
-    static ComponentTemplateHandle makePropertyHandle(Container container, PropertyStructure prop) {
-        return new ComponentTemplateHandle(ensurePropertyTemplateComposition(container), prop);
+    static ComponentTemplateHandle<PropertyStructure> makePropertyHandle(Container container, PropertyStructure prop) {
+        return new ComponentTemplateHandle<>(ensurePropertyTemplateComposition(container), prop);
     }
 
     private static xRTPropertyTemplate template(Container container) {

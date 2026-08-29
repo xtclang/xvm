@@ -137,7 +137,7 @@ public class xContainerLinker
      * </pre></code>
      */
     private int invokeCollectInjections(Frame frame, ObjectHandle[] ahArg, int[] aiReturn) {
-        ComponentTemplateHandle hModule     = (ComponentTemplateHandle) ahArg[0];
+        ComponentTemplateHandle<?> hModule     = (ComponentTemplateHandle<?>) ahArg[0];
         ArrayHandle             haCondNames = (ArrayHandle) ahArg[1];
 
         if (haCondNames.getDelegate().m_cSize > 0) {
@@ -175,7 +175,7 @@ public class xContainerLinker
      * </pre></code>
      */
     private int invokeResolveAndLink(Frame frame, ObjectHandle[] ahArg, int iReturn) {
-        ComponentTemplateHandle hModule      = (ComponentTemplateHandle) ahArg[0];
+        ComponentTemplateHandle<?> hModule      = (ComponentTemplateHandle<?>) ahArg[0];
         ObjectHandle            hModel       = ahArg[1]; // mgmt.Container.Model
         ObjectHandle            hRepo        = ahArg[2]; // mgmt.ModuleRepository
         ObjectHandle            hProvider    = ahArg[3]; // mgmt.ResourceProvider
@@ -238,7 +238,7 @@ public class xContainerLinker
     // ----- helpers -------------------------------------------------------------------------------
 
     private ModuleStructure popModule(Frame frame) {
-        ComponentTemplateHandle hFile = (ComponentTemplateHandle) frame.popStack();
+        ComponentTemplateHandle<?> hFile = (ComponentTemplateHandle<?>) frame.popStack();
         return ((FileStructure) hFile.getComponent()).getModule();
     }
 

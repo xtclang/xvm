@@ -207,7 +207,7 @@ public class xRTCompiler
      */
     private boolean popModuleStructure(Frame frame, CompilerAdapter compiler) {
         ObjectHandle hReturn = frame.popStack();
-        if (hReturn instanceof ComponentTemplateHandle hModule) {
+        if (hReturn instanceof ComponentTemplateHandle<?> hModule) {
             assert xBoolean.isTrue(frame.popStack());
             compiler.addRepo((ModuleStructure) hModule.getComponent());
             return true;
@@ -226,7 +226,7 @@ public class xRTCompiler
 
     private int completeCompilation(Frame frame, CompilerAdapter compiler,
                                     Exception exception, int[] aiReturn) {
-        List<ComponentTemplateHandle> listFiles = new ArrayList<>();
+        List<ComponentTemplateHandle<?>> listFiles = new ArrayList<>();
         List<String>                  listErrors = compiler.getErrors();
         boolean      fSuccess;
         if (exception == null) {

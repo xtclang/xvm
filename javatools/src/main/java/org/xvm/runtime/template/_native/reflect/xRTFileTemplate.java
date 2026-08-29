@@ -73,7 +73,7 @@ public class xRTFileTemplate
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        ComponentTemplateHandle hFile      = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hFile      = (ComponentTemplateHandle<?>) hTarget;
         FileStructure           fileStruct = (FileStructure) hFile.getComponent();
         switch (sPropName) {
         case "mainModule":
@@ -106,7 +106,7 @@ public class xRTFileTemplate
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn) {
-        ComponentTemplateHandle hFile = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hFile = (ComponentTemplateHandle<?>) hTarget;
         FileStructure           file  = (FileStructure) hFile.getComponent();
         switch (method.getName()) {
         case "resolve":
@@ -122,7 +122,7 @@ public class xRTFileTemplate
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn) {
-        ComponentTemplateHandle hFile = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hFile = (ComponentTemplateHandle<?>) hTarget;
         FileStructure           file  = (FileStructure) hFile.getComponent();
         switch (method.getName()) {
         case "extractVersionImpl": { // conditional ModuleTemplate extractVersionImpl(String version)
@@ -193,7 +193,7 @@ public class xRTFileTemplate
         }
 
         for (ObjectHandle hAddModule : ahAddModules) {
-            ComponentTemplateHandle hModule = (ComponentTemplateHandle) hAddModule;
+            ComponentTemplateHandle<?> hModule = (ComponentTemplateHandle<?>) hAddModule;
             file.merge((ModuleStructure) hModule.getComponent(), true, false);
             assert file.validateConstants();
         }
@@ -238,7 +238,7 @@ public class xRTFileTemplate
 
         GenericArrayDelegate haGeneric = (GenericArrayDelegate) hArray.getDelegate();
         for (long i = 0, c = haGeneric.m_cSize; i < c; i++) {
-            ComponentTemplateHandle hModule        = (ComponentTemplateHandle) haGeneric.get(i);
+            ComponentTemplateHandle<?> hModule        = (ComponentTemplateHandle<?>) haGeneric.get(i);
             ModuleStructure         moduleUnlinked = (ModuleStructure) hModule.getComponent();
             ModuleStructure         moduleReplace  = file.getModule(moduleUnlinked.getIdentityConstant());
 
@@ -256,7 +256,7 @@ public class xRTFileTemplate
     }
 
     @Override
-    protected int invokeChildren(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    protected int invokeChildren(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         // calling the super() would pick up all modules, including the native, so we limit
         // the modules to the dependents of the main module
 
@@ -285,7 +285,7 @@ public class xRTFileTemplate
 
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
-        FileStructure module = (FileStructure) ((ComponentTemplateHandle) hTarget).getComponent();
+        FileStructure module = (FileStructure) ((ComponentTemplateHandle<?>) hTarget).getComponent();
         return frame.assignValue(iReturn, xString.makeHandle(frame, module.getModuleId().getName()));
     }
 
@@ -293,20 +293,20 @@ public class xRTFileTemplate
     // ----- ObjectHandle support ------------------------------------------------------------------
 
     /**
-     * Obtain a {@link ComponentTemplateHandle} for the specified file {@link FileStructure}.
+     * Obtain a {@link ComponentTemplateHandle<?>} for the specified file {@link FileStructure}.
      *
      * @param container   the container the handle should belong to
-     * @param fileStruct  the {@link FileStructure} to obtain a {@link ComponentTemplateHandle} for
+     * @param fileStruct  the {@link FileStructure} to obtain a {@link ComponentTemplateHandle<?>} for
      *
-     * @return the resulting {@link ComponentTemplateHandle}
+     * @return the resulting {@link ComponentTemplateHandle<?>}
      */
-    public static ComponentTemplateHandle makeHandle(Container container, FileStructure fileStruct) {
+    public static ComponentTemplateHandle<FileStructure> makeHandle(Container container, FileStructure fileStruct) {
         // note: no need to initialize the struct because there are no natural fields
         xRTFileTemplate template = container.getTemplate("_native.reflect.RTFileTemplate",
                 xRTFileTemplate.class);
         TypeComposition clzFile = template.ensureClass(container,
                 template.getCanonicalType(), template.f_typeFileTemplate.get(template));
-        return new ComponentTemplateHandle(clzFile, fileStruct);
+        return new ComponentTemplateHandle<>(clzFile, fileStruct);
     }
 
     /**

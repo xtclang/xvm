@@ -27,8 +27,8 @@ public class xClassTemplate
     @Override
     public int callEqualsImpl(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
-        return hValue1 instanceof ComponentTemplateHandle &&
-                hValue2 instanceof ComponentTemplateHandle
+        return hValue1 instanceof ComponentTemplateHandle<?> &&
+                hValue2 instanceof ComponentTemplateHandle<?>
             ? xRTComponentTemplate.getInstance(frame).callEquals(frame, clazz, hValue1, hValue2, iReturn)
             : frame.assignValue(iReturn, xBoolean.falseHandle(frame));
     }

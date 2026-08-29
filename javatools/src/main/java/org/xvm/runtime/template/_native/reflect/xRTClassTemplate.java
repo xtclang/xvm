@@ -91,7 +91,7 @@ public class xRTClassTemplate
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hComponent = (ComponentTemplateHandle<?>) hTarget;
         switch (sPropName) {
         case "implicitName":
             return getPropertyImplicitName(frame, hComponent, iReturn);
@@ -133,7 +133,7 @@ public class xRTClassTemplate
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn) {
-        ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hComponent = (ComponentTemplateHandle<?>) hTarget;
         switch (method.getName()) {
         case "ensureClass":
             return invokeEnsureClass(frame, hComponent, iReturn);
@@ -145,7 +145,7 @@ public class xRTClassTemplate
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn) {
-        ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hComponent = (ComponentTemplateHandle<?>) hTarget;
         switch (method.getName()) {
         case "deannotate":
             return invokeDeannotate(frame, hComponent, aiReturn);
@@ -160,7 +160,7 @@ public class xRTClassTemplate
     /**
      * Implements property: implicitName.get()
      */
-    public int getPropertyImplicitName(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyImplicitName(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         ClassStructure   clz = (ClassStructure) hComponent.getComponent();
         IdentityConstant id  = clz.getIdentityConstant();
         if (id instanceof ClassConstant idClz) {
@@ -175,11 +175,11 @@ public class xRTClassTemplate
     /**
      * Implements property: classes.get()
      */
-    public int getPropertyClasses(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyClasses(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Container      container = frame.container();
         ClassStructure clz       = (ClassStructure) hComponent.getComponent();
 
-        List<ComponentTemplateHandle> listTemplates = new ArrayList<>();
+        List<ComponentTemplateHandle<?>> listTemplates = new ArrayList<>();
         for (Component child : clz.children()) {
             switch (child.getFormat()) {
             case INTERFACE:
@@ -204,7 +204,7 @@ public class xRTClassTemplate
     /**
      * Implements property: contribs.get()
      */
-    public int getPropertyContribs(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyContribs(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Container      container = frame.container();
         ClassStructure clz       = (ClassStructure) hComponent.getComponent();
 
@@ -343,7 +343,7 @@ public class xRTClassTemplate
                 listContrib.size(), supplier, iReturn);
     }
 
-    private static int callCreateContrib(Frame frame, ComponentTemplateHandle hComponent,
+    private static int callCreateContrib(Frame frame, ComponentTemplateHandle<?> hComponent,
                                          String sAction, TypeConstant typeContrib,
                                          ObjectHandle haParams, ObjectHandle hDelegatee,
                                          ObjectHandle haNames, ObjectHandle haTypes) {
@@ -367,11 +367,11 @@ public class xRTClassTemplate
     /**
      * Implements property: multimethods.get()
      */
-    public int getPropertyMultimethods(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyMultimethods(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Container      container = frame.container();
         ClassStructure clz       = (ClassStructure) hComponent.getComponent();
 
-        List<ComponentTemplateHandle> listHandles = new ArrayList<>();
+        List<ComponentTemplateHandle<?>> listHandles = new ArrayList<>();
         for (Component child : clz.children()) {
             if (child instanceof MultiMethodStructure) {
                 listHandles.add(makeComponentHandle(container, child));
@@ -388,18 +388,18 @@ public class xRTClassTemplate
     /**
      * Implements property: properties.get()
      */
-    public int getPropertyProperties(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyProperties(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Container      container = frame.container();
         ClassStructure clz       = (ClassStructure) hComponent.getComponent();
 
-        List<ComponentTemplateHandle> listProps = new ArrayList<>();
+        List<ComponentTemplateHandle<?>> listProps = new ArrayList<>();
         for (Component child : clz.children()) {
             if (child instanceof PropertyStructure prop) {
                 listProps.add(xRTPropertyTemplate.makePropertyHandle(container, prop));
             }
         }
 
-        ComponentTemplateHandle[] ahProp = listProps.toArray(NO_TEMPLATES);
+        ComponentTemplateHandle<?>[] ahProp = listProps.toArray(NO_TEMPLATES);
         ArrayHandle hArray = xArray.createImmutableArray(
                 xRTPropertyTemplate.ensureArrayComposition(container), ahProp);
         return frame.assignValue(iReturn, hArray);
@@ -408,7 +408,7 @@ public class xRTClassTemplate
     /**
      * Implements property: singleton.get()
      */
-    public int getPropertySingleton(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertySingleton(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         ClassStructure clz        = (ClassStructure) hComponent.getComponent();
         boolean        fSingleton = clz.isSingleton();
         return frame.assignValue(iReturn, xBoolean.makeHandle(frame, fSingleton));
@@ -417,7 +417,7 @@ public class xRTClassTemplate
     /**
      * Implements property: hasDefault.get()
      */
-    public int getPropertyHasDefault(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyHasDefault(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         ClassStructure clz      = (ClassStructure) hComponent.getComponent();
         boolean        fDefault = clz.getCanonicalType().getDefaultValue() != null;
         return frame.assignValue(iReturn, xBoolean.makeHandle(frame, fDefault));
@@ -426,14 +426,14 @@ public class xRTClassTemplate
     /**
      * Implements property: sourceInfo.get()
      */
-    public int getPropertySourceInfo(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertySourceInfo(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         return frame.raiseException("Not implemented");
     }
 
     /**
      * Implements property: type.get()
      */
-    public int getPropertyType(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyType(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         ClassStructure clz = (ClassStructure) hComponent.getComponent();
 
         return frame.assignValue(iReturn, xRTTypeTemplate.makeHandle(
@@ -443,7 +443,7 @@ public class xRTClassTemplate
     /**
      * Implements property: typeParams.get()
      */
-    public int getPropertyTypeParams(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyTypeParams(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Container      container = frame.container();
         ClassStructure clz       = (ClassStructure) hComponent.getComponent();
         List<Map.Entry<StringConstant, TypeConstant>> listParams = clz.getTypeParamsAsList();
@@ -474,7 +474,7 @@ public class xRTClassTemplate
     /**
      * Implements property: virtualChild.get()
      */
-    public int getPropertyVirtualChild(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyVirtualChild(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         ClassStructure clz      = (ClassStructure) hComponent.getComponent();
         boolean        fVirtual = clz.isVirtualChild();
         return frame.assignValue(iReturn, xBoolean.makeHandle(frame, fVirtual));
@@ -500,14 +500,14 @@ public class xRTClassTemplate
     /**
      * Implementation for: {@code Class<> ensureClass(Type... actualTypes)}.
      */
-    protected int invokeEnsureClass(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    protected int invokeEnsureClass(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         return frame.raiseException("Not implemented");
     }
 
     /**
      * Implementation for: {@code conditional (Annotation, Composition) deannotate()}.
      */
-    protected int invokeDeannotate(Frame frame, ComponentTemplateHandle hComponent, int[] aiReturn) {
+    protected int invokeDeannotate(Frame frame, ComponentTemplateHandle<?> hComponent, int[] aiReturn) {
         // ClassTemplate annotations are actually contributions
         return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
@@ -516,19 +516,19 @@ public class xRTClassTemplate
     // ----- ObjectHandle support ------------------------------------------------------------------
 
     /**
-     * Obtain a {@link ComponentTemplateHandle} for the specified {@link ClassStructure}.
+     * Obtain a {@link ComponentTemplateHandle<?>} for the specified {@link ClassStructure}.
      *
      * @param container  the container for the handle
-     * @param struct     the {@link ClassStructure} to obtain a {@link ComponentTemplateHandle} for
+     * @param struct     the {@link ClassStructure} to obtain a {@link ComponentTemplateHandle<?>} for
      *
-     * @return the resulting {@link ComponentTemplateHandle}
+     * @return the resulting {@link ComponentTemplateHandle<?>}
      */
-    public static ComponentTemplateHandle makeHandle(Container container, ClassStructure struct) {
+    public static ComponentTemplateHandle<ClassStructure> makeHandle(Container container, ClassStructure struct) {
         // note: no need to initialize the struct because there are no natural fields
         xRTClassTemplate template = NativeTemplates.get(container).classTemplate();
         TypeComposition  clz      = template.ensureClass(container,
                 template.getCanonicalType(), template.f_typeClassTemplate.get(template));
-        return new ComponentTemplateHandle(clz, struct);
+        return new ComponentTemplateHandle<>(clz, struct);
     }
 
     /**
@@ -596,7 +596,7 @@ public class xRTClassTemplate
 
     // ----- constants -----------------------------------------------------------------------------
 
-    public static final ComponentTemplateHandle[] NO_TEMPLATES = new ComponentTemplateHandle[0];
+    public static final ComponentTemplateHandle<?>[] NO_TEMPLATES = new ComponentTemplateHandle<?>[0];
 
     /**
      * Reflective class-template metadata is cached per owner template. These final lazy cells preserve

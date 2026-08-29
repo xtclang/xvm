@@ -1833,7 +1833,7 @@ public abstract class Utils {
      *
      * @return R_CALL or R_EXCEPTION
      */
-    public static int constructAnnotationTemplate(Frame frame, ComponentTemplateHandle hClass,
+    public static int constructAnnotationTemplate(Frame frame, ComponentTemplateHandle<?> hClass,
                                                   ObjectHandle[] ahAnnoArg, int iReturn) {
         RuntimeMetadata metadata    = runtimeMetadata(frame);
         MethodStructure constructor = metadata.constructAnnotationTemplate;

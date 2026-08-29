@@ -70,7 +70,7 @@ public class xRTPropertyClassTemplate
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hComponent = (ComponentTemplateHandle<?>) hTarget;
         switch (sPropName) {
         case "classes":
             return getPropertyClasses(frame, hComponent, iReturn);
@@ -100,7 +100,7 @@ public class xRTPropertyClassTemplate
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn) {
-        ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hComponent = (ComponentTemplateHandle<?>) hTarget;
         switch (method.getName()) {
         case "deannotate":
             return invokeDeannotate(frame, hComponent, aiReturn);
@@ -118,11 +118,11 @@ public class xRTPropertyClassTemplate
     /**
      * Implements property: classes.get()
      */
-    public int getPropertyClasses(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyClasses(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
 
         Container                     container     = frame.container();
-        List<ComponentTemplateHandle> listTemplates = new ArrayList<>();
+        List<ComponentTemplateHandle<?>> listTemplates = new ArrayList<>();
         for (Component child : prop.children()) {
             switch (child.getFormat()) {
             case CLASS:
@@ -141,7 +141,7 @@ public class xRTPropertyClassTemplate
     /**
      * Implements property: contribs.get()
      */
-    public int getPropertyContribs(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyContribs(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
 
         List<Contribution>  listContrib = prop.getContributionsAsList();
@@ -194,7 +194,7 @@ public class xRTPropertyClassTemplate
     /**
      * Implements property: multimethods.get()
      */
-    public int getPropertyMultimethods(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyMultimethods(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         PropertyStructure prop   = (PropertyStructure) hComponent.getComponent();
         GenericHandle     hArray = null; // TODO
         return frame.raiseException("Not implemented");
@@ -203,18 +203,18 @@ public class xRTPropertyClassTemplate
     /**
      * Implements property: properties.get()
      */
-    public int getPropertyProperties(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyProperties(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Container         container = frame.container();
         PropertyStructure prop      = (PropertyStructure) hComponent.getComponent();
 
-        List<ComponentTemplateHandle> listProps = new ArrayList<>();
+        List<ComponentTemplateHandle<?>> listProps = new ArrayList<>();
         for (Component child : prop.children()) {
             if (child instanceof PropertyStructure) {
                 listProps.add(xRTPropertyTemplate.makePropertyHandle(container, (PropertyStructure) child));
             }
         }
 
-        ComponentTemplateHandle[] ahProp = listProps.toArray(xRTClassTemplate.NO_TEMPLATES);
+        ComponentTemplateHandle<?>[] ahProp = listProps.toArray(xRTClassTemplate.NO_TEMPLATES);
         ObjectHandle hArray = xArray.createImmutableArray(
                 xRTPropertyTemplate.ensureArrayComposition(container), ahProp);
         return frame.assignValue(iReturn, hArray);
@@ -223,7 +223,7 @@ public class xRTPropertyClassTemplate
     /**
      * Implements property: singleton.get()
      */
-    public int getPropertySingleton(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertySingleton(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         PropertyStructure prop       = (PropertyStructure) hComponent.getComponent();
         boolean           fSingleton = prop.isStatic();
         return frame.assignValue(iReturn, xBoolean.makeHandle(frame, fSingleton));
@@ -232,7 +232,7 @@ public class xRTPropertyClassTemplate
     /**
      * Implements property: sourceInfo.get()
      */
-    public int getPropertySourceInfo(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertySourceInfo(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         PropertyStructure prop  = (PropertyStructure) hComponent.getComponent();
         GenericHandle     hInfo = null; // TODO
         return frame.raiseException("Not implemented");
@@ -241,7 +241,7 @@ public class xRTPropertyClassTemplate
     /**
      * Implements property: type.get()
      */
-    public int getPropertyType(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    public int getPropertyType(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
 
         return frame.assignValue(iReturn,
@@ -254,7 +254,7 @@ public class xRTPropertyClassTemplate
     /**
      * Implementation for: {@code conditional (Annotation, Composition) deannotate()}.
      */
-    protected int invokeDeannotate(Frame frame, ComponentTemplateHandle hComponent, int[] aiReturn) {
+    protected int invokeDeannotate(Frame frame, ComponentTemplateHandle<?> hComponent, int[] aiReturn) {
         // a Composition that is a ClassTemplate is not annotated
         return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
@@ -262,7 +262,7 @@ public class xRTPropertyClassTemplate
     /**
      * Implementation for: {@code conditional PropertyTemplate fromProperty()}.
      */
-    protected int invokeFromProperty(Frame frame, ComponentTemplateHandle hComponent, int[] aiReturn) {
+    protected int invokeFromProperty(Frame frame, ComponentTemplateHandle<?> hComponent, int[] aiReturn) {
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
         return frame.assignValues(aiReturn,
             xBoolean.trueHandle(frame), xRTPropertyTemplate.makePropertyHandle(frame.container(), prop));
@@ -272,16 +272,16 @@ public class xRTPropertyClassTemplate
     // ----- ObjectHandle support ------------------------------------------------------------------
 
     /**
-     * Obtain a {@link ComponentTemplateHandle} for the specified {@link PropertyStructure}.
+     * Obtain a {@link ComponentTemplateHandle<?>} for the specified {@link PropertyStructure}.
      *
-     * @param prop  the {@link PropertyStructure} to obtain a {@link ComponentTemplateHandle} for
+     * @param prop  the {@link PropertyStructure} to obtain a {@link ComponentTemplateHandle<?>} for
      *
-     * @return the resulting {@link ComponentTemplateHandle}
+     * @return the resulting {@link ComponentTemplateHandle<?>}
      */
-    public static ComponentTemplateHandle makeHandle(Container container, PropertyStructure prop) {
+    public static ComponentTemplateHandle<PropertyStructure> makeHandle(Container container, PropertyStructure prop) {
         // note: no need to initialize the struct because there are no natural fields
         xRTPropertyClassTemplate template = NativeTemplates.get(container).propertyClassTemplate();
-        return new ComponentTemplateHandle(template.f_compPropertyClassTemplate.get(template), prop);
+        return new ComponentTemplateHandle<>(template.f_compPropertyClassTemplate.get(template), prop);
     }
 
 

@@ -77,7 +77,7 @@ public class xRTComponentTemplate
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hComponent = (ComponentTemplateHandle<?>) hTarget;
         switch (sPropName) {
         case "access":
             return getPropertyAccess(frame, hComponent, iReturn);
@@ -110,7 +110,7 @@ public class xRTComponentTemplate
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn) {
-        ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hComponent = (ComponentTemplateHandle<?>) hTarget;
         switch (method.getName()) {
         case "children":
             return invokeChildren(frame, hComponent, iReturn);
@@ -122,8 +122,8 @@ public class xRTComponentTemplate
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
-        ComponentTemplateHandle hTemplate1 = (ComponentTemplateHandle) hValue1;
-        ComponentTemplateHandle hTemplate2 = (ComponentTemplateHandle) hValue2;
+        ComponentTemplateHandle<?> hTemplate1 = (ComponentTemplateHandle<?>) hValue1;
+        ComponentTemplateHandle<?> hTemplate2 = (ComponentTemplateHandle<?>) hValue2;
 
         return frame.assignValue(iReturn,
             xBoolean.makeHandle(frame, hTemplate1.getComponent().equals(hTemplate2.getComponent())));
@@ -131,8 +131,8 @@ public class xRTComponentTemplate
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        ComponentTemplateHandle hTemplate1 = (ComponentTemplateHandle) hValue1;
-        ComponentTemplateHandle hTemplate2 = (ComponentTemplateHandle) hValue2;
+        ComponentTemplateHandle<?> hTemplate1 = (ComponentTemplateHandle<?>) hValue1;
+        ComponentTemplateHandle<?> hTemplate2 = (ComponentTemplateHandle<?>) hValue2;
 
         return hTemplate1.getComponent() == hTemplate2.getComponent();
     }
@@ -143,7 +143,7 @@ public class xRTComponentTemplate
     /**
      * Implements property: access.get()
      */
-    protected int getPropertyAccess(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    protected int getPropertyAccess(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         Access    access    = component.getAccess();
         return frame.assignDeferredValue(iReturn, xRTType.ensureAccessHandle(frame, access));
@@ -152,7 +152,7 @@ public class xRTComponentTemplate
     /**
      * Implements property: doc.get()
      */
-    protected int getPropertyDoc(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    protected int getPropertyDoc(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         String    sDoc      = component.getDocumentation();
         return frame.assignValue(iReturn, sDoc == null
@@ -163,7 +163,7 @@ public class xRTComponentTemplate
     /**
      * Implements property: format.get()
      */
-    protected int getPropertyFormat(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    protected int getPropertyFormat(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         return frame.assignDeferredValue(iReturn, ensureFormatHandle(frame, component.getFormat()));
     }
@@ -171,7 +171,7 @@ public class xRTComponentTemplate
     /**
      * Implements property: isAbstract.get()
      */
-    protected int getPropertyIsAbstract(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    protected int getPropertyIsAbstract(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         return frame.assignValue(iReturn, xBoolean.makeHandle(frame, component.isAbstract()));
     }
@@ -179,7 +179,7 @@ public class xRTComponentTemplate
     /**
      * Implements property: isStatic.get()
      */
-    protected int getPropertyIsStatic(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    protected int getPropertyIsStatic(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         return frame.assignValue(iReturn, xBoolean.makeHandle(frame, component.isStatic()));
     }
@@ -187,7 +187,7 @@ public class xRTComponentTemplate
     /**
      * Implements property: name.get()
      */
-    protected int getPropertyName(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    protected int getPropertyName(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         return frame.assignValue(iReturn, xString.makeHandle(frame, component.getSimpleName()));
     }
@@ -195,7 +195,7 @@ public class xRTComponentTemplate
     /**
      * Implements property: parent.get()
      */
-    protected int getPropertyParent(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    protected int getPropertyParent(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Component    parent  = hComponent.getComponent().getParent();
         ObjectHandle hParent = parent == null
                 ? xNullable.makeHandle(frame)
@@ -206,7 +206,7 @@ public class xRTComponentTemplate
     /**
      * Implements property: synthetic.get()
      */
-    protected int getPropertySynthetic(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    protected int getPropertySynthetic(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         return frame.assignValue(iReturn, xBoolean.makeHandle(frame, component.isSynthetic()));
     }
@@ -217,7 +217,7 @@ public class xRTComponentTemplate
     /**
      * Implementation for: {@code ComponentTemplate[] children()}.
      */
-    protected int invokeChildren(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
+    protected int invokeChildren(Frame frame, ComponentTemplateHandle<?> hComponent, int iReturn) {
         Container      container  = frame.container();
         Component      component  = hComponent.getComponent();
         int            cChildren  = component.getChildrenCount();
@@ -325,9 +325,9 @@ public class xRTComponentTemplate
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     /**
-     * Given a Component structure, create ComponentTemplateHandle for it.
+     * Given a Component structure, create ComponentTemplateHandle<?> for it.
      */
-    public static ComponentTemplateHandle makeComponentHandle(Container container, Component component) {
+    public static ComponentTemplateHandle<?> makeComponentHandle(Container container, Component component) {
         switch (component.getFormat()) {
         case FILE:
             return xRTFileTemplate.makeHandle(container, (FileStructure) component);
@@ -349,7 +349,7 @@ public class xRTComponentTemplate
             return xRTClassTemplate.makeHandle(container, (ClassStructure) component);
 
         case MULTIMETHOD:
-            return new ComponentTemplateHandle(getMultiMethodTemplateComposition(container), component);
+            return new ComponentTemplateHandle<>(getMultiMethodTemplateComposition(container), component);
 
         case METHOD:
             return xRTMethodTemplate.makeHandle(container, (MethodStructure) component);
@@ -363,18 +363,19 @@ public class xRTComponentTemplate
     }
 
     /**
-     * Inner class: ComponentTemplateHandle. This is a handle to a native Component.
+     * Inner class: ComponentTemplateHandle<?>. This is a handle to a native Component.
      */
-    public static class ComponentTemplateHandle
+    public static class ComponentTemplateHandle<C extends Component>
             extends GenericHandle {
-        protected ComponentTemplateHandle(TypeComposition clz, Component component) {
+        protected ComponentTemplateHandle(TypeComposition clz, C component) {
             super(clz);
 
             f_struct   = component;
             m_fMutable = false;
         }
 
-        public Component getComponent() {
+        /** @return the component this handle wraps, at the type the factory knew it to be */
+        public C getComponent() {
             return f_struct;
         }
 
@@ -383,7 +384,7 @@ public class xRTComponentTemplate
             return super.toString() + f_struct.getName();
         }
 
-        private final Component f_struct;
+        private final C f_struct;
     }
 
     // ----- fields --------------------------------------------------------------------------------

@@ -51,7 +51,7 @@ public class xRTMethodTemplate
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        ComponentTemplateHandle hMethod = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hMethod = (ComponentTemplateHandle<?>) hTarget;
         switch (sPropName) {
         case "annotations":
             return getPropertyAnnotations(frame, hMethod, iReturn);
@@ -74,7 +74,7 @@ public class xRTMethodTemplate
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn) {
-        ComponentTemplateHandle hMethod = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hMethod = (ComponentTemplateHandle<?>) hTarget;
         switch (method.getName()) {
         case "getParameter":
             return invokeGetParameter(frame, hMethod, (JavaLong) ahArg[0], aiReturn);
@@ -92,7 +92,7 @@ public class xRTMethodTemplate
     /**
      * Implements property: annotations.get()
      */
-    protected int getPropertyAnnotations(Frame frame, ComponentTemplateHandle hMethod, int iReturn) {
+    protected int getPropertyAnnotations(Frame frame, ComponentTemplateHandle<?> hMethod, int iReturn) {
         MethodStructure method = (MethodStructure) hMethod.getComponent();
         Annotation[]    aAnno  = method.getAnnotations();
 
@@ -105,7 +105,7 @@ public class xRTMethodTemplate
     /**
      * Implements property: hasCode.get()
      */
-    protected int getPropertyHasCode(Frame frame, ComponentTemplateHandle hMethod, int iReturn) {
+    protected int getPropertyHasCode(Frame frame, ComponentTemplateHandle<?> hMethod, int iReturn) {
         MethodStructure method = (MethodStructure) hMethod.getComponent();
         return frame.assignValue(iReturn, xBoolean.makeHandle(frame, method.hasCode()));
     }
@@ -118,7 +118,7 @@ public class xRTMethodTemplate
      *  (String? name, TypeTemplate type, Boolean formal, Boolean hasDefault, Const? defaultValue)
      *         getParameter(Int index)
      */
-    protected int invokeGetParameter(Frame frame, ComponentTemplateHandle hMethod, JavaLong hIndex,
+    protected int invokeGetParameter(Frame frame, ComponentTemplateHandle<?> hMethod, JavaLong hIndex,
                                      int[] aiReturn) {
         MethodStructure method = (MethodStructure) hMethod.getComponent();
 
@@ -154,7 +154,7 @@ public class xRTMethodTemplate
      *  (String? name, TypeTemplate type, Boolean cond)
      *         getReturn(Int index)
      */
-    protected int invokeGetReturn(Frame frame, ComponentTemplateHandle hMethod, JavaLong hIndex,
+    protected int invokeGetReturn(Frame frame, ComponentTemplateHandle<?> hMethod, JavaLong hIndex,
                                      int[] aiReturn) {
         MethodStructure method = (MethodStructure) hMethod.getComponent();
 
@@ -191,8 +191,8 @@ public class xRTMethodTemplate
      *
      * @return the newly created handle
      */
-    static ComponentTemplateHandle makeHandle(Container container, MethodStructure method) {
-        return new ComponentTemplateHandle(ensureMethodTemplateComposition(container), method);
+    static ComponentTemplateHandle<MethodStructure> makeHandle(Container container, MethodStructure method) {
+        return new ComponentTemplateHandle<>(ensureMethodTemplateComposition(container), method);
     }
 
 

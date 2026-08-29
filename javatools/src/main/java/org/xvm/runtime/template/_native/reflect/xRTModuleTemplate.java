@@ -51,7 +51,7 @@ public class xRTModuleTemplate
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        ComponentTemplateHandle hTemplate = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle<?> hTemplate = (ComponentTemplateHandle<?>) hTarget;
         switch (sPropName) {
         case "qualifiedName": {
             ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
@@ -90,7 +90,7 @@ public class xRTModuleTemplate
     /**
      * Implements property: modulesByPath.get()
      */
-    public int getPropertyModulesByPath(Frame frame, ComponentTemplateHandle hTemplate, int iReturn) {
+    public int getPropertyModulesByPath(Frame frame, ComponentTemplateHandle<?> hTemplate, int iReturn) {
         // TODO GG: how to cache the result?
         ModuleStructure module    = (ModuleStructure) hTemplate.getComponent();
         Container       container = frame.f_context.f_container;
@@ -101,7 +101,7 @@ public class xRTModuleTemplate
         int                         cModules       = mapModulePaths.size() - 1;
 
         StringHandle[]            ahPaths    = new StringHandle[cModules];
-        ComponentTemplateHandle[] ahTemplate = new ComponentTemplateHandle[cModules];
+        ComponentTemplateHandle<?>[] ahTemplate = new ComponentTemplateHandle<?>[cModules];
         int                       index      = 0;
         for (Map.Entry<ModuleConstant, String> entry : mapModulePaths.entrySet()) {
             ModuleConstant idDep = entry.getKey();
@@ -144,18 +144,18 @@ public class xRTModuleTemplate
     // ----- ObjectHandle support ------------------------------------------------------------------
 
     /**
-     * Obtain a {@link ComponentTemplateHandle} for the specified {@link ModuleStructure}.
+     * Obtain a {@link ComponentTemplateHandle<?>} for the specified {@link ModuleStructure}.
      *
-     * @param module  the {@link ModuleStructure} to obtain a {@link ComponentTemplateHandle} for
+     * @param module  the {@link ModuleStructure} to obtain a {@link ComponentTemplateHandle<?>} for
      *
-     * @return the resulting {@link ComponentTemplateHandle}
+     * @return the resulting {@link ComponentTemplateHandle<?>}
      */
-    public static ComponentTemplateHandle makeHandle(Container container, ModuleStructure module) {
+    public static ComponentTemplateHandle<ModuleStructure> makeHandle(Container container, ModuleStructure module) {
         // note: no need to initialize the struct because there are no natural fields
         xRTModuleTemplate template = template(container);
         TypeComposition   clz      = template.ensureClass(container,
                 template.getCanonicalType(), template.typeModuleTemplate(container));
-        return new ComponentTemplateHandle(clz, module);
+        return new ComponentTemplateHandle<>(clz, module);
     }
 
 
