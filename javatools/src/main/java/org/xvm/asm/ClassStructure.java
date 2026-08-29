@@ -27,6 +27,7 @@ import org.xvm.asm.ast.ReturnStmtAST;
 import org.xvm.asm.constants.*;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.TypeConstant.Relation;
+import org.xvm.asm.constants.Nid;
 
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MethodStructure.ConcurrencySafety;
@@ -2863,7 +2864,7 @@ public sealed class ClassStructure
      * @return the [synthetic] MethodStructure for the corresponding default constructor
      */
     public MethodStructure createInitializer(ConstantPool pool, TypeConstant typeStruct,
-                                             Map<Object, FieldInfo> mapFields) {
+                                             Map<Nid, FieldInfo> mapFields) {
         int nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS | STATIC_BIT | SYNTHETIC_BIT;
 
         // create a transient MethodStructure (without an intermediate MultiMethodStructure)
@@ -2881,8 +2882,8 @@ public sealed class ClassStructure
         assert typeStruct.getAccess() == Access.STRUCT;
 
         TypeInfo infoStruct = typeStruct.ensureTypeInfo();
-        for (Map.Entry<Object, FieldInfo> entry : mapFields.entrySet()) {
-            Object       nid      = entry.getKey();
+        for (Map.Entry<Nid, FieldInfo> entry : mapFields.entrySet()) {
+            Nid       nid      = entry.getKey();
             PropertyInfo infoProp = nid instanceof PropertyConstant idProp
                     ? infoStruct.findProperty(idProp)
                     : infoStruct.findPropertyByNid(nid);

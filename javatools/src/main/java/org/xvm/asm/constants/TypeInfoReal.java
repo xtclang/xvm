@@ -81,7 +81,7 @@ public final class TypeInfoReal
             ClassStructure                      struct,
             int                                 cDepth,
             boolean                             fSynthetic,
-            Map<Object, ParamInfo>              mapTypeParams,
+            Map<Nid, ParamInfo>              mapTypeParams,
             Annotation[]                        aannoClass,
             Annotation[]                        aannoMixin,
             TypeConstant                        typeExtends,
@@ -92,8 +92,8 @@ public final class TypeInfoReal
             Map<IdentityConstant, Origin>       listmapDefaultChain,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant, MethodInfo>     mapMethods,
-            Map<Object, PropertyInfo>           mapVirtProps,
-            Map<Object, MethodInfo>             mapVirtMethods,
+            Map<Nid, PropertyInfo>           mapVirtProps,
+            Map<Nid, MethodInfo>             mapVirtMethods,
             Map<String, ChildInfo>              mapChildren,
             Set<TypeConstant>                   setDepends,
             Progress                            progress) {
@@ -139,7 +139,7 @@ public final class TypeInfoReal
         // mapTypeParams has two types of entries:
         //  - actual generic types keyed by the generic type name
         //  - exploded Ref types keyed by the corresponding NestedIdentity
-        f_fHasGenerics = mapTypeParams.keySet().stream().anyMatch(k -> k instanceof String);
+        f_fHasGenerics = mapTypeParams.keySet().stream().anyMatch(k -> k instanceof Nid.ByName);
 
         m_fExplicitAbstract = fSynthetic || !isClass() || struct.getFormat() == Format.ENUM ||
             struct.isExplicitlyAbstract() || containsAnnotation(aannoClass, "Abstract");
@@ -377,7 +377,7 @@ public final class TypeInfoReal
         }
 
         Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
-        Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
+        Map<Nid          , PropertyInfo> mapVirtProps = new HashMap<>();
         for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
             // ask the Property itself to reduce its capabilities based on the new access level
             PropertyConstant id   = entry.getKey();
@@ -392,7 +392,7 @@ public final class TypeInfoReal
         }
 
         Map<MethodConstant, MethodInfo> mapMethods     = new HashMap<>();
-        Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
+        Map<Nid        , MethodInfo> mapVirtMethods = new HashMap<>();
         for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
             MethodConstant id = entry.getKey();
             MethodInfo method = entry.getValue();
@@ -442,7 +442,7 @@ public final class TypeInfoReal
         assert setFromInto != null;
         ConstantPool                        pool         = pool();
         Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
-        Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
+        Map<Nid          , PropertyInfo> mapVirtProps = new HashMap<>();
         for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
             PropertyConstant id   = entry.getKey();
             PropertyInfo     prop = entry.getValue();
@@ -458,7 +458,7 @@ public final class TypeInfoReal
         }
 
         Map<MethodConstant, MethodInfo> mapMethods     = new HashMap<>();
-        Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
+        Map<Nid        , MethodInfo> mapVirtMethods = new HashMap<>();
         for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
             MethodConstant id     = entry.getKey();
             MethodInfo     method = entry.getValue();
@@ -485,8 +485,8 @@ public final class TypeInfoReal
     public TypeInfo asInto(Set<IdentityConstant> setFromInto) {
         ConstantPool                            pool             = pool();
         Map<PropertyConstant, PropertyInfo    > mapProps         = new HashMap<>();
-        Map<Object          , PropertyInfo    > mapVirtProps     = new HashMap<>();
-        Map<Object          , PropertyConstant> mapRetainedProps = new HashMap<>();
+        Map<Nid          , PropertyInfo    > mapVirtProps     = new HashMap<>();
+        Map<Nid          , PropertyConstant> mapRetainedProps = new HashMap<>();
 
         // we need to evaluate each property for inclusion in the "into" result, but only those that
         // are from a class that is in the setFromInto can be included, and if a property is nested,
@@ -506,7 +506,7 @@ public final class TypeInfoReal
 
                     // don't retain any nested property unless their parent is a retained property
                     PropertyInfo prop = entry.getValue();
-                    Object       nid  = id.resolveNestedIdentity(pool, null);
+                    Nid       nid  = id.resolveNestedIdentity(pool, null);
                     if (nDepth > 1) {
                         if (id.getParentConstant() instanceof PropertyConstant idParent) {
                             if (!mapRetainedProps.containsKey(idParent.resolveNestedIdentity(pool, null))) {
@@ -542,7 +542,7 @@ public final class TypeInfoReal
         }
 
         Map<MethodConstant, MethodInfo> mapMethods     = new HashMap<>();
-        Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
+        Map<Nid        , MethodInfo> mapVirtMethods = new HashMap<>();
         for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
             MethodConstant id     = entry.getKey();
             MethodInfo     method = entry.getValue();
@@ -600,7 +600,7 @@ public final class TypeInfoReal
     private TypeInfoReal buildDelegateInfo() {
         ConstantPool                        pool         = pool();
         Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
-        Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
+        Map<Nid          , PropertyInfo> mapVirtProps = new HashMap<>();
         for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
             PropertyConstant id   = entry.getKey();
             PropertyInfo     prop = entry.getValue();
@@ -613,7 +613,7 @@ public final class TypeInfoReal
         }
 
         Map<MethodConstant, MethodInfo> mapMethods     = new HashMap<>();
-        Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
+        Map<Nid        , MethodInfo> mapVirtMethods = new HashMap<>();
         for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
             MethodConstant id     = entry.getKey();
             MethodInfo     method = entry.getValue();
@@ -638,8 +638,8 @@ public final class TypeInfoReal
             ConstantPool        pool,
             TypeConstant        typeReferent,
             GenericTypeResolver resolver) {
-        Map<Object, ParamInfo> mapTypeParams = new HashMap<>();
-        mapTypeParams.put("Referent", new ParamInfo("Referent", typeReferent, pool.typeObject()));
+        Map<Nid, ParamInfo> mapTypeParams = new HashMap<>();
+        mapTypeParams.put(Nid.of("Referent"), new ParamInfo("Referent", typeReferent, pool.typeObject()));
 
         MethodConstant    id        = findMethods("get", 0, TypeInfo.MethodKind.Method).iterator().next();
         SignatureConstant sig       = id.getSignature();
@@ -655,7 +655,7 @@ public final class TypeInfoReal
         Map<MethodConstant, MethodInfo> mapMethods = new HashMap<>(1);
         mapMethods.put(methodNew.getIdentity(), methodNew);
 
-        Map<Object, MethodInfo> mapVirtMethods = new HashMap<>(1);
+        Map<Nid, MethodInfo> mapVirtMethods = new HashMap<>(1);
         mapVirtMethods.put(sigNew, methodNew);
 
         return new TypeInfoReal(
@@ -987,7 +987,7 @@ public final class TypeInfoReal
     }
 
     @Override
-    public Map<Object, ParamInfo> getTypeParams() {
+    public Map<Nid, ParamInfo> getTypeParams() {
         return Collections.unmodifiableMap(f_mapTypeParams);
     }
 
@@ -1076,7 +1076,7 @@ public final class TypeInfoReal
     }
 
     @Override
-    public Map<Object, PropertyInfo> getVirtProperties() {
+    public Map<Nid, PropertyInfo> getVirtProperties() {
         return Collections.unmodifiableMap(f_mapVirtProps);
     }
 
@@ -1299,7 +1299,7 @@ public final class TypeInfoReal
         }
 
         int    cDeep   = id.getNestedDepth();
-        Object nidThis = id.getNestedIdentity();
+        Nid nidThis = id.getNestedIdentity();
         for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
             PropertyConstant idThat = entry.getKey();
             if (idThat.getNestedDepth() == cDeep && nidThis.equals(idThat.getNestedIdentity())) {
@@ -1314,9 +1314,9 @@ public final class TypeInfoReal
     }
 
     @Override
-    public PropertyInfo findPropertyByNid(Object nid) {
-        if (nid instanceof String sName) {
-            return findProperty(sName);
+    public PropertyInfo findPropertyByNid(Nid nid) {
+        if (nid instanceof Nid.ByName byName) {
+            return findProperty(byName.name());
         }
 
         NestedIdentity nidThis = (NestedIdentity) nid;
@@ -1368,7 +1368,7 @@ public final class TypeInfoReal
     }
 
     @Override
-    public Map<Object, MethodInfo> getVirtMethods() {
+    public Map<Nid, MethodInfo> getVirtMethods() {
         return Collections.unmodifiableMap(f_mapVirtMethods);
     }
 
@@ -1588,7 +1588,7 @@ public final class TypeInfoReal
     }
 
     @Override
-    public MethodInfo getMethodByNestedId(Object nid, boolean fRuntime) {
+    public MethodInfo getMethodByNestedId(Nid nid, boolean fRuntime) {
         ensureCaches();
 
         // TODO remove
@@ -1631,7 +1631,7 @@ public final class TypeInfoReal
     }
 
     @Override
-    public MethodBody[] getOptimizedMethodChain(Object nid) {
+    public MethodBody[] getOptimizedMethodChain(Nid nid) {
         MethodInfo info = getMethodByNestedId(nid, true);
         return info == null
                 ? null
@@ -2037,7 +2037,7 @@ public final class TypeInfoReal
             IdentityConstant idContainer,
             String           sName,
             int              cParams) {
-        Object              nid        = idContainer.getNestedIdentity();
+        Nid              nid        = idContainer.getNestedIdentity();
         String              sNid       = nid instanceof SignatureConstant sig ? sig.getValueString() : nid.toString();
         String              sKey       = cacheKey(sNid + '#' + sName, cParams, MethodKind.Any);
         Set<MethodConstant> setMethods = ensureMethodsByNameCache().get(sKey);
@@ -2074,7 +2074,7 @@ public final class TypeInfoReal
     public MethodInfo getNarrowingMethod(MethodInfo methodCapped) {
         assert methodCapped.isCapped();
 
-        Object nidNarrowing = methodCapped.getHead().getNarrowingNestedIdentity();
+        Nid nidNarrowing = methodCapped.getHead().getNarrowingNestedIdentity();
         for (int i = 0; i < 32; i++) {
             methodCapped = getMethodByNestedId(nidNarrowing);
             if (methodCapped == null || !methodCapped.isCapped()) {
@@ -2424,7 +2424,7 @@ public final class TypeInfoReal
     /**
      * The type parameters for this TypeInfo key'ed by a String or Nid.
      */
-    private final Map<Object, ParamInfo> f_mapTypeParams;
+    private final Map<Nid, ParamInfo> f_mapTypeParams;
 
     /**
      * The class annotations.
@@ -2483,7 +2483,7 @@ public final class TypeInfoReal
      * calling {@link PropertyConstant#getNestedIdentity()} or
      * {@link IdentityConstant#resolveNestedIdentity(ConstantPool, GenericTypeResolver)}.
      */
-    private final Map<Object, PropertyInfo> f_mapVirtProps;
+    private final Map<Nid, PropertyInfo> f_mapVirtProps;
 
     /**
      * The properties of the type, indexed by name. This will not include nested properties, such
@@ -2507,7 +2507,7 @@ public final class TypeInfoReal
      * {@link PropertyConstant#getNestedIdentity()} or
      * {@link IdentityConstant#resolveNestedIdentity(ConstantPool, GenericTypeResolver)}.
      */
-    private final Map<Object, MethodInfo> f_mapVirtMethods;
+    private final Map<Nid, MethodInfo> f_mapVirtMethods;
 
     /**
      * The information about child types of this type, keyed by name. In the case of types nested
@@ -2530,7 +2530,7 @@ public final class TypeInfoReal
     private       volatile boolean                m_fCacheReady;
     private       volatile boolean                m_fChildrenChecked;
     private final Map<MethodConstant, MethodInfo> f_cacheById;
-    private final Map<Object, MethodInfo>         f_cacheByNid;
+    private final Map<Nid, MethodInfo>         f_cacheByNid;
 
     private transient volatile TypeInfoReal                                     m_delegates;
     private transient          Set<MethodInfo>                                  m_setAuto;

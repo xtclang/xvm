@@ -34,6 +34,8 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.Nid;
+import org.xvm.asm.constants.SignatureConstant;
 
 import org.xvm.asm.op.Nop;
 
@@ -1793,14 +1795,16 @@ public final class DebugConsole
         Set<String> setSimple    = new HashSet<>();
         Set<String> setColliding = null;
 
-        for (Object enid : clz.getFieldLayout().keySet()) {
+        for (Nid enid : clz.getFieldLayout().keySet()) {
             if (enid instanceof NestedIdentity) {
                 continue;
             }
 
-            String sSimple = enid instanceof PropertyConstant idProp
-                    ? idProp.getName()
-                    : (String) enid;
+            String sSimple = switch (enid) {
+                case PropertyConstant idProp -> idProp.getName();
+                case Nid.ByName byName       -> byName.name();
+                default                      -> enid.toString();
+            };
             if (setColliding != null && setColliding.contains(sSimple)) {
                 continue;
             }
@@ -1814,19 +1818,27 @@ public final class DebugConsole
         }
 
         ListMap<String, FieldInfo> mapLayout = new ListMap<>();
-        for (Map.Entry<Object, FieldInfo> entry : clz.getFieldLayout().entrySet()) {
-            Object    enid  = entry.getKey();
+        for (Map.Entry<Nid, FieldInfo> entry : clz.getFieldLayout().entrySet()) {
+            Nid       enid  = entry.getKey();
             FieldInfo field = entry.getValue();
 
             if (enid instanceof NestedIdentity || field.isSynthetic()) {
                 continue;
             }
 
-            String sName = enid instanceof PropertyConstant idProp
-                    ? setColliding != null && setColliding.contains(idProp.getName())
-                        ? idProp.getPathString()
-                        : idProp.getName()
-                    : (String) enid;
+            // the nid union is sealed, so this covers it exhaustively; the old code cast the
+            // untyped key straight to String and simply assumed the other variants never arrived
+            String sName = switch (enid) {
+                case PropertyConstant idProp ->
+                        setColliding != null && setColliding.contains(idProp.getName())
+                                ? idProp.getPathString()
+                                : idProp.getName();
+                case Nid.ByName byName    -> byName.name();
+                case Nid.ByLambda byLambda -> byLambda.toString();
+                case IdentityConstant id  -> id.getName();
+                case SignatureConstant sig -> sig.getName();
+                case NestedIdentity ignored -> throw new IllegalStateException("filtered above");
+            };
 
             mapLayout.put(sName, field);
         }

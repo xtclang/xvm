@@ -513,20 +513,20 @@ public final class UnionTypeConstant
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
-    protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
+    protected Map<Nid, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
         if (info1 == null || info2 == null) {
             return ListMap.empty();
         }
 
         ConstantPool           pool = getConstantPool();
-        Map<Object, ParamInfo> map1 = info1.getTypeParams();
-        Map<Object, ParamInfo> map2 = info2.getTypeParams();
-        Map<Object, ParamInfo> map  = new HashMap<>(map1);
+        Map<Nid, ParamInfo> map1 = info1.getTypeParams();
+        Map<Nid, ParamInfo> map2 = info2.getTypeParams();
+        Map<Nid, ParamInfo> map  = new HashMap<>(map1);
 
-        for (Iterator<Map.Entry<Object, ParamInfo>> iter = map.entrySet().iterator(); iter.hasNext();) {
-            Map.Entry<Object, ParamInfo> entry = iter.next();
+        for (Iterator<Map.Entry<Nid, ParamInfo>> iter = map.entrySet().iterator(); iter.hasNext();) {
+            Map.Entry<Nid, ParamInfo> entry = iter.next();
 
-            Object nid = entry.getKey();
+            Nid nid = entry.getKey();
 
             ParamInfo param2 = map2.get(nid);
             if (param2 != null) {

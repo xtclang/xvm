@@ -119,7 +119,7 @@ public class MethodInfo
      *
      * @return a capped version of this MethodInfo
      */
-    MethodInfo capWith(MethodConstant idThis, Object nidThat, MethodInfo that) {
+    MethodInfo capWith(MethodConstant idThis, Nid nidThat, MethodInfo that) {
         // both method chains must be virtual, and neither can already be capped
         assert this.isOverridable() || this.containsVirtualConstructor();
         assert that.isOverridable() || that.isPotentialPropertyOverlay()
@@ -492,7 +492,7 @@ public class MethodInfo
         assert isCapped();
 
         MethodBody bodyCap    = getHead();
-        Object     nidTarget  = idProp.appendNestedIdentity(pool, bodyCap.getNarrowingNestedIdentity()).
+        Nid     nidTarget  = idProp.appendNestedIdentity(pool, bodyCap.getNarrowingNestedIdentity()).
                                     resolveNestedIdentity(pool, null);
         MethodBody[] chainNew = copyOf(getChain());
         chainNew[0] = new MethodBody(bodyCap.getIdentity(), bodyCap.getSignature(),
@@ -825,10 +825,10 @@ public class MethodInfo
      *
      * @return the id of the narrowing method or null if it cannot be found
      */
-    public Object getNarrowingMethod(Map<Object, MethodInfo> mapVirtMethods) {
+    public Nid getNarrowingMethod(Map<Nid, MethodInfo> mapVirtMethods) {
         assert isCapped();
 
-        Object nidNarrowing = getHead().getNarrowingNestedIdentity();
+        Nid nidNarrowing = getHead().getNarrowingNestedIdentity();
         for (int i = 0; i < 32; i++) {
             MethodInfo methodCapped = mapVirtMethods.get(nidNarrowing);
             if (methodCapped == null || !methodCapped.isCapped()) {
@@ -1119,7 +1119,7 @@ public class MethodInfo
     public void populateCache(
             MethodConstant                  idMethod,
             Map<MethodConstant, MethodInfo> mapMethods,
-            Map<Object, MethodInfo>         mapVirtMethods) {
+            Map<Nid, MethodInfo>         mapVirtMethods) {
         MethodConstant id = getHead().getIdentity();
         if (id.getNestedDepth() == idMethod.getNestedDepth()) {
             mapMethods.putIfAbsent(id, this);

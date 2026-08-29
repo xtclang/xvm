@@ -416,9 +416,9 @@ public final class MethodConstant
     }
 
     @Override
-    public Object getPathElement() {
+    public Nid getPathElement() {
         return isLambda()
-                ? Integer.valueOf(m_iLambda)
+                ? Nid.of(m_iLambda)
                 : m_constSig;
     }
 
@@ -488,7 +488,7 @@ public final class MethodConstant
     }
 
     @Override
-    public Object getNestedIdentity() {
+    public Nid getNestedIdentity() {
         // method can be identified with only a signature, assuming it is not recursively nested
         return getNamespace().isNested()
                 ? getCanonicalNestedIdentity()
@@ -496,7 +496,7 @@ public final class MethodConstant
     }
 
     @Override
-    public Object resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver) {
+    public Nid resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver) {
         MethodStructure method = getComponent();
         if (resolver != null && method != null && method.isFunction()) {
             // avoid calling "resolveGenericTypes" for functions

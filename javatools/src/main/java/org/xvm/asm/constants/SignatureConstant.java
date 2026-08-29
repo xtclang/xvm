@@ -76,7 +76,8 @@ import static org.xvm.util.Handy.copyOf;
  * i.e. it is a transient use case.
  */
 public final class SignatureConstant
-        extends PseudoConstant {
+        extends PseudoConstant
+        implements Nid {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

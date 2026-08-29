@@ -467,21 +467,21 @@ public sealed class PropertyConstant
     }
 
     @Override
-    public Object getNestedIdentity() {
+    public Nid getNestedIdentity() {
         // property can be identified with only a name, assuming it is not recursively nested
         return getNamespace().isNested()
                 ? getCanonicalNestedIdentity()
-                : getName();
+                : Nid.of(getName());
     }
 
     @Override
-    public Object resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver) {
+    public Nid resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver) {
         // property can be identified with only a name, assuming it is not recursively nested
         return getNamespace().isNested()
                 ? resolver == null
                     ? getCanonicalNestedIdentity()
                     : new NestedIdentity(pool, resolver)
-                : getName();
+                : Nid.of(getName());
     }
 
     @Override

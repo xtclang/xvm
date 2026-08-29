@@ -21,7 +21,7 @@ public class ParamInfo {
      *                        the actual type to default to the constraint type
      */
     public ParamInfo(String sName, TypeConstant typeConstraint, TypeConstant typeActual) {
-        this(sName, sName, typeConstraint, typeActual);
+        this(Nid.of(sName), sName, typeConstraint, typeActual);
     }
 
     /**
@@ -33,7 +33,7 @@ public class ParamInfo {
      *                        type parameter does not have a specified actual type, which causes
      *                        the actual type to default to the constraint type
      */
-    public ParamInfo(Object nid, String sName, TypeConstant typeConstraint, TypeConstant typeActual) {
+    public ParamInfo(Nid nid, String sName, TypeConstant typeConstraint, TypeConstant typeActual) {
         assert nid != null;
         assert sName != null;
         assert typeConstraint != null;
@@ -72,7 +72,7 @@ public class ParamInfo {
         return f_typeActual != null;
     }
 
-    public Object getNestedIdentity() {
+    public Nid getNestedIdentity() {
         return f_nid;
     }
 
@@ -131,7 +131,7 @@ public class ParamInfo {
     /**
      * The nested identity of the type parameter's property.
      */
-    private final Object f_nid;
+    private final Nid f_nid;
 
     /**
      * The name of the type parameter.

@@ -34,7 +34,7 @@ import static org.xvm.javajit.TypeSystem.escapeJitClassName;
  */
 public abstract sealed class IdentityConstant
         extends Constant
-        implements DefiningConstant
+        implements DefiningConstant, Nid
         permits DecoratedClassConstant, MethodConstant, ModuleConstant, NamedConstant,
                 PureIdentityConstant {
     // ----- constructors --------------------------------------------------------------------------
@@ -138,8 +138,8 @@ public abstract sealed class IdentityConstant
      * @return an Object that represents the path element for this IdentityConstant, and which
      *         implements {@link Object#hashCode()} and {@link Object#equals(Object)} accordingly
      */
-    public Object getPathElement() {
-        return getName();
+    public Nid getPathElement() {
+        return Nid.of(getName());
     }
 
     /**
@@ -275,7 +275,7 @@ public abstract sealed class IdentityConstant
      * @return an object that identifies this constant relative to the class within which it nests,
      *         or null if this constant refers to a class structure
      */
-    public Object getNestedIdentity() {
+    public Nid getNestedIdentity() {
         return isNested()
                 ? getCanonicalNestedIdentity()
                 : null;
@@ -290,7 +290,7 @@ public abstract sealed class IdentityConstant
      *
      * @return an identifying object or null if this constant refers to a class structure
      */
-    public Object resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver) {
+    public Nid resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver) {
         return isNested()
                 ? resolver == null
                     ? getCanonicalNestedIdentity()
@@ -316,7 +316,7 @@ public abstract sealed class IdentityConstant
      *
      * @return the depth of the nested identity, in the same measure as {@link #getNestedDepth()}
      */
-    public int getNestedDepth(Object oid) {
+    public int getNestedDepth(Nid oid) {
         return oid instanceof NestedIdentity nid
                 ? nid.getIdentityConstant().getNestedDepth()
                 : oid == null ? 0 : 1;
@@ -334,7 +334,7 @@ public abstract sealed class IdentityConstant
      *
      * @return true if the two nested identities refer to members within the same container
      */
-    public static boolean isNestedSibling(Object oid1, Object oid2) {
+    public static boolean isNestedSibling(Nid oid1, Nid oid2) {
         if (oid1 == null || oid2 == null) {
             return oid1 == oid2;
         }
@@ -384,13 +384,20 @@ public abstract sealed class IdentityConstant
      *
      * @return a resulting nested identity
      */
-    public IdentityConstant appendNestedIdentity(ConstantPool pool, Object oid) {
+    public IdentityConstant appendNestedIdentity(ConstantPool pool, Nid oid) {
+        // Nid is sealed, so this switch is exhaustive and javac verifies it. The two throwing arms
+        // are not a catch-all default: they are the two variants this operation genuinely has no
+        // meaning for, named explicitly so that adding a sixth variant fails to compile here rather
+        // than falling into a default nobody revisits.
         return switch (oid) {
-            case String s              -> pool.ensurePropertyConstant(this, s);
-            case SignatureConstant sig -> pool.ensureMethodConstant(this, sig);
-            case NestedIdentity    nid -> nid.getIdentityConstant().ensureNestedIdentity(pool, this);
-            case null                  -> this;
-            default                    -> throw new IllegalArgumentException("illegal nid: " + oid);
+            case null                   -> this;
+            case Nid.ByName byName      -> pool.ensurePropertyConstant(this, byName.name());
+            case SignatureConstant sig  -> pool.ensureMethodConstant(this, sig);
+            case NestedIdentity nid     -> nid.getIdentityConstant().ensureNestedIdentity(pool, this);
+            case Nid.ByLambda byLambda  ->
+                    throw new IllegalArgumentException("cannot append a lambda nid: " + byLambda);
+            case IdentityConstant id    ->
+                    throw new IllegalArgumentException("cannot append an identity nid: " + id);
         };
     }
 
@@ -402,8 +409,8 @@ public abstract sealed class IdentityConstant
      * A class used as a nested identity for members not directly nested under an Ecstasy class (or
      * in the case of methods, methods whose multi-method parent is not directly nested).
      */
-    public class NestedIdentity
-            implements Comparable<NestedIdentity>{
+    public final class NestedIdentity
+            implements Comparable<NestedIdentity>, Nid {
         public NestedIdentity() {
             this(null, null);
         }

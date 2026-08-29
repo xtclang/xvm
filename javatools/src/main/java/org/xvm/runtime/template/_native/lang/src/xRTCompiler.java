@@ -21,6 +21,7 @@ import org.xvm.asm.XvmStructure;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.Nid;
 
 import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.InstantRepository;
@@ -185,7 +186,7 @@ public class xRTCompiler
 
     private CallChain computeGetModuleChain(Frame frame, ObjectHandle hRepo) {
         MethodConstant idGetModule = f_idGetModule.get(this);
-        Object         nid         = idGetModule.resolveNestedIdentity(
+        Nid         nid         = idGetModule.resolveNestedIdentity(
                         frame.poolContext(), frame.getGenericsResolver(true));
 
         TypeComposition clazz = hRepo.getComposition();

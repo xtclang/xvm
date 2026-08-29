@@ -237,7 +237,7 @@ public abstract sealed class TypeInfo
     /**
      * @return the complete set of type parameters declared within the type
      */
-    public abstract Map<Object, ParamInfo> getTypeParams();
+    public abstract Map<Nid, ParamInfo> getTypeParams();
 
     /**
      * @return true iff this type has any formal type parameters
@@ -307,7 +307,7 @@ public abstract sealed class TypeInfo
     /**
      * @return virtual properties keyed by nested id
      */
-    public abstract Map<Object, PropertyInfo> getVirtProperties();
+    public abstract Map<Nid, PropertyInfo> getVirtProperties();
 
     /**
      * @return all the properties for this type that can be identified by a simple name, indexed
@@ -389,7 +389,7 @@ public abstract sealed class TypeInfo
      *
      * @return the PropertyInfo for the specified constant, or null
      */
-    public abstract PropertyInfo findPropertyByNid(Object nid);
+    public abstract PropertyInfo findPropertyByNid(Nid nid);
 
     /**
      * @return all non-scoped methods for this type
@@ -404,7 +404,7 @@ public abstract sealed class TypeInfo
     /**
      * @return virtual methods keyed by nested id
      */
-    public abstract Map<Object, MethodInfo> getVirtMethods();
+    public abstract Map<Nid, MethodInfo> getVirtMethods();
 
     /**
      * @return all the methods for this type that can be identified by just a signature, indexed
@@ -487,7 +487,7 @@ public abstract sealed class TypeInfo
      * @return the specified MethodInfo, or null if no MethodInfo could be found by the provided
      *         nested identity
      */
-    public MethodInfo getMethodByNestedId(Object nid) {
+    public MethodInfo getMethodByNestedId(Nid nid) {
         return getMethodByNestedId(nid, false);
     }
 
@@ -501,7 +501,7 @@ public abstract sealed class TypeInfo
      * @return the specified MethodInfo, or null if no MethodInfo could be found by the provided
      *         nested identity
      */
-    public abstract MethodInfo getMethodByNestedId(Object nid, boolean fRuntime);
+    public abstract MethodInfo getMethodByNestedId(Nid nid, boolean fRuntime);
 
     /**
      * Obtain the method chain for the specified method.
@@ -519,7 +519,7 @@ public abstract sealed class TypeInfo
      *
      * @return the method chain iff the method exists; otherwise null
      */
-    public abstract MethodBody[] getOptimizedMethodChain(Object nid);
+    public abstract MethodBody[] getOptimizedMethodChain(Nid nid);
 
     /**
      * Obtain the method chain for the property getter for the specified property id.

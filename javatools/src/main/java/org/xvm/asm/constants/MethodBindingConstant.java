@@ -98,7 +98,7 @@ public final class MethodBindingConstant
             if (method != null && method.getAccess() == Access.PRIVATE) {
                 chain = new CallChain(method);
             } else {
-                Object nid = idMethod.resolveNestedIdentity(
+                Nid nid = idMethod.resolveNestedIdentity(
                                 frame.poolContext(), frame.getGenericsResolver(true));
                 chain = hTarget.getComposition().getMethodCallChain(nid);
             }

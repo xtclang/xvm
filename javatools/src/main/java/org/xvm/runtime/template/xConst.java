@@ -21,6 +21,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.ByteConstant;
 import org.xvm.asm.constants.UnionTypeConstant;
+import org.xvm.asm.constants.Nid;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassComposition.FieldInfo;
@@ -501,7 +502,7 @@ public class xConst
         private final GenericHandle    hValue2;
         private final ClassComposition clzBase;
         private final int              iReturn;
-        private final Iterator<Map.Entry<Object, FieldInfo>> iterFields;
+        private final Iterator<Map.Entry<Nid, FieldInfo>> iterFields;
 
         public Equals(GenericHandle hValue1, GenericHandle hValue2,
                       ClassComposition clzBase, int iReturn) {
@@ -528,9 +529,9 @@ public class xConst
             TypeComposition clz2 = hValue2.getComposition();
 
             while (iterFields.hasNext()) {
-                Map.Entry<Object, FieldInfo> entry = iterFields.next();
+                Map.Entry<Nid, FieldInfo> entry = iterFields.next();
 
-                Object    enid  = entry.getKey();
+                Nid    enid  = entry.getKey();
                 FieldInfo field = entry.getValue();
 
                 if (enid instanceof NestedIdentity || !field.isRegular()) {
@@ -589,7 +590,7 @@ public class xConst
         private final GenericHandle    hValue2;
         private final ClassComposition clzBase;
         private final int              iReturn;
-        private final Iterator<Map.Entry<Object, FieldInfo>> iterFields;
+        private final Iterator<Map.Entry<Nid, FieldInfo>> iterFields;
 
         public Compare(GenericHandle hValue1, GenericHandle hValue2,
                        ClassComposition clzBase, int iReturn) {
@@ -616,9 +617,9 @@ public class xConst
             TypeComposition clz2 = hValue2.getComposition();
 
             while (iterFields.hasNext()) {
-                Map.Entry<Object, FieldInfo> entry = iterFields.next();
+                Map.Entry<Nid, FieldInfo> entry = iterFields.next();
 
-                Object    enid  = entry.getKey();
+                Nid    enid  = entry.getKey();
                 FieldInfo field = entry.getValue();
 
                 if (enid instanceof NestedIdentity || !field.isRegular()) {
@@ -689,7 +690,7 @@ public class xConst
         private final SignatureConstant f_sigHash;
         private final int              iReturn;
         private       long             lResult;
-        private final Iterator<Map.Entry<Object, FieldInfo>> iterFields;
+        private final Iterator<Map.Entry<Nid, FieldInfo>> iterFields;
 
         public HashCode(GenericHandle hConst, ClassComposition clzBase, boolean fCache,
                         SignatureConstant sigHash, int iReturn) {
@@ -719,9 +720,9 @@ public class xConst
             TypeComposition clz       = hConst.getComposition();
 
             while (iterFields.hasNext()) {
-                Map.Entry<Object, FieldInfo> entry = iterFields.next();
+                Map.Entry<Nid, FieldInfo> entry = iterFields.next();
 
-                Object    enid  = entry.getKey();
+                Nid    enid  = entry.getKey();
                 FieldInfo field = entry.getValue();
 
                 if (enid instanceof NestedIdentity || !field.isRegular()) {

@@ -2228,7 +2228,7 @@ public abstract sealed class TypeConstant
 
         // we're going to build a map from name to param info, including whatever parameters are
         // specified by this class/interface, but also each of the contributing classes/interfaces
-        Map<Object, ParamInfo> mapTypeParams = collectTypeParameters(constId, struct, errs);
+        Map<Nid, ParamInfo> mapTypeParams = collectTypeParameters(constId, struct, errs);
 
         // 1) build the "potential call chains" (basically, the order in which we would search for
         //    methods to call in a virtual manner)
@@ -2243,8 +2243,8 @@ public abstract sealed class TypeConstant
         // properties and methods, and collecting all of them
         Map<PropertyConstant , PropertyInfo> mapProps       = new HashMap<>();
         Map<MethodConstant   , MethodInfo  > mapMethods     = new HashMap<>();
-        Map<Object           , PropertyInfo> mapVirtProps   = new HashMap<>(); // keyed by nested id
-        Map<Object           , MethodInfo  > mapVirtMethods = new HashMap<>(); // keyed by nested id
+        Map<Nid           , PropertyInfo> mapVirtProps   = new HashMap<>(); // keyed by nested id
+        Map<Nid           , MethodInfo  > mapVirtMethods = new HashMap<>(); // keyed by nested id
         ListMap<String       , ChildInfo   > mapChildren    = new ListMap<>(); // keyed by name
         // note that the mapChildren keys may be '.' delimited in the case of a "prop.class"
 
@@ -2576,7 +2576,7 @@ public abstract sealed class TypeConstant
         // start by copying all the fields and functions from the private type of this
         Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
         Map<MethodConstant  , MethodInfo  > mapMethods   = new HashMap<>();
-        Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
+        Map<Nid          , PropertyInfo> mapVirtProps = new HashMap<>();
 
         ConstantPool pool    = getConstantPool();
         int          cInvals = pool.getInvalidationCount();
@@ -2675,19 +2675,19 @@ public abstract sealed class TypeConstant
      *
      * @return the map of type parameters
      */
-    private Map<Object, ParamInfo> collectTypeParameters(
+    private Map<Nid, ParamInfo> collectTypeParameters(
             IdentityConstant constId,
             ClassStructure   struct,
             ErrorListener    errs) {
         ConstantPool           pool          = getConstantPool();
-        Map<Object, ParamInfo> mapTypeParams = new HashMap<>();
+        Map<Nid, ParamInfo> mapTypeParams = new HashMap<>();
 
         if (isTuple()) {
             // warning: turtles
             TypeConstant typeConstraint = pool.ensureTypeSequenceTypeConstant();
 
             ParamInfo param = new ParamInfo("ElementTypes", typeConstraint, null);
-            mapTypeParams.put(param.getName(), param);
+            mapTypeParams.put(Nid.of(param.getName()), param);
         } else {
             // obtain the type parameters encoded in this type constant
             TypeConstant[] atypeParams = getParamTypesArray().unsafeArray();
@@ -2735,12 +2735,12 @@ public abstract sealed class TypeConstant
                     }
                 }
 
-                if (mapTypeParams.containsKey(sName)) {
+                if (mapTypeParams.containsKey(Nid.of(sName))) {
                     log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_COLLISION,
                             struct.getIdentityConstant().getValueString(),
                             sName);
                 } else {
-                    mapTypeParams.put(sName, new ParamInfo(sName, typeConstraint, typeActual));
+                    mapTypeParams.put(Nid.of(sName), new ParamInfo(sName, typeConstraint, typeActual));
                 }
             }
         }
@@ -3407,7 +3407,7 @@ public abstract sealed class TypeConstant
     private boolean createCallChains(
             IdentityConstant                  constId,
             ClassStructure                    struct,
-            Map<Object, ParamInfo>            mapTypeParams,
+            Map<Nid, ParamInfo>            mapTypeParams,
             List<Contribution>                listProcess,
             Set<TypeConstant>                 setDepends,
             ListMap<IdentityConstant, Origin> listmapClassChain,
@@ -3558,14 +3558,14 @@ public abstract sealed class TypeConstant
     private boolean collectMemberInfo(
             IdentityConstant                    constId,
             ClassStructure                      struct,
-            Map<Object, ParamInfo>              mapTypeParams,
+            Map<Nid, ParamInfo>              mapTypeParams,
             List<Contribution>                  listProcess,
             Set<TypeConstant>                   setDepends,
             Set<IdentityConstant>               setFromInto,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant, MethodInfo>     mapMethods,
-            Map<Object, PropertyInfo>           mapVirtProps,
-            Map<Object, MethodInfo>             mapVirtMethods,
+            Map<Nid, PropertyInfo>           mapVirtProps,
+            Map<Nid, MethodInfo>             mapVirtMethods,
             Map<String, ChildInfo>              mapChildren,
             ErrorListener                       errs) {
         ConstantPool pool        = getConstantPool();
@@ -3711,7 +3711,7 @@ public abstract sealed class TypeConstant
                         entry.setValue(infoNew);
                         if (infoNew.isVirtual()) {
                             assert infoOld.isVirtual();
-                            Object       nid       = entry.getKey().resolveNestedIdentity(pool, this);
+                            Nid       nid       = entry.getKey().resolveNestedIdentity(pool, this);
                             PropertyInfo infoCheck = mapVirtProps.put(nid, infoNew);
                             assert infoOld == infoCheck;
                         }
@@ -3758,7 +3758,7 @@ public abstract sealed class TypeConstant
                         entry.setValue(infoNew);
                         if (infoNew.isVirtual()) {
                             assert infoOld.isVirtual();
-                            Object     nid       = entry.getKey().getNestedIdentity();
+                            Nid     nid       = entry.getKey().getNestedIdentity();
                             MethodInfo infoCheck = mapVirtMethods.put(nid, infoNew);
                             assert infoOld == infoCheck;
                         }
@@ -3794,9 +3794,9 @@ public abstract sealed class TypeConstant
             PropertyConstant                    idProp,
             PropertyInfo                        info,
             Map<PropertyConstant, PropertyInfo> mapProps,
-            Map<Object, PropertyInfo>           mapVirtProps,
+            Map<Nid, PropertyInfo>           mapVirtProps,
             Map<MethodConstant, MethodInfo>     mapMethods,
-            Map<Object, MethodInfo>             mapVirtMethods,
+            Map<Nid, MethodInfo>             mapVirtMethods,
             ErrorListener                       errs) {
         boolean fComplete = true;
         boolean fExploded = info.isExploded();
@@ -3954,9 +3954,9 @@ public abstract sealed class TypeConstant
             IdentityConstant                    constId,
             PropertyConstant                    idProp,
             Map<PropertyConstant, PropertyInfo> mapProps,
-            Map<Object, PropertyInfo>           mapVirtProps,
+            Map<Nid, PropertyInfo>           mapVirtProps,
             Map<MethodConstant, MethodInfo>     mapMethods,
-            Map<Object, MethodInfo>             mapVirtMethods,
+            Map<Nid, MethodInfo>             mapVirtMethods,
             TypeConstant                        typeContrib,
             TypeInfo                            infoContrib,
             ContribSource                       contribSource,
@@ -3968,7 +3968,7 @@ public abstract sealed class TypeConstant
         if (!mapNotNestedContribProps.isEmpty()) {
             Map<PropertyConstant, PropertyInfo> mapContribProps = new HashMap<>(mapNotNestedContribProps.size());
             for (Entry<PropertyConstant, PropertyInfo> entry : mapNotNestedContribProps.entrySet()) {
-                Object           nidContrib = entry.getKey().resolveNestedIdentity(pool, null);
+                Nid           nidContrib = entry.getKey().resolveNestedIdentity(pool, null);
                 PropertyConstant idContrib  = (PropertyConstant) idProp.appendNestedIdentity(pool, nidContrib);
                 mapContribProps.put(idContrib, entry.getValue());
             }
@@ -3980,7 +3980,7 @@ public abstract sealed class TypeConstant
         if (!mapNotNestedContribMethods.isEmpty()) {
             Map<MethodConstant, MethodInfo> mapContribMethods = new HashMap<>(mapNotNestedContribMethods.size());
             for (Entry<MethodConstant, MethodInfo> entry : mapNotNestedContribMethods.entrySet()) {
-                Object         nidContrib = entry.getKey().resolveNestedIdentity(pool, null);
+                Nid         nidContrib = entry.getKey().resolveNestedIdentity(pool, null);
                 MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(pool, nidContrib);
                 MethodInfo     infoMethod = entry.getValue();
                 if (infoMethod.isCapped()) {
@@ -4005,12 +4005,12 @@ public abstract sealed class TypeConstant
      * @param errs              the error list to log any errors to
      */
     protected void layerOnTypeParams(
-            Map<Object, ParamInfo> mapTypeParams,
+            Map<Nid, ParamInfo> mapTypeParams,
             TypeConstant           typeContrib,
-            Map<Object, ParamInfo> mapContribParams,
+            Map<Nid, ParamInfo> mapContribParams,
             ErrorListener          errs) {
         for (ParamInfo paramContrib : mapContribParams.values()) {
-            Object    nid       = paramContrib.getNestedIdentity();
+            Nid    nid       = paramContrib.getNestedIdentity();
             ParamInfo paramCurr = mapTypeParams.get(nid);
             if (paramCurr == null) {
                 mapTypeParams.put(nid, paramContrib);
@@ -4071,7 +4071,7 @@ public abstract sealed class TypeConstant
             ContribSource                       contribSource,
             PropertyConstant                    idDelegate,
             Map<PropertyConstant, PropertyInfo> mapProps,
-            Map<Object, PropertyInfo>           mapVirtProps,
+            Map<Nid, PropertyInfo>           mapVirtProps,
             TypeConstant                        typeContrib,
             Map<PropertyConstant, PropertyInfo> mapContribProps,
             ErrorListener                       errs) {
@@ -4101,13 +4101,13 @@ public abstract sealed class TypeConstant
             ContribSource                       contribSource,
             PropertyConstant                    idDelegate,
             Map<PropertyConstant, PropertyInfo> mapProps,
-            Map<Object, PropertyInfo>           mapVirtProps,
+            Map<Nid, PropertyInfo>           mapVirtProps,
             TypeConstant                        typeContrib,
             PropertyConstant                    idContrib,
             PropertyInfo                        propContrib,
             ErrorListener                       errs) {
         ConstantPool     pool       = getConstantPool();
-        Object           nidContrib = idContrib.resolveNestedIdentity(pool, this);
+        Nid           nidContrib = idContrib.resolveNestedIdentity(pool, this);
         PropertyConstant idResult   = (PropertyConstant) constId.appendNestedIdentity(pool, nidContrib);
 
         // the property is not virtual if it is a constant, if it is private/private, or if
@@ -4180,7 +4180,7 @@ public abstract sealed class TypeConstant
             ContribSource                   contribSource,
             PropertyConstant                idDelegate,
             Map<MethodConstant, MethodInfo> mapMethods,
-            Map<Object, MethodInfo>         mapVirtMethods,
+            Map<Nid, MethodInfo>         mapVirtMethods,
             TypeConstant                    typeContrib,
             Map<MethodConstant, MethodInfo> mapContribMethods,
             ErrorListener                   errs) {
@@ -4222,8 +4222,8 @@ public abstract sealed class TypeConstant
         // signatures are recorded in a separate set, so that it is possible to determine if they
         // should be capped (and to identify any errors).
         ConstantPool             pool            = getConstantPool();
-        Map<Object, MethodInfo>  mapVirtMods     = new HashMap<>();
-        Map<Object, Set<Object>> mapNarrowedNids = null;
+        Map<Nid, MethodInfo>  mapVirtMods     = new HashMap<>();
+        Map<Nid, Set<Nid>> mapNarrowedNids = null;
         boolean                  fSelf           = contribSource == ContribSource.Self;
         boolean                  fMixingIn       = contribSource == ContribSource.Annotation ||
                                                    contribSource == ContribSource.Mixin ||
@@ -4250,7 +4250,7 @@ public abstract sealed class TypeConstant
             // however, the processing for property accessors is the same as for virtual methods
             if (!methodContrib.isVirtual() && !methodContrib.isPotentialPropertyOverlay()) {
                 boolean fKeep      = true;
-                Object  nidContrib = idContrib.resolveNestedIdentity(pool, this);
+                Nid  nidContrib = idContrib.resolveNestedIdentity(pool, this);
                 if (methodContrib.isCtorOrValidator()) {
                     // not top-level or annotation constructors are not part of this type
                     // constructor call chains; however the annotation "validators" are
@@ -4382,8 +4382,8 @@ public abstract sealed class TypeConstant
 
             // look for a method of the same signature (using its nested identity); only
             // virtual methods are registered using their nested identities
-            Object       nidContrib  = idContrib.getNestedIdentity();
-            List<Object> listMatches = collectPotentialSuperMethods(
+            Nid       nidContrib  = idContrib.getNestedIdentity();
+            List<Nid> listMatches = collectPotentialSuperMethods(
                     methodContrib, nidContrib, mapVirtMethods);
             if (contribSource.OnTop && listMatches.isEmpty() && idContrib.getNestedDepth() > 2) {
                 // this is a special carve-out for layering conditional mixins and annotations "on
@@ -4411,7 +4411,7 @@ public abstract sealed class TypeConstant
                 // type" (which will be common)
                 assert bodyContribTail.isOverride() ^ bodyContribTail.isInto(); // never both!
 
-                Object     nidBase    = null;
+                Nid     nidBase    = null;
                 MethodInfo methodBase = null;
                 if (listMatches.isEmpty()) {
                     if (bodyContribTail.isNative() || bodyContribTail.isInto() && !fMixingIn) {
@@ -4468,8 +4468,8 @@ public abstract sealed class TypeConstant
 
                     // now we need find a method that would be the unambiguously best choice;
                     // collect the nids into a lookup map (sig->nid)
-                    Map<SignatureConstant, Object> mapNids  = new HashMap<>();
-                    for (Object nid : listMatches) {
+                    Map<SignatureConstant, Nid> mapNids  = new HashMap<>();
+                    for (Nid nid : listMatches) {
                         MethodInfo info = mapVirtMethods.get(nid);
                         if (!info.isCapped()) {
                             mapNids.put(info.getSignature(), nid);
@@ -4501,8 +4501,8 @@ public abstract sealed class TypeConstant
 
                     // there are multiple non-ambiguous "super" methods
 // TODO CP review - should we cap some? ignore some? need to see how we get here!!!
-                    List<Object> listCoveredNids = null;
-                    for (Object nid : listMatches) {
+                    List<Nid> listCoveredNids = null;
+                    for (Nid nid : listMatches) {
                         MethodInfo method = mapVirtMethods.get(nid);
                         if (!method.isCapped()) {
                             // we have a method on the super that is covered by this method;
@@ -4517,7 +4517,7 @@ public abstract sealed class TypeConstant
                     }
 
                     if (listCoveredNids != null) {
-                        for (Object nid : listCoveredNids) {
+                        for (Nid nid : listCoveredNids) {
 // TODO CP review!!!
                             if (!nid.equals(nidContrib)) {
                                 MethodInfo     method   = mapVirtMethods.get(nid);
@@ -4550,7 +4550,7 @@ public abstract sealed class TypeConstant
                 if (fSelf || contribSource.OnTop && !methodContrib.isCapped() && !bodyContrib.isOverride()
                         && bodyContrib.isInto()) {
                     // report "override required" if necessary
-                    for (Object nid : listMatches) {
+                    for (Nid nid : listMatches) {
                         MethodInfo methodMatch = mapVirtMethods.get(nid);
                         if (methodMatch == null) {
                             continue;
@@ -4588,9 +4588,9 @@ public abstract sealed class TypeConstant
                 // find the best base method to layer on; use a capped base method only if nothing
                 // else matches
                 MethodInfo methodBase = mapVirtMethods.get(nidContrib);
-                Object     nidBase    = nidContrib;
+                Nid     nidBase    = nidContrib;
                 if (methodBase == null) {
-                    for (Object nidMatch : listMatches) {
+                    for (Nid nidMatch : listMatches) {
                         MethodInfo methodMatch = mapVirtMethods.get(nidMatch);
                         if (methodMatch == null || nidMatch.equals(nidContrib)
                                 || methodMatch.equals(methodBase)) {
@@ -4659,8 +4659,8 @@ public abstract sealed class TypeConstant
             // for each remaining nid that was narrowed, if it was narrowed by exactly one
             // method, then cap the nid by redirecting to the narrowed method, otherwise it is
             // an error
-            for (Entry<Object, Set<Object>> entry : mapNarrowedNids.entrySet()) {
-                Object nidNarrowed  = entry.getKey();
+            for (Entry<Nid, Set<Nid>> entry : mapNarrowedNids.entrySet()) {
+                Nid nidNarrowed  = entry.getKey();
                 if (mapVirtMods.containsKey(nidNarrowed)) {
                     // we ignore every narrowed method signature that did *not* receive a
                     // contribution of its own (i.e. same method signature), because any that did
@@ -4668,10 +4668,10 @@ public abstract sealed class TypeConstant
                     continue;
                 }
 
-                Set<Object> setNarrowing = entry.getValue();
+                Set<Nid> setNarrowing = entry.getValue();
                 if (setNarrowing.size() == 1) {
                     // cap the method
-                    Object     nidNarrowing  = setNarrowing.iterator().next();
+                    Nid     nidNarrowing  = setNarrowing.iterator().next();
                     MethodInfo infoNarrowing = mapVirtMods.get(nidNarrowing);
                     MethodInfo infoNarrowed  = mapVirtMethods.get(nidNarrowed);
                     assert !nidNarrowing.equals(nidNarrowed);
@@ -4684,7 +4684,7 @@ public abstract sealed class TypeConstant
                                 infoNarrowing.getIdentity().getValueString());
                     }
                 } else {
-                    for (Object nidNarrowing : setNarrowing) {
+                    for (Nid nidNarrowing : setNarrowing) {
                         log(errs, Severity.ERROR, VE_METHOD_NARROWING_AMBIGUOUS,
                                 constId.getValueString(),
                                 mapVirtMethods.get(nidNarrowed).getIdentity().getValueString(),
@@ -4697,8 +4697,8 @@ public abstract sealed class TypeConstant
         // the method is stored both by its absolute (fully qualified) ID and its nested
         // ID, which is useful for example when trying to find it when building the actual
         // call chains
-        for (Entry<Object, MethodInfo> entry : mapVirtMods.entrySet()) {
-            Object         nid  = entry.getKey();
+        for (Entry<Nid, MethodInfo> entry : mapVirtMods.entrySet()) {
+            Nid         nid  = entry.getKey();
             MethodInfo     info = entry.getValue();
             MethodConstant id   = (MethodConstant) constId.appendNestedIdentity(pool, nid);
             mapMethods.put(id, info);
@@ -4709,13 +4709,13 @@ public abstract sealed class TypeConstant
     /**
      * Helper method to add a narrowing nid.
      */
-    private Map<Object, Set<Object>> addNarrowingNid(Map<Object, Set<Object>> mapNarrowedNids,
-                                                     Object nidBase, Object nidContrib) {
+    private Map<Nid, Set<Nid>> addNarrowingNid(Map<Nid, Set<Nid>> mapNarrowedNids,
+                                                     Nid nidBase, Nid nidContrib) {
         if (mapNarrowedNids == null) {
             mapNarrowedNids = new HashMap<>();
         }
 
-        Set<Object> setNarrowing = mapNarrowedNids.computeIfAbsent(nidBase, _ -> new HashSet<>());
+        Set<Nid> setNarrowing = mapNarrowedNids.computeIfAbsent(nidBase, _ -> new HashSet<>());
         setNarrowing.add(nidContrib);
         return mapNarrowedNids;
     }
@@ -4781,18 +4781,18 @@ public abstract sealed class TypeConstant
      *
      * @return a list of all matching nested identities
      */
-    protected List<Object> collectPotentialSuperMethods(
+    protected List<Nid> collectPotentialSuperMethods(
             MethodInfo              methodInfo,
-            Object                  nidSub,
-            Map<Object, MethodInfo> mapSupers) {
+            Nid                  nidSub,
+            Map<Nid, MethodInfo> mapSupers) {
         MethodStructure   method     = methodInfo.getHead().getMethodStructure();
         SignatureConstant sigSub     = methodInfo.getSignature();
         int               cDefaults  = method == null ? 0 : method.getDefaultParamCount();
-        List<Object>      listMatch  = null;
+        List<Nid>      listMatch  = null;
         boolean           fAnyCapped = false;
-        Object            nidCovers  = null;
-        for (Entry<Object, MethodInfo> entry : mapSupers.entrySet()) {
-            Object nidCandidate = entry.getKey();
+        Nid            nidCovers  = null;
+        for (Entry<Nid, MethodInfo> entry : mapSupers.entrySet()) {
+            Nid nidCandidate = entry.getKey();
             if (IdentityConstant.isNestedSibling(nidSub, nidCandidate)) {
                 MethodInfo        infoCandidate = entry.getValue();
                 SignatureConstant sigCandidate  = infoCandidate.getSignature(); // resolved
@@ -4843,9 +4843,9 @@ public abstract sealed class TypeConstant
             }
 
             // discard any capped methods whose target is also in the list
-            List<Object> listRemain = new ArrayList<>(cMatches);
+            List<Nid> listRemain = new ArrayList<>(cMatches);
             for (int i = 0; i < cMatches; ++i) {
-                Object     nidMatch  = listMatch.get(i);
+                Nid     nidMatch  = listMatch.get(i);
                 MethodInfo infoMatch = mapSupers.get(nidMatch);
                 if (!(infoMatch.isCapped() && listMatch.contains(infoMatch.getHead().getNarrowingNestedIdentity()))) {
                     listRemain.add(nidMatch);
@@ -4984,7 +4984,7 @@ public abstract sealed class TypeConstant
      */
     private boolean collectSelfTypeParameters(
             ClassStructure                      struct,
-            Map<Object, ParamInfo>              mapTypeParams,
+            Map<Nid, ParamInfo>              mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
             int                                 nBaseRank,
             ErrorListener                       errs) {
@@ -4998,7 +4998,7 @@ public abstract sealed class TypeConstant
                     if (!(param.getNestedIdentity() instanceof NestedIdentity)) {
                         String sParam = param.getName();
 
-                        mapTypeParams.put(sParam, param);
+                        mapTypeParams.put(Nid.of(sParam), param);
 
                         PropertyInfo infoProp = infoParent.findProperty(sParam);
                         if (infoProp == null) {
@@ -5021,7 +5021,7 @@ public abstract sealed class TypeConstant
                     PropertyConstant id = prop.getIdentityConstant();
 
                     mapProps.put(id, PropertyInfo.create(new PropertyBody(prop,
-                            mapTypeParams.get(id.getName())), nRank++));
+                            mapTypeParams.get(Nid.of(id.getName()))), nRank++));
                 }
             }
         }
@@ -5050,12 +5050,12 @@ public abstract sealed class TypeConstant
             IdentityConstant                    constId,
             boolean                             fInterface,
             Component                           structContrib,
-            Map<Object          , ParamInfo>    mapTypeParams,
+            Map<Nid          , ParamInfo>    mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant  , MethodInfo>   mapMethods,
             Map<String, ChildInfo>              mapChildren,
             List<PropertyConstant>              listExplode,
-            Map<Object, PropertyInfo>           mapVirtProps,
+            Map<Nid, PropertyInfo>           mapVirtProps,
             int                                 nBasePropRank,
             int                                 nBaseMethRank,
             ErrorListener                       errs) {
@@ -5123,12 +5123,12 @@ public abstract sealed class TypeConstant
             IdentityConstant                    constId,
             boolean                             fInterface,
             Component                           structContrib,
-            Map<Object          , ParamInfo>    mapTypeParams,
+            Map<Nid          , ParamInfo>    mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant  , MethodInfo>   mapMethods,
             Map<String, ChildInfo>              mapChildren,
             List<PropertyConstant>              listExplode,
-            Map<Object, PropertyInfo>           mapVirtProps,
+            Map<Nid, PropertyInfo>           mapVirtProps,
             int                                 nBasePropRank,
             int                                 nBaseMethRank,
             ErrorListener                       errs) {
@@ -5195,7 +5195,7 @@ public abstract sealed class TypeConstant
                 //       the property relies on (as if they had been correctly populated by going
                 //       through collectTypeParameters)
                 PropertyConstant idParam   = pool.ensurePropertyConstant(id, "Referent");
-                Object           nidParam  = idParam.resolveNestedIdentity(pool, this);
+                Nid           nidParam  = idParam.resolveNestedIdentity(pool, this);
                 ParamInfo        param     = new ParamInfo(nidParam, "Referent", pool.typeObject(), info.getType());
                 PropertyInfo     propParam = PropertyInfo.create(new PropertyBody(null, param), nRank + 1);
                 mapTypeParams.put(nidParam, param);
@@ -5638,8 +5638,8 @@ public abstract sealed class TypeConstant
      * @param errs           the error list to log any errors to
      */
     private void checkTypeParameterProperties(
-            Map<Object, ParamInfo>    mapTypeParams,
-            Map<Object, PropertyInfo> mapProps,
+            Map<Nid, ParamInfo>    mapTypeParams,
+            Map<Nid, PropertyInfo> mapProps,
             ErrorListener             errs) {
         for (ParamInfo param : mapTypeParams.values()) {
             if (param.getNestedIdentity() instanceof NestedIdentity) {
@@ -5734,17 +5734,17 @@ public abstract sealed class TypeConstant
         ConstantPool pool = getConstantPool();
 
         // merge the private view of the annotation on top of the information from infoSource
-        Map<Object          , ParamInfo>    mapMixinParams   = infoMixin.getTypeParams();
+        Map<Nid          , ParamInfo>    mapMixinParams   = infoMixin.getTypeParams();
         Map<PropertyConstant, PropertyInfo> mapMixinProps    = infoMixin.getProperties();
         Map<MethodConstant  , MethodInfo>   mapMixinMethods  = infoMixin.getMethods();
         Map<String          , ChildInfo>    mapMixinChildren = infoMixin.getChildInfosByName();
         TypeConstant                        typeMixin        = infoMixin.getType();
 
-        Map<Object          , ParamInfo   > mapTypeParams  = new HashMap<>(infoSource.getTypeParams());
+        Map<Nid          , ParamInfo   > mapTypeParams  = new HashMap<>(infoSource.getTypeParams());
         Map<PropertyConstant, PropertyInfo> mapProps       = new HashMap<>(infoSource.getProperties());
         Map<MethodConstant  , MethodInfo  > mapMethods     = new HashMap<>(infoSource.getMethods());
-        Map<Object          , PropertyInfo> mapVirtProps   = new HashMap<>(infoSource.getVirtProperties());
-        Map<Object          , MethodInfo  > mapVirtMethods = new HashMap<>(infoSource.getVirtMethods());
+        Map<Nid          , PropertyInfo> mapVirtProps   = new HashMap<>(infoSource.getVirtProperties());
+        Map<Nid          , MethodInfo  > mapVirtMethods = new HashMap<>(infoSource.getVirtMethods());
         ListMap<String      , ChildInfo   > mapChildren    = new ListMap<>(infoSource.getChildInfosByName());
 
         typeTarget.layerOnTypeParams(mapTypeParams, typeMixin, mapMixinParams, errs);
@@ -5825,13 +5825,13 @@ public abstract sealed class TypeConstant
             TypeInfo                            infoBase,
             IdentityConstant                    idBaseClass,
             Map<PropertyConstant, PropertyInfo> mapProps,
-            Map<Object, PropertyInfo>           mapVirtProps,
+            Map<Nid, PropertyInfo>           mapVirtProps,
             PropertyConstant                    idMixinProp,
             PropertyInfo                        propMixin,
             Constant                            constInit,
             int                                 nBaseRank,
             ErrorListener                       errs) {
-        Object           nidContrib = idMixinProp.getNestedIdentity(); // resolved
+        Nid           nidContrib = idMixinProp.getNestedIdentity(); // resolved
         PropertyConstant idResult   = (PropertyConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
         PropertyInfo     propBase   = infoBase.findPropertyByNid(nidContrib);
 

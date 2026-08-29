@@ -18,6 +18,7 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.Nid;
 
 import org.xvm.runtime.ClassComposition.FieldInfo;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -196,7 +197,7 @@ public final class PropertyComposition
     }
 
     @Override
-    public CallChain getMethodCallChain(Object nidMethod) {
+    public CallChain getMethodCallChain(Nid nidMethod) {
         ConstantPool pool = getConstantPool();
         if (nidMethod instanceof SignatureConstant sig) {
             if (sig.getConstantPool() != pool) {
@@ -301,7 +302,7 @@ public final class PropertyComposition
     }
 
     @Override
-    public Map<Object, FieldInfo> getFieldLayout() {
+    public Map<Nid, FieldInfo> getFieldLayout() {
         // strictly speaking, the list should include the non-top-level fields that are kept in
         // the parent's structure, but those are NestedIdentities, not Strings
         return f_clzRef.getFieldLayout();
@@ -377,7 +378,7 @@ public final class PropertyComposition
     private final PropertyInfo     f_infoProp;
 
     // cached method call chain by nid (the top-most method first)
-    private final Map<Object, CallChain> f_mapMethods;
+    private final Map<Nid, CallChain> f_mapMethods;
 
     // cached property getter call chain by property id (the top-most method first)
     private final Map<PropertyConstant, CallChain> f_mapGetters;

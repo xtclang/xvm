@@ -9,6 +9,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.Nid;
 
 
 /**
@@ -92,7 +93,7 @@ public final class CanonicalizedTypeComposition
     }
 
     @Override
-    public CallChain getMethodCallChain(Object nidMethod) {
+    public CallChain getMethodCallChain(Nid nidMethod) {
         CallChain chain = super.getMethodCallChain(nidMethod);
         if (chain.isEmpty() && nidMethod instanceof SignatureConstant sig) {
             // we assume that the information on the canonical TypeInfo is sufficient

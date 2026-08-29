@@ -26,6 +26,7 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.Nid;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.TransientId;
@@ -295,7 +296,7 @@ public final class ClassComposition
     }
 
     @Override
-    public CallChain getMethodCallChain(Object nidMethod) {
+    public CallChain getMethodCallChain(Nid nidMethod) {
         CallChain chain = f_mapMethods.get(nidMethod);
         return chain == null
                 ? ensureMethodChain(nidMethod)
@@ -309,7 +310,7 @@ public final class ClassComposition
      *
      * @return the {@link CallChain}
      */
-    private CallChain ensureMethodChain(Object nidMethod) {
+    private CallChain ensureMethodChain(Nid nidMethod) {
         ConstantPool pool   = getConstantPool();
         // runtime-lazy chain resolution registers shared ids into this pool and drives lazy
         // TypeInfo/chain building - the legitimate post-publication metadata writer
@@ -345,7 +346,7 @@ public final class ClassComposition
         }
     }
 
-    private CallChain computeMethodChain(Object nidMethod) {
+    private CallChain computeMethodChain(Nid nidMethod) {
         TypeInfo info = isStruct()
                 ? f_typeStructure.ensureTypeInfo()
                 : f_typeInception.ensureTypeInfo();
@@ -441,7 +442,7 @@ public final class ClassComposition
     }
 
     @Override
-    public Map<Object, FieldInfo> getFieldLayout() {
+    public Map<Nid, FieldInfo> getFieldLayout() {
         return fieldLayout().fields();
     }
 
@@ -471,8 +472,8 @@ public final class ClassComposition
         var ashNames = new StringHandle[layout.regularFieldCount()];
 
         int i = 0;
-        for (Map.Entry<Object, FieldInfo> entry : layout.fields().entrySet()) {
-            Object    enid  = entry.getKey();
+        for (Map.Entry<Nid, FieldInfo> entry : layout.fields().entrySet()) {
+            Nid    enid  = entry.getKey();
             FieldInfo field = entry.getValue();
 
             if (!(enid instanceof NestedIdentity) && field.isRegular()) {
@@ -487,7 +488,7 @@ public final class ClassComposition
     @Override
     public ObjectHandle[] getFieldValueArray(Frame frame, GenericHandle hValue) {
         var                    layout    = fieldLayout();
-        Map<Object, FieldInfo> mapLayout = layout.fields();
+        Map<Nid, FieldInfo> mapLayout = layout.fields();
         if (mapLayout.isEmpty()) {
             return Utils.OBJECTS_NONE;
         }
@@ -495,8 +496,8 @@ public final class ClassComposition
         ObjectHandle[] ahFields = new ObjectHandle[layout.regularFieldCount()];
 
         int i = 0;
-        for (Map.Entry<Object, FieldInfo> entry : mapLayout.entrySet()) {
-            Object    enid  = entry.getKey();
+        for (Map.Entry<Nid, FieldInfo> entry : mapLayout.entrySet()) {
+            Nid    enid  = entry.getKey();
             FieldInfo field = entry.getValue();
 
             if (!(enid instanceof NestedIdentity) && field.isRegular()) {
@@ -620,7 +621,7 @@ public final class ClassComposition
         TypeConstant typeStruct = pool.ensureAccessTypeConstant(typePublic, Access.STRUCT);
         TypeInfo     infoStruct = typeStruct.ensureTypeInfo();
 
-        Map<Object, FieldInfo> mapFields = new ListMap<>();
+        Map<Nid, FieldInfo> mapFields = new ListMap<>();
         int     cRegular  = 0;
         int     nIndex    = 0;
         boolean fHasOuter = false;
@@ -631,8 +632,8 @@ public final class ClassComposition
             if (sField.equals(GenericHandle.OUTER)) {
                 fHasOuter = true;
             }
-            mapFields.put(sField,
-                    new FieldInfo(sField, nIndex++, pool.typeObject(), null,
+            mapFields.put(Nid.of(sField),
+                    new FieldInfo(Nid.of(sField), nIndex++, pool.typeObject(), null,
                         /*synthetic*/ true, false, false, false));
         }
 
@@ -691,7 +692,7 @@ public final class ClassComposition
                 boolean fTransient = infoProp.isTransient();
                 boolean fPrivate   = infoProp.getRefAccess() == Access.PRIVATE;
 
-                Object enid = fPrivate ? idProp : idProp.getNestedIdentity();
+                Nid enid = fPrivate ? idProp : idProp.getNestedIdentity();
 
                 assert fPrivate
                         ? idProp.getComponent() != null
@@ -720,7 +721,7 @@ public final class ClassComposition
             }
         }
 
-        Map<Object, FieldInfo> mapFrozen = mapFields.isEmpty()
+        Map<Nid, FieldInfo> mapFrozen = mapFields.isEmpty()
                 ? ListMap.empty()
                 : Collections.unmodifiableMap(mapFields.size() > 8
                     ? new LinkedHashMap<>(mapFields)
@@ -745,12 +746,12 @@ public final class ClassComposition
     /**
      * @return the compile-time type for a given property name or identity (never nested identity)
      */
-    public TypeConstant getFieldType(Object nid) {
+    public TypeConstant getFieldType(Nid nid) {
         TypeConstant type     = getInceptionType();
         TypeInfo     infoType = type.ensureTypeInfo();
         PropertyInfo infoProp = nid instanceof PropertyConstant idProp
                 ? infoType.findProperty(idProp, true)
-                : infoType.findProperty((String) nid);
+                : infoType.findProperty(((Nid.ByName) nid).name());
         return infoProp == null ? null : infoProp.inferImmutable(type);
     }
 
@@ -790,7 +791,7 @@ public final class ClassComposition
          * @param clzRef      (optional) the TypeComposition for inflated fields
          * @param fSynthetic  true iff the field is synthetic (e.g. implicit or injected)
          */
-        protected FieldInfo(Object enid, int nIndex, TypeConstant type, TypeComposition clzRef,
+        protected FieldInfo(Nid enid, int nIndex, TypeConstant type, TypeComposition clzRef,
                             boolean fSynthetic, boolean fTransient, boolean fUnassigned, boolean fLazy) {
             f_enid        = enid;
             f_nIndex      = nIndex;
@@ -917,7 +918,7 @@ public final class ClassComposition
         public MethodStructure methodInit;
     }
 
-    private record FieldLayout(Map<Object, FieldInfo> fields, int regularFieldCount,
+    private record FieldLayout(Map<Nid, FieldInfo> fields, int regularFieldCount,
                                boolean hasOuter, boolean hasSpecial) {
         private static final FieldLayout EMPTY =
                 new FieldLayout(Collections.emptyMap(), 0, false, false);
@@ -991,7 +992,7 @@ public final class ClassComposition
     private final Map<PropertyConstant, PropertyComposition> f_mapProperties;
 
     // cached method call chain by nid (the top-most method first)
-    private final Map<Object, CallChain> f_mapMethods;
+    private final Map<Nid, CallChain> f_mapMethods;
 
     // cached property getter call chain by property id (the top-most method first)
     private final Map<PropertyConstant, CallChain> f_mapGetters;

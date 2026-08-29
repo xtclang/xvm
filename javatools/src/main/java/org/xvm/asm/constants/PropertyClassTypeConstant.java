@@ -283,11 +283,11 @@ public final class PropertyClassTypeConstant
         PropertyInfo   infoProp = getPropertyInfo();
         PropertyBody[] aBody    = infoProp.getPropertyBodies();
 
-        Map<Object          , ParamInfo   > mapTypeParams  = new HashMap<>();
+        Map<Nid          , ParamInfo   > mapTypeParams  = new HashMap<>();
         Map<PropertyConstant, PropertyInfo> mapProps       = new HashMap<>();
         Map<MethodConstant  , MethodInfo  > mapMethods     = new HashMap<>();
-        Map<Object          , PropertyInfo> mapVirtProps   = new HashMap<>();
-        Map<Object          , MethodInfo  > mapVirtMethods = new ListMap<>();
+        Map<Nid          , PropertyInfo> mapVirtProps   = new HashMap<>();
+        Map<Nid          , MethodInfo  > mapVirtMethods = new ListMap<>();
         ListMap<String      , ChildInfo   > mapChildren    = new ListMap<>();
 
         TypeInfo         infoBase = null;

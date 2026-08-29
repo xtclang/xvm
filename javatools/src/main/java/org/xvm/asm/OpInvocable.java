@@ -23,6 +23,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.UnionTypeConstant;
+import org.xvm.asm.constants.Nid;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
@@ -162,7 +163,7 @@ public abstract class OpInvocable extends Op {
                 ? null
                 : checkPropertyAccessor(idMethod);
         if (idProp == null) {
-            Object nid = idMethod.resolveNestedIdentity(
+            Nid nid = idMethod.resolveNestedIdentity(
                     frame.poolContext(), frame.getGenericsResolver(true));
 
             chain = clazz.getMethodCallChain(nid);

@@ -539,7 +539,7 @@ public abstract sealed class RelationalTypeConstant
      *
      * @return a merged map
      */
-    protected abstract Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs);
+    protected abstract Map<Nid, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
     /**
      * Produce an array of Annotations for a merge of the specified TypeInfos.

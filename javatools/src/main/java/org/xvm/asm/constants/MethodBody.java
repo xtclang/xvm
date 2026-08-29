@@ -551,7 +551,7 @@ public class MethodBody {
      *         is a cap; the return type stays the legacy untyped nid union
      *         (SignatureConstant | NestedIdentity) because the TypeInfo member maps still key on it
      */
-    public Object getNarrowingNestedIdentity() {
+    public Nid getNarrowingNestedIdentity() {
         if (m_impl == Implementation.Capped) {
             return switch (m_target) {
                 case Target.BySignature(var sig) -> sig;
@@ -568,8 +568,8 @@ public class MethodBody {
         }
 
         if (m_impl == Implementation.Union) {
-            Object nidLeft  = getUnionLeft().getHead().getNarrowingNestedIdentity();
-            Object nidRight = getUnionRight().getHead().getNarrowingNestedIdentity();
+            Nid nidLeft  = getUnionLeft().getHead().getNarrowingNestedIdentity();
+            Nid nidRight = getUnionRight().getHead().getNarrowingNestedIdentity();
             if (nidLeft == null) {
                 return nidRight;
             }
@@ -865,7 +865,7 @@ public class MethodBody {
          * The checked conversion boundary from the legacy untyped nid union; retire this once the
          * TypeInfo member maps key on {@link Narrowing} directly.
          */
-        static Narrowing narrowing(Object nid) {
+        static Narrowing narrowing(Nid nid) {
             return switch (nid) {
                 case SignatureConstant sig                  -> new BySignature(sig);
                 case IdentityConstant.NestedIdentity nested -> new ByNestedId(nested);

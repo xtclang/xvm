@@ -43,6 +43,7 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.UnionTypeConstant;
+import org.xvm.asm.constants.Nid;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
@@ -604,8 +605,8 @@ public class CommonBuilder
 
         if (format != Format.INTERFACE && typeInfo.hasGenericTypes()) {
             for (var entry : typeInfo.getTypeParams().entrySet()) {
-                if (entry.getKey() instanceof String name) {
-                    assembleGenericProperty(classBuilder, name);
+                if (entry.getKey() instanceof Nid.ByName byName) {
+                    assembleGenericProperty(classBuilder, byName.name());
                 }
             }
         }

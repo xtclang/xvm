@@ -6,6 +6,7 @@ import java.util.Map;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.Nid;
 
 import org.xvm.runtime.ClassComposition.FieldInfo;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -60,7 +61,7 @@ public abstract sealed class DelegatingComposition
     }
 
     @Override
-    public CallChain getMethodCallChain(Object nidMethod) {
+    public CallChain getMethodCallChain(Nid nidMethod) {
         return f_clzOrigin.getMethodCallChain(nidMethod);
     }
 
@@ -75,7 +76,7 @@ public abstract sealed class DelegatingComposition
     }
 
     @Override
-    public Map<Object, FieldInfo> getFieldLayout() {
+    public Map<Nid, FieldInfo> getFieldLayout() {
         return f_clzOrigin.getFieldLayout();
     }
 

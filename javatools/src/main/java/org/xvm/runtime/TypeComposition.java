@@ -10,6 +10,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.Nid;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
@@ -168,7 +169,7 @@ public interface TypeComposition {
      *
      * @return a call chain for the method
      */
-    CallChain getMethodCallChain(Object nidMethod);
+    CallChain getMethodCallChain(Nid nidMethod);
 
     /**
      * @param idProp  the property id
@@ -215,7 +216,7 @@ public interface TypeComposition {
     /**
      * @return a map of field info (excluding potentially unassigned, lazy and transient)
      */
-    Map<Object, ClassComposition.FieldInfo> getFieldLayout();
+    Map<Nid, ClassComposition.FieldInfo> getFieldLayout();
 
     /**
      * @return an array of field name handles to use for native Stringable methods on a const
