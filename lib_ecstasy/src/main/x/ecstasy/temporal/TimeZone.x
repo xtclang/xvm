@@ -32,6 +32,27 @@ import TimeOfDay.PicosPerSecond;
 const TimeZone(Int64 picos) {
 
     /**
+     * Construct a TimeZone from an ISO-8601 timezone indicator string, as produced by a
+     * `TimeZone:` literal.
+     *
+     * This exists for the same reason `Date`, `Time`, `TimeOfDay`, `Duration`, `Version` and
+     * `Path` each have a String constructor: it is the entry point the runtime uses to turn a
+     * literal constant into a value. Without it a `TimeZone:` literal compiled and then failed at
+     * run time when the constant could not be materialised.
+     *
+     * @param tz  an ISO-8601 timezone indicator string; see [of]
+     *
+     * @throws IllegalArgument  if the string is not a valid ISO-8601 timezone indicator
+     */
+    construct(String tz) {
+        if (TimeZone timezone := TimeZone.of(tz)) {
+            construct TimeZone(timezone.picos);
+        } else {
+            throw new IllegalArgument($"invalid ISO-8601 timezone: \"{tz}\"");
+        }
+    }
+
+    /**
      * Internal constructor for the special "NoTZ" timezone.
      */
     private construct() {

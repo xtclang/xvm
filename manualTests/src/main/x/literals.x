@@ -15,6 +15,7 @@ module TestLiterals {
         testDates();
         testTimeOfDays();
         testTimes();
+        testTimeZones();
         testDurations();
 //        testLexer();
         testInterval();
@@ -318,6 +319,30 @@ module TestLiterals {
 
         dt = new Time("2019-05-22T120123.456-5:00");
         console.print($"dt={dt} or {Time:2019-05-22T120123.456-05:00}");
+    }
+
+    void testTimeZones() {
+        console.print("\n** testTimeZones()");
+
+        // TimeZone literals were accepted by the lexer and then rejected by the constant pool with
+        // an internal "unsupported format: TimeZone", so any module containing one failed to
+        // compile. Their siblings Date/TimeOfDay/Time/Duration were plumbed through; TimeZone was
+        // not. Compiling this method at all is the regression test.
+        TimeZone tz = TimeZone:Z;
+        console.print($"utc={tz} or {TimeZone:Z}");
+        assert tz == TimeZone.UTC;
+
+        tz = TimeZone:+01:30;
+        console.print($"plus0130={tz} or {TimeZone:+01:30}");
+        assert tz.picos > 0;
+
+        tz = TimeZone:-05:00;
+        console.print($"minus0500={tz} or {TimeZone:-05:00}");
+        assert tz.picos < 0;
+
+        // the literal and the runtime parse must agree
+        assert TimeZone tzParsed := TimeZone.of("Z");
+        assert tzParsed == TimeZone:Z;
     }
 
     void testDurations() {

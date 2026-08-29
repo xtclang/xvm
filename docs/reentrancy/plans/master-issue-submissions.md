@@ -108,8 +108,8 @@ without its listed dependency.
 | 20 | Extract from `5d9a5f395`: the detached-build factories, the copy-on-write publish primitives, and the reworked `ensure*Delegation` - WITHOUT the synthesis window (`openRuntimeSynthesisWindow` exists only because of this branch's publication marker; master has no marker). | `org.xvm.asm.DelegationSynthesisTest` concurrent hammer (probabilistic red: half-built method observed / null multimethod); the deterministic marker test is branch-only. | Needs a filtered master patch; the mechanics (detached build, `publishRuntimeChild`, `publishOrAdoptSynthesizedMethod`, volatile maps) are additive and portable. |
 | 30 | Source-only clean; one-word fix in `Version.isSameAs`. | `org.xvm.asm.VersionTest.testIsSameAsAcrossDifferingPartCounts` fails with `ArrayIndexOutOfBoundsException` at `Version.java:492` on the unfixed source. | Ready after manual review. |
 | 31 | Source-only clean; add 16 `case` labels to `Op.toName`. | `Op.toName(0xDD)` throws `IllegalStateException: op=0xdd` while `toName(0x01)` returns `LINE_1`; 16 opcodes reachable via `instantiate` are absent from `toName`. | Ready after manual review. |
-| 32 | Needs a product decision (add the pool case, or reject in the Lexer) before a patch. | `pool.ensureLiteralConstant(Format.TimeZone, "x")` throws `IllegalStateException: unsupported format: TimeZone` where `Date`/`Time`/`Duration` succeed. | Report first, patch after the behaviour decision. |
-| 33 | Source-only; two one-line fixes, but the guard fix needs a surfaced-set review. | `fieldsForNames(AstNode.class, "noSuchFieldAnywhere")` returns `fields[0]=null` instead of throwing; `isInstance(AstNode.class)` observed `false` where `isAssignableFrom` is `true`. | Null-check fix ready; guard fix needs review. |
+| 32 | Seven sites plus a `construct(String)` on `lib_ecstasy` `TimeZone`. Fixed in-branch, verified end to end. | `pool.ensureLiteralConstant(Format.TimeZone, "x")` throws `IllegalStateException: unsupported format: TimeZone` where `Date`/`Time`/`Duration` succeed. | Ready after manual review. |
+| 33 | Source-only; two one-line fixes. Surfaced set for the guard measured empty (183/183 AST classes load clean). Fixed in-branch. | `fieldsForNames(AstNode.class, "noSuchFieldAnywhere")` returns `fields[0]=null` instead of throwing; `isInstance(AstNode.class)` observed `false` where `isAssignableFrom` is `true`. | Ready after manual review. |
 
 ## Reuse Exposure Categories
 
@@ -2103,7 +2103,8 @@ That is a ratchet, not a spot check: it fails on the next divergence too.
 `ConstantPool.ensureLiteralConstant` with an internal `IllegalStateException`.
 
 **Status/category:** PROVEN red on master, empirically. A user-facing compiler crash,
-not an internal-only hazard.
+not an internal-only hazard. **FIXED in this branch**, verified end to end by compiling AND
+running `manualTests/.../literals.x`, with a six-stage ratchet test.
 
 **Explanation:** the path is complete right up to the pool:
 
@@ -2133,15 +2134,50 @@ So a source file containing a `TimeZone:` literal fails compilation with an inte
 exception rather than a diagnostic - or, if the intent is that the literal is not
 supported, the Lexer should never have accepted it.
 
-**Minimal master-portable fix strategy:** decide which end is right. Either add
-`case TimeZone:` alongside `Date`/`Time`/`Duration` in `ensureLiteralConstant` (and
-check `disassemble`, which also omits it), or remove the Lexer/Parser support so the
-literal is rejected with a proper compiler diagnostic. **This needs a product answer,
-not just a code fix** - hence filing it as a report rather than a patch.
+**Minimal master-portable fix strategy:** support the literal - but note the size, which
+was twice underestimated here before an end-to-end run settled it. It is **SEVEN sites plus
+a library change**, not the five the source inspection first suggested:
 
-**Tests to add/run on master:** a round-trip test per literal format that the Lexer
-accepts, asserting the pool accepts it too. That closes the whole class, not just
-`TimeZone`.
+1. `ConstantPool.ensureLiteralConstant` - the construction switch (throws).
+2. `ConstantPool.disassemble` - the read-back switch, a separate list.
+3. `LiteralConstant` - the constructor validation switch.
+4. `LiteralConstant` - the accepted-format switch.
+5. `LiteralConstant.getType()` - whose fallback is `Constant.getType()`, which THROWS, so a
+   missing mapping is a live crash rather than a silent default.
+6. `xConst.createConstHandle` - the runtime literal switch, plus a `timeZoneConstruct` on its
+   `ConstInfo` record. Missing this one meant the literal COMPILED and then died at run time
+   with `Unexpected op execution failure ... op=VAR_IN`.
+7. `NativeContainer.getConstType` - maps the constant to its implementing class; its default
+   throws `LauncherException("No implementation for constant: TimeZone{value=\"Z\"}")`. This
+   was the last one, and it still failed after 1-6 were all fixed.
+
+Plus **`lib_ecstasy`**: `TimeZone` had no `construct(String)`. The runtime path calls exactly
+that on the Ecstasy class, and `Date`, `Time`, `TimeOfDay`, `Duration`, `Version` and `Path`
+each have one; `TimeZone` had only `TimeZone(Int64 picos)` and a conditional `of(String)`. So
+this is not purely a Java plumbing fix - it adds a constructor to the standard library, which
+is worth flagging to a reviewer even though it is the shape all six siblings already have.
+
+**Tests to add/run on master:** `org.xvm.asm.LiteralFormatPlumbingTest` - a SIX-stage ratchet
+over every literal format the compiler produces: the pool builds it, it maps to a type,
+`disassemble` reads it back, `xConst` materialises it, the Ecstasy class has the
+`construct(String)` that path calls, and `NativeContainer` knows its implementing type. It
+started at three stages and grew to six, because each new stage was added only after an
+end-to-end run proved the previous "fix" still did not work - which is itself the argument
+for keeping all six. Note the round trip is checked by comparing case lists in source, NOT by
+writing a `FileStructure`: a constant nothing references is pruned before it is written, so a
+genuine round trip cannot observe it.
+
+Also `manualTests/src/main/x/literals.x` gains `testTimeZones()`, beside the existing
+`testDates`/`testTimes`/`testDurations`. This is the test that actually mattered: the unit
+ratchet went green twice while the literal was still broken, and only compiling AND RUNNING
+the module exposed sites 6 and 7. It now prints:
+
+```
+** testTimeZones()
+utc=UTC or UTC
+plus0130=+01:30 or +01:30
+minus0500=-05:00 or -05:00
+```
 
 **Dependencies/order:** Independent; needs a decision on intended behaviour.
 
@@ -2153,7 +2189,7 @@ field becomes a null array slot instead of an error.
 
 **Status/category:** PROVEN red on master, empirically. Two defects in one method;
 neither is currently reachable as a crash, but both defeat the diagnostics they exist
-to provide.
+to provide. **FIXED in this branch** with tests.
 
 **Explanation:** the method builds the reflective child-field model used by the AST
 (65 call sites).
@@ -2199,16 +2235,23 @@ null slot is dereferenced, instead of immediately as "no such field <name>".
 
 **Minimal master-portable fix strategy:** replace both `isInstance` calls with
 `isAssignableFrom` on the correct operand order, and fix `clz == null` to
-`clzTry == null`. Expect the corrected guard to start firing on fields the dead
-version let through - that surfaced set needs review before the fix lands, since it
-may be legitimate usage the guard was wrong about rather than real violations.
+`clzTry == null`.
 
-**Tests to add/run on master:** assert `fieldsForNames` throws a named
-`IllegalStateException` for a missing field rather than returning a null slot, and
-that a valid `AstNode`/`List` field is accepted.
+The obvious risk - that the corrected guard starts firing on fields the dead version let
+through - was measured rather than assumed, and **is empty**. Force-loading all 183 classes
+in `org.xvm.compiler.ast` (which runs the static initialisers where `fieldsForNames` is
+called) gives `loaded=183, guard violations=0`. So the guard can be corrected without a
+prior review pass; the earlier caution on this row is withdrawn.
 
-**Dependencies/order:** Independent. Land the null-check fix first; the guard fix
-needs the surfaced-set review above.
+**Tests to add/run on master:** `org.xvm.compiler.ast.AstNodeFieldModelTest` - four cases:
+a missing field must throw and name itself (red before), an unsupported field type must be
+rejected (red before), and the two shapes the child model IS made of, a direct `AstNode`
+field and a `List` field, must still be accepted, plus an inherited field to keep the
+superclass walk covered (both green before and after, deliberately - they pin behaviour the
+fix must not break).
+
+**Dependencies/order:** Independent; both fixes can land together, since the surfaced set
+for the guard fix is measured empty.
 
 ## Items intentionally not in the 18
 

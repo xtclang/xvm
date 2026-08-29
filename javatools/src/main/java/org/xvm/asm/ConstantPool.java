@@ -701,6 +701,7 @@ public class ConstantPool
         case Date:
         case TimeOfDay:
         case Time:
+        case TimeZone:
         case Duration:
         case Path:
         case RegEx: {
@@ -2977,6 +2978,7 @@ public class ConstantPool
             case Date:
             case TimeOfDay:
             case Time:
+            case TimeZone:
             case Duration:
             case Path:
                 constant = new LiteralConstant(this, format, in);

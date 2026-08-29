@@ -135,6 +135,11 @@ public class xConst
                 constructor = info.timeOfDayConstruct();
                 break;
 
+            case TimeZone:
+                clz         = ensureClass(container, pool.typeTimeZone());
+                constructor = info.timeZoneConstruct();
+                break;
+
             case Duration:
                 clz         = ensureClass(container, pool.typeDuration());
                 constructor = info.durationConstruct();
@@ -467,6 +472,8 @@ public class xConst
                 findMethod("construct", 1, pool.typeString());
         MethodStructure timeOfDayConstruct = f_container.getClassStructure("temporal.TimeOfDay").
                 findMethod("construct", 1, pool.typeString());
+        MethodStructure timeZoneConstruct = f_container.getClassStructure("temporal.TimeZone").
+                findMethod("construct", 1, pool.typeString());
         MethodStructure durationConstruct = f_container.getClassStructure("temporal.Duration").
                 findMethod("construct", 1, pool.typeString());
         MethodStructure versionConstruct = f_container.getClassStructure("reflect.Version").
@@ -478,8 +485,8 @@ public class xConst
                 findMethod("hashCode", 2).getIdentityConstant().getSignature();
 
         return new ConstInfo(estimateLength, appendTo, freeze, rangeConstruct, nibbleConstruct,
-                timeConstruct, dateConstruct, timeOfDayConstruct, durationConstruct, versionConstruct,
-                pathConstruct, hashSig);
+                timeConstruct, dateConstruct, timeOfDayConstruct, timeZoneConstruct,
+                durationConstruct, versionConstruct, pathConstruct, hashSig);
     }
 
 
@@ -802,6 +809,7 @@ public class xConst
                              MethodStructure timeConstruct,
                              MethodStructure dateConstruct,
                              MethodStructure timeOfDayConstruct,
+                             MethodStructure timeZoneConstruct,
                              MethodStructure durationConstruct,
                              MethodStructure versionConstruct,
                              MethodStructure pathConstruct,

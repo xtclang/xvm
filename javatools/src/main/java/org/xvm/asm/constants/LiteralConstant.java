@@ -38,6 +38,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * <li>IntLiteral</li>
  * <li>FPLiteral</li>
  * <li>Date</li>
+ * <li>TimeZone</li>
  * <li>TimeOfDay</li>
  * <li>Time</li>
  * <li>Duration</li>
@@ -87,6 +88,10 @@ public sealed class LiteralConstant
             // TODO
             break;
 
+        case TimeZone:
+            // TODO
+            break;
+
         case Duration:
             // TODO
             break;
@@ -128,6 +133,7 @@ public sealed class LiteralConstant
         case Date:
         case TimeOfDay:
         case Time:
+        case TimeZone:
         case Duration:
         case Version:
         case Path:
@@ -174,6 +180,7 @@ public sealed class LiteralConstant
             case Date       -> pool.typeDate();
             case TimeOfDay  -> pool.typeTimeOfDay();
             case Time       -> pool.typeTime();
+            case TimeZone   -> pool.typeTimeZone();
             case Duration   -> pool.typeDuration();
             case Version    -> pool.typeVersion();
             case Path       -> pool.typePath();

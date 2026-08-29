@@ -1973,9 +1973,15 @@ public abstract sealed class AstNode
                 try {
                     Field field = clzTry.getDeclaredField(names[i]);
                     assert field != null;
-                    if (!field.getType().isInstance(AstNode.class) && field.getType().isInstance(List.class)) {
+                    // isAssignableFrom, not isInstance: isInstance asks whether the OBJECT
+                    // passed to it is an instance of the receiver, so isInstance(AstNode.class)
+                    // asked whether the Class OBJECT was an instance of the field's type - false
+                    // for every realistic field type, which left this guard dead.
+                    Class<?> clzField = field.getType();
+                    if (!AstNode.class.isAssignableFrom(clzField)
+                            && !List.class.isAssignableFrom(clzField)) {
                         throw new IllegalStateException("unsupported field type "
-                                + field.getType().getSimpleName() + " on field "
+                                + clzField.getSimpleName() + " on field "
                                 + clzTry.getSimpleName() + '.' + names[i]);
                     }
                     fields[i] = field;
@@ -1985,8 +1991,11 @@ public abstract sealed class AstNode
                         eOrig = e;
                     }
 
+                    // clzTry, not clz: clz is the parameter and is never null here, so the
+                    // saved NoSuchFieldException naming the missing field was never thrown and
+                    // fields[i] was left null - a hole that failed later, far from the cause.
                     clzTry = clzTry.getSuperclass();
-                    if (clz == null) {
+                    if (clzTry == null) {
                         throw new IllegalStateException(eOrig);
                     }
                 } catch (SecurityException e) {
