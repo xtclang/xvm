@@ -294,6 +294,82 @@ the method can return can.
 stay `Component` — so a future attempt fails immediately with the reason instead of surfacing as a
 `ClassCastException` in the middle of building the core library.
 
+## T4 — the proposed design, and how it is guaranteed
+
+### The type
+
+Wrap only what we do not own. `SignatureConstant` and `NestedIdentity` are our classes and can
+carry the marker directly — no wrapper, no change to their `equals`, no conversion at any site that
+already holds one. Only `String` and `Integer` need a wrapper, because you cannot retrofit an
+interface onto a JDK type.
+
+```java
+public sealed interface Nid
+        permits Nid.ByName, Nid.ByLambda, SignatureConstant, IdentityConstant.NestedIdentity {
+
+    /** A member identified by name — properties, fields, type parameters. */
+    record ByName(String name) implements Nid {}
+
+    /** A lambda identified by its index within its parent. */
+    record ByLambda(int index) implements Nid {}
+
+    static Nid of(String name)            { return new ByName(name); }
+    static Nid of(int index)              { return new ByLambda(index); }
+    static Nid of(SignatureConstant sig)  { return sig; }
+}
+```
+
+Records give the union property for free: `ByName("x").equals(new ByLambda(0))` is `false` by
+construction, and no two record types are ever equal. That is the invariant
+`NestedIdentityContractTest` exists to protect, and it is now structural rather than incidental.
+
+### What javac guarantees, and the one thing it does NOT
+
+Verified by compiling a minimal model, not assumed:
+
+| Operation | Behaviour once the map is `Map<Nid, V>` |
+| --- | --- |
+| `map.put("Referent", v)` | **compile error** — `String cannot be converted to Nid` |
+| `map.get("Referent")` | **compiles, returns null silently** |
+| `ByName("x").equals(other record)` | `false`, always |
+
+**`Map.get`, `containsKey` and `remove` take `Object`, not `K`.** So typing the map catches every
+*write* with a wrong key and **no reads at all**. That is precisely the silent-wrong-answer hole,
+and it is the whole reason this refactor is dangerous. Any plan that says "the compiler will find
+them" is half right and the missing half is the dangerous half.
+
+### How it is actually guaranteed
+
+Five layers, in the order they catch things, and only the last two close the read hole:
+
+1. **`NestedIdentityContractTest`** — already in the tree. Pins mutual inequality, key collision,
+   and non-collision. Written before the refactor precisely so it cannot be rationalised afterwards.
+2. **javac on every write** — all `put`/`putIfAbsent`/`computeIfAbsent` with a bare `String`,
+   `Integer` or literal become compile errors the moment the map is typed. This converts the 22
+   bare-variable sites and the literal sites from "must be found by review" into "cannot be missed".
+3. **Bounded read review** — `get`/`containsKey`/`remove` are the hole. The population is knowable
+   and small: **12 files**, and within them only the accesses on nid-keyed maps. That is a finite
+   list to walk, not a codebase-wide hunt, and it must be walked file by file.
+4. **`xdk:installDist`** — the empirical backstop, and the one that matters. These maps *are* type
+   resolution; a read that silently misses does not stay silent when the compiler resolves
+   `lib_ecstasy`. This is what caught the `ClassConstant` regression that 760 unit tests missed,
+   and it is now a standing rule for this campaign.
+5. **The full suite** — 760 tests, last.
+
+### Optional hardening, if step 3 feels too thin
+
+A `NidMap<V>` wrapper exposing `get(Nid)` rather than `get(Object)` would close the read hole at
+compile time too, making the guarantee total rather than "total on writes, reviewed on reads". It
+costs a small delegating class and one more type in the API. Worth it only if the step-3 walk turns
+up more than a handful of read sites — decide after walking, not before.
+
+### Order
+
+`Map<Object, Constant>` (the pool's `getLocator()` union) is **not** a nid and should be split out
+of these counts first — it has been inflating every estimate in this document. Then one family at a
+time, each landing green through all five layers before the next starts. `FieldInfo` (8 maps) is the
+smallest and is the right one to prove the pattern on.
+
 ## Classification rule: actual defect vs. hazard the ugliness hides
 
 Every finding from this campaign gets one of two labels, and the distinction is not
