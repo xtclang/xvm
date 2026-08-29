@@ -21,6 +21,7 @@ import org.xvm.asm.constants.VersionConstant;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.template.text.xString.StringHandle;
+import org.xvm.asm.constants.Nid;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -311,7 +312,7 @@ public class OwnershipDiagnosticsTest {
         }
 
         @Override
-        public ClassComposition.FieldInfo getFieldInfo(Object id) {
+        public ClassComposition.FieldInfo getFieldInfo(Nid id) {
             return null;
         }
 
@@ -336,7 +337,7 @@ public class OwnershipDiagnosticsTest {
         }
 
         @Override
-        public CallChain getMethodCallChain(Object nidMethod) {
+        public CallChain getMethodCallChain(Nid nidMethod) {
             return null;
         }
 
@@ -351,7 +352,7 @@ public class OwnershipDiagnosticsTest {
         }
 
         @Override
-        public Map<Object, ClassComposition.FieldInfo> getFieldLayout() {
+        public Map<Nid, ClassComposition.FieldInfo> getFieldLayout() {
             return Map.of();
         }
 

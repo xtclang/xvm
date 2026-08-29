@@ -5647,7 +5647,7 @@ public abstract sealed class TypeConstant
             }
 
             String       sParam = param.getName();
-            PropertyInfo info   = mapProps.get(sParam);
+            PropertyInfo info   = mapProps.get(Nid.of(sParam));
             if (info == null) {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
                         this.removeAccess().getValueString(),

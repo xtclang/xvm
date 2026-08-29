@@ -30,6 +30,7 @@ import org.xvm.asm.constants.PropertyBody.Effect;
 import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.util.ListMap;
+import org.xvm.asm.constants.Nid;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -542,7 +543,7 @@ public class TypeInfoMemberOwnershipTest {
         Map<MethodConstant, MethodInfo> methods = idMethod == null
                 ? Collections.emptyMap()
                 : Map.of(idMethod, method);
-        Map<Object, MethodInfo> virtualMethods = sig == null
+        Map<Nid, MethodInfo> virtualMethods = sig == null
                 ? Collections.emptyMap()
                 : Map.of(sig, method);
 
@@ -551,7 +552,7 @@ public class TypeInfoMemberOwnershipTest {
                 Collections.emptyMap(), Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
                 null, null, null, Collections.emptyList(), new ListMap<>(), new ListMap<>(),
                 Map.of(idProperty, property), methods,
-                Map.of(idProperty.getNestedIdentity(), property), virtualMethods,
+                Map.<Nid, PropertyInfo>of(idProperty.getNestedIdentity(), property), virtualMethods,
                 children, null, Progress.Complete);
     }
 

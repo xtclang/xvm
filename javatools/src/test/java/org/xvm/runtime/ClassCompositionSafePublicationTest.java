@@ -36,6 +36,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.Lazy;
+import org.xvm.asm.constants.Nid;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -194,15 +195,15 @@ public class ClassCompositionSafePublicationTest {
 
     private static void installSyntheticFieldLayout(ClassComposition clz, TypeConstant type)
             throws Exception {
-        var fields = new LinkedHashMap<Object, ClassComposition.FieldInfo>();
-        fields.put("value", new ClassComposition.FieldInfo(
-                "value", 0, type, null, false, false, false, false));
+        var fields = new LinkedHashMap<Nid, ClassComposition.FieldInfo>();
+        fields.put(Nid.of("value"), new ClassComposition.FieldInfo(
+Nid.of("value"), 0, type, null, false, false, false, false));
 
         setOwnerLazyValue(clz, "f_fieldLayout", newFieldLayout(fields));
     }
 
     private static Object newFieldLayout(
-            LinkedHashMap<Object, ClassComposition.FieldInfo> fields) throws Exception {
+            LinkedHashMap<Nid, ClassComposition.FieldInfo> fields) throws Exception {
         var layoutClass = Stream.of(ClassComposition.class.getDeclaredClasses())
                 .filter(clz -> clz.getSimpleName().equals("FieldLayout"))
                 .findFirst()

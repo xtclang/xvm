@@ -20,6 +20,7 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.Nid;
 
 import org.xvm.runtime.ClassComposition.FieldInfo;
 
@@ -474,7 +475,7 @@ public abstract class ObjectHandle
         }
 
         public ObjectHandle getField(Frame frame, String sProp) {
-            FieldInfo field = getComposition().getFieldInfo(sProp);
+            FieldInfo field = getComposition().getFieldInfo(Nid.of(sProp));
 
             return field == null
                     ? missingPropertyException(frame, sProp)
@@ -515,7 +516,7 @@ public abstract class ObjectHandle
         }
 
         public void setField(Frame frame, String sProp, ObjectHandle hValue) {
-            FieldInfo field = getComposition().getFieldInfo(sProp);
+            FieldInfo field = getComposition().getFieldInfo(Nid.of(sProp));
             if (field.isTransient()) {
                 setTransientField(frame, field.getIndex(), hValue);
             } else {
@@ -543,7 +544,7 @@ public abstract class ObjectHandle
          * methods that could observe a partially constructed handle.
          */
         protected final void initializeField(String sProp, ObjectHandle hValue) {
-            FieldInfo field = getComposition().getFieldInfo(sProp);
+            FieldInfo field = getComposition().getFieldInfo(Nid.of(sProp));
             if (field == null || field.isTransient()) {
                 throw new IllegalStateException("Cannot initialize field: " + sProp);
             }
@@ -809,7 +810,7 @@ public abstract class ObjectHandle
         }
 
         private void overrideField(String sProp, ObjectHandle hValue) {
-            FieldInfo field = getComposition().getFieldInfo(sProp);
+            FieldInfo field = getComposition().getFieldInfo(Nid.of(sProp));
             if (field == null || field.isTransient()) {
                 throw new IllegalStateException("Cannot override field: " + sProp);
             }

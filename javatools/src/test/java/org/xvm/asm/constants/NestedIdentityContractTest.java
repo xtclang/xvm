@@ -13,6 +13,7 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.constants.Nid;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -25,17 +26,20 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  * Characterisation test for the "nested identity" union, written BEFORE any attempt to give it a
  * type.
  *
- * <p>{@code IdentityConstant.getNestedIdentity()} is declared to return {@code Object}, and it
- * really does return five different things: {@code null} for a non-nested identity, a
- * {@code String} for a property, an {@code Integer} for a lambda, a {@code SignatureConstant} for
- * an ordinary method, and a {@code NestedIdentity} when recursively nested. Those values are used
- * as <b>map keys</b> in roughly 76 declarations - {@code Map<Object, ParamInfo>},
- * {@code Map<Object, MethodInfo>}, {@code Map<Object, PropertyInfo>} and friends.</p>
+ * <p>{@code IdentityConstant.getNestedIdentity()} used to be declared as returning {@code Object},
+ * and really did return five different things: {@code null}, a {@code String} for a property, an
+ * {@code Integer} for a lambda, a {@code SignatureConstant} for a method, and a
+ * {@code NestedIdentity} when recursively nested. It now returns {@link Nid}, which names exactly
+ * that union - the two JDK-typed variants wrapped as {@code ByName}/{@code ByLambda}, the three we
+ * own carrying the marker directly. Those values are used
+ * as <b>map keys</b> in roughly 76 declarations - {@code Map<Nid, ParamInfo>},
+ * {@code Map<Nid, MethodInfo>}, {@code Map<Nid, PropertyInfo>} and friends.</p>
  *
- * <p><b>Why this test exists before the refactor rather than after.</b> The union is only safe
- * because the variants are mutually unequal under Java's own {@code equals}: a {@code String}
- * never equals a {@code SignatureConstant}, an {@code Integer} never equals a
- * {@code NestedIdentity}. Any sealed carrier introduced later must reproduce that <i>exactly</i>.
+ * <p><b>This test was written BEFORE the carrier existed, and that is the point.</b> The union was
+ * only safe because the variants are mutually unequal under Java's own {@code equals}: a
+ * {@code String} never equals a {@code SignatureConstant}, an {@code Integer} never equals a
+ * {@code NestedIdentity}. The carrier had to reproduce that <i>exactly</i>, and now does so
+ * structurally - no two record types are ever equal - rather than by accident.
  * Get it subtly wrong and lookups silently start hitting or missing - <b>wrong answers, not
  * crashes</b>, across 76 maps. That is the same failure mode as the {@code unlinkSibling} hazard,
  * at far greater surface, and it is not the kind of thing a passing build would reveal.</p>
@@ -53,10 +57,10 @@ public class NestedIdentityContractTest {
 
         assertNull(fixture.clz.getIdentityConstant().getNestedIdentity(),
                 "a top-level class is not nested, so its nid is null");
-        assertInstanceOf(String.class, fixture.prop.getIdentityConstant().getNestedIdentity(),
+        assertInstanceOf(Nid.ByName.class, fixture.prop.getIdentityConstant().getNestedIdentity(),
                 "a property nests by name");
         assertInstanceOf(SignatureConstant.class, fixture.method.getIdentityConstant().getNestedIdentity(),
-                "a method nests by signature");
+                "a method nests by signature - SignatureConstant carries the marker directly");
     }
 
     /**

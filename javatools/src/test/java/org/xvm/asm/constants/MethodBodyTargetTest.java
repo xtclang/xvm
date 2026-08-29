@@ -63,7 +63,9 @@ public class MethodBodyTargetTest {
 
         assertEquals(new Target.BySignature(fixture.sig), Target.narrowing(fixture.sig));
         assertThrows(IllegalArgumentException.class, () -> Target.narrowing(null));
-        assertThrows(IllegalArgumentException.class, () -> Target.narrowing("just a string"));
+        // a String is no longer even expressible here: Target.narrowing takes a Nid, so the
+        // case this used to assert at runtime is now rejected by the compiler
+        assertThrows(IllegalArgumentException.class, () -> Target.narrowing(Nid.of("just a string")));
 
         var capped = new MethodBody(fixture.id, fixture.sig, Implementation.Capped,
                 Target.narrowing(fixture.sig));

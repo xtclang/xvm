@@ -172,7 +172,7 @@ public final class PropertyComposition
     }
 
     @Override
-    public FieldInfo getFieldInfo(Object id) {
+    public FieldInfo getFieldInfo(Nid id) {
         return f_clzRef.getFieldInfo(id);
     }
 

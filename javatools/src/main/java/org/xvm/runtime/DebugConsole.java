@@ -1643,7 +1643,7 @@ public final class DebugConsole
         if (hThis != null) {
             addVar(0, "this", "this", hThis, listVars, getGlobalStash().getExpandMap());
 
-            FieldInfo field = hThis.getComposition().getFieldInfo(GenericHandle.OUTER);
+            FieldInfo field = hThis.getComposition().getFieldInfo(Nid.of(GenericHandle.OUTER));
             if (field != null) {
                 ObjectHandle hOuter = ((GenericHandle) hThis).getField(frame, field);
                 addVar(0, "outer", "outer", hOuter, listVars, mapExpand);

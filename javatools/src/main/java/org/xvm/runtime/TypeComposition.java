@@ -136,7 +136,7 @@ public interface TypeComposition {
      *
      * @return the field's attributes; -1 if not present
      */
-    ClassComposition.FieldInfo getFieldInfo(Object id);
+    ClassComposition.FieldInfo getFieldInfo(Nid id);
 
     /**
      * Make all the fields of the specified structure immutable.

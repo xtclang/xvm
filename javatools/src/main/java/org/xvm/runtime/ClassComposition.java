@@ -533,7 +533,7 @@ public final class ClassComposition
     }
 
     @Override
-    public FieldInfo getFieldInfo(Object id) {
+    public FieldInfo getFieldInfo(Nid id) {
         if (id instanceof PropertyConstant idProp &&
                 idProp.getComponent().getAccess() != Access.PRIVATE) {
             id = idProp.getNestedIdentity();
@@ -813,6 +813,14 @@ public final class ClassComposition
         }
 
         /**
+         * @return the nested identity this field is keyed by; previously reachable only through
+         *         {@link #getName()}, which renders it lossily as a String
+         */
+        public Nid getNid() {
+            return f_enid;
+        }
+
+        /**
          * @return the field's index
          */
         public int getIndex() {
@@ -905,7 +913,7 @@ public final class ClassComposition
 
         // ----- fields ----------------------------------------------------------------------------
 
-        private final Object          f_enid; // String | PropertyConstant | NestedIdentity
+        private final Nid             f_enid;
         private final int             f_nIndex;
         private final TypeConstant    f_type;
         private final TypeComposition f_clzRef;

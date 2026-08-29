@@ -96,7 +96,7 @@ public abstract sealed class DelegatingComposition
     }
 
     @Override
-    public FieldInfo getFieldInfo(Object id) {
+    public FieldInfo getFieldInfo(Nid id) {
         return f_clzOrigin.getFieldInfo(id);
     }
 

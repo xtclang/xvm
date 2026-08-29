@@ -25,6 +25,7 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
+import org.xvm.asm.constants.Nid;
 
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -48,9 +49,9 @@ public class GenericHandleCloneAsTest {
 
         var refClz    = TestComposition.ref(container);
         var fieldProp = new ClassComposition.FieldInfo(
-                "prop", 0, null, refClz, false, false, false, false);
+Nid.of("prop"), 0, null, refClz, false, false, false, false);
         var fieldData = new ClassComposition.FieldInfo(
-                "data", 1, null, null, false, false, false, false);
+Nid.of("data"), 1, null, null, false, false, false, false);
         var sourceClz = new TestComposition(container, true, fieldProp, fieldData);
         var targetClz = new TestComposition(container, false, fieldProp, fieldData);
 
@@ -120,7 +121,7 @@ public class GenericHandleCloneAsTest {
         private final Container container;
         private final boolean struct;
         private final TypeComposition clzMask;
-        private final Map<Object, ClassComposition.FieldInfo> fields;
+        private final Map<Nid, ClassComposition.FieldInfo> fields;
 
         private TestComposition(Container container) {
             this(container, false, null, Map.of());
@@ -132,7 +133,7 @@ public class GenericHandleCloneAsTest {
         }
 
         private TestComposition(Container container, boolean struct, TypeComposition clzMask,
-                                Map<Object, ClassComposition.FieldInfo> fields) {
+                                Map<Nid, ClassComposition.FieldInfo> fields) {
             this.container = container;
             this.struct    = struct;
             this.clzMask   = clzMask;
@@ -141,16 +142,16 @@ public class GenericHandleCloneAsTest {
 
         private static TestComposition ref(Container container) {
             var fieldOuter = new ClassComposition.FieldInfo(
-                    GenericHandle.OUTER, 0, null, null, true, false, false, false);
+                    Nid.of(GenericHandle.OUTER), 0, null, null, true, false, false, false);
             var fieldValue = new ClassComposition.FieldInfo(
-                    RefHandle.REFERENT, 1, null, null, true, false, false, false);
+                    Nid.of(RefHandle.REFERENT), 1, null, null, true, false, false, false);
             return new TestComposition(container, false, fieldOuter, fieldValue);
         }
 
-        private static Map<Object, ClassComposition.FieldInfo> fieldMap(
+        private static Map<Nid, ClassComposition.FieldInfo> fieldMap(
                 ClassComposition.FieldInfo... fields) {
             return Collections.unmodifiableMap(Arrays.stream(fields)
-                    .collect(Collectors.toMap(ClassComposition.FieldInfo::getName,
+                    .collect(Collectors.toMap(ClassComposition.FieldInfo::getNid,
                             Function.identity(), (first, second) -> second, LinkedHashMap::new)));
         }
 
@@ -229,7 +230,7 @@ public class GenericHandleCloneAsTest {
         }
 
         @Override
-        public ClassComposition.FieldInfo getFieldInfo(Object id) {
+        public ClassComposition.FieldInfo getFieldInfo(Nid id) {
             return fields.get(id);
         }
 
@@ -254,7 +255,7 @@ public class GenericHandleCloneAsTest {
         }
 
         @Override
-        public CallChain getMethodCallChain(Object nidMethod) {
+        public CallChain getMethodCallChain(Nid nidMethod) {
             return null;
         }
 
@@ -269,7 +270,7 @@ public class GenericHandleCloneAsTest {
         }
 
         @Override
-        public Map<Object, ClassComposition.FieldInfo> getFieldLayout() {
+        public Map<Nid, ClassComposition.FieldInfo> getFieldLayout() {
             return fields;
         }
 
