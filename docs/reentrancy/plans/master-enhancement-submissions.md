@@ -72,6 +72,8 @@ surface graduate into individual rows on the bug list.
 | E15 | Dispatch native calls through the receiver instead of past it | mechanism + 1 file per commit | Low / Low-Medium | `ObjectHandle`, `CallChain`, the existing `getTemplate(Class<T>)` | [static-typing-campaign.md](static-typing-campaign.md) (T8) |
 | E16 | Split native FUNCTION dispatch from native METHOD dispatch (retire the nullable receiver) | 3 templates + 12 call sites | Low | `ClassTemplate`, `asm/op/Call_*` | (this file) |
 | E17 | Separate the colliding `A_*` / `R_*` integer protocols | 10 constants, one file | Low | `Op` | (this file) |
+| E18 | Close the closeable switches; ratchet the rest (format completeness) | one test + 11 small switches | Low | `Constant.Format`, the sealed trees | (this file) |
+| E19 | Retire String dispatch for native methods | 76 sites, 542 labels — NOT one PR | High | `MethodStructure`, the template tree | (this file) |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -1096,6 +1098,75 @@ protocols are `int`, so the compiler has nothing to say. Typing them properly - 
 be better still, but the values are on the interpreter's hottest path and both are stored in `int`
 fields throughout, so disjoint numbering buys most of the safety at none of the cost. **Do the
 renumbering now; leave the enums for whenever the hot path is being reworked anyway.**
+
+---
+
+## E18 — Close the switches that CAN be closed; ratchet the ones that cannot
+
+A survey of every `switch` with a throwing `default` - 488 of them, 57% of the codebase's 857
+`IllegalStateException` throws. Sorted by whether the domain is closeable, because the answer
+differs per family and lumping them together is why this has never been tackled:
+
+| Domain switched on | Switches | Closeable? |
+| --- | --- | --- |
+| open values (`i`, `regId`, `getBitLength()`) | 162 | **No** - genuinely open; the default is correct |
+| int constants (`getOpCode()`, `reg.flavor()`) | 135 | Only after the ints become enums (see E17) |
+| enum constants (`format`, `getId()`) | 131 | **Sometimes** - see below |
+| String literals | 78 | Needs a typed replacement (see E19) |
+| type patterns | 11 | **Yes** - sealed + exhaustive switch, cheapest win |
+
+### The enum family: a ratchet, not a `default` removal
+
+The instinct is "it switches on an enum, so drop the default and let javac verify". That is wrong
+for the biggest ones. `ConstantPool.disassemble` switches on `Constant.Format`, which has **107**
+constants, and handles **104**. The three it omits are omitted *correctly*:
+
+- `DeferredValue` and `CastType` - their `assemble()` methods **throw**; they are compiler-internal
+  placeholders that are never persisted, so `disassemble` must never see them.
+- `ResponseSender` - referenced nowhere in the tree at all. It cannot be deleted, because
+  `Format.ordinal()` **is** the binary encoding (`out.writeByte(getFormat().ordinal())`), so
+  removing it would shift every later format. Same reserved-slot situation as `OP_NEWC_T` in E15.
+
+So the default is load-bearing and the switch cannot be closed. **But the invariant behind it can
+be tested**, and that test is what would have caught the `TimeZone` bug (E14/row 32) years ago:
+
+> Every `Format` whose constant class has a working `assemble()` must be handled by
+> `ConstantPool.disassemble`.
+
+That is derived from the code rather than hand-maintained, so it cannot drift the way the two
+parallel switches did. `LiteralFormatPlumbingTest` already does this for the literal formats
+specifically; generalising it to all 107 is a small, self-contained PR.
+
+**Width:** one test. **Port difficulty:** Low. **Value:** it closes the *class* of bug that row 32
+was an instance of, rather than the instance.
+
+### The type-pattern family: 11 switches, closeable today
+
+Eleven switches already dispatch on type patterns (`switch (constClass)`,
+`switch (argRaw)`, `switch (m_arg)`). Where the switched type is sealed, the `default -> throw`
+can be deleted and javac verifies exhaustiveness instead. This is the cheapest item in the whole
+survey and it is the shape E14.5 used successfully in `appendNestedIdentity` and `DebugConsole`.
+
+---
+
+## E19 — Retire String dispatch for native methods
+
+**76 `switch (method.getName())` sites carrying 542 `case "…"` labels.** Every native method
+invocation resolves by hashing and comparing a String at run time, and every one of those 76
+switches ends in a throwing default because the compiler cannot know the set is complete.
+
+This is the purest instance of the pattern this campaign exists to remove: a closed set - the
+native methods a template implements - expressed as open text.
+
+**The shape of a fix** (not yet designed in detail, deliberately): the mapping from
+`MethodStructure` to "which native" is fixed at link time, when `markNative()` runs, not at every
+invocation. Resolving it once onto the `MethodStructure` - an index, or a handle to the
+implementation - would turn 542 String comparisons per-invocation into a table lookup, and make
+the "did I cover every native?" question answerable at build time rather than by a runtime throw.
+
+**Width: large.** 76 sites across the template tree. **This one should NOT be attempted as a single
+PR**; it is listed here so the measurement is recorded and so nobody starts it without knowing the
+size. The right first step is one template converted as a worked example, exactly as E15 did.
 
 ---
 
