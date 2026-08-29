@@ -1045,9 +1045,8 @@ public abstract sealed class Component
      * @param child    the child component
      * @param sibling  the sibling component to unlink
      */
-    @SuppressWarnings("rawtypes")   // callers pass maps keyed by String and by MethodConstant;
-                                 // the method only ever removes by the `id` it is handed
-    protected void unlinkSibling(Map kids, Object id, Component child, Component sibling) {
+    protected <K, C extends Component> void unlinkSibling(
+            Map<K, C> kids, K id, Component child, C sibling) {
         if (sibling == child && child.getNextSibling() == null) {
             // most common case: the specified child is the only sibling with that id
             markModified();
@@ -1060,19 +1059,25 @@ public abstract sealed class Component
         }
 
         if (sibling == child) {
-            // the child to remove is in the head of the linked list
-            kids.put(id, child.getNextSibling());
+            // the child to remove is in the head of the linked list.
+            // The cast is the ONE thing the key/value pairing cannot express: a sibling chain is
+            // typed Component, while a caller's map may be narrower (MultiMethodStructure keys
+            // MethodConstant -> MethodStructure). Siblings of a child in that map are themselves
+            // MethodStructures, so the cast holds; it is localised here rather than erasing the
+            // whole map, which is what let a mismatched key be inserted silently.
+            @SuppressWarnings("unchecked")
+            C next = (C) child.getNextSibling();
+            kids.put(id, next);
         } else {
             // the child to remove is in the middle of the linked list;
             // put the linked list back first, then find and remove the child
             kids.put(id, sibling);
-            do {
-                if (sibling.getNextSibling() == child) {
-                    sibling.setNextSibling(child.getNextSibling());
+            for (Component cur = sibling; cur != null; cur = cur.getNextSibling()) {
+                if (cur.getNextSibling() == child) {
+                    cur.setNextSibling(child.getNextSibling());
                     break;
                 }
-                sibling = sibling.getNextSibling();
-            } while (sibling != null);
+            }
         }
 
         markModified();

@@ -128,6 +128,42 @@ removes a downcast at the call site, a typed carrier that removes an `instanceof
 it. Where a type parameter would only push the cast one level out, do not: that is ceremony,
 not safety.
 
+## Classification rule: actual defect vs. hazard the ugliness hides
+
+Every finding from this campaign gets one of two labels, and the distinction is not
+cosmetic — it decides whether it goes on the **master bug list** or stays here.
+
+**ACTUAL DEFECT** — a caller today produces a wrong result, a crash, or lost data. Goes on
+the master bug list with a red proof. Found so far:
+
+| Row | Finding | How the ugliness hid it |
+| --- | --- | --- |
+| 31 | `Op.toString()` throws on 16 opcodes | two parallel 200-case switches over one domain, kept in sync by hand |
+| 32 | `TimeZone` literal compiles, then dies | the same fact spelled out in seven places |
+| 33 | `AstNode` dead guard + null holes | `isInstance` where `isAssignableFrom` was meant; a guard that cannot fire reads as one that passes |
+| 34 | `mergeChildren` derefs `info2` after checking `info1` | two adjacent lines differing by one character |
+
+**LATENT HAZARD** — the shape permits a defect that no current caller commits. Fixed here,
+NOT filed against master, because filing it would overclaim. Found so far:
+
+- **`Component.unlinkSibling(Map kids, Object id, …)`** — the raw map plus `Object` key meant
+  nothing checked that the key matched the map. A mismatch would `put` a `String` key into a
+  `MethodConstant`-keyed map: no exception, no stack trace, just a child that is silently
+  invisible to every later lookup — strictly worse than a `ClassCastException`, which at
+  least names the moment. **Audited all three callers: every one passes a matching pair**, so
+  there is no defect today. Fixed by tying key to map:
+  `<K, C extends Component> void unlinkSibling(Map<K, C> kids, K id, Component child, C sibling)`.
+  Verified by compiling a deliberate mismatch — javac now rejects it with *"inference variable
+  K has incompatible bounds"*. One localised `@SuppressWarnings("unchecked")` remains on the
+  value side, where a `Component` sibling chain meets a caller's narrower map; that is the one
+  thing the pairing cannot express, and it is now one documented line instead of an erased map.
+
+The lesson the four defects share: **none of them was a hard problem**. Each was a one-word
+or one-line slip that the type system was in a position to catch and had been prevented from
+catching — by a raw type, an `Object` parameter, a hand-maintained parallel switch, or a
+guard written against the wrong overload. That is the argument for this campaign, and it is
+stronger than any cast count.
+
 ## Explicitly NOT doing
 
 - **`ClassTemplate<H extends ObjectHandle>`** — would collapse 561 `(X) hTarget` casts, the

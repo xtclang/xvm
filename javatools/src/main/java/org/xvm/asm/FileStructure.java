@@ -1188,7 +1188,8 @@ public final class FileStructure
     }
 
     @Override
-    protected void unlinkSibling(Map kids, Object id, Component child, Component sibling) {
+    protected <K, C extends Component> void unlinkSibling(
+            Map<K, C> kids, K id, Component child, C sibling) {
         throw new UnsupportedOperationException();
     }
 
