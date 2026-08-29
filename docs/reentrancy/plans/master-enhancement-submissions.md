@@ -938,14 +938,43 @@ So E15's realistic ceiling is **83 casts**, not the 151 an earlier estimate in t
 claimed. Check `grep -l "(XHandle) hTarget"` before starting a file: more than one template file in
 the result means skip it.
 
+**7. A native can be dispatched with a NULL target, and you cannot call a method on null.** All
+twelve `Call_*` ops - `Call_00` through `Call_TN` - invoke natives as
+
+```java
+invokeNativeN(frame, function, null, ahArg, m_nRetValue);
+```
+
+That is the *function* path: a static function has no receiver. Templates on that path guard for
+it explicitly - `BaseBinaryFP:143` reads
+`double d = hTarget == null ? 0 : ((FloatHandle) hTarget).getValue();`, and `BaseDecFP:162` does
+the same.
+
+**Receiver dispatch cannot serve that path at all**, so any template whose natives are reachable
+with a null target must keep its dispatch on the template. `BaseBinaryFP` and `BaseDecFP` are the
+top two entries on the convertible list *and both are disqualified by this*. `xRegEx` converted
+cleanly precisely because it has no null-target path - its natives are all instance methods.
+
+**The check before converting a file is therefore two greps, not one:**
+
+```bash
+grep -l "(XHandle) hTarget" …        # more than one template file  -> shared handle, skip
+grep -c "hTarget == null" <file>     # non-zero                     -> null-target path, skip
+```
+
 ### Ranked by yield inside `invokeNative*` (convertible only)
 
 | File | Handle | Casts |
 | --- | --- | --- |
-| `BaseBinaryFP` | `FloatHandle` | 9 |
-| `BaseDecFP` | `DecimalHandle` | 9 |
 | `xTuple` | `TupleHandle` | 6 |
 | `xRegEx` | `RegExHandle` | 5 (**done** - the worked example) |
+
+`BaseBinaryFP` (9) and `BaseDecFP` (9) headed this list until quirk 7 disqualified them, and
+`xUnconstrainedInteger` (10) and `BaseInt128` (7) until quirk 6 did. **Every one of the four
+highest-yield candidates turned out to be blocked**, which is the honest summary of this
+enhancement: the mechanism is sound and the worked example is real, but the population it can
+actually reach is much smaller than the raw cast count suggests, and only a per-file check
+establishes which.
 
 `xUnconstrainedInteger` (10) and `BaseInt128` (7) were the top of the earlier ranking and are both
 **blocked** - their handles are shared. That is the correction in one line.
