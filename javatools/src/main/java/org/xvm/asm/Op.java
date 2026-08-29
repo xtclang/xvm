@@ -1699,6 +1699,15 @@ public abstract class Op {
         case OP_PIP_DECB:    return "PIP_DECB";
         case OP_PIP_ADD:     return "PIP_ADD";
         case OP_PIP_SUB:     return "PIP_SUB";
+        case OP_PIP_MUL:     return "PIP_MUL";
+        case OP_PIP_DIV:     return "PIP_DIV";
+        case OP_PIP_MOD:     return "PIP_MOD";
+        case OP_PIP_SHL:     return "PIP_SHL";
+        case OP_PIP_SHR:     return "PIP_SHR";
+        case OP_PIP_USHR:    return "PIP_USHR";
+        case OP_PIP_AND:     return "PIP_AND";
+        case OP_PIP_OR:      return "PIP_OR";
+        case OP_PIP_XOR:     return "PIP_XOR";
         case OP_I_GET:       return "I_GET";
         case OP_I_SET:       return "I_SET";
         case OP_IIP_INC:     return "IIP_INC";
@@ -1711,6 +1720,13 @@ public abstract class Op {
         case OP_IIP_SUB:     return "IIP_SUB";
         case OP_IIP_MUL:     return "IIP_MUL";
         case OP_IIP_DIV:     return "IIP_DIV";
+        case OP_IIP_MOD:     return "IIP_MOD";
+        case OP_IIP_SHL:     return "IIP_SHL";
+        case OP_IIP_SHR:     return "IIP_SHR";
+        case OP_IIP_USHR:    return "IIP_USHR";
+        case OP_IIP_AND:     return "IIP_AND";
+        case OP_IIP_OR:      return "IIP_OR";
+        case OP_IIP_XOR:     return "IIP_XOR";
         case OP_CALL_00:     return "CALL_00";
         case OP_CALL_01:     return "CALL_01";
         case OP_CALL_0N:     return "CALL_0N";
@@ -1886,10 +1902,13 @@ public abstract class Op {
     public static final int OP_NEWC_0       = 0x40;
     public static final int OP_NEWC_1       = 0x41;
     public static final int OP_NEWC_N       = 0x42;
+    /** Reserved: the tuple-argument variant of NEWC. Not implemented; the constant holds the
+     *  slot so the contiguous NEWC/NEWCG numbering is not disturbed. See also OP_NEWCG_T. */
     public static final int OP_NEWC_T       = 0x43;
     public static final int OP_NEWCG_0      = 0x44;
     public static final int OP_NEWCG_1      = 0x45;
     public static final int OP_NEWCG_N      = 0x46;
+    /** Reserved: the tuple-argument variant of NEWCG. Not implemented; see OP_NEWC_T. */
     public static final int OP_NEWCG_T      = 0x47;
     public static final int OP_NEWV_0       = 0x48;
     public static final int OP_NEWV_1       = 0x49;
