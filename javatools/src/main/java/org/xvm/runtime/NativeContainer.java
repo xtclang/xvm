@@ -791,7 +791,7 @@ public class NativeContainer
         case          Dec32,   Dec64,   Dec128,   DecN:
 
         case Array, UInt8Array:
-        case Date, TimeOfDay, Time, Duration:
+        case Date, TimeOfDay, Time, TimeZone, Duration:
         case Range, Path, Version, RegEx:
         case Module, Package:
         case Tuple:
