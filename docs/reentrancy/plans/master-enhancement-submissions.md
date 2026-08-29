@@ -69,6 +69,7 @@ surface graduate into individual rows on the bug list.
 | E12 | The gates that make the rest verifiable (test infrastructure) | additive | Low | JUnit; the built XDK | (this file) |
 | E13 | Latent typing hazards: shapes that permit a defect no caller commits | tiny, per-item | Low | the existing signatures | [static-typing-campaign.md](static-typing-campaign.md) |
 | E14 | Static typing campaign: replace `Object`-rooted dispatch with real types | 5 independent slices | Low → Medium-High | the existing class trees; javac generics + sealed | [static-typing-campaign.md](static-typing-campaign.md) |
+| E15 | Dispatch native calls through the receiver instead of past it | mechanism + 1 file per commit | Low / Low-Medium | `ObjectHandle`, `CallChain`, the existing `getTemplate(Class<T>)` | [static-typing-campaign.md](static-typing-campaign.md) (T8) |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -833,6 +834,98 @@ nid-keyed maps. **Port difficulty:** Medium-High. **This is the one to read the 
 
 Land `NestedIdentityContractTest` **first and separately**: it pins mutual inequality, key
 collision and non-collision, and it is what makes the rest safe rather than lucky.
+
+---
+
+## E15 — Dispatch native calls through the receiver instead of past it
+
+**What it is.** Every native call arrives at the template as
+
+```java
+hTarget.getTemplate().invokeNative1(frame, method, hTarget, hArg, iReturn)
+```
+
+The handle produces the template and then passes **itself back as a parameter**, and the
+template's first act is to cast that parameter back to the type it already was. **151 of the
+runtime's handle casts exist only to undo that.**
+
+`ObjectHandle` gains four defaults that reproduce exactly the call above; `CallChain` dispatches
+through the receiver. A handle that overrides one gets `this` already correctly typed - no cast,
+no type parameter, nothing to erase.
+
+**Width.** Two commits' worth of enabling change (`ObjectHandle` + `CallChain`), then **one
+template file per commit**, each independently revertible. `xRegEx` is converted as the worked
+example.
+
+**Port difficulty.** Low for the mechanism, Low-Medium per file. **Reuses** the existing
+`getTemplate(Class<T>)` accessor (~100 uses already) for template-owned state.
+
+### Why NOT `ClassTemplate<H extends ObjectHandle>` — settled, do not retry
+
+`getTemplate()` erases, so nothing can prove the returned template's `H` matches `hTarget`'s type.
+This is not speculation: it is the identical failure that made `ComponentTemplateHandle<C>` remove
+**zero** casts in E14, and it would fail the same way after a far larger edit.
+
+### Scope: exactly four methods, and the line that fixes it there
+
+**107 methods take an `ObjectHandle hTarget`.** A default for each would drag the whole
+`ClassTemplate` API onto `ObjectHandle` and make it the god object the runtime already struggles
+with. The line is:
+
+> **Dispatch belongs on the receiver; operations belong on the template.**
+
+`invokeNative1/N/NN/Get` are dispatch - "invoke this method on this object" - and the receiver is
+exactly what gets cast. `buildHashCode`, `buildStringValue`, `invokeAdd`, `getFieldValue`,
+`setPropertyCapacity` are things the template *does to* a handle; a handle should not know how to
+hash itself in Ecstasy terms. Those 219 casts stay, correctly.
+
+### ⚠️ Quirks a porter must know
+
+**1. The handle tree and the template tree are DIFFERENT shapes, so `super` changes meaning.**
+`RegExHandle extends ObjectHandle` while `xRegEx extends xConst`. Before the change,
+`xRegEx.invokeNative1`'s `super` call walked the **template** chain into `xConst`. After it,
+`RegExHandle.invokeNative1`'s `super` call walks the **handle** chain into `ObjectHandle`, whose
+default delegates to `getTemplate().invokeNative1(...)` - which, because `xRegEx` no longer
+overrides it, lands on `xConst` after all. The chain is preserved, but *by a different route*.
+
+**2. Therefore CONVERSION ORDER MATTERS.** The handle tree is deep - 26 handles extend
+`ObjectHandle` directly, but **12 extend `GenericHandle`, 9 `ServiceHandle`, 7 `RefHandle`, 7
+`DelegateHandle`**. If a subclass handle is converted while its superclass handle is not, its
+`super` call falls through `ObjectHandle`'s default to the template chain. If the superclass IS
+converted, `super` hits the superclass handle instead. **Both can be correct, but they are not the
+same route** - so convert a handle hierarchy top-down, or verify each conversion's `super`
+behaviour explicitly.
+
+**3. Handle classes are `static` nested, so they cannot see the outer template instance.**
+Template-owned helpers are reached through the existing typed accessor:
+
+```java
+return frame.assignValue(iReturn, getTemplate(xRegEx.class).makeHandle(regex, nFlags));
+```
+
+This is also the answer to the per-container-state question: `f_container` and the owner-local
+`Lazy.Bound` caches stay on the template and are reached the same way. One indirection per moved
+method.
+
+**4. The mechanism is separately verifiable, and should be landed separately.** With no handle
+overriding anything, behaviour is identical by construction. Land `ObjectHandle` + `CallChain`
+alone, confirm `xdk:installDist` and the suite, and only then start converting files. That
+separation is what makes a bisect meaningful if a later conversion misbehaves.
+
+**5. Performance is unmeasured.** A virtual call on `ObjectHandle` replaces one on
+`ClassTemplate` - same count, different receiver, megamorphic either way. It should be measured on
+the first few conversions rather than assumed, because this is the interpreter's hot path.
+
+### Ranked by yield inside `invokeNative*`
+
+| File | Casts |
+| --- | --- |
+| `xUnconstrainedInteger` | 10 |
+| `BaseBinaryFP` | 9 |
+| `BaseDecFP` | 9 |
+| `BaseInt128` | 7 |
+| `xTuple` | 6 |
+| `xRegEx` | 5 (**done** - the worked example) |
 
 ---
 
