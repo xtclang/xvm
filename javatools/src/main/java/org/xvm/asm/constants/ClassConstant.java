@@ -310,11 +310,7 @@ public sealed class ClassConstant
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
-    /**
-     * Covariant narrowing: this identity always names a ClassStructure, so callers no longer downcast. Eight overrides like this one remove 222 casts.
-     *
-     * @return the ClassStructure this identity names
-     */
+    /** @return the ClassStructure this identity names */
     @Override
     public ClassStructure getComponent() {
         return (ClassStructure) super.getComponent();

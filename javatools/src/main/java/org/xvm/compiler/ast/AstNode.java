@@ -1830,7 +1830,7 @@ public abstract sealed class AstNode
 
             // find the kids
             int      cKids;
-            Iterator iterK;
+            Iterator<?> iterK;
             switch (value) {
             case Map kids -> {
                 cKids = kids.size();
@@ -1912,7 +1912,7 @@ public abstract sealed class AstNode
     public Map<String, Object> getDumpChildren() {
         Field[] fields = getChildFields();
         if (fields.length == 0) {
-            return Collections.emptyMap();
+            return ListMap.empty();
         }
 
         Map<String, Object> map = new ListMap<>();
@@ -1960,23 +1960,21 @@ public abstract sealed class AstNode
      *
      * @return an array of fields corresponding to the specified names on the specified class
      */
-    protected static Field[] fieldsForNames(Class clz, String... names) {
+    protected static Field[] fieldsForNames(Class<?> clz, String... names) {
         if (names == null || names.length == 0) {
             return NO_FIELDS;
         }
 
         Field[] fields = new Field[names.length];
         NextField: for (int i = 0, c = fields.length; i < c; ++i) {
-            Class                clzTry = clz;
+            Class<?>             clzTry = clz;
             NoSuchFieldException eOrig  = null;
             while (clzTry != null) {
                 try {
                     Field field = clzTry.getDeclaredField(names[i]);
                     assert field != null;
-                    // isAssignableFrom, not isInstance: isInstance asks whether the OBJECT
-                    // passed to it is an instance of the receiver, so isInstance(AstNode.class)
-                    // asked whether the Class OBJECT was an instance of the field's type - false
-                    // for every realistic field type, which left this guard dead.
+                    // isAssignableFrom, not isInstance: isInstance(X.class) asks whether the
+                    // CLASS OBJECT is an instance, which is not the question here
                     Class<?> clzField = field.getType();
                     if (!AstNode.class.isAssignableFrom(clzField)
                             && !List.class.isAssignableFrom(clzField)) {
@@ -1991,9 +1989,7 @@ public abstract sealed class AstNode
                         eOrig = e;
                     }
 
-                    // clzTry, not clz: clz is the parameter and is never null here, so the
-                    // saved NoSuchFieldException naming the missing field was never thrown and
-                    // fields[i] was left null - a hole that failed later, far from the cause.
+                    // clzTry, not clz: clz is the parameter and is never null here
                     clzTry = clzTry.getSuperclass();
                     if (clzTry == null) {
                         throw new IllegalStateException(eOrig);

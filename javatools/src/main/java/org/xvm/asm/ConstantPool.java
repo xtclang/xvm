@@ -2813,7 +2813,7 @@ public class ConstantPool
                         Collections.emptyList(), new ListMap<>(), new ListMap<>(),
                         Collections.emptyMap(), Collections.emptyMap(),
                         Collections.emptyMap(), Collections.emptyMap(),
-                        ListMap.EMPTY, null, Progress.Building);
+                        ListMap.empty(), null, Progress.Building);
                 }
             }
         }

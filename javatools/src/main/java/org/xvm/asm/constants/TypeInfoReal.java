@@ -671,13 +671,13 @@ public final class TypeInfoReal
             null,                   // typeRebase
             null,                   // typeInto
             Collections.emptyList(),// listProcess,
-            ListMap.EMPTY,          // listmapClassChain
-            ListMap.EMPTY,          // listmapDefaultChain
+            ListMap.empty(),          // listmapClassChain
+            ListMap.empty(),          // listmapDefaultChain
             Collections.emptyMap(), // mapProps
             mapMethods,
             Collections.emptyMap(), // mapVirtProps
             mapVirtMethods,
-            ListMap.EMPTY,          // mapChildren
+            ListMap.empty(),          // mapChildren
             null, Progress.Complete
         );
     }
@@ -1182,7 +1182,7 @@ public final class TypeInfoReal
         // a quick check to eliminate the full scan below for 99.9% of scenarios
         MethodStructure method = idMethod.getComponent();
         if (method != null && !method.hasChildren()) {
-            return Collections.emptyMap();
+            return ListMap.empty();
         }
 
         Map<IdentityConstant, Map<String, PropertyInfo>> mapProps = m_mapNestedProperties;

@@ -163,7 +163,27 @@ public class ListMap<K,V>
     private static final ArrayList<?> EMPTY_ARRAY_LIST = new ArrayList<>(0);
 
     /**
-     * An empty ListMap.
+     * The shared immutable empty ListMap. Held as a wildcard and handed out through {@link #empty()}
+     * rather than as a raw {@code public static final ListMap}: the raw constant made every use an
+     * unchecked assignment, and there is no need for one - an empty map has no element types to get
+     * wrong.
+     *
+     * <p>It stays a {@code ListMap} rather than becoming {@code Collections.emptyMap()}, because the
+     * type system and ConstantPool resolution depend on {@code ListMap}'s iteration order and this
+     * value is stored into fields that are later iterated. Substituting another Map implementation
+     * here is exactly the swap this class's javadoc warns against.</p>
      */
-    public static final ListMap EMPTY = new ListMap<>(-1);
+    private static final ListMap<?, ?> EMPTY = new ListMap<>(-1);
+
+    /**
+     * @param <K>  the key type
+     * @param <V>  the value type
+     *
+     * @return the shared immutable empty ListMap, typed to the caller's need
+     */
+    @SuppressWarnings("unchecked")
+    public static <K, V> ListMap<K, V> empty() {
+        return (ListMap<K, V>) EMPTY;
+    }
+
 }

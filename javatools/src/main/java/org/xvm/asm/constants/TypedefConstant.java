@@ -96,11 +96,7 @@ public final class TypedefConstant
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
-    /**
-     * Covariant narrowing: this identity always names a TypedefStructure, so callers no longer downcast. Eight overrides like this one remove 222 casts.
-     *
-     * @return the TypedefStructure this identity names
-     */
+    /** @return the TypedefStructure this identity names */
     @Override
     public TypedefStructure getComponent() {
         return (TypedefStructure) super.getComponent();

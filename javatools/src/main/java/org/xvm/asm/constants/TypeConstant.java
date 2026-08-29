@@ -2661,7 +2661,7 @@ public abstract sealed class TypeConstant
                 false, infoPri.getTypeParams(), infoPri.getClassAnnotations(), infoPri.getMixinAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
-                mapProps, mapMethods, mapVirtProps, Collections.emptyMap(), ListMap.EMPTY,
+                mapProps, mapMethods, mapVirtProps, ListMap.empty(), ListMap.empty(),
                 null, fIncomplete ? Progress.Incomplete : Progress.Complete);
     }
 
@@ -5790,7 +5790,8 @@ public abstract sealed class TypeConstant
         List<Contribution> listProcess = new ArrayList<>(infoSource.getContributionList());
         if (annotation == null) {
             // we don't pass the constraints since the type is known to satisfy the "condition"
-            listProcess.add(structBase.new Contribution(typeMixin, (ListMap) null));
+            listProcess.add(structBase.new Contribution(typeMixin,
+                    (ListMap<StringConstant, TypeConstant>) null));
         } else {
             listProcess.add(structBase.new Contribution(annotation, typeMixin));
         }

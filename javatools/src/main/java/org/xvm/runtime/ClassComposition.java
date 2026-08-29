@@ -721,7 +721,7 @@ public final class ClassComposition
         }
 
         Map<Object, FieldInfo> mapFrozen = mapFields.isEmpty()
-                ? Collections.emptyMap()
+                ? ListMap.empty()
                 : Collections.unmodifiableMap(mapFields.size() > 8
                     ? new LinkedHashMap<>(mapFields)
                     : mapFields);

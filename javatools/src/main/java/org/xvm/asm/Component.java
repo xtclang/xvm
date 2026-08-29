@@ -1045,6 +1045,8 @@ public abstract sealed class Component
      * @param child    the child component
      * @param sibling  the sibling component to unlink
      */
+    @SuppressWarnings("rawtypes")   // callers pass maps keyed by String and by MethodConstant;
+                                 // the method only ever removes by the `id` it is handed
     protected void unlinkSibling(Map kids, Object id, Component child, Component sibling) {
         if (sibling == child && child.getNextSibling() == null) {
             // most common case: the specified child is the only sibling with that id

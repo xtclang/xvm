@@ -63,11 +63,7 @@ public final class MultiMethodConstant
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
-    /**
-     * Covariant narrowing: this identity always names a MultiMethodStructure, so callers no longer downcast. Eight overrides like this one remove 222 casts.
-     *
-     * @return the MultiMethodStructure this identity names
-     */
+    /** @return the MultiMethodStructure this identity names */
     @Override
     public MultiMethodStructure getComponent() {
         return (MultiMethodStructure) super.getComponent();

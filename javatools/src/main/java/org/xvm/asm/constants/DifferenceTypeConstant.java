@@ -293,7 +293,7 @@ public final class DifferenceTypeConstant
     @Override
     protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
         if (info1 == null || info2 == null) {
-            return Collections.emptyMap();
+            return ListMap.empty();
         }
 
         Map<Object, ParamInfo> map1 = info1.getTypeParams();
@@ -332,7 +332,7 @@ public final class DifferenceTypeConstant
     @Override
     protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
         if (info1 == null) {
-            return Collections.emptyMap();
+            return ListMap.empty();
         }
 
         if (info2 == null) {
@@ -357,7 +357,7 @@ public final class DifferenceTypeConstant
     @Override
     protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
         if (info1 == null) {
-            return Collections.emptyMap();
+            return ListMap.empty();
         }
 
         if (info2 == null) {
@@ -383,7 +383,7 @@ public final class DifferenceTypeConstant
     @Override
     protected Map<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
         if (info1 == null) {
-            return ListMap.EMPTY;
+            return ListMap.empty();
         }
 
         if (info2 == null) {

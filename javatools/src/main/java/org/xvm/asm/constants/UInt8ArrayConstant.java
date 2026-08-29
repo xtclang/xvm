@@ -70,9 +70,7 @@ public final class UInt8ArrayConstant
 
     @Override
     protected UInt8ArrayConstant copyForAdoption(AdoptionContext context) {
-        // The logical value is the byte sequence. The payload is frozen, so the adopting pool's
-        // constant can SHARE it: the copy that previously insulated each owner existed only
-        // because the byte[] was mutable and shared storage could be written through either.
+        // the payload is frozen, so the adopting pool's constant can share it
         return new UInt8ArrayConstant(context.pool(), m_abVal);
     }
 

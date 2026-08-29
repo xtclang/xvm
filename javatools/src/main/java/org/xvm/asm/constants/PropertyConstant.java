@@ -167,11 +167,7 @@ public sealed class PropertyConstant
 
     // ----- FormalConstant methods ----------------------------------------------------------------
 
-    /**
-     * Covariant narrowing: this identity always names a PropertyStructure, so callers no longer downcast. Eight overrides like this one remove 222 casts.
-     *
-     * @return the PropertyStructure this identity names
-     */
+    /** @return the PropertyStructure this identity names */
     @Override
     public PropertyStructure getComponent() {
         return (PropertyStructure) super.getComponent();

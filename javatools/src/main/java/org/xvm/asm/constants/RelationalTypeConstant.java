@@ -517,8 +517,8 @@ public abstract sealed class RelationalTypeConstant
                 null,                                   // typeRebase
                 null,                                   // typeInto
                 Collections.emptyList(),                // listProcess,
-                ListMap.EMPTY,                          // listmapClassChain
-                ListMap.EMPTY,                          // listmapDefaultChain
+                ListMap.empty(),                          // listmapClassChain
+                ListMap.empty(),                          // listmapDefaultChain
                 mergeProperties(info1, info2, errs),
                 mergeMethods(info1, info2, errs),
                 Collections.emptyMap(),                 // mapVirtProps

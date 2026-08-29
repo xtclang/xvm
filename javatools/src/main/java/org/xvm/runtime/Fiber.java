@@ -360,12 +360,12 @@ public class Fiber
         if (oPending == null) {
             m_oPendingRequests = request;
         } else if (oPending instanceof Message requestPrev) {
-            Map<CompletableFuture, Message> mapPending = new HashMap<>();
+            Map<CompletableFuture<ObjectHandle>, Message> mapPending = new HashMap<>();
             mapPending.put(requestPrev.f_future, requestPrev);
             mapPending.put(request.f_future, request);
             m_oPendingRequests = mapPending;
         } else {
-            Map<CompletableFuture, Message> mapPending = (Map<CompletableFuture, Message>) oPending;
+            Map<CompletableFuture<ObjectHandle>, Message> mapPending = (Map<CompletableFuture<ObjectHandle>, Message>) oPending;
             mapPending.put(request.f_future, request);
         }
     }
@@ -379,7 +379,7 @@ public class Fiber
         if (oPending instanceof Message) {
             m_oPendingRequests = null;
         } else {
-            ((Map<CompletableFuture, Message>) oPending).remove(request.f_future);
+            ((Map<CompletableFuture<ObjectHandle>, Message>) oPending).remove(request.f_future);
         }
     }
 
@@ -396,14 +396,14 @@ public class Fiber
      * to an UnhandledExceptionHandler if such a handle was registered naturally.
      */
     public void registerUncapturedRequest(Message request) {
-        Map<CompletableFuture, ObjectHandle> mapPending = m_mapPendingUncaptured;
+        Map<CompletableFuture<ObjectHandle>, ObjectHandle> mapPending = m_mapPendingUncaptured;
         if (mapPending == null) {
             m_mapPendingUncaptured = mapPending = new HashMap<>();
         }
 
         m_cPending++;
 
-        CompletableFuture future = request.f_future;
+        CompletableFuture<ObjectHandle> future = request.f_future;
         mapPending.put(future, m_hAsyncSection);
 
         future.whenComplete((_void, ex) -> {
@@ -518,7 +518,7 @@ public class Fiber
 
         StringBuilder sb     = new StringBuilder(" for [");
         boolean       fFirst = true;
-        for (Message request : ((Map<CompletableFuture, Message>) oPending).values()) {
+        for (Message request : ((Map<CompletableFuture<ObjectHandle>, Message>) oPending).values()) {
             if (fFirst) {
                 fFirst = false;
             } else {
@@ -694,7 +694,7 @@ public class Fiber
     private int m_cPending;
 
     /**
-     * Pending requests: Message | Map<CompletableFuture, Message>.
+     * Pending requests: Message | Map<CompletableFuture<ObjectHandle>, Message>.
      */
     private Object m_oPendingRequests;
 
@@ -702,7 +702,7 @@ public class Fiber
      * Pending uncaptured futures; values are AsyncSection? handlers. Can be accessed only on the
      * fiber's service thread.
      */
-    private Map<CompletableFuture, ObjectHandle> m_mapPendingUncaptured;
+    private Map<CompletableFuture<ObjectHandle>, ObjectHandle> m_mapPendingUncaptured;
 
     /**
      * If specified, indicates an action to be performed as the fiber execution resumes.

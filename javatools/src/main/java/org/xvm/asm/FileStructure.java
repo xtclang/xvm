@@ -557,7 +557,7 @@ public final class FileStructure
 
                     // the module itself may contain one or more versions
                     boolean first = true;
-                    for (Iterator iter = module.siblings(); iter.hasNext(); first = false) {
+                    for (Iterator<Component> iter = module.siblings(); iter.hasNext(); first = false) {
                         Version structVer = ((ModuleStructure) iter.next()).getVersion();
                         if (structVer == null) {
                             // must not allow both versioned and unversioned of the same module
@@ -576,7 +576,7 @@ public final class FileStructure
                     assert !vers.contains(idVer);
 
                     // siblings must be either unversioned or the same version as the id
-                    for (Iterator iter = module.siblings(); iter.hasNext(); ) {
+                    for (Iterator<Component> iter = module.siblings(); iter.hasNext(); ) {
                         Version structVer = ((ModuleStructure) iter.next()).getVersion();
                         assert structVer == null || structVer.withoutBuildString().equals(idVer);
                     }

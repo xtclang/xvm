@@ -182,9 +182,6 @@ public final class ModuleConstant
     }
 
     /**
-     * Covariant narrowing: a module identity always names a ModuleStructure, which this method
-     * already built and then discarded the type of.
-     *
      * @return the ModuleStructure this identity names
      */
     @Override

@@ -55,6 +55,9 @@ private class JavaCompilerArgsProvider(
         // convention applies. Deliberate exceptions require a local @SuppressWarnings with a
         // comment proving why the escape/fallthrough is safe; see
         // docs/reentrancy/must-audit-backlog.md (build-gate and fallthrough rows).
+        //
+        // -Xlint:rawtypes is NOT yet here: see static-typing-campaign.md T7. Turning it on is the
+        // goal, but ~40 sites remain and a half-enabled fatal lint just blocks the build.
         add("-Xlint:this-escape")
         add("-Xlint:fallthrough")
         if (previewSnapshot) {

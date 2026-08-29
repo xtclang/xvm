@@ -119,11 +119,7 @@ public final class MethodConstant
         m_iLambda = readMagnitude(in);
     }
 
-    /**
-     * Covariant narrowing: this identity always names a MethodStructure, so callers no longer downcast. Eight overrides like this one remove 222 casts.
-     *
-     * @return the MethodStructure this identity names
-     */
+    /** @return the MethodStructure this identity names */
     @Override
     public MethodStructure getComponent() {
         return (MethodStructure) super.getComponent();

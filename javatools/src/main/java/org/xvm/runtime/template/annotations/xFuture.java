@@ -527,7 +527,9 @@ public class xFuture
             return frame.assignValue(iReturn, hThat);
         }
 
-        CompletableFuture cfAny = CompletableFuture.anyOf(cfThis, cfThat);
+        @SuppressWarnings("rawtypes")   // anyOf() is CompletableFuture<Object> by API; makeHandle
+            // needs the ObjectHandle-typed future, and the raw form is the only bridge
+            CompletableFuture cfAny = CompletableFuture.anyOf(cfThis, cfThat);
 
         return frame.assignValue(iReturn, makeHandle(hThis.getComposition(), cfAny));
     }
@@ -813,7 +815,7 @@ public class xFuture
          *         exceptionally; null otherwise
          */
         public ExceptionHandle getException() {
-            CompletableFuture future = getFuture();
+            CompletableFuture<ObjectHandle> future = getFuture();
             if (future.isCompletedExceptionally()) {
                 try {
                     future.get();

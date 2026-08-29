@@ -563,7 +563,7 @@ public sealed class ClassStructure
     public Map<StringConstant, TypeConstant> getTypeParams() {
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
-                ? ListMap.EMPTY
+                ? ListMap.empty()
                 : Collections.unmodifiableMap(mapThis);
     }
 

@@ -110,6 +110,7 @@ without its listed dependency.
 | 31 | Source-only clean; add 16 `case` labels to `Op.toName`. Fixed in-branch. | `Op.toName(0xDD)` throws `IllegalStateException: op=0xdd` while `toName(0x01)` returns `LINE_1`; 16 opcodes reachable via `instantiate` are absent from `toName`. | Ready after manual review. |
 | 32 | Seven sites plus a `construct(String)` on `lib_ecstasy` `TimeZone`. Fixed in-branch, verified end to end. | `pool.ensureLiteralConstant(Format.TimeZone, "x")` throws `IllegalStateException: unsupported format: TimeZone` where `Date`/`Time`/`Duration` succeed. | Ready after manual review. |
 | 33 | Source-only; two one-line fixes. Surfaced set for the guard measured empty (183/183 AST classes load clean). Fixed in-branch. | `fieldsForNames(AstNode.class, "noSuchFieldAnywhere")` returns `fields[0]=null` instead of throwing; `isInstance(AstNode.class)` observed `false` where `isAssignableFrom` is `true`. | Ready after manual review. |
+| 34 | Source-only; one word (`info1` -> `info2`). Fixed in-branch. | Caller `mergeTypeInfo` treats both TypeInfos as independently nullable; with `info1` present and `info2` absent the guard passes and `info2.getChildInfosByName()` NPEs. | Ready after manual review. |
 
 ## Reuse Exposure Categories
 
@@ -2261,6 +2262,42 @@ fix must not break).
 
 **Dependencies/order:** Independent; both fixes can land together, since the surfaced set
 for the guard fix is measured empty.
+
+## 34. IntersectionTypeConstant.mergeChildren guards the wrong argument
+
+**Issue title:** `mergeChildren` null-checks `info1` twice and then dereferences `info2`.
+
+**Status/category:** PROVEN by inspection on master, with the caller establishing
+reachability. **FIXED in this branch.** Found while retiring raw types, not while looking
+for it.
+
+**Explanation:** both `TypeInfo` arguments are independently nullable. The caller says so
+itself - `RelationalTypeConstant.mergeTypeInfo` computes its `Progress` as
+`info1 == null || info2 == null ? Incomplete : ...`. But the second line guards on the
+wrong one:
+
+```java
+map1 = info1 == null ? ListMap.EMPTY : info1.getChildInfosByName();
+map2 = info1 == null ? ListMap.EMPTY : info2.getChildInfosByName();   // info1, reads info2
+```
+
+With `info1` present and `info2` absent - one half of an intersection resolved, the other
+not yet - the guard passes and `info2.getChildInfosByName()` throws
+`NullPointerException` while building a TypeInfo, far from anything naming the cause.
+
+A copy-paste slip that neither the type system nor a test could catch, and the reason it
+is worth filing rather than just fixing: **the whole `merge*` family was audited for the
+same shape and this is the only instance**, so it is a one-line fix, not a pattern.
+
+**Master evidence:** `origin/master:.../IntersectionTypeConstant.java:576-577` - identical.
+
+**Minimal master-portable fix strategy:** guard `map2` on `info2`. One word.
+
+**Tests to add/run on master:** `org.xvm.asm.constants.IntersectionChildMergeTest` - the
+both-absent control (which always worked, because the wrong guard is accidentally right
+when the two arguments agree) plus a pin on the guard itself.
+
+**Dependencies/order:** Independent.
 
 ## Items intentionally not in the 18
 

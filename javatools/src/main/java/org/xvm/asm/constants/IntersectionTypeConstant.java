@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Collections;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -583,8 +584,8 @@ public sealed class IntersectionTypeConstant
 
     @Override
     protected Map<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
-        Map<String, ChildInfo>     map1 = info1 == null ? ListMap.EMPTY : info1.getChildInfosByName();
-        Map<String, ChildInfo>     map2 = info1 == null ? ListMap.EMPTY : info2.getChildInfosByName();
+        Map<String, ChildInfo>     map1 = info1 == null ? ListMap.empty() : info1.getChildInfosByName();
+        Map<String, ChildInfo>     map2 = info2 == null ? ListMap.empty() : info2.getChildInfosByName();
 
         if (map1.isEmpty()) {
             return map2;

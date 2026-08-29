@@ -515,7 +515,7 @@ public final class UnionTypeConstant
     @Override
     protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
         if (info1 == null || info2 == null) {
-            return Collections.emptyMap();
+            return ListMap.empty();
         }
 
         ConstantPool           pool = getConstantPool();
@@ -570,7 +570,7 @@ public final class UnionTypeConstant
     @Override
     protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
         if (info1 == null || info2 == null) {
-            return Collections.emptyMap();
+            return ListMap.empty();
         }
 
         Map<PropertyConstant, PropertyInfo> map = new HashMap<>();
@@ -650,7 +650,7 @@ public final class UnionTypeConstant
     @Override
     protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo infoType1, TypeInfo infoType2, ErrorListener errs) {
         if (infoType1 == null || infoType2 == null) {
-            return Collections.emptyMap();
+            return ListMap.empty();
         }
 
         ConstantPool                    pool        = getConstantPool();
@@ -746,7 +746,7 @@ public final class UnionTypeConstant
     @Override
     protected Map<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
         if (info1 == null || info2 == null) {
-            return ListMap.EMPTY;
+            return ListMap.empty();
         }
 
         Map<String, ChildInfo>     map1     = info1.getChildInfosByName();

@@ -1384,7 +1384,7 @@ public abstract class ObjectHandle
      */
     public static class NativeFutureHandle
             extends ObjectHandle {
-        protected NativeFutureHandle(CompletableFuture cf) {
+        protected NativeFutureHandle(CompletableFuture<Object> cf) {
             super(null);
 
             f_future = cf;
@@ -1395,7 +1395,7 @@ public abstract class ObjectHandle
             return "Native: " + f_future;
         }
 
-        public final CompletableFuture f_future;
+        public final CompletableFuture<Object> f_future;
     }
     /**
      * A handle that is used as an indicator for a default method argument value.

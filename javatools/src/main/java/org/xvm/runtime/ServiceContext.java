@@ -227,12 +227,12 @@ public class ServiceContext {
      *
      * @return the op info for the specified category
      */
-    public Object getOpInfo(Op op, Enum category) {
-        EnumMap mapByCategory = f_mapOpInfo.get(op);
+    public Object getOpInfo(Op op, Enum<?> category) {
+        EnumMap<?, ?> mapByCategory = f_mapOpInfo.get(op);
         if (mapByCategory == null) {
             return null;
         }
-        WeakReference ref = (WeakReference) mapByCategory.get(category);
+        WeakReference<?> ref = (WeakReference<?>) mapByCategory.get(category);
         return ref == null ? null : ref.get();
     }
 

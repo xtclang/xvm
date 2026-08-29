@@ -68,9 +68,7 @@ public final class Float128Constant
 
     @Override
     protected Float128Constant copyForAdoption(AdoptionContext context) {
-        // The logical value is the encoded 128-bit float. The payload is frozen, so the adopting
-        // pool's constant can SHARE it; the copy that previously insulated each owner existed only
-        // because the byte[] was mutable and writable through either holder.
+        // the payload is frozen, so the adopting pool's constant can share it
         return new Float128Constant(context.pool(), m_abVal);
     }
 
