@@ -26,6 +26,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.NativeContainer;
+import org.xvm.runtime.NativeType;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
@@ -52,6 +53,14 @@ public class xOSStorage
         super(container, structure);
     }
 
+    /** The receiver type: OSStorage is a service, represented by a ServiceHandle. */
+    private static final NativeType<ServiceHandle> SELF =
+            NativeType.of("_native.fs.OSStorage", ServiceHandle.class);
+
+    /** The {@code text.String} parameter type, carrying the handle class that represents it. */
+    private static final NativeType<StringHandle> STRING_TYPE =
+            NativeType.of("text.String", StringHandle.class);
+
     @Override
     public void initNative() {
         markNativeProperty("homeDir");
@@ -59,7 +68,8 @@ public class xOSStorage
         markNativeProperty("tmpDir");
 
         markNativeMethod("find", new String[] {"_native.fs.OSFileStore", "text.String"}, null);
-        markNativeMethod("names", STRING, null);
+        markNativeMethod1("names", SELF, STRING_TYPE, null,
+                (frame, hStorage, hPathString, iReturn) -> names(frame, hPathString, iReturn));
         markNativeMethod("createDir", STRING, BOOLEAN);
         markNativeMethod("createFile", STRING, BOOLEAN);
         markNativeMethod("delete", STRING, BOOLEAN);
@@ -103,6 +113,27 @@ public class xOSStorage
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
     }
 
+    /**
+     * Native {@code names(String pathString)}, bound with typed handles: the declaration names the
+     * parameter {@code text.String} and {@link #STRING_TYPE} carries the handle class for it, so
+     * this body receives a {@link StringHandle} rather than casting one out of an
+     * {@code ObjectHandle}.
+     */
+    private static int names(Frame frame, StringHandle hPathString, int iReturn) {
+        try {
+            Path     path   = Paths.get(hPathString.getStringValue());
+            String[] asName = path.toFile().list();
+            int      cNames = asName == null ? 0 : asName.length;
+
+            Container container = frame.container();
+            return cNames == 0
+                     ? frame.assignValue(iReturn, xString.ensureEmptyArray(container))
+                     : frame.assignValue(iReturn, xString.makeArrayHandle(container, asName));
+        } catch (InvalidPathException e) {
+            return frame.raiseException(xException.ioException(frame, e.getMessage()));
+        }
+    }
+
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn) {
@@ -114,23 +145,6 @@ public class xOSStorage
         }
 
         switch (method.getName()) {
-        case "names": {
-            StringHandle hPathString = (StringHandle) hArg;
-
-            try {
-                Path     path   = Paths.get(hPathString.getStringValue());
-                String[] asName = path.toFile().list();
-                int      cNames = asName == null ? 0 : asName.length;
-
-                Container container = frame.container();
-                return cNames == 0
-                         ? frame.assignValue(iReturn, xString.ensureEmptyArray(container))
-                         : frame.assignValue(iReturn, xString.makeArrayHandle(container, asName));
-            } catch (InvalidPathException e) {
-                return frame.raiseException(xException.ioException(frame, e.getMessage()));
-            }
-        }
-
         case "createFile": { // (pathString)
             StringHandle hPathString = (StringHandle) hArg;
 

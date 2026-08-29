@@ -5,8 +5,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import org.xvm.asm.Annotation;
@@ -552,6 +554,14 @@ public abstract class ClassTemplate
      */
     public int invokeNative1(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
+        // a native bound with a typed handler is dispatched here rather than by a name switch;
+        // this is the fall-through, so a template's existing switch still runs first and an
+        // unmigrated native behaves exactly as before
+        NativeMethod.Bound1<?, ?> bound = f_mapBound1.get(method);
+        if (bound != null) {
+            return bound.dispatch(frame, hTarget, hArg, iReturn);
+        }
+
         return frame.raiseException("Unknown native(1) method: \"" + method + "\" on " + this);
     }
 
@@ -2024,7 +2034,30 @@ public abstract class ClassTemplate
     /**
      * Mark the specified method as native.
      */
-    public void markNativeMethod(String sName, String[] asParamType, String[] asRetType) {
+    /**
+     * Declare a native method taking one argument, bound to a typed implementation.
+     *
+     * <p>The same declaration as {@link #markNativeMethod(String, String[], String[])}, except that
+     * the parameter type carries its Java handle class, so the handler is written against the
+     * handle types instead of against {@code ObjectHandle} plus a cast.</p>
+     *
+     * @param sName      the method name
+     * @param selfType   the receiver's type
+     * @param argType    the argument's type
+     * @param asRetType  the return types, in the existing string form
+     * @param handler    the typed implementation
+     */
+    protected <T extends ObjectHandle, A extends ObjectHandle> void markNativeMethod1(
+            String sName, NativeType<T> selfType, NativeType<A> argType, String[] asRetType,
+            NativeMethod.One<T, A> handler) {
+        MethodStructure method = markNativeMethod(sName, argType.asParamTypes(), asRetType);
+        if (method == null) {
+            throw new IllegalStateException("no such native method: " + sName + " on " + this);
+        }
+        f_mapBound1.put(method, new NativeMethod.Bound1<>(selfType, argType, handler));
+    }
+
+    public MethodStructure markNativeMethod(String sName, String[] asParamType, String[] asRetType) {
         TypeConstant[] atypeParam  = getTypeConstants(this, asParamType);
         TypeConstant[] atypeReturn = getTypeConstants(this, asRetType);
 
@@ -2087,7 +2120,15 @@ public abstract class ClassTemplate
                 method.markNative();
             }
         }
+        return method;
     }
+
+    /**
+     * Natives bound to a typed handler, keyed by the structure {@code markNativeMethod} marked.
+     * Written during {@code initNative} and read on the invocation path.
+     */
+    private final Map<MethodStructure, NativeMethod.Bound1<?, ?>> f_mapBound1 =
+            new ConcurrentHashMap<>();
 
     /**
      * Get a class type for the specified name in the context of the specified template.
