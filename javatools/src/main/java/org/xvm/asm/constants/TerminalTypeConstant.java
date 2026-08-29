@@ -302,7 +302,7 @@ public sealed class TerminalTypeConstant
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             // examine the structure to determine if it represents a class or interface (TODO GG - is this comment just wrong?)
             case ClassConstant constant ->
-                (constant.getComponent()).getTypeParamCount();
+                ((ClassStructure) constant.getComponent()).getTypeParamCount();
 
             case ThisClassConstant constant -> declaredTypeParamCount(constant);
             case ParentClassConstant constant -> declaredTypeParamCount(constant);
@@ -330,7 +330,7 @@ public sealed class TerminalTypeConstant
     public boolean containsGenericParam(String sName) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().containsGenericParam(sName);
         }
 
@@ -374,7 +374,7 @@ public sealed class TerminalTypeConstant
     protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().getGenericParamType(sName, listParams);
         }
 
@@ -434,6 +434,23 @@ public sealed class TerminalTypeConstant
      * @return the underlying constant, resolving it if it is still unresolved and can be resolved
      *         at this point
      */
+    /**
+     * Obtain the resolved constant as the {@link TypedefConstant} it is known to be.
+     *
+     * <p>Every caller of this reached it through {@code !isSingleDefiningConstant()}, which is
+     * exactly the predicate that establishes the constant's type - so the cast those callers used
+     * to write was each of them re-asserting what the guard had already proved. Doing it once,
+     * here, is the same trade as a covariant return, reached by a different route: the predicate
+     * carries the type instead of a subclass carrying it.</p>
+     *
+     * @return the TypedefConstant this type resolves to
+     */
+    protected TypedefConstant ensureResolvedTypedef() {
+        assert !isSingleDefiningConstant()
+                : "not a typedef referring to a relational type: " + getValueString();
+        return (TypedefConstant) ensureResolvedConstant();
+    }
+
     protected Constant ensureResolvedConstant() {
         Constant constId = m_constId;
 
@@ -456,7 +473,7 @@ public sealed class TerminalTypeConstant
            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().resolveContributedName(sName, access, idMethod, collector);
         }
 
@@ -525,7 +542,7 @@ public sealed class TerminalTypeConstant
     public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().resolveGenerics(pool, resolver);
         }
 
@@ -544,7 +561,7 @@ public sealed class TerminalTypeConstant
     public TypeConstant resolveConstraints(boolean fPendingOnly) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().resolveConstraints(fPendingOnly);
         }
 
@@ -675,7 +692,7 @@ public sealed class TerminalTypeConstant
                                              TypeConstant typeTarget, IdentityConstant idCtx) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().
                     resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx);
         }
@@ -825,7 +842,7 @@ public sealed class TerminalTypeConstant
     public boolean isTuple() {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().isTuple();
         }
 
@@ -891,7 +908,7 @@ public sealed class TerminalTypeConstant
     @Override
     public boolean isNullable() {
         if (!isSingleDefiningConstant()) {
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().isNullable();
         }
 
@@ -911,7 +928,7 @@ public sealed class TerminalTypeConstant
     @Override
     public TypeConstant removeNullable() {
         if (!isSingleDefiningConstant()) {
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().removeNullable();
         }
 
@@ -931,7 +948,7 @@ public sealed class TerminalTypeConstant
     @Override
     public TypeConstant andNot(ConstantPool pool, TypeConstant that) {
         if (!isSingleDefiningConstant()) {
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().andNot(pool, that);
         }
 
@@ -981,7 +998,7 @@ public sealed class TerminalTypeConstant
     public boolean extendsClass(IdentityConstant constClass) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().extendsClass(constClass);
         }
 
@@ -999,7 +1016,7 @@ public sealed class TerminalTypeConstant
             case PackageConstant constant ->
                 (constant.getComponent()).extendsClass(constClass);
             case ClassConstant constant ->
-                (constant.getComponent()).extendsClass(constClass);
+                ((ClassStructure) constant.getComponent()).extendsClass(constClass);
 
             case FormalConstant constant ->
                 constant.getConstraintType().extendsClass(constClass);
@@ -1057,7 +1074,7 @@ public sealed class TerminalTypeConstant
     @Override
     public boolean containsRecursiveType() {
         if (!isSingleDefiningConstant()) {
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().containsRecursiveType();
         }
         return false;
@@ -1069,7 +1086,7 @@ public sealed class TerminalTypeConstant
             return getDefiningConstant().equals(getConstantPool().clzFunction());
         }
 
-        TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+        TypedefConstant constId = ensureResolvedTypedef();
         return constId.getReferredToType().containsFunctionType();
     }
 
@@ -1089,7 +1106,7 @@ public sealed class TerminalTypeConstant
     public Category getCategory() {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().getCategory();
         }
 
@@ -1103,7 +1120,7 @@ public sealed class TerminalTypeConstant
 
             case ClassConstant constant -> {
                 // examine the structure to determine if it represents a class or interface
-                ClassStructure clz = constant.getComponent();
+                ClassStructure clz = (ClassStructure) constant.getComponent();
                 if (clz == null) {
                     throw new IllegalStateException("missing class for constant: " + constant);
                 }
@@ -1142,7 +1159,7 @@ public sealed class TerminalTypeConstant
     public boolean isSingleUnderlyingClass(boolean fAllowInterface) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().isSingleUnderlyingClass(fAllowInterface);
         }
 
@@ -1189,7 +1206,7 @@ public sealed class TerminalTypeConstant
     public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().getSingleUnderlyingClass(fAllowInterface);
         }
 
@@ -1225,7 +1242,7 @@ public sealed class TerminalTypeConstant
     public boolean isExplicitClassIdentity(boolean fAllowParams) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().isExplicitClassIdentity(fAllowParams);
         }
 
@@ -1247,7 +1264,7 @@ public sealed class TerminalTypeConstant
     public Component.Format getExplicitClassFormat() {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().getExplicitClassFormat();
         }
 
@@ -1282,7 +1299,7 @@ public sealed class TerminalTypeConstant
     public TypeConstant getExplicitClassInto(boolean fResolve) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().getExplicitClassInto(fResolve);
         }
 
@@ -1292,7 +1309,7 @@ public sealed class TerminalTypeConstant
             case NativeRebaseConstant constant ->
                 throw new IllegalStateException("no class format for: " + constant);
             // get the class referred to
-            case ClassConstant constant -> constant.getComponent();
+            case ClassConstant constant -> (ClassStructure) constant.getComponent();
 
             case ThisClassConstant constant ->
                 (ClassStructure) constant.getDeclarationLevelClass().getComponent();
@@ -1361,7 +1378,7 @@ public sealed class TerminalTypeConstant
     public boolean isConst() {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().isConst();
         }
 
@@ -1376,7 +1393,7 @@ public sealed class TerminalTypeConstant
 
             case NativeRebaseConstant ignored -> false;
             case ClassConstant constant ->
-                (constant.getComponent()).isConst();
+                ((ClassStructure) constant.getComponent()).isConst();
 
             case DecoratedClassConstant _, MethodConstant _, MultiMethodConstant _,
                  PureIdentityConstant _, TypedefConstant _, SignatureConstant _,
@@ -1408,7 +1425,7 @@ public sealed class TerminalTypeConstant
     public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().ensureTypeInfo(idClass, errs);
         }
 
@@ -1441,7 +1458,7 @@ public sealed class TerminalTypeConstant
     protected TypeInfo buildTypeInfo(ErrorListener errs) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().ensureTypeInfoInternal(errs);
         }
 
@@ -1482,7 +1499,7 @@ public sealed class TerminalTypeConstant
         if (isFormalType()) {
             if (!isSingleDefiningConstant()) {
                 // a typedef for a formal type
-                TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+                TypedefConstant constId = ensureResolvedTypedef();
                 return constId.getReferredToType().calculateRelationToLeft(typeLeft);
             }
 
@@ -1582,7 +1599,7 @@ public sealed class TerminalTypeConstant
 
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().isContravariantParameter(pool, typeBase, typeCtx);
         }
 
@@ -1649,7 +1666,7 @@ public sealed class TerminalTypeConstant
             TypeConstant typeRight, Access accessLeft, List<TypeConstant> listLeft) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
         }
 
@@ -1699,7 +1716,7 @@ public sealed class TerminalTypeConstant
                                                boolean fFunction, List<TypeConstant> listParams) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().containsSubstitutableMethod(signature, access, fFunction, listParams);
         }
 
@@ -1750,7 +1767,7 @@ public sealed class TerminalTypeConstant
     public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().checkConsumption(sTypeName, access, listParams);
         }
 
@@ -1835,7 +1852,7 @@ public sealed class TerminalTypeConstant
     public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().checkProduction(sTypeName, access, listParams);
         }
 
@@ -1937,7 +1954,7 @@ public sealed class TerminalTypeConstant
     public ClassTemplate getTemplate(Container container) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            TypedefConstant constId = ensureResolvedTypedef();
             return constId.getReferredToType().getTemplate(container);
         }
 
@@ -2055,7 +2072,7 @@ public sealed class TerminalTypeConstant
         if (!isValidated()) {
             if (!isSingleDefiningConstant()) {
                 // this can only happen if this type is a Typedef referring to a relational type
-                TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+                TypedefConstant constId = ensureResolvedTypedef();
                 return constId.getReferredToType().validate(errs) && super.validate(errs);
             }
 

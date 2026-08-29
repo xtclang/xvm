@@ -90,7 +90,7 @@ public final class InnerChildTypeConstant
 
     @Override
     protected ClassStructure getChildStructure() {
-        return m_idChild.getComponent();
+        return (ClassStructure) m_idChild.getComponent();
     }
 
 

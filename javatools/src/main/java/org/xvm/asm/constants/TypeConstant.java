@@ -766,7 +766,7 @@ public abstract sealed class TypeConstant
             if (idThis.equals(idObject)) {
                 return true;
             }
-            ClassStructure clzObject = idObject.getComponent();
+            ClassStructure clzObject = (ClassStructure) idObject.getComponent();
             return clzObject.hasContribution(idThis);
         }
         return false;
@@ -6442,7 +6442,7 @@ public abstract sealed class TypeConstant
 
             // continue recursively with the right side analysis (the class arm covers the
             // native rebase, which behaved identically under the old format switch)
-            case ClassConstant constant -> (constant.getComponent())
+            case ClassConstant constant -> ((ClassStructure) constant.getComponent())
                     .findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
 
             case ThisClassConstant idRight ->

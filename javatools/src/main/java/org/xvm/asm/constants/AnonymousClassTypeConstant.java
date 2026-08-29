@@ -114,7 +114,7 @@ public final class AnonymousClassTypeConstant
 
     @Override
     protected ClassStructure getChildStructure() {
-        return m_idAnon.getComponent();
+        return (ClassStructure) m_idAnon.getComponent();
     }
 
 

@@ -998,7 +998,7 @@ public abstract class Utils {
 
         case Class: {
             ClassConstant idClz = (ClassConstant) constValue;
-            ClassStructure clz  = idClz.getComponent();
+            ClassStructure clz  = (ClassStructure) idClz.getComponent();
 
             assert clz.isSingleton();
 
@@ -1529,7 +1529,7 @@ public abstract class Utils {
                     int        cArgs = anno.getParams().length;
 
                     ClassConstant  idAnno     = (ClassConstant) anno.getAnnotationClass();
-                    ClassStructure structAnno = idAnno.getComponent();
+                    ClassStructure structAnno = (ClassStructure) idAnno.getComponent();
 
                     // should be one and only one constructor
                     constructAnno = structAnno.findMethod("construct", m -> true);

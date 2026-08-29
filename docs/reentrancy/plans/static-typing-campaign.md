@@ -222,6 +222,35 @@ removes a downcast at the call site, a typed carrier that removes an `instanceof
 it. Where a type parameter would only push the cast one level out, do not: that is ceremony,
 not safety.
 
+## STANDING RULE: a narrowing change is not verified until `xdk:installDist` passes
+
+Learned the expensive way. **T1 narrowed `ClassConstant.getComponent()` to `ClassStructure` and
+that was wrong** — a `ClassConstant` can name a `TypedefStructure`. The failure:
+
+```
+java.lang.ClassCastException: TypedefStructure cannot be cast to ClassStructure
+    at ClassConstant.getComponent(ClassConstant.java:316)
+    at ConstantPool.getImplicitlyImportedComponent(ConstantPool.java:1619)
+    at NameResolver.resolve(NameResolver.java:249)
+```
+
+**760 unit tests did not catch it.** Only compiling `lib_ecstasy` did, because the failing path
+runs when the compiler resolves an implicitly imported typedef. The regression sat in the tree
+across four subsequent commits, all of them "green".
+
+**The reasoning error, stated so it is not repeated:** a covariant return applies to EVERY caller,
+not only the ones already casting. 113 sites cast a `ClassConstant`'s component to
+`ClassStructure` and every one of them was in a path where it genuinely is one — but
+`getImplicitlyImportedComponent` was a caller correctly using the supertype, and narrowing forced
+the cast onto it too. **"Nearly every caller casts to X" is not grounds to narrow. The subclass
+must ALWAYS produce X.** The cast-frequency survey cannot answer that question; only reading what
+the method can return can.
+
+`ClassConstant` and `DecoratedClassConstant` are reverted, and
+`IdentityComponentNarrowingTest` pins both halves: the six sound narrowings, and the two that must
+stay `Component` — so a future attempt fails immediately with the reason instead of surfacing as a
+`ClassCastException` in the middle of building the core library.
+
 ## Classification rule: actual defect vs. hazard the ugliness hides
 
 Every finding from this campaign gets one of two labels, and the distinction is not

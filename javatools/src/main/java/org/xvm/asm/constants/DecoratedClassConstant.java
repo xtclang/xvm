@@ -87,10 +87,8 @@ public final class DecoratedClassConstant
     }
 
     @Override
-    public ClassStructure getComponent() {
-        // the delegate is typed IdentityConstant, so the narrowing costs one cast HERE, which is
-        // the whole point: one internal cast in place of one at every call site
-        return (ClassStructure) getClassIdentityConstant().getComponent();
+    public Component getComponent() {
+        return getClassIdentityConstant().getComponent();
     }
 
     @Override

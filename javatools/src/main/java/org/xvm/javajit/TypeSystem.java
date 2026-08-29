@@ -554,7 +554,7 @@ public class TypeSystem {
             if (constant instanceof TypeConstant constType) {
                 type = constType;
             } else if (constant instanceof ClassConstant constClass) {
-                ClassStructure struct = constClass.getComponent();
+                ClassStructure struct = (ClassStructure) constClass.getComponent();
                 if (idEnd < suffix.length()) {
                     String childName = unescapeJitName(suffix.substring(idEnd + 1))
                             .replace('$', '.');

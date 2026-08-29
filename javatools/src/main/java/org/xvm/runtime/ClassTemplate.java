@@ -2332,7 +2332,7 @@ public abstract class ClassTemplate
                         Constant[]      aconstArgs = anno.getParams();
                         int             cArgs      = aconstArgs.length;
                         ClassConstant   idAnno     = (ClassConstant) anno.getAnnotationClass();
-                        ClassStructure  structAnno = idAnno.getComponent();
+                        ClassStructure  structAnno = (ClassStructure) idAnno.getComponent();
                         MethodStructure ctorAnno   = structAnno.findMethod("construct", cArgs);
 
                         if (structAnno.isVirtualChild() && !hStruct.getComposition().hasOuter()) {

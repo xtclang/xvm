@@ -200,7 +200,7 @@ public class Annotation
      */
     public TypeConstant getFormalType() {
         ClassConstant idAnno = (ClassConstant) getAnnotationClass();
-        return (idAnno.getComponent()).getFormalType();
+        return ((ClassStructure) idAnno.getComponent()).getFormalType();
     }
 
     /**

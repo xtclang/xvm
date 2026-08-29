@@ -67,7 +67,7 @@ public sealed class ClassConstant
      * @throws IllegalStateException if the constructor cannot be found
      */
     public MethodConstant findConstructor(TypeConstant... types) {
-        ClassStructure structClz = getComponent();
+        ClassStructure structClz = (ClassStructure) getComponent();
         if (structClz == null) {
             throw new IllegalStateException("could not find class " + this);
         }
@@ -310,11 +310,6 @@ public sealed class ClassConstant
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
-    /** @return the ClassStructure this identity names */
-    @Override
-    public ClassStructure getComponent() {
-        return (ClassStructure) super.getComponent();
-    }
 
     @Override
     public IdentityConstant replaceParentConstant(IdentityConstant idParent) {
@@ -344,7 +339,7 @@ public sealed class ClassConstant
 
     @Override
     public TypeConstant getType() {
-        ClassStructure clz = getComponent();
+        ClassStructure clz = (ClassStructure) getComponent();
 
         return clz.isVirtualChild()   ? getConstantPool().ensureVirtualChildTypeConstant(
                                             getParentConstant().getType(), getName())

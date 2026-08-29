@@ -848,12 +848,12 @@ public sealed class NamedTypeExpression
             ClassStructure clzClass   = component.getContainingClass();
             if (idTarget != null && clzClass != null) {
                 IdentityConstant idClass   = clzClass.getIdentityConstant();
-                ClassStructure   clzTarget = idTarget.getComponent();
+                ClassStructure   clzTarget = (ClassStructure) idTarget.getComponent();
 
                 if (idTarget.isNestMateOf(idClass)) {
                     if (clzTarget.isVirtualChild()) {
                         ClassConstant  idBase  = idTarget.getAutoNarrowingBase();
-                        ClassStructure clzBase = idBase.getComponent();
+                        ClassStructure clzBase = (ClassStructure) idBase.getComponent();
                         if (clzBase.containsUnresolvedContribution()) {
                             return new UnresolvedTypeConstant(pool,
                                 new UnresolvedNameConstant(pool, clzTarget.getName()));
@@ -893,7 +893,7 @@ public sealed class NamedTypeExpression
                     }
                 } else if (clzTarget.isVirtualChild()) {
                     ClassConstant  idBase  = idTarget.getAutoNarrowingBase();
-                    ClassStructure clzBase = idBase.getComponent();
+                    ClassStructure clzBase = (ClassStructure) idBase.getComponent();
 
                     if (clzBase.containsUnresolvedContribution()) {
                         return new UnresolvedTypeConstant(pool,
@@ -936,7 +936,7 @@ public sealed class NamedTypeExpression
                         }
 
                         ClassConstant  idLeft  = (ClassConstant) type.getSingleUnderlyingClass(true);
-                        ClassStructure clzLeft = idLeft.getComponent();
+                        ClassStructure clzLeft = (ClassStructure) idLeft.getComponent();
                         String         sChild  = name.getValueText();
                         Component      child   = clzLeft.findChildDeep(sChild);
                         if (child instanceof ClassStructure clzChild) {

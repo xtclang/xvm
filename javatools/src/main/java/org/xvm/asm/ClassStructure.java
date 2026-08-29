@@ -1076,7 +1076,7 @@ public sealed class ClassStructure
                         return true;
                     }
 
-                    structCur = constSuper.getComponent();
+                    structCur = (ClassStructure) constSuper.getComponent();
                     continue NextSuper;
                 }
             }
@@ -2341,7 +2341,7 @@ public sealed class ClassStructure
 
                 TypeConstant typeResolved = contrib.resolveType(pool, this, listRight);
 
-                relation = relation.bestOf((constContrib.getComponent()).
+                relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
                         findUnionContribution(pool, typeLeft, typeResolved.getParamTypes()));
                 if (relation == Relation.IS_A) {
                     return Relation.IS_A;

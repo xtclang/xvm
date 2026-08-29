@@ -2410,7 +2410,7 @@ public sealed class NameExpression
                             ClassConstant  idBase  = fMate
                                 ? ((ClassConstant) idThis).getOutermost()
                                 : ((ClassConstant) idTarget).getAutoNarrowingBase();
-                            ClassStructure clzBase = idBase.getComponent();
+                            ClassStructure clzBase = (ClassStructure) idBase.getComponent();
                             boolean        fFormal = !(component instanceof MethodStructure method &&
                                                        method.isFunction());
                             type = pool.ensureVirtualTypeConstant(clzBase, clzTarget,

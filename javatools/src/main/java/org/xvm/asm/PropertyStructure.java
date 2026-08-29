@@ -667,7 +667,7 @@ public final class PropertyStructure
 
             case Class: {
                 ClassConstant  idClz = (ClassConstant) constant;
-                ClassStructure clz   = idClz.getComponent();
+                ClassStructure clz   = (ClassStructure) idClz.getComponent();
                 if (clz.isSingleton()) {
                     collector.resolvedConstant(constant);
                     return ResolutionResult.RESOLVED;
