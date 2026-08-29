@@ -678,6 +678,53 @@ version fails to parse and would make the test vacuously green).
 
 ---
 
+## E13 — Latent typing hazards: shapes that permit a defect no caller commits
+
+Companion to the bug list, and deliberately separate from it. These are **not** defects — every
+current caller is correct, and filing them as bugs would overclaim. They are shapes where the
+type system was in a position to prevent a class of defect and had been prevented from doing so,
+so the next caller is one slip away. Master carries each one identically.
+
+Found by the static-typing campaign
+([static-typing-campaign.md](static-typing-campaign.md)); the classification rule lives there.
+
+### E13.1 — `Component.unlinkSibling(Map kids, Object id, …)`
+
+**What it is.** The map and the key were erased together:
+
+```java
+protected void unlinkSibling(Map kids, Object id, Component child, Component sibling)
+```
+
+The body does `kids.put(id, ...)`, so nothing checks that the key belongs to the map.
+
+**Why it matters more than an ordinary raw type.** A mismatch does not throw. It inserts, say,
+a `String` key into a `MethodConstant`-keyed map — no exception, no stack trace, just a child
+that is silently invisible to every later lookup. That is strictly worse than the
+`ClassCastException` a cast would have given, which at least names the moment.
+
+**Why it is NOT a bug.** All three callers audited: `Component.removeChild` passes
+`Map<String, Component>` + `String`; `MultiMethodStructure.removeChild` passes
+`Map<MethodConstant, MethodStructure>` + `MethodConstant`; `FileStructure` throws
+`UnsupportedOperationException`. Every pair matches today.
+
+**Fix (landed in the branch).**
+
+```java
+protected <K, C extends Component> void unlinkSibling(
+        Map<K, C> kids, K id, Component child, C sibling)
+```
+
+Verified by compiling a deliberate mismatch against the built classes - javac rejects it with
+*"inference variable K has incompatible bounds"*. One localised `@SuppressWarnings("unchecked")`
+remains on the VALUE side, where a `Component` sibling chain meets a caller's narrower map; that
+is the one thing the key/value pairing cannot express, and it is one documented line rather than
+an erased map. The walk also stops reassigning its own `sibling` parameter.
+
+**Width.** One method, one override, three callers. Source- and binary-compatible.
+
+---
+
 ## Appendix: commit-hash resolution table
 
 The 2026-08-28 rebase onto `origin/master` `82683bcd2` rewrote all 297 branch commits, so the

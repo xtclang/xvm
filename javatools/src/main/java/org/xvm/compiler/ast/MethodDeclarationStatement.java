@@ -216,10 +216,16 @@ public non-sealed class MethodDeclarationStatement
             return name.getValueText();
         }
 
-        MethodStructure struct = (MethodStructure) getComponent();
+        MethodStructure struct = getComponent();
         return struct == null
                 ? "???"
                 : struct.getName();
+    }
+
+    /** @return the MethodStructure this statement declares */
+    @Override
+    public MethodStructure getComponent() {
+        return (MethodStructure) super.getComponent();
     }
 
     @Override
@@ -270,7 +276,7 @@ public non-sealed class MethodDeclarationStatement
 
     @Override
     public TypeConstant[] getReturnTypes() {
-        return ((MethodStructure) getComponent()).getReturnTypes();
+        return (getComponent()).getReturnTypes();
     }
 
     @Override
@@ -400,7 +406,7 @@ public non-sealed class MethodDeclarationStatement
                         body.donateSource(method);
                     }
 
-                    MethodStructure methodConstruct = (MethodStructure) m_stmtComplement.getComponent();
+                    MethodStructure methodConstruct = m_stmtComplement.getComponent();
                     if (methodConstruct != null && method != null) {
                         methodConstruct.setConstructFinally(method);
                     }
@@ -428,7 +434,7 @@ public non-sealed class MethodDeclarationStatement
                     if (method != null && fConstructor) {
                         MethodDeclarationStatement stmtFinally = m_stmtComplement;
                         if (stmtFinally != null) {
-                            MethodStructure methodFinally = (MethodStructure) stmtFinally.getComponent();
+                            MethodStructure methodFinally = stmtFinally.getComponent();
                             if (methodFinally != null) {
                                 method.setConstructFinally(methodFinally);
                             }
@@ -544,7 +550,7 @@ public non-sealed class MethodDeclarationStatement
             }
         }
 
-        MethodStructure method = (MethodStructure) getComponent();
+        MethodStructure method = getComponent();
         if (method != null) {
             // methods are opaque, so everything inside the curlies can be deferred until we get to the
             // validateContent() stage
@@ -592,7 +598,7 @@ public non-sealed class MethodDeclarationStatement
     public void validateContent(StageMgr mgr, ErrorListener errs) {
         // method children are all deferred up until this stage, so we have to "catch them up" at
         // this point, recreating the various compiler stages here
-        MethodStructure method = (MethodStructure) getComponent();
+        MethodStructure method = getComponent();
         if (method == null || !catchUpChildren(errs)) {
             // we are in an error state; we choose not to proceed with compilation
             mgr.deferChildren();
@@ -886,7 +892,7 @@ public non-sealed class MethodDeclarationStatement
 
     @Override
     public void generateCode(StageMgr mgr, ErrorListener errs) {
-        MethodStructure method = (MethodStructure) getComponent();
+        MethodStructure method = getComponent();
         if (method == null) {
             // we are in an error state; we choose not to proceed with compilation
             mgr.deferChildren();
@@ -1111,14 +1117,14 @@ public non-sealed class MethodDeclarationStatement
      * Used only for setting up conditional break points.
      */
     private String path() {
-        MethodConstant  idMethod  = ((MethodStructure) getComponent()).getIdentityConstant();
+        MethodConstant  idMethod  = (getComponent()).getIdentityConstant();
         ModuleStructure module    = (ModuleStructure) idMethod.getModuleConstant().getComponent();
         return module.getName() + "/" + idMethod.getPathString();
     }
 
     public String toSignatureString() {
         if (name == null) {
-            MethodStructure struct = (MethodStructure) getComponent();
+            MethodStructure struct = getComponent();
             return struct == null
                     ? "?()"
                     : struct.getIdentityConstant().getValueString();

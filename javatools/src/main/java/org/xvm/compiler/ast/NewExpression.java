@@ -226,7 +226,7 @@ public final class NewExpression
             } else {
                 // there must be an anonymous inner class skeleton by this point
                 assert anon != null && anon.getComponent() != null;
-                return ((ClassStructure) anon.getComponent()).getFormalType();
+                return (anon.getComponent()).getFormalType();
             }
         }
 
@@ -495,7 +495,7 @@ public final class NewExpression
                     typeSuper = pool.ensureAccessTypeConstant(typeTarget,
                             fNestMate ? Access.PRIVATE : Access.PROTECTED);
 
-                    ClassStructure clzAnon = (ClassStructure) anon.getComponent();
+                    ClassStructure clzAnon = anon.getComponent();
 
                     typeResult = clzAnon.getIdentityConstant().getType();
                     if (!ctx.isFunction()) {
@@ -1104,7 +1104,7 @@ public final class NewExpression
             assert anon.getComponent() != null;
 
             m_anonActualBackup = anon;
-            m_clzActualBackup  = (ClassStructure) anon.getComponent();
+            m_clzActualBackup  = anon.getComponent();
         }
 
         // select a unique (and purposefully syntactically illegal) name for the anonymous inner
@@ -1181,7 +1181,7 @@ public final class NewExpression
     private void destroyTempInnerClass() {
         if (anon != null && m_purposeCurrent != AnonPurpose.Actual) {
             // discard any temporary inner class structure
-            ClassStructure clzTemp = (ClassStructure) anon.getComponent();
+            ClassStructure clzTemp = anon.getComponent();
             if (clzTemp != null) {
                 Component componentParent = clzTemp.getParent();
                 assert componentParent == getComponent();       // the parent should be this method
@@ -1213,7 +1213,7 @@ public final class NewExpression
      * Remove synthetic default constructor on the anonymous inner class.
      */
     private void destroyDefaultConstructor() {
-        ClassStructure clz = (ClassStructure) anon.getComponent();
+        ClassStructure clz = anon.getComponent();
         MethodConstant id  = pool().ensureMethodConstant(clz.getIdentityConstant(), "construct",
                 TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
         MethodStructure constrDefault = id.getComponent();
@@ -1251,7 +1251,7 @@ public final class NewExpression
         Parameter[]     aParams    = methodSuper.getParamArray();
         int             cParams    = aParams.length;
         MethodConstant  idSuper    = methodSuper.getIdentityConstant();
-        ClassStructure  clzAnon    = (ClassStructure) anon.getComponent();
+        ClassStructure  clzAnon    = anon.getComponent();
         MethodStructure constrThis = clzAnon.createMethod(true, Access.PUBLIC, null,
                 Parameter.NO_PARAMS, "construct", aParams, true, false);
         constrThis.setSynthetic(true);
@@ -1355,7 +1355,7 @@ public final class NewExpression
 
         // create a wrapper constructor that takes the additional capture values and then delegates
         // to the original constructor
-        ClassStructure  clzAnon   = (ClassStructure) anon.getComponent();
+        ClassStructure  clzAnon   = anon.getComponent();
         MethodStructure constrOld = m_constructor;
         MethodStructure constrNew = clzAnon.createMethod(true, Access.PUBLIC, null,
                 Parameter.NO_PARAMS, "construct", aNewParams, true, false);
@@ -1591,7 +1591,7 @@ public final class NewExpression
 
         @Override
         public ClassStructure getThisClass() {
-            return (ClassStructure) anon.getComponent();
+            return anon.getComponent();
         }
 
         @Override

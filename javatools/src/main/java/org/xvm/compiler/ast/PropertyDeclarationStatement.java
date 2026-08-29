@@ -117,6 +117,12 @@ public final class PropertyDeclarationStatement
         return type;
     }
 
+    /** @return the PropertyStructure this statement declares */
+    @Override
+    public PropertyStructure getComponent() {
+        return (PropertyStructure) super.getComponent();
+    }
+
     @Override
     public boolean isAutoNarrowingAllowed(TypeExpression type) {
         // the property's type is allowed to auto-narrow, but only for non-static properties
@@ -324,7 +330,7 @@ public final class PropertyDeclarationStatement
 
     @Override
     public void resolveNames(StageMgr mgr, ErrorListener errs) {
-        PropertyStructure prop = (PropertyStructure) getComponent();
+        PropertyStructure prop = getComponent();
         if (!prop.resolveAnnotations()) {
             mgr.requestRevisit();
         }
@@ -335,7 +341,7 @@ public final class PropertyDeclarationStatement
         if (!alreadyReached(Stage.Validated)) {
             setStage(Stage.Validating);
 
-            PropertyStructure prop = (PropertyStructure) getComponent();
+            PropertyStructure prop = getComponent();
             TypeConstant      type = prop.getType();
             if (type.containsUnresolved()) {
                 mgr.requestRevisit();
@@ -667,7 +673,7 @@ public final class PropertyDeclarationStatement
     @Override
     public void generateCode(StageMgr mgr, ErrorListener errs) {
         if (!errs.isSilent()) {
-            PropertyStructure   prop = (PropertyStructure) getComponent();
+            PropertyStructure   prop = getComponent();
             ClassStructure      clz  = prop.getContainingClass();
             TypeConstant        type = pool().ensureAccessTypeConstant(clz.getFormalType(), Access.PRIVATE);
             TypeInfo            info = type.ensureTypeInfo(errs);
@@ -736,7 +742,7 @@ public final class PropertyDeclarationStatement
      * @return a newly created property initializer method
      */
     private MethodStructure createInitializer() {
-        PropertyStructure prop   = (PropertyStructure) getComponent();
+        PropertyStructure prop   = getComponent();
         MethodStructure   method = prop.createMethod(isStatic(), Access.PRIVATE,
                 org.xvm.asm.Annotation.NO_ANNOTATIONS,
                 new Parameter[] {new Parameter(pool(), prop.getType(), null, null, true, 0, false)},
@@ -756,7 +762,7 @@ public final class PropertyDeclarationStatement
      * Discard an unused initializer.
      */
     private void discardInitializer(MethodStructure methodInit) {
-        PropertyStructure prop = (PropertyStructure) getComponent();
+        PropertyStructure prop = getComponent();
         prop.removeChild(methodInit.getParent());
     }
 

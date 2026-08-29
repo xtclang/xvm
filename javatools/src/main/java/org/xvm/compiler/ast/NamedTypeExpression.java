@@ -433,7 +433,7 @@ public sealed class NamedTypeExpression
 
             while (parent != null) {
                 if (parent instanceof TypeCompositionStatement stmt) {
-                    ClassStructure clz = (ClassStructure) stmt.getComponent();
+                    ClassStructure clz = stmt.getComponent();
                     if (stmt.getName().equals(getName())) {
                         if (!stmt.alreadyReached(Stage.Resolved)) {
                             // mixins naturally imply formal type parameters from their contributions

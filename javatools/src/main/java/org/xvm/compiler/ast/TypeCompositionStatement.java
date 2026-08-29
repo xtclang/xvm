@@ -257,6 +257,12 @@ public final class TypeCompositionStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /** @return the ClassStructure this statement declares */
+    @Override
+    public ClassStructure getComponent() {
+        return (ClassStructure) super.getComponent();
+    }
+
     @Override
     public Source getSource() {
         return source == null
@@ -1509,7 +1515,7 @@ public final class TypeCompositionStatement
 
     @Override
     public void resolveNames(StageMgr mgr, ErrorListener errs) {
-        ClassStructure component = (ClassStructure) getComponent();
+        ClassStructure component = getComponent();
         if (component == null) {
             // there must've been an error already reported
             assert errs.hasSeriousErrors();
@@ -2094,7 +2100,7 @@ public final class TypeCompositionStatement
         }
 
         ConstantPool   pool      = pool();
-        ClassStructure component = (ClassStructure) getComponent();
+        ClassStructure component = getComponent();
         if (component instanceof PackageStructure pkg && pkg.isModuleImport()) {
             SingletonConstant constInjector = pkg.getModuleInjector();
             if (constInjector != null) {
@@ -2405,7 +2411,7 @@ public final class TypeCompositionStatement
             return;
         }
 
-        ClassStructure component = (ClassStructure) getComponent();
+        ClassStructure component = getComponent();
 
         ValidateShorthand:
         if (component.getFormat() != Format.INTERFACE) {
@@ -2764,7 +2770,7 @@ public final class TypeCompositionStatement
         // 1) set each property based on the parameter name and value passed in as an arg
         // 2) call the super constructors (for extended class and incorporated mixins)
         ConstantPool         pool      = pool();
-        ClassStructure       component = (ClassStructure) getComponent();
+        ClassStructure       component = getComponent();
         Code                 code      = constructor.ensureCode();
         Context              ctxEmit   = ctxConstruct.emittingContext(code);
         ArrayList<BinaryAST> listAsts  = new ArrayList<>();

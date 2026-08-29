@@ -172,7 +172,7 @@ public final class AnnotationExpression
      */
     protected PropertyStructure getAnnotatedProperty() {
         return getParent() instanceof PropertyDeclarationStatement stmtProp
-                ? (PropertyStructure) stmtProp.getComponent()
+                ? stmtProp.getComponent()
                 : null;
     }
 

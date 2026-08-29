@@ -88,7 +88,40 @@ silently. Genericizing a type does not by itself fix its consumers; it can just 
 erasure into them. Four such bindings in `CaseManager` are now `ValueConstant<?>`. Worth
 watching for in every later task: **a green build after a generics change is not evidence.**
 
-### T3 — Covariant `Component` child lookup
+### T3 — Covariant `Component` child lookup — **PARTIALLY DONE**
+
+**Done: the AST-statement half.** `ComponentStatement.getComponent()` returns `Component`, and
+each declaration statement knows exactly what it declares. Three overrides —
+`MethodDeclarationStatement → MethodStructure`, `TypeCompositionStatement → ClassStructure`,
+`PropertyDeclarationStatement → PropertyStructure` — removed **29 casts**.
+
+**Measured, not assumed:** the 130 surviving `getComponent()` casts after T1 split evenly into
+three groups of ~43 — AST statements (done), runtime `ComponentTemplateHandle`, and
+`asm`-internal receivers typed `IdentityConstant`. Only the first was narrowable by the T1
+pattern.
+
+**The other two are NOT narrowable the same way, and that is worth recording:**
+
+- `ComponentTemplateHandle` is ONE class holding any `Component` — the handle type is not
+  per-component-kind, so there is no subclass to narrow. It would need
+  `ComponentTemplateHandle<C extends Component>` plus a generic `makeComponentHandle`, which is
+  a different and larger change.
+- The `asm` receivers are statically `IdentityConstant` (`idClz`, `id`, `idLeft`), where T1's
+  subclass narrowing cannot apply by construction. Narrowing accessors like
+  `SingletonConstant.getClassConstant()` (which returns `IdentityConstant` and forces the cast at
+  `EnumValueConstant:75`) would reach some of them — a separate, smaller task.
+
+**I repeated the T1 mistake here**, having written the warning down after T1: a blanket regex
+over the method name over-deleted, this time inside `compiler/` only. Recovery was worse than
+last time — restoring an over-deleted line from `git show HEAD:` corrupted a multi-line statement
+into a syntax error, because the line numbers had already shifted. **The rule that actually works
+is: delete only where the receiver's static type is one of the narrowed classes, or delete one
+file at a time with a compile between.** A regex over a method name is not scoped by anything.
+
+- [ ] `ComponentTemplateHandle<C extends Component>` (~43 casts)
+- [ ] Narrow the `IdentityConstant` accessors that force casts (`getClassConstant`, …)
+
+### T3 (original scope) — Covariant `Component` child lookup
 
 `getChild`, `getChildByPath`, `getChildByNameMap`, `children()` all return `Component`. The
 existing `Class<T>` overloads are the transitional shape; typing the lookup by what the caller
