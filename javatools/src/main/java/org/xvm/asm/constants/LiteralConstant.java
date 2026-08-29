@@ -47,7 +47,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * </ul>
  */
 public sealed class LiteralConstant
-        extends ValueConstant
+        extends ValueConstant<String>
         permits VersionConstant {
     // ----- constructors --------------------------------------------------------------------------
 

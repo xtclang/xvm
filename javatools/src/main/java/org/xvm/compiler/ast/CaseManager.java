@@ -911,8 +911,8 @@ public class CaseManager<CookieType> {
 
         if (constThat instanceof MatchAnyConstant
                 || !fRangeThis && !fRangeThat
-                || !(constThis instanceof ValueConstant)
-                || !(constThat instanceof ValueConstant)) {
+                || !(constThis instanceof ValueConstant<?>)
+                || !(constThat instanceof ValueConstant<?>)) {
             // technically, some types do have a known range, so it is possible to define a range
             // that is equivalent to a wild-card; that implementation can be deferred until the
             // compiler is re-built from the ground up in Ecstasy; similarly, no handling is
@@ -925,8 +925,8 @@ public class CaseManager<CookieType> {
             if (constThis instanceof RangeConstant constRange) {
                 oThisLo = constRange.getEffectiveLow();
                 oThisHi = constRange.getEffectiveHigh();
-                if (oThisLo instanceof ValueConstant valLo &&
-                    oThisHi instanceof ValueConstant valHi) {
+                if (oThisLo instanceof ValueConstant<?> valLo &&
+                    oThisHi instanceof ValueConstant<?> valHi) {
                     oThisLo = valLo.getValue();
                     oThisHi = valHi.getValue();
                 } else {
@@ -936,7 +936,7 @@ public class CaseManager<CookieType> {
                 return false;
             }
         } else {
-            oThisLo = oThisHi = ((ValueConstant) constThis).getValue();
+            oThisLo = oThisHi = ((ValueConstant<?>) constThis).getValue();
         }
 
         if (!(oThisLo instanceof Comparable cmpThisLo &&
@@ -949,8 +949,8 @@ public class CaseManager<CookieType> {
             if (constThat instanceof RangeConstant constRange) {
                 oThatLo = constRange.getEffectiveLow();
                 oThatHi = constRange.getEffectiveHigh();
-                if (oThatLo instanceof ValueConstant valueLo &&
-                    oThatHi instanceof ValueConstant valueHi) {
+                if (oThatLo instanceof ValueConstant<?> valueLo &&
+                    oThatHi instanceof ValueConstant<?> valueHi) {
                     oThatLo = valueLo.getValue();
                     oThatHi = valueHi.getValue();
                 } else {
@@ -960,7 +960,7 @@ public class CaseManager<CookieType> {
                 return false;
             }
         } else {
-            oThatLo = oThatHi = ((ValueConstant) constThat).getValue();
+            oThatLo = oThatHi = ((ValueConstant<?>) constThat).getValue();
         }
         if (!(oThatLo instanceof Comparable cmpThatLo &&
               oThatHi instanceof Comparable cmpThatHi)) {

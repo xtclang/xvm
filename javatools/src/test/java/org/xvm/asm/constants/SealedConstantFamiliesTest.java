@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -107,8 +108,16 @@ public class SealedConstantFamiliesTest {
                 FPNConstant.class, FSNodeConstant.class, FileStoreConstant.class,
                 Float128Constant.class, Float64Constant.class, FloatConstant.class,
                 IntConstant.class, LiteralConstant.class, MapConstant.class,
-                MatchAnyConstant.class, RangeConstant.class, RegExConstant.class,
+                RangeConstant.class, RegExConstant.class,
                 SingletonConstant.class, StringConstant.class, UInt8ArrayConstant.class);
+
+        // MatchAnyConstant deliberately left this family when ValueConstant became
+        // ValueConstant<V>. It is a WILDCARD MARKER, not a value: its getValue() returned the
+        // string "_" under a comment admitting "there is no correct answer to this question",
+        // and it had zero callers - every use in the tree is `instanceof MatchAnyConstant`.
+        // Typing it ValueConstant<String> would have been a lie that type-checks.
+        assertFalse(ValueConstant.class.isAssignableFrom(MatchAnyConstant.class),
+                "MatchAnyConstant is a wildcard marker, not a ValueConstant");
         assertPermits(FloatConstant.class,
                 Float16Constant.class, Float32Constant.class, Float8e4Constant.class,
                 Float8e5Constant.class);

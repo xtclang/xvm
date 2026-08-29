@@ -21,7 +21,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * Represent a range of two constant values.
  */
 public final class RangeConstant
-        extends ValueConstant {
+        extends ValueConstant<Constant[]> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

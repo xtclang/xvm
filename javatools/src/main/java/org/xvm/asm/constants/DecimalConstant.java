@@ -22,7 +22,7 @@ import org.xvm.util.Hash;
  * Represent a 32-bit, 64-bit, or 128-bit IEEE-754-2008 decimal constant.
  */
 public final class DecimalConstant
-        extends ValueConstant {
+        extends ValueConstant<Decimal> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

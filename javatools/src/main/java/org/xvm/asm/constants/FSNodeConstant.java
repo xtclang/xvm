@@ -26,7 +26,7 @@ import org.xvm.util.FrozenByteArray;
  * Represent an entire filing system directory stored in the constant pool.
  */
 public final class FSNodeConstant
-        extends ValueConstant {
+        extends ValueConstant<Constant> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

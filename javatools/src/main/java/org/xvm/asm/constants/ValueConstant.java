@@ -8,12 +8,12 @@ import org.xvm.asm.ConstantPool;
 /**
  * Represent a constant whose purpose is to represent a constant value.
  */
-public abstract sealed class ValueConstant
+public abstract sealed class ValueConstant<V>
         extends Constant
         permits ArrayConstant, BFloat16Constant, ByteConstant, CharConstant,
                 DecimalAutoConstant, DecimalConstant, FPNConstant, FSNodeConstant,
                 FileStoreConstant, Float128Constant, Float64Constant, FloatConstant,
-                IntConstant, LiteralConstant, MapConstant, MatchAnyConstant,
+                IntConstant, LiteralConstant, MapConstant,
                 RangeConstant, RegExConstant, SingletonConstant, StringConstant,
                 UInt8ArrayConstant {
     // ----- constructors --------------------------------------------------------------------------
@@ -39,9 +39,11 @@ public abstract sealed class ValueConstant
     /**
      * Obtain the value represented by this ValueConstant.
      *
-     * @return the value of the constant (type-specific)
+     * @param <V>  the type of value this constant carries
+     *
+     * @return the value of the constant
      */
-    public abstract Object getValue();
+    public abstract V getValue();
 
     // ----- XvmStructure operations ---------------------------------------------------------------
 

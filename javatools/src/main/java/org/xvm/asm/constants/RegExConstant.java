@@ -19,7 +19,7 @@ import static org.xvm.util.Handy.writeUtf8String;
  * Represent a regular expression constant.
  */
 public final class RegExConstant
-        extends ValueConstant {
+        extends ValueConstant<String> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

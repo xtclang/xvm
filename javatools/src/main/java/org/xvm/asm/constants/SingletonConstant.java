@@ -27,7 +27,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * constant value.
  */
 public sealed class SingletonConstant
-        extends ValueConstant
+        extends ValueConstant<Constant>
         permits EnumValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 

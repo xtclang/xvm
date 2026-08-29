@@ -25,7 +25,7 @@ import static org.xvm.util.Handy.writeUtf8Char;
  * Represent a unicode character constant.
  */
 public final class CharConstant
-        extends ValueConstant {
+        extends ValueConstant<Integer> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

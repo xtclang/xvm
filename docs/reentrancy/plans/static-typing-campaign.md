@@ -62,7 +62,7 @@ other `getComponent()` methods and my auto-repair then guessed the wrong types, 
 duplicate casts. The compiler caught every one — but the cheap version of that lesson is to
 scope the deletion by receiver type, or to delete per-package with a compile between.
 
-### T2 — `ValueConstant<V>` — **IN PROGRESS**
+### T2 — `ValueConstant<V>` — **DONE**
 
 Only **6** call sites have a statically-`ValueConstant` receiver (all in `CaseManager.covers()`);
 the other 893 `.getValue()` calls already have concrete receivers and already get the narrowed
@@ -70,12 +70,23 @@ type. Verified bytecode-identical by `javap` — the `Object getValue()` bridge 
 
 Two honest obstacles, both to be resolved rather than annotated around:
 
-- [ ] `MatchAnyConstant` returns the string `"_"` and its own comment admits there is no correct
-      answer. It is a **wildcard marker, not a value** — `CaseManager.covers()` already
-      special-cases it *first*. Remove it from the `permits` list rather than typing the lie.
-- [ ] `EnumValueConstant.getValue()` can return null. Make it total; do not annotate.
-- [ ] Genericize the class and all 26 overriders
-- [ ] `CaseManager.covers()` — the only site that needs a wildcard or a rethink
+- [x] `MatchAnyConstant` left the family. Verified it has **zero** `getValue()` callers — every
+      use in the tree is `instanceof MatchAnyConstant` — and that `CaseManager.covers()`
+      special-cases it at lines 908 and 912, *before* any `getValue()`. Typing it
+      `ValueConstant<String>` would have been a lie that type-checks.
+- [x] `EnumValueConstant.getValue()` now throws instead of returning null. A negative ordinal
+      means the enum value is not among its own parent's `ENUMVALUE` children — a structural
+      inconsistency. Returning null pushed the failure to whoever dereferenced it; there are no
+      callers, so the impossible state says so instead.
+- [x] Genericized the class and all 20 direct subclasses
+- [x] `CaseManager` — see below
+
+**The clean compile was hiding something, and it is the lesson of this task.** After
+genericizing, the tree compiled with **zero errors** — because `instanceof ValueConstant valLo`
+binds `valLo` as a RAW `ValueConstant`, so `valLo.getValue()` returns `Object` and compiles
+silently. Genericizing a type does not by itself fix its consumers; it can just relocate the
+erasure into them. Four such bindings in `CaseManager` are now `ValueConstant<?>`. Worth
+watching for in every later task: **a green build after a generics change is not evidence.**
 
 ### T3 — Covariant `Component` child lookup
 

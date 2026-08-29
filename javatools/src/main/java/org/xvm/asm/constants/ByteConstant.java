@@ -22,7 +22,7 @@ import static org.xvm.util.Handy.nibbleToChar;
  * constant.
  */
 public final class ByteConstant
-        extends ValueConstant {
+        extends ValueConstant<Integer> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

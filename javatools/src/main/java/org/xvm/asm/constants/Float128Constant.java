@@ -20,7 +20,7 @@ import org.xvm.util.FrozenByteArray;
  * Represent a 128-bit binary floating point constant.
  */
 public final class Float128Constant
-        extends ValueConstant {
+        extends ValueConstant<FrozenByteArray> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

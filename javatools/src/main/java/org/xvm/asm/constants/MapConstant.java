@@ -29,7 +29,7 @@ import static org.xvm.util.Handy.copyOf;
  * Represent a constant value that contains a single map entry or an entire map of keys and values.
  */
 public final class MapConstant
-        extends ValueConstant {
+        extends ValueConstant<Map<Constant, Constant>> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

@@ -91,9 +91,15 @@ public final class EnumValueConstant
     public Constant getValue() {
         // return a presumed ordinal value as the "value" of the enum
         int iOrdinal = getPresumedOrdinal();
-        return iOrdinal < 0
-                ? null
-                : getConstantPool().ensureIntConstant(iOrdinal);
+        if (iOrdinal < 0) {
+            // the enum value is not among its own parent's ENUMVALUE children, so the structure is
+            // inconsistent. This used to return null, which pushed the failure to whoever
+            // dereferenced it; there are no callers today, so make the impossible state say so.
+            throw new IllegalStateException(
+                    "enum value is not a child of its own parent: "
+                    + getClassConstant().getPathString());
+        }
+        return getConstantPool().ensureIntConstant(iOrdinal);
     }
 
 

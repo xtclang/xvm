@@ -24,7 +24,7 @@ import static org.xvm.util.Handy.copyOf;
  * supports the array, tuple, and set types.
  */
 public final class ArrayConstant
-        extends ValueConstant {
+        extends ValueConstant<Constant[]> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

@@ -21,7 +21,7 @@ import org.xvm.util.FrozenByteArray;
  * Represent an octet string (string of unsigned 8-bit bytes) constant.
  */
 public final class UInt8ArrayConstant
-        extends ValueConstant {
+        extends ValueConstant<FrozenByteArray> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

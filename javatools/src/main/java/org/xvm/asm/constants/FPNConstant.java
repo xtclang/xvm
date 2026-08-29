@@ -19,7 +19,7 @@ import org.xvm.util.FrozenByteArray;
  * Represent a variable-length floating point constant.
  */
 public final class FPNConstant
-        extends ValueConstant {
+        extends ValueConstant<FrozenByteArray> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
