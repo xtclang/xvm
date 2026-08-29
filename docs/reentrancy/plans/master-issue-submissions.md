@@ -107,7 +107,7 @@ without its listed dependency.
 | 19 | Extract from `8077ad6c0`: the one-line `f_implicits` `ConcurrentHashMap` conversion plus `implicitIdentityCacheIsConcurrentSafe()`. | `org.xvm.asm.ConstantPoolDiagnosticsTest.implicitIdentityCacheIsConcurrentSafe()` fails on the plain-`HashMap` shape (verified by reverting the fix). | Ready after manual review; the test's master form drops the branch-only surrounding cases. |
 | 20 | Extract from `5d9a5f395`: the detached-build factories, the copy-on-write publish primitives, and the reworked `ensure*Delegation` - WITHOUT the synthesis window (`openRuntimeSynthesisWindow` exists only because of this branch's publication marker; master has no marker). | `org.xvm.asm.DelegationSynthesisTest` concurrent hammer (probabilistic red: half-built method observed / null multimethod); the deterministic marker test is branch-only. | Needs a filtered master patch; the mechanics (detached build, `publishRuntimeChild`, `publishOrAdoptSynthesizedMethod`, volatile maps) are additive and portable. |
 | 30 | Source-only clean; one-word fix in `Version.isSameAs`. | `org.xvm.asm.VersionTest.testIsSameAsAcrossDifferingPartCounts` fails with `ArrayIndexOutOfBoundsException` at `Version.java:492` on the unfixed source. | Ready after manual review. |
-| 31 | Source-only clean; add 16 `case` labels to `Op.toName`. | `Op.toName(0xDD)` throws `IllegalStateException: op=0xdd` while `toName(0x01)` returns `LINE_1`; 16 opcodes reachable via `instantiate` are absent from `toName`. | Ready after manual review. |
+| 31 | Source-only clean; add 16 `case` labels to `Op.toName`. Fixed in-branch. | `Op.toName(0xDD)` throws `IllegalStateException: op=0xdd` while `toName(0x01)` returns `LINE_1`; 16 opcodes reachable via `instantiate` are absent from `toName`. | Ready after manual review. |
 | 32 | Seven sites plus a `construct(String)` on `lib_ecstasy` `TimeZone`. Fixed in-branch, verified end to end. | `pool.ensureLiteralConstant(Format.TimeZone, "x")` throws `IllegalStateException: unsupported format: TimeZone` where `Date`/`Time`/`Duration` succeed. | Ready after manual review. |
 | 33 | Source-only; two one-line fixes. Surfaced set for the guard measured empty (183/183 AST classes load clean). Fixed in-branch. | `fieldsForNames(AstNode.class, "noSuchFieldAnywhere")` returns `fields[0]=null` instead of throwing; `isInstance(AstNode.class)` observed `false` where `isAssignableFrom` is `true`. | Ready after manual review. |
 
@@ -2042,7 +2042,8 @@ to prove they were read-only surfaced the defect.
 **Issue title:** `Op.toName()` has drifted 16 opcodes behind `Op.instantiate()`, so
 `Op.toString()` throws on every one of them - including inside error reporting.
 
-**Status/category:** PROVEN red on master, empirically, not by inspection.
+**Status/category:** PROVEN red on master, empirically, not by inspection. **FIXED in this
+branch** with a ratchet test.
 
 **Explanation:** `Op.instantiate()` switches over 215 opcodes; `Op.toName()` over 201.
 The 16 in the gap are all reachable - they have classes and constants and are
@@ -2072,8 +2073,12 @@ line, constructing the intended `UnsupportedOperationException` instead throws
 it is needed. Same shape at `OpGeneral` (3), `OpVar` (2), `OpIndex` (2),
 `OpCondJump`, `OpJump`, `OpSwitch`, `GP_DivRem`, `OpCallable` (2).
 
-`OP_NEWC_T` and `OP_NEWCG_T` are the reverse drift: named by `toName`, never
-instantiated - dead constants.
+`OP_NEWC_T` and `OP_NEWCG_T` are the reverse drift: named by `toName`, never instantiated.
+They are NOT dead code and must NOT be deleted - an earlier draft of this row said "delete or
+implement", which was wrong. `_T` is a real family variant (`NEW_T` and `NEWG_T` are both
+implemented), and `0x43`/`0x47` sit inside the contiguous `NEWC`/`NEWCG` numbering. Removing
+the constants invites a renumbering that would break the binary format, so they stay as
+reserved slots, now documented as such at the declaration.
 
 **Master evidence:** `origin/master:javatools/src/main/java/org/xvm/asm/Op.java` -
 verified `instantiate=215 toName=201 missing=16`, identical to the branch.
@@ -2085,15 +2090,19 @@ Op.toName(0xDD)  ->  java.lang.IllegalStateException: op=0xdd
 Op.toName(0x01)  ->  LINE_1
 ```
 
-**Minimal master-portable fix strategy:** add the 16 missing `case` labels to
-`toName`, and delete or implement `OP_NEWC_T`/`OP_NEWCG_T`. The durable fix is to
-stop maintaining two parallel 200-case switches over the same enum-shaped domain -
-see `object-typing-static-safety-study.md`, which proposes moving opcode name and
+**Minimal master-portable fix strategy:** add the 16 missing `case` labels to `toName`, and
+document `OP_NEWC_T`/`OP_NEWCG_T` as reserved rather than removing them (see above). The
+durable fix is to stop maintaining two parallel 200-case switches over the same enum-shaped
+domain - see `object-typing-static-safety-study.md`, which proposes moving opcode name and
 factory onto one carrier so they cannot drift.
 
-**Tests to add/run on master:** a table test asserting every opcode `instantiate`
-accepts also has a name, i.e. `instantiate`'s case set is a subset of `toName`'s.
-That is a ratchet, not a spot check: it fails on the next divergence too.
+**Tests to add/run on master:** `org.xvm.asm.OpNameCoverageTest` - three cases. A static one
+asserting `instantiate`'s case set is a SUBSET of `toName`'s (subset, not equality, so the two
+reserved names remain legal); a dynamic one that actually calls `Op.toName` for every opcode
+`instantiate` accepts, so a case that exists but falls through still fails; and a named spot
+check on `IIP_AND`/`PIP_XOR` with `LINE_1` as a control. All three verified red on the unfixed
+source - the dynamic one reporting `OP_IIP_AND -> IllegalStateException: op=0xdd` - and green
+after.
 
 **Dependencies/order:** Independent.
 
