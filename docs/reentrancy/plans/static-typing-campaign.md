@@ -149,7 +149,50 @@ file at a time with a compile between.** A regex over a method name is not scope
 existing `Class<T>` overloads are the transitional shape; typing the lookup by what the caller
 holds is the design shape. Follows T1, which establishes the pattern.
 
-### T4 — Type the `Object nid` nested-identity union — **CONTRACT PINNED, REFACTOR NOT STARTED**
+### T4 — **THE PREMISE WAS WRONG: it is not one union, it is four (plus one that is not a nid at all)**
+
+Investigated properly rather than taken from the study. The framing "the `Object nid` union, ~76
+maps" is incorrect and led me — and the study — to plan a single carrier for a single family. What
+is actually there:
+
+| Map | Count | Keys actually held | All our own types? |
+| --- | --- | --- | --- |
+| `Map<Object, ParamInfo>` | 27 | `String` \| `NestedIdentity` | **No** — `String` |
+| `Map<Object, MethodInfo>` | 14 | `SignatureConstant` \| `Integer` (lambda) \| `NestedIdentity` | **No** — `Integer` |
+| `Map<Object, PropertyInfo>` | 13 | `String` \| `NestedIdentity` | **No** — `String` |
+| `Map<Object, FieldInfo>` | 8 | `String` (`sField`) \| `NestedIdentity` (`enid`) | **No** — `String` |
+| `Map<Object, Constant>` | 6 | **NOT a nid** — the pool's `getLocator()` union | separate problem |
+
+**The decisive question turned out to be: are all the union's variants types we own?** Where they
+are, a marker interface types the union for free — `SignatureConstant` and `NestedIdentity` are
+both our classes, so `implements MethodNid` on each would carry the type with **zero** change to
+`equals`, no wrapping, and no call-site conversion. That would have been the cheap win.
+
+**Every one of these four families includes a JDK type** — `String` for three of them,
+`Integer` for the lambda case in the fourth. You cannot retrofit an interface onto `String`. So
+each family needs *wrapping* (`record ByName(String)`), and wrapping is what creates the whole
+risk: today a property's nid **is** the string `"alpha"`, so any holder of that string indexes the
+map directly, and `TypeInfoReal:642` does exactly that with a literal:
+
+```java
+mapTypeParams.put("Referent", new ParamInfo("Referent", typeReferent, pool.typeObject()));
+```
+
+Under a carrier that must become `Nid.of("Referent")`, and **every** such site must be converted or
+the entry silently becomes unreachable.
+
+**Scoped cost, measured:** 12 files declare genuinely nid-keyed maps. Of the accesses, 62 already
+pass a nid expression and are fine; **45 need individual review** (22 bare variables like `sField`,
+`sig`, `idNested`; 23 other expressions including string literals). That is the real size — much
+smaller than the ~76-map figure this document started with, but every one of the 45 is a
+silent-wrong-answer site if missed.
+
+**Verdict: possible, and worth doing, but it is four separate refactors and none is free.** The
+`Map<Object, Constant>` locator family should be split off first since it is not a nid at all and
+was inflating every count. `NestedIdentityContractTest` is in place to hold the equality contract
+through whichever one goes first.
+
+### T4 (superseded framing) — Type the `Object nid` nested-identity union
 
 **Step one is done and is the durable part.** `NestedIdentityContractTest` characterises the union
 *before* anything touches it: the five variants exist, they are mutually unequal, equal identities
