@@ -149,7 +149,35 @@ file at a time with a compile between.** A regex over a method name is not scope
 existing `Class<T>` overloads are the transitional shape; typing the lookup by what the caller
 holds is the design shape. Follows T1, which establishes the pattern.
 
-### T4 — Type the `Object nid` nested-identity union
+### T4 — Type the `Object nid` nested-identity union — **CONTRACT PINNED, REFACTOR NOT STARTED**
+
+**Step one is done and is the durable part.** `NestedIdentityContractTest` characterises the union
+*before* anything touches it: the five variants exist, they are mutually unequal, equal identities
+produce colliding keys, and distinct members do not collide. That last pair is what the ~76
+`Map<Object, …>` caches actually depend on and what none of them states. Any sealed carrier must
+keep that test green; if it cannot, the carrier design is wrong.
+
+**Step two is measured and deliberately not started.** A sealed carrier of records would preserve
+mutual inequality *by construction* — distinct record types are never equal — so the contract test
+would pass. The risk is not there. It is here:
+
+| | Count |
+| --- | --- |
+| Variables declared `Map<Object, …>` | 38 |
+| Key accesses via a nid-shaped expression | 55 |
+| **Key accesses built some OTHER way** | **60** |
+
+Those 60 are the problem. Today a property's nid *is* the `String` `"alpha"`, so any code holding
+that string can index the map directly. Under a carrier it becomes `new ByName("alpha")`, and
+every one of those 60 sites must be converted **or it silently stops matching**. Not a crash — a
+cache that never hits, or worse, one that hits the wrong entry.
+
+That is the `unlinkSibling` failure mode (wrong answers, not exceptions) at sixty times the
+surface, in the type-resolution path. It needs its own session with these 60 sites reviewed
+individually, and the contract test is now in place to support that. Starting it at the tail of a
+long session is precisely how a subtle miss ships green.
+
+### T4 (original scope) — Type the `Object nid` nested-identity union
 
 Variants are `String | Integer | SignatureConstant | NestedIdentity | null`, used as a key in
 **80** `Map<Object, …>` declarations. `NestedIdentity` is a non-static inner class capturing its
