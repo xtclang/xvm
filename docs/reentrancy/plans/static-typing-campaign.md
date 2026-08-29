@@ -601,6 +601,49 @@ final class StringHandle extends ObjectHandle {
 revertible.** The earlier assessment called this "a project, not a task" — that was wrong about
 the shape. It is a project only in total; each step is small.
 
+### Corrected measurement — and it narrows the plan sharply
+
+My first attribution was wrong: the parser never reset at method end, so casts leaked onto the
+previously-matched method (it reported `setPropertyCapacity` at 51; the real figure is 8). Re-run
+with brace tracking:
+
+| Method receiving `hTarget` | Casts |
+| --- | --- |
+| `invokeNativeGet` | 44 |
+| `invokeNativeN` | 42 |
+| `invokeNative1` | 40 |
+| `invokeNativeNN` | 25 |
+| `buildHashCode` | 11 |
+| `buildStringValue` | 9 |
+| `invokeAdd` | 8 |
+| `setPropertyCapacity` | 8 |
+| `getFieldValue` | 7 |
+| `invokePreInc` | 7 |
+
+Total correctly attributed: **370**. And the number that decides the scope: **107 distinct methods
+take `ObjectHandle hTarget`**.
+
+**That kills the "move dispatch onto handles" plan in its general form.** Giving `ObjectHandle` a
+delegating default for all 107 would drag the entire `ClassTemplate` API onto the handle class —
+a cure worse than the disease, and it would make `ObjectHandle` the god object the runtime already
+struggles with.
+
+### The line that is actually principled
+
+**Dispatch belongs on the receiver; operations belong on the template.**
+
+The four `invokeNative*` methods are *dispatch* — "invoke this method on this object" — and the
+receiver is exactly what is being cast. `buildHashCode`, `invokeAdd`, `getFieldValue`,
+`setPropertyCapacity` are *operations the template performs on a handle*, and they belong on the
+template; the handle should not know how to hash itself in Ecstasy terms.
+
+Applying that line gives a genuinely good ratio:
+
+> **Four delegating defaults on `ObjectHandle` recover 151 casts — 41% of the total.**
+
+The remaining 219 stay, correctly, on the template side. They are not a backlog; they are the
+operations half of a distinction that was never drawn.
+
 ### Ranked by yield
 
 | Handle | Casts recovered |
