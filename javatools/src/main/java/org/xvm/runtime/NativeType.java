@@ -34,6 +34,19 @@ public record NativeType<H extends ObjectHandle>(String typeName, Class<H> handl
     }
 
     /**
+     * @param types  the parameter types, in order
+     *
+     * @return their names in the array form {@code markNativeMethod} takes
+     */
+    public static String[] names(NativeType<?>... types) {
+        String[] asName = new String[types.length];
+        for (int i = 0; i < types.length; i++) {
+            asName[i] = types[i].typeName();
+        }
+        return asName;
+    }
+
+    /**
      * Convert a handle to this type's Java representation.
      *
      * @param handle  the handle to convert

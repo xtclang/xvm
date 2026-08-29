@@ -601,6 +601,11 @@ public abstract class ClassTemplate
             break;
         }
 
+        NativeMethod.BoundN bound = f_mapBoundN.get(method);
+        if (bound != null) {
+            return bound.dispatch(frame, hTarget, ahArg, iReturn);
+        }
+
         return frame.raiseException("Unknown native(N) method: \"" + method + "\" on " + this);
     }
 
@@ -701,6 +706,11 @@ public abstract class ClassTemplate
      */
     public int invokeNativeNN(Frame frame, MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn) {
+        NativeMethod.BoundNN bound = f_mapBoundNN.get(method);
+        if (bound != null) {
+            return bound.dispatch(frame, hTarget, ahArg, aiReturn);
+        }
+
         return frame.raiseException("Unknown native(NN) method: \"" + method + "\" on " + this);
     }
 
@@ -2138,6 +2148,13 @@ public abstract class ClassTemplate
     /** Native property getters bound to a typed handler, keyed by property name. */
     private final Map<String, NativeMethod.BoundGet<?>> f_mapBoundGet = new ConcurrentHashMap<>();
 
+    /** Natives on the N protocol bound to a typed handler. */
+    private final Map<MethodStructure, NativeMethod.BoundN> f_mapBoundN = new ConcurrentHashMap<>();
+
+    /** Natives on the NN protocol bound to a typed handler. */
+    private final Map<MethodStructure, NativeMethod.BoundNN> f_mapBoundNN =
+            new ConcurrentHashMap<>();
+
     /**
      * Get a class type for the specified name in the context of the specified template.
      */
@@ -2247,6 +2264,69 @@ public abstract class ClassTemplate
             String sPropName, NativeType<T> selfType, NativeMethod.Getter<T> getter) {
         markNativeProperty(sPropName);
         f_mapBoundGet.put(sPropName, new NativeMethod.BoundGet<>(selfType, getter));
+    }
+
+    /**
+     * Declare a zero-argument native method, bound to a typed implementation.
+     *
+     * @param sName      the method name
+     * @param selfType   the receiver's type
+     * @param asRetType  the return types, in the existing string form
+     * @param handler    the typed implementation
+     */
+    protected <T extends ObjectHandle> void markNativeMethod0(
+            String sName, NativeType<T> selfType, String[] asRetType,
+            NativeMethod.Zero<T> handler) {
+        bindN(markNativeMethod(sName, VOID, asRetType), sName,
+                NativeMethod.bind(selfType, handler));
+    }
+
+    /**
+     * Declare a two-argument native method, bound to a typed implementation.
+     *
+     * @param sName      the method name
+     * @param selfType   the receiver's type
+     * @param argType1   the first argument's type
+     * @param argType2   the second argument's type
+     * @param asRetType  the return types, in the existing string form
+     * @param handler    the typed implementation
+     */
+    protected <T extends ObjectHandle, A extends ObjectHandle, B extends ObjectHandle>
+            void markNativeMethod2(String sName, NativeType<T> selfType, NativeType<A> argType1,
+                                   NativeType<B> argType2, String[] asRetType,
+                                   NativeMethod.Two<T, A, B> handler) {
+        bindN(markNativeMethod(sName, NativeType.names(argType1, argType2), asRetType), sName,
+                NativeMethod.bind(selfType, argType1, argType2, handler));
+    }
+
+    /**
+     * Declare a two-argument native method returning several values, bound to a typed
+     * implementation.
+     *
+     * @param sName      the method name
+     * @param selfType   the receiver's type
+     * @param argType1   the first argument's type
+     * @param argType2   the second argument's type
+     * @param asRetType  the return types, in the existing string form
+     * @param handler    the typed implementation
+     */
+    protected <T extends ObjectHandle, A extends ObjectHandle, B extends ObjectHandle>
+            void markNativeMethod2NN(String sName, NativeType<T> selfType, NativeType<A> argType1,
+                                     NativeType<B> argType2, String[] asRetType,
+                                     NativeMethod.TwoToMany<T, A, B> handler) {
+        MethodStructure method =
+                markNativeMethod(sName, NativeType.names(argType1, argType2), asRetType);
+        if (method == null) {
+            throw new IllegalStateException("no such native method: " + sName + " on " + this);
+        }
+        f_mapBoundNN.put(method, NativeMethod.bindNN(selfType, argType1, argType2, handler));
+    }
+
+    private void bindN(MethodStructure method, String sName, NativeMethod.BoundN bound) {
+        if (method == null) {
+            throw new IllegalStateException("no such native method: " + sName + " on " + this);
+        }
+        f_mapBoundN.put(method, bound);
     }
 
     public void markNativeProperty(String sPropName) {

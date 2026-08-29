@@ -57,6 +57,10 @@ public class xOSStorage
     private static final NativeType<ServiceHandle> SELF =
             NativeType.of("_native.fs.OSStorage", ServiceHandle.class);
 
+    /** The {@code _native.fs.OSFileStore} parameter type; not narrowed - createHandle takes any. */
+    private static final NativeType<ObjectHandle> STORE_TYPE =
+            NativeType.of("_native.fs.OSFileStore", ObjectHandle.class);
+
     /** The {@code text.String} parameter type, carrying the handle class that represents it. */
     private static final NativeType<StringHandle> STRING_TYPE =
             NativeType.of("text.String", StringHandle.class);
@@ -70,7 +74,8 @@ public class xOSStorage
         markNativeProperty("tmpDir", SELF, (frame, hStorage, iReturn) ->
                 dirForProperty(frame, hStorage, "java.io.tmpdir", iReturn));
 
-        markNativeMethod("find", new String[] {"_native.fs.OSFileStore", "text.String"}, null);
+        markNativeMethod2NN("find", SELF, STORE_TYPE, STRING_TYPE, null,
+                (frame, hStorage, hStore, hPath, aiReturn) -> find(frame, hStore, hPath, aiReturn));
         markNativeMethod1("names", SELF, STRING_TYPE, null,
                 (frame, hStorage, hPathString, iReturn) -> names(frame, hPathString, iReturn));
         markNativeMethod1("createDir", SELF, STRING_TYPE, BOOLEAN,
@@ -82,7 +87,8 @@ public class xOSStorage
         markNativeMethod1("watch", SELF, STRING_TYPE, VOID,
                 (frame, hStorage, hPathDir, iReturn) -> watch(frame, hStorage, hPathDir));
         markNativeMethod("unwatch", STRING, VOID);
-        markNativeMethod("instance", VOID, THIS);
+        markNativeMethod0("instance", SELF, THIS,
+                (frame, hStorage, iReturn) -> instance(frame, iReturn));
 
         invalidateTypeInfo();
     }
@@ -194,6 +200,28 @@ public class xOSStorage
         }
     }
 
+    /** Native {@code instance()}; the receiver is unused and may legitimately be null. */
+    private int instance(Frame frame, int iReturn) {
+        return frame.assignValue(iReturn,
+                ((NativeContainer) f_container).ensureOSStorage(frame, null));
+    }
+
+    /** Native {@code conditional FileNode find(FileStore store, String pathString)}. */
+    private static int find(Frame frame, ObjectHandle hStore, StringHandle hPathString,
+                            int[] aiReturn) {
+        try {
+            Path path = Paths.get(hPathString.getStringValue());
+            if (Files.exists(path)) {
+                return Utils.assignConditionalResult(frame,
+                    xOSFileNode.createHandle(frame, hStore, path, Files.isDirectory(path), Op.A_STACK),
+                    aiReturn);
+            }
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
+        } catch (InvalidPathException e) {
+            return frame.raiseException(xException.ioException(frame, e.getMessage()));
+        }
+    }
+
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn) {
@@ -217,11 +245,6 @@ public class xOSStorage
             return xRTFunction.makeAsyncNativeHandle(frame, method).call1(frame, hTarget, ahArg, iReturn);
         }
 
-        switch (method.getName()) {
-        case "instance":
-            return frame.assignValue(iReturn,
-                    ((NativeContainer) f_container).ensureOSStorage(frame, null));
-        }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }
 
@@ -235,24 +258,6 @@ public class xOSStorage
             return xRTFunction.makeAsyncNativeHandle(frame, method).callN(frame, hTarget, ahArg, aiReturn);
         }
 
-        switch (method.getName()) {
-        case "find": { // (store, pathString)
-            ObjectHandle hStore      = ahArg[0];
-            StringHandle hPathString = (StringHandle) ahArg[1];
-
-            try {
-                Path path = Paths.get(hPathString.getStringValue());
-                if (Files.exists(path)) {
-                    return Utils.assignConditionalResult(frame,
-                        xOSFileNode.createHandle(frame, hStore, path, Files.isDirectory(path), Op.A_STACK),
-                        aiReturn);
-                }
-                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
-            } catch (InvalidPathException e) {
-                return frame.raiseException(xException.ioException(frame, e.getMessage()));
-            }
-        }
-        }
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
 
