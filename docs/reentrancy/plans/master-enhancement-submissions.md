@@ -67,6 +67,8 @@ surface graduate into individual rows on the bug list.
 | E10 | Switch-fallthrough gate + arrow-form migration | small | Low | javac lint | [lint-parallelism-risk-audit.md](../lint-parallelism-risk-audit.md) |
 | E11 | Retire stringly/cast-based dispatch (typed payloads, generics, nullness) | wide | Medium | the existing class trees; jetbrains annotations already on the classpath | [generics-api-audit.md](../generics-api-audit.md), [nullness-annotation-audit.md](../nullness-annotation-audit.md) |
 | E12 | The gates that make the rest verifiable (test infrastructure) | additive | Low | JUnit; the built XDK | (this file) |
+| E13 | Latent typing hazards: shapes that permit a defect no caller commits | tiny, per-item | Low | the existing signatures | [static-typing-campaign.md](static-typing-campaign.md) |
+| E14 | Static typing campaign: replace `Object`-rooted dispatch with real types | 5 independent slices | Low → Medium-High | the existing class trees; javac generics + sealed | [static-typing-campaign.md](static-typing-campaign.md) |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -722,6 +724,115 @@ is the one thing the key/value pairing cannot express, and it is one documented 
 an erased map. The walk also stops reassigning its own `sibling` parameter.
 
 **Width.** One method, one override, three callers. Source- and binary-compatible.
+
+---
+
+## E14 — Static typing campaign: replace `Object`-rooted dispatch with real types
+
+Landed on `lagergren/lazy-instance`. Deliberately written as **independently portable slices** -
+each lands alone, each is verified the same way, and none depends on adopting the others. Design
+record: [static-typing-campaign.md](static-typing-campaign.md).
+
+**Measured effect on master's shape:** casts 2952 → 2840; the `Object`-rooted API surface (where a
+type was never expressed, as opposed to merely widened) 398 → 265, driven by
+`Map<Object, …>` declarations falling 140 → 50.
+
+**Verification rule for every slice below — learned the expensive way.** A narrowing or typing
+change is **not verified until `xdk:installDist` passes**. The unit suite is not sufficient: it
+missed a `ClassConstant` narrowing regression that sat green across four commits, and it missed
+three silent map-read misses in E14.5. Compiling `lib_ecstasy` is what exercises these paths.
+
+### E14.1 — Covariant `getComponent()` on identity constants
+
+**What.** `createClass` already returned `ClassStructure`, `createMethod` a `MethodStructure` - the
+type was known at creation and thrown away at lookup. Seven identity constants now restate it:
+`MethodConstant → MethodStructure`, `PropertyConstant`, `ModuleConstant`, `PackageConstant`,
+`TypedefConstant`, `MultiMethodConstant`, plus the AST declaration statements
+(`MethodDeclarationStatement`, `TypeCompositionStatement`, `PropertyDeclarationStatement`).
+
+**Yield.** ~120 casts deleted. **Width:** small, declarative. **Port difficulty:** Low.
+
+**Carry the caveat with the patch.** `ClassConstant` must **NOT** be narrowed - it can name a
+`TypedefStructure`, and narrowing it produced
+`ClassCastException: TypedefStructure cannot be cast to ClassStructure` inside
+`ConstantPool.getImplicitlyImportedComponent` while compiling the core library.
+`IdentityComponentNarrowingTest` pins both the sound narrowings and the two that must stay
+`Component`, so a repeat attempt fails with the reason. **The general rule: "nearly every caller
+casts to X" is not grounds to narrow; the subclass must ALWAYS produce X.**
+
+### E14.2 — `ValueConstant<V>`
+
+**What.** The class declared `public abstract Object getValue()` while all 26 overriders narrowed
+covariantly - the type existed and was discarded at exactly one point. Now `ValueConstant<V>`.
+
+**Two decisions that come with it.** `MatchAnyConstant` **leaves** the hierarchy: it is a wildcard
+marker, not a value (its `getValue()` returned `"_"` under a comment admitting there is no correct
+answer, it has zero callers, and `CaseManager.covers()` special-cases it first). And
+`EnumValueConstant.getValue()` now throws instead of returning null for an impossible ordinal.
+
+**Width:** 20 subclasses, one line each. **Port difficulty:** Low. Only 6 call sites had a
+statically-`ValueConstant` receiver, all in `CaseManager`; verified bytecode-identical by `javap`.
+
+### E14.3 — Retire raw types where they hid real structure
+
+**What.** `VersionTree.Node` was raw in 40 places because its children were a hand-managed sparse
+array - null-padded, packed from zero, doubled on growth, `arraycopy`-shifted, with
+`kids.length` meaning **capacity** rather than size. Four static helpers reimplemented `List`.
+Converting to `List<Node<V>>` deletes all four, removes the `(Node<V>[]) new Node[]` unchecked cast
+that existed only because Java cannot create generic arrays, and lets every consumer drop its
+null-padding logic. `ListMap.EMPTY` (a raw public constant) becomes a generic `empty()` factory -
+still a `ListMap`, because the type system depends on its iteration order.
+
+**Width:** one data structure plus a handful of sites. **Port difficulty:** Low-Medium.
+
+**Not finished, deliberately.** `-Xlint:rawtypes` is not yet enabled: the initial grep found 15
+sites, the lint found 60+, and ~40 remain. A half-enabled fatal lint just blocks the build.
+
+### E14.4 — Typed accessor pairs where a PREDICATE establishes the type
+
+**What.** A seam the earlier study explicitly filed under "cannot be typed". That verdict is wrong:
+these can be typed, just not by narrowing a return. In `TerminalTypeConstant`, 31 sites read
+
+```java
+if (!isSingleDefiningConstant()) {
+    TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+```
+
+The guard already proved the type; the cast is the caller re-asserting it. One accessor,
+`ensureResolvedTypedef()`, does both - 31 casts become 1.
+
+**Width:** one file. **Port difficulty:** Low. **Generalisable:** wherever a boolean predicate
+establishes a type, an accessor that asserts the predicate and returns the narrow type replaces
+every cast behind it.
+
+### E14.5 — `Nid`: type the nested-identity union
+
+**What.** The nid was a bare `Object` holding five unrelated things, used as the key of the maps
+type resolution runs on. In one place the union was written out **in a comment**, because there was
+no type for it:
+
+```java
+private final Object f_enid; // String | PropertyConstant | NestedIdentity
+```
+
+`Nid` is that comment. Only what we do not own is wrapped: `SignatureConstant`,
+`IdentityConstant` and `NestedIdentity` carry the marker directly - no wrapper, no `equals` change,
+no conversion where one is already held. `String` and `int` become `ByName`/`ByLambda` records,
+which makes the union's safety **structural** (no two record types are ever equal) rather than the
+accident that `String` and `Integer` happen not to equal each other.
+
+**Width:** the largest slice - 4 map families, ~71 locals and parameters, 12 files declaring
+nid-keyed maps. **Port difficulty:** Medium-High. **This is the one to read the warning on:**
+
+> javac type-checks map **writes** only. `Map.get`, `containsKey` and `remove` take `Object`, so a
+> `map.get("Referent")` against a `Map<Nid, V>` compiles and silently returns null. Typing the maps
+> caught every wrong write and **zero** wrong reads. Three silent read misses were found only by
+> building the XDK. Where a read passes through a method you control, **type that method's
+> parameter** - doing so to `getFieldInfo` converted five silent misses into five compile errors at
+> once.
+
+Land `NestedIdentityContractTest` **first and separately**: it pins mutual inequality, key
+collision and non-collision, and it is what makes the rest safe rather than lucky.
 
 ---
 
