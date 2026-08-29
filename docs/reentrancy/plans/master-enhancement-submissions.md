@@ -846,8 +846,9 @@ hTarget.getTemplate().invokeNative1(frame, method, hTarget, hArg, iReturn)
 ```
 
 The handle produces the template and then passes **itself back as a parameter**, and the
-template's first act is to cast that parameter back to the type it already was. **151 of the
-runtime's handle casts exist only to undo that.**
+template's first act is to cast that parameter back to the type it already was. **162 of the
+runtime's handle casts sit inside `invokeNative*` for that reason - of which 83 are actually
+convertible; see quirk 6.**
 
 `ObjectHandle` gains four defaults that reproduce exactly the call above; `CallChain` dispatches
 through the receiver. A handle that overrides one gets `this` already correctly typed - no cast,
@@ -916,16 +917,38 @@ separation is what makes a bisect meaningful if a later conversion misbehaves.
 `ClassTemplate` - same count, different receiver, megamorphic either way. It should be measured on
 the first few conversions rather than assumed, because this is the interpreter's hot path.
 
-### Ranked by yield inside `invokeNative*`
+**6. Roughly HALF the casts are on handles shared by several templates, and those cannot be
+converted at all.** This is the biggest correction to the plan and it is not visible from a cast
+count. `IntNHandle` is declared in `xIntLiteral` but cast by **three** templates (`xIntN`,
+`xUnconstrainedInteger`, `xIntLiteral`); `LongLongHandle` by two; `ClassHandle` by three. A handle
+serving N templates cannot host N different dispatch implementations - deciding *which* template's
+natives to run is exactly what `getTemplate()` does, so for those the dispatch correctly stays
+where it is.
 
-| File | Casts |
+Measured with a parser that handles multi-line signatures (earlier counts in this campaign
+disagreed by 3x because they did not):
+
+| | Casts |
 | --- | --- |
-| `xUnconstrainedInteger` | 10 |
-| `BaseBinaryFP` | 9 |
-| `BaseDecFP` | 9 |
-| `BaseInt128` | 7 |
-| `xTuple` | 6 |
-| `xRegEx` | 5 (**done** - the worked example) |
+| Inside `invokeNative*` | **162** |
+| Handle serves ONE template - convertible | **83** |
+| Handle SHARED across templates - blocked | **79** |
+
+So E15's realistic ceiling is **83 casts**, not the 151 an earlier estimate in this document
+claimed. Check `grep -l "(XHandle) hTarget"` before starting a file: more than one template file in
+the result means skip it.
+
+### Ranked by yield inside `invokeNative*` (convertible only)
+
+| File | Handle | Casts |
+| --- | --- | --- |
+| `BaseBinaryFP` | `FloatHandle` | 9 |
+| `BaseDecFP` | `DecimalHandle` | 9 |
+| `xTuple` | `TupleHandle` | 6 |
+| `xRegEx` | `RegExHandle` | 5 (**done** - the worked example) |
+
+`xUnconstrainedInteger` (10) and `BaseInt128` (7) were the top of the earlier ranking and are both
+**blocked** - their handles are shared. That is the correction in one line.
 
 ---
 
