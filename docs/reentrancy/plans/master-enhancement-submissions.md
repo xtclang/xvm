@@ -71,6 +71,7 @@ surface graduate into individual rows on the bug list.
 | E14 | Static typing campaign: replace `Object`-rooted dispatch with real types | 5 independent slices | Low → Medium-High | the existing class trees; javac generics + sealed | [static-typing-campaign.md](static-typing-campaign.md) |
 | E15 | Dispatch native calls through the receiver instead of past it | mechanism + 1 file per commit | Low / Low-Medium | `ObjectHandle`, `CallChain`, the existing `getTemplate(Class<T>)` | [static-typing-campaign.md](static-typing-campaign.md) (T8) |
 | E16 | Split native FUNCTION dispatch from native METHOD dispatch (retire the nullable receiver) | 3 templates + 12 call sites | Low | `ClassTemplate`, `asm/op/Call_*` | (this file) |
+| E17 | Separate the colliding `A_*` / `R_*` integer protocols | 10 constants, one file | Low | `Op` | (this file) |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -1047,6 +1048,54 @@ new signatures on `ClassTemplate`. **Port difficulty: Low.**
    method states it in the signature, where it cannot be missed or drift.
 
 **Land it before E15's remaining conversions**, not after: it changes which files qualify.
+
+---
+
+## E17 — Separate the two colliding integer protocols (`A_*` and `R_*`)
+
+**A one-file, ten-line change that removes a silent-wrong-answer hazard.** `Op` defines two
+unrelated integer protocols over *exactly the same values*:
+
+| Argument protocol | | Result protocol | |
+| --- | --- | --- | --- |
+| `A_STACK` | -1 | `R_NEXT` | -1 |
+| `A_IGNORE` | -2 | `R_RETURN` | -2 |
+| `A_IGNORE_ASYNC` | -3 | `R_EXCEPTION` | -3 |
+| `A_DEFAULT` | -4 | `R_RETURN_EXCEPTION` | -4 |
+| `A_THIS` | -5 | `R_CALL` | -5 |
+| `A_TARGET` | -6 | `R_RETURN_CALL` | -6 |
+| `A_PUBLIC` | -7 | `R_REPEAT` | -7 |
+| `A_PROTECTED` | -8 | `R_BLOCK` | -8 |
+| `A_PRIVATE` | -9 | `R_PAUSE` | -9 |
+| `A_STRUCT` | -10 | `R_RESET` | -10 |
+
+**Ten for ten.** One says *which argument register*, the other says *what happened during
+execution*, and they are told apart only by which parameter position a value happens to occupy. A
+value that crosses from one protocol to the other is not rejected - it is silently read as a
+perfectly valid value of the other protocol. No exception, no crash, a wrong answer.
+
+**The fix: renumber `R_*` out of the range.** `R_NEXT = -101`, and so on.
+
+**Why this is safe, verified rather than assumed:**
+
+- **`A_*` cannot move** - it is part of the binary format. A constant argument is encoded as
+  `CONSTANT_OFFSET - i` (`Op.java:1198`, `:1270`) and `AstNode` sizes an array as
+  `new RegisterAST[-Op.CONSTANT_OFFSET]`.
+- **`R_*` can** - they are runtime-only return codes with no serialization path.
+- **No code depends on their values.** Checked for range comparisons (`R_x < y`), ordering, and
+  arithmetic: **zero** of each. Every one of the ~51 uses is an equality test or a `switch` arm.
+  (Beware a naive grep here: `R_NEXT ->` in an arrow switch looks like arithmetic on `R_NEXT`.)
+
+**Width:** ten constant values in one file. **Port difficulty:** Low. **Risk:** low, but it is the
+kind of change that wants the full `xdk:installDist` run, since the interpreter is the only thing
+that exercises these.
+
+**Why it is worth its own PR.** It costs almost nothing and it closes a hazard that no amount of
+review would reliably catch, because the mistake it prevents is invisible at the call site: both
+protocols are `int`, so the compiler has nothing to say. Typing them properly - two enums - would
+be better still, but the values are on the interpreter's hottest path and both are stored in `int`
+fields throughout, so disjoint numbering buys most of the safety at none of the cost. **Do the
+renumbering now; leave the enums for whenever the hot path is being reworked anyway.**
 
 ---
 
