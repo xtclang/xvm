@@ -489,7 +489,7 @@ public class Version
         if (cThis != cThat) {
             int[] remaining = cThis > cThat ? thisInts : thatInts;
             for (int i = cShared, c = remaining.length; i < c; ++i) {
-                if (thatInts[i] != 0) {
+                if (remaining[i] != 0) {
                     return false;
                 }
             }
