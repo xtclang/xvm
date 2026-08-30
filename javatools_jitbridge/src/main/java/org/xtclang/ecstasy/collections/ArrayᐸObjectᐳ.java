@@ -409,13 +409,17 @@ public class ArrayᐸObjectᐳ
      * A native implementation of Iterator.x
      */
     private class nIterator extends nObject implements Iterator {
-        // TODO Why do we get a TypeMismatch if this class implements IteratorᐸObjectᐳ
+        private int index = 0;
 
         public nIterator(Ctx ctx) {
             super(ctx);
         }
 
-        private int index = 0;
+        @Override
+        public TypeConstant $xvmType(Ctx ctx) {
+            return ctx.pool().ensureParameterizedTypeConstant(
+                    ctx.pool().typeIterator(), $type.getParamType(0));
+        }
 
         @Override
         public boolean $isImmut() {
