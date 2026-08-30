@@ -230,7 +230,7 @@ public class JitConnector
     private long result = 1;
 
     // TEMPORARY: manually added names
-    private final static String[] CLASS_DUMP_LIST = new String[] {
+    private static final String[] CLASS_DUMP_LIST = new String[] {
         "¤module",
     };
 }

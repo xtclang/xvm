@@ -13,6 +13,8 @@ package propertyInitTests {
         testDefaultProperty();
         testNullablePropertyTarget();
         testStaticServiceProperty();
+        testSingletonService();
+        testSingletonConstWithService();
     }
 
     void testSimple() {
@@ -121,6 +123,39 @@ package propertyInitTests {
 
         @Override
         Int next() = ++count;
+    }
+
+    void testSingletonService() {
+        // exercise the container-scoped $INSTANCE path and verify that the service retains state
+        assert SingletonService.next() == 1;
+        assert SingletonService.next() == 2;
+    }
+
+    void testSingletonConstWithService() {
+        // a singleton const that stores a service must use the same container-scoped path and
+        // retain the mutable state of that service
+        assert SingletonConst.counter.next() == 1;
+        assert SingletonConst.counter.next() == 2;
+    }
+
+    static service SingletonService
+            implements Counter {
+        private Int count = 0;
+
+        @Override
+        Int next() {
+            // TODO: use "return ++count;" when the JIT supports PIP_INCB
+            count = count + 1;
+            return count;
+        }
+    }
+
+    static const SingletonConst {
+        Counter counter;
+
+        construct() {
+            counter = new CounterService();
+        }
     }
 
     class Test() {

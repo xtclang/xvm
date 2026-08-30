@@ -590,7 +590,8 @@ public class CommonBuilder
 
         if (typeInfo.isSingleton()) {
             // public static final $INSTANCE;
-            classBuilder.withField(Instance, art.CD(),
+            ClassDesc cd = isContainerScoped(thisType) ? CD_MethodHandle : art.CD();
+            classBuilder.withField(Instance, cd,
                 ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
         }
 
@@ -677,6 +678,11 @@ public class CommonBuilder
     protected void assembleCLInit(ClassBuilder classBuilder) {
         List<PropertyInfo>     props     = lazyList(constProperties);
         Map<Constant, Integer> constants = this.constants;
+        boolean                isScoped  = isContainerScoped(thisType);
+
+        if (isScoped) {
+            assembleSingletonInitializer(classBuilder);
+        }
 
         // ensure all injection types are added before we generate the TypeConstant fields
         for (PropertyInfo prop : props) {
@@ -871,21 +877,24 @@ public class CommonBuilder
             }
 
             if (typeInfo.isSingleton()) {
-                // $INSTANCE = new Singleton($ctx);
-                // $ctx.allocated(implSize);
-                // $INSTANCE.$init($ctx);
-                MethodConstant ctorId  = typeInfo.findConstructor();
-                String         jitInit = ctorId.ensureJitMethodName(ts).replace("construct", INIT);
-                invokeDefaultConstructor(code, CD_this);
-                code.dup()
-                    .putstatic(CD_this, Instance, CD_this)
-                    .aload(ctxSlot)
-                    .ldc(implSize)
-                    .invokevirtual(CD_Ctx, "allocated", MethodTypeDesc.of(CD_void, CD_long))
-                    .aload(ctxSlot)
-                    .invokevirtual(CD_this, jitInit, MethodTypeDesc.of(CD_this, CD_Ctx))
-                    .pop()
-                ;
+                if (isScoped) {
+                    // store the singleton construction handle; each container computes its instance
+                    code.ldc(MethodHandleDesc.ofMethod(
+                                Kind.STATIC, CD_this, InstanceInit,
+                                MethodTypeDesc.of(CD_this, CD_Ctx)))
+                        .invokestatic(CD_Container, "createInitializerHandle",
+                                MethodTypeDesc.of(CD_MethodHandle, CD_MethodHandle))
+                        .putstatic(CD_this, Instance, CD_MethodHandle);
+                } else {
+                    // $INSTANCE = new Singleton($ctx);
+                    // $ctx.allocated(implSize);
+                    // $INSTANCE.$init($ctx);
+                    invokeDefaultConstructor(code, CD_this, ctxSlot);
+                    code.dup()
+                        .putstatic(CD_this, Instance, CD_this);
+                    initializeSingleton(code, CD_this, ctxSlot);
+                    code.pop();
+                }
             }
 
             appendCLInit(code);
@@ -901,6 +910,36 @@ public class CommonBuilder
             classBuilder.withField(CONST_PROP + entry.getValue(), constantClassDesc(entry.getKey()),
                     ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
         }
+    }
+
+    /**
+     * Assemble the static factory method used to create a container-scoped singleton value.
+     */
+    private void assembleSingletonInitializer(ClassBuilder classBuilder) {
+        ClassDesc CD_this = art.CD();
+
+        classBuilder.withMethodBody(InstanceInit, MethodTypeDesc.of(CD_this, CD_Ctx),
+                ClassFile.ACC_PRIVATE | ClassFile.ACC_STATIC, code -> {
+            int ctxSlot = code.parameterSlot(0);
+
+            invokeDefaultConstructor(code, CD_this, ctxSlot);
+            initializeSingleton(code, CD_this, ctxSlot);
+            code.areturn();
+        });
+    }
+
+    /**
+     * Initialize the singleton at the top of the Java stack leaving it on stack.
+     */
+    private void initializeSingleton(CodeBuilder code, ClassDesc CD_this, int ctxSlot) {
+        MethodConstant ctorId  = typeInfo.findConstructor();
+        String         jitInit = ctorId.ensureJitMethodName(typeSystem).replace("construct", INIT);
+
+        code.aload(ctxSlot)
+            .ldc(implSize)
+            .invokevirtual(CD_Ctx, "allocated", MethodTypeDesc.of(CD_void, CD_long))
+            .aload(ctxSlot)
+            .invokevirtual(CD_this, jitInit, MethodTypeDesc.of(CD_this, CD_Ctx));
     }
 
     private ClassDesc constantClassDesc(Constant constant) {
@@ -4147,7 +4186,14 @@ public class CommonBuilder
         return thisType.removeAccess().getValueString();
     }
 
-    private final static String[] JIT_LIST = new String[] {
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * A synthetic singleton initializer method name for container scoped singleton values.
+     */
+    private static final String InstanceInit = Instance + "$=";
+
+    private static final String[] JIT_LIST = new String[] {
             "Test*", "test*",
             "anon*",                        // covers simple tests and examples
 
@@ -4255,10 +4301,10 @@ public class CommonBuilder
             "_native.io.TerminalConsole",
     };
 
-    private final static String[] NO_JIT_LIST = new String[] {
+    private static final String[] NO_JIT_LIST = new String[] {
     };
 
-    private final static Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
+    private static final Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
         Map.entry("org.xtclang.ecstasy.collections.UniformIndexed",
             Set.of("elementAt")), // TODO: NEWCG_N is not implemented
         Map.entry("org.xtclang.ecstasy.collections.Set",
@@ -4283,6 +4329,6 @@ public class CommonBuilder
             Set.of("not"))          // TODO: depends on virtual constructor
     );
 
-    private final static HashSet<String> SKIP_SET = new HashSet<>();
-    private final static HashSet<String> METHOD_SKIP_SET = new HashSet<>();
+    private static final HashSet<String> SKIP_SET = new HashSet<>();
+    private static final HashSet<String> METHOD_SKIP_SET = new HashSet<>();
 }

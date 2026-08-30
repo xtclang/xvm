@@ -16,6 +16,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
@@ -385,7 +386,14 @@ public abstract class Builder {
 
             // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleCLInit)
             ClassDesc cd = jtd.cd;
-            code.getstatic(cd, Instance, cd);
+            if (isContainerScoped(type)) {
+                code.aload(bctx.ctxSlot(code))
+                    .getstatic(cd, Instance, CD_MethodHandle)
+                    .invokevirtual(CD_Ctx, "getStatic", Ctx.MD_getStatic)
+                    .checkcast(cd);
+            } else {
+                code.getstatic(cd, Instance, cd);
+            }
             return new SingleSlot(type, Specific, cd, "");
         }
 
@@ -622,6 +630,34 @@ public abstract class Builder {
         return prop.isConstant() &&
                 (prop.isInjected() ||
                  prop.getInitializer() != null && !prop.getType().isConst());
+    }
+
+    /**
+     * Determine whether the instance value of the specified singleton type must be scoped to a
+     * container. Singleton services are always container-specific. A singleton const is also
+     * container-specific if one of its stored properties can contain a service.
+     *
+     * @return true iff {@code $INSTANCE} holds a computation handle instead of the singleton value
+     */
+    protected boolean isContainerScoped(TypeConstant type) {
+        TypeInfo info = type.ensureTypeInfo();
+        if (info.isSingleton()) {
+            if (type.isService()) {
+                return true;
+            }
+
+            if (type.getExplicitClassFormat() != Format.CONST) {
+                return false;
+            }
+
+            for (PropertyInfo prop : info.getProperties().values()) {
+                if (!prop.isConstant() && (prop.hasField() || prop.isInjected()) &&
+                        !prop.getType().isConst()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private SingleSlot loadUInt8Array(BuildContext bctx, CodeBuilder code,
@@ -2113,7 +2149,8 @@ public abstract class Builder {
     // ----- well-known methods --------------------------------------------------------------------
 
     /**
-     * The name of the static field holding an instance reference for singleton types.
+     * The name of the static field holding either an instance reference or a container-independent
+     * computation handle for singleton types.
      */
     public static final String Instance = "$INSTANCE";
 
