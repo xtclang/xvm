@@ -490,6 +490,7 @@ public class CommonBuilder
             case ANNOTATION, MIXIN:
                 // annotations and mixins are incorporated (copied) into every class that
                 // annotates the annotation or incorporates the mixin
+                classBuilder.withFlags(flags | ClassFile.ACC_INTERFACE | ClassFile.ACC_ABSTRACT);
                 return false;
 
             default:
@@ -523,7 +524,7 @@ public class CommonBuilder
 
         for (Contribution contrib : typeInfo.getContributionList()) {
             switch (contrib.getComposition()) {
-                case Implements:
+                case Implements, Incorporates:
                     TypeConstant contribType = contrib.getTypeConstant().removeAccess();
                     if  (shouldAddInterface(contribType)) {
                         interfaces.add(ensureClassDesc(contribType));

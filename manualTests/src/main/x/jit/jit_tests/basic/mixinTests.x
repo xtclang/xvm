@@ -47,11 +47,10 @@ package mixinTests {
     }
 
     void test6() {
-//        TODO: an explicit auto-narrowing mixin return retains the mixin descriptor
-//        import t6.*;
-//
-//        Base base = new Base();
-//        assert base.self().value() == 42;
+        import t6.*;
+
+        Base base = new Base();
+        assert base.self().value() == 42;
     }
 
     package t1 {

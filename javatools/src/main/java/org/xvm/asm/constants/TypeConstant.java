@@ -7269,13 +7269,21 @@ public abstract class TypeConstant
      *         requires a "checkcast"
      */
     public boolean isJitAssignableTo(TypeConstant that) {
-        TypeConstant typeThisJit = getCallableJitType();
         TypeConstant typeThatJit = that.getCallableJitType();
+        if (typeThatJit.equals(getConstantPool().typeObject())) {
+            return true;
+        }
+
+        TypeConstant typeThisJit = getCallableJitType();
 
         // Let's say C = ListMap<K,V>; M = ListMapIndex<K,V>
         // Ecstasy: M --into--> C, so M.isA(C), but
         // Java:    C --implements--> M, so M -> C requires a checkcast
-        return typeThisJit.equals(typeThatJit) ||
+        boolean fMixinCast =
+                typeThisJit.getExplicitClassFormat() == Component.Format.MIXIN &&
+                typeThisJit.getExplicitClassInto(true).isA(typeThatJit);
+
+        return typeThisJit.equals(typeThatJit) || !fMixinCast &&
                 !isJitL2Specialized() && typeThisJit.isA(typeThatJit);
     }
 
