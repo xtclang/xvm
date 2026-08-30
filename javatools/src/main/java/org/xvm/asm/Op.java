@@ -1902,18 +1902,15 @@ public abstract class Op {
     public static final int OP_NEWC_0       = 0x40;
     public static final int OP_NEWC_1       = 0x41;
     public static final int OP_NEWC_N       = 0x42;
-    /** Reserved: the tuple-argument variant of NEWC. Not implemented; the constant holds the
-     *  slot so the contiguous NEWC/NEWCG numbering is not disturbed. See also OP_NEWCG_T. */
-    public static final int OP_NEWC_T       = 0x43;
+    public static final int OP_NEWC_T       = 0x43; // not implemented
     public static final int OP_NEWCG_0      = 0x44;
     public static final int OP_NEWCG_1      = 0x45;
     public static final int OP_NEWCG_N      = 0x46;
-    /** Reserved: the tuple-argument variant of NEWCG. Not implemented; see OP_NEWC_T. */
-    public static final int OP_NEWCG_T      = 0x47;
+    public static final int OP_NEWCG_T      = 0x47; // not implemented
     public static final int OP_NEWV_0       = 0x48;
     public static final int OP_NEWV_1       = 0x49;
     public static final int OP_NEWV_N       = 0x4A;
-    public static final int OP_NEWV_T       = 0x4B;
+    public static final int OP_NEWV_T       = 0x4B; // not implemented
 
     public static final int OP_RETURN_0     = 0x4C;
     public static final int OP_RETURN_1     = 0x4D;
