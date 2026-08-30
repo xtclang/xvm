@@ -12,7 +12,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Common base for property related ops.
  */
-public abstract class OpProperty extends Op {
+public abstract class OpProperty extends OpOptimized {
     /**
      * Construct an op.
      *

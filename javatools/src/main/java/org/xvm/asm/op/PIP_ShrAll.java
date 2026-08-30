@@ -3,11 +3,18 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpPropInPlaceAssign;
 
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.NumberSupport;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -16,7 +23,8 @@ import org.xvm.runtime.ObjectHandle;
  * PIP_USHR PROPERTY, rvalue-target, rvalue2 ; T >>>= T
  */
 public class PIP_ShrAll
-        extends OpPropInPlaceAssign {
+        extends OpPropInPlaceAssign
+        implements NumberSupport {
     /**
      * Construct a PIP_SHRALL op based on the passed arguments.
      *
@@ -47,5 +55,20 @@ public class PIP_ShrAll
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue) {
         return hTarget.getTemplate().invokePropertyShrAll(frame, hTarget, idProp, hValue);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected TypeConstant buildOptimizedBinary(BuildContext bctx, CodeBuilder code,
+                                                RegisterInfo regTarget, int argValue) {
+        return buildPrimitiveUnsignedShr(bctx, code, regTarget, argValue);
+    }
+
+    @Override
+    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+                                                   RegisterInfo regTarget, int argValue) {
+        buildXvmPrimitiveUnsignedShr(bctx, code, regTarget, argValue);
+        return regTarget.type();
     }
 }

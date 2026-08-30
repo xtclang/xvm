@@ -2461,16 +2461,44 @@ public class BuildContext {
 
         TypeConstant  targetType = targetReg.type();
         PropertyInfo  propInfo   = propId.getPropertyInfo(targetType);
-        JitMethodDesc jmdGet;
+        JitMethodDesc jmdGet     = loadProperty(code, targetReg, propId, propInfo);
+        assignReturns(code, jmdGet, 1, new int[] {retId});
+    }
+
+    /**
+     * Get the property value and store it in a temporary register.
+     *
+     * @return the temporary register containing the property value
+     */
+    public RegisterInfo buildGetProperty(CodeBuilder code, RegisterInfo targetReg, int propIdIndex) {
+        PropertyConstant propId = getConstant(propIdIndex, PropertyConstant.class);
+        assert !propId.isFormalType();
+
+        TypeConstant  targetType = targetReg.type();
+        PropertyInfo  propInfo   = propId.getPropertyInfo(targetType);
+        TypeConstant  propType   = propInfo.getType().resolveAutoNarrowing(pool(), false, targetType, null);
+        RegisterInfo  regValue   = createTempRegister(propType);
+        JitMethodDesc jmdGet     = loadProperty(code, targetReg, propId, propInfo);
+
+        assignReturn(code, jmdGet, jmdGet.isOptimized, regValue.regId(), regValue.type(), regValue, 0
+        );
+        return regValue;
+    }
+
+    /**
+     * Load a property value onto the Java stack.
+     */
+    private JitMethodDesc loadProperty(CodeBuilder code, RegisterInfo targetReg,
+                                       PropertyConstant propId, PropertyInfo propInfo) {
+        TypeConstant  targetType = targetReg.type();
+        JitMethodDesc jmdGet     = propInfo.getGetterJitDesc(builder, targetType);
 
         if (targetType.getAccess() == Access.STRUCT && !propInfo.isFormalType()) {
-            jmdGet = propInfo.getGetterJitDesc(builder, targetType);
             buildGetPropertyField(code, targetReg, propInfo, jmdGet);
         } else {
-            jmdGet = propInfo.getGetterJitDesc(builder, targetType);
             builder.loadProperty(code, targetType, propId, true, ctxSlot(code));
         }
-        assignReturns(code, jmdGet, 1, new int[] {retId});
+        return jmdGet;
     }
 
     /**
@@ -2887,9 +2915,47 @@ public class BuildContext {
     }
 
     /**
+     * Create an empty temporary register for the specified type.
+     */
+    private RegisterInfo createTempRegister(TypeConstant type) {
+        JitTypeDesc  jitDesc = type.getJitDesc(builder);
+        JitFlavor    flavor  = jitDesc.flavor;
+        ClassDesc    cd      = jitDesc.cd;
+        RegisterInfo reg;
+
+        switch (flavor) {
+        case Specific, Widened, Primitive, AlwaysNull:
+            reg = new SingleSlot(Op.A_STACK, scope.allocateJavaSlot(cd), flavor, type, cd, "");
+            break;
+
+        case NullablePrimitive:
+            reg = new ExtendedSlot(this, Op.A_STACK,
+                    scope.allocateJavaSlot(cd), scope.allocateJavaSlot(CD_boolean),
+                    flavor, type, cd, "");
+            break;
+
+        case XvmPrimitive, NullableXvmPrimitive:
+            ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(type);
+            int[]       slots = new int[cds.length];
+            for (int i = 0; i < cds.length; i++) {
+                slots[i] = scope.allocateJavaSlot(cds[i]);
+            }
+            int extSlot = flavor == NullableXvmPrimitive
+                    ? scope.allocateJavaSlot(CD_boolean)
+                    : MultiSlot.NO_SLOT;
+            reg = new MultiSlot(this, Op.A_STACK, slots, extSlot, flavor, type, cd, cds, "");
+            break;
+
+        default:
+            throw new UnsupportedOperationException("Not implemented: " + flavor);
+        }
+        return reg;
+    }
+
+    /**
      * Store a value described by the specified register from the Java stack in temporary slots.
      */
-    private RegisterInfo storeTempRegister(CodeBuilder code, int regId, RegisterInfo reg) {
+    public RegisterInfo storeTempRegister(CodeBuilder code, int regId, RegisterInfo reg) {
         TypeConstant type   = reg.type();
         JitFlavor    flavor = reg.flavor();
         String       name   = reg.name();
@@ -2965,7 +3031,7 @@ public class BuildContext {
             assignConditionalReturns(code, jmd, cReturns, anVar, isOptimized);
         } else {
             for (int i = 0; i < cReturns; i++) {
-                assignReturn(code, jmd, isOptimized, i, anVar[i]);
+                assignReturn(code, jmd, isOptimized, anVar[i], i);
             }
         }
     }
@@ -3027,7 +3093,7 @@ public class BuildContext {
 
         // keep a copy of the condition after assignReturn() stores the Boolean result
         code.dup();
-        assignReturn(code, jmd, isOptimized, 0, anVar[0]);
+        assignReturn(code, jmd, isOptimized, anVar[0], 0);
 
         for (int i = 1; i < cReturns; i++) {
             int regId = anVar[i];
@@ -3050,22 +3116,49 @@ public class BuildContext {
         Label ifFalse = code.newLabel();
         code.ifeq(ifFalse);
         for (int i = 1; i < cReturns; i++) {
-            assignReturn(code, jmd, isOptimized, i, anVar[i]);
+            assignReturn(code, jmd, isOptimized, anVar[i], i);
         }
         code.labelBinding(ifFalse);
     }
 
+    /**
+     * Assign a return value to the specified destination register.
+     *
+     * @param jmd          the method descriptor describing the Java returns
+     * @param isOptimized  true iff the invocation used the optimized descriptor
+     * @param regId        the destination register id
+     * @param returnIndex  the zero-based Ecstasy return index; an optimized return may occupy
+     *                     multiple Java return positions
+     */
     private void assignReturn(CodeBuilder code, JitMethodDesc jmd, boolean isOptimized,
-                              int i, int regId) {
-        int          iOpt     = isOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
-        JitParamDesc pdRet    = isOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
+                              int regId, int returnIndex) {
         TypeConstant destType = regId == Op.A_IGNORE ? null : getReturnType(regId);
+        assignReturn(code, jmd, isOptimized, regId, destType, null, returnIndex);
+    }
+
+    /**
+     * Assign a logical Ecstasy return value using the supplied destination information.
+     *
+     * @param jmd          the method descriptor describing the Java returns
+     * @param isOptimized  true iff the invocation used the optimized descriptor
+     * @param regId        the destination register id when {@code reg} is null
+     * @param destType     the resolved destination type, or null to discard the return
+     * @param reg          an explicit temporary destination register, or null to use {@code regId}
+     * @param returnIndex  the zero-based Ecstasy return index; an optimized return may occupy
+     *                     multiple Java return positions
+     */
+    private void assignReturn(CodeBuilder code, JitMethodDesc jmd, boolean isOptimized,
+                              int regId, TypeConstant destType, RegisterInfo reg, int returnIndex) {
+        int          optReturnIndex = isOptimized ? jmd.getOptimizedReturnIndex(returnIndex) : -1;
+        JitParamDesc pdRet          = isOptimized
+                ? jmd.optimizedReturns[optReturnIndex]
+                : jmd.standardReturns[returnIndex];
 
         if (destType == null) {
             // the return is explicitly ignored or its destination has gone out of scope;
-            // if i == 0, we need to pop the value from the stack, otherwise the return value
-            // is in the context, so we can just ignore it
-            if (i == 0) {
+            // if returnIndex == 0, we need to pop the value from the stack, otherwise the return
+            // value is in the context, so we can just ignore it
+            if (returnIndex == 0) {
                 Builder.pop(code, pdRet.cd);
             }
             return;
@@ -3076,7 +3169,7 @@ public class BuildContext {
         JitFlavor   retFlavor  = pdRet.flavor;
         String      transform  = retFlavor.name() + "->" + destFlavor.name();
 
-        if (i == 0) {
+        if (returnIndex == 0) {
             switch (transform) {
             case "Primitive->Specific",
                  "Primitive->Widened" -> {
@@ -3091,7 +3184,7 @@ public class BuildContext {
 
             case "NullablePrimitive->NullablePrimitive" -> {
                 assert isOptimized;
-                JitParamDesc pdExt = jmd.optimizedReturns[iOpt + 1];
+                JitParamDesc pdExt = jmd.optimizedReturns[optReturnIndex + 1];
 
                 // if the value is `True`, then the return value is Ecstasy `Null`
                 loadFromContext(code, CD_boolean, pdExt.altIndex);
@@ -3100,7 +3193,7 @@ public class BuildContext {
             case "NullablePrimitive->Specific",
                  "NullablePrimitive->Widened" -> {
                 assert isOptimized;
-                JitParamDesc pdExt = jmd.optimizedReturns[iOpt + 1];
+                JitParamDesc pdExt = jmd.optimizedReturns[optReturnIndex + 1];
 
                 // if the value is `True`, then the return value is Ecstasy `Null`
                 loadFromContext(code, CD_boolean, pdExt.altIndex);
@@ -3120,7 +3213,7 @@ public class BuildContext {
                  "XvmPrimitive->Widened" -> {
                 assert isOptimized;
                 // process the remaining primitives by loading from the context
-                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(returnIndex);
                 for (int j = 1, retIndex = 0; j < optIndexes.length; j++, retIndex++) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                     loadFromContext(code, retDesc.cd, retIndex);
@@ -3130,7 +3223,7 @@ public class BuildContext {
             case "XvmPrimitive->XvmPrimitive" -> {
                 assert isOptimized;
                 // process the remaining primitives by loading from the context
-                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(returnIndex);
                 for (int j = 1, retIndex = 0; j < optIndexes.length; j++, retIndex++) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                     loadFromContext(code, retDesc.cd, retIndex);
@@ -3139,7 +3232,7 @@ public class BuildContext {
             case "NullableXvmPrimitive->Specific",
                  "NullableXvmPrimitive->Widened" -> {
                 assert isOptimized;
-                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(returnIndex);
 
                 loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
                 Label ifTrue = code.newLabel();
@@ -3158,7 +3251,7 @@ public class BuildContext {
 
             case "NullableXvmPrimitive->NullableXvmPrimitive" -> {
                 assert isOptimized;
-                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(returnIndex);
                 for (int j = 1, retIndex = 0; j < optIndexes.length; j++, retIndex++) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                     loadFromContext(code, retDesc.cd, retIndex);
@@ -3214,7 +3307,7 @@ public class BuildContext {
 
             case "NullablePrimitive->NullablePrimitive"-> {
                 assert isOptimized;
-                JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
+                JitParamDesc pdExt = jmd.optimizedReturns[optReturnIndex + 1];
 
                 loadFromContext(code, tdDest.cd, pdRet.altIndex);
                 loadFromContext(code, pdExt.cd, pdExt.altIndex);
@@ -3224,7 +3317,7 @@ public class BuildContext {
             case "NullablePrimitive->Specific",
                  "NullablePrimitive->Widened" -> {
                 assert isOptimized;
-                JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
+                JitParamDesc pdExt = jmd.optimizedReturns[optReturnIndex + 1];
 
                 loadFromContext(code, tdDest.cd, pdRet.altIndex);
                 loadFromContext(code, pdExt.cd, pdExt.altIndex);
@@ -3245,7 +3338,7 @@ public class BuildContext {
                  "XvmPrimitive->Widened" -> {
                 assert isOptimized;
                 // process the remaining primitives by loading from the context
-                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(returnIndex);
                 for (int optIndex : optIndexes) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
                     loadFromContext(code, retDesc.cd, retDesc.altIndex);
@@ -3256,7 +3349,7 @@ public class BuildContext {
             case "XvmPrimitive->XvmPrimitive" -> {
                 assert isOptimized;
                 // process the remaining primitives by loading from the context
-                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(returnIndex);
                 for (int optIndex : optIndexes) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
                     loadFromContext(code, retDesc.cd, retDesc.altIndex);
@@ -3266,7 +3359,7 @@ public class BuildContext {
             case "NullableXvmPrimitive->Specific",
                  "NullableXvmPrimitive->Widened" -> {
                 assert isOptimized;
-                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(returnIndex);
 
                 loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
                 Label ifTrue = code.newLabel();
@@ -3290,7 +3383,7 @@ public class BuildContext {
 
             case "NullableXvmPrimitive->NullableXvmPrimitive" -> {
                 assert isOptimized;
-                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(returnIndex);
                 for (int optIndex : optIndexes) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
                     loadFromContext(code, retDesc.cd, retDesc.altIndex);
@@ -3327,7 +3420,11 @@ public class BuildContext {
             }
         }
 
-        storeValue(code, regId, destType);
+        if (reg == null) {
+            storeValue(code, regId, destType);
+        } else {
+            storeValue(code, reg, destType);
+        }
     }
 
     /**
