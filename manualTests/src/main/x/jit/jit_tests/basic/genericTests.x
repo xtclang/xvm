@@ -52,8 +52,7 @@ package genericTests {
 
     void testFormalType() {
         Iterator<String> iterator = ["alpha"].iterator();
-        // TODO GG/CP: formal type resolution recurses between nObject.$type() and $xvmType()
-//        assert iterator.Element.is(Type<Orderable>);
+        assert iterator.Element.is(Type<Orderable>);
     }
 
     static <Element, Result> Result apply(
