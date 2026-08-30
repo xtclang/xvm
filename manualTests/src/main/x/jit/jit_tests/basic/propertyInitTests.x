@@ -15,6 +15,7 @@ package propertyInitTests {
         testStaticServiceProperty();
         testSingletonService();
         testSingletonConstWithService();
+        testPipOps();
     }
 
     void testSimple() {
@@ -138,16 +139,55 @@ package propertyInitTests {
         assert SingletonConst.counter.next() == 2;
     }
 
+    void testPipOps() {
+        class PipTarget {
+            Int value;
+        }
+
+        PipTarget target = new PipTarget();
+
+        assert ++target.value == 1;
+        assert target.value == 1;
+        assert target.value++ == 1;
+        assert target.value == 2;
+        assert --target.value == 1;
+        assert target.value == 1;
+        assert target.value-- == 1;
+        assert target.value == 0;
+        ++target.value;
+        assert target.value == 1;
+        --target.value;
+        assert target.value == 0;
+        target.value += 5;
+        assert target.value == 5;
+        target.value -= 2;
+        assert target.value == 3;
+        target.value *= 10;
+        assert target.value == 30;
+        target.value /= 3;
+        assert target.value == 10;
+        target.value %= 6;
+        assert target.value == 4;
+        target.value <<= 2;
+        assert target.value == 16;
+        target.value >>= 1;
+        assert target.value == 8;
+        target.value >>>= 1;
+        assert target.value == 4;
+        target.value &= 6;
+        assert target.value == 4;
+        target.value |= 1;
+        assert target.value == 5;
+        target.value ^= 7;
+        assert target.value == 2;
+    }
+
     static service SingletonService
             implements Counter {
         private Int count = 0;
 
         @Override
-        Int next() {
-            // TODO: use "return ++count;" when the JIT supports PIP_INCB
-            count = count + 1;
-            return count;
-        }
+        Int next() = ++count;
     }
 
     static const SingletonConst {

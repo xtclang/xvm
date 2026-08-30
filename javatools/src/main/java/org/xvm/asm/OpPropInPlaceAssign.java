@@ -4,7 +4,13 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -108,6 +114,44 @@ public abstract class OpPropInPlaceAssign
                 + ", " + Argument.toIdString(m_argTarget, m_nTarget)
                 + ", " + Argument.toIdString(m_argValue, m_nValue);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        PropertyConstant prop      = bctx.getConstant(m_nPropId, PropertyConstant.class);
+        RegisterInfo     regTarget = bctx.loadArgument(code, m_nTarget);
+        regTarget = bctx.storeTempRegister(code, m_nTarget, regTarget);
+
+        RegisterInfo regValue  = bctx.buildGetProperty(code, regTarget.load(code), m_nPropId);
+        TypeConstant typeValue = buildInPlaceAssign(bctx, code, regValue, m_nValue);
+        bctx.storeValue(code, regValue, typeValue);
+        bctx.buildSetProperty(code, regTarget.type(), regTarget::load, prop, regValue::load);
+        return -1;
+    }
+
+    /**
+     * Build the operation on the current property value.
+     *
+     * @return the type of the result on the Java stack
+     */
+    protected TypeConstant buildInPlaceAssign(BuildContext bctx, CodeBuilder code,
+                                              RegisterInfo regTarget, int argValue) {
+        if (regTarget.cd().isPrimitive()) {
+            if (!regTarget.isSingle()) {
+                throw new UnsupportedOperationException(toName(getOpCode()) + " on multi-slot");
+            }
+            return buildOptimizedBinary(bctx, code, regTarget, argValue);
+        }
+
+        if (regTarget.type().isXvmPrimitive()) {
+            return buildXvmOptimizedBinary(bctx, code, regTarget, argValue);
+        }
+
+        throw new UnsupportedOperationException(toName(getOpCode()) + " on "
+                + regTarget.type().getValueString());
+    }
+
 
     // ----- data fields ---------------------------------------------------------------------------
 

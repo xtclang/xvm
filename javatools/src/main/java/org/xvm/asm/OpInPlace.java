@@ -10,7 +10,6 @@ import java.lang.classfile.TypeKind;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
-import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -226,37 +225,7 @@ public abstract class OpInPlace
         if (nTarget >= 0) {
             // operation on a register
             RegisterInfo reg = bctx.ensureRegister(code, nTarget);
-            if (reg.cd().isPrimitive()) {
-                assert reg.isSingle();
-
-                buildPrimitiveLocal(bctx, code, reg);
-                if (isAssignOp()) {
-                    bctx.storeValue(code, m_nRetValue, reg.type());
-                } else {
-                    reg.markChanged();
-                }
-            } else if (reg.type().isXvmPrimitive()) {
-                buildXvmPrimitiveLocal(bctx, code, reg);
-                if (isAssignOp()) {
-                    bctx.storeValue(code, m_nRetValue, reg.type());
-                } else {
-                    reg.markChanged();
-                }
-            } else if (reg.type().isA(bctx.pool().typeSequential())) {
-                // this can only be non-primitive Sequential, i.e. IntNumber, IntN or UIntN
-                buildSequentialLocal(bctx, code, reg);
-                if (isAssignOp()) {
-                    bctx.storeValue(code, m_nRetValue, reg.type());
-                } else {
-                    reg.markChanged();
-                }
-            } else {
-                // call the corresponding op method
-                JitMethodDesc jmd = buildOpCallLocal(bctx, code, reg);
-                if (isAssignOp()) {
-                    bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
-                }
-            }
+            buildLocalInPlace(bctx, code, reg, isAssignOp(), m_nRetValue);
         } else {
             // operation on a local property
             PropertyConstant idProp   = bctx.getConstant(nTarget, PropertyConstant.class);
@@ -275,38 +244,6 @@ public abstract class OpInPlace
             }
         }
         return -1;
-    }
-
-    /**
-     * Build the non-primitive type ops for a local variable.
-     *
-     * In:  nothing on the Java stack
-     * Out: the result on Java stack
-     */
-    protected JitMethodDesc buildOpCallLocal(BuildContext bctx, CodeBuilder code, RegisterInfo reg) {
-        String sName;
-        String sOp;
-        switch (getOpCode()) {
-            case OP_IP_DEC  -> {sName = "prevValue";     sOp = null; }
-            case OP_IP_INC  -> {sName = "nextValue";     sOp = null; }
-            case OP_IP_DECA -> {sName = "postDecrement"; sOp = "#--";}
-            case OP_IP_INCA -> {sName = "postIncrement"; sOp = "#++";}
-            case OP_IP_DECB -> {sName = "preDecrement";  sOp = "--#";}
-            case OP_IP_INCB -> {sName = "preIncrement";  sOp = "++#";}
-            default         -> throw new IllegalStateException();
-            }
-
-        TypeConstant  typeTarget = reg.type();
-        MethodInfo    method     = bctx.getTypeInfo(typeTarget).findOpMethod(sName, sOp, null);
-        String        sJitName   = method.ensureJitMethodName(bctx.typeSystem);
-        JitMethodDesc jmd        = method.getJitDesc(bctx.builder, typeTarget);
-
-        assert !jmd.isOptimized;
-
-        reg.load(code);
-        bctx.loadCtx(code);
-        code.invokevirtual(reg.cd(), sJitName, jmd.standardMD);
-        return jmd;
     }
 
     /**
