@@ -7577,7 +7577,10 @@ public abstract class TypeConstant
                 default                           -> throw new IllegalStateException();
             };
 
-            boolean       isFormal = isFormalType();
+            TypeConstant  typeFormal = isFormalType()
+                                        ? this
+                                        : type1.isFormalType() ? type1 : null;
+            boolean       isFormal = typeFormal != null;
             ClassDesc     cd;
             String        sJitName;
             JitMethodDesc jmd;
@@ -7622,7 +7625,7 @@ public abstract class TypeConstant
             }
 
             if (isFormal) {
-                RegisterInfo regType  = bctx.loadType(code, this);
+                RegisterInfo regType  = bctx.loadType(code, typeFormal.getType());
                 int          slotType = bctx.storeTempValue(code, regType.cd());
 
                 // generated class-of-class extends Class and implements "sComparable" and "sOrderable"
