@@ -6,20 +6,10 @@ import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
 
-import static org.xvm.asm.Op.OP_IIP_DEC;
-import static org.xvm.asm.Op.OP_IIP_DECA;
-import static org.xvm.asm.Op.OP_IIP_DECB;
-import static org.xvm.asm.Op.OP_IIP_INC;
-import static org.xvm.asm.Op.OP_IIP_INCA;
-import static org.xvm.asm.Op.OP_IIP_INCB;
-import static org.xvm.asm.Op.OP_IP_DEC;
-import static org.xvm.asm.Op.OP_IP_DECA;
-import static org.xvm.asm.Op.OP_IP_DECB;
-import static org.xvm.asm.Op.OP_IP_INC;
-import static org.xvm.asm.Op.OP_IP_INCA;
-import static org.xvm.asm.Op.OP_IP_INCB;
+import static org.xvm.asm.Op.*;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 
@@ -33,6 +23,89 @@ public interface InPlaceSupport
      * @return the byte value that identifies the op-code, in the range 0-255
      */
     int getOpCode();
+
+    /**
+     * Build an in-place operation on a local register.
+     *
+     * @param bctx      the current build context
+     * @param code      the code builder to add the op codes to
+     * @param reg       the register containing the operation target
+     * @param assign    true iff the operation produces a result
+     * @param resultId  the register to store the result into if {@code assign} is true
+     */
+    default void buildLocalInPlace(BuildContext bctx, CodeBuilder code, RegisterInfo reg,
+                                   boolean assign, int resultId) {
+        if (reg.cd().isPrimitive()) {
+            assert reg.isSingle();
+            buildPrimitiveLocal(bctx, code, reg);
+            if (assign) {
+                bctx.storeValue(code, resultId, reg.type());
+            } else {
+                reg.markChanged();
+            }
+        } else if (reg.type().isXvmPrimitive()) {
+            buildXvmPrimitiveLocal(bctx, code, reg);
+            if (assign) {
+                bctx.storeValue(code, resultId, reg.type());
+            } else {
+                reg.markChanged();
+            }
+        } else if (reg.type().isA(bctx.pool().typeSequential())) {
+            // this can only be non-primitive Sequential, i.e. IntNumber, IntN or UIntN
+            buildSequentialLocal(bctx, code, reg);
+            if (assign) {
+                bctx.storeValue(code, resultId, reg.type());
+            } else {
+                reg.markChanged();
+            }
+        } else {
+            JitMethodDesc jmd = buildOpCallLocal(bctx, code, reg);
+            if (assign) {
+                bctx.assignReturns(code, jmd, 1, new int[] {resultId});
+            }
+        }
+    }
+
+    /**
+     * Build the non-primitive operation on a local register.
+     */
+    default JitMethodDesc buildOpCallLocal(BuildContext bctx, CodeBuilder code, RegisterInfo reg) {
+        String name;
+        String op;
+        switch (getOpCode()) {
+            case OP_IP_DEC, OP_PIP_DEC -> {name = "prevValue"; op = null;}
+            case OP_IP_INC, OP_PIP_INC -> {name = "nextValue"; op = null;}
+            case OP_IP_DECA, OP_PIP_DECA -> {
+                name = "postDecrement";
+                op   = "#--";
+            }
+            case OP_IP_INCA, OP_PIP_INCA -> {
+                name = "postIncrement";
+                op   = "#++";
+            }
+            case OP_IP_DECB, OP_PIP_DECB -> {
+                name = "preDecrement";
+                op   = "--#";
+            }
+            case OP_IP_INCB, OP_PIP_INCB -> {
+                name = "preIncrement";
+                op   = "++#";
+            }
+            default -> throw new IllegalStateException();
+        }
+
+        TypeConstant  targetType = reg.type();
+        MethodInfo    method     = bctx.getTypeInfo(targetType).findOpMethod(name, op, null);
+        String        jitName    = method.ensureJitMethodName(bctx.typeSystem);
+        JitMethodDesc jmd        = method.getJitDesc(bctx.builder, targetType);
+
+        assert !jmd.isOptimized;
+
+        reg.load(code);
+        bctx.loadCtx(code);
+        code.invokevirtual(reg.cd(), jitName, jmd.standardMD);
+        return jmd;
+    }
 
     /**
      * Build the primitive local ops.
@@ -53,12 +126,14 @@ public interface InPlaceSupport
             // we need to code a range check for Char inc/dec ops
             code.iload(reg.slot());
             switch (opCode) {
-                case OP_IP_DEC, OP_IIP_DEC, OP_IP_DECA, OP_IIP_DECA, OP_IP_DECB, OP_IIP_DECB:
+                case OP_IP_DEC, OP_IIP_DEC, OP_IP_DECA, OP_IIP_DECA, OP_IP_DECB, OP_IIP_DECB,
+                        OP_PIP_DEC, OP_PIP_DECA, OP_PIP_DECB:
                     // decrementing
                     code.loadConstant(0);
                     msg = "OutOfBounds: text.Char underflow";
                     break;
-                case OP_IP_INC, OP_IIP_INC, OP_IP_INCA, OP_IIP_INCA, OP_IP_INCB, OP_IIP_INCB:
+                case OP_IP_INC, OP_IIP_INC, OP_IP_INCA, OP_IIP_INCA, OP_IP_INCB, OP_IIP_INCB,
+                        OP_PIP_INC, OP_PIP_INCA, OP_PIP_INCB:
                     // incrementing
                     code.loadConstant(0x10FFFF);
                     msg = "OutOfBounds: text.Char overflow";
@@ -74,7 +149,7 @@ public interface InPlaceSupport
         switch (reg.cd().descriptorString()) {
             case "I", "S", "B", "Z":
                 switch (opCode) {
-                    case OP_IP_DEC, OP_IIP_DEC:
+                    case OP_IP_DEC, OP_IIP_DEC, OP_PIP_DEC:
                         code.iload(reg.slot())
                             .iconst_1()
                             .isub();
@@ -82,7 +157,7 @@ public interface InPlaceSupport
                         code.istore(reg.slot());
                         break;
 
-                    case OP_IP_INC, OP_IIP_INC:
+                    case OP_IP_INC, OP_IIP_INC, OP_PIP_INC:
                         code.iload(reg.slot())
                             .iconst_1()
                             .iadd();
@@ -90,7 +165,7 @@ public interface InPlaceSupport
                         code.istore(reg.slot());
                         break;
 
-                    case OP_IP_DECA, OP_IIP_DECA:
+                    case OP_IP_DECA, OP_IIP_DECA, OP_PIP_DECA:
                         code.iload(reg.slot())
                             .dup()
                             .iconst_1()
@@ -99,7 +174,7 @@ public interface InPlaceSupport
                         code.istore(reg.slot());
                         break;
 
-                    case OP_IP_INCA, OP_IIP_INCA:
+                    case OP_IP_INCA, OP_IIP_INCA, OP_PIP_INCA:
                         code.iload(reg.slot())
                             .dup()
                             .iconst_1()
@@ -108,7 +183,7 @@ public interface InPlaceSupport
                         code.istore(reg.slot());
                         break;
 
-                    case OP_IP_DECB, OP_IIP_DECB:
+                    case OP_IP_DECB, OP_IIP_DECB, OP_PIP_DECB:
                         code.iload(reg.slot())
                             .iconst_1()
                             .isub();
@@ -117,7 +192,7 @@ public interface InPlaceSupport
                             .istore(reg.slot());
                         break;
 
-                    case OP_IP_INCB, OP_IIP_INCB:
+                    case OP_IP_INCB, OP_IIP_INCB, OP_PIP_INCB:
                         code.iload(reg.slot())
                             .iconst_1()
                             .iadd();
@@ -134,35 +209,35 @@ public interface InPlaceSupport
             case "J":
                 code.lload(reg.slot());
                 switch (opCode) {
-                    case OP_IP_DEC, OP_IIP_DEC:
+                    case OP_IP_DEC, OP_IIP_DEC, OP_PIP_DEC:
                         code.lconst_1()
                                 .lsub();
                         break;
 
-                    case OP_IP_INC, OP_IIP_INC:
+                    case OP_IP_INC, OP_IIP_INC, OP_PIP_INC:
                         code.lconst_1()
                                 .ladd();
                         break;
 
-                    case OP_IP_DECA, OP_IIP_DECA:
+                    case OP_IP_DECA, OP_IIP_DECA, OP_PIP_DECA:
                         code.dup2()
                                 .lconst_1()
                                 .lsub();
                         break;
 
-                    case OP_IP_INCA, OP_IIP_INCA:
+                    case OP_IP_INCA, OP_IIP_INCA, OP_PIP_INCA:
                         code.dup2()
                                 .lconst_1()
                                 .ladd();
                         break;
 
-                    case OP_IP_DECB, OP_IIP_DECB:
+                    case OP_IP_DECB, OP_IIP_DECB, OP_PIP_DECB:
                         code.lconst_1()
                                 .lsub()
                                 .dup2();
                         break;
 
-                    case OP_IP_INCB, OP_IIP_INCB:
+                    case OP_IP_INCB, OP_IIP_INCB, OP_PIP_INCB:
                         code.lconst_1()
                                 .ladd()
                                 .dup2();
@@ -177,35 +252,35 @@ public interface InPlaceSupport
             case "F":
                 code.fload(reg.slot());
                 switch (opCode) {
-                    case OP_IP_DEC, OP_IIP_DEC:
+                    case OP_IP_DEC, OP_IIP_DEC, OP_PIP_DEC:
                         code.fconst_1()
                                 .fsub();
                         break;
 
-                    case OP_IP_INC, OP_IIP_INC:
+                    case OP_IP_INC, OP_IIP_INC, OP_PIP_INC:
                         code.fconst_1()
                                 .fadd();
                         break;
 
-                    case OP_IP_DECA, OP_IIP_DECA:
+                    case OP_IP_DECA, OP_IIP_DECA, OP_PIP_DECA:
                         code.dup2()
                                 .fconst_1()
                                 .fsub();
                         break;
 
-                    case OP_IP_INCA, OP_IIP_INCA:
+                    case OP_IP_INCA, OP_IIP_INCA, OP_PIP_INCA:
                         code.dup2()
                                 .fconst_1()
                                 .fadd();
                         break;
 
-                    case OP_IP_DECB, OP_IIP_DECB:
+                    case OP_IP_DECB, OP_IIP_DECB, OP_PIP_DECB:
                         code.fconst_1()
                                 .fsub()
                                 .dup2();
                         break;
 
-                    case OP_IP_INCB, OP_IIP_INCB:
+                    case OP_IP_INCB, OP_IIP_INCB, OP_PIP_INCB:
                         code.fconst_1()
                                 .fadd()
                                 .dup2();
@@ -220,35 +295,35 @@ public interface InPlaceSupport
             case "D":
                 code.dload(reg.slot());
                 switch (opCode) {
-                    case OP_IP_DEC, OP_IIP_DEC:
+                    case OP_IP_DEC, OP_IIP_DEC, OP_PIP_DEC:
                         code.dconst_1()
                                 .dsub();
                         break;
 
-                    case OP_IP_INC, OP_IIP_INC:
+                    case OP_IP_INC, OP_IIP_INC, OP_PIP_INC:
                         code.dconst_1()
                                 .dadd();
                         break;
 
-                    case OP_IP_DECA, OP_IIP_DECA:
+                    case OP_IP_DECA, OP_IIP_DECA, OP_PIP_DECA:
                         code.dup2()
                                 .dconst_1()
                                 .dsub();
                         break;
 
-                    case OP_IP_INCA, OP_IIP_INCA:
+                    case OP_IP_INCA, OP_IIP_INCA, OP_PIP_INCA:
                         code.dup2()
                                 .dconst_1()
                                 .dadd();
                         break;
 
-                    case OP_IP_DECB, OP_IIP_DECB:
+                    case OP_IP_DECB, OP_IIP_DECB, OP_PIP_DECB:
                         code.dconst_1()
                                 .dsub()
                                 .dup2();
                         break;
 
-                    case OP_IP_INCB, OP_IIP_INCB:
+                    case OP_IP_INCB, OP_IIP_INCB, OP_PIP_INCB:
                         code.dconst_1()
                                 .dadd()
                                 .dup2();
@@ -283,19 +358,19 @@ public interface InPlaceSupport
             case "Int128", "UInt128":
                 int[] slots = reg.slots();
                 switch (getOpCode()) {
-                    case OP_IP_DEC, OP_IIP_DEC:
+                    case OP_IP_DEC, OP_IIP_DEC, OP_PIP_DEC:
                         buildLongLongSub(bctx, code, slots[0], slots[1], 1L, 0L);
                         code.lstore(slots[1])
                             .lstore(slots[0]);
                         break;
 
-                    case OP_IP_INC, OP_IIP_INC:
+                    case OP_IP_INC, OP_IIP_INC, OP_PIP_INC:
                         buildLongLongAdd(bctx, code, slots[0], slots[1], 1L, 0L);
                         code.lstore(slots[1])
                             .lstore(slots[0]);
                         break;
 
-                    case OP_IP_DECA, OP_IIP_DECA:
+                    case OP_IP_DECA, OP_IIP_DECA, OP_PIP_DECA:
                         code.lload(slots[0])
                             .lload(slots[1]);
                         buildLongLongSub(bctx, code, slots[0], slots[1], 1L, 0L);
@@ -303,7 +378,7 @@ public interface InPlaceSupport
                             .lstore(slots[0]);
                         break;
 
-                    case OP_IP_INCA, OP_IIP_INCA:
+                    case OP_IP_INCA, OP_IIP_INCA, OP_PIP_INCA:
                         code.lload(slots[0])
                             .lload(slots[1]);
                         buildLongLongAdd(bctx, code, slots[0], slots[1], 1L, 0L);
@@ -311,7 +386,7 @@ public interface InPlaceSupport
                             .lstore(slots[0]);
                         break;
 
-                    case OP_IP_DECB, OP_IIP_DECB:
+                    case OP_IP_DECB, OP_IIP_DECB, OP_PIP_DECB:
                         buildLongLongSub(bctx, code, slots[0], slots[1], 1L, 0L);
                         code.lstore(slots[1])
                             .lstore(slots[0])
@@ -319,7 +394,7 @@ public interface InPlaceSupport
                             .lload(slots[1]);
                         break;
 
-                    case OP_IP_INCB, OP_IIP_INCB:
+                    case OP_IP_INCB, OP_IIP_INCB, OP_PIP_INCB:
                         buildLongLongAdd(bctx, code, slots[0], slots[1], 1L, 0L);
                         code.lstore(slots[1])
                                 .lstore(slots[0])
@@ -356,21 +431,21 @@ public interface InPlaceSupport
         ClassDesc      cd       = bctx.builder.ensureClassDesc(baseType);
         MethodTypeDesc md       = MethodTypeDesc.of(cd, CD_Ctx);
         switch (getOpCode()) {
-            case OP_IP_DEC, OP_IIP_DEC:
+            case OP_IP_DEC, OP_IIP_DEC, OP_PIP_DEC:
                 code.aload(slot);
                 bctx.loadCtx(code);
                 code.invokevirtual(cd, "prevValue", md)
                     .astore(slot);
                 break;
 
-            case OP_IP_INC, OP_IIP_INC:
+            case OP_IP_INC, OP_IIP_INC, OP_PIP_INC:
                 code.aload(slot);
                 bctx.loadCtx(code);
                 code.invokevirtual(cd, "nextValue", md)
                     .astore(slot);
                 break;
 
-            case OP_IP_DECA, OP_IIP_DECA:
+            case OP_IP_DECA, OP_IIP_DECA, OP_PIP_DECA:
                 code.aload(slot)
                     .dup();
                 bctx.loadCtx(code);
@@ -378,7 +453,7 @@ public interface InPlaceSupport
                     .astore(slot);
                 break;
 
-            case OP_IP_INCA, OP_IIP_INCA:
+            case OP_IP_INCA, OP_IIP_INCA, OP_PIP_INCA:
                 code.aload(slot)
                     .dup();
                 bctx.loadCtx(code);
@@ -386,7 +461,7 @@ public interface InPlaceSupport
                     .astore(slot);
                 break;
 
-            case OP_IP_DECB, OP_IIP_DECB:
+            case OP_IP_DECB, OP_IIP_DECB, OP_PIP_DECB:
                 code.aload(slot);
                 bctx.loadCtx(code);
                 code.invokevirtual(cd, "prevValue", md)
@@ -394,7 +469,7 @@ public interface InPlaceSupport
                     .astore(slot);
                 break;
 
-            case OP_IP_INCB, OP_IIP_INCB:
+            case OP_IP_INCB, OP_IIP_INCB, OP_PIP_INCB:
                 code.aload(slot);
                 bctx.loadCtx(code);
                 code.invokevirtual(cd, "nextValue", md)
