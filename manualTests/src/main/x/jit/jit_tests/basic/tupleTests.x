@@ -22,7 +22,7 @@ package tupleTests {
         Int    i2 = tuple[2];
         assert s0 == "hello" && s1 == "world" && i2 == 17;
 
-        // TODO: ListMap.makeImmutable() fails verification by returning ListMapIndex as ListMap
+        // TODO: the Map lookup fails; formatting the assertion invokes specialized Map as a class
 //        Tuple<String, Map<Int, String>> tuple2 = ("goodbye", [4="now"]);
 //        assert tuple2[0] == "goodbye";
 //        assert tuple2[1][4] == "now";
