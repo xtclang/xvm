@@ -453,6 +453,11 @@ public abstract class OpInvocable extends Op {
             if (!typeOwner.equals(typeTarget)) {
                 typeInvoke = typeOwner;
                 cdInvoke   = bctx.builder.ensureClassDesc(typeOwner);
+                if (!typeTarget.isJitAssignableTo(typeOwner)) {
+                    // the target type could be a mixin, which is a Java interface, so invoking a
+                    // method from its "into" class requires a cast to that class
+                    code.checkcast(cdInvoke);
+                }
                 infoTarget = bctx.getTypeInfo(typeOwner);
                 infoMethod = computeMethodInfo(bctx, typeOwner);
                 bodyHead   = infoMethod.getHead();
