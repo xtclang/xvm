@@ -6,6 +6,7 @@ import java.util.List;
 
 import java.util.function.ToIntFunction;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -678,7 +679,7 @@ public class xRef
             if (hContainer != null && sName != null) {
                 TypeConstant typeContainer = hContainer.getType();
                 PropertyInfo infoProp      = frame.poolContext().ensureAccessTypeConstant(
-                        typeContainer, Access.PRIVATE).ensureTypeInfo().findProperty(sName);
+                        typeContainer, Access.PRIVATE).ensureTypeInfo(ErrorListener.RUNTIME).findProperty(sName);
                 if (infoProp == null) {
                     return frame.raiseException(
                             xException.unknownProperty(frame, sName, typeContainer));

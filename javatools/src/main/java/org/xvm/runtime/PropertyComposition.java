@@ -4,6 +4,7 @@ import java.util.Map;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -358,7 +359,7 @@ public final class PropertyComposition
      * @return the TypeInfo for the parent
      */
     private TypeInfo getParentInfo() {
-        return f_clzParent.getInceptionType().ensureTypeInfo();
+        return f_clzParent.getInceptionType().ensureTypeInfo(ErrorListener.RUNTIME);
     }
 
     private static PropertyComposition createStructView(PropertyComposition owner) {

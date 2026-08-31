@@ -3,6 +3,7 @@ package org.xvm.runtime.template.reflect;
 
 import java.util.Iterator;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -173,7 +174,7 @@ public class xClass
      */
     public int getPropertyAbstract(Frame frame, ObjectHandle hTarget, int iReturn) {
         TypeConstant typeTarget = getClassType(hTarget);
-        ObjectHandle hResult    = xBoolean.makeHandle(frame, typeTarget.ensureTypeInfo().isAbstract());
+        ObjectHandle hResult    = xBoolean.makeHandle(frame, typeTarget.ensureTypeInfo(ErrorListener.RUNTIME).isAbstract());
         return frame.assignValue(iReturn, hResult);
     }
 
@@ -214,7 +215,7 @@ public class xClass
     public int invokeAllocate(Frame frame, ObjectHandle hTarget, ObjectHandle hParent, int[] aiReturn) {
         TypeConstant typePublic = getClassType(hTarget);
 
-        if (typePublic.ensureTypeInfo().isSingleton()) {
+        if (typePublic.ensureTypeInfo(ErrorListener.RUNTIME).isSingleton()) {
             return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
 
@@ -384,7 +385,7 @@ public class xClass
      */
     public int invokeIsSingleton(Frame frame, ObjectHandle hTarget, int[] aiReturn) {
         TypeConstant typeClz = getClassType(hTarget);
-        if (typeClz.ensureTypeInfo().isSingleton()) {
+        if (typeClz.ensureTypeInfo(ErrorListener.RUNTIME).isSingleton()) {
             IdentityConstant idClz         = typeClz.getSingleUnderlyingClass(false);
             ConstantPool     pool          = frame.poolContext();
             Constant         constInstance = pool.ensureSingletonConstConstant(idClz);

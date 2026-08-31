@@ -313,7 +313,7 @@ public final class RelOpExpression
         }
 
         TypeFit             fitVia   = TypeFit.NoFit;
-        TypeInfo            infoLeft = typeLeft.ensureTypeInfo();
+        TypeInfo            infoLeft = typeLeft.ensureTypeInfo(errs);
         String              sMethod  = getDefaultMethodName();
         String              sOp      = operator.getId().TEXT;
         Set<MethodConstant> setOps   = infoLeft.findOpMethods(sMethod, sOp, 1);
@@ -342,7 +342,7 @@ public final class RelOpExpression
                 typeConv = typeConv.resolveAutoNarrowing(pool, false, typeLeft, null);
             }
 
-            for (MethodConstant idMethod : typeConv.ensureTypeInfo().findOpMethods(sMethod, sOp, 1)) {
+            for (MethodConstant idMethod : typeConv.ensureTypeInfo(errs).findOpMethods(sMethod, sOp, 1)) {
                 TypeConstant[] aRets = idMethod.getRawReturns().unsafeArray();
                 if (aRets.length >= 1 && isAssignable(ctx, aRets[0], typeRequired)) {
                     // there is a solution via an operator on the result of a conversion
@@ -366,7 +366,7 @@ public final class RelOpExpression
         }
 
         TypeFit             fitVia   = TypeFit.NoFit;
-        TypeInfo            infoLeft = typeLeft.ensureTypeInfo();
+        TypeInfo            infoLeft = typeLeft.ensureTypeInfo(errs);
         String              sMethod  = getDefaultMethodName();
         String              sOp      = operator.getId().TEXT;
         Set<MethodConstant> setOps   = infoLeft.findOpMethods(sMethod, sOp, 1);
@@ -391,7 +391,7 @@ public final class RelOpExpression
 
         for (MethodInfo infoAuto : infoLeft.getAutoMethodInfos()) {
             TypeConstant typeConv = infoAuto.getSignature().getRawReturns().get(0);
-            TypeInfo     infoConv = typeConv.ensureTypeInfo();
+            TypeInfo     infoConv = typeConv.ensureTypeInfo(errs);
             for (MethodConstant idMethod : infoConv.findOpMethods(sMethod, sOp, 1)) {
                 TypeConstant[] aRets = idMethod.getRawReturns().unsafeArray();
                 if (aRets.length >= 2 && isAssignable(ctx, aRets[0], atypeRequired[0])

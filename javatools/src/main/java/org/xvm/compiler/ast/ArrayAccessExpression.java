@@ -184,7 +184,7 @@ public final class ArrayAccessExpression
         int          cIndexes   = indexes.size();
         TypeConstant typeTarget = expr.getImplicitType(ctx);
         if (typeTarget != null) {
-            TypeInfo            infoTarget = typeTarget.ensureTypeInfo();
+            TypeInfo            infoTarget = typeTarget.ensureTypeInfo(errs);
             Set<MethodConstant> setMethods = findPotentialOps(infoTarget, cIndexes);
             for (MethodConstant idMethod : setMethods) {
                 TypeConstant[] atypeReturns = idMethod.getRawReturns().unsafeArray();

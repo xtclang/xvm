@@ -3,6 +3,7 @@ package org.xvm.runtime;
 
 import java.util.Set;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -98,7 +99,7 @@ public final class CanonicalizedTypeComposition
         if (chain.isEmpty() && nidMethod instanceof SignatureConstant sig) {
             // we assume that the information on the canonical TypeInfo is sufficient
             ClassComposition    clzCanonical  = getCanonicalComposition();
-            TypeInfo            infoCanonical = clzCanonical.getType().ensureTypeInfo();
+            TypeInfo            infoCanonical = clzCanonical.getType().ensureTypeInfo(ErrorListener.RUNTIME);
             Set<MethodConstant> setMethods    = infoCanonical.findMethods(
                     sig.getName(), sig.getParamCount(), TypeInfo.MethodKind.Any);
             if (!setMethods.isEmpty()) {

@@ -1748,7 +1748,7 @@ public abstract sealed class TypeConstant
         // situation in which to complete the TypeInfo for type X, it has to get the TypeInfo for
         // type Y, and do build that, it has to get the TypeInfo for type X. this is a catch-22!
         // so what we do to avoid this is to have two layers of requests:
-        // 1) the requests from the outside (naive) world come to ensureTypeInfo(), and those
+        // 1) the requests from the outside (naive) world come to ensureTypeInfo(errs), and those
         //    requests *must* be responded to with a "completed" TypeInfo
         // 2) internal requests, like the ones causing the catch-22, can be responded to with an
         //    incomplete TypeInfo, which is sufficient to build the dependent TypeInfo, but which

@@ -1,6 +1,7 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -255,7 +256,7 @@ public class xRTMethod
         MethodStructure method    = idMethod.getComponent();
 
         if (method == null) {
-            TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
+            TypeInfo   infoTarget = typeTarget.ensureTypeInfo(ErrorListener.RUNTIME);
             MethodInfo infoMethod = infoTarget.getMethodById(idMethod, true);
 
             method = infoMethod == null
@@ -306,7 +307,7 @@ public class xRTMethod
         }
 
         public MethodInfo getMethodInfo() {
-            return f_typeTarget.ensureTypeInfo().getMethodById(f_idMethod, true);
+            return f_typeTarget.ensureTypeInfo(ErrorListener.RUNTIME).getMethodById(f_idMethod, true);
         }
 
         @Override
@@ -353,7 +354,7 @@ public class xRTMethod
     }
 
     private static MethodInfo resolveMethodInfo(TypeConstant typeTarget, MethodStructure method) {
-        return typeTarget.ensureTypeInfo().getMethodById(method.getIdentityConstant(), true);
+        return typeTarget.ensureTypeInfo(ErrorListener.RUNTIME).getMethodById(method.getIdentityConstant(), true);
     }
 
 

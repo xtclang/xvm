@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -944,7 +945,7 @@ public abstract class ClassTemplate
      */
     private int getInjectedProperty(Frame frame, GenericHandle hThis, PropertyConstant idProp,
                                     int iReturn) {
-        TypeInfo     info      = hThis.getType().ensureAccess(Access.PRIVATE).ensureTypeInfo();
+        TypeInfo     info      = hThis.getType().ensureAccess(Access.PRIVATE).ensureTypeInfo(ErrorListener.RUNTIME);
         PropertyInfo prop      = info.findProperty(idProp, true);
         Annotation   anno      = prop.getRefAnnotations()[0];
         Constant[]   aParams   = anno.getParams();
@@ -1797,7 +1798,7 @@ public abstract class ClassTemplate
      * @return a call chain for the specified op and argument or null if none exists
      */
     public CallChain findOpChain(ObjectHandle hTarget, String sName, String sOp, ObjectHandle hArg) {
-        TypeInfo info = hTarget.getType().ensureTypeInfo();
+        TypeInfo info = hTarget.getType().ensureTypeInfo(ErrorListener.RUNTIME);
 
         Set<MethodConstant> setMethods = info.findOpMethods(sName, sOp, hArg == null ? 0 : 1);
         switch (setMethods.size()) {
@@ -1874,7 +1875,7 @@ public abstract class ClassTemplate
      * @return a call chain for the specified op and arguments or null if none exists
      */
     public CallChain findOpChain(ObjectHandle hTarget, String sOp, ObjectHandle[] ahArg) {
-        TypeInfo info  = hTarget.getType().ensureTypeInfo();
+        TypeInfo info  = hTarget.getType().ensureTypeInfo(ErrorListener.RUNTIME);
         int      cArgs = ahArg.length;
 
         Set<MethodConstant> setMethods = info.findOpMethods(sOp, sOp, cArgs);
@@ -2562,7 +2563,7 @@ public abstract class ClassTemplate
             // if the structure is already initialized, there should be no constructor to call
             assert fInitStruct || constructor == null;
 
-            aAnnoMixin = composition.getBaseType().ensureTypeInfo().getMixinAnnotations();
+            aAnnoMixin = composition.getBaseType().ensureTypeInfo(ErrorListener.RUNTIME).getMixinAnnotations();
             ixStep     = fInitStruct ? 0 : 2;
             ixAnno     = 0;
             fAnonymous = constructor != null && constructor.isAnonymousClassWrapperConstructor();

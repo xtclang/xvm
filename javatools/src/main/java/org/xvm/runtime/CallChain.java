@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -642,7 +643,7 @@ public class CallChain {
             f_idConstructor = idConstructor;
             f_clzTarget     = clzTarget;
 
-            TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
+            TypeInfo   infoTarget = typeTarget.ensureTypeInfo(ErrorListener.RUNTIME);
             MethodInfo infoCtor   = infoTarget.findVirtualConstructor(idConstructor.getSignature());
             if (infoCtor == null) {
                 f_constructor = null;

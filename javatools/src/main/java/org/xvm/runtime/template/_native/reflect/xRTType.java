@@ -314,7 +314,7 @@ public class xRTType
             // no-arg toString(), which delegated to toString(false)). See
             // docs/reentrancy/plans/side-effect-free-tostring.md.
             return frame.assignValue(iReturn,
-                xString.makeHandle(frame, hType.getUnsafeDataType().ensureTypeInfo().toString(false)));
+                xString.makeHandle(frame, hType.getUnsafeDataType().ensureTypeInfo(ErrorListener.RUNTIME).toString(false)));
         }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }
@@ -530,7 +530,7 @@ public class xRTType
             }
         }
 
-        TypeInfo                infoTarget = typeTarget.ensureTypeInfo();
+        TypeInfo                infoTarget = typeTarget.ensureTypeInfo(ErrorListener.RUNTIME);
         ConstantPool            poolCtx    = frame.poolContext();
         Container               container  = frame.container();
         Map<String, ChildInfo>  mapInfos   = infoTarget.getChildInfosByName();
@@ -592,7 +592,7 @@ public class xRTType
         }
 
         TypeConstant                        typeTarget = hType.getDataType();
-        TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
+        TypeInfo                            infoTarget = typeTarget.ensureTypeInfo(ErrorListener.RUNTIME);
         Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
 
         ArrayList<PropertyInfo> listInfo = new ArrayList<>(mapProps.size());
@@ -669,7 +669,7 @@ public class xRTType
         //         container from its parent container, or loaded in a container that is nested
         //         within this container)
         TypeConstant typeTarget = hType.getDataType();
-        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+        TypeInfo     infoTarget = typeTarget.ensureTypeInfo(ErrorListener.RUNTIME);
 
         // each of the generated constructor functions (not the "construct" functions) for a virtual
         // child will require a parent reference to be passed as the first argument
@@ -802,7 +802,7 @@ public class xRTType
         }
 
         TypeConstant                    typeTarget  = hType.getDataType();
-        Map<MethodConstant, MethodInfo> mapMethods  = typeTarget.ensureTypeInfo().getMethods();
+        Map<MethodConstant, MethodInfo> mapMethods  = typeTarget.ensureTypeInfo(ErrorListener.RUNTIME).getMethods();
         ArrayList<ObjectHandle>         listHandles = new ArrayList<>(mapMethods.size());
         boolean                         fDeferred   = false;
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet()) {
@@ -874,7 +874,7 @@ public class xRTType
         }
 
         TypeConstant            typeTarget  = hType.getDataType();
-        var                     aMethods    = typeTarget.ensureTypeInfo().sortedMethods();
+        var                     aMethods    = typeTarget.ensureTypeInfo(ErrorListener.RUNTIME).sortedMethods();
         ArrayList<ObjectHandle> listHandles = new ArrayList<>(aMethods.length);
 
         for (Map.Entry<MethodConstant, MethodInfo> entry : aMethods) {
@@ -944,7 +944,7 @@ public class xRTType
         }
 
         TypeConstant            typeTarget = hType.getDataType();
-        var                     aProps     = typeTarget.ensureTypeInfo().sortedProperties();
+        var                     aProps     = typeTarget.ensureTypeInfo(ErrorListener.RUNTIME).sortedProperties();
         ArrayList<PropertyInfo> listProps  = new ArrayList<>(aProps.length);
 
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : aProps) {
@@ -1283,7 +1283,7 @@ public class xRTType
                 if (constDef instanceof PropertyConstant idProp) {
                     TypeConstant typeParent = idProp.getParentConstant().getType();
                     PropertyInfo infoProp   = frame.poolContext().ensureAccessTypeConstant(
-                            typeParent, Access.PRIVATE).ensureTypeInfo().findProperty(idProp, true);
+                            typeParent, Access.PRIVATE).ensureTypeInfo(ErrorListener.RUNTIME).findProperty(idProp, true);
 
                     if (infoProp != null) {
                         ObjectHandle hProp = xRTProperty.makeHandle(frame, typeParent, infoProp);
@@ -1478,7 +1478,7 @@ public class xRTType
      */
     public int invokeStructConstructor(Frame frame, TypeHandle hType, ObjectHandle hOuter, int[] aiReturn) {
         TypeConstant typeTarget = hType.getDataType();
-        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+        TypeInfo     infoTarget = typeTarget.ensureTypeInfo(ErrorListener.RUNTIME);
 
         if (hOuter == ObjectHandle.DEFAULT) {
             hOuter = xNullable.makeHandle(frame);

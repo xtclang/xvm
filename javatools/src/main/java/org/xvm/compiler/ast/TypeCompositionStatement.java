@@ -2494,7 +2494,7 @@ public final class TypeCompositionStatement
                         return;
                     }
 
-                    MethodStructure constructSuper = typeSuper.ensureTypeInfo().
+                    MethodStructure constructSuper = typeSuper.ensureTypeInfo(errs).
                             getMethodById(idSuper).getHead().getMethodStructure();
 
                     assert constructSuper != null;

@@ -8,6 +8,7 @@ import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -283,7 +284,7 @@ public final class ClassComposition
 
     @Override
     public boolean isInjected(PropertyConstant idProp) {
-        PropertyInfo infoProp = f_typeInception.ensureTypeInfo().findProperty(idProp, true);
+        PropertyInfo infoProp = f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME).findProperty(idProp, true);
         return infoProp != null && infoProp.isInjected();
     }
 
@@ -291,7 +292,7 @@ public final class ClassComposition
     public boolean isAtomic(PropertyConstant idProp) {
         // we assume that all native properties are atomic by default; it's up to the native
         // property implementation to re-route it to the corresponding context if necessary
-        PropertyInfo infoProp = f_typeInception.ensureTypeInfo().findProperty(idProp, true);
+        PropertyInfo infoProp = f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME).findProperty(idProp, true);
         return infoProp != null && (infoProp.isAtomic() || infoProp.isNative());
     }
 
@@ -348,8 +349,8 @@ public final class ClassComposition
 
     private CallChain computeMethodChain(Nid nidMethod) {
         TypeInfo info = isStruct()
-                ? f_typeStructure.ensureTypeInfo()
-                : f_typeInception.ensureTypeInfo();
+                ? f_typeStructure.ensureTypeInfo(ErrorListener.RUNTIME)
+                : f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME);
         return new CallChain(info.getOptimizedMethodChain(nidMethod));
     }
 
@@ -393,7 +394,7 @@ public final class ClassComposition
     }
 
     private CallChain computeGetterChain(PropertyConstant id) {
-        MethodBody[] aBody = f_typeInception.ensureTypeInfo().getOptimizedGetChain(id);
+        MethodBody[] aBody = f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME).getOptimizedGetChain(id);
         return aBody == null
                 ? NIL_CHAIN
                 : CallChain.createPropertyCallChain(aBody);
@@ -435,7 +436,7 @@ public final class ClassComposition
     }
 
     private CallChain computeSetterChain(PropertyConstant id) {
-        MethodBody[] aBody = f_typeInception.ensureTypeInfo().getOptimizedSetChain(id);
+        MethodBody[] aBody = f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME).getOptimizedSetChain(id);
         return aBody == null
                 ? NIL_CHAIN
                 : CallChain.createPropertyCallChain(aBody);
@@ -619,7 +620,7 @@ public final class ClassComposition
         Container    container  = getContainer();
         ConstantPool pool       = container.getConstantPool();
         TypeConstant typeStruct = pool.ensureAccessTypeConstant(typePublic, Access.STRUCT);
-        TypeInfo     infoStruct = typeStruct.ensureTypeInfo();
+        TypeInfo     infoStruct = typeStruct.ensureTypeInfo(ErrorListener.RUNTIME);
 
         Map<Nid, FieldInfo> mapFields = new ListMap<>();
         int     cRegular  = 0;
@@ -668,7 +669,7 @@ public final class ClassComposition
                 if (clzRef != null && !infoProp.isNative()) {
                     AnyConstructor:
                     for (Annotation anno : infoProp.getRefAnnotations()) {
-                        TypeInfo infoAnno = anno.getAnnotationType().ensureTypeInfo();
+                        TypeInfo infoAnno = anno.getAnnotationType().ensureTypeInfo(ErrorListener.RUNTIME);
                         int      cArgs    = anno.getParams().length;
 
                         Set<MethodConstant> setConstrId = infoAnno.findMethods("construct", cArgs,
@@ -748,7 +749,7 @@ public final class ClassComposition
      */
     public TypeConstant getFieldType(Nid nid) {
         TypeConstant type     = getInceptionType();
-        TypeInfo     infoType = type.ensureTypeInfo();
+        TypeInfo     infoType = type.ensureTypeInfo(ErrorListener.RUNTIME);
         PropertyInfo infoProp = nid instanceof PropertyConstant idProp
                 ? infoType.findProperty(idProp, true)
                 : infoType.findProperty(((Nid.ByName) nid).name());
@@ -759,7 +760,7 @@ public final class ClassComposition
      * @return the compile-time PropertyInfo for a given property
      */
     public PropertyInfo getPropertyInfo(PropertyConstant idProp) {
-        return getInceptionType().ensureTypeInfo().findProperty(idProp, true);
+        return getInceptionType().ensureTypeInfo(ErrorListener.RUNTIME).findProperty(idProp, true);
     }
 
     @Override

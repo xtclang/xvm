@@ -1,6 +1,7 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -408,7 +409,7 @@ public class xRTTypeTemplate
             DefiningConstant constDef = type.getDefiningConstant();
             if (constDef instanceof PropertyConstant idProp) {
                 TypeConstant  typeTarget = idProp.getClassIdentity().getType();
-                TypeInfo      infoTarget = typeTarget.ensureTypeInfo();
+                TypeInfo      infoTarget = typeTarget.ensureTypeInfo(ErrorListener.RUNTIME);
                 PropertyInfo  infoProp   = infoTarget.findProperty(idProp, true);
                 ObjectHandle  hProperty  = xRTProperty.makeHandle(frame, typeTarget, infoProp);
 

@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -281,7 +282,7 @@ public abstract class Container
      * @return the method constant or null if not found
      */
     public MethodConstant findModuleMethod(String sMethod, ObjectHandle[] ahArg) {
-        TypeInfo infoModule = getModule().getType().ensureTypeInfo();
+        TypeInfo infoModule = getModule().getType().ensureTypeInfo(ErrorListener.RUNTIME);
 
         TypeConstant[] atypeArg;
         if (ahArg.length == 0) {

@@ -934,7 +934,7 @@ public final class AssignmentStatement
             default          -> throw new IllegalStateException("op=" + op.getId().TEXT);
         }
 
-        Set<MethodConstant> setMethods = typeTarget.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
+        Set<MethodConstant> setMethods = typeTarget.ensureTypeInfo(errs).findOpMethods(sMethod, sOp, 1);
         MethodConstant      idOp       = switch (setMethods.size()) {
             case 0  -> null;
             case 1  -> setMethods.iterator().next();
