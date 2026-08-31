@@ -2704,7 +2704,24 @@ The first number is the important one. The listener is almost never manufactured
 already, through 665 parameters. What breaks the chain is not missing plumbing, it is the 11 places
 that receive a listener and then throw it away, and the 28 that accept `null` for it.
 
-### The 11 reassignments are a real signal implemented badly
+### The 11 reassignments are two different things - and only 3 are simply wrong
+
+Grouped by the line immediately preceding each:
+
+| group | count | preceded by | verdict |
+| --- | --- | --- | --- |
+| A | **8** (all `TypeConstant`) | `fIncomplete = true;` / `fComplete = false;` | legitimate intent, bad implementation |
+| B | **3** (`NameExpression`, `LambdaExpression`, `NewExpression`) | `if (errs == null)` | pure null-defaulting, simply wrong |
+
+Group B is stage 1's target and needs no discussion.
+
+**Group A is error-cascade suppression, and the intent is correct.** Once a type computation is
+known to be incomplete, every downstream check on it produces an error derived from one real
+failure. Reporting them buries the cause. This is standard compiler practice - it is why compilers
+carry poison types and error-recovery modes. **A refactor that makes these always report would be a
+regression**, and anyone reading this row should not "fix" them that way.
+
+### The 8 are a real signal implemented badly
 
 ```java
 fIncomplete = true;
@@ -2716,10 +2733,17 @@ consequences rather than causes, and reporting them buries the real one. But mut
 to say so means the decision is invisible at the call site, nothing records what was suppressed, and
 the caller cannot distinguish "no errors" from "errors deliberately dropped".
 
-Note the completeness flag - `fIncomplete`, `fComplete` - is set on the very same line. **The signal
-already exists**; the listener mutation is redundant with it. The clean form is to keep the listener
-and let the caller consult the flag, or `branch()` and drop the branch, which is what the rest of
-the compiler already does.
+Four things are wrong with doing it this way, none of which is the intent:
+
+1. **Redundant.** The completeness flag is set on the very same line and is already the signal.
+2. **Mutates a parameter**, so the suppression is invisible at the call site.
+3. **Irreversible** - a genuinely new, unrelated error later in the method is silently dropped too.
+4. **Discards instead of recording** - nothing can afterwards ask what was suppressed, which is
+   exactly what is wanted when diagnosing why the type failed.
+
+The clean form keeps the listener and lets the completeness flag carry the signal it already
+carries; where suppression itself is worth expressing, `branch()` the listener and drop the branch,
+which preserves the errors for inspection and is what the rest of the compiler already does.
 
 ### The payoff: 53 places with nowhere to report
 
