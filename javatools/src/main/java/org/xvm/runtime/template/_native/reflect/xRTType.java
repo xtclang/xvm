@@ -474,11 +474,12 @@ public class xRTType
 
     @Override
     public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
-        TypeConstant type   = ((TypeHandle) hTarget).getDataType();
-        int          nIndex = (int) lIndex;
+        TypeConstant type = ((TypeHandle) hTarget).getDataType();
 
-        return nIndex >= 0 && nIndex < type.getParamsCount()
-            ? frame.assignValue(iReturn, type.getParamType(nIndex).ensureTypeHandle(frame.container()))
+        // range-checked before narrowing; see the note in xString.extractArrayValue
+        return lIndex >= 0 && lIndex < type.getParamsCount()
+            ? frame.assignValue(iReturn,
+                    type.getParamType((int) lIndex).ensureTypeHandle(frame.container()))
             : frame.raiseException(xException.outOfBounds(frame, lIndex, type.getParamsCount()));
     }
 

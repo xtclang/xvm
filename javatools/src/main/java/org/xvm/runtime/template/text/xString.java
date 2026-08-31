@@ -179,11 +179,14 @@ public class xString
     @Override
     public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
         FrozenCharArray ach = ((StringHandle) hTarget).getValue();
-        int             nIx = (int) lIndex;
 
-        return nIx < 0 || nIx >= ach.size()
+        // the index is range-checked BEFORE it is narrowed: (int) keeps only the low 32 bits, so
+        // an index of 2^32 + 4 used to pass this check as 4 and return that character rather than
+        // raising. The exception already reported the un-narrowed lIndex, so the check was always
+        // meant to be against it.
+        return lIndex < 0 || lIndex >= ach.size()
                 ? frame.raiseException(xException.outOfBounds(frame, lIndex, ach.size()))
-                : frame.assignValue(iReturn, xChar.makeHandle(frame, ach.get(nIx)));
+                : frame.assignValue(iReturn, xChar.makeHandle(frame, ach.get((int) lIndex)));
     }
 
     @Override
