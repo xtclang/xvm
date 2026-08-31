@@ -172,16 +172,8 @@ module TestFiles {
         }
         assert probe.dirFor("sub").create();
 
-        Int files = 0;
-        for (File f : probe.files()) {
-            files++;
-        }
-        Int dirs = 0;
-        for (Directory d : probe.dirs()) {
-            dirs++;
-        }
-        assert files == 5;
-        assert dirs == 1;
+        assert probe.files().count() == 5;
+        assert probe.dirs().count() == 1;
 
         // remove entries the iteration has not reached yet; they must be skipped, not asserted on
         Int seen = 0;
@@ -200,7 +192,7 @@ module TestFiles {
         probe.deleteRecursively();
         assert !probe.exists;
 
-        console.print($"listing ok (files={files}, dirs={dirs}, after delete={seen})");
+        console.print($"listing ok (after a mid-iteration delete, saw {seen} files)");
     }
 
 }
