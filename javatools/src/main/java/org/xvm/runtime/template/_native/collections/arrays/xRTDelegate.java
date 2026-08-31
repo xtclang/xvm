@@ -256,7 +256,11 @@ public abstract class xRTDelegate<H extends xRTDelegate.DelegateHandle>
     public abstract int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn);
 
-    public abstract boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2);
+    public final boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
+        return hValue1 instanceof DelegateHandle h1
+            && hValue2 instanceof DelegateHandle h2
+            && h1.isIdenticalTo(h2);
+    }
 
     /**
      * "capacity.get()" implementation.
@@ -664,7 +668,33 @@ public abstract class xRTDelegate<H extends xRTDelegate.DelegateHandle>
      * Generic array delegate based on an ObjectHandle array.
      */
     public static class GenericArrayDelegate
-            extends DelegateHandle {
+            extends DelegateHandle
+            implements SameAs<GenericArrayDelegate> {
+        @Override
+        public boolean sameAs(GenericArrayDelegate that) {
+            if (getMutability() != that.getMutability() || m_cSize != that.m_cSize) {
+                return false;
+            }
+
+            ObjectHandle[] ah1 = m_ahValue;
+            ObjectHandle[] ah2 = that.m_ahValue;
+
+            if (ah1 == ah2) {
+                return true;
+            }
+
+            for (int i = 0, c = (int) m_cSize; i < c; i++) {
+                ObjectHandle hV1 = ah1[i];
+                ObjectHandle hV2 = ah2[i];
+
+                ClassTemplate template = hV1.getTemplate();
+                if (template != hV2.getTemplate() || !template.compareIdentity(hV1, hV2)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         protected ObjectHandle[] m_ahValue;
 
         /**
@@ -765,6 +795,22 @@ public abstract class xRTDelegate<H extends xRTDelegate.DelegateHandle>
 
             m_fMutable   = mutability != Mutability.Constant;
             m_mutability = mutability;
+        }
+
+        /**
+         * @param that another delegate handle, of any type
+         *
+         * @return true iff the two handles have the same identity
+         */
+        @SuppressWarnings("unchecked")
+        public final boolean isIdenticalTo(DelegateHandle that) {
+            // Two handles of different classes are different representations and so never the same
+            // referent; testing that here is what makes SameAs.sameAs total for every implementor,
+            // and what lets the cast below be written at all. The compiler also emits a bridge that
+            // checkcasts on entry to sameAs, so the narrowing is checked twice over and cannot be
+            // the source of a ClassCastException the way the twenty hand-written casts were.
+            return this == that
+                || getClass() == that.getClass() && ((SameAs<DelegateHandle>) this).sameAs(that);
         }
 
         @Override

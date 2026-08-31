@@ -304,20 +304,6 @@ public abstract class LongBasedDelegate<H extends LongBasedDelegate.LongArrayHan
                 Arrays.equals(h1.m_alValue, 0, cStore, h2.m_alValue, 0, cStore)));
     }
 
-    @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        if (!(hValue1 instanceof LongArrayHandle h1) || !(hValue2 instanceof LongArrayHandle h2)) {
-            return false;
-        }
-
-        if (h1 == h2) {
-            return true;
-        }
-
-        return h1.getMutability() == h2.getMutability()
-            && h1.m_cSize == h2.m_cSize
-            && Arrays.equals(h1.m_alValue, h2.m_alValue);
-    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -535,7 +521,15 @@ public abstract class LongBasedDelegate<H extends LongBasedDelegate.LongArrayHan
      * Array delegate handle based on a java long array.
      */
     public static class LongArrayHandle
-            extends DelegateHandle {
+            extends DelegateHandle
+            implements SameAs<LongArrayHandle> {
+        @Override
+        public boolean sameAs(LongArrayHandle that) {
+            return getMutability() == that.getMutability()
+                && m_cSize == that.m_cSize
+                && Arrays.equals(m_alValue, that.m_alValue);
+        }
+
         protected long[] m_alValue;
 
         protected LongArrayHandle(TypeComposition clazz, long[] alValue, long cValues,

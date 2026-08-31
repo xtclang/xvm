@@ -135,7 +135,20 @@ public class xRTSlicingDelegate
      * Array slice delegate.
      */
     public static class SliceHandle
-            extends DelegateHandle {
+            extends DelegateHandle
+            implements SameAs<SliceHandle> {
+        @Override
+        public boolean sameAs(SliceHandle that) {
+            DelegateHandle hSource1 = f_hSource;
+            DelegateHandle hSource2 = that.f_hSource;
+
+            return getMutability() == that.getMutability()
+                && m_cSize    == that.m_cSize
+                && f_ofStart  == that.f_ofStart
+                && f_fReverse == that.f_fReverse
+                && hSource1.isIdenticalTo(hSource2);
+        }
+
         public final DelegateHandle f_hSource;
         public final long           f_ofStart;
         public final boolean        f_fReverse;
@@ -183,27 +196,6 @@ public class xRTSlicingDelegate
         throw new UnsupportedOperationException("a slice owns no element storage");
     }
 
-    @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        if (hValue1 == hValue2) {
-            return true;
-        }
-
-        // a slice's identity is the source it projects plus the window it projects through
-        if (!(hValue1 instanceof SliceHandle h1) || !(hValue2 instanceof SliceHandle h2)) {
-            return false;
-        }
-
-        DelegateHandle hSource1 = h1.f_hSource;
-        DelegateHandle hSource2 = h2.f_hSource;
-
-        return h1.getMutability() == h2.getMutability()
-            && h1.m_cSize         == h2.m_cSize
-            && h1.f_ofStart       == h2.f_ofStart
-            && h1.f_fReverse      == h2.f_fReverse
-            && hSource1.getTemplate() == hSource2.getTemplate()
-            && hSource1.getTemplate().compareIdentity(hSource1, hSource2);
-    }
 
     @Override
     protected void insertElementImpl(SliceHandle hTarget, ObjectHandle hElement, long lIndex) {

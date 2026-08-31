@@ -320,20 +320,6 @@ public abstract class ByteBasedDelegate<H extends ByteBasedDelegate.ByteArrayHan
                 xBoolean.makeHandle(frame, Arrays.equals(h1.m_abValue, h2.m_abValue)));
     }
 
-    @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        if (!(hValue1 instanceof ByteArrayHandle h1) || !(hValue2 instanceof ByteArrayHandle h2)) {
-            return false;
-        }
-
-        if (h1 == h2) {
-            return true;
-        }
-
-        return h1.getMutability() == h2.getMutability()
-            && h1.m_cSize == h2.m_cSize
-            && Arrays.equals(h1.m_abValue, h2.m_abValue);
-    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -383,7 +369,15 @@ public abstract class ByteBasedDelegate<H extends ByteBasedDelegate.ByteArrayHan
     }
 
     public static class ByteArrayHandle
-            extends DelegateHandle {
+            extends DelegateHandle
+            implements SameAs<ByteArrayHandle> {
+        @Override
+        public boolean sameAs(ByteArrayHandle that) {
+            return getMutability() == that.getMutability()
+                && m_cSize == that.m_cSize
+                && Arrays.equals(m_abValue, that.m_abValue);
+        }
+
         protected byte[] m_abValue;
 
         protected ByteArrayHandle(TypeComposition clazz, byte[] abValue,

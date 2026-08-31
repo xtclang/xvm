@@ -207,20 +207,6 @@ public class xRTFloat64Delegate
                 Arrays.equals(h1.m_adValue, 0, cStore, h2.m_adValue, 0, cStore)));
     }
 
-    @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        if (!(hValue1 instanceof DoubleArrayHandle h1) || !(hValue2 instanceof DoubleArrayHandle h2)) {
-            return false;
-        }
-
-        if (h1 == h2) {
-            return true;
-        }
-
-        return h1.getMutability() == h2.getMutability()
-            && h1.m_cSize == h2.m_cSize
-            && Arrays.equals(h1.m_adValue, h2.m_adValue);
-    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -258,7 +244,15 @@ public class xRTFloat64Delegate
      * Array delegate handle based on a java long array.
      */
     public static class DoubleArrayHandle
-            extends DelegateHandle {
+            extends DelegateHandle
+            implements SameAs<DoubleArrayHandle> {
+        @Override
+        public boolean sameAs(DoubleArrayHandle that) {
+            return getMutability() == that.getMutability()
+                && m_cSize == that.m_cSize
+                && Arrays.equals(m_adValue, that.m_adValue);
+        }
+
         protected double[] m_adValue;
 
         protected DoubleArrayHandle(TypeComposition clazz, double[] adValue, long cValues,

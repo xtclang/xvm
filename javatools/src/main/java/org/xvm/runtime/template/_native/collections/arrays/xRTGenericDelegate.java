@@ -172,38 +172,6 @@ public class xRTGenericDelegate
         return new Equals(ah1, ah2, typeEl, cElements, holder, iReturn).doNext(frame);
     }
 
-    @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        if (!(hValue1 instanceof GenericArrayDelegate h1) || !(hValue2 instanceof GenericArrayDelegate h2)) {
-            return false;
-        }
-
-        if (h1 == h2) {
-            return true;
-        }
-
-        if (h1.getMutability() != h2.getMutability() || h1.m_cSize != h2.m_cSize) {
-            return false;
-        }
-
-        ObjectHandle[] ah1 = h1.m_ahValue;
-        ObjectHandle[] ah2 = h2.m_ahValue;
-
-        if (ah1 == ah2) {
-            return true;
-        }
-
-        for (int i = 0, c = (int) h1.m_cSize; i < c; i++) {
-            ObjectHandle hV1 = ah1[i];
-            ObjectHandle hV2 = ah2[i];
-
-            ClassTemplate template = hV1.getTemplate();
-            if (template != hV2.getTemplate() || !template.compareIdentity(hV1, hV2)) {
-                return false;
-            }
-        }
-        return true;
-    }
 
     @Override
     protected int getPropertyCapacity(Frame frame, GenericArrayDelegate hDelegate, int iReturn) {

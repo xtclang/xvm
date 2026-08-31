@@ -177,20 +177,6 @@ public class xRTStringDelegate
                 xBoolean.makeHandle(frame, Arrays.equals(h1.m_asValue, h2.m_asValue)));
     }
 
-    @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        if (!(hValue1 instanceof StringArrayHandle h1) || !(hValue2 instanceof StringArrayHandle h2)) {
-            return false;
-        }
-
-        if (h1 == h2) {
-            return true;
-        }
-
-        return h1.getMutability() == h2.getMutability()
-            && h1.m_cSize == h2.m_cSize
-            && Arrays.equals(h1.m_asValue, h2.m_asValue);
-    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -228,7 +214,15 @@ public class xRTStringDelegate
     }
 
     public static class StringArrayHandle
-            extends DelegateHandle {
+            extends DelegateHandle
+            implements SameAs<StringArrayHandle> {
+        @Override
+        public boolean sameAs(StringArrayHandle that) {
+            return getMutability() == that.getMutability()
+                && m_cSize == that.m_cSize
+                && Arrays.equals(m_asValue, that.m_asValue);
+        }
+
         protected String[] m_asValue;
 
         protected StringArrayHandle(TypeComposition clazz, String[] asValue,

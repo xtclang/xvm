@@ -219,20 +219,6 @@ public abstract class LongLongDelegate
                 Arrays.equals(h1.m_alValue, 0, cStore, h2.m_alValue, 0, cStore)));
     }
 
-    @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        if (!(hValue1 instanceof LongArrayHandle h1) || !(hValue2 instanceof LongArrayHandle h2)) {
-            return false;
-        }
-
-        if (h1 == h2) {
-            return true;
-        }
-
-        return h1.getMutability() == h2.getMutability()
-            && h1.m_cSize == h2.m_cSize
-            && Arrays.equals(h1.m_alValue, h2.m_alValue);
-    }
 
 
     // ----- helper methods ------------------------------------------------------------------------

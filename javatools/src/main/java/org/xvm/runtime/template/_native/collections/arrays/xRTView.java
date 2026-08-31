@@ -78,7 +78,18 @@ public abstract class xRTView<H extends xRTView.ViewHandle>
      * The abstract base of view handles.
      */
     protected abstract static class ViewHandle
-            extends DelegateHandle {
+            extends DelegateHandle
+            implements SameAs<ViewHandle> {
+        @Override
+        public boolean sameAs(ViewHandle that) {
+            DelegateHandle hSource1 = getSource();
+            DelegateHandle hSource2 = that.getSource();
+
+            return getMutability() == that.getMutability()
+                && m_cSize == that.m_cSize
+                && hSource1.isIdenticalTo(hSource2);
+        }
+
         protected ViewHandle(TypeComposition clazz, Mutability mutability) {
             super(clazz, mutability);
         }
@@ -119,25 +130,6 @@ public abstract class xRTView<H extends xRTView.ViewHandle>
                 getClass().getSimpleName() + " is a view and owns no element storage");
     }
 
-    @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        if (hValue1 == hValue2) {
-            return true;
-        }
-
-        // a view's identity is the identity of the delegate it projects
-        if (!(hValue1 instanceof ViewHandle h1) || !(hValue2 instanceof ViewHandle h2)) {
-            return false;
-        }
-
-        DelegateHandle hSource1 = h1.getSource();
-        DelegateHandle hSource2 = h2.getSource();
-
-        return h1.getMutability() == h2.getMutability()
-            && h1.m_cSize         == h2.m_cSize
-            && hSource1.getTemplate() == hSource2.getTemplate()
-            && hSource1.getTemplate().compareIdentity(hSource1, hSource2);
-    }
 
     @Override
     protected void insertElementImpl(H hTarget, ObjectHandle hElement, long lIndex) {

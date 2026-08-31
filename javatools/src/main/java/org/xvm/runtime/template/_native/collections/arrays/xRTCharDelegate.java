@@ -172,20 +172,6 @@ public class xRTCharDelegate
                 xBoolean.makeHandle(frame, Arrays.equals(h1.m_achValue, h2.m_achValue)));
     }
 
-    @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        if (!(hValue1 instanceof CharArrayHandle h1) || !(hValue2 instanceof CharArrayHandle h2)) {
-            return false;
-        }
-
-        if (h1 == h2) {
-            return true;
-        }
-
-        return h1.getMutability() == h2.getMutability()
-            && h1.m_cSize == h2.m_cSize
-            && Arrays.equals(h1.m_achValue, h2.m_achValue);
-    }
 
     @Override
     protected DelegateHandle createCopyImpl(CharArrayHandle hDelegate, Mutability mutability,
@@ -338,7 +324,15 @@ public class xRTCharDelegate
     }
 
     public static class CharArrayHandle
-            extends DelegateHandle {
+            extends DelegateHandle
+            implements SameAs<CharArrayHandle> {
+        @Override
+        public boolean sameAs(CharArrayHandle that) {
+            return getMutability() == that.getMutability()
+                && m_cSize == that.m_cSize
+                && Arrays.equals(m_achValue, that.m_achValue);
+        }
+
         protected char[] m_achValue;
 
         protected CharArrayHandle(TypeComposition clazz, char[] achValue,
