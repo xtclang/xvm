@@ -81,6 +81,7 @@ surface graduate into individual rows on the bug list.
 | E24 | `null` as an absent argument (60% of 392 sites); asking callers to restate resolved data | one small record + binder change | Low | `ClassTemplate.markNativeMethod` | (this file) |
 | E25 | Generify the delegate hierarchy — 134 casts, BLOCKED on splitting `xRTDelegate`'s dual role | split first, then mechanical | Medium | `xRTDelegate` and 20 implementations | (this file) |
 | E26 | What is left of `unchecked`/`rawtypes` — 92 + 59, and why most are not trivial | trivial part 1 PR; two hierarchy changes separate | Low / Medium | `ServiceContext` message hierarchy | (this file) |
+| E27 | Op-info cache: raw `EnumMap` whose key silently names the value type | 1 PR, per-op-class migration | independent | `OpInfoKey<V>` + generic get/set |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -1881,3 +1882,141 @@ git log --oneline master..HEAD --fixed-strings --grep '<subject>'
 | `eaf3214d6` | Safely publish property metadata caches |
 | `f4df60ed1` | Refuse view cloning of Mutable arrays |
 | `f5d3e45eb` | Embedding API 2/N: Java host can create and run nested containers (the linchpin) |
+
+## E27 — The op-info cache: a raw `EnumMap` whose key silently names the value type
+
+**Depends on:** nothing. Independently implementable.
+
+### What is there
+
+```java
+private final Map<Op, EnumMap> f_mapOpInfo = new WeakHashMap<>();      // raw EnumMap
+
+public Object getOpInfo(Op op, Enum<?> category) {
+    EnumMap<?, ?> mapByCategory = f_mapOpInfo.get(op);
+    ...
+    WeakReference<?> ref = (WeakReference<?>) mapByCategory.get(category);
+    return ref == null ? null : ref.get();
+}
+
+public void setOpInfo(Op op, Enum<?> category, Object info) {
+    f_mapOpInfo.computeIfAbsent(op, (op_) -> new EnumMap(category.getClass()))
+               .put(category, new WeakReference(info));
+}
+```
+
+and at every call site:
+
+```java
+CallChain       chain     = (CallChain)       context.getOpInfo(this, Category.Chain);
+TypeComposition clazzPrev = (TypeComposition) context.getOpInfo(this, Category.Composition);
+TypeConstant    typePrev  = (TypeConstant)    context.getOpInfo(this, Category.Type);
+```
+
+### Why it cannot be typed as written
+
+Each `Op` subclass declares its **own** `Category` enum:
+
+```java
+OpVar:        enum Category {Composition, Type}
+OpInvocable:  enum Category {Chain, Composition}
+```
+
+`EnumMap<K extends Enum<K>, V>` needs a single concrete enum class, and the key class varies per
+op, so there is no type argument to write - which is why it is raw. That is the honest constraint,
+and it is why this row sat as "a design choice, not a cleanup".
+
+But the real defect is not the `EnumMap`. It is that **each category constant already implies a
+value type** - `Chain` means `CallChain`, `Composition` means `TypeComposition`, `Type` means
+`TypeConstant` - and that correspondence exists only in the caller's head and its cast.
+`setOpInfo(this, Category.Chain, someTypeComposition)` compiles today.
+
+### The design
+
+Stop encoding the category as an enum and let the key carry its value type - the same shape as
+`NativeType<H>` in the native binding work:
+
+```java
+/**
+ * A key into the per-op info cache. Each constant names both the slot and the type of value cached
+ * in it, so the cache needs no cast and cannot be asked for, or given, the wrong type.
+ */
+public record OpInfoKey<V>(int index, String name, Class<V> type) {
+    public OpInfoKey {
+        requireNonNull(name);
+        requireNonNull(type);
+    }
+    public static <V> OpInfoKey<V> of(int index, String name, Class<V> type) {
+        return new OpInfoKey<>(index, name, type);
+    }
+}
+```
+
+Declared once per op class, beside the ops that use them:
+
+```java
+// OpInvocable
+protected static final OpInfoKey<CallChain>       CHAIN       = OpInfoKey.of(0, "chain", CallChain.class);
+protected static final OpInfoKey<TypeComposition> COMPOSITION = OpInfoKey.of(1, "composition", TypeComposition.class);
+
+// OpVar
+protected static final OpInfoKey<TypeComposition> COMPOSITION = OpInfoKey.of(0, "composition", TypeComposition.class);
+protected static final OpInfoKey<TypeConstant>    TYPE        = OpInfoKey.of(1, "type", TypeConstant.class);
+```
+
+The API becomes generic in the value:
+
+```java
+public <V> V getOpInfo(Op op, OpInfoKey<V> key);
+public <V> void setOpInfo(Op op, OpInfoKey<V> key, V info);
+```
+
+and every call site loses its cast:
+
+```java
+CallChain chain = context.getOpInfo(this, CHAIN);          // no cast, and no way to get this wrong
+context.setOpInfo(this, CHAIN, clazz);                     // now a compile error
+```
+
+### Storage: keep the array, drop the enum
+
+`EnumMap` was the right instinct - it is an array indexed by ordinal, and this is the op dispatch
+path. Keep exactly that property without the enum by using the key's own `index`:
+
+```java
+private final Map<Op, WeakReference<?>[]> f_mapOpInfo = new WeakHashMap<>();
+```
+
+`get` is an array index and a `Class::cast`; `set` grows the slot array on demand. This is **faster**
+than the current code, which does an `EnumMap.get` plus an unchecked `WeakReference` cast, and it
+removes the per-op `EnumMap` allocation in `computeIfAbsent`.
+
+The `Class<V>` in the key is what makes the read checked rather than unchecked, and it is affordable
+here in a way it is not in the delegate hierarchy: this cast is not erased away by a bridge method,
+so it is a real check that would otherwise be missing.
+
+### Weak-reference semantics are unchanged
+
+Values stay behind `WeakReference` for the reason the current comment gives - the cache is keyed by
+`Op` in a `WeakHashMap` and must not retain compositions or chains. The array holds
+`WeakReference<?>`; `getOpInfo` resolves and casts through `key.type()`.
+
+### Migration
+
+Mechanical and per-op-class, one class at a time:
+
+1. Add `OpInfoKey`, and the generic `get`/`setOpInfo` overloads **alongside** the existing
+   `Enum<?>` ones so nothing breaks.
+2. Convert one op class: replace its `Category` enum with typed keys, drop the casts at its call
+   sites.
+3. When no caller of the `Enum<?>` overloads remains, delete them, the raw field, and the
+   `EnumMap` import.
+
+Step 2 is where the value shows up: `OpInvocable` and `OpVar` between them account for the casts,
+and each conversion is a handful of lines.
+
+### Verification
+
+There is no behavioural change to assert, so the proof is the compiler: after step 2,
+`context.setOpInfo(this, CHAIN, clazz)` where `clazz` is a `TypeComposition` must fail to compile.
+Worth adding as a negative test in the same style as the existing audit examples.

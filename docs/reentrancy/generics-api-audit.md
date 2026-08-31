@@ -1093,11 +1093,25 @@ Measured, not estimated. Numbers from `javac -Xlint:all` with the warning cap li
 
 ### Should fix
 
-- **E25 generification of the delegate hierarchy.** Now unblocked by the split, and the payoff is
-  measured: retyping just the four already-moved methods to `H` removes **61** casts of the 134.
-  Attempted and reverted - the generic hierarchy itself compiles clean (verified from the repo
-  root), but retyping the overrides by script damaged files repeatedly. **Do the override retyping
-  by hand.**
+- **E25 generification of the delegate hierarchy - CORE DONE 2026-08-31, ~90 casts left.**
+  `xRTDelegate<H extends DelegateHandle>` landed; the protected `*Impl` layer takes `H`, narrowed
+  once in `narrow()`. Removed **110** of 252 handle casts in the package. 671 tests, 0 failures;
+  xdk builds; `array.x` and `numbers.x` clean. The one added
+  `@SuppressWarnings("unchecked")` costs no runtime safety - each override gets a synthetic bridge
+  that checkcasts to the concrete handle, verified in the bytecode, so threading a `Class<H>`
+  through 27 constructors to call `Class::cast` would add a redundant second check and nothing else.
+  What is left, in decreasing tractability:
+  - **`BitView` / `ByteView` (~35 casts).** Both interfaces declare `getBits`/`extractBit`/
+    `assignBit` and `getBytes`/`extractByte`/`assignByte` over `DelegateHandle`. Generifying them
+    as `BitView<H extends DelegateHandle>` is the same mechanical change and the natural next
+    increment.
+  - **`callEquals` / `compareIdentity` (~28 casts).** These take two handles, not a target, and
+    either may be foreign, so `narrow()` does not apply - they want `instanceof` guards, the shape
+    already used in `xRTSlicingDelegate.compareIdentity` for master bug 37.
+  - **`invokePreInc`/`PostInc`/`PreDec`/`PostDec`/`invokeIndexOf` (~20 casts).** These are
+    `ClassTemplate` API over `ObjectHandle`; typing them means generifying `ClassTemplate`, which
+    is a much larger change than E25 and should not be folded into it.
+  - **`createBitViewDelegate` (6 casts).** View construction; follows the `BitView` step.
 - **The `CompletableFuture` request hierarchy.** Eleven raw types, all downstream of one raw field:
   the message base declares `public final CompletableFuture f_future` because different requests
   carry different result types - the same field is read as `CompletableFuture<ObjectHandle>` and
