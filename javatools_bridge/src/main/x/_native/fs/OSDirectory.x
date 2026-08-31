@@ -21,36 +21,26 @@ const OSDirectory
 
     @Override
     Iterator<Directory> dirs() {
-        return names()
-            .filter(name -> {
-                if (File|Directory node := find(name)) {
-                    return node.is(Directory);
-                } else {
-                    // that is most probably a broken link
-                    return False;
-                }
-            })
-            .map(name -> {
-                assert File|Directory node := find(name);
-                return node.as(Directory);
-            });
+        return names().flatMap(name -> {
+            if (File|Directory node := find(name), node.is(Directory)) {
+                return [node];
+            }
+            // the name came from a listing, but the node may be a broken link, or may have been
+            // removed since that listing was taken; either way it is simply not a directory now
+            return [];
+        });
     }
 
     @Override
     Iterator<File> files() {
-        return names()
-            .filter(name -> {
-                if (File|Directory node := find(name)) {
-                    return node.is(File);
-                } else {
-                    // that is most probably a broken link
-                    return False;
-                }
-            })
-            .map(name -> {
-                assert File|Directory node := find(name);
-                return node.as(File);
-            });
+        return names().flatMap(name -> {
+            if (File|Directory node := find(name), node.is(File)) {
+                return [node];
+            }
+            // the name came from a listing, but the node may be a broken link, or may have been
+            // removed since that listing was taken; either way it is simply not a file now
+            return [];
+        });
     }
 
     @Override
