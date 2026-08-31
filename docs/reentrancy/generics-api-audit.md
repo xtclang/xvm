@@ -1051,10 +1051,11 @@ Measured, not estimated. Numbers from `javac -Xlint:all` with the warning cap li
 | --- | --- | --- |
 | casts in `javatools` | 2,879 | 2,724 |
 | casts targeting a handle type | 1,439 | 1,277 |
-| `@SuppressWarnings("unchecked")` | 14 | 6 |
-| `unchecked` warnings | - | 92 |
-| `rawtypes` warnings | - | 59 |
-| javac lint categories made fatal | 2 | 17 |
+| `@SuppressWarnings("unchecked")` | 14 | 8 |
+| `unchecked` warnings | - | 93 |
+| `rawtypes` warnings | - | 61 |
+| `serial` warnings | 9 | 0 |
+| javac lint categories made fatal | 2 | 22 |
 
 ### Done, and how
 
@@ -1093,7 +1094,8 @@ Measured, not estimated. Numbers from `javac -Xlint:all` with the warning cap li
 
 ### Should fix
 
-- **E25 generification of the delegate hierarchy - CORE DONE 2026-08-31, ~90 casts left.**
+- **E25 generification of the delegate hierarchy - CORE DONE 2026-08-31, 128 handle casts left**
+  (was 252; see E30 for why the rest are not simply relocatable).**
   `xRTDelegate<H extends DelegateHandle>` landed; the protected `*Impl` layer takes `H`, narrowed
   once in `narrow()`. Removed **110** of 252 handle casts in the package. 671 tests, 0 failures;
   xdk builds; `array.x` and `numbers.x` clean. The one added
@@ -1112,15 +1114,26 @@ Measured, not estimated. Numbers from `javac -Xlint:all` with the warning cap li
     `ClassTemplate` API over `ObjectHandle`; typing them means generifying `ClassTemplate`, which
     is a much larger change than E25 and should not be folded into it.
   - **`createBitViewDelegate` (6 casts).** View construction; follows the `BitView` step.
-- **The `CompletableFuture` request hierarchy.** Eleven raw types, all downstream of one raw field:
-  the message base declares `public final CompletableFuture f_future` because different requests
-  carry different result types - the same field is read as `CompletableFuture<ObjectHandle>` and
-  `CompletableFuture<ObjectHandle[]>`. The fix is generifying the request hierarchy in its result
-  type; the raw field is the symptom.
+- **The `CompletableFuture` request hierarchy - NEXT, and smaller than this row used to claim.**
+  Re-measured 2026-08-31: **51** raw sites, not eleven, but the hierarchy behind them is tiny.
+  `ServiceContext.Message` declares `public final CompletableFuture f_future` and has exactly **two**
+  subclasses, `OpRequest` and `CallLaterRequest`; `Response<T>` is *already* generic, which is why
+  `new Response<ObjectHandle[]>(.., future)` reports "unchecked conversion" - a typed constructor
+  being handed a raw future. The payload types that actually flow are `ObjectHandle` (60 uses),
+  `ObjectHandle[]` (2) and `Void` (2).
+
+  This is the single highest-value item left, because three separate rows converge on it. Of the 154
+  `unchecked`+`rawtypes` warnings in the tree, **39 are in `ServiceContext` and `Fiber` alone**, and
+  they resolve to three known causes: the raw `EnumMap` op-info cache (E27, designed),
+  `CompletableFuture`/`Response` (this row, Must Fix 1) and the raw `Map.put` for pending requests
+  (Must Fix 3). Generifying `Message<T>` clears most of it.
+
+  Note `f_future` is a public field. Pre-existing, but worth making private behind an accessor while
+  the class is being changed anyway.
 - **`ServiceContext.setOpInfo`'s `EnumMap`.** `EnumMap<K extends Enum<K>, V>` needs a concrete enum
   class and the category type varies per op, so no type argument exists to write. Either a plain
   `Map<Enum<?>, ..>` or leave it raw - a design choice, not a cleanup.
-- **The native sweep.** 736 case labels remain across ~60 templates. The mechanism is proven; the
+- **The native sweep.** Re-measured: **719** case labels across **75** templates (this row previously said 736/~60). The mechanism is proven; the
   work is per-template and independent.
 
 ### Note on nullability
