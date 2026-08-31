@@ -85,6 +85,7 @@ surface graduate into individual rows on the bug list.
 | E30 | Storage operations belong on the handle; the `<H>` parameter is the symptom | per-handle, then one deleting commit | supersedes E25's parameter | measured: 105/132 bodies need only the handle |
 | E31 | 42 cache-if-null getters that could be final `Lazy` fields; 7 need a resettable variant | 2 PRs (35 sites, then API + 7) | independent | measured, not estimated |
 | E32 | Thread one `ErrorListener`; stop null-defaulting and blackholing diagnostics | 3 stages, stage 1 alone is mechanical | independent | 665 params, 87 BLACKHOLE, 28 null-guards |
+| E33 | Census of every `Object` in the tree: 61 are `equals` and untouchable, ~132 are real | reference row; feeds E27/E28/E30/E32 | independent | 393 array initializers noted separately |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -2658,3 +2659,78 @@ payoff, and it is unreachable while the listener is optional and half the paths 
 nobody is obliged to carry cannot be relied on to be there.
 
 Do stage 1 first and separately. It is the one that makes the other two provable.
+
+## E33 — Every `Object` in the tree, categorized, and which ones a type could actually replace
+
+**Depends on:** nothing. This is the census the campaign has been working toward; individual rows
+(E27, E28, E30, E32) are instances of it.
+
+### The census
+
+| shape | count |
+| --- | --- |
+| parameter declared `Object` | 97 |
+| method **returns** `Object` | 47 |
+| `Object[]` | 23 |
+| field declared `Object` | 14 |
+| `Map<..., Object>` value | 13 |
+| `List`/`Set`/`Collection<Object>` | 7 |
+
+### The line that matters: 61 of the 97 are not a defect
+
+Splitting the parameters by *why* they are `Object`:
+
+| | count | replaceable? |
+| --- | --- | --- |
+| `equals(Object)` | **61** | **No - mandated by `java.lang.Object`** |
+| everything else | 51 | yes, case by case |
+| serialization/IO field readers | 3 | probably not |
+| op-info cache | 1 | yes - E27 |
+
+This is the distinction worth holding onto. `equals(Object)` is not the codebase being sloppy; the
+signature is fixed by the language, and "fixing" it produces a method that no longer overrides
+anything. A campaign that counts those 61 as debt is measuring the wrong thing and will end up
+arguing for changes that make the code worse.
+
+**The real target is 51 parameters, 47 returns, 14 fields and 20 erased collections.**
+
+### How they break down, and what replaces each
+
+1. **A union wearing `Object`** - one field, several possible types, invariant kept in the
+   reader's head. `Fiber.m_oPendingRequests` is `null | Message | Map<CompletableFuture, Message>`
+   (Must Fix 3). **Replace with:** a sealed interface or, where the micro-optimization is not worth
+   it, the collection form unconditionally. The compiler then enumerates the states.
+
+2. **An erased payload behind a key** - `Map<Op, EnumMap>` with `Object` values, where the key
+   silently implies the value type (Must Fix 2). **Replace with:** a typed key, `OpInfoKey<V>` -
+   E27, designed and ready.
+
+3. **A capability asked of the wrong object** - `ByteView`/`BitView` queried on the template and
+   handed the handle back (E29); `compareIdentity(ObjectHandle, ObjectHandle)` casting both
+   operands (E28, done for delegates). **Replace with:** put the operation on the value that knows
+   its own type. This is the single most productive shape - it produced master bugs 37 and 38.
+
+4. **A type parameter that was never introduced** - `CompletableFuture f_future` on `Message`
+   (Must Fix 1), the delegate storage protocol before E25. **Replace with:** generify the owner.
+
+5. **Genuinely heterogeneous** - `ErrorInfo`'s message-format arguments. **Do not replace**;
+   make it varargs (E32) so at least the boilerplate goes.
+
+### The related array problem
+
+**393 `new X[]{...}` initializers.** Not all are wrong - `TypeConstant[]` (57) and `ObjectHandle[]`
+(26) are the runtime's calling convention and are performance-relevant. But `new Object[]` (18) is
+the untyped case E32 addresses, and **21 sites return an array directly** from a method, which is
+where an array is usually the wrong choice: it hands the caller a mutable, aliasable, unsized-typed
+structure where `List.of(...)` gives an immutable one that says what it is.
+
+Worth separating in any PR: replacing `new X[]{a, b}` with `List.of(a, b)` at a **returned** site is
+an API improvement; doing it on a hot interpreter path is a regression. Start with the 21 returns
+and leave the calling convention alone - and note E30's finding that `ObjectHandle[]` appears 718
+times precisely because it *is* the calling convention.
+
+### Suggested order
+
+E27 (typed key, designed) -> Must Fix 1 (`Message<T>`) -> Must Fix 3 (the union) -> E29 (capability
+on the handle). Each is independently shippable from master, and each removes a class of cast rather
+than an instance.
