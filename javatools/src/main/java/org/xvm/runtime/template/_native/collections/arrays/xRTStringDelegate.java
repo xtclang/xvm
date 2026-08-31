@@ -193,8 +193,13 @@ public class xRTStringDelegate
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        StringArrayHandle h1 = (StringArrayHandle) hValue1;
-        StringArrayHandle h2 = (StringArrayHandle) hValue2;
+        // Arrays of the same element type can be backed by different delegates - a slice or a
+        // view is not a StringArrayHandle - and the caller resolves this template from the
+        // FIRST handle only, so the second is arbitrary. Casting it raised a
+        // ClassCastException into the running program.
+        if (!(hValue1 instanceof StringArrayHandle h1) || !(hValue2 instanceof StringArrayHandle h2)) {
+            return false;
+        }
 
         if (h1 == h2) {
             return true;

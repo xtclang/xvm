@@ -95,6 +95,16 @@ module TestArray {
         assert &v1 == &v2;
 
         console.print($"&bytes.asBitArray() == &bytes.asBitArray(): {&v1 == &v2}");
+
+        // The reverse direction dispatches to the CONCRETE delegate, which resolves the template
+        // from the first handle only and used to cast the second one too.
+        Char[] chars = ['a', 'b', 'c', 'd', 'e'];
+        Char[] cs    = chars[1..3];
+
+        assert &chars != &cs;
+        assert &cs != &chars;
+
+        console.print($"&chars == &chars[1..3]: {&chars == &cs}");
     }
 
     void testArrayList() {
