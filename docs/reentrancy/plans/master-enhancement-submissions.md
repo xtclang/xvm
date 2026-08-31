@@ -2628,6 +2628,27 @@ what makes "every overload failed, here is why" reportable instead of silent. `I
 remaining uses should be few and deliberate. Making the constant package-private, or renaming it to
 something that reads as a decision (`DISCARD_ALL`), stops it being the path of least resistance.
 
+### A free additive win on the same API
+
+`ErrorListener.log` and both `ErrorInfo` constructors declare `Object[] aoParam`, so every caller
+builds the array by hand - 23 `new Object[]{...}` sites, 17 of them in a log or error call, 13 in
+`Lexer` alone:
+
+```java
+errs.log(Severity.ERROR, SOME_CODE, new Object[] {name, type}, this);
+```
+
+Declaring it `Object... aoParam` is **source- and binary-compatible**: an array is still a valid
+argument to a varargs parameter, so all 23 existing call sites keep compiling untouched, and new
+ones read as `errs.log(Severity.ERROR, SOME_CODE, this, name, type)`. This is additive, has no
+behavioural effect, and can ship on its own.
+
+It does not make the parameters *typed* - they are message-format arguments and genuinely
+heterogeneous. Going further means an error code that names its own parameter types (a record per
+code, or a sealed hierarchy), which is a real design change and should be proposed separately rather
+than smuggled in here. The varargs change is worth doing regardless, because it removes the
+boilerplate that makes the untyped array conspicuous at every call site.
+
 ### Why this is a prerequisite, not a cleanup
 
 Once exactly one listener is threaded and never null, it is the natural place for the things the
