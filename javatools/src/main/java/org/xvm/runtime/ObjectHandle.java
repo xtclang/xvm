@@ -1011,6 +1011,9 @@ public abstract class ObjectHandle
 
         public class WrapperException
                 extends Exception {
+            /** Never Java-serialized; present so the serial lint stays clean. */
+            private static final long serialVersionUID = 1L;
+
             public WrapperException() {
                 super();
             }

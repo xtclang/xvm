@@ -972,6 +972,9 @@ public abstract class Launcher<T extends LauncherOptions>
      *   and recovery attempts if we explicitly declare how to handle LauncherException in subclasses in code.
      */
     static public class LauncherException extends RuntimeException {
+        /** Never Java-serialized; present so the serial lint stays clean. */
+        private static final long serialVersionUID = 1L;
+
         private final boolean error;
         private final int exitCode;
 

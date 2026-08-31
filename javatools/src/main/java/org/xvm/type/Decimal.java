@@ -868,6 +868,9 @@ public abstract class Decimal {
      */
     public static class RangeException
             extends ArithmeticException {
+        /** Never Java-serialized; present so the serial lint stays clean. */
+        private static final long serialVersionUID = 1L;
+
         public RangeException(String s, Decimal decNaN) {
             super(s);
 
@@ -878,6 +881,16 @@ public abstract class Decimal {
             return f_decNaN;
         }
 
+        /**
+         * {@link Decimal} is a value type and is deliberately not {@code Serializable}, so this
+         * field would fail a Java serialization of this exception. Nothing serializes it - the
+         * class is {@code Serializable} only because {@link ArithmeticException} is, and the
+         * {@code writeObject} methods elsewhere in this tree are XVM's own binary format, not
+         * {@code ObjectOutputStream}. Marking it {@code transient} would be worse: it would make
+         * {@link #getDecimal} silently answer null instead of failing loudly, for a path that does
+         * not exist.
+         */
+        @SuppressWarnings("serial")
         private final Decimal f_decNaN;
     }
 

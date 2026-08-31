@@ -69,6 +69,22 @@ private class JavaCompilerArgsProvider(
         // environment rather than on the code, so they can fail a build for reasons a contributor
         // cannot see in the source. The six dirty categories above stay off until their counts
         // reach zero; rawtypes is tracked in the enhancement list.
+        // Added 2026-08-31, verified at zero with -Xlint:all. These three are not merely clean,
+        // they are the ones that matter for this codebase: lossy-conversions catches an implicit
+        // narrowing in a compound assignment (the interpreter does long/int arithmetic constantly,
+        // and `intVar += longExpr` silently truncates); synchronization catches locking on a
+        // value-based class, which a concurrent runtime must never do; output-file-clash catches
+        // two outputs racing for one path. The module-system categories (module, exports, opens,
+        // requires-*) are also clean but are no-ops without a module-info, so they are left out
+        // rather than added as decoration.
+        // serial reached zero on 2026-08-31: eight classes that are Serializable only by accident
+        // of extending Exception/ArrayList gained a serialVersionUID, and the one real finding -
+        // Decimal.RangeException holding a non-serializable Decimal - is documented in place.
+        // Nothing in this tree uses Java serialization; making this fatal keeps it that way.
+        add("-Xlint:serial")
+        add("-Xlint:lossy-conversions")
+        add("-Xlint:synchronization")
+        add("-Xlint:output-file-clash")
         add("-Xlint:deprecation")
         add("-Xlint:removal")
         add("-Xlint:dep-ann")

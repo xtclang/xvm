@@ -8,6 +8,9 @@ import org.xvm.tool.Launcher.LauncherException;
  * source material being compiled.
  */
 public class CompilerException extends LauncherException {
+    /** Never Java-serialized; present so the serial lint stays clean. */
+    private static final long serialVersionUID = 1L;
+
     public CompilerException(String message) {
         super(true, message);
     }

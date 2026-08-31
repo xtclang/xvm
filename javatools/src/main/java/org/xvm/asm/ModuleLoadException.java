@@ -17,6 +17,9 @@ import java.io.File;
  */
 public class ModuleLoadException
         extends RuntimeException {
+    /** Never Java-serialized; present so the serial lint stays clean. */
+    private static final long serialVersionUID = 1L;
+
     /**
      * Construct a ModuleLoadException.
      *

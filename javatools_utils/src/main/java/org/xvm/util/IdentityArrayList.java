@@ -11,6 +11,9 @@ import java.util.ListIterator;
  */
 public class IdentityArrayList<E>
         extends ArrayList<E> {
+    /** Never Java-serialized; present so the serial lint stays clean. */
+    private static final long serialVersionUID = 1L;
+
     /**
      * Add the specified element if it is not already present in the list.
      *

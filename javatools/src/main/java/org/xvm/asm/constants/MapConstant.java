@@ -369,6 +369,9 @@ public final class MapConstant
      */
     public static class ROEntry<K,V>
             extends AbstractMap.SimpleEntry<K,V> {
+        /** Never Java-serialized; present so the serial lint stays clean. */
+        private static final long serialVersionUID = 1L;
+
         public ROEntry(K key, V value) {
             super(key, value);
         }
