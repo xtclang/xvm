@@ -2746,6 +2746,59 @@ The clean form keeps the listener and lets the completeness flag carry the signa
 carries; where suppression itself is worth expressing, `branch()` the listener and drop the branch,
 which preserves the errors for inspection and is what the rest of the compiler already does.
 
+### Progress, and the one ambient channel that is left (2026-08-31)
+
+Threaded, so the listener is a parameter rather than state:
+
+| chain | what changed |
+| --- | --- |
+| name resolution (E34) | `resolveName`, `resolveContributedName`, `resolvedComponent`, `resolvedConstant`; `ResolutionCollector.getErrorListener()` deleted |
+| fit tests (stage 2) | 66 literal `null` arguments became explicit `BLACKHOLE`; three silent translations deleted |
+| label variables | `LabelAble.getLabelVar` |
+| stage management | `StageMgr` requires one |
+
+Fields went 13 -> 9, of which 7 are now `final`, and **all five listeners parked on an object so a
+callback could reach it are gone** (`NameResolver`, plus `ForStatement`, `WhileStatement`,
+`ForEachStatement`, `TryStatement`). Null-guard sites: 28 -> 12.
+
+**What remains ambient is `ensureTypeInfo`, and it is the big one.** Measured:
+
+| | count |
+| --- | --- |
+| `ensureTypeInfo(...)` call sites | 221 |
+| of which take the listener from ambient structure state | **123** |
+
+`TypeConstant.ensureTypeInfo()` has a no-listener overload that reaches
+`FileStructure.getErrorListener(pool)`, which reads a mutable field. That field is set and cleared
+by `Compiler` a hundred and sixty lines apart:
+
+```java
+m_structFile.setErrorListener(ErrorListener.BLACKHOLE);   // Compiler:135, when the structure is made
+...
+if (!m_errs.hasSeriousErrors()) {
+    m_structFile.setErrorListener(null);                  // Compiler:298
+}
+```
+
+Two things are wrong with it beyond being ambient. **The restore is conditional** - a compilation
+that produced serious errors leaves the `FileStructure` silenced permanently, so the clear only
+happens on the path that did not need it. And the field is reachable through
+`XvmStructure.setErrorListener`, which delegates to the parent, so it is shared mutable state rather
+than one object's own.
+
+The file's own comment records that master consulted a `ConstantPool` thread-local here and that
+this branch (E3) replaced it with the parameter form - but the *field* is what was left behind, and
+it is the same ambient channel in a different shape.
+
+**Threading it is not a small change.** 221 sites, and many callers are in the runtime, which has no
+listener at all - so the no-argument overload cannot simply be deleted; each caller needs a decision
+about where its listener comes from. It should be scheduled as its own piece of work, after the
+chains above, and probably in the order: give `ensureTypeInfo` a required-listener form, convert the
+98 sites that already have one, then triage the remaining 123 individually.
+
+An interim fix worth doing regardless: make the `Compiler` silence unconditional and scoped
+(try/finally), so a failed compilation cannot leave the structure permanently silent.
+
 ### The payoff: 53 places with nowhere to report
 
 ```java
