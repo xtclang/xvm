@@ -58,7 +58,7 @@ public class Exception extends nConst {
      */
     public nException $init(Ctx ctx, java.lang.String message, Throwable cause) {
         this.text       = message == null ? Nullable.Null : String.of(ctx, message);
-        this.cause      = cause instanceof nException e ? e.exception : Nullable.Null;
+        this.cause      = cause instanceof nException e ? e.getException() : Nullable.Null;
         this.$exception = $createJavaException(cause);
         return $exception;
     }

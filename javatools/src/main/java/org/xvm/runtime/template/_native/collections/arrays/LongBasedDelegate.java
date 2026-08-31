@@ -43,16 +43,7 @@ public abstract class LongBasedDelegate<H extends LongBasedDelegate.LongArrayHan
                                 int nBitsPerValue, boolean fSigned) {
         super(container, structure);
 
-        // note: assumption is that all bit counts are a power of two
-        assert Integer.bitCount(nBitsPerValue) == 1;
-
-        f_nBitsPerValue  = nBitsPerValue;
-        f_nValuesPerLong = 64 / nBitsPerValue;
-        f_nIndexShift    = f_nValuesPerLong >> 1;
-        f_nIndexMask     = (1 << f_nIndexShift) - 1;
-        f_lValueMask     = -1L >>> (64 - f_nBitsPerValue);
-        f_lSignBit       = 1L << (f_nBitsPerValue - 1);
-        f_fSigned        = fSigned;
+        f_codec = LongCodec.of(nBitsPerValue, fSigned);
     }
 
     @Override
@@ -83,7 +74,7 @@ public abstract class LongBasedDelegate<H extends LongBasedDelegate.LongArrayHan
 
         // null out the tail
         int cStore = storage(cSize);
-        for (int i = cSize, c = cStore * f_nValuesPerLong; i < c; i++) {
+        for (int i = cSize, c = cStore * f_codec.cValuesPerLong(); i < c; i++) {
             setValue(al, i, 0);
         }
 
@@ -99,7 +90,7 @@ public abstract class LongBasedDelegate<H extends LongBasedDelegate.LongArrayHan
     public int getPropertyCapacity(Frame frame, H hDelegate, int iReturn) {
 
         return frame.assignValue(iReturn,
-                xInt64.makeHandle(frame, (long) hDelegate.m_alValue.length * f_nValuesPerLong));
+                xInt64.makeHandle(frame, (long) hDelegate.m_alValue.length * f_codec.cValuesPerLong()));
     }
 
     @Override
@@ -130,8 +121,8 @@ public abstract class LongBasedDelegate<H extends LongBasedDelegate.LongArrayHan
 
         long[] alOld  = hDelegate.m_alValue;
         long[] alNew;
-        if ((ofStart & (f_nValuesPerLong-1)) == 0) {
-            int nStart = valueIndex(ofStart);
+        if ((ofStart & (f_codec.cValuesPerLong()-1)) == 0) {
+            int nStart = f_codec.valueIndex(ofStart);
             alNew = Arrays.copyOfRange(alOld, nStart, nStart + storage(cSize));
             if (fReverse) {
                 alNew = reverse(alNew, (int) cSize);
@@ -162,7 +153,7 @@ public abstract class LongBasedDelegate<H extends LongBasedDelegate.LongArrayHan
         long[]          alValue   = hDelegate.m_alValue;
 
         if (lIndex >= cSize) {
-            if (valueIndex(lIndex) >= alValue.length) {
+            if (f_codec.valueIndex(lIndex) >= alValue.length) {
                 alValue = hDelegate.m_alValue = grow(alValue, storage(lIndex + 1));
             }
 
@@ -338,7 +329,7 @@ public abstract class LongBasedDelegate<H extends LongBasedDelegate.LongArrayHan
      * @return the long array size
      */
     protected int storage(long cValues) {
-        return (int) ((cValues - 1) / f_nValuesPerLong + 1);
+        return f_codec.storage(cValues);
     }
 
     /**
@@ -350,12 +341,7 @@ public abstract class LongBasedDelegate<H extends LongBasedDelegate.LongArrayHan
      * @return the value as a long
      */
     protected long getValue(long[] alValue, long lIndex) {
-        long l = (alValue[valueIndex(lIndex)] >>> shiftCount(lIndex)) & f_lValueMask;
-        if (f_fSigned && (l & f_lSignBit) != 0) {
-            // extend the sign
-            l |= ~f_lValueMask;
-        }
-        return l;
+        return f_codec.getValue(alValue, lIndex);
     }
 
     /**
@@ -366,33 +352,7 @@ public abstract class LongBasedDelegate<H extends LongBasedDelegate.LongArrayHan
      * @param lValue   the value
      */
     protected void setValue(long[] alValue, long lIndex, long lValue) {
-        int  nIndex = valueIndex(lIndex);
-        int  cShift = shiftCount(lIndex);
-        long lMask  = f_lValueMask << cShift;
-
-        alValue[nIndex] = alValue[nIndex] & ~lMask | ((lValue & f_lValueMask) << cShift);
-    }
-
-    /**
-     * Calculate an index of the specified value index in the long array.
-     *
-     * @param lIndex  the value index
-     *
-     * @return the index into the long array
-     */
-    private int valueIndex(long lIndex) {
-        return (int) (lIndex >>> f_nIndexShift);
-    }
-
-    /**
-     * Calculate a shift count for the specified index.
-     *
-     * @param lIndex   the value index
-     *
-     * @return the mask
-     */
-    private int shiftCount(long lIndex) {
-        return 64 - f_nBitsPerValue * ((((int) lIndex) & f_nIndexMask) + 1);
+        f_codec.setValue(alValue, lIndex, lValue);
     }
 
     /**
@@ -611,11 +571,9 @@ public abstract class LongBasedDelegate<H extends LongBasedDelegate.LongArrayHan
 
     // ----- constants -----------------------------------------------------------------------------
 
-    protected final int     f_nBitsPerValue;  // for Int16: 16
-    protected final int     f_nValuesPerLong; // for Int16: 4
-    protected final int     f_nIndexShift;    // for Int16: 2
-    protected final int     f_nIndexMask;     // for Int16: 3
-    protected final long    f_lValueMask;     // for Int16: 0x0000_0000_0000_FFFF
-    protected final long    f_lSignBit;       // for Int16: 0x0000_0000_0000_8000
-    protected final boolean f_fSigned;        // for Int16: true
+    /**
+     * How this delegate's element type is packed into the long array. Derived entirely from the
+     * element width and signedness passed to the constructor; see {@link LongCodec}.
+     */
+    protected final LongCodec f_codec;
 }

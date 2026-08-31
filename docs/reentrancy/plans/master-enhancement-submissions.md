@@ -83,6 +83,7 @@ surface graduate into individual rows on the bug list.
 | E26 | What is left of `unchecked`/`rawtypes` — 92 + 59, and why most are not trivial | trivial part 1 PR; two hierarchy changes separate | Low / Medium | `ServiceContext` message hierarchy | (this file) |
 | E27 | Op-info cache: raw `EnumMap` whose key silently names the value type | 1 PR, per-op-class migration | independent | `OpInfoKey<V>` + generic get/set |
 | E30 | Storage operations belong on the handle; the `<H>` parameter is the symptom | per-handle, then one deleting commit | supersedes E25's parameter | measured: 105/132 bodies need only the handle |
+| E31 | 42 cache-if-null getters that could be final `Lazy` fields; 7 need a resettable variant | 2 PRs (35 sites, then API + 7) | independent | measured, not estimated |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -2452,3 +2453,85 @@ Independent of the above, the five 1:1 handles (`CharArrayHandle`, `DoubleArrayH
 `SameAs` (E28, implemented) is the worked precedent - it was clean precisely because identity is
 pure handle state with no codec in it. That alone does not remove the type parameter, so it buys
 readability, not the `<?>` reduction.
+
+## E31 — Cache-if-null getters that could be final fields, and the `Lazy` reset that blocks seven of them
+
+**Depends on:** nothing. `Lazy` already exists in `javatools_utils` and is adopted in ~10 files.
+
+### The pattern
+
+```java
+private Foo m_foo;                       // non-final, mutated on first read
+
+public Foo getFoo() {
+    if (m_foo == null) {
+        m_foo = computeFoo();
+    }
+    return m_foo;
+}
+```
+
+`org.xvm.util.Lazy` exists precisely for this and turns the field `final`:
+
+```java
+private final Lazy<Foo> f_foo = Lazy.of(this::computeFoo);
+```
+
+**42 of these remain**, across 23 files. Measured by matching a cache-fill
+(`if (fld == null) { fld = ... }`) against a non-final declaration of the same field:
+
+| | count |
+| --- | --- |
+| convertible today - the field is never reset | **35** |
+| blocked, because the field is also assigned `null` somewhere | 7 |
+
+The 35 are ordinary unfinished work. Heaviest files: `NativeContainer` (5), `CaseManager` (5),
+`ModuleInfo` (5), then `Op`, `Frame`, `BuildContext`, and several `compiler/ast` statements at 2
+each.
+
+### The seven, and correcting the record on why
+
+The blocked seven are `Label.m_action`, `BuildContext.refs` (x2), `CaseManager.m_labelCurrent`,
+`WhileStatement.m_listContinues`, `ForStatement.m_listContinues`, `ForStatement.m_listShorts`. Each
+is assigned `null` somewhere to invalidate the cache, and `Lazy` has no way to express that.
+
+An earlier answer in this campaign said a `Lazy` "cannot be cleared". That was too strong, and it
+was used to explain away more than it actually blocks. Reading the implementation:
+
+```java
+value = supplier.get();
+valueRef.set(value);
+supplier = null;        // Allow GC of the supplier
+```
+
+The *value* slot is trivially clearable - `valueRef.set(UNSET)` restores the uncomputed state, and
+`isComputed()` already reads that slot. What actually prevents a reset is the line after it: the
+supplier is deliberately discarded so it can be collected, leaving nothing to recompute from. That
+is a **memory tradeoff, not an impossibility**, and it only applies once the value has been
+computed - before that there is nothing to clear, exactly as one would expect of a holder.
+
+### The fix
+
+A resettable variant that keeps its supplier, alongside the existing one rather than replacing it -
+the discard is the right default, and most `Lazy` fields never need a reset:
+
+```java
+public static <T> Resettable<T> ofResettable(Supplier<T> supplier);
+
+public static final class Resettable<T> extends Lazy<T> {
+    public void reset();          // back to uncomputed; the next get() recomputes
+}
+```
+
+`Resettable` retains `supplier` for the owner's lifetime, which is the whole cost and should be
+stated in its javadoc so the choice between the two is explicit at each use site.
+
+### Migration
+
+Two independent pieces:
+
+1. Convert the 35 unblocked sites. Mechanical, one file at a time; each one turns a mutable field
+   `final` and deletes a null check. `NativeContainer`, `CaseManager` and `ModuleInfo` are a third
+   of them between them.
+2. Add `Lazy.ofResettable` and convert the remaining 7. Worth doing second, so the API addition is
+   justified by seven real call sites rather than proposed in the abstract.
