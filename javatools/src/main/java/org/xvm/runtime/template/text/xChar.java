@@ -20,6 +20,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OperatorBinding;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
@@ -51,6 +52,9 @@ public class xChar
 
     @Override
     public void initNative() {
+        bindOp(OperatorBinding.Op.NEXT, JavaLong.class, this::opNext);
+        bindOp(OperatorBinding.Op.PREV, JavaLong.class, this::opPrev);
+
         super.initNative();
 
         markNativeProperty("codepoint");
@@ -128,20 +132,11 @@ public class xChar
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
     }
 
-    @Override
-    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn) {
-        long l = ((JavaLong) hTarget).getValue();
 
-        if (l == Character.MIN_VALUE) {
-            return overflow(frame);
-        }
 
-        return frame.assignValue(iReturn, makeHandle(l - 1));
-    }
 
-    @Override
-    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn) {
-        long l = ((JavaLong) hTarget).getValue();
+    private int opNext(Frame frame, JavaLong hTarget, int iReturn) {
+        long l = hTarget.getValue();
 
         if (l == Character.MAX_VALUE) {
             return overflow(frame);
@@ -150,6 +145,15 @@ public class xChar
         return frame.assignValue(iReturn, makeHandle(l + 1));
     }
 
+    private int opPrev(Frame frame, JavaLong hTarget, int iReturn) {
+        long l = hTarget.getValue();
+
+        if (l == Character.MIN_VALUE) {
+            return overflow(frame);
+        }
+
+        return frame.assignValue(iReturn, makeHandle(l - 1));
+    }
 
     // ----- comparison support --------------------------------------------------------------------
 

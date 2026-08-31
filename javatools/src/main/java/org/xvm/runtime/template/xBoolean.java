@@ -8,6 +8,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OperatorBinding;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.text.xString;
@@ -31,6 +32,12 @@ public class xBoolean
 
     @Override
     public void initNative() {
+        bindOp(OperatorBinding.Op.AND, BooleanHandle.class, BooleanHandle.class, this::opAnd);
+        bindOp(OperatorBinding.Op.OR, BooleanHandle.class, BooleanHandle.class, this::opOr);
+        bindOp(OperatorBinding.Op.XOR, BooleanHandle.class, BooleanHandle.class, this::opXor);
+        bindOp(OperatorBinding.Op.NEG, BooleanHandle.class, this::opNeg);
+        bindOp(OperatorBinding.Op.COMPL, BooleanHandle.class, this::opCompl);
+
         if (getStructure().getFormat() == Format.ENUM) {
             super.initNative();
 
@@ -46,33 +53,10 @@ public class xBoolean
         return new BooleanHandle(clz, iOrdinal != 0);
     }
 
-    @Override
-    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return frame.assignValue(iReturn,
-                makeHandle(frame, ((BooleanHandle) hTarget).get() & ((BooleanHandle) hArg).get()));
-    }
 
-    @Override
-    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return frame.assignValue(iReturn,
-                makeHandle(frame, ((BooleanHandle) hTarget).get() | ((BooleanHandle) hArg).get()));
-    }
 
-    @Override
-    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return frame.assignValue(iReturn,
-                makeHandle(frame, ((BooleanHandle) hTarget).get() ^ ((BooleanHandle) hArg).get()));
-    }
 
-    @Override
-    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn) {
-        return frame.assignValue(iReturn, not((BooleanHandle) hTarget));
-    }
 
-    @Override
-    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn) {
-        return frame.assignValue(iReturn, not((BooleanHandle) hTarget));
-    }
 
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
@@ -131,4 +115,27 @@ public class xBoolean
             return m_index == 0 ? "False" : "True";
         }
     }
+    private int opAnd(Frame frame, BooleanHandle hTarget, BooleanHandle hArg, int iReturn) {
+        return frame.assignValue(iReturn,
+                makeHandle(frame, hTarget.get() & hArg.get()));
+    }
+
+    private int opOr(Frame frame, BooleanHandle hTarget, BooleanHandle hArg, int iReturn) {
+        return frame.assignValue(iReturn,
+                makeHandle(frame, hTarget.get() | hArg.get()));
+    }
+
+    private int opXor(Frame frame, BooleanHandle hTarget, BooleanHandle hArg, int iReturn) {
+        return frame.assignValue(iReturn,
+                makeHandle(frame, hTarget.get() ^ hArg.get()));
+    }
+
+    private int opNeg(Frame frame, BooleanHandle hTarget, int iReturn) {
+        return frame.assignValue(iReturn, not(hTarget));
+    }
+
+    private int opCompl(Frame frame, BooleanHandle hTarget, int iReturn) {
+        return frame.assignValue(iReturn, not(hTarget));
+    }
+
 }

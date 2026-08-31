@@ -23,6 +23,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OperatorBinding;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -54,6 +55,11 @@ public class xEnum
 
     @Override
     public void initNative() {
+        bindOp(OperatorBinding.Op.I_RANGE_I, EnumHandle.class, EnumHandle.class, this::opIRangeI);
+        bindOp(OperatorBinding.Op.E_RANGE_I, EnumHandle.class, EnumHandle.class, this::opERangeI);
+        bindOp(OperatorBinding.Op.I_RANGE_E, EnumHandle.class, EnumHandle.class, this::opIRangeE);
+        bindOp(OperatorBinding.Op.E_RANGE_E, EnumHandle.class, EnumHandle.class, this::opERangeE);
+
         if (NativeTemplates.get(this).isEnum(this)) {
             // all the methods are marked as native due to a "rebase"
             f_templateRange.get(this);
@@ -201,25 +207,9 @@ public class xEnum
                 xString.makeHandle(frame, enumInfo().names().get(hThis.getOrdinal())));
     }
 
-    @Override
-    public int invokeIRangeI(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return createRange(frame, (EnumHandle) hTarget, (EnumHandle) hArg, false, false, iReturn);
-    }
 
-    @Override
-    public int invokeERangeI(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return createRange(frame, (EnumHandle) hTarget, (EnumHandle) hArg, true, false, iReturn);
-    }
 
-    @Override
-    public int invokeIRangeE(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return createRange(frame, (EnumHandle) hTarget, (EnumHandle) hArg, false, true, iReturn);
-    }
 
-    @Override
-    public int invokeERangeE(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return createRange(frame, (EnumHandle) hTarget, (EnumHandle) hArg, true, true, iReturn);
-    }
 
     /**
      * Create a Range object for the specified elements and exclusion flags.
@@ -248,6 +238,22 @@ public class xEnum
                 null, ahVar, iReturn);
     }
 
+
+    private int opIRangeI(Frame frame, EnumHandle hTarget, EnumHandle hArg, int iReturn) {
+        return createRange(frame, hTarget, hArg, false, false, iReturn);
+    }
+
+    private int opERangeI(Frame frame, EnumHandle hTarget, EnumHandle hArg, int iReturn) {
+        return createRange(frame, hTarget, hArg, true, false, iReturn);
+    }
+
+    private int opIRangeE(Frame frame, EnumHandle hTarget, EnumHandle hArg, int iReturn) {
+        return createRange(frame, hTarget, hArg, false, true, iReturn);
+    }
+
+    private int opERangeE(Frame frame, EnumHandle hTarget, EnumHandle hArg, int iReturn) {
+        return createRange(frame, hTarget, hArg, true, true, iReturn);
+    }
 
     // ----- helper methods ------------------------------------------------------------------------
 

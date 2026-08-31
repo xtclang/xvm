@@ -21,6 +21,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OperatorBinding;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
@@ -46,6 +47,20 @@ public class xIntLiteral
 
     @Override
     public void initNative() {
+        bindOp(OperatorBinding.Op.ADD, IntNHandle.class, IntNHandle.class, this::opAdd);
+        bindOp(OperatorBinding.Op.SUB, IntNHandle.class, IntNHandle.class, this::opSub);
+        bindOp(OperatorBinding.Op.MUL, IntNHandle.class, IntNHandle.class, this::opMul);
+        bindOp(OperatorBinding.Op.DIV, IntNHandle.class, IntNHandle.class, this::opDiv);
+        bindOp(OperatorBinding.Op.MOD, IntNHandle.class, IntNHandle.class, this::opMod);
+        bindOp(OperatorBinding.Op.SHL, IntNHandle.class, JavaLong.class, this::opShl);
+        bindOp(OperatorBinding.Op.SHR, IntNHandle.class, JavaLong.class, this::opShr);
+        bindOp(OperatorBinding.Op.SHR_ALL, IntNHandle.class, JavaLong.class, this::opShrAll);
+        bindOp(OperatorBinding.Op.AND, IntNHandle.class, IntNHandle.class, this::opAnd);
+        bindOp(OperatorBinding.Op.OR, IntNHandle.class, IntNHandle.class, this::opOr);
+        bindOp(OperatorBinding.Op.XOR, IntNHandle.class, IntNHandle.class, this::opXor);
+        bindOp(OperatorBinding.Op.NEG, IntNHandle.class, this::opNeg);
+        bindOp(OperatorBinding.Op.COMPL, IntNHandle.class, this::opCompl);
+
         markNativeMethod("construct", STRING, VOID);
 
         markNativeMethod("and",           THIS, THIS);
@@ -123,116 +138,18 @@ public class xIntLiteral
         return frame.raiseException("not supported field: " + idProp.getName());
     }
 
-    @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeIntLiteral(pi1.add(pi2)));
-    }
 
-    @Override
-    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeIntLiteral(pi1.sub(pi2)));
-    }
 
-    @Override
-    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeIntLiteral(pi1.mul(pi2)));
-    }
 
-    @Override
-    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeIntLiteral(pi1.div(pi2)));
-    }
 
-    @Override
-    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeIntLiteral(pi1.mod(pi2)));
-    }
 
-    @Override
-    public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi    = ((IntNHandle) hTarget).getValue();
-        long          count = ((JavaLong) hArg).getValue();
 
-        if (count > Integer.MAX_VALUE) {
-            return overflow(frame);
-        }
-        return frame.assignValue(iReturn, makeIntLiteral(pi.shl((int) count)));
-    }
 
-    @Override
-    public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi    = ((IntNHandle) hTarget).getValue();
-        long          count = ((JavaLong) hArg).getValue();
-
-        if (count > Integer.MAX_VALUE) {
-            return overflow(frame);
-        }
-        return frame.assignValue(iReturn, makeIntLiteral(pi.shr((int) count)));
-    }
-
-    @Override
-    public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi    = ((IntNHandle) hTarget).getValue();
-        long          count = ((JavaLong) hArg).getValue();
-
-        if (count > Integer.MAX_VALUE) {
-            return overflow(frame);
-        }
-        return frame.assignValue(iReturn, makeIntLiteral(pi.ushr((int) count)));
-    }
-
-    @Override
-    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeIntLiteral(pi1.and(pi2)));
-    }
-
-    @Override
-    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeIntLiteral(pi1.or(pi2)));
-    }
-
-    @Override
-    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeIntLiteral(pi1.xor(pi2)));
-    }
-
-    @Override
-    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn) {
-        PackedInteger pi = ((IntNHandle) hTarget).getValue();
-
-        return frame.assignValue(iReturn, makeIntLiteral(pi.negate()));
-    }
-
-    @Override
-    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn) {
-        PackedInteger pi = ((IntNHandle) hTarget).getValue();
-
-        return frame.assignValue(iReturn, makeIntLiteral(pi.complement()));
-    }
 
     @Override
     public int invokeNative1(Frame frame, MethodStructure method,
@@ -346,6 +263,104 @@ public class xIntLiteral
         return frame.assignValue(iReturn, hLiteral.getText());
     }
 
+
+    private int opAdd(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.add(pi2)));
+    }
+
+    private int opSub(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.sub(pi2)));
+    }
+
+    private int opMul(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.mul(pi2)));
+    }
+
+    private int opDiv(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.div(pi2)));
+    }
+
+    private int opMod(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.mod(pi2)));
+    }
+
+    private int opShl(Frame frame, IntNHandle hTarget, JavaLong hArg, int iReturn) {
+        PackedInteger pi    = hTarget.getValue();
+        long          count = hArg.getValue();
+
+        if (count > Integer.MAX_VALUE) {
+            return overflow(frame);
+        }
+        return frame.assignValue(iReturn, makeIntLiteral(pi.shl((int) count)));
+    }
+
+    private int opShr(Frame frame, IntNHandle hTarget, JavaLong hArg, int iReturn) {
+        PackedInteger pi    = hTarget.getValue();
+        long          count = hArg.getValue();
+
+        if (count > Integer.MAX_VALUE) {
+            return overflow(frame);
+        }
+        return frame.assignValue(iReturn, makeIntLiteral(pi.shr((int) count)));
+    }
+
+    private int opShrAll(Frame frame, IntNHandle hTarget, JavaLong hArg, int iReturn) {
+        PackedInteger pi    = hTarget.getValue();
+        long          count = hArg.getValue();
+
+        if (count > Integer.MAX_VALUE) {
+            return overflow(frame);
+        }
+        return frame.assignValue(iReturn, makeIntLiteral(pi.ushr((int) count)));
+    }
+
+    private int opAnd(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.and(pi2)));
+    }
+
+    private int opOr(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.or(pi2)));
+    }
+
+    private int opXor(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.xor(pi2)));
+    }
+
+    private int opNeg(Frame frame, IntNHandle hTarget, int iReturn) {
+        PackedInteger pi = hTarget.getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi.negate()));
+    }
+
+    private int opCompl(Frame frame, IntNHandle hTarget, int iReturn) {
+        PackedInteger pi = hTarget.getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi.complement()));
+    }
 
     // ----- comparison support --------------------------------------------------------------------
 

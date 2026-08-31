@@ -14,6 +14,7 @@ import org.xvm.asm.constants.DecimalConstant;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OperatorBinding;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.TypeComposition;
@@ -47,6 +48,13 @@ public abstract class BaseDecFP
 
     @Override
     public void initNative() {
+        bindOp(OperatorBinding.Op.ADD, DecimalHandle.class, DecimalHandle.class, this::opAdd);
+        bindOp(OperatorBinding.Op.SUB, DecimalHandle.class, DecimalHandle.class, this::opSub);
+        bindOp(OperatorBinding.Op.MUL, DecimalHandle.class, DecimalHandle.class, this::opMul);
+        bindOp(OperatorBinding.Op.DIV, DecimalHandle.class, DecimalHandle.class, this::opDiv);
+        bindOp(OperatorBinding.Op.MOD, DecimalHandle.class, DecimalHandle.class, this::opMod);
+        bindOp(OperatorBinding.Op.NEG, DecimalHandle.class, this::opNeg);
+
         super.initNative();
 
         markNativeMethod("toInt64",   null, null);
@@ -322,34 +330,37 @@ public abstract class BaseDecFP
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
 
-    @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        Decimal dec1 = ((DecimalHandle) hTarget).getValue();
-        Decimal dec2 = ((DecimalHandle) hArg).getValue();
+
+
+
+
+
+
+
+    private int opAdd(Frame frame, DecimalHandle hTarget, DecimalHandle hArg, int iReturn) {
+        Decimal dec1 = hTarget.getValue();
+        Decimal dec2 = hArg.getValue();
 
         return frame.assignValue(iReturn, makeHandle(dec1.add(dec2)));
     }
 
-    @Override
-    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        Decimal dec1 = ((DecimalHandle) hTarget).getValue();
-        Decimal dec2 = ((DecimalHandle) hArg).getValue();
+    private int opSub(Frame frame, DecimalHandle hTarget, DecimalHandle hArg, int iReturn) {
+        Decimal dec1 = hTarget.getValue();
+        Decimal dec2 = hArg.getValue();
 
         return frame.assignValue(iReturn, makeHandle(dec1.subtract(dec2)));
     }
 
-    @Override
-    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        Decimal dec1 = ((DecimalHandle) hTarget).getValue();
-        Decimal dec2 = ((DecimalHandle) hArg).getValue();
+    private int opMul(Frame frame, DecimalHandle hTarget, DecimalHandle hArg, int iReturn) {
+        Decimal dec1 = hTarget.getValue();
+        Decimal dec2 = hArg.getValue();
 
         return frame.assignValue(iReturn, makeHandle(dec1.multiply(dec2)));
     }
 
-    @Override
-    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        Decimal dec1 = ((DecimalHandle) hTarget).getValue();
-        Decimal dec2 = ((DecimalHandle) hArg).getValue();
+    private int opDiv(Frame frame, DecimalHandle hTarget, DecimalHandle hArg, int iReturn) {
+        Decimal dec1 = hTarget.getValue();
+        Decimal dec2 = hArg.getValue();
 
         if (dec2.getSignum() == 0) {
             return overflow(frame);
@@ -358,10 +369,9 @@ public abstract class BaseDecFP
         return frame.assignValue(iReturn, makeHandle(dec1.divide(dec2)));
     }
 
-    @Override
-    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        Decimal dec1 = ((DecimalHandle) hTarget).getValue();
-        Decimal dec2 = ((DecimalHandle) hArg).getValue();
+    private int opMod(Frame frame, DecimalHandle hTarget, DecimalHandle hArg, int iReturn) {
+        Decimal dec1 = hTarget.getValue();
+        Decimal dec2 = hArg.getValue();
 
         if (dec2.getSignum() <= 0) {
             return dec2.getSignum() == 0
@@ -372,13 +382,11 @@ public abstract class BaseDecFP
         return frame.assignValue(iReturn, makeHandle(dec1.mod(dec2)));
     }
 
-    @Override
-    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn) {
-        Decimal dec = ((DecimalHandle) hTarget).getValue();
+    private int opNeg(Frame frame, DecimalHandle hTarget, int iReturn) {
+        Decimal dec = hTarget.getValue();
 
         return frame.assignValue(iReturn, makeHandle(dec.neg()));
     }
-
 
     // ----- comparison support --------------------------------------------------------------------
 

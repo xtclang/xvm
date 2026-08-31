@@ -17,6 +17,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OperatorBinding;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -55,6 +56,8 @@ public class xString
 
     @Override
     public void initNative() {
+        bindOp(OperatorBinding.Op.ADD, StringHandle.class, ObjectHandle.class, this::opAdd);
+
         markNativeProperty("size");
         markNativeProperty("chars");
 
@@ -96,26 +99,6 @@ public class xString
                 makeHandle(frame, getChars((ArrayHandle) ahVar[0])));
     }
 
-    @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        StringHandle hThis = (StringHandle) hTarget;
-
-        switch (Utils.callToString(frame, hArg)) {
-        case Op.R_NEXT:
-            return frame.assignValue(iReturn, concat(hThis, (StringHandle) frame.popStack()));
-
-        case Op.R_CALL:
-            frame.m_frameNext.addContinuation(frameCaller ->
-                frameCaller.assignValue(iReturn, concat(hThis, (StringHandle) frame.popStack())));
-            return Op.R_CALL;
-
-        case Op.R_EXCEPTION:
-            return Op.R_EXCEPTION;
-
-        default:
-            throw new IllegalStateException();
-        }
-    }
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
@@ -169,6 +152,26 @@ public class xString
         }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+    }
+
+    private int opAdd(Frame frame, StringHandle hTarget, ObjectHandle hArg, int iReturn) {
+        StringHandle hThis = hTarget;
+
+        switch (Utils.callToString(frame, hArg)) {
+        case Op.R_NEXT:
+            return frame.assignValue(iReturn, concat(hThis, (StringHandle) frame.popStack()));
+
+        case Op.R_CALL:
+            frame.m_frameNext.addContinuation(frameCaller ->
+                frameCaller.assignValue(iReturn, concat(hThis, (StringHandle) frame.popStack())));
+            return Op.R_CALL;
+
+        case Op.R_EXCEPTION:
+            return Op.R_EXCEPTION;
+
+        default:
+            throw new IllegalStateException();
+        }
     }
 
     // ----- IndexSupport --------------------------------------------------------------------------

@@ -12,6 +12,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OperatorBinding;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
@@ -43,6 +44,13 @@ public abstract class BaseBinaryFP
 
     @Override
     public void initNative() {
+        bindOp(OperatorBinding.Op.ADD, FloatHandle.class, FloatHandle.class, this::opAdd);
+        bindOp(OperatorBinding.Op.SUB, FloatHandle.class, FloatHandle.class, this::opSub);
+        bindOp(OperatorBinding.Op.MUL, FloatHandle.class, FloatHandle.class, this::opMul);
+        bindOp(OperatorBinding.Op.DIV, FloatHandle.class, FloatHandle.class, this::opDiv);
+        bindOp(OperatorBinding.Op.MOD, FloatHandle.class, FloatHandle.class, this::opMod);
+        bindOp(OperatorBinding.Op.NEG, FloatHandle.class, this::opNeg);
+
         super.initNative();
 
         markNativeMethod("toInt64",   null, null);
@@ -292,34 +300,37 @@ public abstract class BaseBinaryFP
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
 
-    @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        double d1 = ((FloatHandle) hTarget).getValue();
-        double d2 = ((FloatHandle) hArg).getValue();
+
+
+
+
+
+
+
+    private int opAdd(Frame frame, FloatHandle hTarget, FloatHandle hArg, int iReturn) {
+        double d1 = hTarget.getValue();
+        double d2 = hArg.getValue();
 
         return frame.assignValue(iReturn, makeHandle(d1+d2));
     }
 
-    @Override
-    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        double d1 = ((FloatHandle) hTarget).getValue();
-        double d2 = ((FloatHandle) hArg).getValue();
+    private int opSub(Frame frame, FloatHandle hTarget, FloatHandle hArg, int iReturn) {
+        double d1 = hTarget.getValue();
+        double d2 = hArg.getValue();
 
         return frame.assignValue(iReturn, makeHandle(d1-d2));
     }
 
-    @Override
-    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        double d1 = ((FloatHandle) hTarget).getValue();
-        double d2 = ((FloatHandle) hArg).getValue();
+    private int opMul(Frame frame, FloatHandle hTarget, FloatHandle hArg, int iReturn) {
+        double d1 = hTarget.getValue();
+        double d2 = hArg.getValue();
 
         return frame.assignValue(iReturn, makeHandle(d1*d2));
     }
 
-    @Override
-    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        double d1 = ((FloatHandle) hTarget).getValue();
-        double d2 = ((FloatHandle) hArg).getValue();
+    private int opDiv(Frame frame, FloatHandle hTarget, FloatHandle hArg, int iReturn) {
+        double d1 = hTarget.getValue();
+        double d2 = hArg.getValue();
 
         if (d2 == 0.0) {
             return overflow(frame);
@@ -328,10 +339,9 @@ public abstract class BaseBinaryFP
         return frame.assignValue(iReturn, makeHandle(d1/d2));
     }
 
-    @Override
-    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        double d1 = ((FloatHandle) hTarget).getValue();
-        double d2 = ((FloatHandle) hArg).getValue();
+    private int opMod(Frame frame, FloatHandle hTarget, FloatHandle hArg, int iReturn) {
+        double d1 = hTarget.getValue();
+        double d2 = hArg.getValue();
 
         if (d2 == 0.0) {
             return overflow(frame);
@@ -340,13 +350,11 @@ public abstract class BaseBinaryFP
         return frame.assignValue(iReturn, makeHandle(d1%d2));
     }
 
-    @Override
-    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn) {
-        double d = ((FloatHandle) hTarget).getValue();
+    private int opNeg(Frame frame, FloatHandle hTarget, int iReturn) {
+        double d = hTarget.getValue();
 
         return frame.assignValue(iReturn, makeHandle(-d));
     }
-
 
     // ----- comparison support --------------------------------------------------------------------
 

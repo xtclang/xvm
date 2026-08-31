@@ -16,6 +16,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.IntegralValue;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OperatorBinding;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
@@ -44,6 +45,23 @@ public abstract class BaseInt128
 
     @Override
     public void initNative() {
+        bindOp(OperatorBinding.Op.ADD, LongLongHandle.class, LongLongHandle.class, this::opAdd);
+        bindOp(OperatorBinding.Op.SUB, LongLongHandle.class, LongLongHandle.class, this::opSub);
+        bindOp(OperatorBinding.Op.MUL, LongLongHandle.class, LongLongHandle.class, this::opMul);
+        bindOp(OperatorBinding.Op.DIV, LongLongHandle.class, LongLongHandle.class, this::opDiv);
+        bindOp(OperatorBinding.Op.MOD, LongLongHandle.class, LongLongHandle.class, this::opMod);
+        bindOp(OperatorBinding.Op.SHL, LongLongHandle.class, JavaLong.class, this::opShl);
+        bindOp(OperatorBinding.Op.SHR, LongLongHandle.class, JavaLong.class, this::opShr);
+        bindOp(OperatorBinding.Op.SHR_ALL, LongLongHandle.class, JavaLong.class, this::opShrAll);
+        bindOp(OperatorBinding.Op.AND, LongLongHandle.class, LongLongHandle.class, this::opAnd);
+        bindOp(OperatorBinding.Op.OR, LongLongHandle.class, LongLongHandle.class, this::opOr);
+        bindOp(OperatorBinding.Op.XOR, LongLongHandle.class, LongLongHandle.class, this::opXor);
+        bindOp(OperatorBinding.Op.NEG, LongLongHandle.class, this::opNeg);
+        bindOp(OperatorBinding.Op.COMPL, LongLongHandle.class, this::opCompl);
+        bindOp(OperatorBinding.Op.NEXT, LongLongHandle.class, this::opNext);
+        bindOp(OperatorBinding.Op.PREV, LongLongHandle.class, this::opPrev);
+        bindOpToMany(OperatorBinding.Op.DIV_REM, LongLongHandle.class, LongLongHandle.class, this::opDivRem);
+
         super.initNative();
 
         markNativeProperty("leadingZeroCount");
@@ -333,49 +351,43 @@ public abstract class BaseInt128
         return frame.assignValue(iReturn, makeHandle(ll.negateUnchecked()));
     }
 
-    @Override
-    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn) {
-        LongLong ll = ((LongLongHandle) hTarget).getValue();
-        return frame.assignValue(iReturn, makeHandle(ll.negateUnchecked()));
-    }
 
-    @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        LongLong ll2 = ((LongLongHandle) hArg).getValue();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private int opAdd(Frame frame, LongLongHandle hTarget, LongLongHandle hArg, int iReturn) {
+        LongLong ll1 = hTarget.getValue();
+        LongLong ll2 = hArg.getValue();
         return frame.assignValue(iReturn, makeHandle(ll1.addUnchecked(ll2)));
     }
 
-    @Override
-    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        LongLong ll2 = ((LongLongHandle) hArg).getValue();
+    private int opSub(Frame frame, LongLongHandle hTarget, LongLongHandle hArg, int iReturn) {
+        LongLong ll1 = hTarget.getValue();
+        LongLong ll2 = hArg.getValue();
         return frame.assignValue(iReturn, makeHandle(ll1.subUnchecked(ll2)));
     }
 
-    @Override
-    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        LongLong ll2 = ((LongLongHandle) hArg).getValue();
+    private int opMul(Frame frame, LongLongHandle hTarget, LongLongHandle hArg, int iReturn) {
+        LongLong ll1 = hTarget.getValue();
+        LongLong ll2 = hArg.getValue();
         return frame.assignValue(iReturn, makeHandle(ll1.mulUnchecked(ll2)));
     }
 
-    @Override
-    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn) {
-        LongLong ll = ((LongLongHandle) hTarget).getValue();
-        return frame.assignValue(iReturn, makeHandle(ll.subUnchecked(LongLong.ONE)));
-    }
-
-    @Override
-    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn) {
-        LongLong ll = ((LongLongHandle) hTarget).getValue();
-        return frame.assignValue(iReturn, makeHandle(ll.addUnchecked(LongLong.ONE)));
-    }
-
-    @Override
-    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        LongLong ll2 = ((LongLongHandle) hArg).getValue();
+    private int opDiv(Frame frame, LongLongHandle hTarget, LongLongHandle hArg, int iReturn) {
+        LongLong ll1 = hTarget.getValue();
+        LongLong ll2 = hArg.getValue();
 
         LongLong llDiv = f_fSigned
             ? ll1.div(ll2)
@@ -384,10 +396,9 @@ public abstract class BaseInt128
         return frame.assignValue(iReturn, makeHandle(llDiv));
     }
 
-    @Override
-    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        LongLong ll2 = ((LongLongHandle) hArg).getValue();
+    private int opMod(Frame frame, LongLongHandle hTarget, LongLongHandle hArg, int iReturn) {
+        LongLong ll1 = hTarget.getValue();
+        LongLong ll2 = hArg.getValue();
 
         LongLong llMod = f_fSigned
             ? ll1.mod(ll2)
@@ -396,10 +407,76 @@ public abstract class BaseInt128
         return frame.assignValue(iReturn, makeHandle(llMod));
     }
 
-    @Override
-    public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn) {
-        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        LongLong ll2 = ((LongLongHandle) hArg).getValue();
+    private int opShl(Frame frame, LongLongHandle hTarget, JavaLong hArg, int iReturn) {
+        LongLong ll1 = hTarget.getValue();
+        int      c   = (int) hArg.getValue();
+
+        return frame.assignValue(iReturn, makeHandle(ll1.shl(c)));
+    }
+
+    private int opShr(Frame frame, LongLongHandle hTarget, JavaLong hArg, int iReturn) {
+        if (!f_fSigned) {
+            // for unsigned values we perform an unsigned right shift
+            return opShrAll(frame, hTarget, hArg, iReturn);
+        }
+        LongLong ll1 = hTarget.getValue();
+        int      c   = (int) hArg.getValue();
+
+        return frame.assignValue(iReturn, makeHandle(ll1.shr(c)));
+    }
+
+    private int opShrAll(Frame frame, LongLongHandle hTarget, JavaLong hArg, int iReturn) {
+        LongLong ll1 = hTarget.getValue();
+        int      c   = (int) hArg.getValue();
+
+        return frame.assignValue(iReturn, makeHandle(ll1.ushr(c)));
+    }
+
+    private int opAnd(Frame frame, LongLongHandle hTarget, LongLongHandle hArg, int iReturn) {
+        LongLong ll1 = hTarget.getValue();
+        LongLong ll2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeHandle(ll1.and(ll2)));
+    }
+
+    private int opOr(Frame frame, LongLongHandle hTarget, LongLongHandle hArg, int iReturn) {
+        LongLong ll1 = hTarget.getValue();
+        LongLong ll2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeHandle(ll1.or(ll2)));
+    }
+
+    private int opXor(Frame frame, LongLongHandle hTarget, LongLongHandle hArg, int iReturn) {
+        LongLong ll1 = hTarget.getValue();
+        LongLong ll2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeHandle(ll1.xor(ll2)));
+    }
+
+    private int opNeg(Frame frame, LongLongHandle hTarget, int iReturn) {
+        LongLong ll = hTarget.getValue();
+        return frame.assignValue(iReturn, makeHandle(ll.negateUnchecked()));
+    }
+
+    private int opCompl(Frame frame, LongLongHandle hTarget, int iReturn) {
+        LongLong ll = hTarget.getValue();
+
+        return frame.assignValue(iReturn, makeHandle(ll.complement()));
+    }
+
+    private int opNext(Frame frame, LongLongHandle hTarget, int iReturn) {
+        LongLong ll = hTarget.getValue();
+        return frame.assignValue(iReturn, makeHandle(ll.addUnchecked(LongLong.ONE)));
+    }
+
+    private int opPrev(Frame frame, LongLongHandle hTarget, int iReturn) {
+        LongLong ll = hTarget.getValue();
+        return frame.assignValue(iReturn, makeHandle(ll.subUnchecked(LongLong.ONE)));
+    }
+
+    private int opDivRem(Frame frame, LongLongHandle hTarget, LongLongHandle hArg, int[] aiReturn) {
+        LongLong ll1 = hTarget.getValue();
+        LongLong ll2 = hArg.getValue();
 
         LongLong[] allQuoRem;
         if (f_fSigned) {
@@ -411,65 +488,6 @@ public abstract class BaseInt128
         LongLong llDiv = allQuoRem[0];
         LongLong llRem = allQuoRem[1];
         return frame.assignValues(aiReturn, makeHandle(llDiv), makeHandle(llRem));
-    }
-
-    @Override
-    public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        int      c   = (int) ((JavaLong) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeHandle(ll1.shl(c)));
-    }
-
-    @Override
-    public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        if (!f_fSigned) {
-            // for unsigned values we perform an unsigned right shift
-            return invokeShrAll(frame, hTarget, hArg, iReturn);
-        }
-        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        int      c   = (int) ((JavaLong) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeHandle(ll1.shr(c)));
-    }
-
-    @Override
-    public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        int      c   = (int) ((JavaLong) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeHandle(ll1.ushr(c)));
-    }
-
-    @Override
-    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        LongLong ll2 = ((LongLongHandle) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeHandle(ll1.and(ll2)));
-    }
-
-    @Override
-    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        LongLong ll2 = ((LongLongHandle) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeHandle(ll1.or(ll2)));
-    }
-
-    @Override
-    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        LongLong ll2 = ((LongLongHandle) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeHandle(ll1.xor(ll2)));
-    }
-
-    @Override
-    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn) {
-        LongLong ll = ((LongLongHandle) hTarget).getValue();
-
-        return frame.assignValue(iReturn, makeHandle(ll.complement()));
     }
 
     // ----- comparison support --------------------------------------------------------------------

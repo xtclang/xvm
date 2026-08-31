@@ -14,6 +14,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OperatorBinding;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xConst;
@@ -38,6 +39,11 @@ public class xFPLiteral
 
     @Override
     public void initNative() {
+        bindOp(OperatorBinding.Op.ADD, FPNHandle.class, FPNHandle.class, this::opAdd);
+        bindOp(OperatorBinding.Op.SUB, FPNHandle.class, FPNHandle.class, this::opSub);
+        bindOp(OperatorBinding.Op.MUL, FPNHandle.class, FPNHandle.class, this::opMul);
+        bindOp(OperatorBinding.Op.DIV, FPNHandle.class, FPNHandle.class, this::opDiv);
+
         markNativeMethod("construct", STRING, VOID);
 
         markNativeMethod("toString", VOID, STRING);
@@ -91,37 +97,9 @@ public class xFPLiteral
         return frame.raiseException("not supported field: " + idProp.getName());
     }
 
-    @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        BigDecimal dec1 = ((FPNHandle) hTarget).getValue();
-        BigDecimal dec2 = ((FPNHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeFPLiteral(dec1.add(dec2)));
-    }
 
-    @Override
-    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        BigDecimal dec1 = ((FPNHandle) hTarget).getValue();
-        BigDecimal dec2 = ((FPNHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeFPLiteral(dec1.subtract(dec2)));
-    }
-
-    @Override
-    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        BigDecimal dec1 = ((FPNHandle) hTarget).getValue();
-        BigDecimal dec2 = ((FPNHandle) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeFPLiteral(dec1.multiply(dec2)));
-    }
-
-    @Override
-    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        BigDecimal dec1 = ((FPNHandle) hTarget).getValue();
-        BigDecimal dec2 = ((FPNHandle) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeFPLiteral(dec1.divide(dec2)));
-    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
@@ -223,4 +201,32 @@ public class xFPLiteral
         protected BigDecimal    m_decValue;
         protected StringHandle  m_hText; // (optional) cached text handle
     }
+    private int opAdd(Frame frame, FPNHandle hTarget, FPNHandle hArg, int iReturn) {
+        BigDecimal dec1 = hTarget.getValue();
+        BigDecimal dec2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeFPLiteral(dec1.add(dec2)));
+    }
+
+    private int opSub(Frame frame, FPNHandle hTarget, FPNHandle hArg, int iReturn) {
+        BigDecimal dec1 = hTarget.getValue();
+        BigDecimal dec2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeFPLiteral(dec1.subtract(dec2)));
+    }
+
+    private int opMul(Frame frame, FPNHandle hTarget, FPNHandle hArg, int iReturn) {
+        BigDecimal dec1 = hTarget.getValue();
+        BigDecimal dec2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeFPLiteral(dec1.multiply(dec2)));
+    }
+
+    private int opDiv(Frame frame, FPNHandle hTarget, FPNHandle hArg, int iReturn) {
+        BigDecimal dec1 = hTarget.getValue();
+        BigDecimal dec2 = hArg.getValue();
+
+        return frame.assignValue(iReturn, makeFPLiteral(dec1.divide(dec2)));
+    }
+
 }

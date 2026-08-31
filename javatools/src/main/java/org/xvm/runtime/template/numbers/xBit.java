@@ -15,6 +15,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OperatorBinding;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
@@ -47,6 +48,11 @@ public class xBit
 
     @Override
     public void initNative() {
+        bindOp(OperatorBinding.Op.AND, JavaLong.class, JavaLong.class, this::opAnd);
+        bindOp(OperatorBinding.Op.OR, JavaLong.class, JavaLong.class, this::opOr);
+        bindOp(OperatorBinding.Op.XOR, JavaLong.class, JavaLong.class, this::opXor);
+        bindOp(OperatorBinding.Op.COMPL, JavaLong.class, this::opCompl);
+
         // Preserve the old eager Bit handle cache warmup, but keep the handles owned by this
         // template's container instead of publishing them in mutable process globals.
         zeroHandle();
@@ -144,33 +150,9 @@ public class xBit
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }
 
-    @Override
-    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return frame.assignValue(iReturn,
-            makeHandle(frame,
-                    ((JavaLong) hTarget).getValue() != 0 & ((JavaLong) hArg).getValue() != 0));
-    }
 
-    @Override
-    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return frame.assignValue(iReturn,
-            makeHandle(frame,
-                    ((JavaLong) hTarget).getValue() != 0 | ((JavaLong) hArg).getValue() != 0));
-    }
 
-    @Override
-    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return frame.assignValue(iReturn,
-            makeHandle(frame,
-                    ((JavaLong) hTarget).getValue() != 0 ^ ((JavaLong) hArg).getValue() != 0));
-    }
 
-    @Override
-    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn) {
-        long l = ((JavaLong) hTarget).getValue();
-
-        return frame.assignValue(iReturn, makeHandle(frame, l == 0));
-    }
 
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
@@ -231,4 +213,28 @@ public class xBit
             Lazy.ofBound(owner -> new JavaLong(owner.getCanonicalClass(), 0));
     private final Lazy.Bound<xBit, JavaLong> f_one =
             Lazy.ofBound(owner -> new JavaLong(owner.getCanonicalClass(), 1));
+    private int opAnd(Frame frame, JavaLong hTarget, JavaLong hArg, int iReturn) {
+        return frame.assignValue(iReturn,
+            makeHandle(frame,
+                    hTarget.getValue() != 0 & hArg.getValue() != 0));
+    }
+
+    private int opOr(Frame frame, JavaLong hTarget, JavaLong hArg, int iReturn) {
+        return frame.assignValue(iReturn,
+            makeHandle(frame,
+                    hTarget.getValue() != 0 | hArg.getValue() != 0));
+    }
+
+    private int opXor(Frame frame, JavaLong hTarget, JavaLong hArg, int iReturn) {
+        return frame.assignValue(iReturn,
+            makeHandle(frame,
+                    hTarget.getValue() != 0 ^ hArg.getValue() != 0));
+    }
+
+    private int opCompl(Frame frame, JavaLong hTarget, int iReturn) {
+        long l = hTarget.getValue();
+
+        return frame.assignValue(iReturn, makeHandle(frame, l == 0));
+    }
+
 }

@@ -15,6 +15,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OperatorBinding;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -43,6 +44,23 @@ public abstract class xUnconstrainedInteger
 
     @Override
     public void initNative() {
+        bindOp(OperatorBinding.Op.ADD, IntNHandle.class, IntNHandle.class, this::opAdd);
+        bindOp(OperatorBinding.Op.SUB, IntNHandle.class, IntNHandle.class, this::opSub);
+        bindOp(OperatorBinding.Op.MUL, IntNHandle.class, IntNHandle.class, this::opMul);
+        bindOp(OperatorBinding.Op.DIV, IntNHandle.class, IntNHandle.class, this::opDiv);
+        bindOp(OperatorBinding.Op.MOD, IntNHandle.class, IntNHandle.class, this::opMod);
+        bindOp(OperatorBinding.Op.SHL, IntNHandle.class, IntNHandle.class, this::opShl);
+        bindOp(OperatorBinding.Op.SHR, IntNHandle.class, IntNHandle.class, this::opShr);
+        bindOp(OperatorBinding.Op.SHR_ALL, IntNHandle.class, IntNHandle.class, this::opShrAll);
+        bindOp(OperatorBinding.Op.AND, IntNHandle.class, IntNHandle.class, this::opAnd);
+        bindOp(OperatorBinding.Op.OR, IntNHandle.class, IntNHandle.class, this::opOr);
+        bindOp(OperatorBinding.Op.XOR, IntNHandle.class, IntNHandle.class, this::opXor);
+        bindOp(OperatorBinding.Op.NEG, IntNHandle.class, this::opNeg);
+        bindOp(OperatorBinding.Op.COMPL, IntNHandle.class, this::opCompl);
+        bindOp(OperatorBinding.Op.NEXT, IntNHandle.class, this::opNext);
+        bindOp(OperatorBinding.Op.PREV, IntNHandle.class, this::opPrev);
+        bindOpToMany(OperatorBinding.Op.DIV_REM, IntNHandle.class, IntNHandle.class, this::opDivRem);
+
         super.initNative();
 
         markNativeProperty("leadingZeroCount");
@@ -324,66 +342,64 @@ public abstract class xUnconstrainedInteger
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
+        PackedInteger pi = ((IntNHandle) hTarget).getValue();
+
+        return frame.assignValue(iReturn, xString.makeHandle(frame, pi.toString()));
+    }
+
+
+    private int opAdd(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
         PackedInteger pir = pi1.add(pi2);
 
         return frame.assignValue(iReturn, makeInt(pir));
     }
 
-    @Override
-    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
+    private int opSub(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
         PackedInteger pir = pi1.sub(pi2);
 
         return frame.assignValue(iReturn, makeInt(pir));
     }
 
-    @Override
-    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
+    private int opMul(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
         PackedInteger pir = pi1.mul(pi2);
 
         return frame.assignValue(iReturn, makeInt(pir));
     }
 
-    @Override
-    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn) {
-        PackedInteger pi = ((IntNHandle) hTarget).getValue();
-
-        return frame.assignValue(iReturn, makeInt(pi.negate()));
-    }
-
-    @Override
-    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn) {
-        PackedInteger pi = ((IntNHandle) hTarget).getValue();
-
-        return frame.assignValue(iReturn, makeInt(pi.previous()));
-    }
-
-    @Override
-    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn) {
-        PackedInteger pi = ((IntNHandle) hTarget).getValue();
-
-        return frame.assignValue(iReturn, makeInt(pi.next()));
-    }
-
-    @Override
-    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
+    private int opDiv(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.div(pi2)));
     }
 
-    @Override
-    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
+    private int opMod(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
 
         PackedInteger piMod = pi1.mod(pi2);
         if (piMod.compareTo(PackedInteger.ZERO) < 0) {
@@ -393,81 +409,83 @@ public abstract class xUnconstrainedInteger
         return frame.assignValue(iReturn, makeInt(piMod));
     }
 
-    @Override
-    public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
+    private int opShl(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.shl(pi2)));
     }
 
-    @Override
-    public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
+    private int opShr(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
         if (!f_fSigned) {
             // for unsigned values we perform an unsigned right shift
-            return invokeShrAll(frame, hTarget, hArg, iReturn);
+            return opShrAll(frame, hTarget, hArg, iReturn);
         }
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.shr(pi2)));
     }
 
-    @Override
-    public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
+    private int opShrAll(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.ushr(pi2)));
     }
 
-    @Override
-    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
+    private int opAnd(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.and(pi2)));
     }
 
-    @Override
-    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
+    private int opOr(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.or(pi2)));
     }
 
-    @Override
-    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
+    private int opXor(Frame frame, IntNHandle hTarget, IntNHandle hArg, int iReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.xor(pi2)));
     }
 
-    @Override
-    public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn) {
-        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
-        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
+    private int opNeg(Frame frame, IntNHandle hTarget, int iReturn) {
+        PackedInteger pi = hTarget.getValue();
 
-        PackedInteger[] aQuoRem = pi1.divrem(pi2);
-        return frame.assignValues(aiReturn, makeInt(aQuoRem[0]), makeInt(aQuoRem[1]));
+        return frame.assignValue(iReturn, makeInt(pi.negate()));
     }
 
-    @Override
-    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn) {
-        PackedInteger pi = ((IntNHandle) hTarget).getValue();
+    private int opCompl(Frame frame, IntNHandle hTarget, int iReturn) {
+        PackedInteger pi = hTarget.getValue();
 
         return frame.assignValue(iReturn, makeInt(pi.complement()));
     }
 
-    @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
-        PackedInteger pi = ((IntNHandle) hTarget).getValue();
+    private int opNext(Frame frame, IntNHandle hTarget, int iReturn) {
+        PackedInteger pi = hTarget.getValue();
 
-        return frame.assignValue(iReturn, xString.makeHandle(frame, pi.toString()));
+        return frame.assignValue(iReturn, makeInt(pi.next()));
     }
 
+    private int opPrev(Frame frame, IntNHandle hTarget, int iReturn) {
+        PackedInteger pi = hTarget.getValue();
+
+        return frame.assignValue(iReturn, makeInt(pi.previous()));
+    }
+
+    private int opDivRem(Frame frame, IntNHandle hTarget, IntNHandle hArg, int[] aiReturn) {
+        PackedInteger pi1 = hTarget.getValue();
+        PackedInteger pi2 = hArg.getValue();
+
+        PackedInteger[] aQuoRem = pi1.divrem(pi2);
+        return frame.assignValues(aiReturn, makeInt(aQuoRem[0]), makeInt(aQuoRem[1]));
+    }
 
     // ----- comparison support --------------------------------------------------------------------
 
