@@ -124,6 +124,32 @@ public interface ErrorListener {
     }
 
     /**
+     * Obtain a listener for the remainder of a computation that has become incomplete.
+     *
+     * <p>Once a type or resolution step is known to have failed, the errors that follow are
+     * consequences of that failure rather than independent problems, and surfacing them buries the
+     * one the user needs to see. Cascade suppression is therefore correct and deliberate.
+     *
+     * <p>The way it was expressed before this method existed was to overwrite the caller's listener
+     * with {@link #BLACKHOLE}, which has four problems: it is redundant with the completeness flag
+     * that is invariably set on the same line; it mutates a parameter, so the decision is invisible
+     * at the call site; it is irreversible, so a genuinely unrelated later error is dropped too;
+     * and it destroys the errors rather than setting them aside, so nothing can afterwards ask what
+     * was suppressed - which is exactly what one wants when diagnosing why the step failed.
+     *
+     * <p>This returns a branch instead. A branch collects, and only {@link #merge} promotes, so
+     * declining to merge is already "record but do not surface" - the semantics wanted here, using
+     * the mechanism the compiler already uses everywhere else. The caller keeps the reference and
+     * may consult {@link #hasSeriousErrors} on it; dropping it discards the errors, exactly as
+     * {@code BLACKHOLE} did, but by choice rather than by construction.
+     *
+     * @return a listener that collects subsequent errors without surfacing them
+     */
+    default ErrorListener suppressCascade() {
+        return branch(null);
+    }
+
+    /**
      * Merge all errors collected by this ErrorListener into the one it was branched out of.
      *
      * @return the ErrorListener this one was {@link #branch branched out} of
