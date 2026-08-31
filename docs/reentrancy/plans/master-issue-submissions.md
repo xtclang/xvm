@@ -30,6 +30,57 @@ Scope decision: `plans/github-issue-breakdown.md` lists 19 Category A rows, but
 the last row is already extracted as PR #539. This file prepares the critical master issues still intended for manual filing
 (originally 18; rows 19 and 20 were graduated 2026-08-25 from the audit waves).
 
+## Filing Index
+
+One row per issue, with what an agent needs to file or PR it on its own. **Independent** means the
+change touches nothing another row touches and can be filed today; where a row does depend on
+another, the dependency is named and must land first.
+
+Status is as of this file's last update; check the PR before re-filing.
+
+| # | Issue | Status | Depends on | Scope |
+| --- | --- | --- | --- | --- |
+| 1 | jsondb rollback failure retention | unfiled | independent | `lib_jsondb`, one catch |
+| 2 | Module load preserves corrupt-file cause | unfiled | independent | `ModuleRepository` |
+| 3 | Method op assembly failure is terminal | unfiled | independent | `MethodStructure` |
+| 4 | Compiler codegen failure is terminal | unfiled | independent | compiler backend |
+| 5 | Raw file submit observes queued write failures | unfiled | **row 8** (worker-failure channel) | `RawOSFileChannel` |
+| 6 | `Future.and` uses both inputs | unfiled | independent | `xFuture` |
+| 7 | JIT/bridge reflection failures not swallowed | unfiled | independent | `javatools_jitbridge` |
+| 8 | MainContainer startup preserves causes | unfiled | independent | `MainContainer` |
+| 9 | Alarm callback registry is timer-thread safe | unfiled | independent | `xRTClock` |
+| 10 | Native callback registration rolls back | unfiled | independent | `NativeContainer` |
+| 11 | Hash/equality contracts (`Register`, `VersionTree`, `MethodBody`) | unfiled | independent | `asm` |
+| 12 | Handle view lifecycle state shared or refused | unfiled | independent | `ObjectHandle` |
+| 13 | `HandleConstant` does not serve live handles cross-container | unfiled | independent | `HandleConstant` |
+| 14 | Reflection `Method.invoke` does not alias caller tuple | unfiled | independent | `xRTMethod` |
+| 15 | Short-hand property override copies super `Parameter` | unfiled | independent | `asm` |
+| 16 | `Contribution` body copies re-own outer component | unfiled | independent | `asm` |
+| 17 | `MethodStructure.Source` copies re-own outer method | unfiled | independent | `asm` |
+| 18 | `FullyBoundHandle.chain()` appends | unfiled | independent | `xRTFunction` |
+| 19-26 | (see the sections below; each states its own scope) | unfiled | independent unless stated | varies |
+| 27 | DirRepository scan-cache data race | **merged** (#547) | - | - |
+| 28 | MethodStructure native/code state publication | unfiled | independent | `MethodStructure` |
+| 29 | `FileStructure.getErrorListener()` NPE | **merged** | - | - |
+| 30 | `Version.isSameAs()` indexes the wrong array | PR #550 | independent | one word + test |
+| 31 | `Op.toString()` throws on 16 opcodes | PR #556 | independent | 16 case labels + test |
+| 32 | `Format.TimeZone` rejected by the pool | PR #559 | independent | 7 sites + `TimeZone.x` |
+| 33 | `AstNode.fieldsForNames` dead guard / null holes | **merged** (#558) | - | - |
+| 34 | `IntersectionTypeConstant.mergeChildren` wrong guard | PR #557 | independent | one word + test |
+| 35 | String/Type index a long by its low 32 bits | PR #560 | independent | 2 methods + `IndexSupport.checkedIndex` |
+| 36 | `deleteAll(range)` wrong elements / crash | PR #563 | independent | 1 offset + 1 missing override |
+
+### Filing a row as an issue or PR
+
+Every row above is a behaviour defect with a reproduction in its section below. To file one:
+
+1. Take the section's **red proof** - each has either a named failing test or a runnable snippet.
+2. Branch from `master`, not from a campaign branch. None of these needs the typing work.
+3. Add the test first and confirm it fails, then the fix, then confirm it passes. Rows 30-36 all
+   carry a test written this way already.
+4. Where the section names a "Not affected" case, keep it in the PR description - several of these
+   sit next to code that looks identical and is correct.
+
 ## Reviewer Framing
 
 These issues are not requests to adopt a house style. Each one is a concrete
