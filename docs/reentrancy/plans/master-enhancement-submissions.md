@@ -79,6 +79,7 @@ surface graduate into individual rows on the bug list.
 | E22 | **The real one**: `ObjectHandle` as calling convention — 1,439 casts (50%) | multi-PR programme; needs a design decision | High | `ClassTemplate`'s 37-method protocol, `ObjectHandle` | (this file) |
 | E23 | Bind natives to typed handlers instead of String dispatch (744 labels) | framework is 1 PR; then per-template | Medium | `ClassTemplate`, every template | (this file) |
 | E24 | `null` as an absent argument (60% of 392 sites); asking callers to restate resolved data | one small record + binder change | Low | `ClassTemplate.markNativeMethod` | (this file) |
+| E25 | Generify the delegate hierarchy — 134 casts, BLOCKED on splitting `xRTDelegate`'s dual role | split first, then mechanical | Medium | `xRTDelegate` and 20 implementations | (this file) |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -1445,6 +1446,70 @@ Related and separable: `ObjectHandle.proceed` has a base body of
 `throw new IllegalStateException("Not deferred")` and is guarded by `instanceof DeferredCallHandle`
 at 20 sites — a partial method, which is a union hiding in a hierarchy. `compareTo` is the only
 other one on `ObjectHandle`. Small, self-contained, and independent of everything above.
+
+---
+
+## E25 — Generify the delegate hierarchy (attempted, blocked, and why)
+
+The best remaining yield-per-effort target by measurement, and it does not work yet. Recording the
+attempt so the next person does not repeat it.
+
+### The target
+
+`xRTDelegate` declares a nine-method storage protocol - `extractArrayValueImpl`,
+`assignArrayValueImpl`, `createCopyImpl`, `insertElementImpl`, `deleteElementImpl`,
+`deleteRangeImpl`, `checkWrite`, `checkWriteInPlace`, `createCopy` - each taking a
+`DelegateHandle`. Twenty implementations across the hierarchy open by casting it to the handle type
+they actually store: **134 `(XHandle) hTarget` casts**, about 5% of every cast in `javatools`, in
+one bounded hierarchy.
+
+Unlike `ClassTemplate` (E22), the typed path exists. The `Impl` methods are `protected` and called
+only from `xRTDelegate`'s own entry points, which already do the conversion once:
+
+```java
+public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
+    DelegateHandle hDelegate = (DelegateHandle) hTarget;      // once, here
+    ...
+    : extractArrayValueImpl(frame, hDelegate, lIndex, iReturn);
+}
+```
+
+So `xRTDelegate<H extends DelegateHandle>` with a `Class<H>` supplied by each subclass would let the
+entry points hand the implementations an already-typed handle, with one checked `Class.cast` and no
+unchecked casts anywhere. Only **15** external references would need an explicit `<?>`.
+
+### What blocks it
+
+**`xRTDelegate` is both the abstract base and the concrete Object-array template.** Its default
+implementations construct a `GenericArrayDelegate`:
+
+```java
+return new GenericArrayDelegate(hDelegate.getComposition(), ahValue, mutability);
+```
+
+Under `xRTDelegate<H>` that does not compile, because the default cannot know `H` is
+`GenericArrayDelegate` - and for every subclass it is not. `NativeTemplates.delegate()` returns
+`xRTDelegate` as a live template, so the concrete role is real and cannot simply be removed.
+
+**The prerequisite is a split**: an abstract generic base holding the protocol, and a concrete
+`xRTGenericDelegate extends xRTDelegate<GenericArrayDelegate>` holding today's defaults, with the
+template registration pointed at the latter. That is a larger change than the generification itself,
+and it should land first and separately.
+
+**A second, smaller obstacle** worth knowing: every handle class is a static nested class of its own
+template - `DelegateHandle` inside `xRTDelegate`, `CharArrayHandle` inside `xRTCharDelegate` - so
+each class names its own nested class in its own declaration. That does compile, but only qualified:
+`class xRTCharDelegate extends xRTDelegate<xRTCharDelegate.CharArrayHandle>`. Verified working;
+noting it because the unqualified form fails with a bare "cannot find symbol" that reads like the
+class is missing.
+
+### Sequence
+
+1. Split the concrete Object-array delegate out of `xRTDelegate`, leaving the base abstract.
+2. Then generify, which is mechanical: 10 constructors, 9 protocol signatures, 20 overrides,
+   15 wildcard sites.
+
+Attempting step 2 alone gets roughly two thirds of the way and then stalls on the defaults.
 
 ---
 
