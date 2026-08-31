@@ -126,7 +126,7 @@ mid-way through.
 | E19 | Retire String dispatch for native methods | large | **E23** is the built version of this | do not file both |
 | E20 | `Format` vs the class hierarchy | small (step 1) | step 1 independent; steps 2-3 need step 1 | **do not start at the audit**; the section says why |
 | E21 | Type `getDefiningConstant()` as the identity/pseudo union | medium | independent | deletes a 33-site workaround layer |
-| E22 | `ObjectHandle` as calling convention (the census) | - | analysis; **needs a design decision** before any PR | option C is prototyped and measured; see E23 |
+| E22 | `ObjectHandle` as calling convention; operator protocol | framework 1 PR, then per-template | framework first, then templates in parallel | **resolved**: option C, swept - 115 overrides to 22 |
 | E23 | Bind natives to typed handlers | framework 1 PR, then per-template | framework first, then each template independently | **the framework PR must land first**; templates are then parallel |
 | E24 | `null` as an absent argument | small | independent | can land before or after E23 |
 | E25 | Generify the delegate hierarchy | medium | **the `xRTDelegate` split**, and that needs `@NativeTemplate` | see the ordering below |
@@ -1308,6 +1308,44 @@ site from surrounding context, which is exactly how the `COMPILER-145` failure a
 
 ---
 
+## E21 — Type `getDefiningConstant()` as the identity/pseudo union
+
+`TypeConstant.getDefiningConstant()` returns `Constant`, though its own javadoc says it always
+produces an identity or a pseudo constant. Because the return type does not say so,
+`TerminalTypeConstant` had grown a private `definingConstant()` / `asDefining()` layer that
+re-asserted it at **33 call sites**, and `TypeConstant` carried another copy of the same check
+inline.
+
+**The fix.** Declare the union as the return type. `DefiningConstant` is a sealed interface
+permitting exactly `IdentityConstant` and `PseudoConstant`, which is what the method actually
+returns, so both re-derivation layers delete.
+
+Two producers read their constant out of a `Constant`-typed field and cannot prove the narrowing
+statically; they funnel through one checked `DefiningConstant.of()`. The reverse direction needs no
+cast at all - an exhaustive switch over the union's two branches, both of which extend `Constant`:
+
+```java
+default Constant asConstant() {
+    return switch (this) {
+        case IdentityConstant constId -> constId;
+        case PseudoConstant   constId -> constId;
+    };
+}
+```
+
+**What it does not do.** It does not remove the 53 casts on `getDefiningConstant()` results. Those
+cast to *subtypes* of the union, and only pattern-matching removes them. The win is the deleted
+workaround layer and an API that states its own invariant - measured honestly, the total cast count
+moved by one.
+
+**Soundness.** The invariant is `TerminalTypeConstant`'s own constructor guard, `Format.isTypeable()`:
+every format it admits is implemented by a class in one of the two branches. Verified empirically
+before relying on it, by instrumenting both producers and running a full `xdk:installDist` plus the
+unit suite with the probe in place - nothing fired.
+
+**Width:** 17 files. **Independent.** **Port difficulty:** medium, and it is mostly mechanical once
+the return type changes; the compiler finds every site.
+
 ## E22 — The actual architecture: `ObjectHandle` is the calling convention
 
 **Why the earlier items kept under-delivering, stated plainly.** Narrowing a producer's return type
@@ -1363,15 +1401,26 @@ B therefore trades ~322 *checked* casts for 122 *unchecked* ones. That is not ob
 unchecked casts are the more dangerous kind. My earlier one-line prediction that a generic template
 "fails identically" was too strong - it does not fail, it trades - but it is not free either.
 
-### What this needs
+### Resolved: option C, prototyped and swept
 
-A decision, not a mechanical sweep. A is safer and proven but reaches 322 of 591 and moves
-operations onto handles; B reaches more bodies but pushes unchecked casts into the dispatch core.
-Either is a multi-PR programme, and the shared-handle 269 are out of reach for both without
-splitting handle classes per template - a third, larger change.
+The decision was taken and the work done, so this section is no longer a question.
 
-**Do not start either as a "cleanup".** The measurement above is the deliverable; the choice is an
-architectural one for the maintainer.
+**C - bind a typed handler per operator, per template** - was chosen because it is the only one of
+the three that adds no unchecked casts and no raw types, and because the per-template table makes
+the shared-handle case a non-issue: the binding belongs to the template, not to the handle class,
+so `JavaLong` backing a dozen integer types stops mattering.
+
+The objection to C was that it replaces a plain virtual call with a table lookup on the VM's hottest
+path. **Measured, that objection is wrong**: megamorphic, with varying data, a virtual call plus two
+casts costs 4.02-4.31 ns/op and the bound table 4.04-4.18 ns/op - within noise.
+
+Swept across the tree: **115 operator overrides down to 22**, and the whole-tree cast total from
+2,879 to 2,706. The 22 that remain are deliberate - `xRTType`'s operands are polymorphic, and the
+`xChecked*` family is unreachable code, naming Ecstasy types that exist nowhere.
+
+**To file this on master:** the seam and the `OperatorBinding` types are one PR that changes no
+behaviour, since an unbound operator falls through to exactly today's path. Each template after that
+is independent. Do the framework first.
 
 ---
 
