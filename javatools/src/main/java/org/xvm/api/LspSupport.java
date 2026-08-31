@@ -2,8 +2,7 @@ package org.xvm.api;
 
 
 import java.io.File;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 
 import java.time.Instant;
@@ -15,13 +14,35 @@ import java.util.Objects;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.FileStructure;
+import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
+import org.xvm.compiler.BuildRepository;
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.InstantRepository;
+import org.xvm.compiler.Parser;
+import org.xvm.compiler.Source;
+
+import org.xvm.compiler.Token.Id;
+
+import org.xvm.compiler.ast.Statement;
+import org.xvm.compiler.ast.StatementBlock;
+import org.xvm.compiler.ast.TypeCompositionStatement;
 
 import org.xvm.javajit.JitConnector;
+
+import org.xvm.tool.Console;
+import org.xvm.tool.Launcher.LauncherException;
+import org.xvm.tool.LauncherOptions.CompilerOptions;
+import org.xvm.tool.ModuleInfo.Node;
+
+import static org.xvm.util.Handy.readFileChars;
+
+import static org.xvm.util.Severity.ERROR;
 
 
 /**
@@ -50,6 +71,18 @@ public class LspSupport {
     }
 
     private static final Object LOCK = new Object();
+
+    private static final Console SILENT_CONSOLE = new Console() {
+        @Override
+        public String out(Object value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public String err(Object value) {
+            return String.valueOf(value);
+        }
+    };
 
     private boolean          configured;
     private ModuleRepository cfgRepo;
@@ -179,8 +212,18 @@ public class LspSupport {
      */
     public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
         verifyConfigured();
-        // TODO GG
-        return null;
+        try {
+            LspCompiler compiler = new LspCompiler(source, input, cfgRepo, errs);
+            return compiler.process() == 0
+                    ? compiler.getModule()
+                    : null;
+        } catch (LauncherException e) {
+            if (errs != null) {
+                errs.log(ERROR, ERR_INTERNAL,
+                        new Object[] {e, "Compilation failed"}, null);
+            }
+            return null;
+        }
     }
 
     /**
@@ -194,10 +237,127 @@ public class LspSupport {
      *
      * @return true if the compilation succeeded and the result was placed into the output
      */
-    public boolean compile(File file, ModuleRepository input, ModuleRepository output, ErrorListener errs) {
-        verifyConfigured();
-        // TODO GG
-        return false;
+    public boolean compile(File file, ModuleRepository input, ModuleRepository output,
+                           ErrorListener errs) {
+        ModuleStructure module;
+        try {
+            module = compile(new String(readFileChars(file)), input, errs);
+        } catch (IOException e) {
+            if (errs != null) {
+                errs.log(ERROR, ERR_INTERNAL,
+                        new Object[] {e, "Unable to read module " + file}, null);
+            }
+            return false;
+        }
+
+        if (module == null) {
+            assert errs == null || errs.hasSeriousErrors();
+            return false;
+        }
+
+        if (output != null) {
+            try {
+                output.storeModule(module);
+            } catch (IOException e) {
+                if (errs != null) {
+                    errs.log(ERROR, ERR_INTERNAL,
+                            new Object[] {e, "Unable to store module " + module.getName()}, module);
+                }
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Adapter that supplies the source and repositories to the standard compiler pipeline and
+     * captures its single compiled module instead of writing it to disk.
+     */
+    private static class LspCompiler
+            extends org.xvm.tool.Compiler {
+        private final String           source;
+        private final ModuleRepository inRepo;
+        private final ModuleRepository coreRepo;
+        private       ModuleStructure  module;
+
+        protected LspCompiler(String source, ModuleRepository input, ModuleRepository core,
+                              ErrorListener errs) {
+            super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
+
+            this.source   = source;
+            this.inRepo   = input;
+            this.coreRepo = core;
+        }
+
+        @Override
+        protected int process() {
+            ModuleRepository repoLib = ensureLibraryRepo();
+            checkErrors("repository setup");
+
+            prelinkSystemLibraries(repoLib);
+            checkErrors("system library linking");
+
+            StatementBlock block;
+            try {
+                block = new Parser(new Source(source), this).parseSource();
+            } catch (CompilerException e) {
+                return 1;
+            }
+            if (checkErrors("source parsing") != 0) {
+                return 1;
+            }
+
+            Statement stmt = block.getStatements().getLast();
+            if (!(stmt instanceof TypeCompositionStatement stmtModule) ||
+                    stmtModule.getCategory().getId() != Id.MODULE) {
+                log(ERROR, "In-memory source does not contain a module");
+                return checkErrors("source parsing");
+            }
+
+            Compiler      compiler = new Compiler(stmtModule, this);
+            FileStructure struct   = compiler.generateInitialFileStructure();
+            if (struct == null || checkErrors("module creation") != 0) {
+                return 1;
+            }
+
+            try {
+                repoLib.storeModule(struct.getModule());
+            } catch (IOException e) {
+                log(ERROR, e, "I/O exception storing module: {}", struct.getModule().getName());
+                return 1;
+            }
+
+            int result = super.compile(List.of(compiler), repoLib);
+            if (result == 0) {
+                this.module = struct.getModule();
+            }
+            return result;
+        }
+
+        @Override
+        protected int compile(List<Compiler> compilers, ModuleRepository repoLib) {
+            throw new IllegalStateException("This method must not be called");
+        }
+
+        @Override
+        protected ModuleRepository configureLibraryRepo(List<File> ignore) {
+            BuildRepository build = new BuildRepository();
+            return inRepo == null || inRepo == coreRepo
+                    ? new LinkedRepository(true, build, coreRepo)
+                    : new LinkedRepository(true, build, inRepo, coreRepo);
+        }
+
+        @Override
+        protected int emitModules(List<Node> allNodes, ModuleRepository ignore) {
+            throw new IllegalStateException("This method must not be called");
+        }
+
+        /**
+         * @return the result of the compilation
+         */
+        protected ModuleStructure getModule() {
+            return module;
+        }
     }
 
     /**
