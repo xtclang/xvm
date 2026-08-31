@@ -315,8 +315,9 @@ public abstract class LongBasedDelegate
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        LongArrayHandle h1 = (LongArrayHandle) hValue1;
-        LongArrayHandle h2 = (LongArrayHandle) hValue2;
+        if (!(hValue1 instanceof LongArrayHandle h1) || !(hValue2 instanceof LongArrayHandle h2)) {
+            return false;
+        }
 
         if (h1 == h2) {
             return true;

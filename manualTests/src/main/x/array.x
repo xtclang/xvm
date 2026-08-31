@@ -6,6 +6,7 @@ module TestArray {
         testStrBuf();
         testConstElement();
         testConstSlice();
+        testSliceIdentity();
 
         testArrayList();
         testArrayListAdd();
@@ -66,6 +67,79 @@ module TestArray {
 
         String[] cruel2 = ["hello", "cruel", "world", "!"] [2..1];
         console.print("array[2..1]=" + cruel2);
+    }
+
+    void testSliceIdentity() {
+        console.print("\n** testSliceIdentity()");
+
+        Int[] nums = [1, 2, 3, 4, 5];
+        Int[] s1   = nums[1..3];
+        Int[] s2   = nums[1..3];
+        Int[] s3   = nums[0..2];
+
+        // Comparing two slices by reference must answer rather than raise. A slice delegate owns no
+        // element storage, and used to inherit the object-array implementation of compareIdentity,
+        // which opened by casting the handle to the object-array one - so this raised a run-time
+        // error instead of comparing.
+        assert &s1 == &s2;
+        assert &s1 != &s3;
+
+        console.print($"&nums[1..3] == &nums[1..3]: {&s1 == &s2}");
+        console.print($"&nums[1..3] == &nums[0..2]: {&s1 == &s3}");
+
+        // Same for a view, which likewise owns no element storage.
+        UInt8[] bytes = [1, 2, 3, 4];
+        Bit[]   v1    = bytes.asBitArray();
+        Bit[]   v2    = bytes.asBitArray();
+
+        assert &v1 == &v2;
+
+        console.print($"&bytes.asBitArray() == &bytes.asBitArray(): {&v1 == &v2}");
+
+        // The reverse direction dispatches to the CONCRETE delegate, which resolves the template
+        // from the first handle only and used to cast the second one too. Each element type below
+        // is backed by a different delegate, and every one had the same defect, so each needs its
+        // own case: array-vs-slice and slice-vs-array must both answer rather than raise.
+        Char[]    chars   = ['a', 'b', 'c', 'd', 'e'];
+        String[]  strs    = ["a", "b", "c", "d", "e"];
+        Float64[] floats  = [1.0, 2.0, 3.0, 4.0, 5.0];
+        Int8[]    int8s   = [1, 2, 3, 4, 5];
+        Int[]     ints    = [1, 2, 3, 4, 5];
+        Int128[]  int128s = [1, 2, 3, 4, 5];
+        Object[]  objs    = ["a", 2, 3.0, 4, 5];
+
+        Char[]    charsSlice   = chars[1..3];
+        String[]  strsSlice    = strs[1..3];
+        Float64[] floatsSlice  = floats[1..3];
+        Int8[]    int8sSlice   = int8s[1..3];
+        Int[]     intsSlice    = ints[1..3];
+        Int128[]  int128sSlice = int128s[1..3];
+        Object[]  objsSlice    = objs[1..3];
+
+        assert &chars   != &charsSlice;
+        assert &strs    != &strsSlice;
+        assert &floats  != &floatsSlice;
+        assert &int8s   != &int8sSlice;
+        assert &ints    != &intsSlice;
+        assert &int128s != &int128sSlice;
+        assert &objs    != &objsSlice;
+
+        assert &charsSlice   != &chars;
+        assert &strsSlice    != &strs;
+        assert &floatsSlice  != &floats;
+        assert &int8sSlice   != &int8s;
+        assert &intsSlice    != &ints;
+        assert &int128sSlice != &int128s;
+        assert &objsSlice    != &objs;
+
+        // one line of actual data rather than a bare "it worked": each of these is a different
+        // delegate, and each used to raise instead of answering
+        console.print($|&chars=={&chars == &charsSlice} &strs=={&strs == &strsSlice} \
+                       |&floats=={&floats == &floatsSlice} &int8s=={&int8s == &int8sSlice} \
+                       |&ints=={&ints == &intsSlice} &int128s=={&int128s == &int128sSlice} \
+                       |&objs=={&objs == &objsSlice}
+                      );
+
     }
 
     void testArrayList() {

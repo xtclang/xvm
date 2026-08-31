@@ -224,8 +224,9 @@ public class xRTFloat64Delegate
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        DoubleArrayHandle h1 = (DoubleArrayHandle) hValue1;
-        DoubleArrayHandle h2 = (DoubleArrayHandle) hValue2;
+        if (!(hValue1 instanceof DoubleArrayHandle h1) || !(hValue2 instanceof DoubleArrayHandle h2)) {
+            return false;
+        }
 
         if (h1 == h2) {
             return true;

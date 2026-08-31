@@ -96,4 +96,26 @@ public abstract class xRTView
                     : hSource;
         }
     }
+
+    /**
+     * A view's identity is the identity of the delegate it projects.
+     */
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
+        if (hValue1 == hValue2) {
+            return true;
+        }
+
+        if (!(hValue1 instanceof ViewHandle h1) || !(hValue2 instanceof ViewHandle h2)) {
+            return false;
+        }
+
+        DelegateHandle hSource1 = h1.getSource();
+        DelegateHandle hSource2 = h2.getSource();
+
+        return h1.getMutability() == h2.getMutability()
+            && h1.m_cSize         == h2.m_cSize
+            && hSource1.getTemplate() == hSource2.getTemplate()
+            && hSource1.getTemplate().compareIdentity(hSource1, hSource2);
+    }
 }

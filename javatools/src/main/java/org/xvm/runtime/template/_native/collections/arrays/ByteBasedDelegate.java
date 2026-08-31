@@ -332,8 +332,9 @@ public abstract class ByteBasedDelegate
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        ByteArrayHandle h1 = (ByteArrayHandle) hValue1;
-        ByteArrayHandle h2 = (ByteArrayHandle) hValue2;
+        if (!(hValue1 instanceof ByteArrayHandle h1) || !(hValue2 instanceof ByteArrayHandle h2)) {
+            return false;
+        }
 
         if (h1 == h2) {
             return true;

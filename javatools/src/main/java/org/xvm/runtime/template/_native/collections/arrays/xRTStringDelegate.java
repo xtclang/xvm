@@ -193,8 +193,9 @@ public class xRTStringDelegate
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        StringArrayHandle h1 = (StringArrayHandle) hValue1;
-        StringArrayHandle h2 = (StringArrayHandle) hValue2;
+        if (!(hValue1 instanceof StringArrayHandle h1) || !(hValue2 instanceof StringArrayHandle h2)) {
+            return false;
+        }
 
         if (h1 == h2) {
             return true;
