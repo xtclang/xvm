@@ -153,7 +153,7 @@ public final class ElvisExpression
                 ? null
                 : Op.selectCommonType(type1.removeNullable(), null, errs);
         if (typeRequired == null) {
-            if (type2Req != null && !expr2.testFit(ctx, type2Req, true, null).isFit()) {
+            if (type2Req != null && !expr2.testFit(ctx, type2Req, true, ErrorListener.BLACKHOLE).isFit()) {
                 // there are no requirements from outside and the second expression is not going to
                 // validate against the first expression type. Compute the narrowest type that expr2
                 // has a chance of validating - a union of type1 and the implicit type for expr2
@@ -163,7 +163,7 @@ public final class ElvisExpression
                 }
             }
         } else {
-            if (type2Req == null || !expr2.testFit(ctx, type2Req, false, null).isFit()) {
+            if (type2Req == null || !expr2.testFit(ctx, type2Req, false, ErrorListener.BLACKHOLE).isFit()) {
                 type2Req = typeRequired;
             }
         }

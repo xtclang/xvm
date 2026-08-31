@@ -380,7 +380,7 @@ public final class ForEachStatement
                     case ITERABLE -> pool.typeIterable();
                 };
 
-                if (exprRVal.testFit(ctx, typeRVal, false, null).isFit()) {
+                if (exprRVal.testFit(ctx, typeRVal, false, ErrorListener.BLACKHOLE).isFit()) {
                     atypeLVals = fValid ? exprLVal.getTypes() : null;
                     break;
                 }
@@ -408,7 +408,7 @@ public final class ForEachStatement
                     typeRValExact = pool.ensureParameterizedTypeConstant(typeRVal, atypeLVals);
                 }
 
-                if (exprRVal.testFit(ctx, typeRValExact, false, null).isFit()) {
+                if (exprRVal.testFit(ctx, typeRValExact, false, ErrorListener.BLACKHOLE).isFit()) {
                     typeRVal = typeRValExact;
                 } else {
                     // the specific container type didn't fit; proceed with the basic type,

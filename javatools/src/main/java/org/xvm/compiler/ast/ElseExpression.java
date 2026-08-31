@@ -100,7 +100,7 @@ public final class ElseExpression
         TypeConstant[] atype2Req = selectCommonTypes(atype1, new TypeConstant[atype1.length]);
 
         if (atypeRequired != null && atypeRequired.length > 0 &&
-                (atype2Req == null || !expr2.testFitMulti(ctx, atype2Req, false, null).isFit())) {
+                (atype2Req == null || !expr2.testFitMulti(ctx, atype2Req, false, ErrorListener.BLACKHOLE).isFit())) {
             atype2Req = atypeRequired;
         }
 

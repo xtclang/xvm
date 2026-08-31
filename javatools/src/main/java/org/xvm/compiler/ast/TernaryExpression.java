@@ -174,11 +174,11 @@ public final class TernaryExpression
 
                 // try to figure out which side is more flexible
                 TypeFit fitThen = cElse > 0
-                        ? exprThen.testFitMulti(ctxThen, atypeElse, false, null)
+                        ? exprThen.testFitMulti(ctxThen, atypeElse, false, ErrorListener.BLACKHOLE)
                         : TypeFit.NoFit;
 
                 TypeFit fitElse = cThen > 0
-                        ? exprElse.testFitMulti(ctxElse, atypeThen, false, null)
+                        ? exprElse.testFitMulti(ctxElse, atypeThen, false, ErrorListener.BLACKHOLE)
                         : TypeFit.NoFit;
 
                 use = computeUsage(fitThen, fitElse);
@@ -190,11 +190,11 @@ public final class TernaryExpression
                 TypeConstant[] atypeThenR = resolveConstraints(atypeThen);
                 TypeConstant[] atypeElseR = resolveConstraints(atypeElse);
                 if (atypeElseR != null) {
-                    fitThen = exprThen.testFitMulti(ctxThen, atypeElseR, false, null);
+                    fitThen = exprThen.testFitMulti(ctxThen, atypeElseR, false, ErrorListener.BLACKHOLE);
                 }
 
                 if (atypeThenR != null) {
-                    fitElse = exprElse.testFitMulti(ctxElse, atypeThenR, false, null);
+                    fitElse = exprElse.testFitMulti(ctxElse, atypeThenR, false, ErrorListener.BLACKHOLE);
                 }
 
                 use = computeUsage(fitThen, fitElse);
@@ -222,8 +222,8 @@ public final class TernaryExpression
 
                 if (atypeThenR != null && atypeElseR != null) {
                     TypeConstant[] atypeCommonR = selectCommonTypes(atypeThenR, atypeElseR);
-                    if (exprThen.testFitMulti(ctxThen, atypeCommonR, false, null).isFit() &&
-                        exprElse.testFitMulti(ctxElse, atypeCommonR, false, null).isFit() ) {
+                    if (exprThen.testFitMulti(ctxThen, atypeCommonR, false, ErrorListener.BLACKHOLE).isFit() &&
+                        exprElse.testFitMulti(ctxElse, atypeCommonR, false, ErrorListener.BLACKHOLE).isFit() ) {
                         atypeThen = atypeElse = atypeCommonR;
                         break;
                     }
@@ -595,12 +595,12 @@ public final class TernaryExpression
             TypeConstant typeFalse = pool().typeFalse();
 
             // test "? (True, result) : False" first
-            if (exprElse.testFit(ctx, typeFalse, fExhaustive, null).isFit()) {
+            if (exprElse.testFit(ctx, typeFalse, fExhaustive, ErrorListener.BLACKHOLE).isFit()) {
                 return m_plan = Plan.ElseIsFalse;
             }
 
             // test "? False : (True, result)" next
-            if (exprThen.testFit(ctx, typeFalse, fExhaustive, null).isFit()) {
+            if (exprThen.testFit(ctx, typeFalse, fExhaustive, ErrorListener.BLACKHOLE).isFit()) {
                 return m_plan = Plan.ThenIsFalse;
             }
         }

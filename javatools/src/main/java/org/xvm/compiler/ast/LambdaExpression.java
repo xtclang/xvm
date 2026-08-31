@@ -339,9 +339,6 @@ public final class LambdaExpression
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
-        }
 
         if (!ensurePrepared(errs)) {
             return TypeFit.NoFit;

@@ -107,9 +107,9 @@ public final class TemplateExpression
         for (int i = 0; i < cExprs; ++i) {
             Expression     exprOld = exprs.get(i);
             TypeConstant[] atypeExpr;
-            if (exprOld.testFit(ctx, T_STRING, false, null).isFit()) {
+            if (exprOld.testFit(ctx, T_STRING, false, ErrorListener.BLACKHOLE).isFit()) {
                 atypeExpr = A_STRING;
-            } else if (exprOld.testFit(ctx, T_OBJECT, false, null).isFit()) {
+            } else if (exprOld.testFit(ctx, T_OBJECT, false, ErrorListener.BLACKHOLE).isFit()) {
                 atypeExpr = A_OBJECT;
             } else {
                 // void expression (e.g. a lambda-style expr explicitly appending to "$"); note that

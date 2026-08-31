@@ -189,7 +189,9 @@ public final class NewExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        return calculateTargetType(ctx, null);
+        // no listener overload: this is an implicit-type query, so errors are discarded by
+        // choice rather than by a null that happens to mean the same thing
+        return calculateTargetType(ctx, ErrorListener.BLACKHOLE);
     }
 
     private TypeConstant calculateTargetType(Context ctx, ErrorListener errs) {
@@ -197,9 +199,6 @@ public final class NewExpression
             return getType();
         }
 
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
-        }
 
         TypeConstant typeTarget = null;
         if (body == null) {

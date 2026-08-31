@@ -631,10 +631,10 @@ public final class RelOpExpression
 
         String sMethod = getDefaultMethodName();
         String sOp     = operator.getId().TEXT;
-        if (expr1.testFit(ctx, typeRequired, false, null).isFit()) {
+        if (expr1.testFit(ctx, typeRequired, false, ErrorListener.BLACKHOLE).isFit()) {
             Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
             for (MethodConstant idMethod : setOps) {
-                if (expr2.testFit(ctx, idMethod.getRawParams().get(0), false, null).isFit()) {
+                if (expr2.testFit(ctx, idMethod.getRawParams().get(0), false, ErrorListener.BLACKHOLE).isFit()) {
                     TypeConstant typeReturn = idMethod.getRawReturns().get(0);
                     if (typeReturn.containsAutoNarrowing(false)) {
                         typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
@@ -650,10 +650,10 @@ public final class RelOpExpression
 
         if (typeRequired.isParamsSpecified()) {
             for (TypeConstant typeParam : typeRequired.getParamTypesArray()) {
-                if (expr1.testFit(ctx, typeParam, false, null).isFit()) {
+                if (expr1.testFit(ctx, typeParam, false, ErrorListener.BLACKHOLE).isFit()) {
                     Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
                     for (MethodConstant idMethod : setOps) {
-                        if (expr2.testFit(ctx, idMethod.getRawParams().get(0), false, null).isFit()) {
+                        if (expr2.testFit(ctx, idMethod.getRawParams().get(0), false, ErrorListener.BLACKHOLE).isFit()) {
                             TypeConstant typeReturn = idMethod.getRawReturns().get(0);
                             if (typeReturn.containsAutoNarrowing(false)) {
                                 typeReturn = typeReturn.resolveAutoNarrowing(pool(), false,
@@ -707,7 +707,7 @@ public final class RelOpExpression
                 }
 
                 TypeConstant typeParam = idMethod.getRawParams().get(0);
-                TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, null);
+                TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, ErrorListener.BLACKHOLE);
                 if (!fit.isFit()) {
                     fit = expr2.testFitExhaustive(ctx, typeParam, null);
                 }
