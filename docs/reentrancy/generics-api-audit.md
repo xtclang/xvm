@@ -443,6 +443,12 @@ underlying maps.
 
 ### Must Fix: Native Template Loading Uses Raw Class
 
+**RESOLVED 2026-08-31.** `NativeContainer` now declares
+`final Map<String, Class<? extends ClassTemplate>> mapTemplateClasses`, and the scan resolves each
+class with `Class.forName(sClass).asSubclass(ClassTemplate.class)`. `@NativeTemplate` lets a
+template declare the Ecstasy class it implements instead of having it derived from its file name,
+which is what made the `xRTDelegate` split expressible.
+
 Examples:
 
 - `javatools/src/main/java/org/xvm/runtime/NativeContainer.java:183` creates
@@ -1067,31 +1073,19 @@ Measured, not estimated. Numbers from `javac -Xlint:all` with the warning cap li
 - **Suppressions 14 to 6**: the self-typed builder in `LauncherOptions` gained a `self()` hook
   (4 gone); `JumpVal_N`'s arrays of generic types became lists (4 gone); one 80-line suppression
   narrowed to a one-line factory. The remaining 6 are documented in place.
+- **`xRTDelegate` split completed (2026-08-31)**: the remaining eight storage methods moved, and
+  the base now declares all twelve abstract. All eight dereferenced `m_ahValue`, so none was
+  shared behaviour. The earlier note here claimed five were "derived" and that `createDelegate`
+  was overloaded; both were wrong, inferred from method names without reading the bodies. The
+  real blocker was visibility - four are `public`, and a scripted pass had declared all eight
+  `protected abstract`, which Java forbids on an override. The split named the five overrides
+  `xRTView` and `xRTSlicingDelegate` were missing, one of which was crashing: master bug 37,
+  fixed for master in PR #564.
 - **Lint ratchet**: fifteen already-clean categories made fatal, verified by inserting a deprecated
   call and watching the build fail.
 
 ### Must audit
 
-- **The other eight `xRTDelegate` methods.** Re-audited 2026-08-31 by reading every body; the
-  previous entry here was wrong on two counts and is corrected below.
-  - **All eight are storage-specific.** Every one dereferences `GenericArrayDelegate.m_ahValue`.
-    The earlier claim that five were "derived" operations was inferred from names
-    (`callEquals`, `compareIdentity`, `fill` *sound* generic) without reading them. They are not
-    derived; all eight move to `xRTGenericDelegate` exactly like the first four.
-  - **`createDelegate` is not overloaded.** The base declares exactly one 5-arg form.
-  - **The real blocker was visibility.** Four are `public` (`createDelegate`, `callEquals`,
-    `compareIdentity`, `fill`) and four are `protected`. The earlier scripted attempt declared all
-    eight `protected abstract`; Java forbids reducing visibility on an override, so every concrete
-    subclass then failed to override its own method. That cascade was a bad `sed`, not a design
-    problem. Preserve the modifier per method and it disappears.
-  - **Fallout is exactly 2 classes x 5 methods.** `xRTChar/Float64/StringDelegate` already override
-    all eight. `xRTView` and `xRTSlicingDelegate` override only `getPropertyCapacity`,
-    `setPropertyCapacity` and `fill`, so each needs the other five.
-  - **Those five inherited bodies are unreachable-or-broken today**, which is the whole point of
-    making them abstract: a view/slice handle is not a `GenericArrayDelegate`, so each inherited
-    body is an unconditional `ClassCastException`. Four are unreachable (Ecstasy's fixed-size guard
-    rejects `insert`/`delete` first; `xArray` answers `callEquals` itself). **`compareIdentity` is
-    reachable and crashes** - filed as master bug 37.
 - **The 6 remaining `@SuppressWarnings`.** Two in `MarkAndSweepGcSpace` are the `ArrayList` idiom
   and correct; `ConstantPool.register` keeps method scope deliberately for four casts of one
   invariant. The other three are one-line declarations. None is known-wrong; all should be
