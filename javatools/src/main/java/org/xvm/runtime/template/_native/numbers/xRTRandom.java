@@ -13,6 +13,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.IntegralValue;
 import org.xvm.runtime.NativeType;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -28,7 +29,6 @@ import org.xvm.runtime.template.collections.xBitArray;
 import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
-import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.xBit;
 import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xInt8;
@@ -63,6 +63,13 @@ public class xRTRandom
     private static final NativeType<JavaLong> INT_TYPE =
             NativeType.of("numbers.Int64", JavaLong.class);
 
+    /**
+     * The same {@code numbers.Int64} declaration, typed by what its handles SHARE rather than by a
+     * handle class, for {@code int(Int max)} - whose bound may arrive in either representation.
+     */
+    private static final NativeType<IntegralValue> INT_VALUE =
+            NativeType.ofShared("numbers.Int64", IntegralValue.class);
+
     @Override
     public void initNative() {
         String[] BIT       = new String[] {"numbers.Bit"};
@@ -85,7 +92,8 @@ public class xRTRandom
                 (frame, hRandom, hSize, iReturn) -> bits(frame, hRandom, hSize, iReturn));
         markNativeMethod1("bytes", SELF, INT_TYPE, BYTEARRAY,
                 (frame, hRandom, hSize, iReturn) -> bytes(frame, hRandom, hSize, iReturn));
-        markNativeMethod("int"    , INT      , INT      );
+        markNativeMethod1("int", SELF, INT_VALUE, INT,
+                (frame, hRandom, hMax, iReturn) -> invokeInt(frame, hRandom, hMax, iReturn));
         markNativeMethod("int8"   , VOID     , INT8     );
         markNativeMethod("int16"  , VOID     , INT16    );
         markNativeMethod("int32"  , VOID     , INT32    );
@@ -104,16 +112,6 @@ public class xRTRandom
     @Override
     public TypeConstant getCanonicalType() {
         return pool().ensureEcstasyTypeConstant("numbers.Random");
-    }
-
-    @Override
-    public int invokeNative1(Frame frame, MethodStructure method,
-                             ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        switch (method.getName()) {
-        case "int":
-            return invokeInt(frame, hTarget, hArg, iReturn);
-        }
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
     }
 
     @Override
@@ -260,32 +258,28 @@ public class xRTRandom
                 xByteArray.makeByteArrayHandle(frame.container(), ab, Mutability.Constant));
     }
 
-    protected int invokeInt(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        boolean  fSmall = false;
-        long     lMax   = 0;
-        LongLong llMax  = null;
-
-        if (hArg instanceof JavaLong hL) {
-            fSmall = true;
-            lMax   = hL.getValue();
-        } else {
-            llMax = ((LongLongHandle) hArg).getValue();
-            if (llMax.isSmall(true)) {
-                fSmall = true;
-                lMax   = llMax.getLowValue();
-            } else {
-                throw new IllegalStateException();
-            }
+    /**
+     * Native {@code Int int(Int max)}.
+     *
+     * <p>The bound is declared {@code Int}, which has two Java representations, so this used to ask
+     * which one arrived - {@code instanceof JavaLong}, else cast to {@code LongLongHandle} - and
+     * carried a {@code fSmall} flag that both branches set and nothing ever read. Declaring the
+     * parameter as {@link IntegralValue} lets it ask the value a question instead.</p>
+     */
+    private int invokeInt(Frame frame, RandomHandle hRandom, IntegralValue hMax, int iReturn) {
+        if (!hMax.fitsLong(true)) {
+            return frame.raiseException(xException.illegalArgument(frame,
+                    "Exclusive maximum exceeds 64 bits"));
         }
 
-        Random rnd = rnd(hTarget);
-
+        long lMax = hMax.longValue();
         if (lMax <= 0) {
             return frame.raiseException(xException.illegalArgument(frame,
                     "Illegal exclusive maximum (" + lMax +"); maximum must be > 0"));
         }
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(frame, computeRandom(rnd, lMax)));
+        return frame.assignValue(iReturn,
+                xInt64.makeHandle(frame, computeRandom(rnd(hRandom), lMax)));
     }
 
     /**

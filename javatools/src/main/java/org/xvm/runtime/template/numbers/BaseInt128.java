@@ -14,6 +14,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.IntegralValue;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
@@ -549,7 +550,8 @@ public abstract class BaseInt128
     }
 
     public static class LongLongHandle
-            extends ObjectHandle {
+            extends ObjectHandle
+            implements IntegralValue {
         protected LongLong m_llValue;
 
         public LongLongHandle(TypeComposition clazz, LongLong ll) {
@@ -559,6 +561,16 @@ public abstract class BaseInt128
 
         public LongLong getValue() {
             return m_llValue;
+        }
+
+        @Override
+        public boolean fitsLong(boolean fSigned) {
+            return m_llValue.isSmall(fSigned);
+        }
+
+        @Override
+        public long longValue() {
+            return m_llValue.getLowValue();
         }
 
         @Override

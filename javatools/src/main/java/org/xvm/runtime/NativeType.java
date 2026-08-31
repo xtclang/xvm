@@ -17,13 +17,34 @@ package org.xvm.runtime;
  *
  * @param <H>  the handle class representing this Ecstasy type
  */
-public record NativeType<H extends ObjectHandle>(String typeName, Class<H> handleClass) {
+public record NativeType<H>(String typeName, Class<H> handleClass) {
     /**
      * @param typeName     the Ecstasy type name, as it appears in {@code markNativeMethod}
      * @param handleClass  the handle class representing that type
      */
     public static <H extends ObjectHandle> NativeType<H> of(String typeName, Class<H> handleClass) {
         return new NativeType<>(typeName, handleClass);
+    }
+
+    /**
+     * Declare a type whose handles share an interface rather than a class.
+     *
+     * <p>An Ecstasy type does not always have a single Java representation. {@code Int} arrives as
+     * a {@code JavaLong} or a {@code LongLongHandle} depending on magnitude, so no handle CLASS
+     * describes it - but {@link IntegralValue}, which both implement, does. Binding against that
+     * gives the native body a compile-time type and lets it ask the value a question instead of
+     * testing which class arrived.</p>
+     *
+     * <p>Separate from {@link #of} because it gives up the guarantee that the type argument is an
+     * {@link ObjectHandle}: the caller asserts instead that every handle valid for this Ecstasy
+     * type implements the given interface. That assertion is the whole content of the declaration,
+     * so it should be conspicuous where it is made.</p>
+     *
+     * @param typeName    the Ecstasy type name
+     * @param sharedType  the interface every handle for that type implements
+     */
+    public static <H> NativeType<H> ofShared(String typeName, Class<H> sharedType) {
+        return new NativeType<>(typeName, sharedType);
     }
 
     /**

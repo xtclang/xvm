@@ -2062,7 +2062,7 @@ public abstract class ClassTemplate
      * @param asRetType  the return types, in the existing string form
      * @param handler    the typed implementation
      */
-    protected <T extends ObjectHandle, A extends ObjectHandle> void markNativeMethod1(
+    protected <T extends ObjectHandle, A> void markNativeMethod1(
             String sName, NativeType<T> selfType, NativeType<A> argType, String[] asRetType,
             NativeMethod.One<T, A> handler) {
         MethodStructure method = markNativeMethod(sName, argType.asParamTypes(), asRetType);
@@ -2302,7 +2302,7 @@ public abstract class ClassTemplate
      * @param asRetType  the return types, in the existing string form
      * @param handler    the typed implementation
      */
-    protected <T extends ObjectHandle, A extends ObjectHandle, B extends ObjectHandle>
+    protected <T extends ObjectHandle, A, B>
             void markNativeMethod2(String sName, NativeType<T> selfType, NativeType<A> argType1,
                                    NativeType<B> argType2, String[] asRetType,
                                    NativeMethod.Two<T, A, B> handler) {
@@ -2321,7 +2321,7 @@ public abstract class ClassTemplate
      * @param asRetType  the return types, in the existing string form
      * @param handler    the typed implementation
      */
-    protected <T extends ObjectHandle, A extends ObjectHandle, B extends ObjectHandle>
+    protected <T extends ObjectHandle, A, B>
             void markNativeMethod2NN(String sName, NativeType<T> selfType, NativeType<A> argType1,
                                      NativeType<B> argType2, String[] asRetType,
                                      NativeMethod.TwoToMany<T, A, B> handler) {

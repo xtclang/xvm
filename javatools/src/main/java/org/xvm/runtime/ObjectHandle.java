@@ -1034,7 +1034,8 @@ public abstract class ObjectHandle
      * A handle for any object that fits in a long.
      */
     public static class JavaLong
-            extends ObjectHandle {
+            extends ObjectHandle
+            implements IntegralValue {
         protected long m_lValue;
 
         public JavaLong(TypeComposition clazz, long lValue) {
@@ -1048,6 +1049,16 @@ public abstract class ObjectHandle
         }
 
         public long getValue() {
+            return m_lValue;
+        }
+
+        @Override
+        public boolean fitsLong(boolean fSigned) {
+            return true;
+        }
+
+        @Override
+        public long longValue() {
             return m_lValue;
         }
 

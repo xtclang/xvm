@@ -26,7 +26,7 @@ public final class NativeMethod {
      * @param <A>  the argument's handle type
      */
     @FunctionalInterface
-    public interface One<T extends ObjectHandle, A extends ObjectHandle> {
+    public interface One<T extends ObjectHandle, A> {
         int invoke(Frame frame, T hTarget, A hArg, int iReturn);
     }
 
@@ -46,7 +46,7 @@ public final class NativeMethod {
      *
      * <p>Package-private because only {@link ClassTemplate} binds and dispatches these.</p>
      */
-    record Bound1<T extends ObjectHandle, A extends ObjectHandle>(
+    record Bound1<T extends ObjectHandle, A>(
             NativeType<T> self, NativeType<A> arg, One<T, A> handler) {
         int dispatch(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
             return handler.invoke(frame, self.cast(hTarget), arg.cast(hArg), iReturn);
@@ -78,7 +78,7 @@ public final class NativeMethod {
      * @param <B>  the second argument's handle type
      */
     @FunctionalInterface
-    public interface Two<T extends ObjectHandle, A extends ObjectHandle, B extends ObjectHandle> {
+    public interface Two<T extends ObjectHandle, A, B> {
         int invoke(Frame frame, T hTarget, A hArg1, B hArg2, int iReturn);
     }
 
@@ -90,7 +90,7 @@ public final class NativeMethod {
      * @param <B>  the second argument's handle type
      */
     @FunctionalInterface
-    public interface TwoToMany<T extends ObjectHandle, A extends ObjectHandle, B extends ObjectHandle> {
+    public interface TwoToMany<T extends ObjectHandle, A, B> {
         int invoke(Frame frame, T hTarget, A hArg1, B hArg2, int[] aiReturn);
     }
 
@@ -118,7 +118,7 @@ public final class NativeMethod {
     }
 
     /** Bind a two-argument native. */
-    static <T extends ObjectHandle, A extends ObjectHandle, B extends ObjectHandle> BoundN bind(
+    static <T extends ObjectHandle, A, B> BoundN bind(
             NativeType<T> self, NativeType<A> arg1, NativeType<B> arg2, Two<T, A, B> handler) {
         return (frame, hTarget, ahArg, iReturn) ->
                 handler.invoke(frame, self.cast(hTarget), arg1.cast(ahArg[0]), arg2.cast(ahArg[1]),
@@ -126,7 +126,7 @@ public final class NativeMethod {
     }
 
     /** Bind a two-argument native that produces several return values. */
-    static <T extends ObjectHandle, A extends ObjectHandle, B extends ObjectHandle> BoundNN bindNN(
+    static <T extends ObjectHandle, A, B> BoundNN bindNN(
             NativeType<T> self, NativeType<A> arg1, NativeType<B> arg2, TwoToMany<T, A, B> handler) {
         return (frame, hTarget, ahArg, aiReturn) ->
                 handler.invoke(frame, self.cast(hTarget), arg1.cast(ahArg[0]), arg2.cast(ahArg[1]),
