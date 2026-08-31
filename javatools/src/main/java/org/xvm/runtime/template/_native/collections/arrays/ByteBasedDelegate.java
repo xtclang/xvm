@@ -322,8 +322,12 @@ public abstract class ByteBasedDelegate<H extends ByteBasedDelegate.ByteArrayHan
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        ByteArrayHandle h1 = (ByteArrayHandle) hValue1;
-        ByteArrayHandle h2 = (ByteArrayHandle) hValue2;
+        // Arrays of the same element type can be backed by different delegates - a slice or a
+        // view is not a ByteArrayHandle - and either side may be one. Casting instead of
+        // testing raised a ClassCastException into the running program; see master bug 37.
+        if (!(hValue1 instanceof ByteArrayHandle h1) || !(hValue2 instanceof ByteArrayHandle h2)) {
+            return false;
+        }
 
         if (h1 == h2) {
             return true;

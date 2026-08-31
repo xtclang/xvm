@@ -2020,3 +2020,133 @@ and each conversion is a handful of lines.
 There is no behavioural change to assert, so the proof is the compiler: after step 2,
 `context.setOpInfo(this, CHAIN, clazz)` where `clazz` is a `TypeComposition` must fail to compile.
 Worth adding as a negative test in the same style as the existing audit examples.
+
+## E28 — `compareIdentity` is a binary method wearing a unary signature
+
+**Depends on:** nothing. Independently implementable. Closely related to master bugs 37 and 38.
+
+### The complaint, stated precisely
+
+```java
+// ClassTemplate
+public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+```
+
+Every delegate implements this by casting **both** arguments to its own handle type:
+
+```java
+CharArrayHandle h1 = (CharArrayHandle) hValue1;
+CharArrayHandle h2 = (CharArrayHandle) hValue2;
+```
+
+This signature promises to accept any two handles and then throws `ClassCastException` for most
+pairs. That is not a typing accident - it is a **partial function with a total signature**, and it
+produced master bugs 37 and 38.
+
+### Why generics cannot fix this, honestly
+
+The instinct is `compareIdentity(H h1, H h2)` on `xRTDelegate<H>`. It does not work, and it is worth
+recording why so nobody re-attempts it:
+
+The only caller is `xRef.CompareReferents`, which holds two `ObjectHandle`s and obtains the template
+from the *first* one:
+
+```java
+hArray1.getDelegate().getTemplate().compareIdentity(hArray1.getDelegate(), hArray2.getDelegate());
+```
+
+There is no static relationship between "the template derived from handle 1" and "the type of
+handle 2". Expressing that needs a dependent type - "these two values have the same runtime type" -
+which Java has no way to state. Any `H` written here is bound by handle 1 alone, and handle 2 is
+still an unrelated `DelegateHandle`. This is the classic **binary method problem**, and it is
+genuinely not solvable by parameterizing the receiver.
+
+So the runtime test cannot be removed. What can be removed is the *lie*.
+
+### What is achievable, and worth doing
+
+Make the operation total, and move it to the value that knows its own type:
+
+```java
+// DelegateHandle
+public boolean isIdenticalTo(DelegateHandle that);
+
+// CharArrayHandle
+@Override
+public boolean isIdenticalTo(DelegateHandle that) {
+    return that instanceof CharArrayHandle other
+        && Arrays.equals(m_achValue, other.m_achValue);
+}
+```
+
+Three things improve, none of them cosmetic:
+
+1. **The signature stops lying.** `isIdenticalTo` returns a `boolean` for every argument. There is
+   no input for which it throws, so there is no bug 37 to find.
+2. **The dispatch is the language's, not a hand-rolled one.** Today the receiver is chosen by
+   `getTemplate()` on handle 1 and the "type check" is a cast. As a virtual method on the handle,
+   the receiver is chosen by the JVM and the check is an `instanceof` the compiler can see.
+3. **It is where the data is.** The handles hold the storage (`m_achValue`, `m_abValue`,
+   `m_alValue`); the template holds none. Asking the template about the handle's contents is
+   already backwards - see E29 for the same inversion in `ByteView`.
+
+The `instanceof` remains, and that is the honest end state: one checked test, in the one place the
+concrete type is known, instead of two unchecked casts in a method that should never have accepted
+those arguments.
+
+### Migration
+
+`ClassTemplate.compareIdentity` stays (other templates use it) and, for delegates, forwards:
+
+```java
+// xRTDelegate
+@Override
+public final boolean compareIdentity(ObjectHandle h1, ObjectHandle h2) {
+    return h1 instanceof DelegateHandle d1 && h2 instanceof DelegateHandle d2
+        && d1.isIdenticalTo(d2);
+}
+```
+
+One `final` forwarder, then each handle gains `isIdenticalTo` and each template loses its
+`compareIdentity`. Per-handle, independently testable, and it deletes the guarded-cast boilerplate
+added for bug 38 rather than leaving it in twenty places.
+
+## E29 — Capability interfaces ask the template about the handle's own data
+
+**Depends on:** nothing. Same inversion as E28.
+
+`BitView` and `ByteView` are queried on the template and then handed the handle back:
+
+```java
+DelegateHandle hDelegate = hArray.getDelegate();
+ClassTemplate  tDelegate = hDelegate.getTemplate();
+if (tDelegate instanceof ByteView hView) {
+    return hView.getBytes(hDelegate, ofStart, cSize, fReverse);
+}
+throw new UnsupportedOperationException("unsupported delegate: " + hDelegate);
+```
+
+`hDelegate` and `tDelegate` are obtained separately, so nothing relates the template's handle type
+to the handle being passed. Every implementation therefore re-opens the handle by casting - about
+35 casts across eight classes - and a mismatched pair is an `UnsupportedOperationException` at run
+time rather than a compile error. Generifying `ByteView<H>` does **not** help: callers would hold
+`ByteView<?>` and could not pass their `DelegateHandle` at all.
+
+The fix is the same inversion as E28 - put the capability on the handle, which owns the bytes:
+
+```java
+// ByteArrayHandle and friends
+public byte[] getBytes(long ofStart, long cBytes, boolean fReverse);
+public byte   extractByte(long of);
+public void   assignByte(long of, byte bValue);
+```
+
+Then the call site is `hDelegate.getBytes(ofStart, cSize, fReverse)` - no capability query, no cast,
+and "this delegate does not support bytes" becomes a class that does not implement the interface,
+which the compiler enforces at every call. The `UnsupportedOperationException` and its
+"unsupported delegate" message disappear with it.
+
+Note the `// TODO: add an "assignBytes" method to the ByteView interface` already sitting in
+`xByteArray.setBytes`, where the caller loops calling `assignByte` one byte at a time because the
+interface exposes no bulk form. Moving the capability onto the handle is the point at which that
+TODO becomes a one-line method on the class that owns the array.

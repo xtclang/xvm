@@ -209,8 +209,12 @@ public class xRTFloat64Delegate
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        DoubleArrayHandle h1 = (DoubleArrayHandle) hValue1;
-        DoubleArrayHandle h2 = (DoubleArrayHandle) hValue2;
+        // Arrays of the same element type can be backed by different delegates - a slice or a
+        // view is not a DoubleArrayHandle - and either side may be one. Casting instead of
+        // testing raised a ClassCastException into the running program; see master bug 37.
+        if (!(hValue1 instanceof DoubleArrayHandle h1) || !(hValue2 instanceof DoubleArrayHandle h2)) {
+            return false;
+        }
 
         if (h1 == h2) {
             return true;

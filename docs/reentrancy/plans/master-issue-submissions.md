@@ -70,6 +70,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 35 | String/Type index a long by its low 32 bits | PR #560 | independent | 2 methods + `IndexSupport.checkedIndex` |
 | 36 | `deleteAll(range)` wrong elements / crash | PR #563 | independent | 1 offset + 1 missing override |
 | 37 | `&slice1 == &slice2` / `&view1 == &view2` crash with a Java `ClassCastException` | PR #564 | independent | 2 missing overrides |
+| 38 | `&a == &slice_of_a` crashes for every non-generic element type | folding into PR #564 | extends 37 | 7 guarded casts |
 
 ### Filing a row as an issue or PR
 
@@ -2609,3 +2610,59 @@ the source delegate. Structurally identical to the generic one, over the fields 
 
 **Regression test.** `&s1 == &s2` on two equal slices of one array must answer without raising, and
 must stay `True` for slices over the same source and range.
+
+## 38. Comparing arrays of the same element type by reference crashes when their storage differs
+
+The same defect as bug 37, in the seven templates that bug 37's fix does not reach. Bug 37 fixed the
+case where the *slice or view* is asked; this is the case where the concrete delegate is asked and
+the **other** side is the slice.
+
+```
+Char[] a = ['a','b','c','d','e'];
+Char[] s = a[1..3];
+
+&s == &a      // bug 37 direction - dispatches to xRTSlicingDelegate
+&a == &s      // THIS bug     - dispatches to xRTCharDelegate
+```
+
+Verified on clean master `145f12f51`:
+
+```
+java.lang.ClassCastException: class ...xRTSlicingDelegate$SliceHandle cannot be cast to
+class ...xRTCharDelegate$CharArrayHandle
+```
+
+**Cause.** `xRef.CompareReferents` resolves the template from the *first* handle and passes both
+handles to it. Every delegate's `compareIdentity` then casts **both** arguments to its own handle
+type:
+
+```java
+CharArrayHandle h1 = (CharArrayHandle) hValue1;
+CharArrayHandle h2 = (CharArrayHandle) hValue2;
+```
+
+Handle 1 is safe by construction - it selected the template. Handle 2 is arbitrary. Any pair of
+arrays with the same element type but different storage crashes, in whichever direction puts the
+concrete delegate first.
+
+**Affected templates** (all seven have the identical two-cast opening): `xRTCharDelegate`,
+`xRTStringDelegate`, `xRTFloat64Delegate`, `ByteBasedDelegate`, `LongBasedDelegate`,
+`LongLongDelegate`, `xRTGenericDelegate`.
+
+**Fix.** Test instead of cast; a mismatched representation is not the same referent:
+
+```java
+if (!(hValue1 instanceof CharArrayHandle h1) || !(hValue2 instanceof CharArrayHandle h2)) {
+    return false;
+}
+```
+
+Seven mechanical edits, same shape as bug 37's fix. `&a == &s` then answers `False` rather than
+raising, and `array.x` / `numbers.x` run unchanged.
+
+**Longer term** this whole family should stop being a cast at all - see E28, which moves the
+comparison onto the handle so the operation is total and the signature stops promising to accept
+pairs it cannot handle.
+
+**Regression test.** `&a == &s` and `&s == &a` must both answer for arrays of every element type
+whose delegate is not the generic one.

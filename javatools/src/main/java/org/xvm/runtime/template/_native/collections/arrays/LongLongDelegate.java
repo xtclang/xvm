@@ -221,8 +221,12 @@ public abstract class LongLongDelegate
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        LongArrayHandle h1 = (LongArrayHandle) hValue1;
-        LongArrayHandle h2 = (LongArrayHandle) hValue2;
+        // Arrays of the same element type can be backed by different delegates - a slice or a
+        // view is not a LongArrayHandle - and either side may be one. Casting instead of
+        // testing raised a ClassCastException into the running program; see master bug 37.
+        if (!(hValue1 instanceof LongArrayHandle h1) || !(hValue2 instanceof LongArrayHandle h2)) {
+            return false;
+        }
 
         if (h1 == h2) {
             return true;
