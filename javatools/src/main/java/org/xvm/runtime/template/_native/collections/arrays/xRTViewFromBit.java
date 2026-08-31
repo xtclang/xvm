@@ -10,10 +10,13 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.util.Lazy;
@@ -158,4 +161,37 @@ public class xRTViewFromBit
                 getInceptionClassConstant().getType(), typeElement);
         mapViews.put(typeElement, f_container.getTemplate(typeView, xRTViewFromBit.class));
     }
+
+    // ----- storage protocol ----------------------------------------------------------------------
+
+    /*
+     * This view is an intermediate: it fixes how elements are addressed, and its concrete subclasses
+     * fix how they are stored. It therefore has no storage of its own to read or write, and every
+     * subclass overrides the three methods below. They exist because the base declares them, and
+     * because inheriting the object-array implementations - which is what happened before the base
+     * stopped providing them - would answer for storage this class does not have.
+     */
+
+    @Override
+    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+                                        int iReturn) {
+        return frame.raiseException(xException.unsupported(frame, storageMessage()));
+    }
+
+    @Override
+    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+                                       ObjectHandle hValue) {
+        return frame.raiseException(xException.unsupported(frame, storageMessage()));
+    }
+
+    @Override
+    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+                                            long ofStart, long cSize, boolean fReverse) {
+        throw new UnsupportedOperationException(storageMessage());
+    }
+
+    private String storageMessage() {
+        return getClass().getSimpleName() + " defines no element storage of its own";
+    }
+
 }

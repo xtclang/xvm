@@ -44,8 +44,7 @@ import static org.xvm.util.Handy.copyOf;
 /**
  * The native RTDelegate<Object> implementation.
  */
-@NativeTemplate("_native.collections.arrays.RTDelegate")
-public class xRTDelegate
+public abstract class xRTDelegate
         extends ClassTemplate
         implements IndexSupport {
 
@@ -566,76 +565,19 @@ public class xRTDelegate
      *
      * @return a new array delegate
      */
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
-                                            long ofStart, long cSize, boolean fReverse) {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
-
-        if (ofStart == 0 && cSize == hDelegate.m_cSize && cSize == hDelegate.m_ahValue.length
-                && mutability == hDelegate.getMutability() && mutability == Mutability.Constant
-                && !fReverse) {
-            // there is absolutely no reason to create a copy
-            return hDelegate;
-        }
-
-        ObjectHandle[] ahValue = Arrays.copyOfRange(hDelegate.m_ahValue,
-                                    (int) ofStart, (int) (ofStart + cSize));
-        if (fReverse) {
-            ahValue = reverse(ahValue, (int) cSize);
-        }
-        return new GenericArrayDelegate(hDelegate.getComposition(), ahValue, mutability);
-    }
+    protected abstract DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+                                            long ofStart, long cSize, boolean fReverse);
 
     /**
      * Storage-specific implementation of {@link #extractArrayValue}.
      */
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
-        return frame.assignValue(iReturn, ((GenericArrayDelegate) hTarget).m_ahValue[(int) lIndex]);
-    }
+    protected abstract int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn);
 
     /**
      * Storage-specific implementation of {@link #assignArrayValue}.
      */
-    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
-                                       ObjectHandle hValue) {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
-        ObjectHandle[]       ahValue   = hDelegate.m_ahValue;
-        int                  cSize     = (int) hDelegate.m_cSize;
-        int                  nIndex    = (int) lIndex;
-
-        if (nIndex == cSize) {
-            if (cSize == ahValue.length) {
-                ahValue = hDelegate.m_ahValue = grow(ahValue, cSize + 1);
-            }
-            hDelegate.m_cSize++;
-        } else if (nIndex > cSize) {
-            TypeConstant typeElement  = hTarget.getType().getParamType(0);
-            Constant     constDefault = typeElement.getDefaultValue();
-
-            if (constDefault == null) {
-                return frame.raiseException(xException.unsupported(
-                        frame, "No default value for " + typeElement.getValueString()));
-            }
-
-            if (nIndex >= ahValue.length) {
-                hDelegate.m_ahValue = ahValue = grow(ahValue, nIndex + 1);
-            }
-            hDelegate.m_cSize = nIndex + 1;
-
-            ObjectHandle hDefault = frame.getConstHandle(constDefault);
-            if (Op.isDeferred(hDefault)) {
-                ObjectHandle[] ahVal = ahValue;
-                return hDefault.proceed(frame, frameCaller -> {
-                    Arrays.fill(ahVal, cSize, nIndex, frameCaller.popStack());
-                    ahVal[nIndex] = hValue;
-                    return Op.R_NEXT;
-                });
-            }
-            Arrays.fill(ahValue, cSize, nIndex, hDefault);
-        }
-
-        ahValue[nIndex] = hValue;
-        return Op.R_NEXT;
-    }
+    protected abstract int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+                                       ObjectHandle hValue);
 
     /**
      * Storage-specific implementation of {@link #invokeInsertElement}.
@@ -733,7 +675,7 @@ public class xRTDelegate
         mapDelegates.put(typeElement, f_container.getTemplate(typeDelegate, xRTDelegate.class));
     }
 
-    private static ObjectHandle[] reverse(ObjectHandle[] ahValue, int cSize) {
+    protected static ObjectHandle[] reverse(ObjectHandle[] ahValue, int cSize) {
         ObjectHandle[] ahValueR = new ObjectHandle[cSize];
         for (int i = 0; i < cSize; i++) {
             ahValueR[i] = ahValue[cSize - 1 - i];
@@ -741,7 +683,7 @@ public class xRTDelegate
         return ahValueR;
     }
 
-    private static ObjectHandle[] grow(ObjectHandle[] ahValue, int cSize) {
+    protected static ObjectHandle[] grow(ObjectHandle[] ahValue, int cSize) {
         int cCapacity = calculateCapacity(ahValue.length, cSize);
 
         ObjectHandle[] ahNew = new ObjectHandle[cCapacity];
