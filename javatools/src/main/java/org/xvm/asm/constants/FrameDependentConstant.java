@@ -33,8 +33,4 @@ public abstract class FrameDependentConstant
      * @return the ObjectHandle (can be a DeferredCallHandle)
      */
     public abstract ObjectHandle getHandle(Frame frame);
-
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
 }

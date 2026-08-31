@@ -1095,8 +1095,4 @@ public class UnionTypeConstant
             ? m_constType2.getValueString() + '?'
             : m_constType1.getValueString() + " | " + m_constType2.getValueString();
     }
-
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
 }

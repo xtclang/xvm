@@ -27,9 +27,6 @@ public class PackageStructure
         super(xsParent, nFlags, constId, condition);
     }
 
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
     // ----- accessors --------------------------------------------------------------------------------------
 
     /**

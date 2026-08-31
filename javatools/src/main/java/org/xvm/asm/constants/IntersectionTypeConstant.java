@@ -807,8 +807,4 @@ public class IntersectionTypeConstant
     public String getValueString() {
         return m_constType1.getValueString() + " + " + m_constType2.getValueString();
     }
-
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
 }

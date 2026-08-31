@@ -243,9 +243,6 @@ public class PendingTypeConstant
         return "PendingTypeParameter";
     }
 
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
     // ----- data fields ---------------------------------------------------------------------------
 
     private final TypeConstant f_typeConstraint;

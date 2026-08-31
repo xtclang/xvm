@@ -335,8 +335,4 @@ public class AllCondition
 
         return aconstMerged;
     }
-
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
 }

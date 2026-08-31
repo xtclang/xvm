@@ -29,8 +29,4 @@ public abstract class FloatConstant
      */
     @Override
     public abstract Float getValue();
-
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
 }

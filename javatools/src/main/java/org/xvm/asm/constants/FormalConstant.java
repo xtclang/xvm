@@ -68,8 +68,4 @@ public abstract class FormalConstant
      * @return the resulting {@link ExprAST} or null if the conversion is not feasible
      */
     public abstract ExprAST toExprAst(Context ctx);
-
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
 }

@@ -270,8 +270,4 @@ public abstract class AbstractDependantChildTypeConstant
         }
         return Usage.NO;
     }
-
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
 }

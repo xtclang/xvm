@@ -294,8 +294,4 @@ public class TypeSequenceTypeConstant
     public String getValueString() {
         return "Tuple<...>";
     }
-
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
 }

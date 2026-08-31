@@ -123,8 +123,6 @@ public class CastTypeConstant
             + m_constType2.getValueString() + ")";
     }
 
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
     // ----- fields --------------------------------------------------------------------------------
 
     private final TypeConstant f_constType1Orig;

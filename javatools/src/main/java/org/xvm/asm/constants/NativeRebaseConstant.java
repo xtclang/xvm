@@ -95,9 +95,6 @@ public class NativeRebaseConstant
         return "Native(" + m_constIface.getValueString() + ')';
     }
 
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
     // ----- data fields ---------------------------------------------------------------------------
 
     /**
