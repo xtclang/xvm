@@ -86,6 +86,7 @@ surface graduate into individual rows on the bug list.
 | E31 | 42 cache-if-null getters that could be final `Lazy` fields; 7 need a resettable variant | 2 PRs (35 sites, then API + 7) | independent | measured, not estimated |
 | E32 | Thread one `ErrorListener`; stop null-defaulting and blackholing diagnostics | 3 stages, stage 1 alone is mechanical | independent | 665 params, 87 BLACKHOLE, 28 null-guards |
 | E33 | Census of every `Object` in the tree: 61 are `equals` and untouchable, ~132 are real | reference row; feeds E27/E28/E30/E32 | independent | 393 array initializers noted separately |
+| E34 | `ResolutionCollector.getErrorListener()` smuggles the error sink; pass it explicitly | 1 PR, ~60 mechanical sites | complements E32 | removes `NameResolver`'s un-cleaned stash |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -2846,3 +2847,89 @@ times precisely because it *is* the calling convention.
 E27 (typed key, designed) -> Must Fix 1 (`Message<T>`) -> Must Fix 3 (the union) -> E29 (capability
 on the handle). Each is independently shippable from master, and each removes a class of cast rather
 than an instance.
+
+## E34 — The error sink rides inside a resolution callback; pass it explicitly instead
+
+**Depends on:** nothing. Complements E32 (which removes the nulls); this removes the smuggling.
+
+### What it looks like
+
+`ComponentResolver` carries a nested callback interface, and that callback was given a method to
+hand out an error sink:
+
+```java
+interface ResolutionCollector {
+    ResolutionResult resolvedComponent(Component component);
+    ResolutionResult resolvedConstant(Constant constant);
+
+    default AstNode       getNode()          { return null; }
+    default ErrorListener getErrorListener() { return ErrorListener.BLACKHOLE; }
+}
+```
+
+Callers then reach through the collector for it:
+
+```java
+collector.getErrorListener().log(Severity.ERROR, ...);   // MethodStructure:1777, Component:2091, ...
+```
+
+### Why this is the root of the `NameResolver` smell
+
+The listener travels **inside** the collector rather than being passed to the operation that might
+need it. Two consequences follow directly:
+
+1. **Any implementor that does not override gets silence for free.** The default is `BLACKHOLE`, so
+   "I did not think about errors" and "I deliberately discard errors" are the same code - and the
+   first is the default.
+
+2. **An implementor whose listener varies per call has to stash it on itself.** That is exactly
+   `NameResolver`: it is cached on the AST node (`m_resolver = resolver = new NameResolver(...)`),
+   so it outlives any one listener, yet `resolve(ErrorListener errs)` must answer
+   `getErrorListener()` afterwards. Hence:
+
+   ```java
+   // store off the error list for use by call backs
+   // (note: there's no attempt to clean this up later)
+   m_errs = errs;
+   ```
+
+   The comment is accurate and the field cannot be `final`, because the object is reused across
+   compilation stages with different listeners. **No amount of local tidying fixes that** - the
+   interface is what forces the stash.
+
+### The change: pass it, do not publish it
+
+Remove `getErrorListener()` from `ResolutionCollector` and give the operations the listener:
+
+```java
+ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector,
+                             ErrorListener errs);
+ResolutionResult resolvedComponent(Component component, ErrorListener errs);
+ResolutionResult resolvedConstant(Constant constant, ErrorListener errs);
+```
+
+What that deletes rather than moves:
+
+- the `BLACKHOLE` default, so silence stops being free;
+- `NameResolver.m_errs` and its "no attempt to clean this up later" - `resolve(errs)` threads its
+  own parameter and the field goes;
+- the 6 `collector.getErrorListener()` pull sites, which receive a listener instead;
+- one more reason the listener cannot be `final` wherever it *is* a field.
+
+`getNode()` has the same shape and should be looked at in the same pass, though it is less harmful -
+a null node degrades a message, it does not discard one.
+
+### Size
+
+Measured, so this can be scheduled rather than guessed:
+
+| | count |
+| --- | --- |
+| `resolveName(...)` call sites | 36 |
+| `resolvedComponent` / `resolvedConstant` sites | 19 |
+| implementors of `ResolutionCollector` | 3 |
+| sites pulling the listener out of a collector | 6 |
+
+About sixty sites, all mechanical, no behavioural change intended: every site that logs today still
+logs, but because it was handed a listener rather than because it asked a callback for one. Worth
+doing as its own PR, after E32 stage 1 so the two are reviewable apart.
