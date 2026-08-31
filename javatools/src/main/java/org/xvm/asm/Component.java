@@ -56,6 +56,8 @@ import static org.xvm.util.Handy.stream;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * The Component data structure is the base class for the module, package, class, property, method,
@@ -3554,7 +3556,7 @@ public abstract sealed class Component
     public static class SimpleCollector
             implements ResolutionCollector {
         public SimpleCollector(ErrorListener errs) {
-            m_errs = errs;
+            m_errs = requireNonNull(errs, "errs");
         }
 
         @Override

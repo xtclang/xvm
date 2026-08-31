@@ -9,6 +9,8 @@ import org.xvm.compiler.ast.AstNode;
 
 import org.xvm.util.Severity;
 
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * Represents a list of errors collected from a process such as compilation, assembly, or the
@@ -163,7 +165,7 @@ public class ErrorList
         public BranchedErrorListener(ErrorListener listener, int cMaxErrors, AstNode node) {
             super(cMaxErrors);
 
-            f_listener = listener;
+            f_listener = requireNonNull(listener, "listener");
             f_node     = node;
         }
 

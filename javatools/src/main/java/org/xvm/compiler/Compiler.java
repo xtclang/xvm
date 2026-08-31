@@ -13,6 +13,8 @@ import org.xvm.compiler.ast.TypeCompositionStatement;
 
 import org.xvm.util.Severity;
 
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * A module compiler for Ecstasy code.
@@ -42,7 +44,7 @@ public class Compiler {
         }
 
         m_stmtModule = stmtModule;
-        m_errs       = errs;
+        m_errs       = requireNonNull(errs, "errs");
     }
 
 

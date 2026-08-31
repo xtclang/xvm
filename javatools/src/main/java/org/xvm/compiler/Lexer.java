@@ -28,6 +28,8 @@ import static org.xvm.util.Handy.isHexit;
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.quotedChar;
 
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * An Ecstasy source code parser supporting both demand-based and stream-based
@@ -51,7 +53,7 @@ public class Lexer
         }
 
         m_source        = source;
-        m_errorListener = errorListener;
+        m_errorListener = requireNonNull(errorListener, "errorListener");
 
         // Constructors must not dispatch through overridable tokenization hooks; subclasses are
         // still incomplete here. Keep the old leading-whitespace priming through a private helper.

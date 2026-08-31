@@ -22,6 +22,8 @@ import org.xvm.compiler.ast.CompositionNode.Incorporates;
 
 import org.xvm.util.Severity;
 
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * The AnonInnerClass represents the suggested shape for an anonymous inner class.
@@ -38,7 +40,7 @@ public class AnonInnerClass {
         assert errs != null;
 
         m_exprType = expr;
-        f_errs     = errs;
+        f_errs     = requireNonNull(errs, "errs");
     }
 
 
