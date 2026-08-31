@@ -97,14 +97,42 @@ module TestArray {
         console.print($"&bytes.asBitArray() == &bytes.asBitArray(): {&v1 == &v2}");
 
         // The reverse direction dispatches to the CONCRETE delegate, which resolves the template
-        // from the first handle only and used to cast the second one too.
-        Char[] chars = ['a', 'b', 'c', 'd', 'e'];
-        Char[] cs    = chars[1..3];
+        // from the first handle only and used to cast the second one too. Each element type below
+        // is backed by a different delegate, and every one had the same defect, so each needs its
+        // own case: array-vs-slice and slice-vs-array must both answer rather than raise.
+        Char[]    chars   = ['a', 'b', 'c', 'd', 'e'];
+        String[]  strs    = ["a", "b", "c", "d", "e"];
+        Float64[] floats  = [1.0, 2.0, 3.0, 4.0, 5.0];
+        Int8[]    int8s   = [1, 2, 3, 4, 5];
+        Int[]     ints    = [1, 2, 3, 4, 5];
+        Int128[]  int128s = [1, 2, 3, 4, 5];
+        Object[]  objs    = ["a", 2, 3.0, 4, 5];
 
-        assert &chars != &cs;
-        assert &cs != &chars;
+        Char[]    charsSlice   = chars[1..3];
+        String[]  strsSlice    = strs[1..3];
+        Float64[] floatsSlice  = floats[1..3];
+        Int8[]    int8sSlice   = int8s[1..3];
+        Int[]     intsSlice    = ints[1..3];
+        Int128[]  int128sSlice = int128s[1..3];
+        Object[]  objsSlice    = objs[1..3];
 
-        console.print($"&chars == &chars[1..3]: {&chars == &cs}");
+        assert &chars   != &charsSlice;
+        assert &strs    != &strsSlice;
+        assert &floats  != &floatsSlice;
+        assert &int8s   != &int8sSlice;
+        assert &ints    != &intsSlice;
+        assert &int128s != &int128sSlice;
+        assert &objs    != &objsSlice;
+
+        assert &charsSlice   != &chars;
+        assert &strsSlice    != &strs;
+        assert &floatsSlice  != &floats;
+        assert &int8sSlice   != &int8s;
+        assert &intsSlice    != &ints;
+        assert &int128sSlice != &int128s;
+        assert &objsSlice    != &objs;
+
+        console.print("array-vs-slice identity answers for all seven delegates");
     }
 
     void testArrayList() {
