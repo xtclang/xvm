@@ -75,6 +75,42 @@ public interface ErrorListener {
     }
 
     /**
+     * Log an error, taking the message parameters as varargs.
+     *
+     * <p>Identical to {@link #log(Severity, String, Object[], XvmStructure)} but with the
+     * parameters last, so callers write the values directly instead of building an
+     * {@code Object[]} at the call site. Added rather than replacing, because a varargs parameter
+     * must come last and the existing signature cannot be reordered without breaking every caller.
+     *
+     * @param severity  the severity level
+     * @param sCode     the error code
+     * @param xs        the XvmStructure the error relates to
+     * @param aoParam   the error message parameters
+     *
+     * @return true if the process should be aborted
+     */
+    default boolean log(Severity severity, String sCode, XvmStructure xs, Object... aoParam) {
+        return log(new ErrorInfo(severity, sCode, aoParam, xs));
+    }
+
+    /**
+     * Log an error against a source position, taking the message parameters as varargs.
+     *
+     * @param severity   the severity level
+     * @param sCode      the error code
+     * @param source     the source that the error is in
+     * @param lPosStart  the position in the source where the error begins
+     * @param lPosEnd    the position in the source where the error ends
+     * @param aoParam    the error message parameters
+     *
+     * @return true if the process should be aborted
+     */
+    default boolean log(Severity severity, String sCode, Source source, long lPosStart, long lPosEnd,
+            Object... aoParam) {
+        return log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
+    }
+
+    /**
      * Branch this ErrorListener by creating a new one that will collect subsequent errors
      * in the same manner as this one until it is {@link #merge() merged} or discarded in the
      * (optional) context of the specified node.

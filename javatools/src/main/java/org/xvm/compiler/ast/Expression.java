@@ -472,7 +472,13 @@ public abstract sealed class Expression
     protected TypeFit testFitAsType(Context ctx, TypeConstant typeRequired, boolean fExhaustive,
                                     ErrorListener errs) {
         TypeExpression exprType = toTypeExpression();
-        return new StageMgr(exprType, Compiler.Stage.Validated, errs).fastForward(20)
+
+        // this is a fit TEST, so staging errors are expected and discarded, exactly as the fit
+        // itself is on the next line and as validateAsType() below does for the same step. Passing
+        // the caller's listener here would report staging failures for an expression we are only
+        // speculating about; it previously reached StageMgr as null and was silently turned into
+        // BLACKHOLE anyway, which said the same thing without admitting it.
+        return new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20)
                 ? exprType.testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE)
                 : TypeFit.NoFit;
     }

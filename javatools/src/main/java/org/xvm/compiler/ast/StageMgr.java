@@ -20,6 +20,8 @@ import org.xvm.compiler.ast.AstNode.ChildIterator;
 
 import org.xvm.util.Severity;
 
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * A Stage Manager is used to shepherd the AST nodes through their various stages.
@@ -31,7 +33,8 @@ public class StageMgr {
      *
      * @param node         the node to process
      * @param stageTarget  the target stage
-     * @param errs         the optional error list to log to
+     * @param errs         the error list to log to; required. A caller that genuinely wants
+     *                     errors discarded passes {@link ErrorListener#BLACKHOLE} and says so
      */
     public StageMgr(AstNode node, Stage stageTarget, ErrorListener errs) {
         assert node != null;
@@ -39,7 +42,7 @@ public class StageMgr {
 
         m_listRevisit = Collections.singletonList(node);
         m_target      = stageTarget;
-        m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
+        m_errs        = requireNonNull(errs, "errs");
     }
 
     /**
@@ -48,7 +51,8 @@ public class StageMgr {
      *
      * @param list         the list of nodes to process
      * @param stageTarget  the target stage
-     * @param errs         the optional error list to log to
+     * @param errs         the error list to log to; required. A caller that genuinely wants
+     *                     errors discarded passes {@link ErrorListener#BLACKHOLE} and says so
      */
     public StageMgr(List<AstNode> list, Stage stageTarget, ErrorListener errs) {
         assert list != null && !list.isEmpty();
@@ -56,7 +60,7 @@ public class StageMgr {
 
         m_listRevisit = list;
         m_target      = stageTarget;
-        m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
+        m_errs        = requireNonNull(errs, "errs");
     }
 
     /**
