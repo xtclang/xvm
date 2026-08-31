@@ -1138,10 +1138,16 @@ Measured, not estimated. Numbers from `javac -Xlint:all` with the warning cap li
 
 ### Note on nullability
 
-`@NotNull` in this tree is `org.jetbrains.annotations.NotNull`, declared `compileOnly`. It is an IDE
-hint, not a build or runtime check, and `javatools` does not depend on it at all - so it cannot be
-used to enforce any of the invariants above. Where one matters, assert it; see
-`JumpVal_N.findSmall`.
+**Corrected 2026-08-31.** An earlier version of this note said `javatools` does not depend on
+`org.jetbrains.annotations` at all. That is wrong: `javatools/build.gradle.kts` declares
+`compileOnly(libs.jetbrains.annotations)` (and `testCompileOnly`), and `@NotNull` is already used at
+7 sites in `javatools`, 1 in `javatools_utils`. So the annotation IS available and can be applied.
+
+What remains true is that it enforces nothing on its own - `compileOnly` means no runtime
+dependency, and javac has no nullability lint (`javac --help-lint` lists none; that needs ErrorProne
+or NullAway). So `@NotNull` documents intent for the IDE, and `Objects.requireNonNull` is what
+actually enforces it. For a field or constructor parameter that is never legitimately null, use
+both: the annotation to state it and the check to prove it. See `JumpVal_N.findSmall`.
 
 ## Follow-Up Plan
 

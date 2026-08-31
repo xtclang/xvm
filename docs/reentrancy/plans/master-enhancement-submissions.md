@@ -2480,14 +2480,29 @@ private final Lazy<Foo> f_foo = Lazy.of(this::computeFoo);
 **42 of these remain**, across 23 files. Measured by matching a cache-fill
 (`if (fld == null) { fld = ... }`) against a non-final declaration of the same field:
 
+**Re-classified 2026-08-31, and the first split was wrong.** The original match counted any
+`if (x == null) { x = ... }`, which swept in local accumulators and fields that are not lazy caches
+at all. Classified by what actually blocks making each one `final`:
+
 | | count |
 | --- | --- |
-| convertible today - the field is never reset | **35** |
-| blocked, because the field is also assigned `null` somewhere | 7 |
+| **CLEAN - single lazy assignment, convertible to `Lazy` today** | **7** |
+| copy-assigned from another instance (`this.f = that.f`) | 12 |
+| reset to `null` somewhere (needs a resettable `Lazy`) | 7 |
+| `null` used as an "absent" sentinel (`if (f != null)`) | 7 |
+| assigned in several unrelated places | 2 |
+| not a field at all - a local accumulator | many |
 
-The 35 are ordinary unfinished work. Heaviest files: `NativeContainer` (5), `CaseManager` (5),
-`ModuleInfo` (5), then `Op`, `Frame`, `BuildContext`, and several `compiler/ast` statements at 2
-each.
+So the convertible set is **7, not 35**. The other groups each need a different refactor, and two of
+them are more interesting than the `Lazy` conversion:
+
+- **The 7 sentinel cases** are the "null handling is endemic" problem in miniature - a `null`
+  collection meaning "empty", tested with `!= null` and read with `.isEmpty()` in different places.
+  The fix is an eagerly-allocated empty collection and `isEmpty()` everywhere, which deletes the
+  null entirely. `Statement.m_listBreaks` is the model: `null` means "no breaks", tested three
+  different ways.
+- **The 12 copy-assigned** cannot be `final` while a copy constructor writes them from another
+  instance; that is a design question about whether those objects should share the cache at all.
 
 ### The seven, and correcting the record on why
 
