@@ -1149,6 +1149,55 @@ or NullAway). So `@NotNull` documents intent for the IDE, and `Objects.requireNo
 actually enforces it. For a field or constructor parameter that is never legitimately null, use
 both: the annotation to state it and the check to prove it. See `JumpVal_N.findSmall`.
 
+## Retrospective: which generification actually paid (2026-08-31)
+
+Worth recording before the next row is attempted, because the answer is not the intuitive one.
+
+### The scoreboard
+
+| | |
+| --- | --- |
+| handle casts in the arrays package | 252 -> 128 |
+| `rawtypes` tree-wide | 59 -> 61 (+2, both unwritable - see below) |
+| `@SuppressWarnings("unchecked")` | 6 -> 8 (`narrow()`, `SameAs`) |
+| master bugs surfaced | 36, 37, 38 |
+
+### All three bugs came from the split, none from the type parameter
+
+- **36** - making `deleteRangeImpl` abstract made javac name `xRTStringDelegate`'s missing override.
+- **37, 38** - making the protocol abstract forced `xRTView` and `xRTSlicingDelegate` to implement
+  `compareIdentity`, which exposed that the body they had been inheriting was an unconditional
+  `ClassCastException`.
+
+`xRTDelegate<H>` found nothing. It removed casts, which is worth something, but it also introduced
+two `rawtypes` that **cannot be fixed at all**: `NativeTemplateRef` keys on `Class<T>`, and
+`Class<xRTDelegate<?>>` is unwritable in Java because a class literal is always raw in its own type
+argument. E30 then measured that the parameter should not exist - the storage operations belong on
+the handle, and the parameter is the symptom of their being on the template.
+
+### The pattern: substitution failed, design change worked
+
+Three attempts at generification-as-substitution failed, each differently:
+
+- scripted retyping of the overrides corrupted brace structure and had to be reverted (twice);
+- `DelegateHandle<SELF>` hit a structural wall - `ByteArrayHandle` is simultaneously a concrete leaf
+  and `BitArrayHandle`'s superclass, which no self type can express;
+- the `<?>` spread was invisible until after the substitution had landed.
+
+Three design changes worked, and each removed a class of defect rather than an instance:
+
+- **declare the protocol** (the split) - turned "a subclass forgot this" into a compile error;
+- **move the operation to the value that knows its own type** (`SameAs`) - made
+  `compareIdentity` total, so bugs 37 and 38 became unwritable rather than fixed;
+- **recognize that behaviour is data** (`LongCodec`) - the packing was seven derived fields, not
+  polymorphism, which is what makes E30 affordable at all.
+
+**The rule this suggests:** a type parameter is worth adding when it *follows from* a decision about
+where behaviour belongs. Added ahead of that decision it relocates casts into wildcards and buys
+nothing. `ObjectHandle<T>` was analysed on those grounds and rejected - 4,120 sites across 394 files
+to make roughly twenty methods cast-free, with the win concentrated in code that a design change
+(E28/E29/E30) fixes properly instead.
+
 ## Follow-Up Plan
 
 1. Add a source-shape lint task that reports raw declarations and unchecked
