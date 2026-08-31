@@ -112,6 +112,7 @@ without its listed dependency.
 | 33 | Source-only; two one-line fixes. Surfaced set for the guard measured empty (183/183 AST classes load clean). Fixed in-branch. | `fieldsForNames(AstNode.class, "noSuchFieldAnywhere")` returns `fields[0]=null` instead of throwing; `isInstance(AstNode.class)` observed `false` where `isAssignableFrom` is `true`. | Ready after manual review. |
 | 34 | Source-only; one word (`info1` -> `info2`). Fixed in-branch. | Caller `mergeTypeInfo` treats both TypeInfos as independently nullable; with `info1` present and `info2` absent the guard passes and `info2.getChildInfosByName()` NPEs. | Ready after manual review. |
 | 35 | Source-only; two methods, three lines each. Fixed in-branch, verified end to end. | `org.xvm.runtime.IndexNarrowingTest.noIndexedMethodRangeChecksANarrowedIndex` fails on the unfixed source naming both sites; at run time `"abcdefgh"[4294967300]` answers `'e'` where the same index on an `Int[]` raises. | Ready after manual review. |
+| 36 | Source-only; one offset and one missing override. Fixed in PR #563 with tests. | `TestArray.testDeleteRange` fails on master: `Int8[1,2,3,4,5].deleteAll(1..2)` answers `[1, 3, 4]` where `[1, 4, 5]` is required, and `String[...].deleteAll(1..2)` throws `ClassCastException: StringArrayHandle cannot be cast to GenericArrayDelegate`. | Filed as PR #563. |
 
 ## Reuse Exposure Categories
 
@@ -2459,3 +2460,49 @@ as-is:
 **Not affected:** `BaseInt128`'s shift operators also narrow with `(int)`, and that one is safe -
 `LongLong.shl` masks the count with `& 0x7F`, and truncation preserves the low 32 bits, so the low
 7 survive. Worth stating because the two sites look identical.
+
+## 36. deleteAll(range) returns wrong elements on byte-backed arrays and crashes on String arrays
+
+Array storage is per element type, and each delegate implements `deleteRangeImpl` itself. Two of
+them are wrong, and only a MULTI-element range shows either - a single-element delete takes the
+`deleteElementImpl` branch instead.
+
+**Byte-backed arrays return the wrong elements, with no error.**
+
+```
+Int8  [1,2,3,4,5].deleteAll(1..2)  ->  [1, 3, 4]    expected [1, 4, 5]
+UInt8 [1,2,3,4,5].deleteAll(1..2)  ->  0x010304     expected 0x010405
+```
+
+`ByteBasedDelegate.deleteRangeImpl` copies from `nIndex + 1` where the generic implementation uses
+`nIndex + nDelete`. `+1` is correct in `deleteElementImpl` immediately above it, which is where it
+appears to have been copied from.
+
+**String arrays crash.**
+
+```
+ClassCastException: StringArrayHandle cannot be cast to GenericArrayDelegate
+    at xRTDelegate.deleteRangeImpl(xRTDelegate.java:681)
+    at xRTDelegate.deleteRange(xRTDelegate.java:457)
+    at xArray.invokeDeleteAll(xArray.java:765)
+```
+
+`xRTStringDelegate` declares no `deleteRangeImpl`, so it inherits `xRTDelegate`'s - which is the
+object-array implementation and casts to `GenericArrayDelegate`.
+
+**Checked every element type with its own storage.** `Int64`, `Int16`, `Int128`, `Float64`, `Char`,
+`Boolean`, `Bit`, `Nibble` and `Object` are correct. `Int8`, `UInt8` and `String` are not.
+
+**Red proof.** `TestArray.testDeleteRange`, added in PR #563, run against an unfixed runtime:
+
+```
+IllegalState: "new Array<Int8>(Mutable, [1,2,3,4,5]).deleteAll(1..2) == [1, 4, 5]": ... = [1, 3, 4]
+    at testDeleteRange() (array.x:390)
+```
+
+**Both are consequences of the untyped storage protocol.** Nine methods on `xRTDelegate` take a
+`DelegateHandle`; twenty implementations open by casting it back to what they actually store. A
+missing implementation is therefore invisible - `xRTStringDelegate` inherits one written for a
+different storage type and nothing objects - and nothing relates the byte-backed implementation to
+the generic one it was derived from. See E25 for the generification that would make the first of
+those a compile error, and the split it depends on.
