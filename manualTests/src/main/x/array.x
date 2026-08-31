@@ -6,6 +6,7 @@ module TestArray {
         testStrBuf();
         testConstElement();
         testConstSlice();
+        testSliceIdentity();
 
         testArrayList();
         testArrayListAdd();
@@ -66,6 +67,34 @@ module TestArray {
 
         String[] cruel2 = ["hello", "cruel", "world", "!"] [2..1];
         console.print("array[2..1]=" + cruel2);
+    }
+
+    void testSliceIdentity() {
+        console.print("\n** testSliceIdentity()");
+
+        Int[] nums = [1, 2, 3, 4, 5];
+        Int[] s1   = nums[1..3];
+        Int[] s2   = nums[1..3];
+        Int[] s3   = nums[0..2];
+
+        // Comparing two slices by reference must answer rather than raise. A slice delegate owns no
+        // element storage, and used to inherit the object-array implementation of compareIdentity,
+        // which opened by casting the handle to the object-array one - so this raised a run-time
+        // error instead of comparing.
+        assert &s1 == &s2;
+        assert &s1 != &s3;
+
+        console.print($"&nums[1..3] == &nums[1..3]: {&s1 == &s2}");
+        console.print($"&nums[1..3] == &nums[0..2]: {&s1 == &s3}");
+
+        // Same for a view, which likewise owns no element storage.
+        UInt8[] bytes = [1, 2, 3, 4];
+        Bit[]   v1    = bytes.asBitArray();
+        Bit[]   v2    = bytes.asBitArray();
+
+        assert &v1 == &v2;
+
+        console.print($"&bytes.asBitArray() == &bytes.asBitArray(): {&v1 == &v2}");
     }
 
     void testArrayList() {
