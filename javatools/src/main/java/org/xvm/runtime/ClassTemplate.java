@@ -2141,6 +2141,17 @@ public abstract class ClassTemplate
     /**
      * Natives bound to a typed handler, keyed by the structure {@code markNativeMethod} marked.
      * Written during {@code initNative} and read on the invocation path.
+     *
+     * <p><b>Why keying on a Component is safe here.</b> {@code Component.equals} is a deep,
+     * recursive structural comparison, which would be alarming on a dispatch path. It is not
+     * reached. A lookup hits by reference - the runtime passes back the same
+     * {@code MethodStructure} instance {@code markNativeMethod} returned, confirmed by running
+     * every binding against an {@code IdentityHashMap} - so the map's {@code key == ek}
+     * short-circuit answers before {@code equals} is consulted. Even on a hash collision between
+     * two different methods, {@code equals} short-circuits in {@code isBodyIdentical} on the
+     * identity constant, whose hash is cached; the recursive {@code areChildrenIdentical} half is
+     * only reachable once the identity constants already match, which means the same method.
+     * {@code Component.hashCode} is likewise {@code getIdentityConstant().hashCode()}, cached.</p>
      */
     private final Map<MethodStructure, NativeMethod.Bound1<?, ?>> f_mapBound1 =
             new ConcurrentHashMap<>();
