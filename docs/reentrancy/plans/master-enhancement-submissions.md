@@ -2165,11 +2165,55 @@ self type only on the handle hierarchy. That works, and it costs **262 sites** t
 roughly 23 casts that the `instanceof` guards already make *safe*. The guards fixed the actual
 defect (master bugs 37 and 38); CRTP would only change their syntax.
 
-**Conclusion: not worth doing as stated.** The reachable end state - guarded `instanceof` in each
-implementation, with the contract documented once on `ClassTemplate.compareIdentity` - is the
-pragmatic optimum for this hierarchy. What remains valuable from this row is the *other* half:
-moving the operation onto the handle (`isIdenticalTo`) so the signature stops promising to accept
-pairs it cannot handle. That needs no type parameter at all, and it is independently implementable.
+**Conclusion: the CRTP form is not worth doing - but the diagnosis was wrong about why.** The cost
+was never `ByteArrayHandle`. It was making `DelegateHandle` *itself* generic, which forces all 273
+bare references to become `DelegateHandle<?>`. `ByteArrayHandle` merely made that visible first.
+
+### What does work (prototyped and verified 2026-08-31)
+
+Leave the handle hierarchy alone and put the self type on a one-method capability interface. Then
+`DelegateHandle` stays non-generic and the `<?>` churn is **zero**:
+
+```java
+interface SameAs<SELF> { boolean sameAs(SELF that); }
+
+// DelegateHandle - NOT generic
+@SuppressWarnings("unchecked")
+public final boolean isIdenticalTo(DelegateHandle that) {
+    return this == that
+        || (getClass() == that.getClass() && ((SameAs<DelegateHandle>) this).sameAs(that));
+}
+
+class CharArrayHandle extends DelegateHandle implements SameAs<CharArrayHandle> {
+    public boolean sameAs(CharArrayHandle that) { ... }        // no cast
+}
+```
+
+`ByteArrayHandle` stops being a problem entirely: it implements `SameAs<ByteArrayHandle>` once, and
+`BitArrayHandle` overrides `sameAs(ByteArrayHandle)` with a single narrowing - which
+`getClass() == that.getClass()` has already proved safe. A class cannot implement the interface
+twice with different arguments, and it does not need to.
+
+The unchecked cast is backed by two things, not hope: the `getClass()` equality immediately before
+it, and a compiler-emitted bridge that checkcasts anyway -
+
+```
+public boolean sameAs(java.lang.Object);
+     2: checkcast     #8    // class CharArrayHandle
+     5: invokevirtual #19   // Method sameAs:(LCharArrayHandle;)Z
+```
+
+Verified end to end in a standalone prototype: compiles clean under `-Xlint:all`, and every
+previously-crashing pair (`byte` vs `bit`, `char` vs `slice`) answers `false`.
+
+**Cost:** one interface, `sameAs` on ~19 handles, one narrowing in `BitArrayHandle`, and nine
+templates lose their `compareIdentity` override. **No** type parameter on `DelegateHandle`, no `<?>`
+anywhere, and the operation becomes total - which is what makes bugs 37 and 38 unwritable rather
+than merely fixed.
+
+Handle classes are pure Java internals - `NativeContainer` binds Ecstasy names from
+`Class<? extends ClassTemplate>`, never from handle class names, and no handle name appears in any
+string or reflective lookup - so none of this is visible to XTC or affects language compatibility.
 
 *(Superseded by the attempt recorded above: `DelegateHandle<SELF>` looked like the contained
 version - 272 tokens, no array uses, six external files - but the hierarchy will not accept a self
