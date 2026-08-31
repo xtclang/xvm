@@ -295,8 +295,13 @@ public class Compiler {
                 // "purge" the constant pool and do a final validation on the entire module structure
                 m_structFile.reregisterConstants(true);
                 m_structFile.validate(m_errs);
-                m_structFile.setErrorListener(null);
             }
+
+            // Lift the registration-phase silence set in generateInitialFileStructure, whether or
+            // not this compilation succeeded. It used to be cleared inside the branch above, so a
+            // compilation that produced serious errors left the structure silenced for good - the
+            // clear only ran on the path that had nothing to report.
+            m_structFile.setErrorListener(null);
         }
 
         return m_mgr.isComplete();
