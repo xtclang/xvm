@@ -1,7 +1,6 @@
 package org.xvm.compiler;
 
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
@@ -10,8 +9,6 @@ import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
-
-import org.xvm.util.Severity;
 
 /**
  * A module compiler for Ecstasy code.
@@ -27,9 +24,9 @@ public class Compiler {
      * Construct a module compiler.
      *
      * @param stmtModule  the statement representing all of the code in the module
-     * @param errs    the error list to log any errors to during the various phases of compilation
+     * @param errs        the listener to log any errors to during the various phases of compilation
      */
-    public Compiler(TypeCompositionStatement stmtModule, ErrorList errs) {
+    public Compiler(TypeCompositionStatement stmtModule, ErrorListener errs) {
         if (stmtModule == null) {
             throw new IllegalArgumentException("AST node for module required");
         }
@@ -37,7 +34,7 @@ public class Compiler {
             throw new IllegalArgumentException("AST node for module is not a module statement");
         }
         if (errs == null) {
-            throw new IllegalArgumentException("ErrorList required");
+            throw new IllegalArgumentException("ErrorListener required");
         }
 
         m_stmtModule = stmtModule;
@@ -55,9 +52,9 @@ public class Compiler {
     }
 
     /**
-     * @return the ErrorList that the compiler reports errors to
+     * @return the listener that the compiler reports errors to
      */
-    public ErrorList getErrorListener() {
+    public ErrorListener getErrorListener() {
         validateCompiler();
         return m_errs;
     }
@@ -148,7 +145,7 @@ public class Compiler {
             return null;
         }
 
-        try (var ignore = ConstantPool.withPool(m_structFile.getConstantPool())) {
+        try (var _ = ConstantPool.withPool(m_structFile.getConstantPool())) {
             // first time through, load any module dependencies
             setStage(Stage.Loading);
             ModuleConstant idMissing = m_structFile.linkModules(repo, false);
@@ -185,7 +182,7 @@ public class Compiler {
             return true;
         }
 
-        try (var ignore = ConstantPool.withPool(m_structFile.getConstantPool())) {
+        try (var _ = ConstantPool.withPool(m_structFile.getConstantPool())) {
             // recursively resolve all of the unresolved global names, and if anything couldn't get done
             // in one pass, then store it off in a list to tackle next time
             if (!alreadyReached(Stage.Resolving)) {
@@ -229,7 +226,7 @@ public class Compiler {
             return true;
         }
 
-        try (var ignored = ConstantPool.withPool(m_structFile.getConstantPool())) {
+        try (var _ = ConstantPool.withPool(m_structFile.getConstantPool())) {
             // recursively resolve all of the unresolved global names, and if anything couldn't get done
             // in one pass, the manager will keep track of what remains to be done
             if (!alreadyReached(Stage.Validating)) {
@@ -273,7 +270,7 @@ public class Compiler {
             return true;
         }
 
-        try (var ignored = ConstantPool.withPool(m_structFile.getConstantPool())) {
+        try (var _ = ConstantPool.withPool(m_structFile.getConstantPool())) {
             // recursively resolve all of the unresolved global names, and if anything couldn't get done
             // in one pass, then store it off in a list to tackle next time
             if (!alreadyReached(Stage.Emitting)) {
@@ -289,7 +286,7 @@ public class Compiler {
             if (m_mgr.processComplete()) {
                 setStage(Stage.Emitted);
 
-                if (m_errs.getSeverity().compareTo(Severity.ERROR) < 0) {
+                if (!m_errs.hasSeriousErrors()) {
                     // "purge" the constant pool and do a final validation on the entire module structure
                     m_structFile.reregisterConstants(true);
                     m_structFile.validate(m_errs);
@@ -381,7 +378,7 @@ public class Compiler {
     /**
      * The ErrorListener to report errors to.
      */
-    private final ErrorList m_errs;
+    private final ErrorListener m_errs;
 
     /**
      * The FileStructure that this compiler is putting together in a series of passes.
