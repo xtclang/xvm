@@ -2639,16 +2639,56 @@ builds the array by hand - 23 `new Object[]{...}` sites, 17 of them in a log or 
 errs.log(Severity.ERROR, SOME_CODE, new Object[] {name, type}, this);
 ```
 
-Declaring it `Object... aoParam` is **source- and binary-compatible**: an array is still a valid
-argument to a varargs parameter, so all 23 existing call sites keep compiling untouched, and new
-ones read as `errs.log(Severity.ERROR, SOME_CODE, this, name, type)`. This is additive, has no
-behavioural effect, and can ship on its own.
+**Corrected after attempting it:** changing the existing signatures in place does **not** compile.
+A varargs parameter must come last, and all four declarations have parameters *after* `aoParam`
+(`XvmStructure xs`, or the source position triple). The change has to be additive **overloads** with
+the ellipsis last:
+
+```java
+default boolean log(Severity severity, String sCode, XvmStructure xs, Object... aoParam);
+default boolean log(Severity severity, String sCode, Source source, long lPosStart, long lPosEnd,
+        Object... aoParam);
+```
+
+Those are new methods, so every existing call site is untouched and callers migrate when convenient,
+writing `errs.log(Severity.ERROR, SOME_CODE, this, name, type)`. **Implemented on the working
+branch.** Note the same reordering problem applies to `Lexer`'s four `protected log(...)` helpers,
+which already carry `(Severity, String, long, long)` overloads - adding varargs there needs care
+about resolution and was deliberately left alone.
 
 It does not make the parameters *typed* - they are message-format arguments and genuinely
 heterogeneous. Going further means an error code that names its own parameter types (a record per
 code, or a sealed hierarchy), which is a real design change and should be proposed separately rather
 than smuggled in here. The varargs change is worth doing regardless, because it removes the
 boilerplate that makes the untyped array conspicuous at every call site.
+
+### What stage 1 found on the first try
+
+Requiring a listener in `StageMgr`'s two constructors immediately failed an ordinary xdk build:
+
+```
+java.lang.NullPointerException: errs
+    at StageMgr.<init>(StageMgr.java:45)
+    at Expression.testFitAsType(Expression.java:475)
+    at RelOpExpression.testFit(RelOpExpression.java:304)
+```
+
+`testFitAsType` passed its caller's `errs` straight into `StageMgr` for a **speculative** staging
+step. The correct behaviour was already written on the very next method - `validateAsType` stages
+the same expression with an explicit `ErrorListener.BLACKHOLE`, because staging an expression you
+are only speculating about must not report errors.
+
+So the method's behaviour depended on its caller:
+
+- caller passes `null` -> silently `BLACKHOLE`, errors discarded;
+- caller passes a real listener -> staging failures from a *fit test* reported as real errors.
+
+**Classified as a latent hazard, not a master bug.** The inconsistency is plain in the source, but
+reaching the second branch needs a caller with a non-null listener, a `typeRequired.isTypeOfType()`,
+and a type expression that fails staging - and no repro has been produced. It is recorded here
+rather than in the bug list until one is. What it does demonstrate is that this row's premise is
+right: **there was no design behind the nulls.** The single live null-passer turned out to be an
+omission, fixed by copying the line above it.
 
 ### Why this is a prerequisite, not a cleanup
 
