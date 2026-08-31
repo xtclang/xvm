@@ -164,4 +164,12 @@ public class xRTSlicingDelegate
             return super.toString() + " @" + f_ofStart;
         }
     }
+
+    @Override
+    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
+        // a slice is fixed-size; xArray raises "SizeLimited: Fixed size array" before any delegate
+        // is asked, so this states the position rather than borrowing another delegate's storage
+        throw new UnsupportedOperationException("a slice owns no element storage");
+    }
+
 }

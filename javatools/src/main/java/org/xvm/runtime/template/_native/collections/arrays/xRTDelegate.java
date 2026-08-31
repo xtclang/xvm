@@ -621,19 +621,7 @@ public abstract class xRTDelegate
     /**
      * Storage-specific implementation of {@link #deleteRange}.
      */
-    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
-        int                  cSize     = (int) hDelegate.m_cSize;
-        ObjectHandle[]       ahValue   = hDelegate.m_ahValue;
-        int                  nIndex    = (int) lIndex;
-        int                  nDelete   = (int) cDelete;
-
-        if (nIndex < cSize - nDelete) {
-            System.arraycopy(ahValue, nIndex + nDelete, ahValue, nIndex, cSize - nIndex - nDelete);
-        }
-        Arrays.fill(ahValue, cSize - nDelete, cSize, null);
-        hDelegate.m_cSize -= cDelete;
-    }
+    protected abstract void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete);
 
 
     // ----- helper methods ------------------------------------------------------------------------

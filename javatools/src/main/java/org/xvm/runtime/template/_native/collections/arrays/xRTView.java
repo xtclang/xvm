@@ -96,4 +96,11 @@ public abstract class xRTView
                     : hSource;
         }
     }
+
+    @Override
+    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
+        throw new UnsupportedOperationException(
+                getClass().getSimpleName() + " is a view and owns no element storage");
+    }
+
 }

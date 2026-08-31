@@ -324,4 +324,20 @@ public class xRTStringDelegate
                 && Arrays.equals(this.m_asValue, that.m_asValue);
         }
     }
+
+    @Override
+    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
+        StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
+        int               cSize     = (int) hDelegate.m_cSize;
+        String[]          asValue   = hDelegate.m_asValue;
+        int               nIndex    = (int) lIndex;
+        int               nDelete   = (int) cDelete;
+
+        if (nIndex < cSize - nDelete) {
+            System.arraycopy(asValue, nIndex + nDelete, asValue, nIndex, cSize - nIndex - nDelete);
+        }
+        Arrays.fill(asValue, cSize - nDelete, cSize, null);
+        hDelegate.m_cSize -= cDelete;
+    }
+
 }

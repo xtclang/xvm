@@ -23,6 +23,7 @@ module TestArray {
 
         testComparable();
         testAggregation();
+        testDeleteRange();
 
         testIterators();
 
@@ -369,4 +370,44 @@ module TestArray {
         console.print($"col={col}");
         console.print($"bytes={col.contents}");
     }
+    /**
+     * `deleteAll(range)` across every element type that has its own storage.
+     *
+     * Array storage is chosen per element type - a byte-backed delegate for `Int8`, a `String[]`
+     * one for `String`, an `ObjectHandle[]` one for everything else - and each implements the
+     * delete itself. Two of them were wrong in ways a single-element delete could not show:
+     * the byte-backed one copied from the wrong offset and silently produced the wrong elements,
+     * and `String` had no implementation at all and inherited the one for object arrays, which
+     * failed with a cast error. So this deletes a MULTI-element range, and does it for every type,
+     * because each type is a different implementation.
+     */
+    void testDeleteRange() {
+        console.print("\n** testDeleteRange()");
+
+        // removing 1..2 from a five-element array must always leave the 1st, 4th and 5th
+        assert new Array<Int64>  (Mutable, [1, 2, 3, 4, 5]).deleteAll(1..2) == [1, 4, 5];
+        assert new Array<Int8>   (Mutable, [1, 2, 3, 4, 5]).deleteAll(1..2) == [1, 4, 5];
+        assert new Array<Int16>  (Mutable, [1, 2, 3, 4, 5]).deleteAll(1..2) == [1, 4, 5];
+        assert new Array<Int128> (Mutable, [1, 2, 3, 4, 5]).deleteAll(1..2) == [1, 4, 5];
+        assert new Array<UInt8>  (Mutable, [1, 2, 3, 4, 5]).deleteAll(1..2) == [1, 4, 5];
+        assert new Array<Float64>(Mutable, [1.0, 2.0, 3.0, 4.0, 5.0]).deleteAll(1..2) == [1.0, 4.0, 5.0];
+        assert new Array<Char>   (Mutable, ['a', 'b', 'c', 'd', 'e']).deleteAll(1..2) == ['a', 'd', 'e'];
+        assert new Array<String> (Mutable, ["a", "b", "c", "d", "e"]).deleteAll(1..2) == ["a", "d", "e"];
+        assert new Array<Boolean>(Mutable, [True, False, True, False, True]).deleteAll(1..2)
+                == [True, False, True];
+        assert new Array<Bit>    (Mutable, [0, 1, 0, 1, 0]).deleteAll(1..2) == [0, 1, 0];
+        assert new Array<Nibble> (Mutable, [0, 1, 2, 3, 4]).deleteAll(1..2) == [0, 3, 4];
+        assert new Array<Object> (Mutable, [1, 2, 3, 4, 5]).deleteAll(1..2).size == 3;
+
+        // a single-element delete took a different path and always worked; keep it covered
+        assert new Array<String>(Mutable, ["a", "b", "c", "d"]).deleteAll(1..1) == ["a", "c", "d"];
+        assert new Array<Int8>  (Mutable, [1, 2, 3, 4]).deleteAll(1..1) == [1, 3, 4];
+
+        // and a range reaching the end, where the copy is skipped entirely
+        assert new Array<Int8>  (Mutable, [1, 2, 3, 4, 5]).deleteAll(3..4) == [1, 2, 3];
+        assert new Array<String>(Mutable, ["a", "b", "c", "d", "e"]).deleteAll(3..4) == ["a", "b", "c"];
+
+        console.print("deleteAll(range) ok for every element type");
+    }
+
 }
