@@ -111,6 +111,7 @@ without its listed dependency.
 | 32 | Seven sites plus a `construct(String)` on `lib_ecstasy` `TimeZone`. Fixed in-branch, verified end to end. | `pool.ensureLiteralConstant(Format.TimeZone, "x")` throws `IllegalStateException: unsupported format: TimeZone` where `Date`/`Time`/`Duration` succeed. | Ready after manual review. |
 | 33 | Source-only; two one-line fixes. Surfaced set for the guard measured empty (183/183 AST classes load clean). Fixed in-branch. | `fieldsForNames(AstNode.class, "noSuchFieldAnywhere")` returns `fields[0]=null` instead of throwing; `isInstance(AstNode.class)` observed `false` where `isAssignableFrom` is `true`. | Ready after manual review. |
 | 34 | Source-only; one word (`info1` -> `info2`). Fixed in-branch. | Caller `mergeTypeInfo` treats both TypeInfos as independently nullable; with `info1` present and `info2` absent the guard passes and `info2.getChildInfosByName()` NPEs. | Ready after manual review. |
+| 35 | Source-only; two methods, three lines each. Fixed in-branch, verified end to end. | `org.xvm.runtime.IndexNarrowingTest.noIndexedMethodRangeChecksANarrowedIndex` fails on the unfixed source naming both sites; at run time `"abcdefgh"[4294967300]` answers `'e'` where the same index on an `Int[]` raises. | Ready after manual review. |
 
 ## Reuse Exposure Categories
 
@@ -2377,3 +2378,84 @@ scratch worktree still works. Hashes of MASTER commits are unaffected and still 
 | `f4df60ed1` | branch seed (rewritten) | Refuse view cloning of Mutable arrays |
 | `f835b3693` | branch seed (rewritten) | Copy super parameters for short-hand property overrides |
 | `ff8cc479a` | branch seed (rewritten) | Clone reflection invoke arguments before frame reuse |
+
+## 35. String and Type index a long by its low 32 bits
+
+`ArrayTemplate.extractArrayValue` receives the index as a `long`, and two implementations narrow it
+before range-checking it:
+
+```java
+int nIx = (int) lIndex;
+
+return nIx < 0 || nIx >= ach.length
+        ? frame.raiseException(xException.outOfBounds(frame, lIndex, ach.length))
+        : frame.assignValue(iReturn, xChar.makeHandle(ach[nIx]));
+```
+
+`(int)` keeps only the low 32 bits, so an index of 2<sup>32</sup>&nbsp;+&nbsp;4 becomes 4, satisfies
+the guard, and reads element 4.
+
+**Red proof, at run time.** On an eight-character String:
+
+```
+"abcdefgh"[4294967300]   ->  'e'          // should raise
+[10,11,12,13,14,15,16,17][4294967300]  ->  raises "Index 4294967300 out of range 0..7"
+```
+
+The array gets it right because `xArray` checks the un-narrowed value, so the two containers
+disagree about the same out-of-range index. The exception each broken site builds already reports
+`lIndex` rather than the narrowed variable, which is the tell that the check was always intended to
+be against the full value.
+
+**Red proof, deterministic.** `org.xvm.runtime.IndexNarrowingTest` scans the runtime for a method
+taking a `long` index that narrows it and then range-checks the narrowed name. On unfixed source it
+fails naming both sites; on fixed source it passes. Two further tests guard the scan against
+silently matching nothing. It scans source rather than invoking the method because reaching
+`extractArrayValue` needs a live `Frame`, container and type composition.
+
+**Affected**
+
+| file | method |
+| --- | --- |
+| `javatools/.../runtime/template/text/xString.java` | `extractArrayValue` |
+| `javatools/.../runtime/template/_native/reflect/xRTType.java` | `extractArrayValue` |
+
+**Patch** - range-check before narrowing; generated against `origin/master` blobs, so it applies
+as-is:
+
+```diff
+--- a/javatools/src/main/java/org/xvm/runtime/template/text/xString.java
++++ b/javatools/src/main/java/org/xvm/runtime/template/text/xString.java
+@@ -188,11 +188,10 @@
+     @Override
+     public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
+         char[] ach = ((StringHandle) hTarget).getValue();
+-        int    nIx = (int) lIndex;
+ 
+-        return nIx < 0 || nIx >= ach.length
++        return lIndex < 0 || lIndex >= ach.length
+                 ? frame.raiseException(xException.outOfBounds(frame, lIndex, ach.length))
+-                : frame.assignValue(iReturn, xChar.makeHandle(ach[nIx]));
++                : frame.assignValue(iReturn, xChar.makeHandle(ach[(int) lIndex]));
+     }
+--- a/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTType.java
++++ b/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTType.java
+@@ -468,11 +468,11 @@
+     @Override
+     public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
+-        TypeConstant type   = ((TypeHandle) hTarget).getDataType();
+-        int          nIndex = (int) lIndex;
++        TypeConstant type = ((TypeHandle) hTarget).getDataType();
+ 
+-        return nIndex >= 0 && nIndex < type.getParamsCount()
+-            ? frame.assignValue(iReturn, type.getParamType(nIndex).ensureTypeHandle(frame.f_context.f_container))
++        return lIndex >= 0 && lIndex < type.getParamsCount()
++            ? frame.assignValue(iReturn,
++                    type.getParamType((int) lIndex).ensureTypeHandle(frame.f_context.f_container))
+             : frame.raiseException(xException.outOfBounds(frame, lIndex, type.getParamsCount()));
+     }
+```
+
+**Not affected:** `BaseInt128`'s shift operators also narrow with `(int)`, and that one is safe -
+`LongLong.shl` masks the count with `& 0x7F`, and truncation preserves the low 32 bits, so the low
+7 survive. Worth stating because the two sites look identical.
