@@ -15,10 +15,12 @@ public interface ComponentResolver {
      * @param sName      the name to resolve
      * @param access     the accessibility to the component this resolver represents
      * @param collector  the collector to which the potential name matches will be reported
+     * @param errs       the listener to report resolution issues to; required
      *
      * @return the resolution result
      */
-    ResolutionResult resolveName(String sName, Constants.Access access, ResolutionCollector collector);
+    ResolutionResult resolveName(String sName, Constants.Access access, ResolutionCollector collector,
+                                 ErrorListener errs);
 
     enum ResolutionResult {
         UNKNOWN, RESOLVED, POSSIBLE, ERROR;
@@ -61,13 +63,6 @@ public interface ComponentResolver {
          */
         default AstNode getNode() {
             return null;
-        }
-
-        /**
-         * Provide an ErrorListener to report resolution issues to.
-         */
-        default ErrorListener getErrorListener() {
-            return ErrorListener.BLACKHOLE;
         }
     }
 }

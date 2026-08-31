@@ -145,11 +145,11 @@ public final class PackageStructure
     }
 
     @Override
-    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector) {
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector, ErrorListener errs) {
         Contribution contrib = findContribution(Composition.Import);
         return contrib == null
-                ? super.resolveName(sName, access, collector)
-                : contrib.getModuleConstant().getComponent().resolveName(sName, access, collector);
+                ? super.resolveName(sName, access, collector, errs)
+                : contrib.getModuleConstant().getComponent().resolveName(sName, access, collector, errs);
     }
 
 

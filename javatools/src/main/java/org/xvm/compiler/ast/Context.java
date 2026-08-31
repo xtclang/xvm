@@ -2420,7 +2420,7 @@ public class Context {
                 MethodStructure  method    = getMethod();
                 MethodConstant   idMethod  = method == null ? null : method.getIdentityConstant();
 
-                if (typeLeft.resolveContributedName(sName, access, idMethod, collector) ==
+                if (typeLeft.resolveContributedName(sName, access, idMethod, collector, errs) ==
                         ResolutionResult.RESOLVED) {
                     // inference succeeded, but we can only use properties that are constants or
                     // formal types

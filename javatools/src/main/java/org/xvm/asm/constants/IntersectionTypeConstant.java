@@ -353,14 +353,14 @@ public sealed class IntersectionTypeConstant
 
     @Override
     public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector, ErrorListener errs) {
         // for the IntersectionType to contribute a name, either side needs to find it
-        ResolutionResult result1 = m_constType1.resolveContributedName(sName, access, idMethod, collector);
+        ResolutionResult result1 = m_constType1.resolveContributedName(sName, access, idMethod, collector, errs);
         if (result1 == ResolutionResult.RESOLVED) {
             return result1;
         }
 
-        ResolutionResult result2 = m_constType2.resolveContributedName(sName, access, idMethod, collector);
+        ResolutionResult result2 = m_constType2.resolveContributedName(sName, access, idMethod, collector, errs);
         if (result2 == ResolutionResult.RESOLVED) {
             return result2;
         }

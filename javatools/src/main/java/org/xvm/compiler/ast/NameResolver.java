@@ -188,7 +188,7 @@ public class NameResolver
                     }
 
                     // ask the component to resolve the name
-                    switch (componentResolver.resolveName(sName, access, this)) {
+                    switch (componentResolver.resolveName(sName, access, this, errs)) {
                     case POSSIBLE:
                         // formal types could not be resolved; keep walking up
                         fPossibleFormal = true;
@@ -304,7 +304,7 @@ public class NameResolver
                     }
                 } else {
                     Component component = (Component) structure;
-                    switch (component.resolveName(m_sName, Access.PRIVATE, this)) {
+                    switch (component.resolveName(m_sName, Access.PRIVATE, this, errs)) {
                     case POSSIBLE:
                         // the component's type has some unresolved parts, which is not a
                         // consideration at this point; process as unknown
@@ -539,7 +539,7 @@ public class NameResolver
                         ? constPseudo.getDeclarationLevelClass().getComponent()
                         : null;
             if (component != null) {
-                result = component.resolveName(m_sName, Access.PRIVATE, this);
+                result = component.resolveName(m_sName, Access.PRIVATE, this, errs);
             }
         }
 
@@ -549,7 +549,7 @@ public class NameResolver
             //
             // REVIEW: we should strongly consider creating a dedicated constant for this,
             //         so there is no ambiguity at compile- or run-time resolution
-            result = getPool().clzType().getComponent().resolveName(m_sName, Access.PUBLIC, this);
+            result = getPool().clzType().getComponent().resolveName(m_sName, Access.PUBLIC, this, errs);
         }
 
         switch (result) {
@@ -746,10 +746,6 @@ public class NameResolver
         return m_node;
     }
 
-    @Override
-    public ErrorListener getErrorListener() {
-        return m_errs;
-    }
 
 
     // ----- helpers -------------------------------------------------------------------------------

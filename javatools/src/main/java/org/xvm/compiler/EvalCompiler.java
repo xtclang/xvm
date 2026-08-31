@@ -418,7 +418,7 @@ public class EvalCompiler {
 
         @Override
         public ResolutionResult resolveName(String sName, Constants.Access access,
-                                            ResolutionCollector collector) {
+                                            ResolutionCollector collector, ErrorListener errs) {
             Component component = pool().getImplicitlyImportedComponent(sName);
             return component == null
                     ? ResolutionResult.ERROR

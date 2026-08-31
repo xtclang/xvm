@@ -123,7 +123,7 @@ public final class RecursiveTypeConstant
 
     @Override
     public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector, ErrorListener errs) {
         return ResolutionResult.UNKNOWN;
     }
 

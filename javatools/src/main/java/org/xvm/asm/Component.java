@@ -2006,7 +2006,7 @@ public abstract sealed class Component
      * @return the resolution result is one of: RESOLVED, UNKNOWN or POSSIBLE
      */
     protected ResolutionResult resolveContributedName(
-            String sName, Access access, ResolutionCollector collector, boolean fAllowInto) {
+            String sName, Access access, ResolutionCollector collector, boolean fAllowInto, ErrorListener errs) {
         assert access != Access.STRUCT;
 
         Component child = getChild(sName);
@@ -2088,21 +2088,21 @@ public abstract sealed class Component
                 }
                 if (m_FVisited != null && m_FVisited.booleanValue() == fAllowInto) {
                     // recursive contribution
-                    collector.getErrorListener().log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
+                    errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
                             new Object[] {getName(), contrib.getComposition().toString().toLowerCase()}, this);
                     return ResolutionResult.ERROR;
                 }
 
                 m_FVisited = fAllowInto;
                 ResolutionResult result =
-                        clzContrib.resolveContributedName(sName, access, collector, fAllowInto);
+                        clzContrib.resolveContributedName(sName, access, collector, fAllowInto, errs);
                 m_FVisited = null;
 
                 if (result != ResolutionResult.UNKNOWN) {
                     return result;
                 }
             } else {
-                return typeContrib.resolveContributedName(sName, access, null, collector);
+                return typeContrib.resolveContributedName(sName, access, null, collector, errs);
             }
         }
 
@@ -2218,8 +2218,8 @@ public abstract sealed class Component
     // ----- ComponentResolver methods -------------------------------------------------------------
 
     @Override
-    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector) {
-        return resolveContributedName(sName, access, collector, true);
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector, ErrorListener errs) {
+        return resolveContributedName(sName, access, collector, true, errs);
     }
 
 
@@ -3569,7 +3569,9 @@ public abstract sealed class Component
             return ResolutionResult.RESOLVED;
         }
 
-        @Override
+        /**
+         * @return the listener this collector was constructed with
+         */
         public ErrorListener getErrorListener() {
             return m_errs;
         }

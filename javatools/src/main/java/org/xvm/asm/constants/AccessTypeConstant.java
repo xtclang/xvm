@@ -164,11 +164,11 @@ public final class AccessTypeConstant
 
     @Override
     public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector, ErrorListener errs) {
         access = m_access == Access.STRUCT || access == Access.STRUCT
                 ? Access.PRIVATE
                 : m_access.minOf(access);
-        return super.resolveContributedName(sName, access, idMethod, collector);
+        return super.resolveContributedName(sName, access, idMethod, collector, errs);
     }
 
     // ----- TypeInfo support ----------------------------------------------------------------------

@@ -63,7 +63,7 @@ public final class TypeSequenceTypeConstant
 
     @Override
     public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector, ErrorListener errs) {
         return ResolutionResult.UNKNOWN;
     }
 

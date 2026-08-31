@@ -161,7 +161,7 @@ public final class PropertyClassTypeConstant
 
     @Override
     public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector, ErrorListener errs) {
         return ResolutionResult.UNKNOWN;
     }
 

@@ -394,14 +394,13 @@ public final class UnionTypeConstant
 
     @Override
     public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector, ErrorListener errs) {
         // for the UnionType to contribute a name, either both sides need to find exactly
         // the same component or just one side should find it
-        ErrorListener    errs       = collector.getErrorListener();
         SimpleCollector  collector1 = new SimpleCollector(errs);
-        ResolutionResult result1    = m_constType1.resolveContributedName(sName, access, idMethod, collector1);
+        ResolutionResult result1    = m_constType1.resolveContributedName(sName, access, idMethod, collector1, errs);
         SimpleCollector  collector2 = new SimpleCollector(errs);
-        ResolutionResult result2    = m_constType2.resolveContributedName(sName, access, idMethod, collector2);
+        ResolutionResult result2    = m_constType2.resolveContributedName(sName, access, idMethod, collector2, errs);
 
         if (result1 == ResolutionResult.RESOLVED) {
             Constant const1 = collector1.getResolvedConstant();

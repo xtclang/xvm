@@ -470,11 +470,11 @@ public sealed class TerminalTypeConstant
 
     @Override
     public ResolutionResult resolveContributedName(
-           String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
+           String sName, Access access, MethodConstant idMethod, ResolutionCollector collector, ErrorListener errs) {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = ensureResolvedTypedef();
-            return constId.getReferredToType().resolveContributedName(sName, access, idMethod, collector);
+            return constId.getReferredToType().resolveContributedName(sName, access, idMethod, collector, errs);
         }
 
         DefiningConstant defining = getDefiningConstant();
@@ -482,23 +482,23 @@ public sealed class TerminalTypeConstant
             case FormalConstant _, KeywordConstant _ -> ResolutionResult.UNKNOWN;
 
             case NativeRebaseConstant constant -> resolveClassContributedName(
-                    constant.getClassConstant(), sName, access, idMethod, collector);
+                    constant.getClassConstant(), sName, access, idMethod, collector, errs);
             case ModuleConstant constant ->
-                resolveClassContributedName(constant, sName, access, idMethod, collector);
+                resolveClassContributedName(constant, sName, access, idMethod, collector, errs);
             case PackageConstant constant ->
-                resolveClassContributedName(constant, sName, access, idMethod, collector);
+                resolveClassContributedName(constant, sName, access, idMethod, collector, errs);
             case ClassConstant constant ->
-                resolveClassContributedName(constant, sName, access, idMethod, collector);
+                resolveClassContributedName(constant, sName, access, idMethod, collector, errs);
 
             case ThisClassConstant constant -> constant.getDeclarationLevelClass().getType().
-                    resolveContributedName(sName, access, idMethod, collector);
+                    resolveContributedName(sName, access, idMethod, collector, errs);
             case ParentClassConstant constant -> constant.getDeclarationLevelClass().getType().
-                    resolveContributedName(sName, access, idMethod, collector);
+                    resolveContributedName(sName, access, idMethod, collector, errs);
             case ChildClassConstant constant -> constant.getDeclarationLevelClass().getType().
-                    resolveContributedName(sName, access, idMethod, collector);
+                    resolveContributedName(sName, access, idMethod, collector, errs);
 
             case TypedefConstant constant -> constant.getReferredToType().
-                    resolveContributedName(sName, access, idMethod, collector);
+                    resolveContributedName(sName, access, idMethod, collector, errs);
 
             case UnresolvedNameConstant ignored -> ResolutionResult.POSSIBLE;
 
@@ -514,7 +514,7 @@ public sealed class TerminalTypeConstant
      */
     private static ResolutionResult resolveClassContributedName(
             IdentityConstant idClz, String sName, Access access, MethodConstant idMethod,
-            ResolutionCollector collector) {
+            ResolutionCollector collector, ErrorListener errs) {
         if (idMethod != null) {
             if (idClz.isNestMateOf(idMethod.getClassIdentity())) {
                 access = Access.PRIVATE;
@@ -527,7 +527,7 @@ public sealed class TerminalTypeConstant
             }
         }
 
-        return idClz.getComponent().resolveName(sName, access, collector);
+        return idClz.getComponent().resolveName(sName, access, collector, errs);
     }
 
     @Override

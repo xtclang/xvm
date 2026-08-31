@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver.ResolutionCollector;
@@ -185,12 +186,12 @@ public abstract sealed class AbstractDependantChildTypeConstant
 
     @Override
     public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector, ErrorListener errs) {
         if (containsUnresolved()) {
             return ResolutionResult.POSSIBLE;
         }
 
-        return getChildStructure().resolveName(sName, access, collector);
+        return getChildStructure().resolveName(sName, access, collector, errs);
     }
 
 

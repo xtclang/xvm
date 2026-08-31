@@ -640,7 +640,7 @@ public final class PropertyStructure
     }
 
     @Override
-    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector) {
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector, ErrorListener errs) {
         // allow the property to resolve names based on the property type;
         // it comes handy in the context inference scenario, allowing us to write:
         //    Color c = Red;
@@ -651,8 +651,8 @@ public final class PropertyStructure
         // Note; we don't call into the super since the PropertyStructure's children are
         // "invisible" without the name qualification
 
-        SimpleCollector  collectorTemp = new SimpleCollector(collector.getErrorListener());
-        ResolutionResult result        = getType().resolveContributedName(sName, access, null, collectorTemp);
+        SimpleCollector  collectorTemp = new SimpleCollector(errs);
+        ResolutionResult result        = getType().resolveContributedName(sName, access, null, collectorTemp, errs);
         if (result == ResolutionResult.RESOLVED) {
             // we only allow static properties (constants) and singleton classes
             Constant constant = collectorTemp.getResolvedConstant();
@@ -679,7 +679,7 @@ public final class PropertyStructure
             return ResolutionResult.UNKNOWN;
         }
 
-        return super.resolveName(sName, access, collector);
+        return super.resolveName(sName, access, collector, errs);
     }
 
     @Override

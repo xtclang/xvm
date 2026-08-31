@@ -1760,7 +1760,7 @@ public final class MethodStructure
     }
 
     @Override
-    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector) {
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector, ErrorListener errs) {
         for (int i = 0, c = getParamCount(); i < c; ++i) {
             Parameter param = m_aParams[i];
 
@@ -1774,17 +1774,17 @@ public final class MethodStructure
                 // REVIEW need a better error?
                 AstNode node = collector.getNode();
                 if (node == null) {
-                    collector.getErrorListener().log(Severity.ERROR,
+                    errs.log(Severity.ERROR,
                         Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS, null, this);
                 } else {
-                    node.log(collector.getErrorListener(), Severity.ERROR,
+                    node.log(errs, Severity.ERROR,
                         Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS);
                 }
                 return ResolutionResult.ERROR;
             }
         }
 
-        return super.resolveName(sName, access, collector);
+        return super.resolveName(sName, access, collector, errs);
     }
 
     /**

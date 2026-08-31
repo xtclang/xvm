@@ -316,9 +316,9 @@ public final class UnresolvedTypeConstant
 
     @Override
     public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector, ErrorListener errs) {
         return isTypeResolved()
-                ? getResolvedType().resolveContributedName(sName, access, idMethod, collector)
+                ? getResolvedType().resolveContributedName(sName, access, idMethod, collector, errs)
                 : ResolutionResult.POSSIBLE;
     }
 

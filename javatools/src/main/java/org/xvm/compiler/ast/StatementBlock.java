@@ -926,7 +926,7 @@ public final class StatementBlock
                     // REVIEW - shouldn't all of this resolution info be present on the TypeInfo? i.e. shouldn't we rely on the TypeInfo instead of the Component?
                     SimpleCollector collector  = new SimpleCollector(errs);
                     Constant        constFound = null;
-                    if (component.resolveName(sName, access, collector) == ResolutionResult.RESOLVED) {
+                    if (component.resolveName(sName, access, collector, errs) == ResolutionResult.RESOLVED) {
                         Constant constant = collector.getResolvedConstant();
                         switch (constant.getFormat()) {
                         // properties and methods will use the TypeInfo for resolution

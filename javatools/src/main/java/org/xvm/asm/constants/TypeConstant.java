@@ -1142,8 +1142,8 @@ public abstract sealed class TypeConstant
      * @return the resolution result
      */
     public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
-        return getUnderlyingType().resolveContributedName(sName, access, idMethod, collector);
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector, ErrorListener errs) {
+        return getUnderlyingType().resolveContributedName(sName, access, idMethod, collector, errs);
     }
 
     @Override

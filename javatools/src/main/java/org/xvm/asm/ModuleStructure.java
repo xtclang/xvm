@@ -698,15 +698,15 @@ public final class ModuleStructure
     }
 
     @Override
-    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector) {
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector, ErrorListener errs) {
         if (sName.equals(getSimpleName())) {
             collector.resolvedComponent(this);
             return ResolutionResult.RESOLVED;
         }
 
         return m_moduleActual == null
-                ? super.resolveName(sName, access, collector)
-                : m_moduleActual.resolveName(sName, access, collector);
+                ? super.resolveName(sName, access, collector, errs)
+                : m_moduleActual.resolveName(sName, access, collector, errs);
     }
 
     /**

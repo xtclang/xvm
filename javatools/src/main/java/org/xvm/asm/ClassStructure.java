@@ -1005,13 +1005,13 @@ public sealed class ClassStructure
     }
 
     @Override
-    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector) {
-        ResolutionResult result = super.resolveName(sName, access, collector);
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector, ErrorListener errs) {
+        ResolutionResult result = super.resolveName(sName, access, collector, errs);
         if (result == ResolutionResult.UNKNOWN && getFormat() == Format.SERVICE) {
             // look into the Service interface itself
             ClassStructure   clzSvc       = (ClassStructure) getConstantPool().clzService().getComponent();
             SimpleCollector  collectorSvc = new SimpleCollector(ErrorListener.BLACKHOLE);
-            ResolutionResult resultSvc    = clzSvc.resolveName(sName, Access.PROTECTED, collectorSvc);
+            ResolutionResult resultSvc    = clzSvc.resolveName(sName, Access.PROTECTED, collectorSvc, errs);
             if (resultSvc == ResolutionResult.RESOLVED) {
                 // only allow child classes; properties and methods are resolved by the TypeInfo
                 Constant constant = collectorSvc.getResolvedConstant();
