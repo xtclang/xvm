@@ -77,6 +77,7 @@ surface graduate into individual rows on the bug list.
 | E20 | `Format` vs class hierarchy: pin the 4 divergences, then audit 154 sites | step 1 is one test; steps 2-3 are 6 small PRs | Low (step 1) | `Constant.Format`, the 4 divergent pairs | (this file) |
 | E21 | Type `getDefiningConstant()` as the identity/pseudo union | 17 files; deletes a 33-site workaround layer | Medium | `TypeConstant`, `TerminalTypeConstant` | (this file) |
 | E22 | **The real one**: `ObjectHandle` as calling convention — 1,439 casts (50%) | multi-PR programme; needs a design decision | High | `ClassTemplate`'s 37-method protocol, `ObjectHandle` | (this file) |
+| E23 | Bind natives to typed handlers instead of String dispatch (744 labels) | framework is 1 PR; then per-template | Medium | `ClassTemplate`, every template | (this file) |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -1298,6 +1299,85 @@ splitting handle classes per template - a third, larger change.
 
 **Do not start either as a "cleanup".** The measurement above is the deliverable; the choice is an
 architectural one for the maintainer.
+
+---
+
+## E23 — Bind natives to typed handlers instead of dispatching them by String
+
+The concrete answer to E22: the runtime knows a native's identity and its argument types at link
+time, and throws both away.
+
+```java
+markNativeMethod("names", STRING, null);      // STRING is {"text.String"}
+```
+
+This locates the `MethodStructure` by name and parameter type, then records `m_fNative = true` — a
+boolean. Every invocation afterwards re-derives the identity with `switch (method.getName())` and
+re-derives the argument type with a hand-written cast:
+
+```java
+case "names": StringHandle hPathString = (StringHandle) hArg;
+```
+
+**744 `case` labels across four protocols** do this: `invokeNativeN` 266, `invokeNative1` 193,
+`invokeNativeGet` 186, `invokeNativeNN` 93, `invokeNativeSet` 6.
+
+### The recipe
+
+**1. Make the declared type carry its Java representation.** `STRING` names a `text.String` but not
+the `StringHandle` representing it. `NativeType<H>` carries both, so the conversion can happen once,
+as a checked `Class.cast`, instead of as an unchecked cast in each body.
+
+**2. Return the structure `markNativeMethod` marked.** It already found it. Note it may return a
+*synthetic override* it created rather than the method originally found, so the binder must key on
+what came back, not on its own lookup.
+
+**3. Bind in the fall-through, never before the switch.** The dispatch seam goes in the base
+`ClassTemplate.invokeNative*` arm that previously only raised `"Unknown native method"`. A
+template's existing switch still runs first, so an unmigrated native behaves exactly as before and
+migration is per-native with no flag day. This is the property that makes the whole thing portable
+in small pieces.
+
+**4. Keep the arity out of the stored type.** `BoundN`/`BoundNN` dispatch from
+`(hTarget, ahArg[], returns)`; per-arity typing lives in `bind` factories. A three-argument form is
+one factory, not a new map. Measured `ahArg[i]` usage: 88 / 55 / 23 / 10 / 3 / 1 / 1, so zero-, one-
+and two-argument forms cover nearly everything.
+
+**5. Bind only where the existing body casts the argument UNCONDITIONALLY.** Where it tests with
+`instanceof` first, the declaration does not settle the representation — see below. 21 sites in the
+runtime cast an argument conditionally.
+
+**6. For a type with several representations, name what they SHARE.** An Ecstasy `Int` is a
+`JavaLong` or a `LongLongHandle` depending on magnitude, so no handle class describes it.
+`IntegralValue` — `fitsLong(signed)` / `longValue()` — is implemented by both, and
+`NativeType.ofShared` declares against it. This unblocks the **29** natives with an `INT` parameter.
+It cannot be a *sealed* union (permits need one package; there is no named module and the two live
+in different packages) and it must not be an abstract tier under `ObjectHandle` (`JavaLong` also
+backs `Char`, `Bit`, `Boolean`). Name what the handle **carries**, not what it **is**.
+
+### What it costs, measured
+
+- A ten-label string switch is **6.1–6.2 ns/op**; the bound lookup plus two checked `Class.cast`
+  calls is **4.7 ns/op**. The typed path is ~1.4 ns/op **faster** — a cached-hash lookup with an
+  identity compare beats hashing and comparing a String, and the JIT elides the cast checks on a
+  hit. A partially migrated template pays both, transiently.
+- **The map key is a `Component`, whose `equals` is a deep recursive structural comparison.** It is
+  never reached: lookups hit by reference (confirmed by running every binding against an
+  `IdentityHashMap`), so the `key == ek` short-circuit answers first, and even on a collision
+  `equals` short-circuits in `isBodyIdentical` on the cached identity-constant hash before the
+  recursive half. Worth stating explicitly in any port — it looks alarming and is not.
+
+### End state, and what survives
+
+A migrated template loses its switch. Whether it loses the *method* depends on the template:
+
+- `xOSFileStore`, `xRTRandom` — not holding a guard, so `invokeNative1` is **deleted**.
+- `xOSStorage` — a service, so three overrides survive holding **only** the async context guard,
+  with no dispatch left in them. That guard is a cross-cutting concern the binding does not address.
+
+Done so far: `xOSStorage` (10 case labels to 0), `xOSFileStore`, `xRTRandom`. **Width: large — do
+not attempt as one PR.** Steps 1–4 are one PR that changes no behaviour; each template after that is
+independent.
 
 ---
 
