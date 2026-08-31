@@ -174,9 +174,6 @@ public class xRTGenericDelegate
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        // Arrays of the same element type can be backed by different delegates - a slice or a
-        // view is not a GenericArrayDelegate - and either side may be one. Casting instead of
-        // testing raised a ClassCastException into the running program; see master bug 37.
         if (!(hValue1 instanceof GenericArrayDelegate h1) || !(hValue2 instanceof GenericArrayDelegate h2)) {
             return false;
         }

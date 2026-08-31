@@ -1643,6 +1643,12 @@ public abstract class ClassTemplate
      *
      * Note: this method is inherently native; it must be answered without calling any natural code
      *
+     * Note: the caller resolves this template from {@code hValue1} alone, so {@code hValue1} is
+     * always one this template produced but {@code hValue2} is arbitrary - two arrays of the same
+     * element type may be backed by different delegates, and a slice or a view is not the concrete
+     * handle. Implementations must therefore TEST the second argument rather than cast it; a
+     * different representation is not the same identity, so the answer is false, not an exception.
+     *
      * @param hValue1  the first value
      * @param hValue2  the second value
      *

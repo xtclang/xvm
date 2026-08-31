@@ -174,9 +174,6 @@ public class xRTCharDelegate
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        // Arrays of the same element type can be backed by different delegates - a slice or a
-        // view is not a CharArrayHandle - and either side may be one. Casting instead of
-        // testing raised a ClassCastException into the running program; see master bug 37.
         if (!(hValue1 instanceof CharArrayHandle h1) || !(hValue2 instanceof CharArrayHandle h2)) {
             return false;
         }
