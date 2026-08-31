@@ -7,6 +7,7 @@ module runner.xtclang.org {
 
     Int run(String[] args) {
         // TODO GG
+        console.print("Hello");
         return 0;
     }
 }
