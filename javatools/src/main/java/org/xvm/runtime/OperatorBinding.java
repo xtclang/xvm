@@ -32,7 +32,8 @@ public final class OperatorBinding {
      * binding falls through to the behaviour it has today.
      */
     public enum Op {
-        ADD, SUB, MUL, DIV, MOD, SHL, SHR, SHR_ALL, AND, OR, XOR, NEG, COMPL, NEXT, PREV
+        ADD, SUB, MUL, DIV, MOD, SHL, SHR, SHR_ALL, AND, OR, XOR, NEG, COMPL, NEXT, PREV,
+        DIV_REM, I_RANGE_I, E_RANGE_I, I_RANGE_E, E_RANGE_E
     }
 
     /**
@@ -56,6 +57,17 @@ public final class OperatorBinding {
         int invoke(Frame frame, T hTarget, int iReturn);
     }
 
+    /**
+     * An operator taking a receiver and one argument, and producing several return values.
+     *
+     * @param <T>  the receiver's handle type
+     * @param <A>  the argument's handle type
+     */
+    @FunctionalInterface
+    public interface BinaryToMany<T, A> {
+        int invoke(Frame frame, T hTarget, A hArg, int[] aiReturn);
+    }
+
     /** One bound binary operator, with the conversion its handler's types imply. */
     interface BoundBinary {
         int dispatch(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
@@ -66,6 +78,11 @@ public final class OperatorBinding {
         int dispatch(Frame frame, ObjectHandle hTarget, int iReturn);
     }
 
+    /** One bound binary operator producing several return values. */
+    interface BoundBinaryToMany {
+        int dispatch(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn);
+    }
+
     static <T, A> BoundBinary bind(NativeType<T> self, NativeType<A> arg, Binary<T, A> handler) {
         return (frame, hTarget, hArg, iReturn) ->
                 handler.invoke(frame, self.cast(hTarget), arg.cast(hArg), iReturn);
@@ -73,5 +90,11 @@ public final class OperatorBinding {
 
     static <T> BoundUnary bind(NativeType<T> self, Unary<T> handler) {
         return (frame, hTarget, iReturn) -> handler.invoke(frame, self.cast(hTarget), iReturn);
+    }
+
+    static <T, A> BoundBinaryToMany bindToMany(NativeType<T> self, NativeType<A> arg,
+                                               BinaryToMany<T, A> handler) {
+        return (frame, hTarget, hArg, aiReturn) ->
+                handler.invoke(frame, self.cast(hTarget), arg.cast(hArg), aiReturn);
     }
 }

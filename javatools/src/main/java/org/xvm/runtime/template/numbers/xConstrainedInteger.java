@@ -70,6 +70,19 @@ public abstract class xConstrainedInteger
         bindOp(OperatorBinding.Op.XOR, JavaLong.class, JavaLong.class, (frame, h1, h2, iReturn) ->
                 frame.assignValue(iReturn, makeJavaLong(h1.getValue() ^ h2.getValue())));
 
+        bindOp(OperatorBinding.Op.DIV, JavaLong.class, JavaLong.class, this::div);
+        bindOp(OperatorBinding.Op.MOD, JavaLong.class, JavaLong.class, this::mod);
+        bindOp(OperatorBinding.Op.SHL, JavaLong.class, JavaLong.class, (frame, h1, h2, iReturn) ->
+                frame.assignValue(iReturn, makeJavaLong(h1.getValue() << h2.getValue())));
+        bindOp(OperatorBinding.Op.SHR, JavaLong.class, JavaLong.class, this::shr);
+        bindOp(OperatorBinding.Op.SHR_ALL, JavaLong.class, JavaLong.class, this::shrAll);
+        bindOp(OperatorBinding.Op.COMPL, JavaLong.class, (frame, h, iReturn) ->
+                frame.assignValue(iReturn, makeJavaLong(~h.getValue())));
+        bindOpToMany(OperatorBinding.Op.DIV_REM, JavaLong.class, JavaLong.class,
+                (frame, h1, h2, aiReturn) -> frame.assignValues(aiReturn,
+                        makeJavaLong(h1.getValue() / h2.getValue()),
+                        makeJavaLong(h1.getValue() % h2.getValue())));
+
         bindOp(OperatorBinding.Op.NEG,  JavaLong.class, (frame, h, iReturn) ->
                 frame.assignValue(iReturn, makeJavaLong(-h.getValue())));
         bindOp(OperatorBinding.Op.NEXT, JavaLong.class, (frame, h, iReturn) ->
@@ -438,27 +451,23 @@ public abstract class xConstrainedInteger
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }
 
-    @Override
-    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-
+    /** Native {@code /}; division by zero is reported as an overflow, as it was. */
+    private int div(Frame frame, JavaLong h1, JavaLong h2, int iReturn) {
+        long l2 = h2.getValue();
         if (l2 == 0) {
             return overflow(frame);
         }
-        return frame.assignValue(iReturn, makeJavaLong(l1 / l2));
+        return frame.assignValue(iReturn, makeJavaLong(h1.getValue() / l2));
     }
 
-    @Override
-    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-
+    /** Native {@code %}; a signed remainder is adjusted to the sign of the divisor. */
+    private int mod(Frame frame, JavaLong h1, JavaLong h2, int iReturn) {
+        long l2 = h2.getValue();
         if (l2 == 0) {
             return overflow(frame);
         }
 
-        long lMod = l1 % l2;
+        long lMod = h1.getValue() % l2;
         if (f_fSigned && lMod != 0 && (lMod < 0) != (l2 < 0)) {
             lMod += l2;
             assert (lMod < 0) == (l2 < 0);
@@ -467,55 +476,25 @@ public abstract class xConstrainedInteger
         return frame.assignValue(iReturn, makeJavaLong(lMod));
     }
 
-    @Override
-    public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeJavaLong(l1 << l2));
+    /** Native {@code >>}; an unsigned type shifts in zeroes, so it defers to {@code >>>}. */
+    private int shr(Frame frame, JavaLong h1, JavaLong h2, int iReturn) {
+        return f_fSigned
+                ? frame.assignValue(iReturn, makeJavaLong(h1.getValue() >> h2.getValue()))
+                : shrAll(frame, h1, h2, iReturn);
     }
 
-    @Override
-    public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        if (!f_fSigned) {
-            // for unsigned values we perform an unsigned right shift
-            return invokeShrAll(frame, hTarget, hArg, iReturn);
-        }
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-        return frame.assignValue(iReturn, makeJavaLong(l1 >> l2));
-    }
-
-    @Override
-    public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-        // we mask the value to ensure it fits within the constrained integer range
-        // for example, if this is an 8-bit Int8 with a value -1 the long will be
-        // 0xFFFFFFFFFFFFFFFF, and if we do a >>> 2, the value will be 0x3FFFFFFFFFFFFFFF but the
-        // lowest 8 bits is still 0xFF so the Int8 will still have a value of -1. Performing >>> 2
-        // on an Int8 should result in a value of 0x3E
+    /**
+     * Native {@code >>>}. The value is masked to the constrained width first: an 8-bit Int8 holding
+     * -1 is 0xFFFFFFFFFFFFFFFF as a long, so an unmasked {@code >>> 2} would keep its low 8 bits at
+     * 0xFF and still read as -1, where the Int8 answer is 0x3E.
+     */
+    private int shrAll(Frame frame, JavaLong h1, JavaLong h2, int iReturn) {
+        long l1 = h1.getValue();
         if (f_cNumBits < 64) {
             l1 = l1 & ((1L << f_cNumBits) - 1);
         }
-        return frame.assignValue(iReturn, makeJavaLong(l1 >>> l2));
+        return frame.assignValue(iReturn, makeJavaLong(l1 >>> h2.getValue()));
     }
-
-    @Override
-    public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn) {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-
-        return frame.assignValues(aiReturn, makeJavaLong(l1 / l2), makeJavaLong(l1 % l2));
-    }
-
-    @Override
-    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn) {
-        long l = ((JavaLong) hTarget).getValue();
-
-        return frame.assignValue(iReturn, makeJavaLong(~l));
-    }
-
 
     // ----- comparison support --------------------------------------------------------------------
 

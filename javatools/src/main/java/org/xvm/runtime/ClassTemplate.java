@@ -1687,27 +1687,27 @@ public abstract class ClassTemplate
 
     @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "div", "/", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.DIV, frame, hTarget, hArg, iReturn, "div", "/");
     }
 
     @Override
     public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "mod", "%", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.MOD, frame, hTarget, hArg, iReturn, "mod", "%");
     }
 
     @Override
     public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "shiftLeft", "<<", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.SHL, frame, hTarget, hArg, iReturn, "shiftLeft", "<<");
     }
 
     @Override
     public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "shiftRight", ">>", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.SHR, frame, hTarget, hArg, iReturn, "shiftRight", ">>");
     }
 
     @Override
     public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "shiftAllRight", ">>>", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.SHR_ALL, frame, hTarget, hArg, iReturn, "shiftAllRight", ">>>");
     }
 
     @Override
@@ -1727,27 +1727,31 @@ public abstract class ClassTemplate
 
     @Override
     public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn) {
-        return getOpChain(frame, hTarget, "divrem", "/%", hArg).invoke(frame, hTarget, hArg, aiReturn);
+        OperatorBinding.BoundBinaryToMany bound = f_aBoundBinaryToMany[OperatorBinding.Op.DIV_REM.ordinal()];
+
+        return bound == null
+                ? getOpChain(frame, hTarget, "divrem", "/%", hArg).invoke(frame, hTarget, hArg, aiReturn)
+                : bound.dispatch(frame, hTarget, hArg, aiReturn);
     }
 
     @Override
     public int invokeIRangeI(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "to", "..", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.I_RANGE_I, frame, hTarget, hArg, iReturn, "to", "..");
     }
 
     @Override
     public int invokeERangeI(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "exTo", ">..", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.E_RANGE_I, frame, hTarget, hArg, iReturn, "exTo", ">..");
     }
 
     @Override
     public int invokeIRangeE(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "toEx", "..<", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.I_RANGE_E, frame, hTarget, hArg, iReturn, "toEx", "..<");
     }
 
     @Override
     public int invokeERangeE(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "exToEx", ">..<", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.E_RANGE_E, frame, hTarget, hArg, iReturn, "exToEx", ">..<");
     }
 
     @Override
@@ -1757,7 +1761,7 @@ public abstract class ClassTemplate
 
     @Override
     public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn) {
-        return getOpChain(frame, hTarget, "not", "~", null).invoke(frame, hTarget, iReturn);
+        return dispatchUnary(OperatorBinding.Op.COMPL, frame, hTarget, iReturn, "not", "~");
     }
 
     @Override
@@ -2162,6 +2166,10 @@ public abstract class ClassTemplate
     private final OperatorBinding.BoundBinary[] f_aBoundBinary =
             new OperatorBinding.BoundBinary[OperatorBinding.Op.values().length];
 
+    /** Multi-return binary operators bound to a typed handler. */
+    private final OperatorBinding.BoundBinaryToMany[] f_aBoundBinaryToMany =
+            new OperatorBinding.BoundBinaryToMany[OperatorBinding.Op.values().length];
+
     /** Unary operators bound to a typed handler; a null slot keeps today's behaviour. */
     private final OperatorBinding.BoundUnary[] f_aBoundUnary =
             new OperatorBinding.BoundUnary[OperatorBinding.Op.values().length];
@@ -2376,6 +2384,25 @@ public abstract class ClassTemplate
         f_aBoundUnary[op.ordinal()] = OperatorBinding.bind(selfTypeOf(selfClass), handler);
     }
 
+    /**
+     * Bind a typed implementation of a binary operator producing several return values.
+     *
+     * <p>Named apart from {@link #bindOp} rather than overloading it: the two handler types differ
+     * only in their last parameter, {@code int} against {@code int[]}, which a lambda cannot
+     * disambiguate.</p>
+     *
+     * @param op         which operator
+     * @param selfClass  the receiver's handle class
+     * @param argClass   the argument's handle class
+     * @param handler    the typed implementation
+     */
+    protected <T extends ObjectHandle, A> void bindOpToMany(
+            OperatorBinding.Op op, Class<T> selfClass, Class<A> argClass,
+            OperatorBinding.BinaryToMany<T, A> handler) {
+        f_aBoundBinaryToMany[op.ordinal()] =
+                OperatorBinding.bindToMany(selfTypeOf(selfClass), selfTypeOf(argClass), handler);
+    }
+
     private int dispatchBinary(OperatorBinding.Op op, Frame frame, ObjectHandle hTarget,
                                ObjectHandle hArg, int iReturn, String sMethod, String sOp) {
         OperatorBinding.BoundBinary bound = f_aBoundBinary[op.ordinal()];
@@ -2387,10 +2414,15 @@ public abstract class ClassTemplate
 
     private int dispatchUnary(OperatorBinding.Op op, Frame frame, ObjectHandle hTarget,
                               int iReturn, String sMethod) {
+        return dispatchUnary(op, frame, hTarget, iReturn, sMethod, null);
+    }
+
+    private int dispatchUnary(OperatorBinding.Op op, Frame frame, ObjectHandle hTarget,
+                              int iReturn, String sMethod, String sOp) {
         OperatorBinding.BoundUnary bound = f_aBoundUnary[op.ordinal()];
 
         return bound == null
-                ? getOpChain(frame, hTarget, sMethod, null, null).invoke(frame, hTarget, iReturn)
+                ? getOpChain(frame, hTarget, sMethod, sOp, null).invoke(frame, hTarget, iReturn)
                 : bound.dispatch(frame, hTarget, iReturn);
     }
 
