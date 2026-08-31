@@ -2790,11 +2790,35 @@ The file's own comment records that master consulted a `ConstantPool` thread-loc
 this branch (E3) replaced it with the parameter form - but the *field* is what was left behind, and
 it is the same ambient channel in a different shape.
 
-**Threading it is not a small change.** 221 sites, and many callers are in the runtime, which has no
-listener at all - so the no-argument overload cannot simply be deleted; each caller needs a decision
-about where its listener comes from. It should be scheduled as its own piece of work, after the
-chains above, and probably in the order: give `ensureTypeInfo` a required-listener form, convert the
-98 sites that already have one, then triage the remaining 123 individually.
+**Why the setter exists at all** - and it is not laziness. `TypeConstant` is shared by the compiler
+and the runtime, and only the compiler has an `ErrorListener`. Broken down:
+
+| | count |
+| --- | --- |
+| already pass a listener explicitly | **99** |
+| no-arg form in `asm`/`compiler` - a listener is threadable | **58** |
+| no-arg form in `runtime` - no listener exists in that subsystem | **40** |
+| elsewhere (`javajit`, `tool`, `api`) | ~24 |
+
+`FileStructure.getErrorListener` already answers `ErrorListener.RUNTIME` when the field is unset, so
+**the runtime path already resolves to a real listener**. The mutable field exists for one reason:
+so the compiler can temporarily override that default with `BLACKHOLE` during registration, then put
+it back.
+
+**That makes the setter removable without solving the runtime's missing-listener problem first:**
+
+1. The 40 runtime sites pass `ErrorListener.RUNTIME` explicitly. No behavioural change - that is
+   already what they get - but the default stops being ambient.
+2. The 58 compiler/asm sites thread the listener they already have in scope, the way E34 threaded
+   name resolution.
+3. The compiler's registration-phase silence becomes a parameter to the calls it wants silenced,
+   rather than a mode set on a shared structure.
+4. `setErrorListener`, the field, and the no-argument `ensureTypeInfo()` overload are then all
+   deleted together, and `XvmStructure.setErrorListener` - which currently delegates the mutation to
+   the parent, making it shared state - goes with them.
+
+Still a large change at ~120 call sites, but it is now four ordered steps with a measured count
+each, and step 1 is mechanical and behaviour-preserving.
 
 An interim fix worth doing regardless: make the `Compiler` silence unconditional and scoped
 (try/finally), so a failed compilation cannot leave the structure permanently silent.
