@@ -1503,6 +1503,35 @@ each class names its own nested class in its own declaration. That does compile,
 noting it because the unqualified form fails with a bare "cannot find symbol" that reads like the
 class is missing.
 
+### The split, sized
+
+Confirmed the shape, which is better than it first looked. The 12 object-array method bodies are
+~207 lines, and the hierarchy underneath is only a few roots:
+
+| classes | root |
+| --- | --- |
+| 25 | `xRTView` |
+| 9 | `LongBasedDelegate` |
+| 6 | `ByteBasedDelegate` |
+| 3 | `LongLongDelegate` |
+| 1 each | `xRTFloat64Delegate`, `xRTCharDelegate`, `xRTStringDelegate`, `xRTSlicingDelegate` |
+
+So making the moved methods abstract does **not** cost 23 implementations: one on `xRTView` covers
+25 classes and one on `xRTSlicingDelegate` covers the rest. Both are fixed-size, and the runtime
+already rejects mutation on them before the delegate is reached - verified: deleting from a slice
+raises `SizeLimited: Fixed size array`, inserting raises `ReadOnly`, both well before
+`deleteRangeImpl`.
+
+The registration also needs repointing: `NativeTemplateRef.of("_native.collections.arrays.RTDelegate",
+xRTDelegate.class)` would name the new concrete class, and `NativeTemplates.delegate()` /
+`isDelegate()` follow.
+
+**Do this edit by hand.** Two scripted attempts at it have now damaged `xRTDelegate.java` - the
+second removed 791 lines where ~207 were intended, because brace-matching a file with this many
+nested classes and multi-line signatures is not reliable enough to trust. Both were caught and
+reverted, but the file is 1000+ lines with nested handle classes and the method boundaries do not
+survive naive scanning.
+
 ### Sequence
 
 1. Split the concrete Object-array delegate out of `xRTDelegate`, leaving the base abstract.
