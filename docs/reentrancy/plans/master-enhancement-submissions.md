@@ -2690,6 +2690,54 @@ rather than in the bug list until one is. What it does demonstrate is that this 
 right: **there was no design behind the nulls.** The single live null-passer turned out to be an
 omission, fixed by copying the line above it.
 
+### The threading is feasible: there are only four creation sites
+
+Measured, because it determines whether "thread one listener" is realistic:
+
+| | count |
+| --- | --- |
+| places an `ErrorListener` is **created** | **4** (`new ErrorList`, `BranchedErrorListener`, and the two constants) |
+| places a received listener is **reassigned** to `BLACKHOLE` mid-method | 11 (8 in `TypeConstant`) |
+| `System.err.println` / `printStackTrace` in catch or soft-assert paths | 53 |
+
+The first number is the important one. The listener is almost never manufactured - it is threaded
+already, through 665 parameters. What breaks the chain is not missing plumbing, it is the 11 places
+that receive a listener and then throw it away, and the 28 that accept `null` for it.
+
+### The 11 reassignments are a real signal implemented badly
+
+```java
+fIncomplete = true;
+errs        = ErrorListener.BLACKHOLE;     // stop reporting from here on
+```
+
+The intent is legitimate: once a type computation is known to be incomplete, further errors are
+consequences rather than causes, and reporting them buries the real one. But mutating the parameter
+to say so means the decision is invisible at the call site, nothing records what was suppressed, and
+the caller cannot distinguish "no errors" from "errors deliberately dropped".
+
+Note the completeness flag - `fIncomplete`, `fComplete` - is set on the very same line. **The signal
+already exists**; the listener mutation is redundant with it. The clean form is to keep the listener
+and let the caller consult the flag, or `branch()` and drop the branch, which is what the rest of
+the compiler already does.
+
+### The payoff: 53 places with nowhere to report
+
+```java
+// soft assert
+System.err.println("Invalid argument type \"" + typeArg.getValueString() + ...);
+```
+
+These are real diagnostics going to `stderr` because there is no sink to send them to - and then
+execution continues. A threaded, non-null listener is that sink. Once it exists, `stderr` stops
+being the fallback for a runtime that has detected something it cannot explain, and a caller can
+decide whether a soft assert is fatal for its context rather than having that decided by a print
+statement.
+
+This is the argument for doing stage 1 even though it looks like a null-check cleanup: the value is
+not the 28 null-guards, it is that afterwards there is exactly one thing to thread, and it can carry
+the logging and diagnostics the codebase currently has nowhere to put.
+
 ### Why this is a prerequisite, not a cleanup
 
 Once exactly one listener is threaded and never null, it is the natural place for the things the
