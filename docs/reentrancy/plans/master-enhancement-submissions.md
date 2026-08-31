@@ -2143,10 +2143,37 @@ one serious cost: it adds an object and an indirection to frame registers and ar
 which is the hottest path in the interpreter. Worth considering on its own terms, not as a way to
 enable `ObjectHandle<T>`.
 
-**`DelegateHandle<SELF>` is the version worth doing.** It carries the binary methods that actually
-need the self type, it is never used as an array or a type argument, and it reaches six files
-outside its own package. The forwarder below is what the dynamic entry point needs; everything
-under it becomes cast-free.
+### Attempted 2026-08-31, and why it was reverted
+
+`DelegateHandle<SELF>` was implemented far enough to compile down to two errors, and those two
+errors are the finding. **The handle hierarchy cannot express a self type**, for a concrete reason:
+
+```
+ByteArrayHandle          <- instantiated directly (ByteBasedDelegate, 2 sites)
+   BitArrayHandle        <- extends it, and is a template handle type in its own right
+```
+
+`xRTInt8Delegate` and `xRTUInt8Delegate` bind `ByteArrayHandle` **itself** as their handle type,
+while `BitBasedDelegate` binds `BitArrayHandle`, a narrowing of it. A self type must satisfy
+`H extends ByteArrayHandle<H>`, which plain `ByteArrayHandle` does not - it would have to be its own
+`SELF` *and* the supertype of another binding. That is the standard CRTP wart: a class that is at
+once a concrete leaf and an intermediate. Java has no way to write it.
+
+The escape is to relax the template bound to `xRTDelegate<H extends DelegateHandle<?>>` and keep the
+self type only on the handle hierarchy. That works, and it costs **262 sites** turning bare
+`DelegateHandle` into `DelegateHandle<?>` across the package and six files outside it - to delete
+roughly 23 casts that the `instanceof` guards already make *safe*. The guards fixed the actual
+defect (master bugs 37 and 38); CRTP would only change their syntax.
+
+**Conclusion: not worth doing as stated.** The reachable end state - guarded `instanceof` in each
+implementation, with the contract documented once on `ClassTemplate.compareIdentity` - is the
+pragmatic optimum for this hierarchy. What remains valuable from this row is the *other* half:
+moving the operation onto the handle (`isIdenticalTo`) so the signature stops promising to accept
+pairs it cannot handle. That needs no type parameter at all, and it is independently implementable.
+
+*(Superseded by the attempt recorded above: `DelegateHandle<SELF>` looked like the contained
+version - 272 tokens, no array uses, six external files - but the hierarchy will not accept a self
+type. The forwarder below is still worth doing, without the type parameter.)*
 
 ### Migration
 
