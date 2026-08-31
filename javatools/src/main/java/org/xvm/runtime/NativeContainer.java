@@ -179,7 +179,7 @@ public class NativeContainer
         String sRoot = xObject.class.getProtectionDomain().getCodeSource().getLocation().getFile();
         sRoot = URLDecoder.decode(sRoot, StandardCharsets.UTF_8);
 
-        Map<String, Class> mapTemplateClasses = new HashMap<>();
+        final Map<String, Class<? extends ClassTemplate>> mapTemplateClasses = new HashMap<>();
         if (sRoot.endsWith(".jar")) {
             scanNativeJarDirectory(sRoot, "org/xvm/runtime/template", mapTemplateClasses);
         } else {
@@ -195,7 +195,7 @@ public class NativeContainer
         storeNativeTemplate(new xConst  (this, getClassStructure("Const")));
         storeNativeTemplate(new xService(this, getClassStructure("Service")));
 
-        for (Map.Entry<String, Class> entry : mapTemplateClasses.entrySet()) {
+        for (Map.Entry<String, Class<? extends ClassTemplate>> entry : mapTemplateClasses.entrySet()) {
             ClassStructure structClass = getClassStructure(entry.getKey());
             if (structClass == null) {
                 // this is a native class for a composite type;
@@ -210,7 +210,7 @@ public class NativeContainer
                 continue;
             }
 
-            Class<ClassTemplate> clz = entry.getValue();
+            Class<? extends ClassTemplate> clz = entry.getValue();
             if (!Modifier.isAbstract(clz.getModifiers())) {
                 try {
                     storeNativeTemplate(instantiateNativeTemplate(clz, structClass));
@@ -240,7 +240,7 @@ public class NativeContainer
         ensureServiceContext();
     }
 
-    private void scanNativeJarDirectory(String sJarFile, String sPackage, Map<String, Class> mapTemplateClasses) {
+    private void scanNativeJarDirectory(String sJarFile, String sPackage, Map<String, Class<? extends ClassTemplate>> mapTemplateClasses) {
         try (JarFile jf = new JarFile(sJarFile)) {
             jf.stream().filter(entry  -> isNativeClass(sPackage, entry.getName()))
                        .forEach(entry -> mapTemplateClasses.put(componentName(entry.getName()),
@@ -273,18 +273,18 @@ public class NativeContainer
         return sb.toString();
     }
 
-    private static Class classForName(String sFile) {
+    private static Class<? extends ClassTemplate> classForName(String sFile) {
         assert sFile.endsWith(".class");
         String sClz = sFile.substring(0, sFile.length() - ".class".length()).replace('/', '.');
         try {
-            return Class.forName(sClz);
+            return Class.forName(sClz).asSubclass(ClassTemplate.class);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
 
     // sPackage is either empty or ends with a dot
-    private void scanNativeDirectory(File dirNative, String sPackage, Map<String, Class> mapTemplateClasses) {
+    private void scanNativeDirectory(File dirNative, String sPackage, Map<String, Class<? extends ClassTemplate>> mapTemplateClasses) {
         for (String sName : dirNative.list()) {
             if (sName.endsWith(".class")) {
                 if (sName.startsWith("x") && !sName.contains("$")) {
@@ -293,7 +293,8 @@ public class NativeContainer
                     String sClass = "org.xvm.runtime.template." + sPackage + "x" + sSimpleName;
 
                     try {
-                        mapTemplateClasses.put(sQualifiedName, Class.forName(sClass));
+                        mapTemplateClasses.put(sQualifiedName,
+                                Class.forName(sClass).asSubclass(ClassTemplate.class));
                     } catch (ClassNotFoundException e) {
                         throw new LauncherException(true, "Cannot load " + sClass, e);
                     }
@@ -862,7 +863,7 @@ public class NativeContainer
     }
 
     private ClassTemplate instantiateNativeTemplate(
-            Class<ClassTemplate> clz, ClassStructure structClass) throws Exception {
+            Class<? extends ClassTemplate> clz, ClassStructure structClass) throws Exception {
         // The old boolean fInstance fallback was a hidden owner-role side channel. Native
         // templates now expose the ordinary owner constructor; any derived/canonical distinction
         // must be explicit inside the template hierarchy.
