@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Register;
 
 
@@ -25,5 +26,5 @@ public interface LabelAble {
      *
      * @return the corresponding register
      */
-    Register getLabelVar(Context ctx, String sName);
+    Register getLabelVar(Context ctx, String sName, ErrorListener errs);
 }

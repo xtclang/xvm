@@ -61,8 +61,8 @@ public final class LabeledStatement
     }
 
     @Override
-    public Register getLabelVar(Context ctx, String sName) {
-        return ((LabelAble) stmt).getLabelVar(ctx, sName);
+    public Register getLabelVar(Context ctx, String sName, ErrorListener errs) {
+        return ((LabelAble) stmt).getLabelVar(ctx, sName, errs);
     }
 
 
@@ -138,9 +138,9 @@ public final class LabeledStatement
          * @param ctx    the context
          * @param sProp  the property name
          */
-        public void markPropRead(Context ctx, String sProp) {
+        public void markPropRead(Context ctx, String sProp, ErrorListener errs) {
             assert isPropReadable(sProp);
-            ((LabelAble) LabeledStatement.this.stmt).getLabelVar(ctx, sProp);
+            ((LabelAble) LabeledStatement.this.stmt).getLabelVar(ctx, sProp, errs);
         }
 
         /**
@@ -148,9 +148,9 @@ public final class LabeledStatement
          *
          * @param sProp  the property name
          */
-        public Register getPropRegister(Context ctx, String sProp) {
+        public Register getPropRegister(Context ctx, String sProp, ErrorListener errs) {
             assert isPropReadable(sProp);
-            return ((LabelAble) LabeledStatement.this.stmt).getLabelVar(ctx, sProp);
+            return ((LabelAble) LabeledStatement.this.stmt).getLabelVar(ctx, sProp, errs);
         }
 
         @Override

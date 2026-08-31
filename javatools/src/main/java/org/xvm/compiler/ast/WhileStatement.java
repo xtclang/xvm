@@ -130,7 +130,7 @@ public final class WhileStatement
     }
 
     @Override
-    public Register getLabelVar(Context ctx, String sName) {
+    public Register getLabelVar(Context ctx, String sName, ErrorListener errs) {
         assert hasLabelVar(sName);
 
         boolean fFirst = "first".equals(sName);
@@ -145,7 +145,7 @@ public final class WhileStatement
             Token  tok      = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sRegName);
 
             reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64(), sRegName);
-            m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
+            m_ctxLabelVars.registerVar(tok, reg, errs);
 
             if (fFirst) {
                 m_regFirst = reg;
@@ -250,7 +250,6 @@ public final class WhileStatement
             // the current context and error list are required by getLabelVar() if, in the process
             // of validation, one of the nested AST nodes requires a loop variable
             m_ctxLabelVars  = ctx;
-            m_errsLabelVars = errs;
             m_listContinues = null;
 
             // either enter normal or loop, depending on the assumption
@@ -417,7 +416,6 @@ public final class WhileStatement
 
             // lazily created loop vars are only created inside the validation of this statement
             m_ctxLabelVars  = null;
-            m_errsLabelVars = null;
 
             if (ctxFork != null && !hasBreaks()) {
                 // there are no breaks out of the loop, therefore the only way to get out is for the
@@ -759,7 +757,6 @@ public final class WhileStatement
 
     private transient Label         m_labelContinue;
     private transient Context       m_ctxLabelVars;
-    private transient ErrorListener m_errsLabelVars;
     private transient Register      m_regFirst;
     private transient Register      m_regCount;
 
@@ -793,7 +790,6 @@ public final class WhileStatement
         this.lEndPos = that.lEndPos;
         this.m_labelContinue = that.m_labelContinue;
         this.m_ctxLabelVars = that.m_ctxLabelVars;
-        this.m_errsLabelVars = that.m_errsLabelVars;
         this.m_regFirst = that.m_regFirst;
         this.m_regCount = that.m_regCount;
         this.m_listContinues = that.m_listContinues;

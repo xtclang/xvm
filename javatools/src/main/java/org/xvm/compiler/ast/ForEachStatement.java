@@ -217,7 +217,7 @@ public final class ForEachStatement
     }
 
     @Override
-    public Register getLabelVar(Context ctx, String sName) {
+    public Register getLabelVar(Context ctx, String sName, ErrorListener errs) {
         assert isLabeled();
         assert hasLabelVar(sName);
 
@@ -249,7 +249,7 @@ public final class ForEachStatement
             };
 
             reg = ctx.createRegister(type, getLabelName() + '.' + sName);
-            m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
+            m_ctxLabelVars.registerVar(tok, reg, errs);
 
             switch (sName) {
             case "first": m_regFirst   = reg; break;
@@ -309,7 +309,6 @@ public final class ForEachStatement
 
             // save off the current context and errors, in case we have to lazily create some loop vars
             m_ctxLabelVars  = ctx;
-            m_errsLabelVars = errs;
 
             // ultimately, the condition has to be re-written, because it is inevitably shorthand for
             // a measure of syntactic sugar; in order of precedence, the condition can be:
@@ -570,7 +569,6 @@ public final class ForEachStatement
 
             // lazily created loop vars are only created inside the validation of this statement
             m_ctxLabelVars  = null;
-            m_errsLabelVars = null;
 
             errs.merge();
             return fValid ? this : null;
@@ -1365,7 +1363,6 @@ public final class ForEachStatement
     private transient Expression       m_exprRValue;
     private transient Plan             m_plan;
     private transient Context          m_ctxLabelVars;
-    private transient ErrorListener    m_errsLabelVars;
     private transient Register         m_regFirst;
     private transient Register         m_regLast;
     private transient Register         m_regCount;
@@ -1398,7 +1395,6 @@ public final class ForEachStatement
         this.m_exprRValue = that.m_exprRValue;
         this.m_plan = that.m_plan;
         this.m_ctxLabelVars = that.m_ctxLabelVars;
-        this.m_errsLabelVars = that.m_errsLabelVars;
         this.m_regFirst = that.m_regFirst;
         this.m_regLast = that.m_regLast;
         this.m_regCount = that.m_regCount;

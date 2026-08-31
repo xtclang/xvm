@@ -795,7 +795,7 @@ public sealed class NameExpression
             LabelVar labelVar = (LabelVar) ctx.getVar(exprName.getNameToken(), errs);
             String   sVar     = getName();
             if (labelVar.isPropReadable(sVar)) {
-                labelVar.markPropRead(ctx, sVar);
+                labelVar.markPropRead(ctx, sVar, errs);
             } else {
                 String sLabel = exprName.getName();
                 log(errs, Severity.ERROR, Compiler.LABEL_VARIABLE_ILLEGAL, sVar, sLabel);
@@ -1253,7 +1253,7 @@ public sealed class NameExpression
                 if (left instanceof NameExpression nameLeft) {
                     if (nameLeft.getMeaning() == Meaning.Label) {
                         LabelVar labelVar = (LabelVar) nameLeft.m_arg;
-                        Register regLabel = labelVar.getPropRegister(ctx, getName());
+                        Register regLabel = labelVar.getPropRegister(ctx, getName(), errs);
                         m_astResult = regLabel.getRegisterAST();
                         return regLabel;
                     }

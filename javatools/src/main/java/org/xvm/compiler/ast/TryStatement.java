@@ -102,7 +102,7 @@ public final class TryStatement
     }
 
     @Override
-    public Register getLabelVar(Context ctx, String sName) {
+    public Register getLabelVar(Context ctx, String sName, ErrorListener errs) {
         assert hasLabelVar(sName);
 
         Register reg = m_regFinallyException;
@@ -113,7 +113,7 @@ public final class TryStatement
                     Id.IDENTIFIER, sRegName);
 
             m_regFinallyException = reg = ctx.createRegister(pool().typeException१(), sRegName);
-            m_ctxValidatingFinally.registerVar(tok, reg, m_errsValidatingFinally);
+            m_ctxValidatingFinally.registerVar(tok, reg, errs);
         }
 
         return reg;
@@ -276,10 +276,8 @@ public final class TryStatement
             Context ctxFinally = ctxCatchAll.enter();
 
             m_ctxValidatingFinally  = ctxFinally;
-            m_errsValidatingFinally = errs;
             StatementBlock catchallNew = (StatementBlock) catchall.validate(ctxFinally, errs);
             m_ctxValidatingFinally  = null;
-            m_errsValidatingFinally = null;
 
             ctxFinally.promoteAssignments(ctxOrig);
 
@@ -565,7 +563,6 @@ public final class TryStatement
     protected StatementBlock            catchall;
 
     private transient Context       m_ctxValidatingFinally;
-    private transient ErrorListener m_errsValidatingFinally;
     private transient Register      m_regFinallyException;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TryStatement.class,
@@ -586,7 +583,6 @@ public final class TryStatement
         this.catches = that.catches;
         this.catchall = that.catchall;
         this.m_ctxValidatingFinally = that.m_ctxValidatingFinally;
-        this.m_errsValidatingFinally = that.m_errsValidatingFinally;
         this.m_regFinallyException = that.m_regFinallyException;
     }
 
