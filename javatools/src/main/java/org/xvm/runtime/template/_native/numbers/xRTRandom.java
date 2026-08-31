@@ -13,6 +13,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeType;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
@@ -49,6 +50,19 @@ public class xRTRandom
         super(container, structure);
     }
 
+    /** The receiver type: RTRandom is a service, represented by its own RandomHandle. */
+    private static final NativeType<RandomHandle> SELF =
+            NativeType.of("_native.numbers.RTRandom", RandomHandle.class);
+
+    /**
+     * The {@code numbers.Int64} parameter type. Bound only for natives whose existing body casts
+     * the argument to {@link JavaLong} UNCONDITIONALLY; {@code int(Int max)} is deliberately not
+     * bound, because {@code invokeInt} accepts either a JavaLong or a LongLongHandle for the same
+     * declared type.
+     */
+    private static final NativeType<JavaLong> INT_TYPE =
+            NativeType.of("numbers.Int64", JavaLong.class);
+
     @Override
     public void initNative() {
         String[] BIT       = new String[] {"numbers.Bit"};
@@ -67,8 +81,10 @@ public class xRTRandom
         String[] FLOAT64   = new String[] {"numbers.Float64"};
 
         markNativeMethod("bit"    , VOID     , BIT      );
-        markNativeMethod("bits"   , INT      , BITARRAY );
-        markNativeMethod("bytes"  , INT      , BYTEARRAY);
+        markNativeMethod1("bits", SELF, INT_TYPE, BITARRAY,
+                (frame, hRandom, hSize, iReturn) -> bits(frame, hRandom, hSize, iReturn));
+        markNativeMethod1("bytes", SELF, INT_TYPE, BYTEARRAY,
+                (frame, hRandom, hSize, iReturn) -> bytes(frame, hRandom, hSize, iReturn));
         markNativeMethod("int"    , INT      , INT      );
         markNativeMethod("int8"   , VOID     , INT8     );
         markNativeMethod("int16"  , VOID     , INT16    );
@@ -94,43 +110,6 @@ public class xRTRandom
     public int invokeNative1(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         switch (method.getName()) {
-        case "bits": { // "Bit[] bits(Int size)"
-            long cBits = ((JavaLong) hArg).getValue();
-            if (cBits < 0) {
-                return frame.raiseException(xException.illegalArgument(frame,
-                        "size must be >= 0: " + cBits));
-            }
-
-            if (cBits > 2_000_000_000L) {
-                return frame.raiseException(xException.illegalArgument(frame,
-                        "size limit (2 billion bits) exceeded: " + cBits));
-            }
-
-            byte[] ab = new byte[(int) ((cBits+7)>>>3)];
-            rnd(hTarget).nextBytes(ab);
-            return frame.assignValue(iReturn,
-                    xBitArray.makeBitArrayHandle(frame.container(), ab, (int) cBits,
-                            Mutability.Constant));
-        }
-
-        case "bytes": { // "Byte[] bytes(Int size)"
-            long cBytes = ((JavaLong) hArg).getValue();
-            if (cBytes < 0) {
-                return frame.raiseException(xException.illegalArgument(frame,
-                        "array size must be >= 0: " + cBytes));
-            }
-
-            if (cBytes > 2_000_000_000L) {
-                return frame.raiseException(xException.illegalArgument(frame,
-                        "array size limit (2 billion bits) exceeded: " + cBytes));
-            }
-
-            byte[] ab = new byte[(int) cBytes];
-            rnd(hTarget).nextBytes(ab);
-            return frame.assignValue(iReturn,
-                    xByteArray.makeByteArrayHandle(frame.container(), ab, Mutability.Constant));
-        }
-
         case "int":
             return invokeInt(frame, hTarget, hArg, iReturn);
         }
@@ -242,6 +221,45 @@ public class xRTRandom
     /**
      * Native implementation of "Int&nbsp;int(Int max)".
      */
+    /** Native {@code Bit[] bits(Int size)}. */
+    private int bits(Frame frame, RandomHandle hRandom, JavaLong hSize, int iReturn) {
+        long cBits = hSize.getValue();
+        if (cBits < 0) {
+            return frame.raiseException(xException.illegalArgument(frame,
+                    "size must be >= 0: " + cBits));
+        }
+
+        if (cBits > 2_000_000_000L) {
+            return frame.raiseException(xException.illegalArgument(frame,
+                    "size limit (2 billion bits) exceeded: " + cBits));
+        }
+
+        byte[] ab = new byte[(int) ((cBits+7)>>>3)];
+        rnd(hRandom).nextBytes(ab);
+        return frame.assignValue(iReturn,
+                xBitArray.makeBitArrayHandle(frame.container(), ab, (int) cBits,
+                        Mutability.Constant));
+    }
+
+    /** Native {@code Byte[] bytes(Int size)}. */
+    private int bytes(Frame frame, RandomHandle hRandom, JavaLong hSize, int iReturn) {
+        long cBytes = hSize.getValue();
+        if (cBytes < 0) {
+            return frame.raiseException(xException.illegalArgument(frame,
+                    "array size must be >= 0: " + cBytes));
+        }
+
+        if (cBytes > 2_000_000_000L) {
+            return frame.raiseException(xException.illegalArgument(frame,
+                    "array size limit (2 billion bits) exceeded: " + cBytes));
+        }
+
+        byte[] ab = new byte[(int) cBytes];
+        rnd(hRandom).nextBytes(ab);
+        return frame.assignValue(iReturn,
+                xByteArray.makeByteArrayHandle(frame.container(), ab, Mutability.Constant));
+    }
+
     protected int invokeInt(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         boolean  fSmall = false;
         long     lMax   = 0;
@@ -318,7 +336,11 @@ public class xRTRandom
      * @return the Random to use
      */
     private Random rnd(ObjectHandle hTarget) {
-        Random random = ((RandomHandle) hTarget).f_random;
+        return rnd((RandomHandle) hTarget);
+    }
+
+    private Random rnd(RandomHandle hRandom) {
+        Random random = hRandom.f_random;
 
         return random == null ? ThreadLocalRandom.current() : random;
     }
