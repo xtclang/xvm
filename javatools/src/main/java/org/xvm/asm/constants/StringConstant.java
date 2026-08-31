@@ -155,16 +155,6 @@ public class StringConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected StringConstant ensureMutable() {
-        return (StringConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected StringConstant ensureReadOnly() {
-        return (StringConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());

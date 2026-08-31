@@ -72,14 +72,4 @@ public abstract class FormalConstant
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
-    @Override
-    protected FormalConstant ensureMutable() {
-        return (FormalConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected FormalConstant ensureReadOnly() {
-        return (FormalConstant) super.ensureReadOnly();
-    }
-
 }

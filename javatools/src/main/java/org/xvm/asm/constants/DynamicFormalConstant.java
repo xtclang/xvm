@@ -215,16 +215,6 @@ public class DynamicFormalConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected DynamicFormalConstant ensureMutable() {
-        return (DynamicFormalConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected DynamicFormalConstant ensureReadOnly() {
-        return (DynamicFormalConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 

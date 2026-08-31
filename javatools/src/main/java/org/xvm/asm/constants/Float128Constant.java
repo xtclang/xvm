@@ -117,16 +117,6 @@ public class Float128Constant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected Float128Constant ensureMutable() {
-        return (Float128Constant) super.ensureMutable();
-    }
-
-    @Override
-    protected Float128Constant ensureReadOnly() {
-        return (Float128Constant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());

@@ -1797,6 +1797,10 @@ public class MethodStructure
     protected MethodStructure cloneBody() {
         MethodStructure that = (MethodStructure) super.cloneBody();
 
+        if (this.m_aAnnotations != null) {
+            that.m_aAnnotations = this.m_aAnnotations.clone();
+        }
+
         int cReturns = getReturnCount();
         if (cReturns > 0) {
             Parameter[] aReturns = new Parameter[cReturns];
@@ -1831,6 +1835,12 @@ public class MethodStructure
 
         if (this.m_aconstLocal != null) {
             that.m_aconstLocal = this.m_aconstLocal.clone();
+        }
+        if (this.m_aconstSuper != null) {
+            that.m_aconstSuper = this.m_aconstSuper.clone();
+        }
+        if (this.m_aAstParams != null) {
+            that.m_aAstParams = this.m_aAstParams.clone();
         }
 
         // force the reloading of the m_structFinally
@@ -1894,39 +1904,30 @@ public class MethodStructure
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected MethodStructure ensureMutable() {
-        return (MethodStructure) super.ensureMutable();
-    }
-
-    @Override
-    protected MethodStructure ensureReadOnly() {
-        return (MethodStructure) super.ensureReadOnly();
-    }
-
-    @Override
-    protected void prepareReadOnly() {
-        super.prepareReadOnly();
-
-        if (m_aAnnotations != null) {
-            m_aAnnotations = m_aAnnotations.clone();
-        }
-        if (m_aReturns != null) {
-            m_aReturns = m_aReturns.clone();
-        }
-        if (m_aParams != null) {
-            m_aParams = m_aParams.clone();
-        }
-        if (m_aconstLocal != null) {
-            m_aconstLocal = m_aconstLocal.clone();
-        }
-        if (m_aconstSuper != null) {
-            m_aconstSuper = m_aconstSuper.clone();
-        }
-        if (m_aAstParams != null) {
-            m_aAstParams = m_aAstParams.clone();
-        }
-        if (m_code != null) {
-            m_code.prepareReadOnly();
+    protected void markReadOnly() {
+        if (!isReadOnly()) {
+            if (m_aAnnotations != null) {
+                m_aAnnotations = m_aAnnotations.clone();
+            }
+            if (m_aReturns != null) {
+                m_aReturns = m_aReturns.clone();
+            }
+            if (m_aParams != null) {
+                m_aParams = m_aParams.clone();
+            }
+            if (m_aconstLocal != null) {
+                m_aconstLocal = m_aconstLocal.clone();
+            }
+            if (m_aconstSuper != null) {
+                m_aconstSuper = m_aconstSuper.clone();
+            }
+            if (m_aAstParams != null) {
+                m_aAstParams = m_aAstParams.clone();
+            }
+            if (m_code != null) {
+                m_code.markReadOnly();
+            }
+            super.markReadOnly();
         }
     }
 
@@ -2507,9 +2508,9 @@ public class MethodStructure
                 that.m_listOps = new ArrayList<>(this.m_listOps);
             }
 
-            that.m_mapIndex        = this.m_mapIndex;
+            that.m_mapIndex        = null;
             that.m_fTrailingPrefix = this.m_fTrailingPrefix;
-            that.m_aop             = this.m_aop;
+            that.m_aop             = this.m_aop == null ? null : this.m_aop.clone();
             that.m_nPrevLine       = this.m_nPrevLine;
             that.m_nCurLine        = this.m_nCurLine;
 
@@ -2621,7 +2622,7 @@ public class MethodStructure
         /**
          * Detach mutable arrays or collections that may previously have been returned to a caller.
          */
-        private void prepareReadOnly() {
+        private void markReadOnly() {
             if (m_listOps != null) {
                 m_listOps = new ArrayList<>(m_listOps);
             }

@@ -709,24 +709,23 @@ public class PropertyStructure
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected PropertyStructure ensureMutable() {
-        return (PropertyStructure) super.ensureMutable();
+    protected PropertyStructure cloneBody() {
+        PropertyStructure that = (PropertyStructure) super.cloneBody();
+        that.m_aPropAnno = null;
+        that.m_aRefAnno  = null;
+        return that;
     }
 
     @Override
-    protected PropertyStructure ensureReadOnly() {
-        return (PropertyStructure) super.ensureReadOnly();
-    }
-
-    @Override
-    protected void prepareReadOnly() {
-        super.prepareReadOnly();
-
-        if (m_aPropAnno != null) {
-            m_aPropAnno = m_aPropAnno.clone();
-        }
-        if (m_aRefAnno != null) {
-            m_aRefAnno = m_aRefAnno.clone();
+    protected void markReadOnly() {
+        if (!isReadOnly()) {
+            if (m_aPropAnno != null) {
+                m_aPropAnno = m_aPropAnno.clone();
+            }
+            if (m_aRefAnno != null) {
+                m_aRefAnno = m_aRefAnno.clone();
+            }
+            super.markReadOnly();
         }
     }
 

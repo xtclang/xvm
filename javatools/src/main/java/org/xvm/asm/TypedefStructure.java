@@ -66,16 +66,6 @@ public class TypedefStructure
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected TypedefStructure ensureMutable() {
-        return (TypedefStructure) super.ensureMutable();
-    }
-
-    @Override
-    protected TypedefStructure ensureReadOnly() {
-        return (TypedefStructure) super.ensureReadOnly();
-    }
-
-    @Override
     protected void disassemble(DataInput in)
     throws IOException {
         super.disassemble(in);

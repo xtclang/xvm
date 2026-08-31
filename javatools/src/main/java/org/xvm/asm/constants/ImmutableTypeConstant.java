@@ -221,16 +221,6 @@ public class ImmutableTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected ImmutableTypeConstant ensureMutable() {
-        return (ImmutableTypeConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected ImmutableTypeConstant ensureReadOnly() {
-        return (ImmutableTypeConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constType = pool.register(m_constType);
     }

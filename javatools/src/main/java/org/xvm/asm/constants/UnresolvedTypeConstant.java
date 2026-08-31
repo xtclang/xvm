@@ -489,16 +489,6 @@ public class UnresolvedTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected UnresolvedTypeConstant ensureMutable() {
-        return (UnresolvedTypeConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected UnresolvedTypeConstant ensureReadOnly() {
-        return (UnresolvedTypeConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         throw new IllegalStateException();
     }

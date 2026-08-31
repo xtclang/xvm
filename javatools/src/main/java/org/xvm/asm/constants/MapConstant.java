@@ -309,16 +309,6 @@ public class MapConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected MapConstant ensureMutable() {
-        return (MapConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected MapConstant ensureReadOnly() {
-        return (MapConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constType = pool.register(m_constType);
         m_aconstKey = registerConstants(pool, m_aconstKey);

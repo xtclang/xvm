@@ -609,16 +609,6 @@ public abstract class ConditionalConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected ConditionalConstant ensureMutable() {
-        return (ConditionalConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected ConditionalConstant ensureReadOnly() {
-        return (ConditionalConstant) super.ensureReadOnly();
-    }
-
-    @Override
     public String getDescription() {
         return "condition=" + getValueString();
     }

@@ -146,16 +146,6 @@ public class DecimalAutoConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected DecimalAutoConstant ensureMutable() {
-        return (DecimalAutoConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected DecimalAutoConstant ensureReadOnly() {
-        return (DecimalAutoConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_dec = pool.register(m_dec);
     }

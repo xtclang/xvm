@@ -420,16 +420,6 @@ public class PropertyConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected PropertyConstant ensureMutable() {
-        return (PropertyConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected PropertyConstant ensureReadOnly() {
-        return (PropertyConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         invalidateCache();
 

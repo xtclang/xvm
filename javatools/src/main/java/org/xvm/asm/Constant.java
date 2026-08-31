@@ -451,16 +451,6 @@ public abstract class Constant
     // ----- XvmStructure operations ---------------------------------------------------------------
 
     @Override
-    protected Constant ensureMutable() {
-        return (Constant) super.ensureMutable();
-    }
-
-    @Override
-    protected Constant ensureReadOnly() {
-        return (Constant) super.ensureReadOnly();
-    }
-
-    @Override
     protected Constant findThisIn(FileStructure thatFileStructure) {
         Constant constant = thatFileStructure.getConstantPool().getConstant(this);
         if (constant == null) {

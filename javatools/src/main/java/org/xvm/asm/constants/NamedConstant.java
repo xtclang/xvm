@@ -163,16 +163,6 @@ public abstract class NamedConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected NamedConstant ensureMutable() {
-        return (NamedConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected NamedConstant ensureReadOnly() {
-        return (NamedConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constParent = pool.register(m_constParent);
         m_constName   = pool.register(m_constName);

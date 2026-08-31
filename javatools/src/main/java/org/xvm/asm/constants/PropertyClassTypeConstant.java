@@ -462,16 +462,6 @@ public class PropertyClassTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected PropertyClassTypeConstant ensureMutable() {
-        return (PropertyClassTypeConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected PropertyClassTypeConstant ensureReadOnly() {
-        return (PropertyClassTypeConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 

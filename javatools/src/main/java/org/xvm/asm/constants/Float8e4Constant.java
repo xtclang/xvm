@@ -88,16 +88,6 @@ public class Float8e4Constant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected Float8e4Constant ensureMutable() {
-        return (Float8e4Constant) super.ensureMutable();
-    }
-
-    @Override
-    protected Float8e4Constant ensureReadOnly() {
-        return (Float8e4Constant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());

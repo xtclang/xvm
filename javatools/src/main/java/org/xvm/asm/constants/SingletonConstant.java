@@ -244,16 +244,6 @@ public class SingletonConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected SingletonConstant ensureMutable() {
-        return (SingletonConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected SingletonConstant ensureReadOnly() {
-        return (SingletonConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constClass = pool.register(m_constClass);
     }

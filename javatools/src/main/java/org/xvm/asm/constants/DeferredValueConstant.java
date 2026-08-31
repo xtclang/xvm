@@ -79,16 +79,6 @@ public class DeferredValueConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected DeferredValueConstant ensureMutable() {
-        return (DeferredValueConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected DeferredValueConstant ensureReadOnly() {
-        return (DeferredValueConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void assemble(DataOutput out) {
         throw new IllegalStateException();
     }

@@ -333,16 +333,6 @@ public class ClassConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected ClassConstant ensureMutable() {
-        return (ClassConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected ClassConstant ensureReadOnly() {
-        return (ClassConstant) super.ensureReadOnly();
-    }
-
-    @Override
     public String getDescription() {
         Constant constParent = getNamespace();
         while (constParent instanceof ClassConstant idParent) {

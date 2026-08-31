@@ -76,16 +76,6 @@ public class PackageConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected PackageConstant ensureMutable() {
-        return (PackageConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected PackageConstant ensureReadOnly() {
-        return (PackageConstant) super.ensureReadOnly();
-    }
-
-    @Override
     public String getDescription() {
         Constant constParent = getNamespace();
         while (constParent instanceof PackageConstant) {

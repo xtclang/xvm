@@ -60,7 +60,7 @@ import static org.xvm.util.Handy.stream;
  *
  * <li>The manner in which a hierarchy is created from a binary is called disassembly. Disassembly
  * is triggered in a recursive manner by constructing a {@link FileStructure FileStructure}, which
- * represents an outer-most "envelope" for XVM structures. The result of disassembly should be equal
+ * represents an outermost "envelope" for XVM structures. The result of disassembly should be equal
  * to the XVM structure from which the binary was originally created from. Furthermore, the result
  * should itself be mutable, and subsequently persistable; that means that a binary can be
  * constituted (disassembled) into an XVM structure, modified, and persisted, supporting a wide
@@ -199,8 +199,7 @@ public abstract class XvmStructure
     }
 
     /**
-     * If this XVM structure is not already read-only, then make this XVM structure read-only by
-     * making its entire FileStructure read-only.
+     * Make the entire FileStructure that contains this XVM structure read-only.
      *
      * @return this XVM structure, marked as read-only
      */
@@ -212,6 +211,9 @@ public abstract class XvmStructure
                         + " is not part of a FileStructure");
             }
             fileStructure.markReadOnly();
+            if (!isReadOnly()) {
+                markReadOnly();
+            }
         }
         return this;
     }
@@ -219,9 +221,27 @@ public abstract class XvmStructure
     /**
      * Mark this structure and all structures contained by it as read-only.
      */
-    protected final void markReadOnly() {
-        getContained().forEach(XvmStructure::ensureReadOnly);
-        m_fReadOnly = true;
+    protected void markReadOnly() {
+        if (!m_fReadOnly) {
+            getContained().forEach(XvmStructure::markContainedReadOnly);
+            m_fReadOnly = true;
+        }
+    }
+
+    /**
+     * Mark a directly contained structure, including any component siblings, as read-only.
+     *
+     * @param structure  the directly contained structure
+     */
+    private static void markContainedReadOnly(XvmStructure structure) {
+        if (structure instanceof Component component) {
+            for (Component sibling = component.getEldestSibling(); sibling != null;
+                    sibling = sibling.getNextSibling()) {
+                sibling.markReadOnly();
+            }
+        } else {
+            structure.markReadOnly();
+        }
     }
 
     /**

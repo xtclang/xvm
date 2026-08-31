@@ -84,16 +84,6 @@ public class VersionConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected VersionConstant ensureMutable() {
-        return (VersionConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected VersionConstant ensureReadOnly() {
-        return (VersionConstant) super.ensureReadOnly();
-    }
-
-    @Override
     public String getDescription() {
         return "version=" + getValue();
     }

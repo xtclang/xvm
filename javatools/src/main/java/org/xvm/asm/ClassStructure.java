@@ -228,7 +228,7 @@ public class ClassStructure
                 m_aAnnoMixin = annos;
             }
         }
-        return annos;
+        return isReadOnly() ? annos.clone() : annos;
     }
 
     /**
@@ -1024,6 +1024,9 @@ public class ClassStructure
             mapThat.putAll(mapThis);
             that.m_mapParams = mapThat;
         }
+
+        that.m_aAnnoClass = null;
+        that.m_aAnnoMixin = null;
 
         return that;
     }
@@ -3329,21 +3332,18 @@ public class ClassStructure
     // ----- XvmStructure/Component methods --------------------------------------------------------
 
     @Override
-    protected ClassStructure ensureMutable() {
-        return (ClassStructure) super.ensureMutable();
-    }
-
-    @Override
-    protected ClassStructure ensureReadOnly() {
-        return (ClassStructure) super.ensureReadOnly();
-    }
-
-    @Override
-    protected void prepareReadOnly() {
-        super.prepareReadOnly();
-
-        if (m_mapParams != null) {
-            m_mapParams = new ListMap<>(m_mapParams);
+    protected void markReadOnly() {
+        if (!isReadOnly()) {
+            if (m_mapParams != null) {
+                m_mapParams = new ListMap<>(m_mapParams);
+            }
+            if (m_aAnnoClass != null) {
+                m_aAnnoClass = m_aAnnoClass.clone();
+            }
+            if (m_aAnnoMixin != null) {
+                m_aAnnoMixin = m_aAnnoMixin.clone();
+            }
+            super.markReadOnly();
         }
     }
 

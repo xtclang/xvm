@@ -138,16 +138,6 @@ public class FPNConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected FPNConstant ensureMutable() {
-        return (FPNConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected FPNConstant ensureReadOnly() {
-        return (FPNConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());

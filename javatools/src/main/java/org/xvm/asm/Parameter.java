@@ -382,6 +382,7 @@ public class Parameter
             throw new IllegalStateException(e);
         }
 
+        that.m_aAnnotations   = m_aAnnotations.clone();
         that.m_fImplicitDeref = false;
         that.m_regDeref       = null;
         return that;
@@ -391,16 +392,11 @@ public class Parameter
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected Parameter ensureMutable() {
-        return (Parameter) super.ensureMutable();
-    }
-
-    @Override
-    protected Parameter ensureReadOnly() {
+    protected void markReadOnly() {
         if (!isReadOnly()) {
             m_aAnnotations = m_aAnnotations.clone();
+            super.markReadOnly();
         }
-        return (Parameter) super.ensureReadOnly();
     }
 
     @Override

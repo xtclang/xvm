@@ -120,16 +120,6 @@ public class MatchAnyConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected MatchAnyConstant ensureMutable() {
-        return (MatchAnyConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected MatchAnyConstant ensureReadOnly() {
-        return (MatchAnyConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constType = pool.register(m_constType);
     }

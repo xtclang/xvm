@@ -517,14 +517,4 @@ public class DifferenceTypeConstant
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
-    @Override
-    protected DifferenceTypeConstant ensureMutable() {
-        return (DifferenceTypeConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected DifferenceTypeConstant ensureReadOnly() {
-        return (DifferenceTypeConstant) super.ensureReadOnly();
-    }
-
 }

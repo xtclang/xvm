@@ -623,16 +623,6 @@ public class MethodConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected MethodConstant ensureMutable() {
-        return (MethodConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected MethodConstant ensureReadOnly() {
-        return (MethodConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_type = null;
 

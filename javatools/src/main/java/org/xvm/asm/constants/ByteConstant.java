@@ -519,16 +519,6 @@ public class ByteConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected ByteConstant ensureMutable() {
-        return (ByteConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected ByteConstant ensureReadOnly() {
-        return (ByteConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(m_format.ordinal());

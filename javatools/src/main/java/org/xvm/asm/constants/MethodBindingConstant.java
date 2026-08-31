@@ -145,16 +145,6 @@ public class MethodBindingConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected MethodBindingConstant ensureMutable() {
-        return (MethodBindingConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected MethodBindingConstant ensureReadOnly() {
-        return (MethodBindingConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_idMethod = pool.register(m_idMethod);
     }

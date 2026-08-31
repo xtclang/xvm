@@ -775,16 +775,6 @@ public abstract class IdentityConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected IdentityConstant ensureMutable() {
-        return (IdentityConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected IdentityConstant ensureReadOnly() {
-        return (IdentityConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void setContaining(XvmStructure xsParent) {
         super.setContaining(xsParent);
 

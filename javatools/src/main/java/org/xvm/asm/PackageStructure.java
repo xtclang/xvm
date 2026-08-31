@@ -30,17 +30,6 @@ public class PackageStructure
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
-    @Override
-    protected PackageStructure ensureMutable() {
-        return (PackageStructure) super.ensureMutable();
-    }
-
-    @Override
-    protected PackageStructure ensureReadOnly() {
-        return (PackageStructure) super.ensureReadOnly();
-    }
-
-
     // ----- accessors --------------------------------------------------------------------------------------
 
     /**

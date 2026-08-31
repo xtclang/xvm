@@ -7941,16 +7941,6 @@ public abstract class TypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant ensureMutable() {
-        return (TypeConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected TypeConstant ensureReadOnly() {
-        return (TypeConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void setContaining(XvmStructure pool) {
         assert isShared((ConstantPool) pool);
 

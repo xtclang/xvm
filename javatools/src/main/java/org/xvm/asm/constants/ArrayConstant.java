@@ -280,16 +280,6 @@ public class ArrayConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected ArrayConstant ensureMutable() {
-        return (ArrayConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected ArrayConstant ensureReadOnly() {
-        return (ArrayConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constType = pool.register(m_constType);
         m_aconstVal = registerConstants(pool, m_aconstVal);

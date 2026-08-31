@@ -246,17 +246,6 @@ public class PendingTypeConstant
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
-    @Override
-    protected PendingTypeConstant ensureMutable() {
-        return (PendingTypeConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected PendingTypeConstant ensureReadOnly() {
-        return (PendingTypeConstant) super.ensureReadOnly();
-    }
-
-
     // ----- data fields ---------------------------------------------------------------------------
 
     private final TypeConstant f_typeConstraint;

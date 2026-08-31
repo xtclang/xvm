@@ -170,16 +170,6 @@ public class PresentCondition
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected PresentCondition ensureMutable() {
-        return (PresentCondition) super.ensureMutable();
-    }
-
-    @Override
-    protected PresentCondition ensureReadOnly() {
-        return (PresentCondition) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constStruct = pool.register(m_constStruct);
     }

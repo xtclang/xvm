@@ -811,14 +811,4 @@ public class IntersectionTypeConstant
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
-    @Override
-    protected IntersectionTypeConstant ensureMutable() {
-        return (IntersectionTypeConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected IntersectionTypeConstant ensureReadOnly() {
-        return (IntersectionTypeConstant) super.ensureReadOnly();
-    }
-
 }

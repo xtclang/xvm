@@ -256,14 +256,4 @@ public class AnyCondition
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
-    @Override
-    protected AnyCondition ensureMutable() {
-        return (AnyCondition) super.ensureMutable();
-    }
-
-    @Override
-    protected AnyCondition ensureReadOnly() {
-        return (AnyCondition) super.ensureReadOnly();
-    }
-
 }

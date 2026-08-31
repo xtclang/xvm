@@ -212,16 +212,6 @@ public class EnumValueConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected EnumValueConstant ensureMutable() {
-        return (EnumValueConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected EnumValueConstant ensureReadOnly() {
-        return (EnumValueConstant) super.ensureReadOnly();
-    }
-
-    @Override
     public String getDescription() {
         return "enum=" + getClassConstant().getName();
     }

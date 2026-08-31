@@ -674,16 +674,6 @@ public class AnnotatedTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected AnnotatedTypeConstant ensureMutable() {
-        return (AnnotatedTypeConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected AnnotatedTypeConstant ensureReadOnly() {
-        return (AnnotatedTypeConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_annotation = pool.register(m_annotation);
         m_constType  = pool.register(m_constType);

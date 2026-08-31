@@ -173,16 +173,6 @@ public class ParentClassConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected ParentClassConstant ensureMutable() {
-        return (ParentClassConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected ParentClassConstant ensureReadOnly() {
-        return (ParentClassConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constChild = pool.register(m_constChild);
     }

@@ -116,16 +116,6 @@ public class KeywordConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected KeywordConstant ensureMutable() {
-        return (KeywordConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected KeywordConstant ensureReadOnly() {
-        return (KeywordConstant) super.ensureReadOnly();
-    }
-
-    @Override
     public String getDescription() {
         return switch (f_format) {
             case IsConst   -> "const";

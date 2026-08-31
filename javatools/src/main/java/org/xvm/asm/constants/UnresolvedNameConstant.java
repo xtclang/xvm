@@ -237,16 +237,6 @@ public class UnresolvedNameConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected UnresolvedNameConstant ensureMutable() {
-        return (UnresolvedNameConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected UnresolvedNameConstant ensureReadOnly() {
-        return (UnresolvedNameConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         if (isNameResolved()) {
             m_constId = pool.register(m_constId);

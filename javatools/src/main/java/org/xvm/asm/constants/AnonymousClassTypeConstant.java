@@ -246,16 +246,6 @@ public class AnonymousClassTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected AnonymousClassTypeConstant ensureMutable() {
-        return (AnonymousClassTypeConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected AnonymousClassTypeConstant ensureReadOnly() {
-        return (AnonymousClassTypeConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 

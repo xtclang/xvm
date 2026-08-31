@@ -131,16 +131,6 @@ public class NamedCondition
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected NamedCondition ensureMutable() {
-        return (NamedCondition) super.ensureMutable();
-    }
-
-    @Override
-    protected NamedCondition ensureReadOnly() {
-        return (NamedCondition) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constName = pool.register(m_constName);
     }

@@ -1099,14 +1099,4 @@ public class UnionTypeConstant
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
-    @Override
-    protected UnionTypeConstant ensureMutable() {
-        return (UnionTypeConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected UnionTypeConstant ensureReadOnly() {
-        return (UnionTypeConstant) super.ensureReadOnly();
-    }
-
 }

@@ -40,16 +40,6 @@ public abstract class ValueConstant
 
     // ----- XvmStructure operations ---------------------------------------------------------------
 
-    @Override
-    protected ValueConstant ensureMutable() {
-        return (ValueConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected ValueConstant ensureReadOnly() {
-        return (ValueConstant) super.ensureReadOnly();
-    }
-
     /**
      * {@inheritDoc}
      * <p/>

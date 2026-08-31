@@ -2054,7 +2054,7 @@ public abstract class Component
             List<Contribution> listClone = new ArrayList<>(listContribs.size());
 
             for (Contribution listContrib : listContribs) {
-                listClone.add((Contribution) listContrib.clone());
+                listClone.add(that.new Contribution(listContrib));
             }
             that.m_listContribs = listClone;
         }
@@ -2157,29 +2157,13 @@ public abstract class Component
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected Component ensureMutable() {
-        return (Component) super.ensureMutable();
-    }
-
-    @Override
-    protected Component ensureReadOnly() {
-        for (Component sibling = getEldestSibling(); sibling != null;
-                sibling = sibling.getNextSibling()) {
-            if (!sibling.isReadOnly()) {
-                sibling.prepareReadOnly();
-                sibling.markReadOnly();
+    protected void markReadOnly() {
+        if (!isReadOnly()) {
+            List<Contribution> contributions = m_listContribs;
+            if (contributions != null) {
+                contributions.forEach(Contribution::markReadOnly);
             }
-        }
-        return this;
-    }
-
-    /**
-     * Detach any externally accessible mutable state before this component becomes read-only.
-     */
-    protected void prepareReadOnly() {
-        List<Contribution> contributions = m_listContribs;
-        if (contributions != null) {
-            contributions.forEach(Contribution::prepareReadOnly);
+            super.markReadOnly();
         }
     }
 
@@ -2698,8 +2682,26 @@ public abstract class Component
      * abstract sense, meaning any class, interface, mixin, const, enum, or service) can be composed
      * of any number of contributing components.
      */
-    public class Contribution
-            implements Cloneable {
+    public class Contribution {
+        /**
+         * Copy a Contribution onto this Contribution's containing Component.
+         *
+         * @param that  the Contribution to copy
+         */
+        private Contribution(Contribution that) {
+            m_composition  = that.m_composition;
+            m_typeContrib  = that.m_typeContrib;
+            m_constProp    = that.m_constProp;
+            m_annotation   = that.m_annotation;
+            m_mapParams    = that.m_mapParams == null
+                    ? null
+                    : new ListMap<>(that.m_mapParams);
+            m_constInjector = that.m_constInjector;
+            m_listInject    = that.m_listInject == null
+                    ? null
+                    : new ArrayList<>(that.m_listInject);
+        }
+
         /**
          * @see XvmStructure#disassemble(DataInput)
          */
@@ -3040,7 +3042,7 @@ public abstract class Component
         /**
          * Detach mutable values that may have been supplied by a caller.
          */
-        private void prepareReadOnly() {
+        private void markReadOnly() {
             if (m_listInject != null) {
                 m_listInject = Collections.unmodifiableList(new ArrayList<>(m_listInject));
             }
@@ -3290,15 +3292,6 @@ public abstract class Component
                     }
                 }
                 break;
-            }
-        }
-
-        @Override
-        protected Object clone() {
-            try {
-                return super.clone();
-            } catch (CloneNotSupportedException e) {
-                throw new IllegalStateException(e);
             }
         }
 

@@ -33,14 +33,4 @@ public abstract class FloatConstant
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
-    @Override
-    protected FloatConstant ensureMutable() {
-        return (FloatConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected FloatConstant ensureReadOnly() {
-        return (FloatConstant) super.ensureReadOnly();
-    }
-
 }

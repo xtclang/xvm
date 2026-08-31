@@ -173,16 +173,6 @@ public class NotCondition
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected NotCondition ensureMutable() {
-        return (NotCondition) super.ensureMutable();
-    }
-
-    @Override
-    protected NotCondition ensureReadOnly() {
-        return (NotCondition) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constCond = pool.register(m_constCond);
     }

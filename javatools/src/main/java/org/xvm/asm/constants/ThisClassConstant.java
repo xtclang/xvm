@@ -123,16 +123,6 @@ public class ThisClassConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected ThisClassConstant ensureMutable() {
-        return (ThisClassConstant) super.ensureMutable();
-    }
-
-    @Override
-    protected ThisClassConstant ensureReadOnly() {
-        return (ThisClassConstant) super.ensureReadOnly();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constClass = pool.register(m_constClass);
     }

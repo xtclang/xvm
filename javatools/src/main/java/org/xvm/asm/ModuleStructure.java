@@ -787,22 +787,23 @@ public class ModuleStructure
     }
 
     @Override
-    protected void prepareReadOnly() {
-        super.prepareReadOnly();
-
-        getVersions().ensureReadOnly();
-        if (isFingerprint()) {
-            m_vtreeImportAllowVers.ensureReadOnly();
-        }
-        if (m_mapDependencies != null) {
-            m_mapDependencies = Collections.unmodifiableMap(new HashMap<>(m_mapDependencies));
-        }
-        if (m_mapCondNames == null) {
-            m_mapCondNames = collectConditionalNames();
-        }
-        m_mapCondNames = Collections.unmodifiableMap(new HashMap<>(m_mapCondNames));
-        if (m_abDigest != null) {
-            m_abDigest = m_abDigest.clone();
+    protected void markReadOnly() {
+        if (!isReadOnly()) {
+            getVersions().ensureReadOnly();
+            if (isFingerprint()) {
+                m_vtreeImportAllowVers.ensureReadOnly();
+            }
+            if (m_mapDependencies != null) {
+                m_mapDependencies = Collections.unmodifiableMap(new HashMap<>(m_mapDependencies));
+            }
+            if (m_mapCondNames == null) {
+                m_mapCondNames = collectConditionalNames();
+            }
+            m_mapCondNames = Collections.unmodifiableMap(new HashMap<>(m_mapCondNames));
+            if (m_abDigest != null) {
+                m_abDigest = m_abDigest.clone();
+            }
+            super.markReadOnly();
         }
     }
 
