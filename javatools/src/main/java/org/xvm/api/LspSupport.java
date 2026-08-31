@@ -4,6 +4,7 @@ package org.xvm.api;
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 
 import java.time.Instant;
 
@@ -24,31 +25,31 @@ import org.xvm.javajit.JitConnector;
 
 
 /**
- * A Connector-like implementation to support LSP and other tool uses. This implementation uses the
- * Connector API to run a long-running Ecstasy application (in "Container Zero") that is responsible
- * for spinning up any number of child containers to "run()" modules. The ToolConnector is a
- * singleton, but it does require configuration; specifically, it requires a Module Repository from
- * which to load the core Ecstasy classes. Without configuration, the ToolConnector will attempt to
- * locate the core Ecstasy classes using the "XDK_HOME" OS property.
+ * A class used to support LSP and other tool uses. This implementation uses the Connector API to
+ * run a long-running Ecstasy application (in "Container Zero") that is responsible for spinning up
+ * any number of child containers to "run()" modules. The LspSupport is a singleton, but it does
+ * require configuration; specifically, it requires a Module Repository from which to load the core
+ * Ecstasy classes. Without configuration, the LspSupport will attempt to locate the core Ecstasy
+ * classes using the "XDK_HOME" OS property.
  *
- * The methods on the ToolConnector itself can be assumed to be thread-safe and concurrent.
+ * The methods on the LspSupport itself can be assumed to be thread-safe and concurrent.
  */
-public class ToolConnector {
+public class LspSupport {
     // ----- internal (construction etc.) ----------------------------------------------------------
 
     /**
      * Internal constructor.
      */
-    ToolConnector() {}
+    LspSupport() {}
 
     /**
      * Internal singleton implementation.
      */
     private static class Singleton {
-        static ToolConnector instance = new ToolConnector();
+        static LspSupport instance = new LspSupport();
     }
 
-    private static Object LOCK = new Object();
+    private static final Object LOCK = new Object();
 
     private boolean          configured;
     private ModuleRepository cfgRepo;
@@ -88,14 +89,16 @@ public class ToolConnector {
     /**
      * @return the Connector instance
      */
-    private Connector ensureConnector() {
+    public Connector ensureConnector() {
         synchronized (LOCK) {
             if (connector == null) {
-                Connector starting = useJit() ? new JitConnector(cfgRepo) : new InterpreterConnector(cfgRepo);
-                starting.loadModule("org.ecstasy.runner");
-                starting.start(null);
+                Connector connector = useJit()
+                        ? new JitConnector(cfgRepo)
+                        : new InterpreterConnector(cfgRepo);
+                connector.loadModule("runner.xtclang.org");
+                connector.start(null);
                 // TODO GG
-                connector = starting;
+                this.connector = connector;
             }
             return connector;
         }
@@ -106,7 +109,7 @@ public class ToolConnector {
     /**
      * @return the singleton ToolConnector instance
      */
-    public static ToolConnector instance() {
+    public static LspSupport instance() {
         return Singleton.instance;
     }
 
@@ -119,7 +122,7 @@ public class ToolConnector {
      *                        use to provide injectable resources in lieu of the default injector
      *                        for this implementation
      */
-    public ToolConnector configure(ModuleRepository coreRepo, String customInjector) {
+    public LspSupport configure(ModuleRepository coreRepo, String customInjector) {
         synchronized (LOCK) {
             if (configured) {
                 if (!(Objects.equals(coreRepo, cfgRepo) && Objects.equals(customInjector, cfgInjector))) {
@@ -227,6 +230,11 @@ public class ToolConnector {
          *         "Long"; null otherwise
          */
         Long result();
+
+        /**
+         * @return the File containing the output that the application printed to the Console
+         */
+        File console();
     }
 
     /**
@@ -237,7 +245,7 @@ public class ToolConnector {
      * parameter.
      *
      * @param module      the module to execute
-     * @param console     (optional) the OutputStream for the executing application
+     * @param console     (optional) the PrintStream for the executing application
      * @param rootDir     (optional) the root directory for the application's file system; null
      *                    indicates a temporary (e.g. in-memory) file system only
      * @param injections  (optional) additional "String" and "String[]" injections
@@ -248,12 +256,11 @@ public class ToolConnector {
      */
     public Control run(
             ModuleStructure           module,
-            OutputStream              console,
+            PrintStream               console,
             File                      rootDir,
             Map<String, List<String>> injections,
             ErrorListener             errs) {
-        verifyConfigured();
-        return run(new InstantRepository(module), module.getName(), module.getVersion(), null,
+        return run(new InstantRepository(module), module.getName(), module.getVersion(),
                 console, rootDir, injections, null, errs);
     }
 
@@ -269,7 +276,7 @@ public class ToolConnector {
      * @param input           the ModuleRepository providing any necessary modules
      * @param moduleName      the module name to execute; must be loadable from "input"
      * @param version         (optional) the version of the module to load
-     * @param console         (optional) the OutputStream for the executing application
+     * @param console         (optional) the PrintStream for the executing application
      * @param rootDir         (optional) the root directory for the application's file system; null
      *                        indicates a temporary (e.g. in-memory) file system only
      * @param injections      (optional) additional "String" and "String[]" injections
@@ -285,8 +292,7 @@ public class ToolConnector {
             ModuleRepository          input,
             String                    moduleName,
             Version                   version,
-            InputStream               keyboard,
-            OutputStream              console,
+            PrintStream               console,
             File                      rootDir,
             Map<String, List<String>> injections,
             String                    customInjector,
