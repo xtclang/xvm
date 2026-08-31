@@ -64,6 +64,11 @@ module xunit_engine.xtclang.org {
     static String DefaultXUnitDir = "xunit";
 
     /**
+     * The directory, under the output directory, that the generated test module is built into.
+     */
+    static String GeneratedModuleDir = "modules";
+
+    /**
      * The root test output directory located under the build directory.
      */
     static String TestOutputRootDir = "test-output";
@@ -108,14 +113,18 @@ module xunit_engine.xtclang.org {
         @Inject(ConfigTestOutputDir) String?          outDirName;
         @Inject("repository")        ModuleRepository coreRepo;
         @Inject                      Directory        curDir;
-        @Inject                      Directory        tmpDir;
         @Inject                      Console          console;
 
         Directory outDir   = outDirName.is(String)
                                     ? curDir.dirFor(outDirName)
                                     : curDir.dirFor(DefaultXUnitDir);
 
-        Directory buildDir = tmpDir.dirFor("xunit");
+        // The generated module is built under the output directory rather than in a shared
+        // /tmp/xunit. Every runner used the same /tmp/xunit, and each one generates a module into
+        // it, scans it with a DirRepository, and deletes the module when finished - so one runner
+        // could delete a module while another was mid-scan. The output directory is already
+        // private to this project, this checkout and this user, which the /tmp path was not.
+        Directory buildDir = outDir.dirFor(GeneratedModuleDir);
 
         outDir.ensure();
         buildDir.ensure();
