@@ -2018,7 +2018,7 @@ public abstract sealed class Component
             case Class:
             case Typedef:
             case MultiMethod:
-                collector.resolvedComponent(child);
+                collector.resolvedComponent(child, errs);
                 return ResolutionResult.RESOLVED;
             }
             return ResolutionResult.UNKNOWN;
@@ -2074,7 +2074,7 @@ public abstract sealed class Component
                                 typeParent.getSingleUnderlyingClass(true).getComponent();
                         typeFormal = clzParent.getFormalType().resolveGenericType(sName);
                     }
-                    collector.resolvedConstant(typeFormal.getDefiningConstant().asConstant());
+                    collector.resolvedConstant(typeFormal.getDefiningConstant().asConstant(), errs);
                     return ResolutionResult.RESOLVED;
                 }
             }
@@ -3558,13 +3558,13 @@ public abstract sealed class Component
         }
 
         @Override
-        public ResolutionResult resolvedComponent(Component component) {
+        public ResolutionResult resolvedComponent(Component component, ErrorListener errs) {
             m_constant = component.getIdentityConstant();
             return ResolutionResult.RESOLVED;
         }
 
         @Override
-        public ResolutionResult resolvedConstant(Constant constant) {
+        public ResolutionResult resolvedConstant(Constant constant, ErrorListener errs) {
             m_constant = constant;
             return ResolutionResult.RESOLVED;
         }

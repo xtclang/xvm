@@ -1768,7 +1768,8 @@ public final class MethodStructure
                 if (i < getTypeParamCount()) {
                     assert param.isTypeParameter();
                     return collector.resolvedConstant(
-                            getConstantPool().ensureRegisterConstant(getIdentityConstant(), i, sName));
+                            getConstantPool().ensureRegisterConstant(getIdentityConstant(), i, sName),
+                            errs);
                 }
 
                 // REVIEW need a better error?

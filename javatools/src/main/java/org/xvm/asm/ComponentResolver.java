@@ -48,7 +48,7 @@ public interface ComponentResolver {
          *
          * @param component  the child component (which may be a composite)
          */
-        ResolutionResult resolvedComponent(Component component);
+        ResolutionResult resolvedComponent(Component component, ErrorListener errs);
 
         /**
          * Invoked when a name resolves to something that is a constant, such as a property
@@ -56,7 +56,7 @@ public interface ComponentResolver {
          *
          * @param constant  either a PropertyConstant or a TypeParameterConstant
          */
-        ResolutionResult resolvedConstant(Constant constant);
+        ResolutionResult resolvedConstant(Constant constant, ErrorListener errs);
 
         /**
          * Provide an AstNode to report resolution issues for.

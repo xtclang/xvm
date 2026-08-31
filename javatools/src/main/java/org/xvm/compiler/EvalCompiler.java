@@ -422,7 +422,7 @@ public class EvalCompiler {
             Component component = pool().getImplicitlyImportedComponent(sName);
             return component == null
                     ? ResolutionResult.ERROR
-                    : collector.resolvedComponent(component);
+                    : collector.resolvedComponent(component, errs);
         }
 
         @Override

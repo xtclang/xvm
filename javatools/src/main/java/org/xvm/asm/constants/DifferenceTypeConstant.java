@@ -240,7 +240,7 @@ public final class DifferenceTypeConstant
                 // TODO: if the results are identical we can allow that
                 return ResolutionResult.UNKNOWN;
             }
-            collector.resolvedConstant(collector1.getResolvedConstant());
+            collector.resolvedConstant(collector1.getResolvedConstant(), errs);
         }
 
         return result1;

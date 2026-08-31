@@ -1016,7 +1016,7 @@ public sealed class ClassStructure
                 // only allow child classes; properties and methods are resolved by the TypeInfo
                 Constant constant = collectorSvc.getResolvedConstant();
                 if (constant.getFormat() == Constant.Format.Class) {
-                    collector.resolvedConstant(constant);
+                    collector.resolvedConstant(constant, errs);
                     return ResolutionResult.RESOLVED;
                 }
             }

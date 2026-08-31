@@ -660,7 +660,7 @@ public final class PropertyStructure
             case Property: {
                 PropertyConstant idProp = (PropertyConstant) constant;
                 if (idProp.isConstant()) {
-                    collector.resolvedConstant(constant);
+                    collector.resolvedConstant(constant, errs);
                     return ResolutionResult.RESOLVED;
                 }
                 break;
@@ -670,7 +670,7 @@ public final class PropertyStructure
                 ClassConstant  idClz = (ClassConstant) constant;
                 ClassStructure clz   = (ClassStructure) idClz.getComponent();
                 if (clz.isSingleton()) {
-                    collector.resolvedConstant(constant);
+                    collector.resolvedConstant(constant, errs);
                     return ResolutionResult.RESOLVED;
                 }
                 break;

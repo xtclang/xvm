@@ -700,7 +700,7 @@ public final class ModuleStructure
     @Override
     public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector, ErrorListener errs) {
         if (sName.equals(getSimpleName())) {
-            collector.resolvedComponent(this);
+            collector.resolvedComponent(this, errs);
             return ResolutionResult.RESOLVED;
         }
 

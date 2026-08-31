@@ -412,13 +412,13 @@ public final class UnionTypeConstant
                 }
             }
 
-            collector.resolvedConstant(const1);
+            collector.resolvedConstant(const1, errs);
             return ResolutionResult.RESOLVED;
         }
 
         if (result2 == ResolutionResult.RESOLVED) {
             Constant const2 = collector2.getResolvedConstant();
-            collector.resolvedConstant(const2);
+            collector.resolvedConstant(const2, errs);
             return ResolutionResult.RESOLVED;
         }
 
