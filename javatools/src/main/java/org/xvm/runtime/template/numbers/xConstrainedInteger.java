@@ -13,6 +13,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OperatorBinding;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
@@ -52,6 +53,30 @@ public abstract class xConstrainedInteger
 
     @Override
     public void initNative() {
+        // typed operator implementations: the handler receives JavaLong, so the two casts every
+        // one of these used to open with are gone. Bound per template, so the shared JavaLong
+        // handle - which backs a dozen integer types with different overflow rules - is no
+        // obstacle the way it would be if the operation lived on the handle.
+        bindOp(OperatorBinding.Op.ADD, JavaLong.class, JavaLong.class, (frame, h1, h2, iReturn) ->
+                frame.assignValue(iReturn, makeJavaLong(h1.getValue() + h2.getValue())));
+        bindOp(OperatorBinding.Op.SUB, JavaLong.class, JavaLong.class, (frame, h1, h2, iReturn) ->
+                frame.assignValue(iReturn, makeJavaLong(h1.getValue() - h2.getValue())));
+        bindOp(OperatorBinding.Op.MUL, JavaLong.class, JavaLong.class, (frame, h1, h2, iReturn) ->
+                frame.assignValue(iReturn, makeJavaLong(h1.getValue() * h2.getValue())));
+        bindOp(OperatorBinding.Op.AND, JavaLong.class, JavaLong.class, (frame, h1, h2, iReturn) ->
+                frame.assignValue(iReturn, makeJavaLong(h1.getValue() & h2.getValue())));
+        bindOp(OperatorBinding.Op.OR,  JavaLong.class, JavaLong.class, (frame, h1, h2, iReturn) ->
+                frame.assignValue(iReturn, makeJavaLong(h1.getValue() | h2.getValue())));
+        bindOp(OperatorBinding.Op.XOR, JavaLong.class, JavaLong.class, (frame, h1, h2, iReturn) ->
+                frame.assignValue(iReturn, makeJavaLong(h1.getValue() ^ h2.getValue())));
+
+        bindOp(OperatorBinding.Op.NEG,  JavaLong.class, (frame, h, iReturn) ->
+                frame.assignValue(iReturn, makeJavaLong(-h.getValue())));
+        bindOp(OperatorBinding.Op.NEXT, JavaLong.class, (frame, h, iReturn) ->
+                frame.assignValue(iReturn, makeJavaLong(h.getValue() + 1)));
+        bindOp(OperatorBinding.Op.PREV, JavaLong.class, (frame, h, iReturn) ->
+                frame.assignValue(iReturn, makeJavaLong(h.getValue() - 1)));
+
         super.initNative();
 
         if (f_fSigned) {
@@ -414,54 +439,6 @@ public abstract class xConstrainedInteger
     }
 
     @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-        long lr = l1 + l2;
-
-        return frame.assignValue(iReturn, makeJavaLong(lr));
-    }
-
-    @Override
-    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-        long lr = l1 - l2;
-
-        return frame.assignValue(iReturn, makeJavaLong(lr));
-    }
-
-    @Override
-    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-        long lr = l1 * l2;
-
-        return frame.assignValue(iReturn, makeJavaLong(lr));
-    }
-
-    @Override
-    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn) {
-        long l = ((JavaLong) hTarget).getValue();
-
-        return frame.assignValue(iReturn, makeJavaLong(-l));
-    }
-
-    @Override
-    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn) {
-        long l = ((JavaLong) hTarget).getValue();
-
-        return frame.assignValue(iReturn, makeJavaLong(l - 1));
-    }
-
-    @Override
-    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn) {
-        long l = ((JavaLong) hTarget).getValue();
-
-        return frame.assignValue(iReturn, makeJavaLong(l + 1));
-    }
-
-    @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
@@ -522,30 +499,6 @@ public abstract class xConstrainedInteger
             l1 = l1 & ((1L << f_cNumBits) - 1);
         }
         return frame.assignValue(iReturn, makeJavaLong(l1 >>> l2));
-    }
-
-    @Override
-    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeJavaLong(l1 & l2));
-    }
-
-    @Override
-    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeJavaLong(l1 | l2));
-    }
-
-    @Override
-    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeJavaLong(l1 ^ l2));
     }
 
     @Override

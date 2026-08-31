@@ -1672,17 +1672,17 @@ public abstract class ClassTemplate
 
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "add", "+", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.ADD, frame, hTarget, hArg, iReturn, "add", "+");
     }
 
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "sub", "-", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.SUB, frame, hTarget, hArg, iReturn, "sub", "-");
     }
 
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "mul", "*", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.MUL, frame, hTarget, hArg, iReturn, "mul", "*");
     }
 
     @Override
@@ -1712,17 +1712,17 @@ public abstract class ClassTemplate
 
     @Override
     public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "and", "&", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.AND, frame, hTarget, hArg, iReturn, "and", "&");
     }
 
     @Override
     public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "or", "|", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.OR, frame, hTarget, hArg, iReturn, "or", "|");
     }
 
     @Override
     public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        return getOpChain(frame, hTarget, "xor", "^", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return dispatchBinary(OperatorBinding.Op.XOR, frame, hTarget, hArg, iReturn, "xor", "^");
     }
 
     @Override
@@ -1752,7 +1752,7 @@ public abstract class ClassTemplate
 
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn) {
-        return getOpChain(frame, hTarget, "neg", null, null).invoke(frame, hTarget, iReturn);
+        return dispatchUnary(OperatorBinding.Op.NEG, frame, hTarget, iReturn, "neg");
     }
 
     @Override
@@ -1762,12 +1762,12 @@ public abstract class ClassTemplate
 
     @Override
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn) {
-        return getOpChain(frame, hTarget, "nextValue", null, null).invoke(frame, hTarget, iReturn);
+        return dispatchUnary(OperatorBinding.Op.NEXT, frame, hTarget, iReturn, "nextValue");
     }
 
     @Override
     public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn) {
-        return getOpChain(frame, hTarget, "prevValue", null, null).invoke(frame, hTarget, iReturn);
+        return dispatchUnary(OperatorBinding.Op.PREV, frame, hTarget, iReturn, "prevValue");
     }
 
     /**
@@ -2158,6 +2158,14 @@ public abstract class ClassTemplate
     /** Native property getters bound to a typed handler, keyed by property name. */
     private final Map<String, NativeMethod.BoundGet<?>> f_mapBoundGet = new ConcurrentHashMap<>();
 
+    /** Binary operators bound to a typed handler; a null slot keeps today's behaviour. */
+    private final OperatorBinding.BoundBinary[] f_aBoundBinary =
+            new OperatorBinding.BoundBinary[OperatorBinding.Op.values().length];
+
+    /** Unary operators bound to a typed handler; a null slot keeps today's behaviour. */
+    private final OperatorBinding.BoundUnary[] f_aBoundUnary =
+            new OperatorBinding.BoundUnary[OperatorBinding.Op.values().length];
+
     /** Natives on the N protocol bound to a typed handler. */
     private final Map<MethodStructure, NativeMethod.BoundN> f_mapBoundN = new ConcurrentHashMap<>();
 
@@ -2339,6 +2347,51 @@ public abstract class ClassTemplate
      */
     private MethodStructure markNativeMethod(String sName, NativeSignature sig) {
         return markNativeMethod(sName, sig.paramTypes(), sig.returnTypes());
+    }
+
+    /**
+     * Bind a typed implementation of a binary operator.
+     *
+     * @param op         which operator
+     * @param selfClass  the receiver's handle class
+     * @param argClass   the argument's handle class
+     * @param handler    the typed implementation
+     */
+    protected <T extends ObjectHandle, A> void bindOp(
+            OperatorBinding.Op op, Class<T> selfClass, Class<A> argClass,
+            OperatorBinding.Binary<T, A> handler) {
+        f_aBoundBinary[op.ordinal()] =
+                OperatorBinding.bind(selfTypeOf(selfClass), selfTypeOf(argClass), handler);
+    }
+
+    /**
+     * Bind a typed implementation of a unary operator.
+     *
+     * @param op         which operator
+     * @param selfClass  the receiver's handle class
+     * @param handler    the typed implementation
+     */
+    protected <T extends ObjectHandle> void bindOp(
+            OperatorBinding.Op op, Class<T> selfClass, OperatorBinding.Unary<T> handler) {
+        f_aBoundUnary[op.ordinal()] = OperatorBinding.bind(selfTypeOf(selfClass), handler);
+    }
+
+    private int dispatchBinary(OperatorBinding.Op op, Frame frame, ObjectHandle hTarget,
+                               ObjectHandle hArg, int iReturn, String sMethod, String sOp) {
+        OperatorBinding.BoundBinary bound = f_aBoundBinary[op.ordinal()];
+
+        return bound == null
+                ? getOpChain(frame, hTarget, sMethod, sOp, hArg).invoke(frame, hTarget, hArg, iReturn)
+                : bound.dispatch(frame, hTarget, hArg, iReturn);
+    }
+
+    private int dispatchUnary(OperatorBinding.Op op, Frame frame, ObjectHandle hTarget,
+                              int iReturn, String sMethod) {
+        OperatorBinding.BoundUnary bound = f_aBoundUnary[op.ordinal()];
+
+        return bound == null
+                ? getOpChain(frame, hTarget, sMethod, null, null).invoke(frame, hTarget, iReturn)
+                : bound.dispatch(frame, hTarget, iReturn);
     }
 
     private MethodStructure requireNative(MethodStructure method, String sName) {
