@@ -1886,8 +1886,6 @@ public abstract class AstNode
                 try {
                     Field field = clzTry.getDeclaredField(names[i]);
                     assert field != null;
-                    // isAssignableFrom, not isInstance: isInstance(X.class) asks whether the
-                    // CLASS OBJECT is an instance, which is not the question here
                     Class<?> clzField = field.getType();
                     if (!AstNode.class.isAssignableFrom(clzField)
                             && !List.class.isAssignableFrom(clzField)) {
@@ -1902,7 +1900,6 @@ public abstract class AstNode
                         eOrig = e;
                     }
 
-                    // clzTry, not clz: clz is the parameter and is never null here
                     clzTry = clzTry.getSuperclass();
                     if (clzTry == null) {
                         throw new IllegalStateException(eOrig);
