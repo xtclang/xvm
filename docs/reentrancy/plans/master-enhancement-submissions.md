@@ -94,6 +94,77 @@ benefits from E2's sealing.
 
 ---
 
+## Filing Index
+
+One row per enhancement, with what an agent needs to raise it as its own PR on `master`. Unlike the
+bug list, several of these have real prerequisites - taking them out of order produces a change that
+compiles and then fails, or one that is three times the size it needed to be.
+
+**Independent** means it can be branched from `master` today and touches nothing another row is
+mid-way through.
+
+| ID | Enhancement | Size | Depends on | Notes for the filer |
+| --- | --- | --- | --- | --- |
+| E1 | Owner-local instance caches | medium | independent | |
+| E2 | Seal the hierarchies, exhaustive dispatch | large | independent | do per-hierarchy, not all at once |
+| E3 | ConstantPool explicit-pool threading | large | its two halves are ordered: pool threading, then freeze-on-publish | |
+| E4 | Embedding API + container model | large | independent | |
+| E5 | Side-effect-free `toString()` | medium | independent | E9 is *not* a prerequisite |
+| E6 | AST clone eradication | medium | independent | |
+| E7 | Frozen shared metadata, refuse unsafe view cloning | medium | independent | |
+| E8 | Diagnostics: named exceptions, logging/JFR | large | independent | |
+| E9 | Constructor `this`-escape elimination | medium | independent | |
+| E10 | Switch-fallthrough gate, arrow-form migration | medium | independent | |
+| E11 | Retire stringly-typed and cast-based dispatch | large | superseded in practice by **E23** | file E23 instead unless you want the survey |
+| E12 | The gates that make the rest verifiable | small | independent | worth doing early; it is what keeps the others honest |
+| E13 | Latent typing hazards | small | independent | a survey, not a change |
+| E14 | Static typing campaign (the umbrella) | - | umbrella for E15-E25 | not a PR on its own |
+| E15 | Dispatch native calls through the receiver | large | independent, but **E23 subsumes most of it** | |
+| E16 | Split native FUNCTION from native METHOD dispatch | medium | independent | |
+| E17 | Separate the colliding `A_*` / `R_*` protocols | small | independent | prerequisite for the 135 int-constant switches in **E18** |
+| E18 | Close the closeable switches; ratchet the rest | small (step 1) | step 1 independent; the int-constant part needs **E17** | step 1 is one test file, land it alone |
+| E19 | Retire String dispatch for native methods | large | **E23** is the built version of this | do not file both |
+| E20 | `Format` vs the class hierarchy | small (step 1) | step 1 independent; steps 2-3 need step 1 | **do not start at the audit**; the section says why |
+| E21 | Type `getDefiningConstant()` as the identity/pseudo union | medium | independent | deletes a 33-site workaround layer |
+| E22 | `ObjectHandle` as calling convention (the census) | - | analysis; **needs a design decision** before any PR | option C is prototyped and measured; see E23 |
+| E23 | Bind natives to typed handlers | framework 1 PR, then per-template | framework first, then each template independently | **the framework PR must land first**; templates are then parallel |
+| E24 | `null` as an absent argument | small | independent | can land before or after E23 |
+| E25 | Generify the delegate hierarchy | medium | **the `xRTDelegate` split**, and that needs `@NativeTemplate` | see the ordering below |
+
+### The one chain that matters
+
+Everything above is independent except this, and taking it out of order does not work:
+
+```
+@NativeTemplate annotation        (small, independent - file this first)
+        |
+        v
+split xRTDelegate                 (concrete class KEEPS its name; the BASE is renamed)
+        |
+        v
+E25 generify xRTDelegate<H>       (134 casts)
+```
+
+The annotation is required because the Ecstasy class a template serves is derived from its **file
+name**, so without it the concrete class cannot be renamed and the split cannot be expressed. The
+split is required because `xRTDelegate` is both the protocol base and the object-array
+implementation, so a generic base cannot compile its own defaults.
+
+Each of the three is a reasonable PR on its own, and the first two are useful even if the third is
+never done - the split alone turned master bug 36 into a compile error.
+
+### Filing any of these
+
+1. Branch from `master`. None of these needs a campaign branch, and several were developed on one
+   only because that is where they were found.
+2. Check the row's dependency column before starting. E20 and E23 in particular name an order, and
+   both sections explain what goes wrong if it is ignored.
+3. Where a row says a step is "one test file", that step is worth filing by itself - it is the part
+   that keeps the rest from regressing.
+4. Several sections record a **negative result** - something measured that did not pay. Keep those
+   in the PR description if you re-derive them; they are the reason the change is scoped the way
+   it is.
+
 ## E1 — Owner-local instance caches (retire the static `INSTANCE`/`fInstance` role)
 
 **What it is.** Templates cached their singleton behavior in **process-static**
