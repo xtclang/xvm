@@ -520,10 +520,17 @@ public class JumpVal_N
     /**
      * @return an immutable snapshot of the per-column jump maps
      *
-     * <p>A column with no map is rendered as an empty one rather than absent, which lets this be a
-     * genuinely immutable {@code List.copyOf} instead of an unmodifiable view over a mutable list -
-     * one fewer indirection on a read path that runs per switch execution. Nothing reads such a
-     * column: the write and the read are guarded by the same {@code afIs} bit.</p>
+     * <p>A column with no map is rendered as an empty one rather than absent, which lets this
+     * return a genuinely immutable {@code List.copyOf} rather than an unmodifiable view over a
+     * mutable list. Nothing reads such a column anyway - the write and the read are guarded by the
+     * same {@code afIs} bit - so the empty map is never consulted.</p>
+     *
+     * <p><b>The cost, stated honestly.</b> {@code List.copyOf} copies the outer container, which
+     * the array version did not: one extra allocation and a shallow copy of one reference per
+     * switch COLUMN. That is paid once, when a switch site's cache is built, and buys direct array
+     * access on the read, which runs once per execution of that switch. An
+     * {@code unmodifiableList} would avoid the copy and add an indirection to every read instead,
+     * which is the wrong side of that trade.</p>
      */
     private static List<Map<ObjectHandle, Long>> copyMaps(List<Map<ObjectHandle, Long>> amapJump) {
         List<Map<ObjectHandle, Long>> copy = new ArrayList<>(amapJump.size());
@@ -535,6 +542,9 @@ public class JumpVal_N
 
     /**
      * @return an immutable snapshot of the per-column range lists, an absent column rendered empty
+     *
+     * <p>Same trade as {@link #copyMaps}: one extra container copy at cache-build time, in exchange
+     * for direct access on the read.</p>
      */
     private static List<List<RangeMatch>> copyRanges(List<List<RangeMatch>> alistRange) {
         List<List<RangeMatch>> copy = new ArrayList<>(alistRange.size());

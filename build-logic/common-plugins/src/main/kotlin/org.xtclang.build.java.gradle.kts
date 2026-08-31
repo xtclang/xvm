@@ -60,6 +60,30 @@ private class JavaCompilerArgsProvider(
         // goal, but ~40 sites remain and a half-enabled fatal lint just blocks the build.
         add("-Xlint:this-escape")
         add("-Xlint:fallthrough")
+        // Categories below are at ZERO across the Java sources today, verified by compiling with
+        // -Xlint:all and tallying: only unchecked, rawtypes, dangling-doc-comments, serial, cast
+        // and classfile produce anything. Enabling a clean category costs nothing now and, with
+        // -Werror, makes reintroducing one a build failure rather than a warning nobody reads.
+        //
+        // Deliberately NOT enabled: path, options and processing depend on the invoking
+        // environment rather than on the code, so they can fail a build for reasons a contributor
+        // cannot see in the source. The six dirty categories above stay off until their counts
+        // reach zero; rawtypes is tracked in the enhancement list.
+        add("-Xlint:deprecation")
+        add("-Xlint:removal")
+        add("-Xlint:dep-ann")
+        add("-Xlint:divzero")
+        add("-Xlint:empty")
+        add("-Xlint:finally")
+        add("-Xlint:overloads")
+        add("-Xlint:overrides")
+        add("-Xlint:static")
+        add("-Xlint:strictfp")
+        add("-Xlint:text-blocks")
+        add("-Xlint:try")
+        add("-Xlint:varargs")
+        add("-Xlint:auxiliaryclass")
+        add("-Xlint:identity")
         if (previewSnapshot) {
             add("--enable-preview")
             if (lintSnapshot) add("-Xlint:preview")
