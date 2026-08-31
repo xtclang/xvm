@@ -9,6 +9,7 @@ import java.lang.classfile.CodeBuilder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -203,7 +204,7 @@ public class JumpVal_N
     @SuppressWarnings("fallthrough")
     private int findSmall(Frame frame, int iPC, ObjectHandle[] ahValue, SwitchCache cache) {
         Algorithm[]               aAlg   = cache.columnAlgorithms();
-        Map<ObjectHandle, Long>[] aMap   = cache.smallJumpMaps();
+        List<Map<ObjectHandle, Long>> aMap = cache.smallJumpMaps();
         long[]                    alWild = cache.smallWildcards();
         long                      afIs   = m_afIsSwitch;
         long                      ixBits = -1;
@@ -214,7 +215,7 @@ public class JumpVal_N
             long         ixColumn = 0; // matching cases in this column
             switch (aAlg[iCol]) {
             case NativeRange: {
-                List<RangeMatch> listRange = cache.smallRanges()[iCol];
+                List<RangeMatch> listRange = cache.smallRanges().get(iCol);
                 for (int iRange = 0, cR = listRange.size(); iRange < cR; iRange++) {
                     RangeMatch range = listRange.get(iRange);
 
@@ -234,7 +235,14 @@ public class JumpVal_N
 
             case NativeSimple: {
                 if ((afIs & (1L << iCol)) == 0) {
-                    Long LBits = aMap[iCol].get(hValue);
+                    // every column reachable here has a map: copyMaps() renders an absent one as
+                    // empty rather than null, and the write in buildSmallJumpMaps is guarded by
+                    // this same afIs bit. Asserted rather than assumed, so a future change to
+                    // either half fails a test instead of throwing here.
+                    Map<ObjectHandle, Long> mapColumn = aMap.get(iCol);
+                    assert mapColumn != null : "no jump map for column " + iCol;
+
+                    Long LBits = mapColumn.get(hValue);
                     if (LBits != null) {
                         ixColumn |= LBits.longValue();
                     }
@@ -396,17 +404,17 @@ public class JumpVal_N
         int              cRows       = anConstCase.length;
         int              cColumns    = anArg.length;
 
-        Map<ObjectHandle, Long>[] amapJump    = newJumpMaps(cColumns);
+        List<Map<ObjectHandle, Long>> amapJump = newColumns(cColumns);
         long[]                    alWild      = new long[cColumns];
         Algorithm[]               aAlgorithm  = new Algorithm[cColumns];
         Algorithm                 algorithm   = Algorithm.NativeSimple;
         TypeConstant[]            atypeColumn = new TypeConstant[cColumns];
-        List<RangeMatch>[]        alistRange  = newRangeLists(cColumns);
+        List<List<RangeMatch>>    alistRange  = newColumns(cColumns);
 
         Arrays.fill(aAlgorithm, Algorithm.NativeSimple); // assume native
         for (int iC = 0; iC < cColumns; iC++) {
             if ((afIs & (1L << iC)) == 0) {
-                amapJump[iC] = new HashMap<>(cRows);
+                amapJump.set(iC, new HashMap<>(cRows));
             }
             atypeColumn[iC] = frame.getLocalType(anArg[iC], null);
         }
@@ -434,7 +442,7 @@ public class JumpVal_N
 
                 if (aAlgorithm[iC].isNative()) {
                     if (hCase.isNativeEqual()) {
-                        Map<ObjectHandle, Long> mapJump = amapJump[iC];
+                        Map<ObjectHandle, Long> mapJump = amapJump.get(iC);
                         if (mapJump != null) {
                             mapJump.compute(hCase, (h, LOld) ->
                                 Long.valueOf(lCaseBit | (LOld == null ?  0 : LOld.longValue())));
@@ -455,7 +463,7 @@ public class JumpVal_N
 
                         addRange((GenericHandle) hCase, lCaseBit, alistRange, iC);
                     } else {
-                        amapJump[iC].compute(hCase, (h, LOld) ->
+                        amapJump.get(iC).compute(hCase, (h, LOld) ->
                             Long.valueOf(lCaseBit | (LOld == null ?  0 : LOld.longValue())));
                     }
                 }
@@ -479,7 +487,8 @@ public class JumpVal_N
      *
      * @return true iff the range element is native
      */
-    private boolean addRange(GenericHandle hRange, long lCaseBit, List<RangeMatch>[] alist, int iC) {
+    private boolean addRange(GenericHandle hRange, long lCaseBit,
+                             List<List<RangeMatch>> alist, int iC) {
         ObjectHandle hLow  = hRange.getField(null, "lowerBound");
         ObjectHandle hHigh = hRange.getField(null, "upperBound");
 
@@ -488,43 +497,51 @@ public class JumpVal_N
         return hLow.isNativeEqual();
     }
 
-    private List<RangeMatch> ensureRangeList(List<RangeMatch>[] alist, int iCol) {
-        List<RangeMatch> list = alist[iCol];
+    private List<RangeMatch> ensureRangeList(List<List<RangeMatch>> alist, int iCol) {
+        List<RangeMatch> list = alist.get(iCol);
         if (list == null) {
-            list = alist[iCol] = new ArrayList<>();
+            alist.set(iCol, list = new ArrayList<>());
         }
         return list;
     }
 
     /**
-     * @return an array of per-column jump maps
+     * @return a mutable per-column list of the given size, every entry initially absent
      *
-     * <p>Java cannot create an array of a generic type, so the element type is unchecked here. It
-     * is confined to this one line rather than covering the eighty-line method that needs the
-     * array, which is what the suppression used to span.</p>
+     * <p>These are per-column lists rather than arrays because Java cannot create an array of a
+     * generic type: {@code new Map[n]} is unchecked and needs a suppression, while a
+     * {@code List<Map<..>>} says the same thing and is checked. The read path indexes an
+     * immutable list, which costs a bounds check and an array read - the same as the array did.</p>
      */
-    @SuppressWarnings("unchecked")
-    private static Map<ObjectHandle, Long>[] newJumpMaps(int cColumns) {
-        return new Map[cColumns];
+    private static <T> List<T> newColumns(int cColumns) {
+        return new ArrayList<>(Collections.nCopies(cColumns, null));
     }
 
-    @SuppressWarnings("unchecked")
-    private static List<RangeMatch>[] newRangeLists(int cColumns) {
-        return new List[cColumns];
+    /**
+     * @return an immutable snapshot of the per-column jump maps
+     *
+     * <p>A column with no map is rendered as an empty one rather than absent, which lets this be a
+     * genuinely immutable {@code List.copyOf} instead of an unmodifiable view over a mutable list -
+     * one fewer indirection on a read path that runs per switch execution. Nothing reads such a
+     * column: the write and the read are guarded by the same {@code afIs} bit.</p>
+     */
+    private static List<Map<ObjectHandle, Long>> copyMaps(List<Map<ObjectHandle, Long>> amapJump) {
+        List<Map<ObjectHandle, Long>> copy = new ArrayList<>(amapJump.size());
+        for (Map<ObjectHandle, Long> map : amapJump) {
+            copy.add(map == null ? Map.of() : Map.copyOf(map));
+        }
+        return List.copyOf(copy);
     }
 
-    @SuppressWarnings("unchecked")
-    private static Map<ObjectHandle, Long>[] copyMaps(Map<ObjectHandle, Long>[] amapJump) {
-        Map<ObjectHandle, Long>[] copy = new Map[amapJump.length];
-        Arrays.setAll(copy, i -> amapJump[i] == null ? null : Map.copyOf(amapJump[i]));
-        return copy;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static List<RangeMatch>[] copyRanges(List<RangeMatch>[] alistRange) {
-        List<RangeMatch>[] copy = new List[alistRange.length];
-        Arrays.setAll(copy, i -> alistRange[i] == null ? List.of() : List.copyOf(alistRange[i]));
-        return copy;
+    /**
+     * @return an immutable snapshot of the per-column range lists, an absent column rendered empty
+     */
+    private static List<List<RangeMatch>> copyRanges(List<List<RangeMatch>> alistRange) {
+        List<List<RangeMatch>> copy = new ArrayList<>(alistRange.size());
+        for (List<RangeMatch> list : alistRange) {
+            copy.add(list == null ? List.of() : List.copyOf(list));
+        }
+        return List.copyOf(copy);
     }
 
     private SwitchCache buildLargeJumpMaps(Frame frame, ObjectHandle[][] aahCases) {
@@ -582,8 +599,8 @@ public class JumpVal_N
      * and reuse its own switch table without changing switch matching behavior.
      */
     private record SwitchCache(ObjectHandle[][] cases, TypeConstant[] columnTypes,
-                               Map<ObjectHandle, Long>[] smallJumpMaps, long[] smallWildcards,
-                               List<RangeMatch>[] smallRanges, Algorithm[] columnAlgorithms,
+                               List<Map<ObjectHandle, Long>> smallJumpMaps, long[] smallWildcards,
+                               List<List<RangeMatch>> smallRanges, Algorithm[] columnAlgorithms,
                                Algorithm algorithm) {}
 
     private record RangeMatch(ObjectHandle lower, ObjectHandle upper, long caseBits) {}
