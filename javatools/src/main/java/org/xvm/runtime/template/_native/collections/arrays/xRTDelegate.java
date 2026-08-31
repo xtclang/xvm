@@ -67,10 +67,24 @@ public abstract class xRTDelegate<H extends xRTDelegate.DelegateHandle>
      * terms of {@code DelegateHandle} because callers hold arrays generically. This is the one
      * place that crossing is made: each {@code *Impl} below receives {@code H} already narrowed, so
      * the twenty implementations do not each re-open the handle by casting it back to what they
-     * store. The cast is unchecked for the same reason those casts were: the handle a template is
-     * asked about is the handle it created. Getting that wrong is a
-     * {@link ClassCastException} either way - the difference is that it is now raised once, here,
-     * instead of in whichever implementation happened to be reached first.
+     * store.
+     *
+     * <p>The {@code unchecked} suppression silences a static-analysis gap, not a runtime one. This
+     * cast erases to nothing - {@code H}'s bound is already {@code DelegateHandle} - but each
+     * {@code *Impl} override still gets a synthetic bridge method that checkcasts to the concrete
+     * handle before delegating, and calls through this class go to that bridge. Verified in the
+     * bytecode:
+     *
+     * <pre>
+     * protected void deleteElementImpl(GenericArrayDelegate, long);   // the implementation
+     * protected void deleteElementImpl(DelegateHandle, long);         // bridge
+     *     1: checkcast  GenericArrayDelegate
+     * </pre>
+     *
+     * So a wrong handle raises {@link ClassCastException} exactly where it did before, and exactly
+     * once - the same single check each of those hand-written casts performed. Threading a
+     * {@code Class<H>} through every template to call {@code Class::cast} here would add a second,
+     * redundant check on the array element path and buy no safety.
      */
     @SuppressWarnings("unchecked")
     protected final H narrow(DelegateHandle hTarget) {
