@@ -55,9 +55,8 @@ public class xRTViewFromBitToNibble
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+    protected DelegateHandle createCopyImpl(ViewHandle hView, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse) {
-        ViewHandle     hView   = (ViewHandle) hTarget;
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
@@ -72,8 +71,7 @@ public class xRTViewFromBitToNibble
     }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
-        ViewHandle     hView   = (ViewHandle) hTarget;
+    protected int extractArrayValueImpl(Frame frame, ViewHandle hView, long lIndex, int iReturn) {
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
@@ -93,9 +91,8 @@ public class xRTViewFromBitToNibble
     }
 
     @Override
-    public int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    public int assignArrayValueImpl(Frame frame, ViewHandle hView, long lIndex,
                                     ObjectHandle hValue) {
-        ViewHandle     hView   = (ViewHandle) hTarget;
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 

@@ -26,7 +26,7 @@ import org.xvm.runtime.template.numbers.xInt64;
  * Native RTDelegate<Float64> implementation.
  */
 public class xRTFloat64Delegate
-        extends xRTDelegate {
+        extends xRTDelegate<xRTFloat64Delegate.DoubleArrayHandle> {
     public xRTFloat64Delegate(Container container, ClassStructure structure) {
         super(container, structure);
     }
@@ -59,8 +59,7 @@ public class xRTFloat64Delegate
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue) {
-        DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
+    public DelegateHandle fill(DoubleArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
 
         Arrays.fill(hDelegate.m_adValue, 0, cSize, ((FloatHandle) hValue).getValue());
         hDelegate.m_cSize = cSize;
@@ -68,15 +67,13 @@ public class xRTFloat64Delegate
     }
 
     @Override
-    public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
-        DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
+    public int getPropertyCapacity(Frame frame, DoubleArrayHandle hDelegate, int iReturn) {
 
         return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_adValue.length));
     }
 
     @Override
-    public int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity) {
-        DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
+    public int setPropertyCapacity(Frame frame, DoubleArrayHandle hDelegate, long nCapacity) {
 
         double[] adOld = hDelegate.m_adValue;
         long     cSize = hDelegate.m_cSize;
@@ -98,9 +95,8 @@ public class xRTFloat64Delegate
     }
 
     @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, xArray.Mutability mutability,
+    protected DelegateHandle createCopyImpl(DoubleArrayHandle hDelegate, xArray.Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse) {
-        DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
 
         double[] alValue;
         if (ofStart == 0) {
@@ -116,8 +112,7 @@ public class xRTFloat64Delegate
     }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
-        DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
+    protected int extractArrayValueImpl(Frame frame, DoubleArrayHandle hDelegate, long lIndex, int iReturn) {
 
         return frame.assignValue(iReturn,
                 frame.container().nativeTemplates().float64().makeHandle(
@@ -125,9 +120,8 @@ public class xRTFloat64Delegate
     }
 
     @Override
-    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    protected int assignArrayValueImpl(Frame frame, DoubleArrayHandle hDelegate, long lIndex,
                                        ObjectHandle hValue) {
-        DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
 
         int      cSize   = (int) hDelegate.m_cSize;
         double[] adValue = hDelegate.m_adValue;
@@ -146,8 +140,7 @@ public class xRTFloat64Delegate
     }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex) {
-        DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
+    protected void insertElementImpl(DoubleArrayHandle hDelegate, ObjectHandle hElement, long lIndex) {
         int               cSize     = (int) hDelegate.m_cSize;
         double[]          adValue   = hDelegate.m_adValue;
 
@@ -167,8 +160,7 @@ public class xRTFloat64Delegate
     }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex) {
-        DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
+    protected void deleteElementImpl(DoubleArrayHandle hDelegate, long lIndex) {
         int               cSize     = (int) hDelegate.m_cSize;
         double[]          adValue   = hDelegate.m_adValue;
 
@@ -181,8 +173,7 @@ public class xRTFloat64Delegate
     }
 
     @Override
-    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
-        DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
+    protected void deleteRangeImpl(DoubleArrayHandle hDelegate, long lIndex, long cDelete) {
         int               cSize     = (int) hDelegate.m_cSize;
         double[]          adValue   = hDelegate.m_adValue;
         int               nIndex    = (int) lIndex;

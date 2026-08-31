@@ -23,7 +23,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
  * A base class for native ArrayDelegate<Bit> views that point to delegates holding byte arrays.
  */
 public abstract class ByteBasedBitView
-        extends xRTViewToBit
+        extends xRTViewToBit<ByteBasedBitView.ViewHandle>
         implements BitView {
     public ByteBasedBitView(Container container, ClassStructure structure) {
         super(container, structure);
@@ -60,9 +60,8 @@ public abstract class ByteBasedBitView
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+    protected DelegateHandle createCopyImpl(ViewHandle hView, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse) {
-        ViewHandle hView = (ViewHandle) hTarget;
 
         byte[] abBits = getBits(hView, ofStart, cSize, fReverse);
 
@@ -71,17 +70,15 @@ public abstract class ByteBasedBitView
     }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
-        ViewHandle hView = (ViewHandle) hTarget;
+    protected int extractArrayValueImpl(Frame frame, ViewHandle hView, long lIndex, int iReturn) {
 
         return frame.assignValue(iReturn, xBit.makeHandle(frame,
                 BitBasedDelegate.getBit(hView.f_hSource.m_abValue, lIndex)));
     }
 
     @Override
-    public int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    public int assignArrayValueImpl(Frame frame, ViewHandle hView, long lIndex,
                                     ObjectHandle hValue) {
-        ViewHandle hView = (ViewHandle) hTarget;
 
         BitBasedDelegate.setBit(hView.f_hSource.m_abValue, lIndex, ((JavaLong) hValue).getValue() != 0);
         return Op.R_NEXT;

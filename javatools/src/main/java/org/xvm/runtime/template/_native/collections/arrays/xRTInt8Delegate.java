@@ -16,7 +16,7 @@ import org.xvm.runtime.template.numbers.xInt8;
  * Native RTDelegate<Int8> implementation.
  */
 public class xRTInt8Delegate
-        extends ByteBasedDelegate
+        extends ByteBasedDelegate<ByteBasedDelegate.ByteArrayHandle>
         implements ByteView {
     public xRTInt8Delegate(Container container, ClassStructure structure) {
         super(container, structure, Byte.MIN_VALUE, Byte.MAX_VALUE);

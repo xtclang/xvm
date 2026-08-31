@@ -21,7 +21,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
  * The native RTSlicingDelegate<Object> implementation.
  */
 public class xRTSlicingDelegate
-        extends xRTDelegate {
+        extends xRTDelegate<xRTSlicingDelegate.SliceHandle> {
     public xRTSlicingDelegate(Container container, ClassStructure structure) {
         super(container, structure);
     }
@@ -39,13 +39,12 @@ public class xRTSlicingDelegate
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    protected int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
+    protected int getPropertyCapacity(Frame frame, SliceHandle hTarget, int iReturn) {
         return getPropertySize(frame, hTarget, iReturn);
     }
 
     @Override
-    protected int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity) {
-        SliceHandle hSlice = (SliceHandle) hTarget;
+    protected int setPropertyCapacity(Frame frame, SliceHandle hSlice, long nCapacity) {
 
         return nCapacity == hSlice.m_cSize
             ? Op.R_NEXT
@@ -66,7 +65,7 @@ public class xRTSlicingDelegate
     }
 
     @Override
-    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue) {
+    public DelegateHandle fill(SliceHandle hTarget, int cSize, ObjectHandle hValue) {
         return null;
     }
 
@@ -87,9 +86,8 @@ public class xRTSlicingDelegate
     }
 
     @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+    protected DelegateHandle createCopyImpl(SliceHandle hSlice, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse) {
-        SliceHandle    hSlice  = (SliceHandle) hTarget;
         DelegateHandle hSource = hSlice.f_hSource;
 
         return ((xRTDelegate) hSource.getTemplate()).createCopyImpl(hSource, mutability,
@@ -97,8 +95,7 @@ public class xRTSlicingDelegate
     }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
-        SliceHandle    hSlice  = (SliceHandle) hTarget;
+    protected int extractArrayValueImpl(Frame frame, SliceHandle hSlice, long lIndex, int iReturn) {
         DelegateHandle hSource = hSlice.f_hSource;
 
         return ((xRTDelegate) hSource.getTemplate()).
@@ -106,9 +103,8 @@ public class xRTSlicingDelegate
     }
 
     @Override
-    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    protected int assignArrayValueImpl(Frame frame, SliceHandle hSlice, long lIndex,
                                        ObjectHandle hValue) {
-        SliceHandle    hSlice  = (SliceHandle) hTarget;
         DelegateHandle hSource = hSlice.f_hSource;
 
         return ((xRTDelegate) hSource.getTemplate()).
@@ -166,7 +162,7 @@ public class xRTSlicingDelegate
     }
 
     @Override
-    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
+    protected void deleteRangeImpl(SliceHandle hTarget, long lIndex, long cDelete) {
         // a slice is fixed-size; xArray raises "SizeLimited: Fixed size array" before any delegate
         // is asked, so this states the position rather than borrowing another delegate's storage
         throw new UnsupportedOperationException("a slice owns no element storage");
@@ -210,14 +206,14 @@ public class xRTSlicingDelegate
     }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex) {
+    protected void insertElementImpl(SliceHandle hTarget, ObjectHandle hElement, long lIndex) {
         // a slice is fixed-size; xArray raises "ReadOnly: Fixed size array" before any delegate is
         // asked, so this states the position rather than borrowing another delegate's storage
         throw new UnsupportedOperationException("a slice owns no element storage");
     }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex) {
+    protected void deleteElementImpl(SliceHandle hTarget, long lIndex) {
         // see insertElementImpl
         throw new UnsupportedOperationException("a slice owns no element storage");
     }

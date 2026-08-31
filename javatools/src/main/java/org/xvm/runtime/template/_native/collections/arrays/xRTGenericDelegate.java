@@ -44,15 +44,14 @@ import static org.xvm.util.Handy.copyOf;
  */
 @NativeTemplate("_native.collections.arrays.RTDelegate")
 public class xRTGenericDelegate
-        extends xRTDelegate {
+        extends xRTDelegate<xRTDelegate.GenericArrayDelegate> {
     public xRTGenericDelegate(Container container, ClassStructure structure) {
         super(container, structure);
     }
 
     @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+    protected DelegateHandle createCopyImpl(GenericArrayDelegate hDelegate, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse) {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
 
         if (ofStart == 0 && cSize == hDelegate.m_cSize && cSize == hDelegate.m_ahValue.length
                 && mutability == hDelegate.getMutability() && mutability == Mutability.Constant
@@ -70,14 +69,13 @@ public class xRTGenericDelegate
     }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
-        return frame.assignValue(iReturn, ((GenericArrayDelegate) hTarget).m_ahValue[(int) lIndex]);
+    protected int extractArrayValueImpl(Frame frame, GenericArrayDelegate hDelegate, long lIndex, int iReturn) {
+        return frame.assignValue(iReturn, hDelegate.m_ahValue[(int) lIndex]);
     }
 
     @Override
-    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    protected int assignArrayValueImpl(Frame frame, GenericArrayDelegate hDelegate, long lIndex,
                                        ObjectHandle hValue) {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
         ObjectHandle[]       ahValue   = hDelegate.m_ahValue;
         int                  cSize     = (int) hDelegate.m_cSize;
         int                  nIndex    = (int) lIndex;
@@ -88,7 +86,7 @@ public class xRTGenericDelegate
             }
             hDelegate.m_cSize++;
         } else if (nIndex > cSize) {
-            TypeConstant typeElement  = hTarget.getType().getParamType(0);
+            TypeConstant typeElement  = hDelegate.getType().getParamType(0);
             Constant     constDefault = typeElement.getDefaultValue();
 
             if (constDefault == null) {
@@ -118,8 +116,7 @@ public class xRTGenericDelegate
     }
 
     @Override
-    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
+    protected void deleteRangeImpl(GenericArrayDelegate hDelegate, long lIndex, long cDelete) {
         int                  cSize     = (int) hDelegate.m_cSize;
         ObjectHandle[]       ahValue   = hDelegate.m_ahValue;
         int                  nIndex    = (int) lIndex;
@@ -208,15 +205,13 @@ public class xRTGenericDelegate
     }
 
     @Override
-    protected int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
+    protected int getPropertyCapacity(Frame frame, GenericArrayDelegate hDelegate, int iReturn) {
 
         return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_ahValue.length));
     }
 
     @Override
-    protected int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity) {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
+    protected int setPropertyCapacity(Frame frame, GenericArrayDelegate hDelegate, long nCapacity) {
 
         ObjectHandle[] ahOld = hDelegate.m_ahValue;
         int            nSize = (int) hDelegate.m_cSize;
@@ -237,8 +232,7 @@ public class xRTGenericDelegate
     }
 
     @Override
-    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue) {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
+    public DelegateHandle fill(GenericArrayDelegate hDelegate, int cSize, ObjectHandle hValue) {
 
         Arrays.fill(hDelegate.m_ahValue, 0, cSize, hValue);
         hDelegate.m_cSize = cSize;
@@ -246,8 +240,7 @@ public class xRTGenericDelegate
     }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex) {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
+    protected void insertElementImpl(GenericArrayDelegate hDelegate, ObjectHandle hElement, long lIndex) {
         int                  cSize     = (int) hDelegate.m_cSize;
         ObjectHandle[]       ahValue   = hDelegate.m_ahValue;
         int                  nIndex    = (int) lIndex;
@@ -268,8 +261,7 @@ public class xRTGenericDelegate
     }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex) {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
+    protected void deleteElementImpl(GenericArrayDelegate hDelegate, long lIndex) {
         int                  cSize     = (int) hDelegate.m_cSize;
         ObjectHandle[]       ahValue   = hDelegate.m_ahValue;
         int                  nIndex    = (int) lIndex;

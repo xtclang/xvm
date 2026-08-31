@@ -22,7 +22,7 @@ import org.xvm.runtime.template.numbers.xInt64;
  * A base class for native ArrayDelegate implementations based on bit arrays.
  */
 public abstract class BitBasedDelegate
-        extends ByteBasedDelegate
+        extends ByteBasedDelegate<BitBasedDelegate.BitArrayHandle>
         implements BitView {
     protected BitBasedDelegate(Container container, ClassStructure structure) {
         super(container, structure, (byte) 0, (byte) 1);
@@ -106,10 +106,9 @@ public abstract class BitBasedDelegate
     }
 
     @Override
-    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue) {
+    public DelegateHandle fill(BitArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
         assert cSize > 0;
 
-        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
         byte[]         ab        = hDelegate.m_abValue;
 
         if (isSet(hValue)) {
@@ -132,21 +131,19 @@ public abstract class BitBasedDelegate
     }
 
     @Override
-    public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
-        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
+    public int getPropertyCapacity(Frame frame, BitArrayHandle hDelegate, int iReturn) {
 
         return frame.assignValue(iReturn, xInt64.makeHandle(frame, (long) hDelegate.m_abValue.length << 3));
     }
 
     @Override
-    public int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity) {
+    public int setPropertyCapacity(Frame frame, BitArrayHandle hTarget, long nCapacity) {
         return super.setPropertyCapacity(frame, hTarget, storage(nCapacity));
     }
 
     @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+    protected DelegateHandle createCopyImpl(BitArrayHandle hDelegate, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse) {
-        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
 
         byte[] abBits = getBits(hDelegate, ofStart, cSize, fReverse);
 
@@ -154,16 +151,14 @@ public abstract class BitBasedDelegate
     }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
-        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
+    protected int extractArrayValueImpl(Frame frame, BitArrayHandle hDelegate, long lIndex, int iReturn) {
 
         return frame.assignValue(iReturn, makeBitHandle(getBit(hDelegate.m_abValue, lIndex)));
     }
 
     @Override
-    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    protected int assignArrayValueImpl(Frame frame, BitArrayHandle hDelegate, long lIndex,
                                        ObjectHandle hValue) {
-        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
 
         long   cSize   = hDelegate.m_cSize;
         byte[] abValue = hDelegate.m_abValue;
@@ -181,8 +176,7 @@ public abstract class BitBasedDelegate
     }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex) {
-        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
+    protected void insertElementImpl(BitArrayHandle hDelegate, ObjectHandle hElement, long lIndex) {
         long           cSize     = hDelegate.m_cSize;
         byte[]         abValue   = hDelegate.m_abValue;
 
@@ -201,8 +195,7 @@ public abstract class BitBasedDelegate
     }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex) {
-        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
+    protected void deleteElementImpl(BitArrayHandle hDelegate, long lIndex) {
         long           cSize     = hDelegate.m_cSize;
         byte[]         abValue   = hDelegate.m_abValue;
 
@@ -217,8 +210,7 @@ public abstract class BitBasedDelegate
     }
 
     @Override
-    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
-        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
+    protected void deleteRangeImpl(BitArrayHandle hDelegate, long lIndex, long cDelete) {
         long           cSize     = hDelegate.m_cSize;
         byte[]         abValue   = hDelegate.m_abValue;
 

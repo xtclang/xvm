@@ -44,20 +44,37 @@ import static org.xvm.util.Handy.copyOf;
 /**
  * The native RTDelegate<Object> implementation.
  */
-public abstract class xRTDelegate
+public abstract class xRTDelegate<H extends xRTDelegate.DelegateHandle>
         extends ClassTemplate
         implements IndexSupport {
 
-    public static xRTDelegate getInstance(Frame frame) {
+    public static xRTDelegate<?> getInstance(Frame frame) {
         return NativeTemplates.get(frame).delegate();
     }
 
-    public static xRTDelegate getInstance(Container container) {
+    public static xRTDelegate<?> getInstance(Container container) {
         return NativeTemplates.get(container).delegate();
     }
 
     public xRTDelegate(Container container, ClassStructure structure) {
         super(container, structure);
+    }
+
+    /**
+     * Narrow a {@link DelegateHandle} to the handle type this template stores.
+     *
+     * <p>Every delegate stores exactly one representation, and the public API above is expressed in
+     * terms of {@code DelegateHandle} because callers hold arrays generically. This is the one
+     * place that crossing is made: each {@code *Impl} below receives {@code H} already narrowed, so
+     * the twenty implementations do not each re-open the handle by casting it back to what they
+     * store. The cast is unchecked for the same reason those casts were: the handle a template is
+     * asked about is the handle it created. Getting that wrong is a
+     * {@link ClassCastException} either way - the difference is that it is now raised once, here,
+     * instead of in whichever implementation happened to be reached first.
+     */
+    @SuppressWarnings("unchecked")
+    protected final H narrow(DelegateHandle hTarget) {
+        return (H) hTarget;
     }
 
     @Override
@@ -148,7 +165,7 @@ public abstract class xRTDelegate
 
         switch (sPropName) {
         case "capacity":
-            return getPropertyCapacity(frame, hTarget, iReturn);
+            return getPropertyCapacity(frame, narrow((DelegateHandle) hTarget), iReturn);
 
         case "mutability":
             return frame.assignDeferredValue(iReturn,
@@ -168,7 +185,7 @@ public abstract class xRTDelegate
 
         switch (sPropName) {
         case "capacity":
-            return setPropertyCapacity(frame, hTarget, ((JavaLong) hValue).getValue());
+            return setPropertyCapacity(frame, narrow((DelegateHandle) hTarget), ((JavaLong) hValue).getValue());
 
         case "mutability": {
             Mutability mutability = Mutability.values()[((EnumHandle) hValue).getOrdinal()];
@@ -230,12 +247,12 @@ public abstract class xRTDelegate
     /**
      * "capacity.get()" implementation.
      */
-    protected abstract int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn);
+    protected abstract int getPropertyCapacity(Frame frame, H hTarget, int iReturn);
 
     /**
      * "capacity.set()" implementation.
      */
-    protected abstract int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity);
+    protected abstract int setPropertyCapacity(Frame frame, H hTarget, long nCapacity);
 
     /**
      * "size.get()" implementation.
@@ -270,7 +287,7 @@ public abstract class xRTDelegate
                 xException.typeMismatch(frame, hValue.getType(), hDelegate.getElementType()));
         }
 
-        insertElementImpl(hDelegate, hValue, (int) hIndex.getValue());
+        insertElementImpl(narrow(hDelegate), hValue, (int) hIndex.getValue());
 
         if (mutability != null) {
             hDelegate.setMutability(mutability);
@@ -302,7 +319,7 @@ public abstract class xRTDelegate
             break;
         }
 
-        deleteElementImpl(hDelegate, lIndex);
+        deleteElementImpl(narrow(hDelegate), lIndex);
 
         if (mutability != null) {
             hDelegate.setMutability(mutability);
@@ -339,7 +356,7 @@ public abstract class xRTDelegate
      * @param cSize    the number of elements to fill
      * @param hValue   the value
      */
-    public abstract DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue);
+    public abstract DelegateHandle fill(H hTarget, int cSize, ObjectHandle hValue);
 
     /**
      * Delete the elements within the specified range.
@@ -358,9 +375,9 @@ public abstract class xRTDelegate
         }
 
         if (cSize == 1) {
-            deleteElementImpl(hDelegate, ofStart);
+            deleteElementImpl(narrow(hDelegate), ofStart);
         } else {
-            deleteRangeImpl(hDelegate, ofStart, cSize);
+            deleteRangeImpl(narrow(hDelegate), ofStart, cSize);
         }
 
         if (hDelegate != hTarget) {
@@ -378,7 +395,7 @@ public abstract class xRTDelegate
      * @return a new array delegate
      */
     protected DelegateHandle createCopy(DelegateHandle hTarget, Mutability mutability) {
-        return createCopyImpl(hTarget, mutability, 0, hTarget.m_cSize, false);
+        return createCopyImpl(narrow(hTarget), mutability, 0, hTarget.m_cSize, false);
     }
 
 
@@ -390,7 +407,7 @@ public abstract class xRTDelegate
 
         return lIndex < 0 || lIndex >= hDelegate.m_cSize
                 ? frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize))
-                : extractArrayValueImpl(frame, hDelegate, lIndex, iReturn);
+                : extractArrayValueImpl(frame, narrow(hDelegate), lIndex, iReturn);
     }
 
     public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue) {
@@ -411,7 +428,7 @@ public abstract class xRTDelegate
         }
 
         return hDelegate.checkAssign(hValue)
-            ? assignArrayValueImpl(frame, hDelegate, lIndex, hValue)
+            ? assignArrayValueImpl(frame, narrow(hDelegate), lIndex, hValue)
             : frame.raiseException(
                 xException.typeMismatch(frame, hValue.getType(), hDelegate.getElementType()));
     }
@@ -470,34 +487,34 @@ public abstract class xRTDelegate
      *
      * @return a new array delegate
      */
-    protected abstract DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+    protected abstract DelegateHandle createCopyImpl(H hTarget, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse);
 
     /**
      * Storage-specific implementation of {@link #extractArrayValue}.
      */
-    protected abstract int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn);
+    protected abstract int extractArrayValueImpl(Frame frame, H hTarget, long lIndex, int iReturn);
 
     /**
      * Storage-specific implementation of {@link #assignArrayValue}.
      */
-    protected abstract int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    protected abstract int assignArrayValueImpl(Frame frame, H hTarget, long lIndex,
                                        ObjectHandle hValue);
 
     /**
      * Storage-specific implementation of {@link #invokeInsertElement}.
      */
-    protected abstract void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex);
+    protected abstract void insertElementImpl(H hTarget, ObjectHandle hElement, long lIndex);
 
     /**
      * Storage-specific implementation of {@link #invokeDeleteElement}.
      */
-    protected abstract void deleteElementImpl(DelegateHandle hTarget, long lIndex);
+    protected abstract void deleteElementImpl(H hTarget, long lIndex);
 
     /**
      * Storage-specific implementation of {@link #deleteRange}.
      */
-    protected abstract void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete);
+    protected abstract void deleteRangeImpl(H hTarget, long lIndex, long cDelete);
 
 
     // ----- helper methods ------------------------------------------------------------------------

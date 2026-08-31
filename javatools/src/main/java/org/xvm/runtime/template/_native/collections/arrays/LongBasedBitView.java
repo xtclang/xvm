@@ -23,7 +23,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
  * A base class for native ArrayDelegate<ViewType> views that point to delegates holding long arrays.
  */
 public abstract class LongBasedBitView
-        extends xRTViewToBit
+        extends xRTViewToBit<LongBasedBitView.ViewHandle>
         implements BitView {
     public LongBasedBitView(Container container, ClassStructure structure, int nBitsPerValue) {
         super(container, structure);
@@ -58,9 +58,8 @@ public abstract class LongBasedBitView
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+    protected DelegateHandle createCopyImpl(ViewHandle hView, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse) {
-        ViewHandle hView = (ViewHandle) hTarget;
 
         byte[] abBits = getBits(hView, ofStart, cSize, fReverse);
 
@@ -69,17 +68,15 @@ public abstract class LongBasedBitView
     }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
-        ViewHandle hView = (ViewHandle) hTarget;
+    protected int extractArrayValueImpl(Frame frame, ViewHandle hView, long lIndex, int iReturn) {
 
         return frame.assignValue(iReturn, xBit.makeHandle(frame,
                 LongBasedDelegate.getBit(hView.f_hSource.m_alValue, lIndex)));
     }
 
     @Override
-    public int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    public int assignArrayValueImpl(Frame frame, ViewHandle hView, long lIndex,
                                     ObjectHandle hValue) {
-        ViewHandle hView = (ViewHandle) hTarget;
 
         LongBasedDelegate.setBit(hView.f_hSource.m_alValue, lIndex, ((JavaLong) hValue).getValue() != 0);
         return Op.R_NEXT;

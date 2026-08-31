@@ -29,7 +29,7 @@ import org.xvm.runtime.template.text.xChar;
  * Native RTDelegate<Char> implementation.
  */
 public class xRTCharDelegate
-        extends xRTDelegate {
+        extends xRTDelegate<xRTCharDelegate.CharArrayHandle> {
     public xRTCharDelegate(Container container, ClassStructure structure) {
         super(container, structure);
     }
@@ -128,8 +128,7 @@ public class xRTCharDelegate
     }
 
     @Override
-    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue) {
-        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
+    public DelegateHandle fill(CharArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
 
         Arrays.fill(hDelegate.m_achValue, 0, cSize, (char) ((JavaLong) hValue).getValue());
         hDelegate.m_cSize = cSize;
@@ -137,15 +136,13 @@ public class xRTCharDelegate
     }
 
     @Override
-    public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
-        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
+    public int getPropertyCapacity(Frame frame, CharArrayHandle hDelegate, int iReturn) {
 
         return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_achValue.length));
     }
 
     @Override
-    public int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity) {
-        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
+    public int setPropertyCapacity(Frame frame, CharArrayHandle hDelegate, long nCapacity) {
 
         char[] achOld = hDelegate.m_achValue;
         int    nSize  = (int) hDelegate.m_cSize;
@@ -190,9 +187,8 @@ public class xRTCharDelegate
     }
 
     @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+    protected DelegateHandle createCopyImpl(CharArrayHandle hDelegate, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse) {
-        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
         char[] achValue = Arrays.copyOfRange(
                 hDelegate.m_achValue, (int) ofStart, (int) (ofStart + cSize));
@@ -204,16 +200,14 @@ public class xRTCharDelegate
     }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
-        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
+    protected int extractArrayValueImpl(Frame frame, CharArrayHandle hDelegate, long lIndex, int iReturn) {
 
         return frame.assignValue(iReturn, xChar.makeHandle(frame, hDelegate.m_achValue[(int) lIndex]));
     }
 
     @Override
-    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    protected int assignArrayValueImpl(Frame frame, CharArrayHandle hDelegate, long lIndex,
                                        ObjectHandle hValue) {
-        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
         int    cSize    = (int) hDelegate.m_cSize;
         char[] achValue = hDelegate.m_achValue;
@@ -232,8 +226,7 @@ public class xRTCharDelegate
     }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex) {
-        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
+    protected void insertElementImpl(CharArrayHandle hDelegate, ObjectHandle hElement, long lIndex) {
         int             cSize     = (int) hDelegate.m_cSize;
         char[]          achValue  = hDelegate.m_achValue;
 
@@ -253,8 +246,7 @@ public class xRTCharDelegate
     }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex) {
-        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
+    protected void deleteElementImpl(CharArrayHandle hDelegate, long lIndex) {
         int             cSize     = (int) hDelegate.m_cSize;
         char[]          achValue  = hDelegate.m_achValue;
         int             nIndex    = (int) lIndex;
@@ -266,8 +258,7 @@ public class xRTCharDelegate
     }
 
     @Override
-    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
-        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
+    protected void deleteRangeImpl(CharArrayHandle hDelegate, long lIndex, long cDelete) {
         int             cSize     = (int) hDelegate.m_cSize;
         char[]          achValue  = hDelegate.m_achValue;
         int             nIndex    = (int) lIndex;

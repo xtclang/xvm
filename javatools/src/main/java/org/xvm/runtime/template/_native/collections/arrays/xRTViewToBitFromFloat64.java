@@ -32,7 +32,7 @@ import static org.xvm.runtime.template._native.collections.arrays.LongBasedDeleg
  * A base class for native ArrayDelegate<Bit> views that point to delegates holding double arrays.
  */
 public class xRTViewToBitFromFloat64
-        extends xRTViewToBit
+        extends xRTViewToBit<xRTViewToBitFromFloat64.ViewHandle>
         implements BitView {
     public xRTViewToBitFromFloat64(Container container, ClassStructure structure) {
         super(container, structure);
@@ -70,9 +70,8 @@ public class xRTViewToBitFromFloat64
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+    protected DelegateHandle createCopyImpl(ViewHandle hView, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse) {
-        ViewHandle hView = (ViewHandle) hTarget;
 
         byte[] abBits = getBits(hView, ofStart, cSize, fReverse);
 
@@ -81,17 +80,15 @@ public class xRTViewToBitFromFloat64
     }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
-        ViewHandle hView = (ViewHandle) hTarget;
+    protected int extractArrayValueImpl(Frame frame, ViewHandle hView, long lIndex, int iReturn) {
 
         return frame.assignValue(iReturn, xBit.makeHandle(frame,
                 getBit(hView.f_hSource.m_adValue, lIndex)));
     }
 
     @Override
-    public int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    public int assignArrayValueImpl(Frame frame, ViewHandle hView, long lIndex,
                                     ObjectHandle hValue) {
-        ViewHandle hView = (ViewHandle) hTarget;
 
         setBit(hView.f_hSource.m_adValue, lIndex, ((JavaLong) hValue).getValue() != 0);
         return Op.R_NEXT;

@@ -21,8 +21,8 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 /**
  * The abstract base of RTView* implementations.
  */
-public abstract class xRTView
-        extends xRTDelegate {
+public abstract class xRTView<H extends xRTView.ViewHandle>
+        extends xRTDelegate<H> {
     protected xRTView(Container container, ClassStructure structure) {
         super(container, structure);
     }
@@ -36,13 +36,12 @@ public abstract class xRTView
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    protected int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
+    protected int getPropertyCapacity(Frame frame, H hTarget, int iReturn) {
         return getPropertySize(frame, hTarget, iReturn);
     }
 
     @Override
-    protected int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity) {
-        DelegateHandle hView = (DelegateHandle) hTarget;
+    protected int setPropertyCapacity(Frame frame, H hView, long nCapacity) {
 
         return nCapacity == hView.m_cSize
             ? Op.R_NEXT
@@ -63,7 +62,7 @@ public abstract class xRTView
     }
 
     @Override
-    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue) {
+    public DelegateHandle fill(H hTarget, int cSize, ObjectHandle hValue) {
         return null;
     }
 
@@ -98,7 +97,7 @@ public abstract class xRTView
     }
 
     @Override
-    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
+    protected void deleteRangeImpl(H hTarget, long lIndex, long cDelete) {
         throw new UnsupportedOperationException(
                 getClass().getSimpleName() + " is a view and owns no element storage");
     }
@@ -141,7 +140,7 @@ public abstract class xRTView
     }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex) {
+    protected void insertElementImpl(H hTarget, ObjectHandle hElement, long lIndex) {
         // a view is fixed-size; xArray raises "ReadOnly: Fixed size array" before any delegate is
         // asked, so this states the position rather than borrowing another delegate's storage
         throw new UnsupportedOperationException(
@@ -149,7 +148,7 @@ public abstract class xRTView
     }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex) {
+    protected void deleteElementImpl(H hTarget, long lIndex) {
         // see insertElementImpl
         throw new UnsupportedOperationException(
                 getClass().getSimpleName() + " is a view and owns no element storage");

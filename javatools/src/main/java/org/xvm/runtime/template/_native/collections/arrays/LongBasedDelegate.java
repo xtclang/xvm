@@ -36,8 +36,8 @@ import org.xvm.util.Handy;
 /**
  * A base class for native ArrayDelegate implementations based on long arrays.
  */
-public abstract class LongBasedDelegate
-        extends xRTDelegate
+public abstract class LongBasedDelegate<H extends LongBasedDelegate.LongArrayHandle>
+        extends xRTDelegate<H>
         implements BitView {
     protected LongBasedDelegate(Container container, ClassStructure structure,
                                 int nBitsPerValue, boolean fSigned) {
@@ -71,10 +71,9 @@ public abstract class LongBasedDelegate
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue) {
+    public DelegateHandle fill(H hDelegate, int cSize, ObjectHandle hValue) {
         assert cSize > 0;
 
-        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
         long[]          al        = hDelegate.m_alValue;
         long            lValue    = ((JavaLong) hValue).getValue();
 
@@ -97,16 +96,14 @@ public abstract class LongBasedDelegate
     }
 
     @Override
-    public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
-        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
+    public int getPropertyCapacity(Frame frame, H hDelegate, int iReturn) {
 
         return frame.assignValue(iReturn,
                 xInt64.makeHandle(frame, (long) hDelegate.m_alValue.length * f_nValuesPerLong));
     }
 
     @Override
-    public int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity) {
-        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
+    public int setPropertyCapacity(Frame frame, H hDelegate, long nCapacity) {
 
         long[] alOld = hDelegate.m_alValue;
         long   cSize = hDelegate.m_cSize;
@@ -128,9 +125,8 @@ public abstract class LongBasedDelegate
     }
 
     @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+    protected DelegateHandle createCopyImpl(H hDelegate, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse) {
-        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
         long[] alOld  = hDelegate.m_alValue;
         long[] alNew;
@@ -154,16 +150,14 @@ public abstract class LongBasedDelegate
     }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
-        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
+    protected int extractArrayValueImpl(Frame frame, H hDelegate, long lIndex, int iReturn) {
 
         return frame.assignValue(iReturn, makeElementHandle(getValue(hDelegate.m_alValue, lIndex)));
     }
 
     @Override
-    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    protected int assignArrayValueImpl(Frame frame, H hDelegate, long lIndex,
                                        ObjectHandle hValue) {
-        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
         long            cSize     = hDelegate.m_cSize;
         long[]          alValue   = hDelegate.m_alValue;
 
@@ -180,8 +174,7 @@ public abstract class LongBasedDelegate
     }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex) {
-        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
+    protected void insertElementImpl(H hDelegate, ObjectHandle hElement, long lIndex) {
         long            cSize     = hDelegate.m_cSize;
         long[]          alValue   = hDelegate.m_alValue;
 
@@ -202,8 +195,7 @@ public abstract class LongBasedDelegate
     }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex) {
-        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
+    protected void deleteElementImpl(H hDelegate, long lIndex) {
         long            cSize     = hDelegate.m_cSize;
         long[]          alValue   = hDelegate.m_alValue;
 
@@ -218,8 +210,7 @@ public abstract class LongBasedDelegate
     }
 
     @Override
-    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
-        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
+    protected void deleteRangeImpl(H hDelegate, long lIndex, long cDelete) {
         long            cSize     = hDelegate.m_cSize;
         long[]          alValue   = hDelegate.m_alValue;
 

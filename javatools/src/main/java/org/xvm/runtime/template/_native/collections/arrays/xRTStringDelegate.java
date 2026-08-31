@@ -30,7 +30,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * A native ArrayDelegate implementations based on String arrays.
  */
 public class xRTStringDelegate
-        extends xRTDelegate {
+        extends xRTDelegate<xRTStringDelegate.StringArrayHandle> {
     public xRTStringDelegate(Container container, ClassStructure structure) {
         super(container, structure);
     }
@@ -62,8 +62,7 @@ public class xRTStringDelegate
     }
 
     @Override
-    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue) {
-        StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
+    public DelegateHandle fill(StringArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
 
         Arrays.fill(hDelegate.m_asValue, 0, cSize, ((StringHandle) hValue).getStringValue());
         hDelegate.m_cSize = cSize;
@@ -71,15 +70,13 @@ public class xRTStringDelegate
     }
 
     @Override
-    public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
-        StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
+    public int getPropertyCapacity(Frame frame, StringArrayHandle hDelegate, int iReturn) {
 
         return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_asValue.length));
     }
 
     @Override
-    public int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity) {
-        StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
+    public int setPropertyCapacity(Frame frame, StringArrayHandle hDelegate, long nCapacity) {
 
         String[] asOld = hDelegate.m_asValue;
         int      nSize = (int) hDelegate.m_cSize;
@@ -100,9 +97,8 @@ public class xRTStringDelegate
     }
 
     @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+    protected DelegateHandle createCopyImpl(StringArrayHandle hDelegate, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse) {
-        StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
 
         String[] abValue = Arrays.copyOfRange(hDelegate.m_asValue, (int) ofStart, (int) (ofStart + cSize));
         if (fReverse) {
@@ -113,17 +109,15 @@ public class xRTStringDelegate
     }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
-        StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
+    protected int extractArrayValueImpl(Frame frame, StringArrayHandle hDelegate, long lIndex, int iReturn) {
 
         String s = hDelegate.m_asValue[(int) lIndex];
         return frame.assignValue(iReturn, xString.makeHandle(frame, s));
     }
 
     @Override
-    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    protected int assignArrayValueImpl(Frame frame, StringArrayHandle hDelegate, long lIndex,
                                        ObjectHandle hValue) {
-        StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
 
         int    cSize   = (int) hDelegate.m_cSize;
         String[] abValue = hDelegate.m_asValue;
@@ -141,8 +135,7 @@ public class xRTStringDelegate
     }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex) {
-        StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
+    protected void insertElementImpl(StringArrayHandle hDelegate, ObjectHandle hElement, long lIndex) {
         int               cSize     = (int) hDelegate.m_cSize;
         String[]          asValue   = hDelegate.m_asValue;
         String            bValue    = ((StringHandle) hElement).getStringValue();
@@ -160,8 +153,7 @@ public class xRTStringDelegate
     }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex) {
-        StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
+    protected void deleteElementImpl(StringArrayHandle hDelegate, long lIndex) {
         int               cSize     = (int) hDelegate.m_cSize;
         String[]          asValue   = hDelegate.m_asValue;
 
@@ -326,8 +318,7 @@ public class xRTStringDelegate
     }
 
     @Override
-    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
-        StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
+    protected void deleteRangeImpl(StringArrayHandle hDelegate, long lIndex, long cDelete) {
         int               cSize     = (int) hDelegate.m_cSize;
         String[]          asValue   = hDelegate.m_asValue;
         int               nIndex    = (int) lIndex;

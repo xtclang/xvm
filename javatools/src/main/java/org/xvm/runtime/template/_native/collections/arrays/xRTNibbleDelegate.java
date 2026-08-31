@@ -17,7 +17,7 @@ import org.xvm.runtime.template.numbers.xNibble;
  * Native RTDelegate<Nibble> implementation.
  */
 public class xRTNibbleDelegate
-        extends LongBasedDelegate
+        extends LongBasedDelegate<LongBasedDelegate.LongArrayHandle>
         implements ByteView {
     public xRTNibbleDelegate(Container container, ClassStructure structure) {
         super(container, structure, 4, false);

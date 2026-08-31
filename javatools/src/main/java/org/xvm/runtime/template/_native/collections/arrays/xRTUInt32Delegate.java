@@ -16,7 +16,7 @@ import org.xvm.runtime.template.numbers.xUInt32;
  * Native RTDelegate<UInt32> implementation.
  */
 public class xRTUInt32Delegate
-        extends LongBasedDelegate
+        extends LongBasedDelegate<LongBasedDelegate.LongArrayHandle>
         implements ByteView {
     public xRTUInt32Delegate(Container container, ClassStructure structure) {
         super(container, structure, 32, false);

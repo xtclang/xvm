@@ -30,8 +30,8 @@ import org.xvm.runtime.template.numbers.xUInt8;
 /**
  * A base class for native ArrayDelegate implementations based on byte arrays.
  */
-public abstract class ByteBasedDelegate
-        extends xRTDelegate
+public abstract class ByteBasedDelegate<H extends ByteBasedDelegate.ByteArrayHandle>
+        extends xRTDelegate<H>
         implements ByteView {
     public ByteBasedDelegate(Container container, ClassStructure structure,
                              byte bMinValue, byte bMaxValue) {
@@ -57,8 +57,7 @@ public abstract class ByteBasedDelegate
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue) {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+    public DelegateHandle fill(H hDelegate, int cSize, ObjectHandle hValue) {
 
         Arrays.fill(hDelegate.m_abValue, 0, cSize, (byte) ((JavaLong) hValue).getValue());
         hDelegate.m_cSize = cSize;
@@ -66,15 +65,13 @@ public abstract class ByteBasedDelegate
     }
 
     @Override
-    public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+    public int getPropertyCapacity(Frame frame, H hDelegate, int iReturn) {
 
         return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_abValue.length));
     }
 
     @Override
-    public int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity) {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+    public int setPropertyCapacity(Frame frame, H hDelegate, long nCapacity) {
 
         byte[] abOld = hDelegate.m_abValue;
         int    nSize = (int) hDelegate.m_cSize;
@@ -95,9 +92,8 @@ public abstract class ByteBasedDelegate
     }
 
     @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+    protected DelegateHandle createCopyImpl(H hDelegate, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse) {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
 
         byte[] abValue = Arrays.copyOfRange(hDelegate.m_abValue, (int) ofStart, (int) (ofStart + cSize));
         if (fReverse) {
@@ -108,17 +104,15 @@ public abstract class ByteBasedDelegate
     }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+    protected int extractArrayValueImpl(Frame frame, H hDelegate, long lIndex, int iReturn) {
 
         byte b = hDelegate.m_abValue[(int) lIndex];
         return frame.assignValue(iReturn, makeElementHandle(b));
     }
 
     @Override
-    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    protected int assignArrayValueImpl(Frame frame, H hDelegate, long lIndex,
                                        ObjectHandle hValue) {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
 
         int    cSize   = (int) hDelegate.m_cSize;
         byte[] abValue = hDelegate.m_abValue;
@@ -137,8 +131,7 @@ public abstract class ByteBasedDelegate
     }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex) {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+    protected void insertElementImpl(H hDelegate, ObjectHandle hElement, long lIndex) {
         int             cSize     = (int) hDelegate.m_cSize;
         byte[]          abValue   = hDelegate.m_abValue;
         byte            bValue    = (byte) ((JavaLong) hElement).getValue();
@@ -156,8 +149,7 @@ public abstract class ByteBasedDelegate
     }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex) {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+    protected void deleteElementImpl(H hDelegate, long lIndex) {
         int             cSize     = (int) hDelegate.m_cSize;
         byte[]          abValue   = hDelegate.m_abValue;
 
@@ -169,8 +161,7 @@ public abstract class ByteBasedDelegate
     }
 
     @Override
-    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+    protected void deleteRangeImpl(H hDelegate, long lIndex, long cDelete) {
         int             cSize     = (int) hDelegate.m_cSize;
         byte[]          abValue   = hDelegate.m_abValue;
         int             nIndex    = (int) lIndex;

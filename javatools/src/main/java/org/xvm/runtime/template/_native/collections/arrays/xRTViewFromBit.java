@@ -26,7 +26,7 @@ import org.xvm.util.Lazy;
  * The native RTViewFromBit base implementation.
  */
 public class xRTViewFromBit
-        extends xRTView
+        extends xRTView<xRTViewFromBit.ViewHandle>
         implements ByteView {
     public static xRTViewFromBit getInstance(Container container) {
         return NativeTemplates.get(container).viewFromBit();
@@ -173,19 +173,19 @@ public class xRTViewFromBit
      */
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    protected int extractArrayValueImpl(Frame frame, ViewHandle hTarget, long lIndex,
                                         int iReturn) {
         return frame.raiseException(xException.unsupported(frame, storageMessage()));
     }
 
     @Override
-    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+    protected int assignArrayValueImpl(Frame frame, ViewHandle hTarget, long lIndex,
                                        ObjectHandle hValue) {
         return frame.raiseException(xException.unsupported(frame, storageMessage()));
     }
 
     @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+    protected DelegateHandle createCopyImpl(ViewHandle hTarget, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse) {
         throw new UnsupportedOperationException(storageMessage());
     }
