@@ -2094,6 +2094,60 @@ The `instanceof` remains, and that is the honest end state: one checked test, in
 concrete type is known, instead of two unchecked casts in a method that should never have accepted
 those arguments.
 
+### Why not generify `ObjectHandle` itself
+
+The self-typed (CRTP) form is the textbook answer to a binary method, and it does work in principle:
+
+```java
+abstract class ObjectHandle<SELF extends ObjectHandle<SELF>> {
+    public abstract boolean isIdenticalTo(SELF that);
+}
+class CharArrayHandle extends DelegateHandle<CharArrayHandle> { ... }   // no cast at all
+```
+
+Every per-delegate cast disappears; the one dynamic entry point (`xRef.CompareReferents`, holding
+two `ObjectHandle<?>`) needs a single unchecked crossing, exactly like `xRTDelegate.narrow()`.
+
+It is still the wrong change, and the reason is measured, not aesthetic:
+
+| | `ObjectHandle<SELF>` | `DelegateHandle<SELF>` |
+| --- | --- | --- |
+| bare tokens in `javatools` | **4,120** | 272 |
+| files touched | **394** | 36 (6 outside the arrays package) |
+| `ObjectHandle[]` / `DelegateHandle[]` | **718** | **0** |
+| uses as a type argument | 99+ | 1 |
+
+**Correction (verified, not assumed):** the arrays are *not* the blocker. An earlier draft of this
+section claimed `ObjectHandle[]` would become a raw array plus a suppression at all 718 sites. That
+is wrong. Java forbids creating `List<String>[]`, but an **unbounded wildcard** type is reifiable,
+so `new ObjectHandle<?>[10]` is legal and compiles clean under `-Xlint:all`:
+
+```java
+static abstract class OH<SELF extends OH<SELF>> { abstract boolean same(SELF o); }
+OH<?>[] arr = new OH<?>[10];     // compiles, no warning, no suppression
+```
+
+So all 718 become `ObjectHandle<?>[]` mechanically. The cost is churn, not lost type safety.
+
+What remains against it is scale and yield: ~4,120 sites across 394 files, plus CRTP plumbing
+through 101 handle subclasses (intermediates such as `ByteArrayHandle` must themselves stay
+parameterized so `BitArrayHandle extends ByteArrayHandle<BitArrayHandle>` can bind), to make
+cast-free roughly twenty methods that a single `instanceof` already makes *safe*. The win is real
+but thin, and it touches every file in the runtime at once - which is precisely the kind of change
+that cannot be reviewed or bisected.
+
+A wrapper class - `ObjectHandleArray` instead of `ObjectHandle[]` - does not change this arithmetic,
+because there is no generic-array problem to solve. It is a separate proposal with separate merits
+(a named type for the calling convention, with methods and invariants instead of a bare array), and
+one serious cost: it adds an object and an indirection to frame registers and argument passing,
+which is the hottest path in the interpreter. Worth considering on its own terms, not as a way to
+enable `ObjectHandle<T>`.
+
+**`DelegateHandle<SELF>` is the version worth doing.** It carries the binary methods that actually
+need the self type, it is never used as an array or a type argument, and it reaches six files
+outside its own package. The forwarder below is what the dynamic entry point needs; everything
+under it becomes cast-free.
+
 ### Migration
 
 `ClassTemplate.compareIdentity` stays (other templates use it) and, for delegates, forwards:
