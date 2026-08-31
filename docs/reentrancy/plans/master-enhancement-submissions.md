@@ -2345,19 +2345,34 @@ cannot see. `xArray` holds a `DelegateHandle`, fetches its template, and hands t
 it. Nothing relates the two, so the type argument has nowhere to come from - exactly the shape
 already recorded for `ByteView` in E29 and for `compareIdentity` in E28.
 
-### Measured: the operations do not need the template
+### Measured - and the first measurement was wrong
 
-Every `*Impl` body in the package was checked for template-only state. The result:
+An initial pass counted *field* access and reported 105 of 132 bodies as needing only the handle.
+That metric was wrong: it missed **unqualified calls to overridable template methods**
+(`setValue(...)`, `isSet(...)`), which are the whole point. Re-measured against every non-static
+`public`/`protected` method the templates declare:
 
 | | count |
 | --- | --- |
-| bodies needing only the handle and arguments | **105** |
-| bodies mentioning anything template-scoped | 27 |
+| bodies that are pure handle state | 89 |
+| bodies calling an **overridable template method** | 23 |
 
-and of those 27, all but two resolve to `xChar.makeHandle(...)`, `xInt64.makeHandle(...)`,
-`xBoolean.makeHandle(...)` - **statics on the element templates**, unrelated to the delegate
-template's own state. The genuine dependencies are two `createCopyImpl` bodies in the bit views that
-need `f_container` to build a *new* view.
+The 23 call `isSet`, `setValue`, `getValue`, `storage`, `makeElementHandle`, `makeBitHandle`,
+`getBits`, `reverse`. These are not misplaced storage logic. They are an **element codec**, and the
+template owns them for a real reason: one handle class serves many element types.
+
+| handle class | templates using it |
+| --- | --- |
+| `ViewHandle` | 12 |
+| `LongArrayHandle` | 7 (`Int16/32`, `UInt16/32`, `Nibble`, `Int64`, `Int128`) |
+| `BitArrayHandle` | 3 |
+| `ByteArrayHandle` | 2 |
+| `CharArrayHandle`, `DoubleArrayHandle`, `GenericArrayDelegate`, `SliceHandle`, `StringArrayHandle` | 1 each |
+
+A `LongArrayHandle` holding `Int16`s packs four per `long`; one holding `Int64`s packs one. The
+handle cannot answer `extractValue` because **it does not know its own element width** - the
+template does. So the naive form of this row is wrong for roughly two thirds of the storage, and
+`<?>` is the price of a real constraint rather than of a misplacement.
 
 So the storage operations are already pure functions of the handle. The handles hold the arrays -
 `m_abValue`, `m_achValue`, `m_alValue`, `m_ahValue` - and the template holds none of it. Asking the
@@ -2406,9 +2421,34 @@ either the original or E25 - no wildcards, no unchecked cast, no erased wrapper 
 compiler-enforced "this handle implements the storage protocol" in place of "this template can be
 cast to something that operates on that handle".
 
-### Migration
+### What would actually make this work
 
-Per handle, independently: give it the six methods (bodies move verbatim from its template's
-`*Impl`), repoint that template's callers, delete the `*Impl` pair. When the last one is done, the
-type parameter and `narrow()` come out in a single commit. `SameAs` (E28, already implemented) is
-the same move for `compareIdentity` and is the worked precedent.
+The blocker is that the handle hierarchy is coarser than the element types. Make it match, and every
+handle becomes 1:1 with a template:
+
+```java
+abstract class LongArrayHandle extends DelegateHandle { long[] m_alValue; }   // storage only
+final class Int16ArrayHandle  extends LongArrayHandle { /* codec: 4 per long */ }
+final class Int64ArrayHandle  extends LongArrayHandle { /* codec: 1 per long */ }
+```
+
+Then the codec lives with the storage it describes, the whole protocol moves onto the handle, and
+the type parameter, `narrow()`, its suppression and every `<?>` are deleted rather than relocated.
+
+**Cost, stated honestly:** roughly fifteen new handle classes, each small (a constructor plus the
+codec methods its template used to hold). `LongArrayHandle`, `ByteArrayHandle` and
+`xRTView.ViewHandle` become abstract, which also removes the concrete-and-extended wart that
+defeated the self-typed attempt recorded above.
+
+**Do not start this as a sweep.** Prove it on `LongArrayHandle` alone - the worst case, seven
+templates - and confirm the codec really is per-element-type and not per-instance. If that one works
+the rest are mechanical; if it does not, the row is dead and `<?>` stays, which is an acceptable
+answer.
+
+### Migration for the part that is already safe
+
+Independent of the above, the five 1:1 handles (`CharArrayHandle`, `DoubleArrayHandle`,
+`GenericArrayDelegate`, `SliceHandle`, `StringArrayHandle`) can take their operations today, and
+`SameAs` (E28, implemented) is the worked precedent - it was clean precisely because identity is
+pure handle state with no codec in it. That alone does not remove the type parameter, so it buys
+readability, not the `<?>` reduction.
