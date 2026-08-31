@@ -243,8 +243,11 @@ public class NativeContainer
     private void scanNativeJarDirectory(String sJarFile, String sPackage, Map<String, Class<? extends ClassTemplate>> mapTemplateClasses) {
         try (JarFile jf = new JarFile(sJarFile)) {
             jf.stream().filter(entry  -> isNativeClass(sPackage, entry.getName()))
-                       .forEach(entry -> mapTemplateClasses.put(componentName(entry.getName()),
-                                                                classForName(entry.getName())));
+                       .forEach(entry -> {
+                           Class<? extends ClassTemplate> clz = classForName(entry.getName());
+                           mapTemplateClasses.put(
+                                   ecstasyNameOf(clz, componentName(entry.getName())), clz);
+                       });
         } catch (IOException e) {
             throw new LauncherException(e);
         }
@@ -273,6 +276,19 @@ public class NativeContainer
         return sb.toString();
     }
 
+    /**
+     * The Ecstasy class a template implements: what it declares, or - for a template that declares
+     * nothing - what its file name implies.
+     *
+     * @param clz            the template class
+     * @param sFromFileName  the name derived from the file, used when the class declares none
+     */
+    private static String ecstasyNameOf(Class<? extends ClassTemplate> clz, String sFromFileName) {
+        NativeTemplate annotation = clz.getAnnotation(NativeTemplate.class);
+
+        return annotation == null ? sFromFileName : annotation.value();
+    }
+
     private static Class<? extends ClassTemplate> classForName(String sFile) {
         assert sFile.endsWith(".class");
         String sClz = sFile.substring(0, sFile.length() - ".class".length()).replace('/', '.');
@@ -293,8 +309,9 @@ public class NativeContainer
                     String sClass = "org.xvm.runtime.template." + sPackage + "x" + sSimpleName;
 
                     try {
-                        mapTemplateClasses.put(sQualifiedName,
-                                Class.forName(sClass).asSubclass(ClassTemplate.class));
+                        Class<? extends ClassTemplate> clz =
+                                Class.forName(sClass).asSubclass(ClassTemplate.class);
+                        mapTemplateClasses.put(ecstasyNameOf(clz, sQualifiedName), clz);
                     } catch (ClassNotFoundException e) {
                         throw new LauncherException(true, "Cannot load " + sClass, e);
                     }

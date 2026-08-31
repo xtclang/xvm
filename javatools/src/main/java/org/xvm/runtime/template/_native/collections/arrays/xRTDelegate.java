@@ -19,6 +19,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplate;
 import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -43,6 +44,7 @@ import static org.xvm.util.Handy.copyOf;
 /**
  * The native RTDelegate<Object> implementation.
  */
+@NativeTemplate("_native.collections.arrays.RTDelegate")
 public class xRTDelegate
         extends ClassTemplate
         implements IndexSupport {
