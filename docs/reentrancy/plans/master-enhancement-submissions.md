@@ -78,6 +78,7 @@ surface graduate into individual rows on the bug list.
 | E21 | Type `getDefiningConstant()` as the identity/pseudo union | 17 files; deletes a 33-site workaround layer | Medium | `TypeConstant`, `TerminalTypeConstant` | (this file) |
 | E22 | **The real one**: `ObjectHandle` as calling convention — 1,439 casts (50%) | multi-PR programme; needs a design decision | High | `ClassTemplate`'s 37-method protocol, `ObjectHandle` | (this file) |
 | E23 | Bind natives to typed handlers instead of String dispatch (744 labels) | framework is 1 PR; then per-template | Medium | `ClassTemplate`, every template | (this file) |
+| E24 | `null` as an absent argument (60% of 392 sites); asking callers to restate resolved data | one small record + binder change | Low | `ClassTemplate.markNativeMethod` | (this file) |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -1378,6 +1379,72 @@ A migrated template loses its switch. Whether it loses the *method* depends on t
 Done so far: `xOSStorage` (10 case labels to 0), `xOSFileStore`, `xRTRandom`. **Width: large — do
 not attempt as one PR.** Steps 1–4 are one PR that changes no behaviour; each template after that is
 independent.
+
+---
+
+## E24 — `null` as an absent argument, and restating what the code already resolved
+
+Two adjacent smells, both found while building E23, both with a mechanical fix.
+
+### `null` meaning "no filter"
+
+`markNativeMethod(sName, asParamType, asRetType)` treats both arrays as optional filters for
+choosing among overloads, and spells "no filter" as `null`. Across **392 declarations**:
+
+| | count |
+| --- | --- |
+| `null` for **both** — the name alone identifies the method | **140** |
+| `null` for the parameters only | 58 |
+| `null` for the returns only | 38 |
+| both named | 156 |
+
+So **60%** of these call sites pass at least one argument that is not a value but an absence, and
+the reader cannot tell from a call whether a `null` means "any" or "none" without opening the
+callee.
+
+**Why overloads alone do not fix it**, and why this ended up as `null`: both filters are
+`String[]`, so a parameters-only overload is erasure-identical to a returns-only one. That is worth
+stating in any port, because it is the reason the obvious fix was not taken.
+
+**The fix is to name the combination.** A small record with intention-revealing factories —
+`BY_NAME`, `params(...)`, `returns(...)`, `of(...)` — makes each call say which filters apply, and
+confines the `null` the underlying lookup still expects to one place that documents it as the only
+deliberately-nullable thing in the type. Callers write no nulls at all.
+
+This shape is worth looking for generally: **an optional parameter whose absence is encoded as
+`null`, where the overloads that would express it collide under erasure.**
+
+### Making a caller restate what the code already resolved
+
+`markNativeMethod` locates the `MethodStructure`, which carries the parameter types. A typed
+binding that *also* asks the caller to name those types therefore rejects the 198 declarations that
+pass `null` for them — for no reason, since the types are on the structure either way.
+
+The rule: **ask the caller only for what nothing else knows.** Here that is the Java handle class;
+the Ecstasy type comes from the resolved structure. Applying it doubled the population the binding
+can reach and deleted the per-template type constants, so declarations read closer to what they
+mean.
+
+### On sealing, and whether to move packages for it
+
+A sealed union lets a `switch` be verified exhaustive with no `default`. That only pays when
+consumers must genuinely **distinguish** the members. When they instead want one operation from
+whichever member they have, a plain interface with that operation is better: it removes the switch
+entirely rather than checking it, and it needs no package surgery.
+
+Both unions found here are the second kind, so **no package move is warranted**:
+
+- **`IntegralValue`** (`JavaLong` | `LongLongHandle`) — consumers want the value, not the
+  representation. Sealing would need `JavaLong` moved out of `runtime` into `template.numbers`,
+  which would also be a lie: `JavaLong` backs `Char`, `Bit` and `Boolean` too.
+- **The deferred handles** (`DeferredCallHandle` and its three subclasses) — already one package,
+  so sealing is free, and still buys nothing: all 20 sites test the base and then call the virtual
+  `proceed`/`addContinuation`. Nothing distinguishes the four.
+
+Related and separable: `ObjectHandle.proceed` has a base body of
+`throw new IllegalStateException("Not deferred")` and is guarded by `instanceof DeferredCallHandle`
+at 20 sites — a partial method, which is a union hiding in a hierarchy. `compareTo` is the only
+other one on `ObjectHandle`. Small, self-contained, and independent of everything above.
 
 ---
 
