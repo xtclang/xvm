@@ -188,10 +188,11 @@ public class xString
     @Override
     public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
         char[] ach = ((StringHandle) hTarget).getValue();
+        int    nIx = IndexSupport.checkedIndex(lIndex, ach.length);
 
-        return lIndex < 0 || lIndex >= ach.length
+        return nIx < 0
                 ? frame.raiseException(xException.outOfBounds(frame, lIndex, ach.length))
-                : frame.assignValue(iReturn, xChar.makeHandle(ach[(int) lIndex]));
+                : frame.assignValue(iReturn, xChar.makeHandle(ach[nIx]));
     }
 
     @Override

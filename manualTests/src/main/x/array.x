@@ -25,6 +25,7 @@ module TestArray {
         testComparable();
         testAggregation();
         testDeleteRange();
+        testIndexBounds();
 
         testIterators();
 
@@ -483,6 +484,59 @@ module TestArray {
         assert new Array<String>(Mutable, ["a", "b", "c", "d", "e"]).deleteAll(3..4) == ["a", "b", "c"];
 
         console.print("deleteAll(range) ok for every element type");
+    }
+
+    void testIndexBounds() {
+        console.print("\n** testIndexBounds()");
+
+        String s   = "abcdefgh";
+        Int[]  arr = [10, 11, 12, 13, 14, 15, 16, 17];
+
+        assert s[0] == 'a';
+        assert s[4] == 'e';
+        assert s[7] == 'h';
+        assert arr[4] == 14;
+
+        // An index arrives as a 64-bit Int and the underlying storage is addressed by a 32-bit
+        // one, so an index whose LOW 32 BITS land inside the container must still be rejected.
+        // 2^32 + 4 narrows to 4; String used to answer 'e' for it while Int[] raised, so the two
+        // disagreed about the same out-of-range index.
+        Int lowBitsInRange = 4294967300;        // 2^32 + 4
+
+        assert !checkedGet(s, lowBitsInRange);
+        assert !checkedGet(arr, lowBitsInRange);
+
+        // and the ordinary out-of-range cases still behave
+        assert !checkedGet(s, 8);
+        assert !checkedGet(s, -1);
+        assert !checkedGet(arr, 8);
+        assert !checkedGet(arr, -1);
+
+        console.print("index bounds ok");
+    }
+
+    /**
+     * @return True iff the index could be read; False if it raised OutOfBounds
+     */
+    Boolean checkedGet(String s, Int index) {
+        try {
+            Char ignored = s[index];
+            return True;
+        } catch (OutOfBounds e) {
+            return False;
+        }
+    }
+
+    /**
+     * @return True iff the index could be read; False if it raised OutOfBounds
+     */
+    Boolean checkedGet(Int[] arr, Int index) {
+        try {
+            Int ignored = arr[index];
+            return True;
+        } catch (OutOfBounds e) {
+            return False;
+        }
     }
 
 }
