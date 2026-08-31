@@ -84,6 +84,7 @@ surface graduate into individual rows on the bug list.
 | E27 | Op-info cache: raw `EnumMap` whose key silently names the value type | 1 PR, per-op-class migration | independent | `OpInfoKey<V>` + generic get/set |
 | E30 | Storage operations belong on the handle; the `<H>` parameter is the symptom | per-handle, then one deleting commit | supersedes E25's parameter | measured: 105/132 bodies need only the handle |
 | E31 | 42 cache-if-null getters that could be final `Lazy` fields; 7 need a resettable variant | 2 PRs (35 sites, then API + 7) | independent | measured, not estimated |
+| E32 | Thread one `ErrorListener`; stop null-defaulting and blackholing diagnostics | 3 stages, stage 1 alone is mechanical | independent | 665 params, 87 BLACKHOLE, 28 null-guards |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -2567,3 +2568,72 @@ Two independent pieces:
    of them between them.
 2. Add `Lazy.ofResettable` and convert the remaining 7. Worth doing second, so the API addition is
    justified by seven real call sites rather than proposed in the abstract.
+
+## E32 — Thread one `ErrorListener`, and stop destroying diagnostics at the source
+
+**Depends on:** nothing. The mechanism this needs already exists and already works.
+
+### The state
+
+| | count |
+| --- | --- |
+| `ErrorListener` parameters and locals | 665 |
+| `ErrorListener.BLACKHOLE` uses | 87 |
+| sites that null-guard or blackhole-default the listener | 28 |
+| `branch()` / `merge()` uses | 44 / 56 |
+
+The last row is the important one: **the correct mechanism is already there and is already used in a
+hundred places.** `ErrorListener.branch(AstNode)` gives a child listener for speculative work, and
+`merge()` promotes what it collected into the parent. That is exactly the primitive this needs.
+`BLACKHOLE` is the shortcut people reach for instead.
+
+### Two different problems wearing one name
+
+The 87 `BLACKHOLE` uses are not one pattern. They are two, and they need opposite fixes.
+
+**1. Null-defaulting - `errs == null ? ErrorListener.BLACKHOLE : errs`.** The listener is treated as
+optional, so every entry point re-decides what "no listener" means, and the answer is always "throw
+the errors away". This is the null-discipline problem: a parameter that is never legitimately absent
+is declared as if it were. Nothing forces a caller to supply one, so the quiet path is the default
+path.
+
+**2. Speculative work - `validate(ctx, ErrorListener.BLACKHOLE)`, `ensureTypeInfo(BLACKHOLE)`.**
+Here the caller genuinely intends to try something that may fail. But `BLACKHOLE` destroys the
+errors *at the point they are raised*, so the caller cannot afterwards ask whether the attempt
+failed, or why, or report it if every alternative failed. `branch()` keeps them and lets the caller
+decide - which is why the code that does it properly uses `branch()`/`merge()`.
+
+Both look like "we do not care about errors here". Only the second is ever true, and even then only
+until the speculation fails.
+
+### The refactor, in three independent stages
+
+**Stage 1 - the listener is never null.** Every method that takes an `ErrorListener` requires one:
+`@NotNull` to state it, `Objects.requireNonNull` in constructors and entry points to prove it. The
+28 null-guards disappear; a caller with nothing to report passes an explicit listener and says so at
+the call site rather than having it defaulted underneath them. This is mechanical, has no behavioural
+effect where callers already pass one, and is worth doing alone.
+
+Note `@NotNull` is available - `javatools/build.gradle.kts` declares
+`compileOnly(libs.jetbrains.annotations)` and it is used at 7 sites already. It documents intent for
+the IDE; `requireNonNull` is what enforces it, since javac has no nullability lint.
+
+**Stage 2 - speculative work branches instead of blackholing.** Convert the speculative `BLACKHOLE`
+call sites to `errs.branch(node)`, and either `merge()` on success or drop the branch on failure.
+The errors then exist, and the caller can ask `hasSeriousErrors()` before discarding them - which is
+what makes "every overload failed, here is why" reportable instead of silent. `InvocationExpression`
+(13 uses) and `TypeConstant` (10) are most of the work and are also where the silence hurts most.
+
+**Stage 3 - `BLACKHOLE` stops being reachable by default.** Once stages 1 and 2 are done, the
+remaining uses should be few and deliberate. Making the constant package-private, or renaming it to
+something that reads as a decision (`DISCARD_ALL`), stops it being the path of least resistance.
+
+### Why this is a prerequisite, not a cleanup
+
+Once exactly one listener is threaded and never null, it is the natural place for the things the
+compiler and runtime currently have nowhere to put: diagnostics, log sinks, timing, and the
+per-compilation context that is presently passed as extra parameters or not at all. That is the
+payoff, and it is unreachable while the listener is optional and half the paths discard it - a sink
+nobody is obliged to carry cannot be relied on to be there.
+
+Do stage 1 first and separately. It is the one that makes the other two provable.
