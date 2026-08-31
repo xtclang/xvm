@@ -205,6 +205,14 @@ public class ConstantPool
      *         the previously registered Constant (which should be used in lieu of the passed
      *         Constant) is returned
      */
+    /*
+     * The unchecked casts below are all the same claim: the pool's canonical instance for a
+     * constant equal to a T is itself a T. The map is heterogeneous - it holds every constant kind
+     * - so nothing in its type says that, but registration only ever returns the canonical form of
+     * what it was given. Kept at method scope deliberately: there are four such casts and they are
+     * one invariant, so splitting the suppression across them would repeat the claim rather than
+     * narrow it.
+     */
     @SuppressWarnings("unchecked")
     public <T extends Constant> T register(T constant) {
         // to allow this method to be used blindly, i.e. for constants that may be optional within a

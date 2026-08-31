@@ -243,7 +243,7 @@ public class ServiceContext {
      * @param category the category of the cached info (op specific)
      * @param info     the info
      */
-    public void setOpInfo(Op op, Enum category, Object info) {
+    public void setOpInfo(Op op, Enum<?> category, Object info) {
         f_mapOpInfo.computeIfAbsent(op, (op_) -> new EnumMap(category.getClass()))
                    .put(category, new WeakReference(info));
     }

@@ -389,7 +389,6 @@ public class JumpVal_N
         throw new UnsupportedOperationException();
     }
 
-    @SuppressWarnings("unchecked")
     private SwitchCache buildSmallJumpMaps(Frame frame, ObjectHandle[][] aahCases) {
         int[]            anConstCase = m_anConstCase;
         int[]            anArg       = m_anArgCond;
@@ -397,7 +396,7 @@ public class JumpVal_N
         int              cRows       = anConstCase.length;
         int              cColumns    = anArg.length;
 
-        Map<ObjectHandle, Long>[] amapJump    = new Map[cColumns];
+        Map<ObjectHandle, Long>[] amapJump    = newJumpMaps(cColumns);
         long[]                    alWild      = new long[cColumns];
         Algorithm[]               aAlgorithm  = new Algorithm[cColumns];
         Algorithm                 algorithm   = Algorithm.NativeSimple;
@@ -495,6 +494,18 @@ public class JumpVal_N
             list = alist[iCol] = new ArrayList<>();
         }
         return list;
+    }
+
+    /**
+     * @return an array of per-column jump maps
+     *
+     * <p>Java cannot create an array of a generic type, so the element type is unchecked here. It
+     * is confined to this one line rather than covering the eighty-line method that needs the
+     * array, which is what the suppression used to span.</p>
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<ObjectHandle, Long>[] newJumpMaps(int cColumns) {
+        return new Map[cColumns];
     }
 
     @SuppressWarnings("unchecked")

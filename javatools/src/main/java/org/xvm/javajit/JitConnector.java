@@ -88,7 +88,7 @@ public class JitConnector
         ConstantPool     pool      = ts.pool();
         Set<String>      dumpNames = new HashSet<>(Arrays.asList(CLASS_DUMP_LIST));
         try {
-            Class  mainClass = loader.loadClass(typeName);
+            Class<?> mainClass = loader.loadClass(typeName);
             Ctx    ctx       = Ctx.get();
             Object module    = mainClass.getDeclaredConstructor(Ctx.class).newInstance(ctx);
 
@@ -103,11 +103,11 @@ public class JitConnector
                     methodStructure.getParam(0).getType().equals(stringArrayType);
 
                 // ArrayᐸObjectᐳ stringArray = ArrayᐸObjectᐳ.new$p(ctx, arrayType, capacity, false);
-                Class       arrayClass  = loader.loadClass(Builder.N_ArrayObj);
+                Class<?>    arrayClass  = loader.loadClass(Builder.N_ArrayObj);
                 Method      newMethod   = arrayClass.getDeclaredMethod("$new$p", Ctx.class, TypeConstant.class, Long.TYPE, Boolean.TYPE);
                 Object      stringArray = newMethod.invoke(null, ctx, stringArrayType, (long) args.length, false);
-                Class       stringClass = loader.loadClass(Builder.N_String);
-                Class       objectClass = loader.loadClass(Builder.N_Object);
+                Class<?>    stringClass = loader.loadClass(Builder.N_String);
+                Class<?>    objectClass = loader.loadClass(Builder.N_Object);
                 Constructor stringCtor  = stringClass.getDeclaredConstructor(Ctx.class, String.class);
                 Method      addMethod   = arrayClass.getDeclaredMethod("add", Ctx.class, objectClass);
                 for (String arg : args) {
@@ -116,7 +116,7 @@ public class JitConnector
                 }
 
                 // stringArray.makeImmutable();
-                Class  baseArrayClass  = loader.loadClass(Builder.N_Array);
+                Class<?> baseArrayClass  = loader.loadClass(Builder.N_Array);
                 Method makeImmutMethod = baseArrayClass.getDeclaredMethod("makeImmutable", Ctx.class);
                 stringArray = makeImmutMethod.invoke(stringArray, ctx);
 
