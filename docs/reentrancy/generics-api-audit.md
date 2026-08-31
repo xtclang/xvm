@@ -1035,6 +1035,76 @@ Should fix:
 - compare/equality casts inside old class hierarchies where the receiver has
   already checked the concrete type.
 
+## Status As Of 2026-08-31
+
+Measured, not estimated. Numbers from `javac -Xlint:all` with the warning cap lifted - the build's
+`maxWarnings=0` does NOT lift javac's own default of 100, so any count taken without an explicit
+`-Porg.xtclang.java.maxWarnings=100000` is truncated.
+
+| | then | now |
+| --- | --- | --- |
+| casts in `javatools` | 2,879 | 2,724 |
+| casts targeting a handle type | 1,439 | 1,277 |
+| `@SuppressWarnings("unchecked")` | 14 | 6 |
+| `unchecked` warnings | - | 92 |
+| `rawtypes` warnings | - | 59 |
+| javac lint categories made fatal | 2 | 17 |
+
+### Done, and how
+
+- **Operator protocol swept**: 115 overrides to 22 via typed per-template bindings. The 22 left are
+  deliberate (`xRTType`'s operands are polymorphic; the `xChecked*` family is unreachable).
+- **Native binding built and proven** on `xOSStorage`, `xOSFileStore`, `xRTRandom` - four protocols,
+  the framework consulted only in each base's fall-through so unmigrated natives are untouched.
+- **`xRTDelegate` split**: the object-array implementations of four storage methods moved to
+  `xRTGenericDelegate`, and the base declares them abstract. This turned master bug 36 into a
+  compile error.
+- **`@NativeTemplate`**: a template can now declare which Ecstasy class it implements instead of
+  having it derived from its file name, which is what made the split expressible at all.
+- **Suppressions 14 to 6**: the self-typed builder in `LauncherOptions` gained a `self()` hook
+  (4 gone); `JumpVal_N`'s arrays of generic types became lists (4 gone); one 80-line suppression
+  narrowed to a one-line factory. The remaining 6 are documented in place.
+- **Lint ratchet**: fifteen already-clean categories made fatal, verified by inserting a deprecated
+  call and watching the build fail.
+
+### Must audit
+
+- **The other eight `xRTDelegate` methods.** Moving them is NOT mechanical, and each needs a
+  decision. `createDelegate` is overloaded and only one form is object-array specific; several
+  classes declare `callEquals`/`compareIdentity` wider than `protected`, so a `protected abstract`
+  base declaration is not overridable by them; `xRTView` and `xRTSlicingDelegate` already define
+  three of them. And five of the eight are **derived** operations, not storage - making those
+  abstract forces every delegate to reimplement comparison and filling, which is worse than today.
+- **The 6 remaining `@SuppressWarnings`.** Two in `MarkAndSweepGcSpace` are the `ArrayList` idiom
+  and correct; `ConstantPool.register` keeps method scope deliberately for four casts of one
+  invariant. The other three are one-line declarations. None is known-wrong; all should be
+  re-checked if the surrounding code changes.
+
+### Should fix
+
+- **E25 generification of the delegate hierarchy.** Now unblocked by the split, and the payoff is
+  measured: retyping just the four already-moved methods to `H` removes **61** casts of the 134.
+  Attempted and reverted - the generic hierarchy itself compiles clean (verified from the repo
+  root), but retyping the overrides by script damaged files repeatedly. **Do the override retyping
+  by hand.**
+- **The `CompletableFuture` request hierarchy.** Eleven raw types, all downstream of one raw field:
+  the message base declares `public final CompletableFuture f_future` because different requests
+  carry different result types - the same field is read as `CompletableFuture<ObjectHandle>` and
+  `CompletableFuture<ObjectHandle[]>`. The fix is generifying the request hierarchy in its result
+  type; the raw field is the symptom.
+- **`ServiceContext.setOpInfo`'s `EnumMap`.** `EnumMap<K extends Enum<K>, V>` needs a concrete enum
+  class and the category type varies per op, so no type argument exists to write. Either a plain
+  `Map<Enum<?>, ..>` or leave it raw - a design choice, not a cleanup.
+- **The native sweep.** 736 case labels remain across ~60 templates. The mechanism is proven; the
+  work is per-template and independent.
+
+### Note on nullability
+
+`@NotNull` in this tree is `org.jetbrains.annotations.NotNull`, declared `compileOnly`. It is an IDE
+hint, not a build or runtime check, and `javatools` does not depend on it at all - so it cannot be
+used to enforce any of the invariants above. Where one matters, assert it; see
+`JumpVal_N.findSmall`.
+
 ## Follow-Up Plan
 
 1. Add a source-shape lint task that reports raw declarations and unchecked
