@@ -172,10 +172,7 @@ public class xRTSlicingDelegate
     }
 
     /**
-     * A slice does not own element storage, so the inherited implementation - which is the
-     * object-array one, and opens by casting to {@code GenericArrayDelegate} - cannot apply to a
-     * {@link SliceHandle}. A slice's identity is the source it projects plus the window it
-     * projects through.
+     * A slice's identity is the source it projects plus the window it projects through.
      */
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {

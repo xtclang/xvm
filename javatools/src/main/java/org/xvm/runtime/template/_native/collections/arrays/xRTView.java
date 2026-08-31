@@ -98,9 +98,7 @@ public abstract class xRTView
     }
 
     /**
-     * A view does not own element storage, so the inherited implementation - which is the
-     * object-array one, and opens by casting to {@code GenericArrayDelegate} - cannot apply to a
-     * {@link ViewHandle}. A view's identity is the identity of the delegate it projects.
+     * A view's identity is the identity of the delegate it projects.
      */
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {

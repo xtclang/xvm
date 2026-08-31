@@ -132,7 +132,14 @@ module TestArray {
         assert &int128sSlice != &int128s;
         assert &objsSlice    != &objs;
 
-        console.print("array-vs-slice identity answers for all seven delegates");
+        // one line of actual data rather than a bare "it worked": each of these is a different
+        // delegate, and each used to raise instead of answering
+        console.print($|&chars=={&chars == &charsSlice} &strs=={&strs == &strsSlice} \
+                       |&floats=={&floats == &floatsSlice} &int8s=={&int8s == &int8sSlice} \
+                       |&ints=={&ints == &intsSlice} &int128s=={&int128s == &int128sSlice} \
+                       |&objs=={&objs == &objsSlice}
+                      );
+
     }
 
     void testArrayList() {
