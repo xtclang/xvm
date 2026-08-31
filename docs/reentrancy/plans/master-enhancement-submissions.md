@@ -2215,6 +2215,47 @@ Handle classes are pure Java internals - `NativeContainer` binds Ecstasy names f
 `Class<? extends ClassTemplate>`, never from handle class names, and no handle name appears in any
 string or reflective lookup - so none of this is visible to XTC or affects language compatibility.
 
+### Implemented on the working branch 2026-08-31
+
+Done for the delegate family: `SameAs` added, `xRTDelegate.compareIdentity` is a `final` forwarder,
+nine template overrides deleted, eight handles gained a cast-free `sameAs`, and
+`LongLongDelegate`'s override turned out to be byte-identical to `LongBasedDelegate`'s on the same
+handle and simply disappeared. Handle casts in the package: 142 -> 128. 671 tests, 0 failures.
+
+### How far the same defect actually reaches - measured, and it stops here
+
+Thirteen templates outside this package open `compareIdentity` the same way, so the obvious next
+step is to lift `SameAs` to `ObjectHandle`/`ClassTemplate`. **That is not a bug fix, because none of
+the other twelve is reachable.** The delegate family was uniquely exposed for a specific reason:
+one Ecstasy type maps to *several* Java handle classes there - a `Char[]` may be a
+`CharArrayHandle`, a `SliceHandle`, or a `ViewHandle` - so a legal comparison of two values of the
+same Ecstasy type can hand a template a handle it did not create.
+
+Everywhere else the mapping is one-to-one. Sweeping every template that casts both operands, against
+the subclasses of the type it casts to:
+
+| template | casts to | subclasses of that type |
+| --- | --- | --- |
+| `xString` | `StringHandle` | none |
+| `xTuple` | `TupleHandle` | none |
+| `xArray` | `ArrayHandle` | none |
+| `BaseBinaryFP` | `FloatHandle` | none |
+| `BaseDecFP` | `DecimalHandle` | none |
+| `BaseInt128` | `LongLongHandle` | none |
+| `xUnconstrainedInteger` | `IntNHandle` | none |
+| `xBit`, `xChar`, `xConstrainedInteger` | `JavaLong` | none |
+| `xEnum` | `EnumHandle` | `BooleanHandle` - still an `EnumHandle`, so the cast holds |
+
+With no subclass there is no second representation, so the cast can only fail if two *different*
+Ecstasy types reach one template. That does not happen: the runtime compares templates before
+asking either of them. Verified directly - `Object a = 'x'; Object b = "y"; &a == &b` answers
+`False` on clean master rather than raising, as does the `Int`/`String` pair.
+
+**So lifting `SameAs` to `ObjectHandle` is a signature-honesty change, not a fix.** It is still
+worth doing - twelve methods would stop promising to accept pairs they cannot handle - but it should
+be proposed and reviewed as a design change, and it must not be bundled into a crash fix. Filed as
+this row; deliberately kept out of PR #564.
+
 *(Superseded by the attempt recorded above: `DelegateHandle<SELF>` looked like the contained
 version - 272 tokens, no array uses, six external files - but the hierarchy will not accept a self
 type. The forwarder below is still worth doing, without the type parameter.)*
