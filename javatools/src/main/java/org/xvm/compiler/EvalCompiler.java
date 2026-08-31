@@ -67,7 +67,7 @@ public class EvalCompiler {
      */
     public MethodStructure createLambda(TypeConstant typeReturn) {
         ConstantPool pool = f_frame.poolContext();
-        ErrorList    errs = m_errs = new ErrorList(1);
+        ErrorList    errs = m_errs = ErrorList.firstError();
 
         MethodStructure      method = f_frame.f_function;
         ClassStructure       clz    = method.getContainingClass();

@@ -206,7 +206,7 @@ public final class XtcEngine
     private @NotNull CompileResult compileInternal(@NotNull ErrorListener errsCaller,
                                                    @NotNull CompileEvent event,
                                                    @NotNull SourceUnit @NotNull... units) {
-        var errsCollect = new ErrorList(Integer.MAX_VALUE);
+        var errsCollect = ErrorList.unlimited();
         // Always tee - never a null listener to test for. The ErrorList stays the PRIMARY so its
         // abort/serious-error semantics keep driving the compiler stages; the caller's sink (possibly
         // BLACKHOLE) just observes.

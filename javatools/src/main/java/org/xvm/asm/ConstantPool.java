@@ -4309,7 +4309,7 @@ public class ConstantPool
             }
             Source src = new Source(loader.getResourceAsStream("implicit.x"));
 
-            ErrorList errs   = new ErrorList(1);
+            ErrorList errs   = ErrorList.firstError();
             Parser    parser = new Parser(src, errs);
             Map<String, String[]> mapImplicits = parser.parseImplicits();
             Map<String, String[]> mapFrozen    = new HashMap<>(mapImplicits.size());

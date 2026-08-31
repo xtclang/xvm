@@ -145,7 +145,9 @@ public class Parser {
             Loop: while (!eof()) {
                 if (match(Id.MODULE) != null) {
                     if (!eof()) {
-                        m_errorListener = new ErrorList(1);
+                        // a branch of the caller's listener, not a fresh unrelated one: the errors
+                        // stay related to the parse that produced them, and are simply not merged
+                        m_errorListener = errsPrev.branch(null);
                         List<Token> tokens = parseQualifiedName();
                         if (!m_errorListener.hasSeriousErrors()) {
                             StringBuilder sb = new StringBuilder();
@@ -166,7 +168,11 @@ public class Parser {
                     }
                 }
             }
-        } catch (RuntimeException ignore) {
+        } catch (RuntimeException e) {
+            // a quick scan is best-effort and answers null when it cannot determine the name, but
+            // swallowing every RuntimeException silently would also hide real defects, so say so
+            errsPrev.log(Severity.WARNING, Compiler.FATAL_ERROR, null, m_source,
+                    m_source.getPosition(), m_source.getPosition());
         } finally {
             m_errorListener = errsPrev;
         }

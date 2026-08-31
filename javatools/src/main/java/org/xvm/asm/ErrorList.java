@@ -20,8 +20,45 @@ public class ErrorList
         implements ErrorListener {
     // ----- constructors --------------------------------------------------------------------------
 
+    /**
+     * The number of serious errors after which a process gives up.
+     *
+     * <p>There is nothing special about this value; the point is that it is one value with a name,
+     * rather than a different literal at each construction site. Before this existed the callers
+     * passed 341, 24, 100, 10 and 5, none of which was explained and at least two of which cannot
+     * have been chosen deliberately.
+     */
+    public static final int DEFAULT_MAX_ERRORS = 100;
+
+    /**
+     * Construct an ErrorList that gives up after {@link #DEFAULT_MAX_ERRORS} serious errors.
+     */
+    public ErrorList() {
+        this(DEFAULT_MAX_ERRORS);
+    }
+
+    /**
+     * @param cMaxErrors  the number of serious errors after which {@link #isAbortDesired} answers
+     *                    true; use {@link #firstError()} or {@link #unlimited()} where that is the
+     *                    intent, so the number does not have to be read as one
+     */
     public ErrorList(int cMaxErrors) {
         f_cMaxErrors = cMaxErrors;
+    }
+
+    /**
+     * @return an ErrorList for a speculative attempt, which only needs to know whether anything
+     *         went wrong rather than collect a report
+     */
+    public static ErrorList firstError() {
+        return new ErrorList(1);
+    }
+
+    /**
+     * @return an ErrorList that collects everything and never asks the process to abort
+     */
+    public static ErrorList unlimited() {
+        return new ErrorList(Integer.MAX_VALUE);
     }
 
 
