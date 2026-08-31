@@ -172,4 +172,53 @@ public class xRTSlicingDelegate
         throw new UnsupportedOperationException("a slice owns no element storage");
     }
 
+    @Override
+    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cCapacity,
+                                         ObjectHandle[] ahContent, Mutability mutability) {
+        // a slice is always created over an existing delegate, by slice(), never from raw content
+        throw new UnsupportedOperationException("a slice owns no element storage");
+    }
+
+    @Override
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
+        // xArray.callEquals compares element-by-element through the array API and never asks the
+        // delegate, so this states the position rather than borrowing another delegate's storage
+        throw new UnsupportedOperationException("a slice owns no element storage");
+    }
+
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
+        if (hValue1 == hValue2) {
+            return true;
+        }
+
+        // a slice's identity is the source it projects plus the window it projects through
+        if (!(hValue1 instanceof SliceHandle h1) || !(hValue2 instanceof SliceHandle h2)) {
+            return false;
+        }
+
+        DelegateHandle hSource1 = h1.f_hSource;
+        DelegateHandle hSource2 = h2.f_hSource;
+
+        return h1.getMutability() == h2.getMutability()
+            && h1.m_cSize         == h2.m_cSize
+            && h1.f_ofStart       == h2.f_ofStart
+            && h1.f_fReverse      == h2.f_fReverse
+            && hSource1.getTemplate() == hSource2.getTemplate()
+            && hSource1.getTemplate().compareIdentity(hSource1, hSource2);
+    }
+
+    @Override
+    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex) {
+        // a slice is fixed-size; xArray raises "ReadOnly: Fixed size array" before any delegate is
+        // asked, so this states the position rather than borrowing another delegate's storage
+        throw new UnsupportedOperationException("a slice owns no element storage");
+    }
+
+    @Override
+    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex) {
+        // see insertElementImpl
+        throw new UnsupportedOperationException("a slice owns no element storage");
+    }
 }

@@ -69,6 +69,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 34 | `IntersectionTypeConstant.mergeChildren` wrong guard | PR #557 | independent | one word + test |
 | 35 | String/Type index a long by its low 32 bits | PR #560 | independent | 2 methods + `IndexSupport.checkedIndex` |
 | 36 | `deleteAll(range)` wrong elements / crash | PR #563 | independent | 1 offset + 1 missing override |
+| 37 | `&slice1 == &slice2` / `&view1 == &view2` crash with a Java `ClassCastException` | PR #564 | independent | 2 missing overrides |
 
 ### Filing a row as an issue or PR
 
@@ -164,6 +165,7 @@ without its listed dependency.
 | 34 | Source-only; one word (`info1` -> `info2`). Fixed in-branch. | Caller `mergeTypeInfo` treats both TypeInfos as independently nullable; with `info1` present and `info2` absent the guard passes and `info2.getChildInfosByName()` NPEs. | Ready after manual review. |
 | 35 | Source-only; two methods, three lines each. Fixed in-branch, verified end to end. | `org.xvm.runtime.IndexNarrowingTest.noIndexedMethodRangeChecksANarrowedIndex` fails on the unfixed source naming both sites; at run time `"abcdefgh"[4294967300]` answers `'e'` where the same index on an `Int[]` raises. | Ready after manual review. |
 | 36 | Source-only; one offset and one missing override. Fixed in PR #563 with tests. | `TestArray.testDeleteRange` fails on master: `Int8[1,2,3,4,5].deleteAll(1..2)` answers `[1, 3, 4]` where `[1, 4, 5]` is required, and `String[...].deleteAll(1..2)` throws `ClassCastException: StringArrayHandle cannot be cast to GenericArrayDelegate`. | Filed as PR #563. |
+| 37 | Source-only; two added overrides, no change to existing code. Fixed on `lagergren/fix-slice-compare-identity`, verified red-on-master and green-after. | `TestArray.testSliceIdentity` dies on clean master `145f12f51` at `array.x:84` with `ClassCastException: SliceHandle cannot be cast to GenericArrayDelegate`; the view case dies the same way with `ByteBasedBitView$ViewHandle`. Both answer `True` after the fix, and the full `array.x` suite runs with 0 unhandled exceptions. | Filed as PR #564. |
 
 ## Reuse Exposure Categories
 
@@ -2557,3 +2559,53 @@ missing implementation is therefore invisible - `xRTStringDelegate` inherits one
 different storage type and nothing objects - and nothing relates the byte-backed implementation to
 the generic one it was derived from. See E25 for the generification that would make the first of
 those a compile error, and the split it depends on.
+
+## 37. Comparing two array slices by reference crashes the runtime
+
+Taking the reference of two slices and comparing them kills the program with a raw Java
+`ClassCastException` escaping into Ecstasy, instead of answering the comparison.
+
+```
+Int[] a  = [1, 2, 3, 4, 5];
+Int[] s1 = a[1..3];
+Int[] s2 = a[1..3];
+s1 == s2      // True - fine
+&s1 == &s2    // Unhandled exception: Run-time error: java.lang.ClassCastException
+```
+
+Verified on clean master `145f12f51`:
+
+```
+java.lang.ClassCastException: class ...xRTSlicingDelegate$SliceHandle cannot be cast to
+class ...xRTDelegate$GenericArrayDelegate
+        at ...xRTDelegate.compareIdentity(xRTDelegate.java:266)
+        at ...xArray.compareIdentity(xArray.java:555)
+        at ...xRef$CompareReferents.doNext(xRef.java:1227)
+```
+
+**Cause.** `xRTDelegate` is the base of every array delegate, but its `compareIdentity` is not a
+base implementation - it is the *object-array* implementation, and it opens with
+
+```java
+GenericArrayDelegate h1 = (GenericArrayDelegate) hValue1;
+```
+
+`xRTSlicingDelegate.SliceHandle` and `xRTView.ViewHandle` are `DelegateHandle`s with no relation to
+`GenericArrayDelegate`: a slice holds `f_hSource`/`f_ofStart`, a view holds its source. Neither
+overrides `compareIdentity`, so both inherit a cast that cannot succeed. The same is true of
+`createDelegate`, `callEquals`, `insertElementImpl` and `deleteElementImpl` - those four happen to
+be unreachable (`xArray` answers `callEquals` itself; Ecstasy rejects `insert`/`delete` on a
+fixed-size slice before any delegate is asked), so `compareIdentity` is the one that escapes.
+
+This is the type-system failure in the audit made concrete: the storage-specific implementation
+lives in the shared base, so "a subclass forgot to implement this" is invisible to the compiler and
+shows up as a `ClassCastException` in a user's program. Declaring the storage protocol `abstract`
+on the base - the E25 split - turns exactly this into a compile error, which is how master bug 36
+was found.
+
+**Fix.** Give `xRTSlicingDelegate` and `xRTView` a `compareIdentity` that compares what they
+actually hold: same mutability and size, same start offset and direction, and `compareIdentity` on
+the source delegate. Structurally identical to the generic one, over the fields a slice/view owns.
+
+**Regression test.** `&s1 == &s2` on two equal slices of one array must answer without raising, and
+must stay `True` for slices over the same source and range.

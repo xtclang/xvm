@@ -1056,9 +1056,12 @@ Measured, not estimated. Numbers from `javac -Xlint:all` with the warning cap li
   deliberate (`xRTType`'s operands are polymorphic; the `xChecked*` family is unreachable).
 - **Native binding built and proven** on `xOSStorage`, `xOSFileStore`, `xRTRandom` - four protocols,
   the framework consulted only in each base's fall-through so unmigrated natives are untouched.
-- **`xRTDelegate` split**: the object-array implementations of four storage methods moved to
-  `xRTGenericDelegate`, and the base declares them abstract. This turned master bug 36 into a
-  compile error.
+- **`xRTDelegate` split, now complete**: all twelve object-array implementations moved to
+  `xRTGenericDelegate`, and the base declares the whole storage protocol abstract. The first four
+  turned master bug 36 into a compile error; the remaining eight (done 2026-08-31) exposed master
+  bug 37 - `compareIdentity` was the object-array implementation sitting in the shared base, so
+  `&slice1 == &slice2` and `&view1 == &view2` both died with a `ClassCastException`. `xRTView` and
+  `xRTSlicingDelegate` now implement the five they were missing.
 - **`@NativeTemplate`**: a template can now declare which Ecstasy class it implements instead of
   having it derived from its file name, which is what made the split expressible at all.
 - **Suppressions 14 to 6**: the self-typed builder in `LauncherOptions` gained a `self()` hook
@@ -1069,12 +1072,26 @@ Measured, not estimated. Numbers from `javac -Xlint:all` with the warning cap li
 
 ### Must audit
 
-- **The other eight `xRTDelegate` methods.** Moving them is NOT mechanical, and each needs a
-  decision. `createDelegate` is overloaded and only one form is object-array specific; several
-  classes declare `callEquals`/`compareIdentity` wider than `protected`, so a `protected abstract`
-  base declaration is not overridable by them; `xRTView` and `xRTSlicingDelegate` already define
-  three of them. And five of the eight are **derived** operations, not storage - making those
-  abstract forces every delegate to reimplement comparison and filling, which is worse than today.
+- **The other eight `xRTDelegate` methods.** Re-audited 2026-08-31 by reading every body; the
+  previous entry here was wrong on two counts and is corrected below.
+  - **All eight are storage-specific.** Every one dereferences `GenericArrayDelegate.m_ahValue`.
+    The earlier claim that five were "derived" operations was inferred from names
+    (`callEquals`, `compareIdentity`, `fill` *sound* generic) without reading them. They are not
+    derived; all eight move to `xRTGenericDelegate` exactly like the first four.
+  - **`createDelegate` is not overloaded.** The base declares exactly one 5-arg form.
+  - **The real blocker was visibility.** Four are `public` (`createDelegate`, `callEquals`,
+    `compareIdentity`, `fill`) and four are `protected`. The earlier scripted attempt declared all
+    eight `protected abstract`; Java forbids reducing visibility on an override, so every concrete
+    subclass then failed to override its own method. That cascade was a bad `sed`, not a design
+    problem. Preserve the modifier per method and it disappears.
+  - **Fallout is exactly 2 classes x 5 methods.** `xRTChar/Float64/StringDelegate` already override
+    all eight. `xRTView` and `xRTSlicingDelegate` override only `getPropertyCapacity`,
+    `setPropertyCapacity` and `fill`, so each needs the other five.
+  - **Those five inherited bodies are unreachable-or-broken today**, which is the whole point of
+    making them abstract: a view/slice handle is not a `GenericArrayDelegate`, so each inherited
+    body is an unconditional `ClassCastException`. Four are unreachable (Ecstasy's fixed-size guard
+    rejects `insert`/`delete` first; `xArray` answers `callEquals` itself). **`compareIdentity` is
+    reachable and crashes** - filed as master bug 37.
 - **The 6 remaining `@SuppressWarnings`.** Two in `MarkAndSweepGcSpace` are the `ArrayList` idiom
   and correct; `ConstantPool.register` keeps method scope deliberately for four casts of one
   invariant. The other three are one-line declarations. None is known-wrong; all should be
