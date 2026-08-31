@@ -1532,6 +1532,30 @@ nested classes and multi-line signatures is not reliable enough to trust. Both w
 reverted, but the file is 1000+ lines with nested handle classes and the method boundaries do not
 survive naive scanning.
 
+### The split cannot rename the concrete class
+
+Templates are discovered by scanning the template directory, and the Ecstasy class a Java template
+serves is derived from its FILE NAME:
+
+```java
+String sSimpleName   = sName.substring(1, sName.length() - 6);   // xRTDelegate.class -> RTDelegate
+String sQualifiedName = sPackage + sSimpleName;
+mapTemplateClasses.put(sQualifiedName, Class.forName(sClass));
+```
+
+So a new `xRTGenericDelegate` maps to an Ecstasy `RTGenericDelegate`, which does not exist; the
+registration loop skips a template whose Ecstasy class is missing, and it is never instantiated.
+Repointing `RT_DELEGATE` at it compiles and then fails at run time.
+
+**The concrete class must keep the name `xRTDelegate`.** The abstract base is what gets a new name -
+`xRTDelegateBase` or similar - and the other delegates change their `extends` to it. That is the
+opposite of the obvious direction, and cheaper: nine `extends` clauses and a new base holding the
+protocol, rather than moving twelve method bodies out of a thousand-line file.
+
+Verified the naming rule by reading `NativeContainer.scanNativeDirectory`; an abstract base is
+skipped twice over, both because its Ecstasy class is absent and because the loop tests
+`Modifier.isAbstract`.
+
 ### Sequence
 
 1. Split the concrete Object-array delegate out of `xRTDelegate`, leaving the base abstract.
