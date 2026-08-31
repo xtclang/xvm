@@ -58,6 +58,8 @@ import static org.xvm.util.Handy.writePackedLong;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * The Component data structure is the base class for the module, package, class, property, method,
@@ -3596,7 +3598,7 @@ public abstract sealed class Component
         /**
          * The error listener.
          */
-        private final ErrorListener m_errs;
+        private final @NotNull ErrorListener m_errs;
     }
 
 

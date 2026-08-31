@@ -3,6 +3,8 @@ package org.xvm.asm;
 
 import org.xvm.compiler.ast.AstNode;
 
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * ComponentResolver represents the name resolution functionality of the Component.
@@ -20,7 +22,7 @@ public interface ComponentResolver {
      * @return the resolution result
      */
     ResolutionResult resolveName(String sName, Constants.Access access, ResolutionCollector collector,
-                                 ErrorListener errs);
+                                 @NotNull ErrorListener errs);
 
     enum ResolutionResult {
         UNKNOWN, RESOLVED, POSSIBLE, ERROR;
@@ -48,7 +50,7 @@ public interface ComponentResolver {
          *
          * @param component  the child component (which may be a composite)
          */
-        ResolutionResult resolvedComponent(Component component, ErrorListener errs);
+        ResolutionResult resolvedComponent(Component component, @NotNull ErrorListener errs);
 
         /**
          * Invoked when a name resolves to something that is a constant, such as a property
@@ -56,7 +58,7 @@ public interface ComponentResolver {
          *
          * @param constant  either a PropertyConstant or a TypeParameterConstant
          */
-        ResolutionResult resolvedConstant(Constant constant, ErrorListener errs);
+        ResolutionResult resolvedConstant(Constant constant, @NotNull ErrorListener errs);
 
         /**
          * Provide an AstNode to report resolution issues for.

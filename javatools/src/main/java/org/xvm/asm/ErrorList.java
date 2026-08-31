@@ -11,6 +11,8 @@ import org.xvm.util.Severity;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * Represents a list of errors collected from a process such as compilation, assembly, or the
@@ -239,7 +241,7 @@ public class ErrorList
             return "Branched: " + super.toString();
         }
 
-        private final ErrorListener f_listener;
+        private final @NotNull ErrorListener f_listener;
         private final AstNode       f_node;
     }
 

@@ -30,6 +30,8 @@ import static org.xvm.util.Handy.quotedChar;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * An Ecstasy source code parser supporting both demand-based and stream-based
@@ -2888,7 +2890,7 @@ public class Lexer
     /**
      * The ErrorListener to report errors to.
      */
-    private final ErrorListener m_errorListener;
+    private final @NotNull ErrorListener m_errorListener;
 
     /**
      * Keeps track of whether whitespace was encountered.

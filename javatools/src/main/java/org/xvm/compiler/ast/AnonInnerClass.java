@@ -24,6 +24,8 @@ import org.xvm.util.Severity;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * The AnonInnerClass represents the suggested shape for an anonymous inner class.
@@ -407,5 +409,5 @@ public class AnonInnerClass {
     /**
      * The error listener to use to log any errors.
      */
-    private final ErrorListener f_errs;
+    private final @NotNull ErrorListener f_errs;
 }

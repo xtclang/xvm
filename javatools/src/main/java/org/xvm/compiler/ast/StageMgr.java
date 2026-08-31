@@ -22,6 +22,8 @@ import org.xvm.util.Severity;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * A Stage Manager is used to shepherd the AST nodes through their various stages.
@@ -36,7 +38,7 @@ public class StageMgr {
      * @param errs         the error list to log to; required. A caller that genuinely wants
      *                     errors discarded passes {@link ErrorListener#BLACKHOLE} and says so
      */
-    public StageMgr(AstNode node, Stage stageTarget, ErrorListener errs) {
+    public StageMgr(AstNode node, Stage stageTarget, @NotNull ErrorListener errs) {
         assert node != null;
         assert stageTarget != null && stageTarget.isTargetable();
 
@@ -54,7 +56,7 @@ public class StageMgr {
      * @param errs         the error list to log to; required. A caller that genuinely wants
      *                     errors discarded passes {@link ErrorListener#BLACKHOLE} and says so
      */
-    public StageMgr(List<AstNode> list, Stage stageTarget, ErrorListener errs) {
+    public StageMgr(List<AstNode> list, Stage stageTarget, @NotNull ErrorListener errs) {
         assert list != null && !list.isEmpty();
         assert stageTarget != null && stageTarget.isTargetable();
 
@@ -447,7 +449,7 @@ public class StageMgr {
     /**
      * Error list to log processing errors to.
      */
-    private final ErrorListener m_errs;
+    private final @NotNull ErrorListener m_errs;
 
     /**
      * The current node being processed if processing is occurring.

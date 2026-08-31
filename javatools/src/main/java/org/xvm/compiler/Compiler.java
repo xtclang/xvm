@@ -15,6 +15,8 @@ import org.xvm.util.Severity;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * A module compiler for Ecstasy code.
@@ -383,7 +385,7 @@ public class Compiler {
     /**
      * The ErrorListener to report errors to.
      */
-    private final ErrorListener m_errs;
+    private final @NotNull ErrorListener m_errs;
 
     /**
      * The FileStructure that this compiler is putting together in a series of passes.
