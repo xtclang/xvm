@@ -128,7 +128,7 @@ public class xRTCharDelegate
     }
 
     @Override
-    public DelegateHandle fill(CharArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
+    protected DelegateHandle fillImpl(CharArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
 
         Arrays.fill(hDelegate.m_achValue, 0, cSize, (char) ((JavaLong) hValue).getValue());
         hDelegate.m_cSize = cSize;

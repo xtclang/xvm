@@ -55,7 +55,7 @@ public abstract class LongLongDelegate
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    public DelegateHandle fill(LongArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
+    protected DelegateHandle fillImpl(LongArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
 
         long[]   alValue = hDelegate.m_alValue;
         LongLong ll      = ((LongLongHandle) hValue).getValue();

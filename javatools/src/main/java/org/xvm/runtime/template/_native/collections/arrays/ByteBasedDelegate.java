@@ -57,7 +57,7 @@ public abstract class ByteBasedDelegate<H extends ByteBasedDelegate.ByteArrayHan
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    public DelegateHandle fill(H hDelegate, int cSize, ObjectHandle hValue) {
+    protected DelegateHandle fillImpl(H hDelegate, int cSize, ObjectHandle hValue) {
 
         Arrays.fill(hDelegate.m_abValue, 0, cSize, (byte) ((JavaLong) hValue).getValue());
         hDelegate.m_cSize = cSize;

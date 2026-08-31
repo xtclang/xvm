@@ -62,7 +62,7 @@ public class xRTStringDelegate
     }
 
     @Override
-    public DelegateHandle fill(StringArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
+    protected DelegateHandle fillImpl(StringArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
 
         Arrays.fill(hDelegate.m_asValue, 0, cSize, ((StringHandle) hValue).getStringValue());
         hDelegate.m_cSize = cSize;

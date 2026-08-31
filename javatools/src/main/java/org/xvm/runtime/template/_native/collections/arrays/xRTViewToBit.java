@@ -27,11 +27,11 @@ import org.xvm.util.Lazy;
 public class xRTViewToBit<H extends xRTView.ViewHandle>
         extends xRTView<H> {
 
-    public static xRTViewToBit getInstance(Frame frame) {
+    public static xRTViewToBit<?> getInstance(Frame frame) {
         return NativeTemplates.get(frame).viewToBit();
     }
 
-    public static xRTViewToBit getInstance(Container container) {
+    public static xRTViewToBit<?> getInstance(Container container) {
         return NativeTemplates.get(container).viewToBit();
     }
 
@@ -81,7 +81,7 @@ public class xRTViewToBit<H extends xRTView.ViewHandle>
      */
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability) {
         TypeConstant typeElement = hSource.getType().getParamType(0);
-        xRTViewToBit template    = f_views.get(this).get(typeElement);
+        xRTViewToBit<?> template    = f_views.get(this).get(typeElement);
 
         if (template != null) {
             return template.createBitViewDelegate(hSource, mutability);
@@ -95,12 +95,12 @@ public class xRTViewToBit<H extends xRTView.ViewHandle>
     // The dispatch map is owner-local because both the element type keys and specialized templates
     // are ConstantPool/container owned. A static map built from subtype INSTANCE fields can cross
     // containers under parallel startup.
-    private final Lazy.Bound<xRTViewToBit, Map<TypeConstant, xRTViewToBit>> f_views =
-            Lazy.ofBound(xRTViewToBit::createViews);
+    private final Lazy.Bound<xRTViewToBit<?>, Map<TypeConstant, xRTViewToBit<?>>> f_views =
+            Lazy.ofBound(xRTViewToBit<?>::createViews);
 
-    private Map<TypeConstant, xRTViewToBit> createViews() {
+    private Map<TypeConstant, xRTViewToBit<?>> createViews() {
         ConstantPool                    pool     = pool();
-        Map<TypeConstant, xRTViewToBit> mapViews = new HashMap<>();
+        Map<TypeConstant, xRTViewToBit<?>> mapViews = new HashMap<>();
 
         putView(mapViews, pool, pool.typeNibble());
 
@@ -121,7 +121,7 @@ public class xRTViewToBit<H extends xRTView.ViewHandle>
         return mapViews;
     }
 
-    private void putView(Map<TypeConstant, xRTViewToBit> mapViews,
+    private void putView(Map<TypeConstant, xRTViewToBit<?>> mapViews,
                          ConstantPool pool, TypeConstant typeElement) {
         TypeConstant typeView = pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(), typeElement);

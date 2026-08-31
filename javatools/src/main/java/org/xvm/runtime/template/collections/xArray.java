@@ -497,8 +497,8 @@ public class xArray
                 if (ahArg[0] instanceof ArrayHandle hThat) {
                     DelegateHandle hDelegateThis = hThis.getDelegate();
                     DelegateHandle hDelegateThat = hThat.getDelegate();
-                    if (hDelegateThis.getTemplate() instanceof xRTDelegate templateThis &&
-                        hDelegateThat.getTemplate() instanceof xRTDelegate templateThat &&
+                    if (hDelegateThis.getTemplate() instanceof xRTDelegate<?> templateThis &&
+                        hDelegateThat.getTemplate() instanceof xRTDelegate<?> templateThat &&
                             templateThis == templateThat) {
                         ObjectHandle hStart = ahArg[1];
                         int ofStart = hStart == ObjectHandle.DEFAULT
@@ -583,7 +583,7 @@ public class xArray
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
         DelegateHandle hDelegate = hArray.getDelegate();
 
-        return ((xRTDelegate) hDelegate.getTemplate()).
+        return ((xRTDelegate<?>) hDelegate.getTemplate()).
                 extractArrayValue(frame, hDelegate, lIndex, iReturn);
     }
 
@@ -592,7 +592,7 @@ public class xArray
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
         DelegateHandle hDelegate = hArray.getDelegate();
 
-        return ((xRTDelegate) hDelegate.getTemplate()).
+        return ((xRTDelegate<?>) hDelegate.getTemplate()).
                 assignArrayValue(frame, hDelegate, lIndex, hValue);
     }
 
@@ -613,7 +613,7 @@ public class xArray
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
         DelegateHandle hDelegate = hArray.getDelegate();
 
-        return ((xRTDelegate) hDelegate.getTemplate()).
+        return ((xRTDelegate<?>) hDelegate.getTemplate()).
                 invokePreInc(frame, hDelegate, lIndex, iReturn);
     }
 
@@ -622,7 +622,7 @@ public class xArray
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
         DelegateHandle hDelegate = hArray.getDelegate();
 
-        return ((xRTDelegate) hDelegate.getTemplate()).
+        return ((xRTDelegate<?>) hDelegate.getTemplate()).
                 invokePostInc(frame, hDelegate, lIndex, iReturn);
     }
 
@@ -631,7 +631,7 @@ public class xArray
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
         DelegateHandle hDelegate = hArray.getDelegate();
 
-        return ((xRTDelegate) hDelegate.getTemplate()).
+        return ((xRTDelegate<?>) hDelegate.getTemplate()).
                 invokePreDec(frame, hDelegate, lIndex, iReturn);
     }
 
@@ -640,7 +640,7 @@ public class xArray
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
         DelegateHandle hDelegate = hArray.getDelegate();
 
-        return ((xRTDelegate) hDelegate.getTemplate()).
+        return ((xRTDelegate<?>) hDelegate.getTemplate()).
                 invokePostDec(frame, hDelegate, lIndex, iReturn);
     }
 
@@ -650,7 +650,7 @@ public class xArray
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
         DelegateHandle hDelegate = hArray.getDelegate();
 
-        return ((xRTDelegate) hDelegate.getTemplate()).toArray(frame, hDelegate);
+        return ((xRTDelegate<?>) hDelegate.getTemplate()).toArray(frame, hDelegate);
     }
 
 
@@ -697,7 +697,7 @@ public class xArray
                               long ixUpper, boolean fExUpper, boolean fReverse, int iReturn) {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
         DelegateHandle hDelegate = hArray.getDelegate();
-        xRTDelegate    template  = (xRTDelegate) hDelegate.getTemplate();
+        xRTDelegate<?>    template  = (xRTDelegate<?>) hDelegate.getTemplate();
 
         if (fExLower) {
             // exclusive lower
@@ -736,7 +736,7 @@ public class xArray
                                  long ixUpper, boolean fExUpper, int iReturn) {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
         DelegateHandle hDelegate = hArray.getDelegate();
-        xRTDelegate    template  = (xRTDelegate) hDelegate.getTemplate();
+        xRTDelegate<?>    template  = (xRTDelegate<?>) hDelegate.getTemplate();
 
         if (fExLower) {
             // exclusive lower
@@ -782,7 +782,7 @@ public class xArray
     protected int fill(Frame frame, ObjectHandle hTarget, int cSize, ObjectHandle hValue, int iReturn) {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
         DelegateHandle hDelegate = hArray.getDelegate();
-        xRTDelegate    template  = (xRTDelegate) hDelegate.getTemplate();
+        xRTDelegate<?>    template  = (xRTDelegate<?>) hDelegate.getTemplate();
 
         if (!hDelegate.checkAssign(hValue)) {
             TypeConstant typeEl = hDelegate.getElementType();
@@ -957,7 +957,7 @@ public class xArray
     protected static DelegateHandle makeDelegate(TypeComposition clzArray, int cCapacity,
                                                  ObjectHandle[] ahValue, Mutability mutability) {
         TypeConstant typeElement      = clzArray.getType().getParamType(0);
-        xRTDelegate  templateDelegate = xRTDelegate.getArrayTemplate(
+        xRTDelegate<?>  templateDelegate = xRTDelegate.getArrayTemplate(
                 clzArray.getContainer(), typeElement);
 
         return templateDelegate.createDelegate(

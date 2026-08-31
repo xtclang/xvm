@@ -201,7 +201,7 @@ public class xRTGenericDelegate
     }
 
     @Override
-    public DelegateHandle fill(GenericArrayDelegate hDelegate, int cSize, ObjectHandle hValue) {
+    protected DelegateHandle fillImpl(GenericArrayDelegate hDelegate, int cSize, ObjectHandle hValue) {
 
         Arrays.fill(hDelegate.m_ahValue, 0, cSize, hValue);
         hDelegate.m_cSize = cSize;

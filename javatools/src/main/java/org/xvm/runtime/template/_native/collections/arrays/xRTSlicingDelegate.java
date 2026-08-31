@@ -65,7 +65,7 @@ public class xRTSlicingDelegate
     }
 
     @Override
-    public DelegateHandle fill(SliceHandle hTarget, int cSize, ObjectHandle hValue) {
+    protected DelegateHandle fillImpl(SliceHandle hTarget, int cSize, ObjectHandle hValue) {
         return null;
     }
 

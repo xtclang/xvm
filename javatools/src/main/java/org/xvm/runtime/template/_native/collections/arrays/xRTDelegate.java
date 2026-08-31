@@ -147,7 +147,7 @@ public abstract class xRTDelegate<H extends xRTDelegate.DelegateHandle>
     public TypeComposition ensureParameterizedClass(Container container, TypeConstant... atypeParams) {
         assert atypeParams.length == 1;
 
-        xRTDelegate template = getArrayTemplate(atypeParams[0]);
+        xRTDelegate<?> template = getArrayTemplate(atypeParams[0]);
 
         return template == null
                 ? super.ensureParameterizedClass(container, atypeParams)
@@ -156,7 +156,7 @@ public abstract class xRTDelegate<H extends xRTDelegate.DelegateHandle>
 
     @Override
     public ClassTemplate getTemplate(TypeConstant type) {
-        xRTDelegate template = getArrayTemplate(type.getParamType(0));
+        xRTDelegate<?> template = getArrayTemplate(type.getParamType(0));
         return template == null ? this : template;
     }
 
@@ -374,7 +374,14 @@ public abstract class xRTDelegate<H extends xRTDelegate.DelegateHandle>
      * @param cSize    the number of elements to fill
      * @param hValue   the value
      */
-    public abstract DelegateHandle fill(H hTarget, int cSize, ObjectHandle hValue);
+    public final DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue) {
+        return fillImpl(narrow(hTarget), cSize, hValue);
+    }
+
+    /**
+     * Fill this delegate's storage; see {@link #fill}.
+     */
+    protected abstract DelegateHandle fillImpl(H hTarget, int cSize, ObjectHandle hValue);
 
     /**
      * Delete the elements within the specified range.
@@ -537,19 +544,19 @@ public abstract class xRTDelegate<H extends xRTDelegate.DelegateHandle>
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    public static xRTDelegate getArrayTemplate(Container container, TypeConstant typeParam) {
-        xRTDelegate templateBase = NativeTemplates.get(container).delegate();
-        xRTDelegate template     = templateBase.getArrayTemplate(typeParam);
+    public static xRTDelegate<?> getArrayTemplate(Container container, TypeConstant typeParam) {
+        xRTDelegate<?> templateBase = NativeTemplates.get(container).delegate();
+        xRTDelegate<?> template     = templateBase.getArrayTemplate(typeParam);
         return template == null ? templateBase : template;
     }
 
-    private xRTDelegate getArrayTemplate(TypeConstant typeParam) {
+    private xRTDelegate<?> getArrayTemplate(TypeConstant typeParam) {
         return f_delegates.get(this).get(typeParam);
     }
 
-    private Map<TypeConstant, xRTDelegate> createDelegates() {
+    private Map<TypeConstant, xRTDelegate<?>> createDelegates() {
         ConstantPool                   pool         = pool();
-        Map<TypeConstant, xRTDelegate> mapDelegates = new HashMap<>();
+        Map<TypeConstant, xRTDelegate<?>> mapDelegates = new HashMap<>();
 
         TypeConstant[] delegateTypes = {
                 pool.typeNibble(),
@@ -568,7 +575,7 @@ public abstract class xRTDelegate<H extends xRTDelegate.DelegateHandle>
         return Map.copyOf(mapDelegates);
     }
 
-    private void addDelegate(Map<TypeConstant, xRTDelegate> mapDelegates, TypeConstant typeElement) {
+    private void addDelegate(Map<TypeConstant, xRTDelegate<?>> mapDelegates, TypeConstant typeElement) {
         TypeConstant typeDelegate = pool().ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(), typeElement);
         mapDelegates.put(typeElement, f_container.getTemplate(typeDelegate, xRTDelegate.class));
@@ -862,6 +869,6 @@ public abstract class xRTDelegate<H extends xRTDelegate.DelegateHandle>
 
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};
 
-    private final Lazy.Bound<xRTDelegate, Map<TypeConstant, xRTDelegate>> f_delegates =
-            Lazy.ofBound(xRTDelegate::createDelegates);
+    private final Lazy.Bound<xRTDelegate<?>, Map<TypeConstant, xRTDelegate<?>>> f_delegates =
+            Lazy.ofBound(xRTDelegate<?>::createDelegates);
 }

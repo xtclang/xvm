@@ -59,7 +59,7 @@ public class xRTFloat64Delegate
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    public DelegateHandle fill(DoubleArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
+    protected DelegateHandle fillImpl(DoubleArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
 
         Arrays.fill(hDelegate.m_adValue, 0, cSize, ((FloatHandle) hValue).getValue());
         hDelegate.m_cSize = cSize;

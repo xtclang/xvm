@@ -199,7 +199,7 @@ public final class NativeTemplates {
         return is(ARRAY, template);
     }
 
-    public xRTDelegate delegate() {
+    public xRTDelegate<?> delegate() {
         return get(RT_DELEGATE);
     }
 
@@ -223,7 +223,7 @@ public final class NativeTemplates {
         return is(RT_VIEW_FROM_BYTE, template);
     }
 
-    public xRTViewToBit viewToBit() {
+    public xRTViewToBit<?> viewToBit() {
         return get(RT_VIEW_TO_BIT);
     }
 

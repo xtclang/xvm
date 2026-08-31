@@ -106,7 +106,7 @@ public abstract class BitBasedDelegate
     }
 
     @Override
-    public DelegateHandle fill(BitArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
+    protected DelegateHandle fillImpl(BitArrayHandle hDelegate, int cSize, ObjectHandle hValue) {
         assert cSize > 0;
 
         byte[]         ab        = hDelegate.m_abValue;

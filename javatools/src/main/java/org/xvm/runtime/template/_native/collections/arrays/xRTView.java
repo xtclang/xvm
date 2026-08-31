@@ -62,7 +62,7 @@ public abstract class xRTView<H extends xRTView.ViewHandle>
     }
 
     @Override
-    public DelegateHandle fill(H hTarget, int cSize, ObjectHandle hValue) {
+    protected DelegateHandle fillImpl(H hTarget, int cSize, ObjectHandle hValue) {
         return null;
     }
 

@@ -71,7 +71,7 @@ public abstract class LongBasedDelegate<H extends LongBasedDelegate.LongArrayHan
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    public DelegateHandle fill(H hDelegate, int cSize, ObjectHandle hValue) {
+    protected DelegateHandle fillImpl(H hDelegate, int cSize, ObjectHandle hValue) {
         assert cSize > 0;
 
         long[]          al        = hDelegate.m_alValue;
