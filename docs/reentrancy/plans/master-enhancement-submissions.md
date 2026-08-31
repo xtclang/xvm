@@ -1556,6 +1556,41 @@ Verified the naming rule by reading `NativeContainer.scanNativeDirectory`; an ab
 skipped twice over, both because its Ecstasy class is absent and because the loop tests
 `Modifier.isAbstract`.
 
+### Status: the split is done for the three core storage methods
+
+`xRTGenericDelegate` now holds the object-array implementations of
+`extractArrayValueImpl`, `assignArrayValueImpl` and `createCopyImpl`; `xRTDelegate` declares them
+abstract and is itself abstract; the binding to the Ecstasy class is declared with
+`@NativeTemplate` rather than taken from the file name.
+
+**It paid for itself on the first compile.** Making those three abstract produced three errors,
+one per class that had been inheriting storage it does not own - the same shape as master bug 36,
+found by the compiler rather than by a user.
+
+### The remaining nine are not mechanical
+
+Moving the other nine (`createDelegate`, `callEquals`, `compareIdentity`, `getPropertyCapacity`,
+`setPropertyCapacity`, `fill`, `insertElementImpl`, `deleteElementImpl`, `deleteRangeImpl`) was
+attempted and reverted. The move itself is fine - the fallout is not, and it needs a decision per
+method rather than a sweep:
+
+- **`createDelegate` is overloaded.** There are two, `(Container, TypeConstant, int)` and
+  `(Container, TypeConstant, int, ObjectHandle[], Mutability)`. Only one is object-array specific;
+  making the wrong one abstract produces errors that look unrelated.
+- **Visibility differs.** Several classes already declare `callEquals` and `compareIdentity` with a
+  wider visibility than `protected`, so a `protected abstract` declaration in the base is not
+  overridable by them.
+- **Some are already implemented where the fallout lands.** `xRTView` and `xRTSlicingDelegate`
+  already define `getPropertyCapacity`, `setPropertyCapacity` and `fill`; adding them again is a
+  duplicate-method error, so the fallout set has to be computed per class rather than assumed.
+- **Five of the nine are not storage at all.** `callEquals`, `compareIdentity`, `fill` and the two
+  capacity methods are derived operations that could be implemented generically over the storage
+  protocol. Making them abstract forces every delegate to reimplement comparison and filling, which
+  is worse than what is there now. They should be rewritten generically in the base, not moved.
+
+So the sequence below still holds, but step 1 should be read as: move the four remaining STORAGE
+methods, and rewrite the five derived ones over the storage protocol rather than moving them.
+
 ### Sequence
 
 1. Split the concrete Object-array delegate out of `xRTDelegate`, leaving the base abstract.
