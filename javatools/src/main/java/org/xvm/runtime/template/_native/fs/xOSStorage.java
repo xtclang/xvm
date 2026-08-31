@@ -26,6 +26,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.NativeContainer;
+import org.xvm.runtime.NativeSignature;
 import org.xvm.runtime.NativeType;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
@@ -67,27 +68,33 @@ public class xOSStorage
 
     @Override
     public void initNative() {
-        markNativeProperty("homeDir", SELF, (frame, hStorage, iReturn) ->
+        markNativeProperty("homeDir", ServiceHandle.class, (frame, hStorage, iReturn) ->
                 dirForProperty(frame, hStorage, "user.home", iReturn));
-        markNativeProperty("curDir", SELF, (frame, hStorage, iReturn) ->
+        markNativeProperty("curDir", ServiceHandle.class, (frame, hStorage, iReturn) ->
                 dirForProperty(frame, hStorage, "user.dir", iReturn));
-        markNativeProperty("tmpDir", SELF, (frame, hStorage, iReturn) ->
+        markNativeProperty("tmpDir", ServiceHandle.class, (frame, hStorage, iReturn) ->
                 dirForProperty(frame, hStorage, "java.io.tmpdir", iReturn));
 
-        markNativeMethod2NN("find", SELF, STORE_TYPE, STRING_TYPE, null,
+        markNativeMethod2NN("find", ServiceHandle.class, ObjectHandle.class, StringHandle.class,
+                NativeSignature.params("_native.fs.OSFileStore", "text.String"),
                 (frame, hStorage, hStore, hPath, aiReturn) -> find(frame, hStore, hPath, aiReturn));
-        markNativeMethod1("names", SELF, STRING_TYPE, null,
+        markNativeMethod1("names", ServiceHandle.class, StringHandle.class,
+                NativeSignature.params(STRING),
                 (frame, hStorage, hPathString, iReturn) -> names(frame, hPathString, iReturn));
-        markNativeMethod1("createDir", SELF, STRING_TYPE, BOOLEAN,
+        markNativeMethod1("createDir", ServiceHandle.class, StringHandle.class,
+                NativeSignature.of(STRING, BOOLEAN),
                 (frame, hStorage, hPath, iReturn) -> createDir(frame, hPath, iReturn));
-        markNativeMethod1("createFile", SELF, STRING_TYPE, BOOLEAN,
+        markNativeMethod1("createFile", ServiceHandle.class, StringHandle.class,
+                NativeSignature.of(STRING, BOOLEAN),
                 (frame, hStorage, hPath, iReturn) -> createFile(frame, hPath, iReturn));
-        markNativeMethod1("delete", SELF, STRING_TYPE, BOOLEAN,
+        markNativeMethod1("delete", ServiceHandle.class, StringHandle.class,
+                NativeSignature.of(STRING, BOOLEAN),
                 (frame, hStorage, hPath, iReturn) -> delete(frame, hPath, iReturn));
-        markNativeMethod1("watch", SELF, STRING_TYPE, VOID,
+        markNativeMethod1("watch", ServiceHandle.class, StringHandle.class,
+                NativeSignature.of(STRING, VOID),
                 (frame, hStorage, hPathDir, iReturn) -> watch(frame, hStorage, hPathDir));
         markNativeMethod("unwatch", STRING, VOID);
-        markNativeMethod0("instance", SELF, THIS,
+        markNativeMethod0("instance", ServiceHandle.class, NativeSignature.of(VOID, THIS),
                 (frame, hStorage, iReturn) -> instance(frame, iReturn));
 
         invalidateTypeInfo();

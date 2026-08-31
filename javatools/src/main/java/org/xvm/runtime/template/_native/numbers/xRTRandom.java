@@ -14,6 +14,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.IntegralValue;
+import org.xvm.runtime.NativeSignature;
 import org.xvm.runtime.NativeType;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -88,11 +89,14 @@ public class xRTRandom
         String[] FLOAT64   = new String[] {"numbers.Float64"};
 
         markNativeMethod("bit"    , VOID     , BIT      );
-        markNativeMethod1("bits", SELF, INT_TYPE, BITARRAY,
+        markNativeMethod1("bits", RandomHandle.class, JavaLong.class,
+                NativeSignature.of(INT, BITARRAY),
                 (frame, hRandom, hSize, iReturn) -> bits(frame, hRandom, hSize, iReturn));
-        markNativeMethod1("bytes", SELF, INT_TYPE, BYTEARRAY,
+        markNativeMethod1("bytes", RandomHandle.class, JavaLong.class,
+                NativeSignature.of(INT, BYTEARRAY),
                 (frame, hRandom, hSize, iReturn) -> bytes(frame, hRandom, hSize, iReturn));
-        markNativeMethod1("int", SELF, INT_VALUE, INT,
+        markNativeMethod1("int", RandomHandle.class, IntegralValue.class,
+                NativeSignature.of(INT, INT),
                 (frame, hRandom, hMax, iReturn) -> invokeInt(frame, hRandom, hMax, iReturn));
         markNativeMethod("int8"   , VOID     , INT8     );
         markNativeMethod("int16"  , VOID     , INT16    );

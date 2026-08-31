@@ -20,6 +20,7 @@ import org.xvm.asm.Op;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeSignature;
 import org.xvm.runtime.NativeType;
 import org.xvm.runtime.ObjectHandle;
 
@@ -54,9 +55,11 @@ public class xOSFileStore
         markNativeProperty("bytesFree");
         markNativeProperty("bytesUsed");
 
-        markNativeMethod1("dirFor", SELF, STRING_TYPE, null,
+        markNativeMethod1("dirFor", ObjectHandle.class, StringHandle.class,
+                NativeSignature.params(STRING),
                 (frame, hStore, hPath, iReturn) -> nodeFor(frame, hStore, hPath, true, iReturn));
-        markNativeMethod1("fileFor", SELF, STRING_TYPE, null,
+        markNativeMethod1("fileFor", ObjectHandle.class, StringHandle.class,
+                NativeSignature.params(STRING),
                 (frame, hStore, hPath, iReturn) -> nodeFor(frame, hStore, hPath, false, iReturn));
         markNativeMethod("linkAsFile", STRING, null);
         markNativeMethod("copyOrMove", null, null);

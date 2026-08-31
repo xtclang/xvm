@@ -1,5 +1,6 @@
 package org.xvm.runtime;
 
+import static java.util.Objects.requireNonNull;
 
 /**
  * Binds an Ecstasy type name to the Java handle class that represents it.
@@ -18,6 +19,13 @@ package org.xvm.runtime;
  * @param <H>  the handle class representing this Ecstasy type
  */
 public record NativeType<H>(String typeName, Class<H> handleClass) {
+    public NativeType {
+        // a binding with either half missing would fail later, at a dispatch, with nothing to say
+        // which declaration was wrong; the compact constructor names it here instead
+        requireNonNull(typeName, "typeName");
+        requireNonNull(handleClass, "handleClass");
+    }
+
     /**
      * @param typeName     the Ecstasy type name, as it appears in {@code markNativeMethod}
      * @param handleClass  the handle class representing that type
@@ -45,26 +53,6 @@ public record NativeType<H>(String typeName, Class<H> handleClass) {
      */
     public static <H> NativeType<H> ofShared(String typeName, Class<H> sharedType) {
         return new NativeType<>(typeName, sharedType);
-    }
-
-    /**
-     * @return this type name in the single-element array form {@code markNativeMethod} takes
-     */
-    public String[] asParamTypes() {
-        return new String[] {typeName};
-    }
-
-    /**
-     * @param types  the parameter types, in order
-     *
-     * @return their names in the array form {@code markNativeMethod} takes
-     */
-    public static String[] names(NativeType<?>... types) {
-        String[] asName = new String[types.length];
-        for (int i = 0; i < types.length; i++) {
-            asName[i] = types[i].typeName();
-        }
-        return asName;
     }
 
     /**

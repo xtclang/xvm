@@ -2063,13 +2063,12 @@ public abstract class ClassTemplate
      * @param handler    the typed implementation
      */
     protected <T extends ObjectHandle, A> void markNativeMethod1(
-            String sName, NativeType<T> selfType, NativeType<A> argType, String[] asRetType,
+            String sName, Class<T> selfClass, Class<A> argClass, NativeSignature sig,
             NativeMethod.One<T, A> handler) {
-        MethodStructure method = markNativeMethod(sName, argType.asParamTypes(), asRetType);
-        if (method == null) {
-            throw new IllegalStateException("no such native method: " + sName + " on " + this);
-        }
-        f_mapBound1.put(method, new NativeMethod.Bound1<>(selfType, argType, handler));
+        MethodStructure method = requireNative(markNativeMethod(sName, sig), sName);
+
+        f_mapBound1.put(method, new NativeMethod.Bound1<>(
+                selfTypeOf(selfClass), paramTypeOf(method, 0, argClass), handler));
     }
 
     public MethodStructure markNativeMethod(String sName, String[] asParamType, String[] asRetType) {
@@ -2272,9 +2271,9 @@ public abstract class ClassTemplate
      * @param getter     the typed implementation
      */
     protected <T extends ObjectHandle> void markNativeProperty(
-            String sPropName, NativeType<T> selfType, NativeMethod.Getter<T> getter) {
+            String sPropName, Class<T> selfClass, NativeMethod.Getter<T> getter) {
         markNativeProperty(sPropName);
-        f_mapBoundGet.put(sPropName, new NativeMethod.BoundGet<>(selfType, getter));
+        f_mapBoundGet.put(sPropName, new NativeMethod.BoundGet<>(selfTypeOf(selfClass), getter));
     }
 
     /**
@@ -2286,10 +2285,11 @@ public abstract class ClassTemplate
      * @param handler    the typed implementation
      */
     protected <T extends ObjectHandle> void markNativeMethod0(
-            String sName, NativeType<T> selfType, String[] asRetType,
+            String sName, Class<T> selfClass, NativeSignature sig,
             NativeMethod.Zero<T> handler) {
-        bindN(markNativeMethod(sName, VOID, asRetType), sName,
-                NativeMethod.bind(selfType, handler));
+        MethodStructure method = requireNative(markNativeMethod(sName, sig), sName);
+
+        f_mapBoundN.put(method, NativeMethod.bind(selfTypeOf(selfClass), handler));
     }
 
     /**
@@ -2303,11 +2303,13 @@ public abstract class ClassTemplate
      * @param handler    the typed implementation
      */
     protected <T extends ObjectHandle, A, B>
-            void markNativeMethod2(String sName, NativeType<T> selfType, NativeType<A> argType1,
-                                   NativeType<B> argType2, String[] asRetType,
+            void markNativeMethod2(String sName, Class<T> selfClass, Class<A> argClass1,
+                                   Class<B> argClass2, NativeSignature sig,
                                    NativeMethod.Two<T, A, B> handler) {
-        bindN(markNativeMethod(sName, NativeType.names(argType1, argType2), asRetType), sName,
-                NativeMethod.bind(selfType, argType1, argType2, handler));
+        MethodStructure method = requireNative(markNativeMethod(sName, sig), sName);
+
+        f_mapBoundN.put(method, NativeMethod.bind(selfTypeOf(selfClass),
+                paramTypeOf(method, 0, argClass1), paramTypeOf(method, 1, argClass2), handler));
     }
 
     /**
@@ -2322,22 +2324,57 @@ public abstract class ClassTemplate
      * @param handler    the typed implementation
      */
     protected <T extends ObjectHandle, A, B>
-            void markNativeMethod2NN(String sName, NativeType<T> selfType, NativeType<A> argType1,
-                                     NativeType<B> argType2, String[] asRetType,
+            void markNativeMethod2NN(String sName, Class<T> selfClass, Class<A> argClass1,
+                                     Class<B> argClass2, NativeSignature sig,
                                      NativeMethod.TwoToMany<T, A, B> handler) {
-        MethodStructure method =
-                markNativeMethod(sName, NativeType.names(argType1, argType2), asRetType);
-        if (method == null) {
-            throw new IllegalStateException("no such native method: " + sName + " on " + this);
-        }
-        f_mapBoundNN.put(method, NativeMethod.bindNN(selfType, argType1, argType2, handler));
+        MethodStructure method = requireNative(markNativeMethod(sName, sig), sName);
+
+        f_mapBoundNN.put(method, NativeMethod.bindNN(selfTypeOf(selfClass),
+                paramTypeOf(method, 0, argClass1), paramTypeOf(method, 1, argClass2), handler));
     }
 
-    private void bindN(MethodStructure method, String sName, NativeMethod.BoundN bound) {
+    /**
+     * Resolve and mark a native from a {@link NativeSignature}, so no caller writes the
+     * {@code null} that "no filter" is expressed as.
+     */
+    private MethodStructure markNativeMethod(String sName, NativeSignature sig) {
+        return markNativeMethod(sName, sig.paramTypes(), sig.returnTypes());
+    }
+
+    private MethodStructure requireNative(MethodStructure method, String sName) {
         if (method == null) {
             throw new IllegalStateException("no such native method: " + sName + " on " + this);
         }
-        f_mapBoundN.put(method, bound);
+        return method;
+    }
+
+    /**
+     * @return the receiver's type, named by this template
+     */
+    private <T> NativeType<T> selfTypeOf(Class<T> selfClass) {
+        return NativeType.ofShared(f_sName, selfClass);
+    }
+
+    /**
+     * The declared Ecstasy type of a native's parameter, taken from the structure
+     * {@code markNativeMethod} just resolved.
+     *
+     * <p>Half the native declarations in the tree - 198 of 393 - pass {@code null} for their
+     * parameter types, because the method name alone is enough to find them. The types are on the
+     * resolved structure either way, so requiring a caller to restate one just to bind a typed
+     * handler asks it for something the code has already computed. It supplies only the Java
+     * handle class, which is the part nothing else knows.</p>
+     *
+     * @param method    the resolved native
+     * @param iParam    the parameter index
+     * @param argClass  the Java class that parameter's handles are represented by
+     */
+    private static <A> NativeType<A> paramTypeOf(MethodStructure method, int iParam,
+                                                 Class<A> argClass) {
+        var params = method.getIdentityConstant().getRawParams();
+
+        return NativeType.ofShared(
+                iParam < params.size() ? params.get(iParam).getValueString() : "?", argClass);
     }
 
     public void markNativeProperty(String sPropName) {

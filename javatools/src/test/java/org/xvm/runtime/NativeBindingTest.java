@@ -57,17 +57,42 @@ public class NativeBindingTest {
     public void aTypeCarriesBothItsEcstasyNameAndItsHandleClass() {
         assertEquals("test.Self", SELF.typeName());
         assertSame(TestHandle.class, SELF.handleClass());
-        assertEquals(1, SELF.asParamTypes().length);
-        assertEquals("test.Self", SELF.asParamTypes()[0]);
     }
 
+    /**
+     * A half-built declaration must fail where it is written. Without this, a null slips through
+     * and only surfaces later at a dispatch, with nothing left to say which declaration was wrong.
+     */
     @Test
-    public void namesRendersSeveralTypesInDeclarationOrder() {
-        String[] asName = NativeType.names(SELF, OTHER);
+    public void aTypeMissingEitherHalfIsRejectedAtConstruction() {
+        assertThrows(NullPointerException.class,
+                () -> NativeType.of(null, TestHandle.class), "a type with no name");
+        assertThrows(NullPointerException.class,
+                () -> NativeType.of("test.Self", null), "a type with no handle class");
+    }
 
-        assertEquals(2, asName.length);
-        assertEquals("test.Self", asName[0]);
-        assertEquals("test.Other", asName[1]);
+    /**
+     * {@link NativeSignature} exists so no caller writes the {@code null} that the underlying
+     * lookup uses for "no filter" - 140 of the tree's 392 native declarations pass it for both
+     * halves. The nulls live here, in one place, and each factory says which filters apply.
+     */
+    @Test
+    public void aSignatureNamesWhichFiltersApplyInsteadOfPassingNull() {
+        assertNull(NativeSignature.BY_NAME.paramTypes());
+        assertNull(NativeSignature.BY_NAME.returnTypes());
+
+        var params = NativeSignature.params("text.String");
+        assertEquals(1, params.paramTypes().length);
+        assertEquals("text.String", params.paramTypes()[0]);
+        assertNull(params.returnTypes(), "params() must not constrain the returns");
+
+        var returns = NativeSignature.returns("numbers.Int64");
+        assertNull(returns.paramTypes(), "returns() must not constrain the parameters");
+        assertEquals("numbers.Int64", returns.returnTypes()[0]);
+
+        var both = NativeSignature.of(new String[] {"text.String"}, new String[] {"Boolean"});
+        assertEquals("text.String", both.paramTypes()[0]);
+        assertEquals("Boolean", both.returnTypes()[0]);
     }
 
     /** The zero-argument arity, whose integration path no probe program reaches. */
@@ -170,6 +195,25 @@ public class NativeBindingTest {
         assertThrows(ClassCastException.class,
                 () -> bound.dispatch(null, new OtherHandle(), new ObjectHandle[0], 0),
                 "the receiver is declared test.Self but an OtherHandle was passed");
+    }
+
+    /**
+     * The shared-type form: an Ecstasy {@code Int} has two Java representations, so a handler is
+     * declared against what they share rather than against either class.
+     */
+    @Test
+    public void aSharedTypeAcceptsEveryRepresentationOfItsEcstasyType() {
+        NativeType<IntegralValue> intType =
+                NativeType.ofShared("numbers.Int64", IntegralValue.class);
+
+        var hSmall = new ObjectHandle.JavaLong(null, 42L);
+        IntegralValue converted = intType.cast(hSmall);
+
+        assertTrue(converted.fitsLong(true), "a JavaLong always fits");
+        assertEquals(42L, converted.longValue());
+
+        assertThrows(ClassCastException.class, () -> intType.cast(new OtherHandle()),
+                "a handle that does not carry an integral value must still be rejected");
     }
 
     private static int fail_shouldNotReachHandler() {
