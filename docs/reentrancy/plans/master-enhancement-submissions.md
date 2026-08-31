@@ -2510,6 +2510,22 @@ supplier is deliberately discarded so it can be collected, leaving nothing to re
 is a **memory tradeoff, not an impossibility**, and it only applies once the value has been
 computed - before that there is nothing to clear, exactly as one would expect of a holder.
 
+**And the tradeoff is close to nil here - measured.** Every adoption in this tree uses
+`Lazy.ofBound(owner -> ...)`, which passes the owner as an argument instead of capturing it, so the
+lambdas are **non-capturing**. Java caches a non-capturing lambda as a singleton at its
+`invokedynamic` call site - verified directly: two calls to a factory returning `o -> o.compute()`
+yield the same instance, while `o::compute` allocates per call. So:
+
+- the `function` field exists whether or not it holds a value; nulling it reclaims no field;
+- what it pointed at is a single shared instance that lives as long as the class regardless;
+- `Bound` already retains `owner` for its `checkOwner` check, which is a real reference - so the
+  class is not minimizing retention anyway.
+
+Nulling the function therefore frees **zero bytes** for every current use. The discard is only worth
+anything for a *capturing* supplier that closes over something large, and no adoption here is one.
+An earlier draft of this row called the retention a meaningful cost; it is not, and `Resettable`
+should not be sold as a tradeoff when for this codebase it is free.
+
 ### The fix
 
 A resettable variant that keeps its supplier, alongside the existing one rather than replacing it -
@@ -2523,8 +2539,9 @@ public static final class Resettable<T> extends Lazy<T> {
 }
 ```
 
-`Resettable` retains `supplier` for the owner's lifetime, which is the whole cost and should be
-stated in its javadoc so the choice between the two is explicit at each use site.
+`Resettable` retains `supplier` for the owner's lifetime. For a non-capturing supplier - which is
+every use in this tree - that costs nothing, per the measurement above. The javadoc should say so,
+and say plainly that the one case to think about is a supplier capturing a large transient.
 
 ### Migration
 
