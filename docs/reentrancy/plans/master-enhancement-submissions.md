@@ -82,6 +82,7 @@ surface graduate into individual rows on the bug list.
 | E25 | Generify the delegate hierarchy — 134 casts, BLOCKED on splitting `xRTDelegate`'s dual role | split first, then mechanical | Medium | `xRTDelegate` and 20 implementations | (this file) |
 | E26 | What is left of `unchecked`/`rawtypes` — 92 + 59, and why most are not trivial | trivial part 1 PR; two hierarchy changes separate | Low / Medium | `ServiceContext` message hierarchy | (this file) |
 | E27 | Op-info cache: raw `EnumMap` whose key silently names the value type | 1 PR, per-op-class migration | independent | `OpInfoKey<V>` + generic get/set |
+| E30 | Storage operations belong on the handle; the `<H>` parameter is the symptom | per-handle, then one deleting commit | supersedes E25's parameter | measured: 105/132 bodies need only the handle |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -2316,3 +2317,98 @@ Note the `// TODO: add an "assignBytes" method to the ByteView interface` alread
 `xByteArray.setBytes`, where the caller loops calling `assignByte` one byte at a time because the
 interface exposes no bulk form. Moving the capability onto the handle is the point at which that
 TODO becomes a one-line method on the class that owns the array.
+
+## E30 — The storage operations are on the wrong object, and the type parameter is the symptom
+
+**Depends on:** nothing. Supersedes the type-parameter half of E25. Same inversion as E28 and E29.
+
+### The complaint
+
+After E25, `xRTDelegate` carries a type parameter and callers must write `xRTDelegate<?>`:
+
+```java
+ClassTemplate tDelegate = hDelegate.getTemplate();
+((xRTDelegate<?>) tDelegate).fill(hDelegate, cSize, hValue);
+```
+
+Wildcards spread from there, and two of them cannot be removed at all -
+`NativeTemplateRef` keys on `Class<T>`, and `Class<xRTDelegate<?>>` is unwritable in Java, because
+a class literal is always raw in its own type argument. Reaching for `Class::cast` does not help;
+the type simply cannot be named.
+
+That friction is a signal, not an inconvenience to be absorbed.
+
+### Why it happens
+
+The wildcard exists because a *third party* is being asked to operate on a value whose type it
+cannot see. `xArray` holds a `DelegateHandle`, fetches its template, and hands the handle back to
+it. Nothing relates the two, so the type argument has nowhere to come from - exactly the shape
+already recorded for `ByteView` in E29 and for `compareIdentity` in E28.
+
+### Measured: the operations do not need the template
+
+Every `*Impl` body in the package was checked for template-only state. The result:
+
+| | count |
+| --- | --- |
+| bodies needing only the handle and arguments | **105** |
+| bodies mentioning anything template-scoped | 27 |
+
+and of those 27, all but two resolve to `xChar.makeHandle(...)`, `xInt64.makeHandle(...)`,
+`xBoolean.makeHandle(...)` - **statics on the element templates**, unrelated to the delegate
+template's own state. The genuine dependencies are two `createCopyImpl` bodies in the bit views that
+need `f_container` to build a *new* view.
+
+So the storage operations are already pure functions of the handle. The handles hold the arrays -
+`m_abValue`, `m_achValue`, `m_alValue`, `m_ahValue` - and the template holds none of it. Asking the
+template to operate on the handle's array was backwards from the start.
+
+### The design
+
+Move the storage protocol onto `DelegateHandle` and delete the type parameter:
+
+```java
+// DelegateHandle - no type parameter anywhere
+public abstract int  extractValue(Frame frame, long lIndex, int iReturn);
+public abstract int  assignValue(Frame frame, long lIndex, ObjectHandle hValue);
+public abstract void insertElement(ObjectHandle hElement, long lIndex);
+public abstract void deleteElement(long lIndex);
+public abstract void deleteRange(long lIndex, long cDelete);
+public abstract DelegateHandle fill(int cSize, ObjectHandle hValue);
+```
+
+Call sites become plain virtual dispatch:
+
+```java
+hDelegate.fill(cSize, hValue);              // was: ((xRTDelegate<?>) template).fill(h, ...)
+hDelegate.extractValue(frame, lIndex, iReturn);
+```
+
+What this deletes, rather than relocates:
+
+- the `<H>` parameter on `xRTDelegate`, and every `xRTDelegate<?>` that followed from it - including
+  the two that cannot currently be written at all;
+- `narrow()` and its `@SuppressWarnings("unchecked")`;
+- the `fill`/`fillImpl` wrapper pair, and the same split on the other five - the erased wrapper only
+  exists to cross from the template's view to the handle's;
+- the remaining `(XxxHandle) hTarget` casts, because the receiver *is* the handle.
+
+The template keeps what is genuinely template-scoped: `createDelegate`, `createBitViewDelegate`, and
+the Ecstasy-facing native dispatch. Those need `f_container` and a `TypeComposition`, and they are
+factories - the one thing a template legitimately is.
+
+### Relationship to E25
+
+E25 is not wasted: parameterizing the hierarchy is what made the storage protocol explicit and
+forced every implementation to state which representation it serves, which is how master bugs 36,
+37 and 38 were found. It was a scaffold. This row removes it, and the end state is *more* typed than
+either the original or E25 - no wildcards, no unchecked cast, no erased wrapper layer, and a
+compiler-enforced "this handle implements the storage protocol" in place of "this template can be
+cast to something that operates on that handle".
+
+### Migration
+
+Per handle, independently: give it the six methods (bodies move verbatim from its template's
+`*Impl`), repoint that template's callers, delete the `*Impl` pair. When the last one is done, the
+type parameter and `narrow()` come out in a single commit. `SameAs` (E28, already implemented) is
+the same move for `compareIdentity` and is the worked precedent.
