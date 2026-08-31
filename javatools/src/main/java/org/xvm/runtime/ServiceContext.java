@@ -430,7 +430,7 @@ public class ServiceContext {
     /**
      * Add a response to the service response queue.
      */
-    private void respond(Response response) {
+    private void respond(Response<?> response) {
         f_queueResponse.add(response);
         ensureScheduled(true);
     }
@@ -439,7 +439,7 @@ public class ServiceContext {
      * Process all queued responses.
      */
     private void processResponses() {
-        Response response;
+        Response<?> response;
         while ((response = f_queueResponse.poll()) != null) {
             response.run();
         }
@@ -2124,7 +2124,7 @@ public class ServiceContext {
     /**
      * The queue of responses.
      */
-    private final Queue<Response> f_queueResponse = new ConcurrentLinkedQueue<>();
+    private final Queue<Response<?>> f_queueResponse = new ConcurrentLinkedQueue<>();
 
     /**
      * The set of active fibers. It can be [read] accessed by outside threads.

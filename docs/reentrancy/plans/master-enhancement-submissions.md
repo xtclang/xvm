@@ -80,6 +80,7 @@ surface graduate into individual rows on the bug list.
 | E23 | Bind natives to typed handlers instead of String dispatch (744 labels) | framework is 1 PR; then per-template | Medium | `ClassTemplate`, every template | (this file) |
 | E24 | `null` as an absent argument (60% of 392 sites); asking callers to restate resolved data | one small record + binder change | Low | `ClassTemplate.markNativeMethod` | (this file) |
 | E25 | Generify the delegate hierarchy — 134 casts, BLOCKED on splitting `xRTDelegate`'s dual role | split first, then mechanical | Medium | `xRTDelegate` and 20 implementations | (this file) |
+| E26 | What is left of `unchecked`/`rawtypes` — 92 + 59, and why most are not trivial | trivial part 1 PR; two hierarchy changes separate | Low / Medium | `ServiceContext` message hierarchy | (this file) |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -1718,6 +1719,72 @@ methods, and rewrite the five derived ones over the storage protocol rather than
    15 wildcard sites.
 
 Attempting step 2 alone gets roughly two thirds of the way and then stalls on the defaults.
+
+---
+
+## E26 — What is left of `unchecked` and `rawtypes`, and why
+
+The build now makes fifteen javac lint categories fatal. Two remain off because they are not clean:
+**92 `unchecked`** and **59 `rawtypes`** in `javatools`.
+
+**First, a measurement warning.** javac caps reported warnings at 100 by default. The build's
+`maxWarnings` property produces no `-Xmaxwarns` flag when set to 0, so it does NOT lift that cap -
+it leaves javac's own. Counting under the cap gave 63/25 and moved as fixes landed, because
+removing one warning let a suppressed one surface. Pass an explicit large value
+(`-Porg.xtclang.java.maxWarnings=100000`) or the numbers are wrong.
+
+### The raw types, by what is actually raw
+
+| count | type | trivial? |
+| --- | --- | --- |
+| 11 | `CompletableFuture` | **no** - see below |
+| 8 | `List` | mixed |
+| 4 each | `VersionTree`, `Iterator`, `Function`, `Comparable` | mixed |
+| 3 each | `Entry`, `Collection`, `ArrayList` | mostly yes |
+| 2 each | `Map`, `LinkedHashMap`, `EnumMap`, `CaseManager` | `EnumMap` no |
+| 1 | `WeakReference` | tied to `EnumMap` |
+
+### The two that prove the point
+
+Neither has a trivial fix, and in both cases the raw type is a symptom rather than the defect.
+
+**`CompletableFuture` (11 sites).** The message base class declares
+
+```java
+public final CompletableFuture f_future;
+```
+
+and it is raw because different requests carry different result types - the same field is read as
+`CompletableFuture<ObjectHandle>` at one call site and `CompletableFuture<ObjectHandle[]>` at
+another. Parameterising the field is impossible without first making the request hierarchy generic
+in its result type. **That refactor is the fix; the raw type is the symptom.** The four remaining
+`unchecked` warnings on `new Response(...)` are downstream of the same root - the constructor cannot
+infer `T` from a raw field.
+
+**`EnumMap` (2 sites, plus the `WeakReference`).** `ServiceContext.setOpInfo` builds
+
+```java
+new EnumMap(category.getClass())
+```
+
+`EnumMap<K extends Enum<K>, V>` needs a concrete enum class, and the category's type varies per op,
+so no type argument exists to write. The options are a plain `Map<Enum<?>, ...>` - typed, at the
+cost of `EnumMap`'s array backing - or leaving it raw. This is a design choice, not a cleanup.
+
+### What was trivially fixable, and done
+
+`Response` was generic but used raw in the response queue, the `respond` parameter and the
+`processResponses` local, all of which only ever call `run()`; `Response<?>` fits exactly. Done.
+
+### The rule this suggests
+
+Where a raw type has a trivial fix it is usually a local oversight. Where it does not, it is almost
+always naming a place where a **type parameter is missing one level up** - a field, a base class, a
+container - and the raw use is how the code copes. Those are worth reading as findings rather than
+as lint debt: each one points at a hierarchy that has not been told what it holds.
+
+**Filing:** the trivial fixes are one small PR. The `CompletableFuture` and `EnumMap` cases should
+be filed as their own enhancements, since each is a hierarchy change with its own risk.
 
 ---
 
