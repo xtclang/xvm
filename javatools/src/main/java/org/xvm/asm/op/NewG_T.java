@@ -87,8 +87,8 @@ public class NewG_T
 
             return isDeferred(hArg)
                     ? hArg.proceed(frame, frameCaller ->
-                        complete(frameCaller, ((TupleHandle) frameCaller.popStack()).m_ahValue))
-                    : complete(frame, ((TupleHandle) hArg).m_ahValue);
+                        complete(frameCaller, ((TupleHandle) frameCaller.popStack()).valuesCopy()))
+                    : complete(frame, ((TupleHandle) hArg).valuesCopy());
         } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
         }
