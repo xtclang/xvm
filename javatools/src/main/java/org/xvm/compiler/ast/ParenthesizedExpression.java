@@ -102,7 +102,7 @@ public final class ParenthesizedExpression
 
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         if (typeRequired != null) {
-            TypeFit fitTuple = testTupleFit(ctx, typeRequired, true, null);
+            TypeFit fitTuple = testTupleFit(ctx, typeRequired, true, ErrorListener.BLACKHOLE);
             TypeFit fitValue = super.testFit(ctx, typeRequired, true, ErrorListener.BLACKHOLE);
             if (fitTuple.betterThan(fitValue)) {
                 // replace this parenthesized expression with an actual tuple expression containing
