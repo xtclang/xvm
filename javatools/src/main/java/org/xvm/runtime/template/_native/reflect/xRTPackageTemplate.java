@@ -16,14 +16,8 @@ import org.xvm.runtime.TypeComposition;
  */
 public class xRTPackageTemplate
         extends xRTClassTemplate {
-    public static xRTPackageTemplate INSTANCE;
-
     public xRTPackageTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -45,8 +39,9 @@ public class xRTPackageTemplate
      */
     public static ComponentTemplateHandle makeHandle(Container container, PackageStructure pkg) {
         // note: no need to initialize the struct because there are no natural fields
-        TypeComposition clz = INSTANCE.ensureClass(container,
-                                INSTANCE.getCanonicalType(), PACKAGE_TEMPLATE_TYPE);
+        xRTPackageTemplate template = container.nativeTemplates().get(xRTPackageTemplate.class);
+        TypeComposition clz      = template.ensureClass(container, template.getCanonicalType(),
+                PACKAGE_TEMPLATE_TYPE);
         return new ComponentTemplateHandle(clz, pkg);
     }
 

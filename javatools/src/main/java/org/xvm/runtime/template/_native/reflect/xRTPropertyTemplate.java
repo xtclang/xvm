@@ -29,14 +29,8 @@ import org.xvm.runtime.template.collections.xArray;
  */
 public class xRTPropertyTemplate
         extends xRTComponentTemplate {
-    public static xRTPropertyTemplate INSTANCE;
-
     public xRTPropertyTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -179,10 +173,12 @@ public class xRTPropertyTemplate
     /**
      * @return the TypeComposition for an RTPropertyTemplate
      */
-    public static TypeComposition ensurePropertyTemplateComposition() {
+    // TODO: use the container - this still caches one composition process-wide
+    public static TypeComposition ensurePropertyTemplateComposition(Container container) {
         TypeComposition clz = PROPERTY_TEMPLATE_COMP;
         if (clz == null) {
-            ClassTemplate templateRT   = INSTANCE;
+            ClassTemplate templateRT   = container.nativeTemplates().
+                    get(xRTPropertyTemplate.class);
             ConstantPool  pool         = templateRT.pool();
             TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
             PROPERTY_TEMPLATE_COMP = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);
@@ -194,13 +190,14 @@ public class xRTPropertyTemplate
     /**
      * @return the TypeComposition for an Array of PropertyTemplate
      */
-    public static TypeComposition ensureArrayComposition() {
+    public static TypeComposition ensureArrayComposition(Container container) {
         TypeComposition clz = ARRAY_PROP_COMP;
         if (clz == null) {
-            ConstantPool pool = INSTANCE.pool();
+            ConstantPool pool = container.nativeTemplates().get(xRTPropertyTemplate.class).pool();
             TypeConstant typePropertyTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
             TypeConstant typePropertyArray = pool.ensureArrayType(typePropertyTemplate);
-            ARRAY_PROP_COMP = clz = INSTANCE.f_container.resolveClass(typePropertyArray);
+            ARRAY_PROP_COMP = clz = container.getNativeContainer().
+                    resolveClass(typePropertyArray);
             assert clz != null;
         }
         return clz;
@@ -216,8 +213,10 @@ public class xRTPropertyTemplate
      *
      * @return the newly created handle
      */
-    static ComponentTemplateHandle makePropertyHandle(PropertyStructure prop) {
-        return new ComponentTemplateHandle(ensurePropertyTemplateComposition(), prop);
+    static ComponentTemplateHandle makePropertyHandle(Container container,
+                                                      PropertyStructure prop) {
+        return new ComponentTemplateHandle(
+                ensurePropertyTemplateComposition(container), prop);
     }
 
 

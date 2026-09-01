@@ -42,7 +42,7 @@ public abstract class ByteBasedBitView
 
             DelegateHandle hView = hSource instanceof ByteArrayHandle hBytes
                     ? new ViewHandle(clzView, hBytes, hBytes.getBitCount(), mutability)
-                    : xRTViewToBit.INSTANCE.createBitViewDelegate(hSource, mutability);
+                    : nativeTemplates().get(xRTViewToBit.class).createBitViewDelegate(hSource, mutability);
 
             return slice(hView, hSlice.f_ofStart*8, hSlice.m_cSize*8, false);
         }
@@ -53,7 +53,7 @@ public abstract class ByteBasedBitView
 
         return hSource instanceof ByteArrayHandle hBytes
                     ? new ViewHandle(clzView, hBytes, hBytes.getBitCount(), mutability)
-                    : xRTViewToBit.INSTANCE.createBitViewDelegate(hSource, mutability);
+                    : nativeTemplates().get(xRTViewToBit.class).createBitViewDelegate(hSource, mutability);
     }
 
 
@@ -66,7 +66,7 @@ public abstract class ByteBasedBitView
 
         byte[] abBits = getBits(hView, ofStart, cSize, fReverse);
 
-        return xRTBitDelegate.INSTANCE.makeHandle(abBits, cSize, mutability);
+        return nativeTemplates().get(xRTBitDelegate.class).makeHandle(abBits, cSize, mutability);
     }
 
     @Override

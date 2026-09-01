@@ -30,14 +30,8 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
  */
 public class xEnumeration
         extends xClass {
-    public static xEnumeration INSTANCE;
-
     public xEnumeration(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -95,7 +89,7 @@ public class xEnumeration
             boolean        fDefer = false;
 
             for (int i = 0; i < cNames; i++) {
-                ahName[i] = xString.makeHandle(listNames.get(i));
+                ahName[i] = xString.makeHandle(frame, listNames.get(i));
 
                 EnumHandle hValue = listValues.get(i);
                 if (hValue.isStruct()) {
@@ -124,7 +118,7 @@ public class xEnumeration
             ConstantPool pool    = frame.poolContext();
             TypeConstant typeMap = pool.ensureMapType(pool.typeString(), idEnumeration.getType());
 
-            switch (xListMap.INSTANCE.constructMap(
+            switch (nativeTemplates().get(xListMap.class).constructMap(
                         frame, typeMap, ahName, ahVal, false, fDefer, Op.A_STACK)) {
             case Op.R_NEXT: {
                 hMap = frame.popStack();

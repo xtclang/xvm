@@ -23,14 +23,8 @@ import org.xvm.runtime.template._native.collections.arrays.xRTViewToBitFromNibbl
  */
 public class xNibbleArray
         extends BitBasedArray {
-    public static xNibbleArray INSTANCE;
-
     public xNibbleArray(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -56,11 +50,11 @@ public class xNibbleArray
             ArrayHandle hArray = (ArrayHandle) hTarget;
 
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hDelegate  = xRTViewToBitFromNibble.INSTANCE.createBitViewDelegate(
+            DelegateHandle hDelegate  = nativeTemplates().get(xRTViewToBitFromNibble.class).createBitViewDelegate(
                     hArray.m_hDelegate, mutability);
 
             return frame.assignValue(iReturn, new ArrayHandle(
-                    xBitArray.INSTANCE.getCanonicalClass(), hDelegate, mutability));
+                    nativeTemplates().get(xBitArray.class).getCanonicalClass(), hDelegate, mutability));
         }
 
         case "asByteArray": {
@@ -72,11 +66,11 @@ public class xNibbleArray
             }
 
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hDelegate  = xRTViewFromBitToByte.INSTANCE.createBitViewDelegate(
+            DelegateHandle hDelegate  = nativeTemplates().get(xRTViewFromBitToByte.class).createBitViewDelegate(
                     hArray.m_hDelegate, mutability);
 
             return frame.assignValue(iReturn, new ArrayHandle(
-                    xByteArray.INSTANCE.getCanonicalClass(), hDelegate, mutability));
+                    nativeTemplates().get(xByteArray.class).getCanonicalClass(), hDelegate, mutability));
         }
         }
 

@@ -28,14 +28,8 @@ import org.xvm.runtime.template.collections.xByteArray;
  */
 public class xRTNetworkInterface
         extends xService {
-    public static xRTNetworkInterface INSTANCE;
-
     public xRTNetworkInterface(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -78,7 +72,8 @@ public class xRTNetworkInterface
 
         if (frame.f_context != hService.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(method).callN(frame, hTarget, ahArg, aiReturn);
+            return xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+                    callN(frame, hTarget, ahArg, aiReturn);
         }
 
         switch (method.getName()) {

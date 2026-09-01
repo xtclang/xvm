@@ -99,10 +99,12 @@ public abstract class Container
         ServiceContext ctx = m_contextMain;
         if (ctx == null) {
             try (var ignore = ConstantPool.withPool(getConstantPool())) {
+                xService templateService = nativeTemplates().get(xService.class);
+
                 m_contextMain = ctx = createServiceContext(getModule().getName());
-                xService.INSTANCE.createServiceHandle(ctx,
-                    xService.INSTANCE.getCanonicalClass(),
-                    xService.INSTANCE.getCanonicalType());
+                templateService.createServiceHandle(ctx,
+                    templateService.getCanonicalClass(),
+                    templateService.getCanonicalType());
             }
         }
         return ctx;

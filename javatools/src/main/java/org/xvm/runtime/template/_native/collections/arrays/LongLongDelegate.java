@@ -30,8 +30,6 @@ import org.xvm.runtime.template._native.collections.arrays.LongBasedDelegate.Lon
  */
 public abstract class LongLongDelegate
         extends xRTDelegate {
-    public static LongLongDelegate INSTANCE;
-
     public LongLongDelegate(Container container, ClassStructure structure, boolean fSigned) {
         super(container, structure, false);
 
@@ -78,7 +76,7 @@ public abstract class LongLongDelegate
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                xInt64.makeHandle((long) hDelegate.m_alValue.length / 2));
+                xInt64.makeHandle(frame, (long) hDelegate.m_alValue.length / 2));
     }
 
     @Override

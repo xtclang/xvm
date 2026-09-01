@@ -62,12 +62,12 @@ public class MainContainer
         if (!listValue.isEmpty()) {
             if (typeRequired.equals(typeString)) {
                 // require String, return the last element
-                return xString.makeHandle(listValue.getLast());
+                return xString.makeHandle(frame, listValue.getLast());
             }
             if (typeRequired.equals(typeStrings)) {
                 // require String[], return the whole List<String> as an array
                 String[] asValue = listValue.toArray(String[]::new);
-                return xString.makeArrayHandle(asValue);
+                return xString.makeArrayHandle(frame.f_context.f_container, asValue);
             }
             if (typeRequired.isEnum()) {
                 TypeComposition clz    = typeRequired.ensureClass(frame);
@@ -108,7 +108,7 @@ public class MainContainer
         TypeComposition clz      = type.ensureClass(frame);
         ClassTemplate   template = clz.getTemplate();
         MethodStructure ctor     = template.getStructure().findMethod("construct", 1, pool.typeString());
-        ObjectHandle[]  ahArgs   = new ObjectHandle[]{xString.makeHandle(sValue)};
+        ObjectHandle[]  ahArgs   = new ObjectHandle[]{xString.makeHandle(frame, sValue)};
         int             iResult  = template.construct(frame, ctor, clz, null, ahArgs, Op.A_STACK);
         return frame.popResult(iResult);
     }
@@ -203,7 +203,7 @@ public class MainContainer
             CallChain         chain      = clzModule.getMethodCallChain(sigMethod);
             boolean           fReturn    = sigMethod.getReturnCount() > 0;
 
-            FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle((frame, ah, iRet) -> {
+            FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle(this, (frame, ah, iRet) -> {
                 SingletonConstant idModule = frame.poolContext().ensureSingletonConstConstant(f_idModule);
                 ObjectHandle      hModule  = frame.getConstHandle(idModule);
                 int               iReturn  = fReturn ? Op.A_STACK : Op.A_IGNORE;

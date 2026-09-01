@@ -11,18 +11,12 @@ import org.xvm.runtime.Container;
  */
 public class xUInt16
         extends xUnsignedConstrainedInt {
-    public static xUInt16 INSTANCE;
-
     public xUInt16(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, 0, 2L * (long) Short.MAX_VALUE + 1, 16, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return xInt16.INSTANCE;
+        return nativeTemplates().get(xInt16.class);
     }
 }

@@ -51,16 +51,10 @@ import org.xvm.runtime.template.numbers.xUInt16;
  */
 public class xRTSocket
         extends xService {
-    public static xRTSocket INSTANCE;
-
     public static final int CONNECT_TIMEOUT_MS = 15_000;
 
     public xRTSocket(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -108,7 +102,7 @@ public class xRTSocket
         }
 
         if (frame.f_context != hSocket.f_context) {
-            return xRTFunction.makeAsyncNativeHandle(method).
+            return xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
                     call1(frame, hTarget, new ObjectHandle[] {hArg}, iReturn);
         }
 
@@ -129,7 +123,8 @@ public class xRTSocket
         }
 
         if (frame.f_context != hSocket.f_context) {
-            return xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
+            return xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+                    call1(frame, hTarget, ahArg, iReturn);
         }
 
         switch (method.getName()) {
@@ -175,7 +170,8 @@ public class xRTSocket
                 InetAddress local   = socket.getLocalAddress();
                 byte[]      abLocal = local == null ? new byte[0] : local.getAddress();
                 int         nLocal  = socket.getLocalPort();
-                return INSTANCE.constructSocket(frameCaller, socket, abLocal, nLocal,
+                return frame.f_context.f_container.nativeTemplates().get(xRTSocket.class).
+                        constructSocket(frameCaller, socket, abLocal, nLocal,
                         abRemoteIP, nRemotePort, aiReturn);
             } catch (Throwable e) {
                 Throwable cause = unwrap(e);
@@ -228,9 +224,9 @@ public class xRTSocket
                 pool.typeByteArray(), pool.typeUInt16());
         ObjectHandle[]   ahParams     = new ObjectHandle[constructor.getMaxVars()];
         ahParams[0] = xArray.makeByteArrayHandle(abLocal, Mutability.Constant);
-        ahParams[1] = xUInt16.INSTANCE.makeJavaLong(nLocalPort);
+        ahParams[1] = nativeTemplates().get(xUInt16.class).makeJavaLong(nLocalPort);
         ahParams[2] = xArray.makeByteArrayHandle(abRemote, Mutability.Constant);
-        ahParams[3] = xUInt16.INSTANCE.makeJavaLong(nRemotePort);
+        ahParams[3] = nativeTemplates().get(xUInt16.class).makeJavaLong(nRemotePort);
 
         switch (template.construct(frame, constructor, clz, null, ahParams, Op.A_STACK)) {
         case Op.R_NEXT:
@@ -358,13 +354,13 @@ public class xRTSocket
     private static int invokeAvailableImpl(Frame frame, SocketHandle hSocket, int iReturn) {
         Socket socket = hSocket.socket;
         if (socket == null || socket.isClosed()) {
-            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(0));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, 0));
         }
         try {
             int n = socket.getInputStream().available();
-            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(Math.max(n, 0)));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, Math.max(n, 0)));
         } catch (IOException e) {
-            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(0));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, 0));
         }
     }
 

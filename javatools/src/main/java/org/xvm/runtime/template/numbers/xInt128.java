@@ -10,14 +10,8 @@ import org.xvm.runtime.ObjectHandle;
 
 public class xInt128
         extends BaseInt128 {
-    public static xInt128 INSTANCE;
-
     public xInt128(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, true);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -37,7 +31,7 @@ public class xInt128
             if (ll.signum() < 0) {
                 ll = ll.complement().addUnchecked(LongLong.ONE);
             }
-            return frame.assignValue(iReturn, xUInt128.INSTANCE.makeHandle(ll));
+            return frame.assignValue(iReturn, nativeTemplates().get(xUInt128.class).makeHandle(ll));
         }
         }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

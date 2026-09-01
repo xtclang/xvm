@@ -10,6 +10,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
@@ -25,19 +26,15 @@ import org.xvm.runtime.template.numbers.xConstrainedInteger;
  */
 public class xAtomicIntNumber
         extends xAtomic {
-    public static xAtomicIntNumber INSTANCE;
-
     public xAtomicIntNumber(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance) {
-            INSTANCE = this;
-        }
         f_templateReferent = null;
     }
 
     public xAtomicIntNumber(xConstrainedInteger templateIntNumber) {
-        super(templateIntNumber.f_container, INSTANCE.f_struct, false);
+        super(templateIntNumber.f_container, NativeTemplates.of(templateIntNumber).
+                get(xAtomicIntNumber.class).f_struct, false);
 
         f_templateReferent = templateIntNumber;
     }

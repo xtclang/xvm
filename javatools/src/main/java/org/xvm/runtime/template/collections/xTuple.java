@@ -42,18 +42,18 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 public class xTuple
         extends ClassTemplate
         implements IndexSupport {
-    public static xTuple INSTANCE;
-    public static ClassConstant INCEPTION_CLASS;
+    /**
+     * The rebased inception class for this container's Tuple template.
+     */
+    private final ClassConstant f_idInception;
     public static TupleHandle H_VOID;
 
     public xTuple(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance) {
-            INSTANCE = this;
-            INCEPTION_CLASS = new NativeRebaseConstant(
-                (ClassConstant) structure.getIdentityConstant());
-        }
+        f_idInception = fInstance
+                ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
+                : null;
     }
 
     @Override
@@ -77,7 +77,7 @@ public class xTuple
 
     @Override
     protected ClassConstant getInceptionClassConstant() {
-        return INCEPTION_CLASS;
+        return f_idInception;
     }
 
     @Override
@@ -165,7 +165,7 @@ public class xTuple
 
         switch (sPropName) {
         case "size":
-            return frame.assignValue(iReturn, xInt64.makeHandle(hTuple.m_ahValue.length));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, hTuple.m_ahValue.length));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -614,7 +614,8 @@ public class xTuple
 
                 int iResult = index < cTypes
                     ? atype[index].callEquals(frameCaller, h1, h2, Op.A_STACK)
-                    : xObject.INSTANCE.callEquals(frameCaller, xObject.CLASS, h1, h2, Op.A_STACK);
+                    : frameCaller.f_context.f_container.nativeTemplates().get(xObject.class).
+                            callEquals(frameCaller, xObject.CLASS, h1, h2, Op.A_STACK);
                 switch (iResult) {
                 case Op.R_NEXT:
                     ObjectHandle hResult = frameCaller.popStack();

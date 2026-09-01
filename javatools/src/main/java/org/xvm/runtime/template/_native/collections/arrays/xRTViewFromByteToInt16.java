@@ -23,14 +23,8 @@ import org.xvm.runtime.template.numbers.xInt16;
  */
 public class xRTViewFromByteToInt16
         extends xRTViewFromByte {
-    public static xRTViewFromByteToInt16 INSTANCE;
-
     public xRTViewFromByteToInt16(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -61,7 +55,7 @@ public class xRTViewFromByteToInt16
                 anValue[i] = (short) (((short) bValue0) << 8 | (bValue1 & 0xFF));
             }
 
-            return xRTInt16Delegate.INSTANCE.packHandle(anValue, mutability);
+            return nativeTemplates().get(xRTInt16Delegate.class).packHandle(anValue, mutability);
         }
 
         throw new UnsupportedOperationException();
@@ -79,7 +73,7 @@ public class xRTViewFromByteToInt16
 
             // using a "short" intermediary takes care of the sign handling
             short nValue = (short) (((short) bValue0) << 8 | (bValue1 & 0xFF));
-            return frame.assignValue(iReturn, xInt16.INSTANCE.makeJavaLong(nValue));
+            return frame.assignValue(iReturn, nativeTemplates().get(xInt16.class).makeJavaLong(nValue));
         }
 
         throw new UnsupportedOperationException();

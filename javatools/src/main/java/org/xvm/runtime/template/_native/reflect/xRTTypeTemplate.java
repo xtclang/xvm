@@ -50,14 +50,8 @@ import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTe
  */
 public class xRTTypeTemplate
         extends xConst {
-    public static xRTTypeTemplate INSTANCE;
-
     public xRTTypeTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -196,8 +190,9 @@ public class xRTTypeTemplate
      * @return the resulting {@link TypeTemplateHandle}
      */
     public static TypeTemplateHandle makeHandle(Container container, TypeConstant type) {
-        ConstantPool    pool = INSTANCE.pool();
-        TypeComposition clz  = INSTANCE.ensureClass(container, INSTANCE.getCanonicalType(),
+        xRTTypeTemplate template = container.nativeTemplates().get(xRTTypeTemplate.class);
+        ConstantPool    pool     = template.pool();
+        TypeComposition clz      = template.ensureClass(container, template.getCanonicalType(),
                 pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
         return new TypeTemplateHandle(clz, type);
     }
@@ -235,7 +230,7 @@ public class xRTTypeTemplate
     public int getPropertyDesc(Frame frame, TypeTemplateHandle hType, int iReturn) {
         TypeConstant type  = hType.getDataType();
         String       sDesc = type.getValueString();
-        return frame.assignValue(iReturn, xString.makeHandle(sDesc));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, sDesc));
     }
 
     /**
@@ -268,7 +263,7 @@ public class xRTTypeTemplate
                     : idClz.getPathString();
         }
 
-        return frame.assignValue(iReturn, sName == null ? xNullable.NULL : xString.makeHandle(sName));
+        return frame.assignValue(iReturn, sName == null ? xNullable.NULL : xString.makeHandle(frame, sName));
     }
 
     /**
@@ -581,7 +576,7 @@ public class xRTTypeTemplate
      * @return the TypeComposition for an Array of TypeTemplate
      */
     public static TypeComposition ensureArrayClassComposition(Container container) {
-        return container.ensureClassComposition(TEMPLATE_ARRAY_TYPE, xArray.INSTANCE);
+        return container.ensureClassComposition(TEMPLATE_ARRAY_TYPE, container.nativeTemplates().get(xArray.class));
     }
 
     private static TypeConstant TEMPLATE_ARRAY_TYPE;

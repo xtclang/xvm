@@ -7812,7 +7812,7 @@ public abstract class TypeConstant
         }
 
         // don't cache a "foreign" handle
-        return xRTType.makeForeignHandle(this);
+        return xRTType.makeForeignHandle(container, this);
     }
 
     /**

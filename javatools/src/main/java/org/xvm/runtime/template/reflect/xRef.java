@@ -61,17 +61,17 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 public class xRef
         extends ClassTemplate
         implements VarSupport {
-    public static xRef INSTANCE;
-    public static ClassConstant INCEPTION_CLASS;
+    /**
+     * The rebased inception class for this container's Ref template.
+     */
+    private final ClassConstant f_idInception;
 
     public xRef(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance) {
-            INSTANCE = this;
-            INCEPTION_CLASS = new NativeRebaseConstant(
-                    (ClassConstant) structure.getIdentityConstant());
-        }
+        f_idInception = fInstance
+                ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
+                : null;
     }
 
     @Override
@@ -89,7 +89,7 @@ public class xRef
 
     @Override
     public void registerNativeTemplates() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xRef.class)) {
             // register the native "Identity" template
             ClassStructure structId = (ClassStructure) f_struct.getChild("Identity");
 
@@ -108,7 +108,10 @@ public class xRef
 
     @Override
     protected ClassConstant getInceptionClassConstant() {
-        return INCEPTION_CLASS;
+        // subclasses (xInject) inherit this and are not themselves rebased, so the
+        // answer is the container's own xRef template's constant - not this instance's, which
+        // is only populated for that one template
+        return nativeTemplates().get(xRef.class).f_idInception;
     }
 
     @Override
@@ -145,7 +148,7 @@ public class xRef
                 h -> frame.assignValue(iReturn, Identity.ensureIdentity(h)));
 
         case "bitLength":
-            return frame.assignValue(iReturn, xInt64.makeHandle(64)); // TODO
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, 64)); // TODO
 
         case "selfContained":
             return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isSelfContained()));
@@ -291,7 +294,7 @@ public class xRef
             String sName = hRef.getName();
             return sName == null
                     ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                    : frame.assignValues(aiReturn, xBoolean.TRUE, xString.makeHandle(sName));
+                    : frame.assignValues(aiReturn, xBoolean.TRUE, xString.makeHandle(frame, sName));
         }
 
         case "isProperty": {

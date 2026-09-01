@@ -91,14 +91,8 @@ import org.xvm.util.Handy;
  */
 public class xRTServer
         extends xService {
-    public static xRTServer INSTANCE;
-
     public xRTServer(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -190,19 +184,19 @@ public class xRTServer
         case "setHeaders":
             return frame.f_context == hServer.f_context
                     ? invokeSetHeaders(frame, ahArg)
-                    : xRTFunction.makeAsyncNativeHandle(method).
+                    : xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
                             call1(frame, hServer, ahArg, iReturn);
 
         case "setBodyBytes":
             return frame.f_context == hServer.f_context
                     ? invokeSetBodyBytes(frame, ahArg)
-                    : xRTFunction.makeAsyncNativeHandle(method).
+                    : xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
                             call1(frame, hServer, ahArg, iReturn);
 
         case "readBody":
             return frame.f_context == hServer.f_context
                     ? invokeReadBody(frame, ahArg, iReturn)
-                    : xRTFunction.makeAsyncNativeHandle(method).
+                    : xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
                             call1(frame, hServer, ahArg, iReturn);
 
         case "closeImpl":
@@ -417,7 +411,8 @@ public class xRTServer
         assert method != null;
 
         FunctionHandle hFunction =
-                xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hWrapper);
+                xRTFunction.makeInternalHandle(frame.f_context.f_container, method).
+                        bindTarget(frame, hWrapper);
         return new RequestHandler(hWrapper.f_context, hFunction, hServer);
     }
 
@@ -439,7 +434,7 @@ public class xRTServer
 
         return frame.assignValues(aiResult,
                 xByteArray.makeByteArrayHandle(ab, Mutability.Constant),
-                xUInt16.INSTANCE.makeJavaLong(nPort));
+                nativeTemplates().get(xUInt16.class).makeJavaLong(nPort));
     }
 
     /**
@@ -452,7 +447,7 @@ public class xRTServer
 
         return frame.assignValues(aiResult,
                 xByteArray.makeByteArrayHandle(ab, Mutability.Constant),
-                xUInt16.INSTANCE.makeJavaLong(nPort));
+                nativeTemplates().get(xUInt16.class).makeJavaLong(nPort));
     }
 
     /**
@@ -467,7 +462,7 @@ public class xRTServer
         return sName == null
             ? frame.assignValue(aiResult[0], xBoolean.FALSE)
             : frame.assignValues(aiResult, xBoolean.TRUE,
-                    xString.makeHandle(sName), xUInt16.INSTANCE.makeJavaLong(nPort));
+                    xString.makeHandle(frame, sName), nativeTemplates().get(xUInt16.class).makeJavaLong(nPort));
     }
 
     /**
@@ -476,7 +471,7 @@ public class xRTServer
     private int invokeGetProtocol(Frame frame, HttpContextHandle hCtx, int iResult) {
         String sProtocol = hCtx.f_exchange.getProtocol();
 
-        return frame.assignValue(iResult, xString.makeHandle(sProtocol));
+        return frame.assignValue(iResult, xString.makeHandle(frame, sProtocol));
     }
 
     /**
@@ -486,7 +481,7 @@ public class xRTServer
         Headers headers = hCtx.f_exchange.getRequestHeaders();
 
         return frame.assignValue(iResult,
-                xString.makeArrayHandle(headers.keySet().toArray(Utils.NO_NAMES)));
+                xString.makeArrayHandle(frame.f_context.f_container, headers.keySet().toArray(Utils.NO_NAMES)));
     }
 
     /**
@@ -504,7 +499,7 @@ public class xRTServer
         }
 
         return frame.assignValues(aiResult, xBoolean.TRUE,
-                xString.makeArrayHandle(listValues.toArray(Utils.NO_NAMES)));
+                xString.makeArrayHandle(frame.f_context.f_container, listValues.toArray(Utils.NO_NAMES)));
     }
 
     /**
@@ -672,10 +667,13 @@ public class xRTServer
         }
 
         private ObjectHandle[] createArguments(HttpExchange exchange) {
+            Container         container = f_hServer.getComposition().getContainer();
             ObjectHandle      hBinding  = f_hServer.getBinding();
-            HttpContextHandle hContext  = new HttpContextHandle(exchange);
-            StringHandle      hURI      = xString.makeHandle(exchange.getRequestURI().toASCIIString());
-            StringHandle      hMethod   = xString.makeHandle(exchange.getRequestMethod());
+            HttpContextHandle hContext  = new HttpContextHandle(container, exchange);
+            StringHandle      hURI      = xString.makeHandle(container,
+                                              exchange.getRequestURI().toASCIIString());
+            StringHandle      hMethod   = xString.makeHandle(container,
+                                              exchange.getRequestMethod());
             BooleanHandle     hTls      = xBoolean.makeHandle(exchange instanceof HttpsExchange);
             return new ObjectHandle[]{hBinding, hContext, hURI, hMethod, hTls};
         }
@@ -952,8 +950,8 @@ public class xRTServer
      */
     protected static class HttpContextHandle
                 extends ObjectHandle {
-        public HttpContextHandle(HttpExchange exchange) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        public HttpContextHandle(Container container, HttpExchange exchange) {
+            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
 
             f_exchange = exchange;
             m_fMutable = false;

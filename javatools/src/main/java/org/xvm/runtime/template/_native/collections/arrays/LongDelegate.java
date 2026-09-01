@@ -17,8 +17,6 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
  */
 public abstract class LongDelegate
         extends LongBasedDelegate {
-    public static LongDelegate INSTANCE;
-
     public LongDelegate(Container container, ClassStructure structure, boolean fSigned) {
         super(container, structure, 64, fSigned);
 

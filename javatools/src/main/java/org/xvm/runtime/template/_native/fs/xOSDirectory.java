@@ -30,14 +30,8 @@ import org.xvm.runtime.template.xBoolean;
  */
 public class xOSDirectory
         extends xOSFileNode {
-    public static xOSDirectory INSTANCE;
-
     public xOSDirectory(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

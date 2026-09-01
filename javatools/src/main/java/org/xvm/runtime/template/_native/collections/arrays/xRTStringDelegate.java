@@ -31,14 +31,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public class xRTStringDelegate
         extends xRTDelegate {
-    public static xRTStringDelegate INSTANCE;
-
     public xRTStringDelegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     // ----- RTDelegate API ------------------------------------------------------------------------
@@ -80,7 +74,7 @@ public class xRTStringDelegate
     public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
         StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_asValue.length));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_asValue.length));
     }
 
     @Override
@@ -123,7 +117,7 @@ public class xRTStringDelegate
         StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
 
         String s = hDelegate.m_asValue[(int) lIndex];
-        return frame.assignValue(iReturn, xString.makeHandle(s));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, s));
     }
 
     @Override

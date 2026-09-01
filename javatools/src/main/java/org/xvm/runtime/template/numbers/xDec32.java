@@ -20,14 +20,8 @@ import org.xvm.type.Decimal32;
  */
 public class xDec32
         extends BaseDecFP {
-    public static xDec32 INSTANCE;
-
     public xDec32(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, 32);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     // ----- helpers -------------------------------------------------------------------------------

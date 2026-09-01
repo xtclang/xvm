@@ -11,8 +11,6 @@ import org.xvm.runtime.Container;
  */
 public abstract class BitBasedArray
         extends xArray {
-    public static BitBasedArray INSTANCE;
-
     protected BitBasedArray(Container container, ClassStructure structure) {
         super(container, structure, false);
     }

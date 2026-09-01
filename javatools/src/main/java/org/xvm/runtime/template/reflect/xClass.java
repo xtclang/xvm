@@ -52,14 +52,8 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  */
 public class xClass
         extends xConst {
-    public static xClass INSTANCE;
-
     public xClass(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -99,8 +93,8 @@ public class xClass
                         frame.getGenericsResolver(typeClz.containsDynamicType()));
 
             ClassTemplate template = switch (idClz.getComponent().getFormat()) {
-                case ENUMVALUE -> xEnumValue  .INSTANCE;
-                case ENUM      -> xEnumeration.INSTANCE;
+                case ENUMVALUE -> nativeTemplates().get(xEnumValue.class);
+                case ENUM      -> nativeTemplates().get(xEnumeration.class);
                 default        -> this;
             };
 
@@ -170,7 +164,7 @@ public class xClass
 
     @Override
     protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
-        return frame.assignValue(iReturn, xInt64.makeHandle(getClassType(hTarget).hashCode()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, getClassType(hTarget).hashCode()));
     }
 
 
@@ -344,14 +338,14 @@ public class xClass
                 if (fTuple) {
                     TypeConstant[] atypeParam = typeClz.getParamTypesArray();
                     for (int i = 0; i < cParams; ++i) {
-                        ahNames[i] = xString.makeHandle("ElementTypes[" + i + "]");
+                        ahNames[i] = xString.makeHandle(frame, "ElementTypes[" + i + "]");
                         ahTypes[i] = atypeParam[i].ensureTypeHandle(container);
                     }
                 } else {
                     Iterator<StringConstant> iterNames  = clz.getTypeParams().keySet().iterator();
                     TypeConstant[]           atypeParam = clz.normalizeParameters(pool, typeClz.getParamTypesArray());
                     for (int i = 0; i < cParams; ++i) {
-                        ahNames[i] = xString.makeHandle(iterNames.next().getValue());
+                        ahNames[i] = xString.makeHandle(frame, iterNames.next().getValue());
                         ahTypes[i] = atypeParam[i].ensureTypeHandle(container);
                     }
                 }
@@ -495,7 +489,8 @@ public class xClass
      * @return the TypeComposition for an Array of Class
      */
     public static TypeComposition ensureArrayComposition(Container container) {
-        return container.ensureClassComposition(CLASS_ARRAY_TYPE, xArray.INSTANCE);
+        return container.ensureClassComposition(CLASS_ARRAY_TYPE,
+                container.nativeTemplates().get(xArray.class));
     }
 
 

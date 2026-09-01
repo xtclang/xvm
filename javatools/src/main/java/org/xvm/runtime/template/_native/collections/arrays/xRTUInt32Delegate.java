@@ -18,14 +18,8 @@ import org.xvm.runtime.template.numbers.xUInt32;
 public class xRTUInt32Delegate
         extends LongBasedDelegate
         implements ByteView {
-    public static xRTUInt32Delegate INSTANCE;
-
     public xRTUInt32Delegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, 32, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -42,6 +36,6 @@ public class xRTUInt32Delegate
 
     @Override
     protected ObjectHandle makeElementHandle(long lValue) {
-        return xUInt32.INSTANCE.makeJavaLong(lValue);
+        return nativeTemplates().get(xUInt32.class).makeJavaLong(lValue);
     }
 }

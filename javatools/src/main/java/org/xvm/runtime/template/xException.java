@@ -27,21 +27,15 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public class xException
         extends xConst {
-    public static xException INSTANCE;
-
     public xException(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xException.class)) {
             // cache all the well-known exception classes
-            s_clzException                  = INSTANCE.getCanonicalClass();
+            s_clzException                  = nativeTemplates().get(xException.class).getCanonicalClass();
             s_clzDeadlock                   = f_container.getTemplate("Deadlock"                     ).getCanonicalClass();
             s_clzIllegalArgument            = f_container.getTemplate("IllegalArgument"              ).getCanonicalClass();
             s_clzIllegalState               = f_container.getTemplate("IllegalState"                 ).getCanonicalClass();
@@ -282,7 +276,9 @@ public class xException
                                              String sMessage, ExceptionHandle hCause) {
         ExceptionHandle hException = makeMutableStruct(frame, clzEx, null);
 
-        hException.setField(frame, "text",  sMessage == null ? xNullable.NULL : xString.makeHandle(sMessage));
+        hException.setField(frame, "text",  sMessage == null
+                ? xNullable.NULL
+                : xString.makeHandle(clzEx.getContainer(), sMessage));
         hException.setField(frame, "cause", hCause == null   ? xNullable.NULL : hCause);
         hException.makeImmutable();
 
@@ -309,7 +305,9 @@ public class xException
                                              String sMessage, String sRtError) {
         ExceptionHandle hException = makeMutableStruct(frame, clzEx, sRtError);
 
-        hException.setField(frame, "text",  sMessage == null ? xNullable.NULL : xString.makeHandle(sMessage));
+        hException.setField(frame, "text",  sMessage == null
+                ? xNullable.NULL
+                : xString.makeHandle(clzEx.getContainer(), sMessage));
         hException.setField(frame, "cause", xNullable.NULL);
         hException.makeImmutable();
 
@@ -321,7 +319,9 @@ public class xException
 
         ExceptionHandle hException = new ExceptionHandle(clxEx, sRTError);
 
-        hException.setField(frame, "stackTrace", xString.makeHandle(
+        // the frame is null when translating a native exception (see Utils.translate), so the
+        // owner has to come from the composition the exception is being built with
+        hException.setField(frame, "stackTrace", xString.makeHandle(clxEx.getContainer(),
                 frame == null ? "" : frame.getStackTrace()));
 
         return hException;

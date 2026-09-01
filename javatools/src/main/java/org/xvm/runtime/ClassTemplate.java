@@ -154,11 +154,18 @@ public abstract class ClassTemplate
     }
 
     /**
-     * @return true iff this is the container's native template for its class, rather than one of
-     *         the per-structure templates that the same class also backs
+     * Note: the class has to be named explicitly, because it is the class that <i>declares</i> the
+     * calling method that matters, not this template's own class. A template that inherits such a
+     * method - {@code xVar} extends {@code xRef} - is the native instance of its own class while
+     * still not being the one the inherited method is asking about.
+     *
+     * @param clzTemplate  the native template class being asked about
+     *
+     * @return true iff this is the container's native template for the specified class, rather
+     *         than one of the per-structure templates that the same class also backs
      */
-    protected boolean isNativeInstance() {
-        return nativeTemplates().isNativeInstance(this);
+    protected boolean isNativeInstance(Class<? extends ClassTemplate> clzTemplate) {
+        return this == nativeTemplates().get(clzTemplate);
     }
 
     /**
@@ -211,7 +218,7 @@ public abstract class ClassTemplate
                 if ("Object".equals(f_sName)) {
                     return null;
                 }
-                templateSuper = m_templateSuper = xObject.INSTANCE;
+                templateSuper = m_templateSuper = nativeTemplates().get(xObject.class);
             } else {
                 templateSuper = m_templateSuper =
                     f_container.getTemplate(f_structSuper.getIdentityConstant());
@@ -2001,7 +2008,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
-        return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, hTarget.toString()));
     }
 
 
@@ -2458,7 +2465,7 @@ public abstract class ClassTemplate
             if (hfn == null) {
                 // in case super constructors have their own finalizers, we need a non-null anchor
                 // that may be replaced by Frame.chainFinalizers()
-                hfn = FullyBoundHandle.NO_OP;
+                hfn = FullyBoundHandle.ensureNoOp(frame.f_context.f_container);
             }
 
             frame.m_hfnFinally = hfn;

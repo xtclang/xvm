@@ -124,29 +124,20 @@ public final class NativeTemplates {
     }
 
     /**
-     * @return true iff the specified template is this container's native template for its class,
-     *         as opposed to one of the per-structure templates that the same Java class also backs
-     *         (a {@code xEnum} exists for every enumeration, an {@code xObject} for every class)
-     */
-    public boolean isNativeInstance(ClassTemplate template) {
-        return template != null && template == get(template.getClass());
-    }
-
-    /**
      * Add a template that cannot be found by name because it implements a composite type declared
      * by another template.
      *
      * <p>Called from {@link ClassTemplate#registerNativeTemplates()}, after the template has been
      * fully constructed - the map write is what publishes it.</p>
      *
+     * <p>The last registration for a class wins, which is what the {@code INSTANCE} assignment in
+     * the constructor did. It matters: {@code xRTDelegate} registers a nibble delegate twice, and
+     * the second one is the template the runtime used to hand out.</p>
+     *
      * @param template  the fully constructed template to publish
      */
     void register(ClassTemplate template) {
-        requireNonNull(template, "template");
-
-        ClassTemplate templatePrev = f_mapByClass.putIfAbsent(template.getClass(), template);
-        assert templatePrev == null || templatePrev == template
-                : "duplicate native template for " + template.getClass().getName();
+        f_mapByClass.put(requireNonNull(template, "template").getClass(), template);
     }
 
 

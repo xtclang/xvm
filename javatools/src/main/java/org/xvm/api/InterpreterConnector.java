@@ -95,7 +95,7 @@ public class InterpreterConnector
                 TypeConstant typeArg = method.getParam(0).getType();
 
                 assert typeStrings.isA(typeArg);
-                ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
+                ahArg = new ObjectHandle[]{xString.makeArrayHandle(m_containerMain, asArg)};
             }
             break;
 
@@ -103,7 +103,7 @@ public class InterpreterConnector
             TypeConstant typeArg = method.getParam(0).getType();
             assert typeStrings.isA(typeArg);
             // the method requires an array that we can supply
-            ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
+            ahArg = new ObjectHandle[]{xString.makeArrayHandle(m_containerMain, asArg)};
             break;
         }
         }

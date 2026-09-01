@@ -56,7 +56,7 @@ public class xOSFileNode
         NodeHandle hNode = (NodeHandle) hTarget;
         switch (sPropName) {
         case "pathString":
-            return frame.assignValue(iReturn, xString.makeHandle(hNode.f_path.toString()));
+            return frame.assignValue(iReturn, xString.makeHandle(frame, hNode.f_path.toString()));
 
         case "exists":
             return frame.assignValue(iReturn, xBoolean.makeHandle(hNode.f_path.toFile().exists()));
@@ -70,7 +70,7 @@ public class xOSFileNode
         case "createdMillis":
             try {
                 BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
-                return frame.assignValue(iReturn, xInt64.makeHandle(attr.creationTime().toMillis()));
+                return frame.assignValue(iReturn, xInt64.makeHandle(frame, attr.creationTime().toMillis()));
             } catch (IOException e) {
                 return raisePathException(frame, e, hNode.f_path);
             }
@@ -78,7 +78,7 @@ public class xOSFileNode
         case "accessedMillis":
             try {
                 BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
-                return frame.assignValue(iReturn, xInt64.makeHandle(attr.lastAccessTime().toMillis()));
+                return frame.assignValue(iReturn, xInt64.makeHandle(frame, attr.lastAccessTime().toMillis()));
             } catch (IOException e) {
                 return raisePathException(frame, e, hNode.f_path);
             }
@@ -86,7 +86,7 @@ public class xOSFileNode
         case "modifiedMillis":
             try {
                 BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
-                return frame.assignValue(iReturn, xInt64.makeHandle(attr.lastModifiedTime().toMillis()));
+                return frame.assignValue(iReturn, xInt64.makeHandle(frame, attr.lastModifiedTime().toMillis()));
             } catch (IOException e) {
                 return raisePathException(frame, e, hNode.f_path);
             }
@@ -96,9 +96,9 @@ public class xOSFileNode
                 Path path = hNode.f_path;
                 if (Files.exists(path)) {
                     BasicFileAttributes attr = Files.readAttributes(path, BasicFileAttributes.class);
-                    return frame.assignValue(iReturn, xInt64.makeHandle(attr.size()));
+                    return frame.assignValue(iReturn, xInt64.makeHandle(frame, attr.size()));
                 } else {
-                    return frame.assignValue(iReturn, xInt64.makeHandle(0));
+                    return frame.assignValue(iReturn, xInt64.makeHandle(frame, 0));
                 }
             } catch (IOException e) {
                 return raisePathException(frame, e, hNode.f_path);
@@ -121,8 +121,10 @@ public class xOSFileNode
      */
     static int createHandle(Frame frame, ObjectHandle hOSStore, Path path, boolean fDir, int iReturn) {
         return fDir
-            ? xOSDirectory.INSTANCE.createHandle(frame, hOSStore, path, iReturn)
-            : xOSFile     .INSTANCE.createHandle(frame, hOSStore, path, iReturn);
+            ? frame.f_context.f_container.nativeTemplates().get(xOSDirectory.class).
+                    createHandle(frame, hOSStore, path, iReturn)
+            : frame.f_context.f_container.nativeTemplates().get(xOSFile.class).
+                    createHandle(frame, hOSStore, path, iReturn);
     }
 
 

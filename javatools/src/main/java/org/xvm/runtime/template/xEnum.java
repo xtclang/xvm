@@ -36,19 +36,13 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xEnum
         extends xConst {
-    public static xEnum INSTANCE;
-
     public xEnum(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xEnum.class)) {
             // all the methods are marked as native due to a "rebase"
 
             RANGE_TEMPLATE = f_container.getTemplate("Range");
@@ -158,10 +152,10 @@ public class xEnum
         }
 
         case "name":
-            return frame.assignValue(iReturn, xString.makeHandle(m_listNames.get(hThis.getOrdinal())));
+            return frame.assignValue(iReturn, xString.makeHandle(frame, m_listNames.get(hThis.getOrdinal())));
 
         case "ordinal":
-            return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getOrdinal()));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, hThis.getOrdinal()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -175,7 +169,7 @@ public class xEnum
         if (method.getName().equals("stepsTo")) {
             EnumHandle hThat = (EnumHandle) hTarget;
             return frame.assignValue(iReturn,
-                    xInt64.makeHandle(hThis.getOrdinal() - hThat.getOrdinal()));
+                    xInt64.makeHandle(frame, hThis.getOrdinal() - hThat.getOrdinal()));
         }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
     }
@@ -203,7 +197,7 @@ public class xEnum
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         EnumHandle hThis = (EnumHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getOrdinal()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hThis.getOrdinal()));
     }
 
     @Override
@@ -211,7 +205,7 @@ public class xEnum
         EnumHandle hThis = (EnumHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                xString.makeHandle(m_listNames.get(hThis.getOrdinal())));
+                xString.makeHandle(frame, m_listNames.get(hThis.getOrdinal())));
     }
 
     @Override

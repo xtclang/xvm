@@ -54,14 +54,8 @@ import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
  */
 public class xRTAlgorithms
         extends xService {
-    public static xRTAlgorithms INSTANCE;
-
     public xRTAlgorithms(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -143,7 +137,7 @@ public class xRTAlgorithms
                 MessageDigest digest = MessageDigest.getInstance(sName);
 
                 nBlockSize = 0;
-                hImpl      = new DigestHandle(digest);
+                hImpl      = new DigestHandle(frame.f_context.f_container, digest);
                 break;
             }
 
@@ -152,7 +146,7 @@ public class xRTAlgorithms
                 Cipher cipher = Cipher.getInstance(sName);
 
                 nBlockSize = cipher.getBlockSize();
-                hImpl      = new CipherHandle(cipher);
+                hImpl      = new CipherHandle(frame.f_context.f_container, cipher);
                 break;
             }
 
@@ -160,7 +154,7 @@ public class xRTAlgorithms
                 Mac mac = Mac.getInstance(sName);
 
                 nBlockSize = 0;
-                hImpl      = new MacHandle(mac);
+                hImpl      = new MacHandle(frame.f_context.f_container, mac);
                 break;
             }
 
@@ -168,7 +162,7 @@ public class xRTAlgorithms
                 Signature sig = Signature.getInstance(sName);
 
                 nBlockSize = 0;
-                hImpl      = new SignatureHandle(sig);
+                hImpl      = new SignatureHandle(frame.f_context.f_container, sig);
                 break;
             }
 
@@ -176,7 +170,7 @@ public class xRTAlgorithms
                 KeyGenerator generator = KeyGenerator.getInstance(sName);
 
                 nBlockSize = 0;
-                hImpl      = new KeyGenHandle(generator);
+                hImpl      = new KeyGenHandle(frame.f_context.f_container, generator);
                 break;
             }
 
@@ -185,7 +179,7 @@ public class xRTAlgorithms
             }
 
             List<ObjectHandle> list = new ArrayList<>(9);
-            list.add(xInt64.makeHandle(nBlockSize));
+            list.add(xInt64.makeHandle(frame, nBlockSize));
             list.add(hImpl);
             return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
 
@@ -288,8 +282,8 @@ public class xRTAlgorithms
      */
     public static class DigestHandle
             extends ObjectHandle {
-        protected DigestHandle(MessageDigest digest) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        protected DigestHandle(Container container, MessageDigest digest) {
+            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
 
             f_digest = digest;
         }
@@ -305,8 +299,8 @@ public class xRTAlgorithms
      */
     public static class CipherHandle
             extends ObjectHandle {
-        protected CipherHandle(Cipher cipher) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        protected CipherHandle(Container container, Cipher cipher) {
+            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
 
             f_cipher = cipher;
         }
@@ -322,8 +316,8 @@ public class xRTAlgorithms
      */
     public static class SignatureHandle
             extends ObjectHandle {
-        protected SignatureHandle(Signature signature) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        protected SignatureHandle(Container container, Signature signature) {
+            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
 
             f_signature = signature;
         }
@@ -339,8 +333,8 @@ public class xRTAlgorithms
      */
     public static class MacHandle
             extends ObjectHandle {
-        protected MacHandle(Mac mac) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        protected MacHandle(Container container, Mac mac) {
+            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
 
             f_mac = mac;
         }
@@ -356,8 +350,8 @@ public class xRTAlgorithms
      */
     public static class SecretHandle
             extends ObjectHandle {
-        protected SecretHandle(Key key) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        protected SecretHandle(Container container, Key key) {
+            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
 
             f_key = key;
         }
@@ -378,8 +372,8 @@ public class xRTAlgorithms
          */
         public final KeyGenerator f_generator;
 
-        protected KeyGenHandle(KeyGenerator generator) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        protected KeyGenHandle(Container container, KeyGenerator generator) {
+            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
 
             f_generator = generator;
         }

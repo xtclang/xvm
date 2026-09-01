@@ -28,14 +28,8 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
  */
 public class xRTServiceControl
         extends ClassTemplate {
-    public static xRTServiceControl INSTANCE;
-
     public xRTServiceControl(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -79,7 +73,8 @@ public class xRTServiceControl
             }
             return frame.f_context == context
                 ? context.shutdown(frame)
-                : xRTFunction.makeAsyncNativeHandle(method).call1(frame, hService, ahArg, iReturn);
+                : xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+                        call1(frame, hService, ahArg, iReturn);
         }
 
         case "kill":
@@ -112,7 +107,8 @@ public class xRTServiceControl
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     public static ObjectHandle makeHandle(ServiceContext context) {
-        return new ControlHandle(INSTANCE.m_clzControl, context);
+        return new ControlHandle(context.f_container.nativeTemplates().
+                get(xRTServiceControl.class).m_clzControl, context);
     }
 
     protected static class ControlHandle

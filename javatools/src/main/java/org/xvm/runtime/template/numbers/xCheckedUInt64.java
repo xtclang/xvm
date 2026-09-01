@@ -14,19 +14,13 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
  */
 public class xCheckedUInt64
         extends xCheckedUnsignedInt {
-    public static xCheckedUInt64 INSTANCE;
-
     public xCheckedUInt64(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, 0L, 0xFFFF_FFFF_FFFF_FFFFL, 64);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return xCheckedInt64.INSTANCE;
+        return nativeTemplates().get(xCheckedInt64.class);
     }
 
     @Override

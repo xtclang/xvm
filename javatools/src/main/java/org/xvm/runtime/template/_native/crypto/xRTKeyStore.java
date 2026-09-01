@@ -82,14 +82,8 @@ import org.xvm.runtime.template._native.collections.arrays.xRTBooleanDelegate;
  */
 public class xRTKeyStore
         extends xService {
-    public static xRTKeyStore INSTANCE;
-
     public xRTKeyStore(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -214,7 +208,7 @@ public class xRTKeyStore
             try {
                 ArrayList<String> listNames = Collections.list(hStore.f_keyStore.aliases());
                 return frame.assignValue(iReturn,
-                        xString.makeArrayHandle(listNames.toArray(Utils.NO_NAMES)));
+                        xString.makeArrayHandle(frame.f_context.f_container, listNames.toArray(Utils.NO_NAMES)));
             } catch (KeyStoreException e) {
                 return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
             }
@@ -337,18 +331,18 @@ public class xRTKeyStore
             // create the arguments
             List<ObjectHandle> list = new ArrayList<>(9);
             list.add(xBoolean.TRUE);
-            list.add(xString.makeHandle(sIssuer));
-            list.add(xString.makeHandle(sSubject));
-            list.add(xInt64.makeHandle(nVersion));
-            addDate(dateNotBefore, list);
-            addDate(dateNotAfter, list);
+            list.add(xString.makeHandle(frame, sIssuer));
+            list.add(xString.makeHandle(frame, sSubject));
+            list.add(xInt64.makeHandle(frame, nVersion));
+            addDate(frame, dateNotBefore, list);
+            addDate(frame, dateNotAfter, list);
             list.add(xArray.makeBooleanArrayHandle(abUsage, cUsage, Mutability.Constant));
-            list.add(xString.makeHandle(sSigAlgName));
+            list.add(xString.makeHandle(frame, sSigAlgName));
             list.add(xByteArray.makeByteArrayHandle(abSignature, Mutability.Constant));
-            list.add(xString.makeHandle(sAlgorithm));
-            list.add(xInt64.makeHandle(cKeyBits >>> 3));
+            list.add(xString.makeHandle(frame, sAlgorithm));
+            list.add(xInt64.makeHandle(frame, cKeyBits >>> 3));
             list.add(xByteArray.makeByteArrayHandle(abPublic, Mutability.Constant));
-            list.add(new SecretHandle(publicKey));
+            list.add(new SecretHandle(frame.f_context.f_container, publicKey));
             list.add(xByteArray.makeByteArrayHandle(abDer, Mutability.Constant));
 
             return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
@@ -357,13 +351,13 @@ public class xRTKeyStore
         }
     }
 
-    private static void addDate(Date date, List<ObjectHandle> list) {
+    private static void addDate(Frame frame, Date date, List<ObjectHandle> list) {
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
 
-        list.add(xInt64.makeHandle(cal.get(Calendar.YEAR)));
-        list.add(xInt64.makeHandle(cal.get(Calendar.MONTH) + 1));
-        list.add(xInt64.makeHandle(cal.get(Calendar.DAY_OF_MONTH)));
+        list.add(xInt64.makeHandle(frame, cal.get(Calendar.YEAR)));
+        list.add(xInt64.makeHandle(frame, cal.get(Calendar.MONTH) + 1));
+        list.add(xInt64.makeHandle(frame, cal.get(Calendar.DAY_OF_MONTH)));
     }
 
     private static int getPublicKeyLength(PublicKey puk)
@@ -409,10 +403,10 @@ public class xRTKeyStore
                 } else {
                     nType = 1; // Pair
                 }
-                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(nType));
+                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, nType));
             }
             if (keyStore.isCertificateEntry(sName)) {
-                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(1)); // Certificate
+                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, 1)); // Certificate
             }
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         } catch (GeneralSecurityException e) {
@@ -456,14 +450,14 @@ public class xRTKeyStore
 
                 List<ObjectHandle> list = new ArrayList<>(9);
                 list.add(xBoolean.TRUE);
-                list.add(xString.makeHandle(sAlgorithm));
-                list.add(xInt64.makeHandle(cKeyBits >>> 3));
-                list.add(new SecretHandle(key));
+                list.add(xString.makeHandle(frame, sAlgorithm));
+                list.add(xInt64.makeHandle(frame, cKeyBits >>> 3));
+                list.add(new SecretHandle(frame.f_context.f_container, key));
                 if (publicKey == null) {
                     list.add(xNullable.NULL);
                     list.add(xArray.ensureEmptyByteArray());
                 } else {
-                    list.add(new SecretHandle(publicKey));
+                    list.add(new SecretHandle(frame.f_context.f_container, publicKey));
                     list.add(xArray.makeByteArrayHandle(abPublic, Mutability.Constant));
                 }
                 return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
@@ -485,13 +479,13 @@ public class xRTKeyStore
             Key key = hStore.getKey(sName);
             if (key instanceof PBEKey keyPwd) {
                 return frame.assignValues(aiReturn,
-                        xBoolean.TRUE, xString.makeHandle(keyPwd.getPassword()));
+                        xBoolean.TRUE, xString.makeHandle(frame, keyPwd.getPassword()));
             }
 
             // unfortunately com.sun.crypto.provider.PBEKey is not public
             if ("PBEKey".equals(key.getClass().getSimpleName())) {
                 return frame.assignValues(aiReturn, xBoolean.TRUE,
-                        xString.makeHandle(new String(key.getEncoded(), StandardCharsets.UTF_8)));
+                        xString.makeHandle(frame, new String(key.getEncoded(), StandardCharsets.UTF_8)));
             }
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         } catch (GeneralSecurityException e) {

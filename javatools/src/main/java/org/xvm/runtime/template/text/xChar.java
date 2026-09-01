@@ -40,14 +40,8 @@ import org.xvm.util.Handy;
  */
 public class xChar
         extends xConst {
-    public static xChar INSTANCE;
-
     public xChar(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -58,7 +52,7 @@ public class xChar
 
         invalidateTypeInfo();
 
-        if (this == INSTANCE) {
+        if (isNativeInstance(xChar.class)) {
             ClassComposition clz = getCanonicalClass();
             for (int i = 0; i < cache.length; ++i) {
                 cache[i] = new JavaLong(clz, i);
@@ -122,7 +116,8 @@ public class xChar
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         switch (sPropName) {
         case "codepoint":
-            return frame.assignValue(iReturn, xUInt32.INSTANCE.makeJavaLong(((JavaLong) hTarget).getValue()));
+            return frame.assignValue(iReturn,
+                    nativeTemplates().get(xUInt32.class).makeJavaLong(((JavaLong) hTarget).getValue()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -178,18 +173,34 @@ public class xChar
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         JavaLong hThis = (JavaLong) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getValue()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hThis.getValue()));
     }
 
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    public static JavaLong makeHandle(long chValue) {
+    /**
+     * @return a Char handle owned by this template's container
+     */
+    public JavaLong makeHandle(long chValue) {
         assert chValue >= 0 & chValue <= 0x10FFFF;
-        if (chValue < 128) {
-            return INSTANCE.cache[(int)chValue];
-        }
-        return new JavaLong(INSTANCE.getCanonicalClass(), chValue);
+        return chValue < 128
+                ? cache[(int) chValue]
+                : new JavaLong(getCanonicalClass(), chValue);
+    }
+
+    /**
+     * @return a Char handle owned by the specified container
+     */
+    public static JavaLong makeHandle(Container container, long chValue) {
+        return container.nativeTemplates().get(xChar.class).makeHandle(chValue);
+    }
+
+    /**
+     * @return a Char handle owned by the container the specified frame runs in
+     */
+    public static JavaLong makeHandle(Frame frame, long chValue) {
+        return makeHandle(frame.f_context.f_container, chValue);
     }
 
     private final JavaLong[] cache = new JavaLong[128];

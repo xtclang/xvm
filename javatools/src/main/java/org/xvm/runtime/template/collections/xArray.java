@@ -22,6 +22,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -62,20 +63,15 @@ import org.xvm.util.Handy;
 public class xArray
         extends ClassTemplate
         implements IndexSupport {
-    public static xArray INSTANCE;
     public static xEnum  MUTABILITY;
 
     public xArray(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void registerNativeTemplates() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xArray.class)) {
             registerNativeTemplate(new xBitArray   (f_container, f_struct, true));
             registerNativeTemplate(new xByteArray  (f_container, f_struct, true));
             registerNativeTemplate(new xNibbleArray(f_container, f_struct, true));
@@ -88,8 +84,8 @@ public class xArray
         ConstantPool              pool         = f_container.getConstantPool();
         Map<TypeConstant, xArray> mapTemplates = new HashMap<>();
 
-        mapTemplates.put(pool.typeBit(),  xBitArray.INSTANCE);
-        mapTemplates.put(pool.typeByte(), xByteArray.INSTANCE);
+        mapTemplates.put(pool.typeBit(),  nativeTemplates().get(xBitArray.class));
+        mapTemplates.put(pool.typeByte(), nativeTemplates().get(xByteArray.class));
 
         ARRAY_TEMPLATES = mapTemplates;
 
@@ -123,7 +119,7 @@ public class xArray
         }
 
         // cache helper methods
-        FILL_FROM_ITERABLE = xRTDelegate.INSTANCE.getStructure().findMethod("fillFromIterable", 4);
+        FILL_FROM_ITERABLE = nativeTemplates().get(xRTDelegate.class).getStructure().findMethod("fillFromIterable", 4);
         CREATE_LIST_SET    = Utils.CONST_HELPER.findMethod("createListSet", 2);
 
         // cache Mutability template
@@ -322,7 +318,7 @@ public class xArray
                     int                 cArgs       = hfnSupplier.getVarCount();
                     ObjectHandle[]      ahArg       = new ObjectHandle[cArgs];
                     Utils.ValueSupplier supplier    = (frameCaller, index) -> {
-                        ahArg[0] = xInt64.makeHandle(index);
+                        ahArg[0] = xInt64.makeHandle(frame, index);
                         return hfnSupplier.call1(frameCaller, null, ahArg, Op.A_STACK);
                     };
                     return new Utils.FillArray(hArray, cSize, supplier, iReturn).doNext(frame);
@@ -485,10 +481,10 @@ public class xArray
                     : Mutability.Fixed;
 
             DelegateHandle hView  =
-                    xRTViewToBit.INSTANCE.createBitViewDelegate(hArray.m_hDelegate, mutability);
+                    nativeTemplates().get(xRTViewToBit.class).createBitViewDelegate(hArray.m_hDelegate, mutability);
 
             return frame.assignValue(iReturn,
-                    new ArrayHandle(xBitArray.INSTANCE.getCanonicalClass(), hView, mutability));
+                    new ArrayHandle(nativeTemplates().get(xBitArray.class).getCanonicalClass(), hView, mutability));
         }
 
         case "clear": {
@@ -565,7 +561,8 @@ public class xArray
             TypeConstant   typeRef   = pool.ensureParameterizedTypeConstant(
                                            pool.typeVar(), hDelegate.getType());
 
-            ClassComposition clzRef  = frame.f_context.f_container.ensureClassComposition(typeRef, xRef.INSTANCE);
+            ClassComposition clzRef  = frame.f_context.f_container.ensureClassComposition(typeRef,
+                    nativeTemplates().get(xRef.class));
             RefHandle        hRef    = new RefHandle(clzRef, "delegate", hDelegate);
 
             return frame.assignValue(iReturn, hRef);
@@ -909,7 +906,8 @@ public class xArray
      * @return a Bit array handle
      */
     public static ArrayHandle makeBitArrayHandle(byte[] abValue, int cBits, Mutability mutability) {
-        DelegateHandle hDelegate = xRTBitDelegate.INSTANCE.makeHandle(abValue, cBits, mutability);
+        DelegateHandle hDelegate = NativeTemplates.of(BIT_ARRAY_CLZ).
+                get(xRTBitDelegate.class).makeHandle(abValue, cBits, mutability);
         return new ArrayHandle(BIT_ARRAY_CLZ, hDelegate, mutability);
     }
 
@@ -917,7 +915,8 @@ public class xArray
      * @return a Boolean array handle
      */
     public static ArrayHandle makeBooleanArrayHandle(byte[] abValue, int cBits, Mutability mutability) {
-        DelegateHandle hDelegate = xRTBooleanDelegate.INSTANCE.makeHandle(abValue, cBits, mutability);
+        DelegateHandle hDelegate = NativeTemplates.of(BOOLEAN_ARRAY_CLZ).
+                get(xRTBooleanDelegate.class).makeHandle(abValue, cBits, mutability);
         return new ArrayHandle(BOOLEAN_ARRAY_CLZ, hDelegate, mutability);
     }
 
@@ -935,7 +934,8 @@ public class xArray
         if (abValue.length == 0 && mutability == Mutability.Constant) {
             return ensureEmptyByteArray();
         }
-        DelegateHandle hDelegate = xRTUInt8Delegate.INSTANCE.makeHandle(abValue, cBytes, mutability);
+        DelegateHandle hDelegate = NativeTemplates.of(BYTE_ARRAY_CLZ).
+                get(xRTUInt8Delegate.class).makeHandle(abValue, cBytes, mutability);
         return new ArrayHandle(BYTE_ARRAY_CLZ, hDelegate, mutability);
     }
 
@@ -944,8 +944,9 @@ public class xArray
      */
     public static ArrayHandle ensureEmptyByteArray() {
         if (EMPTY_BYTE_ARRAY == null) {
-            DelegateHandle hDelegate = xRTUInt8Delegate.INSTANCE.makeHandle(
-                    Handy.EMPTY_BYTE_ARRAY, 0, Mutability.Constant);
+            DelegateHandle hDelegate = NativeTemplates.of(BYTE_ARRAY_CLZ).
+                    get(xRTUInt8Delegate.class).makeHandle(
+                            Handy.EMPTY_BYTE_ARRAY, 0, Mutability.Constant);
             EMPTY_BYTE_ARRAY = new ArrayHandle(BYTE_ARRAY_CLZ, hDelegate, Mutability.Constant);
         }
         return EMPTY_BYTE_ARRAY;
@@ -955,7 +956,8 @@ public class xArray
      * @return a Char array handle
      */
     public static ArrayHandle makeCharArrayHandle(char[] achValue, Mutability mutability) {
-        DelegateHandle hDelegate = xRTCharDelegate.INSTANCE.makeHandle(achValue, mutability);
+        DelegateHandle hDelegate = NativeTemplates.of(CHAR_ARRAY_CLZ).
+                get(xRTCharDelegate.class).makeHandle(achValue, mutability);
         return new ArrayHandle(CHAR_ARRAY_CLZ, hDelegate, mutability);
     }
 
@@ -983,7 +985,8 @@ public class xArray
     protected static DelegateHandle makeDelegate(TypeComposition clzArray, int cCapacity,
                                                  ObjectHandle[] ahValue, Mutability mutability) {
         TypeConstant typeElement      = clzArray.getType().getParamType(0);
-        xRTDelegate  templateDelegate = xRTDelegate.getArrayTemplate(typeElement);
+        xRTDelegate  templateDelegate = xRTDelegate.getArrayTemplate(
+                                            clzArray.getContainer(), typeElement);
 
         return templateDelegate.createDelegate(
                 clzArray.getContainer(), typeElement, cCapacity, ahValue, mutability);

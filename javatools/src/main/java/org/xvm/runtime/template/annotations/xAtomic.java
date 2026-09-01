@@ -33,14 +33,8 @@ import org.xvm.runtime.template.reflect.xVar;
  */
 public class xAtomic
         extends xVar {
-    public static xAtomic INSTANCE;
-
     public xAtomic(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -52,19 +46,19 @@ public class xAtomic
         Map<TypeConstant, xAtomic> mapTemplates = new HashMap<>();
 
         // Int128, UInt128
-        mapTemplates.put(pool.typeInt128(),  new xAtomicInt128(xInt128.INSTANCE));
-        mapTemplates.put(pool.typeUInt128(), new xAtomicInt128(xUInt128.INSTANCE));
+        mapTemplates.put(pool.typeInt128(),  new xAtomicInt128(nativeTemplates().get(xInt128.class)));
+        mapTemplates.put(pool.typeUInt128(), new xAtomicInt128(nativeTemplates().get(xUInt128.class)));
 
-        mapTemplates.put(pool.typeInt8(),    new xAtomicIntNumber(xInt8.INSTANCE));
-        mapTemplates.put(pool.typeInt16(),   new xAtomicIntNumber(xInt16.INSTANCE));
-        mapTemplates.put(pool.typeInt32(),   new xAtomicIntNumber(xInt32.INSTANCE));
-        mapTemplates.put(pool.typeInt64(),   new xAtomicIntNumber(xInt64.INSTANCE));
+        mapTemplates.put(pool.typeInt8(),    new xAtomicIntNumber(nativeTemplates().get(xInt8.class)));
+        mapTemplates.put(pool.typeInt16(),   new xAtomicIntNumber(nativeTemplates().get(xInt16.class)));
+        mapTemplates.put(pool.typeInt32(),   new xAtomicIntNumber(nativeTemplates().get(xInt32.class)));
+        mapTemplates.put(pool.typeInt64(),   new xAtomicIntNumber(nativeTemplates().get(xInt64.class)));
 
-        mapTemplates.put(pool.typeNibble(),  new xAtomicIntNumber(xNibble.INSTANCE));
-        mapTemplates.put(pool.typeUInt8(),   new xAtomicIntNumber(xUInt8.INSTANCE));
-        mapTemplates.put(pool.typeUInt16(),  new xAtomicIntNumber(xUInt16.INSTANCE));
-        mapTemplates.put(pool.typeUInt32(),  new xAtomicIntNumber(xUInt32.INSTANCE));
-        mapTemplates.put(pool.typeUInt64(),  new xAtomicIntNumber(xUInt64.INSTANCE));
+        mapTemplates.put(pool.typeNibble(),  new xAtomicIntNumber(nativeTemplates().get(xNibble.class)));
+        mapTemplates.put(pool.typeUInt8(),   new xAtomicIntNumber(nativeTemplates().get(xUInt8.class)));
+        mapTemplates.put(pool.typeUInt16(),  new xAtomicIntNumber(nativeTemplates().get(xUInt16.class)));
+        mapTemplates.put(pool.typeUInt32(),  new xAtomicIntNumber(nativeTemplates().get(xUInt32.class)));
+        mapTemplates.put(pool.typeUInt64(),  new xAtomicIntNumber(nativeTemplates().get(xUInt64.class)));
 
         NUMBER_TEMPLATES = mapTemplates;
 

@@ -32,14 +32,8 @@ import org.xvm.type.Decimal128;
  */
 public class xFPLiteral
         extends xConst {
-    public static xFPLiteral INSTANCE;
-
     public xFPLiteral(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -145,15 +139,15 @@ public class xFPLiteral
 
         case "toDec32":
             return frame.assignValue(iReturn,
-                    xDec32.INSTANCE.makeHandle(new Decimal32(hLiteral.getValue())));
+                    nativeTemplates().get(xDec32.class).makeHandle(new Decimal32(hLiteral.getValue())));
 
         case "toDec64":
             return frame.assignValue(iReturn,
-                    xDec64.INSTANCE.makeHandle(new Decimal64(hLiteral.getValue())));
+                    nativeTemplates().get(xDec64.class).makeHandle(new Decimal64(hLiteral.getValue())));
 
         case "toDec128":
             return frame.assignValue(iReturn,
-                    xDec128.INSTANCE.makeHandle(new Decimal128(hLiteral.getValue())));
+                    nativeTemplates().get(xDec128.class).makeHandle(new Decimal128(hLiteral.getValue())));
 
         case "toFloat128":
         case "toFloatN":
@@ -175,7 +169,7 @@ public class xFPLiteral
     @Override
     protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         FPNHandle hLiteral = (FPNHandle) hTarget;
-        return frame.assignValue(iReturn, xInt64.makeHandle(hLiteral.getValue().hashCode()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hLiteral.getValue().hashCode()));
     }
 
     @Override
@@ -201,7 +195,8 @@ public class xFPLiteral
         public StringHandle getText() {
             StringHandle hText = m_hText;
             if (hText == null) {
-                m_hText = hText = xString.makeHandle(m_decValue.toString());
+                m_hText = hText = xString.makeHandle(getComposition().getContainer(),
+                        m_decValue.toString());
             }
             return hText;
         }

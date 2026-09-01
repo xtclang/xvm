@@ -11,6 +11,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
@@ -22,17 +23,17 @@ import org.xvm.runtime.template.numbers.xInt64;
  */
 public class Identity
         extends ClassTemplate {
-    public static Identity INSTANCE;
-    public static ClassConstant INCEPTION_CLASS;
+    /**
+     * The rebased inception class for this container's Identity template.
+     */
+    private final ClassConstant f_idInception;
 
     public Identity(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance) {
-            INSTANCE = this;
-            INCEPTION_CLASS = new NativeRebaseConstant(
-                    (ClassConstant) structure.getIdentityConstant());
-        }
+        f_idInception = fInstance
+                ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
+                : null;
     }
 
     @Override
@@ -45,7 +46,7 @@ public class Identity
 
     @Override
     protected ClassConstant getInceptionClassConstant() {
-        return INCEPTION_CLASS;
+        return f_idInception;
     }
 
     @Override
@@ -60,7 +61,7 @@ public class Identity
 
         case "hashCode": {
             IdentityHandle hId = (IdentityHandle) ahArg[1];
-            return frame.assignValue(iReturn, xInt64.makeHandle(hId.hashCode()));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, hId.hashCode()));
         }
         }
 
@@ -80,7 +81,8 @@ public class Identity
      * Create an identity handle for a mutable or non-hashable object.
      */
     public static IdentityHandle ensureIdentity(ObjectHandle h) {
-        return new IdentityHandle(INSTANCE.getCanonicalClass(), h);
+        return new IdentityHandle(NativeTemplates.of(h.getComposition()).
+                get(Identity.class).getCanonicalClass(), h);
     }
 
 

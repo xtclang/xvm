@@ -38,14 +38,8 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle
  */
 public class xLocalClock
         extends xService {
-    public static xLocalClock INSTANCE;
-
     public xLocalClock(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -131,10 +125,11 @@ public class xLocalClock
             return frame.raiseException(e.getMessage());
         }
 
-        FunctionHandle hCancel = new NativeFunctionHandle((_, _, _) -> {
-            alarm.cancel();
-            return Op.R_NEXT;
-        });
+        FunctionHandle hCancel = new NativeFunctionHandle(frame.f_context.f_container,
+                (_, _, _) -> {
+                    alarm.cancel();
+                    return Op.R_NEXT;
+                });
 
         return frame.assignValue(iReturn, hCancel);
     }
@@ -175,11 +170,11 @@ public class xLocalClock
     // -----  helpers ------------------------------------------------------------------------------
 
     protected JavaLong epochMillis(Frame frame) {
-        return xInt64.makeHandle(System.currentTimeMillis());
+        return xInt64.makeHandle(frame, System.currentTimeMillis());
     }
 
     protected JavaLong timezoneMillis(Frame frame) {
-        return xInt64.makeHandle(TimeZone.getDefault().getOffset(System.currentTimeMillis()));
+        return xInt64.makeHandle(frame, TimeZone.getDefault().getOffset(System.currentTimeMillis()));
     }
 
     /**

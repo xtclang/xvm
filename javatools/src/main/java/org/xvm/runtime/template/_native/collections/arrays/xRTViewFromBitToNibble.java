@@ -26,14 +26,8 @@ import org.xvm.runtime.template.numbers.xNibble;
  */
 public class xRTViewFromBitToNibble
         extends xRTViewFromBit {
-    public static xRTViewFromBitToNibble INSTANCE;
-
     public xRTViewFromBitToNibble(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -70,7 +64,7 @@ public class xRTViewFromBitToNibble
         if (tSource instanceof BitView tView) {
             byte[] abBits = tView.getBytes(hSource, ofStart/2, cSize/2, fReverse);
 
-            return xRTNibbleDelegate.INSTANCE.packHandle(abBits, mutability);
+            return nativeTemplates().get(xRTNibbleDelegate.class).packHandle(abBits, mutability);
         }
 
         throw new UnsupportedOperationException();
@@ -90,7 +84,7 @@ public class xRTViewFromBitToNibble
             } else {
                 nNibble = nNibble & 0x0F;
             }
-            return frame.assignValue(iReturn, xNibble.INSTANCE.makeJavaLong(nNibble));
+            return frame.assignValue(iReturn, nativeTemplates().get(xNibble.class).makeJavaLong(nNibble));
         }
 
         throw new UnsupportedOperationException();

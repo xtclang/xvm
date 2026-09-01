@@ -48,14 +48,8 @@ import org.xvm.runtime.template.numbers.xUInt64;
  */
 public class xRTRandom
         extends xService {
-    public static xRTRandom INSTANCE;
-
     public xRTRandom(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -151,42 +145,49 @@ public class xRTRandom
             return frame.assignValue(iReturn, xBit.makeHandle(rnd(hTarget).nextBoolean()));
 
         case "nibble":
-            return frame.assignValue(iReturn, xNibble.makeHandle(rnd(hTarget).nextInt()));
+            return frame.assignValue(iReturn, xNibble.makeHandle(frame, rnd(hTarget).nextInt()));
 
         case "int8":
-            return frame.assignValue(iReturn, xInt8.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+            return frame.assignValue(iReturn, nativeTemplates().get(xInt8.class).makeJavaLong(rnd(hTarget).nextInt()));
 
         case "int16":
-            return frame.assignValue(iReturn, xInt16.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+            return frame.assignValue(iReturn, nativeTemplates().get(xInt16.class).makeJavaLong(rnd(hTarget).nextInt()));
 
         case "int32":
-            return frame.assignValue(iReturn, xInt32.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+            return frame.assignValue(iReturn, nativeTemplates().get(xInt32.class).makeJavaLong(rnd(hTarget).nextInt()));
 
         case "int64":
-            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(rnd(hTarget).nextLong()));
+            return frame.assignValue(iReturn,
+                    nativeTemplates().get(xInt64.class).makeJavaLong(rnd(hTarget).nextLong()));
 
         case "uint8":
-            return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+            return frame.assignValue(iReturn, nativeTemplates().get(xUInt8.class).makeJavaLong(rnd(hTarget).nextInt()));
 
         case "uint16":
-            return frame.assignValue(iReturn, xUInt16.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+            return frame.assignValue(iReturn,
+                    nativeTemplates().get(xUInt16.class).makeJavaLong(rnd(hTarget).nextInt()));
 
         case "uint32":
-            return frame.assignValue(iReturn, xUInt32.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+            return frame.assignValue(iReturn,
+                    nativeTemplates().get(xUInt32.class).makeJavaLong(rnd(hTarget).nextInt()));
 
         case "uint64":
-            return frame.assignValue(iReturn, xUInt64.INSTANCE.makeJavaLong(rnd(hTarget).nextLong()));
+            return frame.assignValue(iReturn,
+                    nativeTemplates().get(xUInt64.class).makeJavaLong(rnd(hTarget).nextLong()));
 
         case "dec64":
             // Float64 has more precision than Dec64, so this should work fine, although there
             // won't be as solid of a guarantee on a perfect distribution of random values
-            return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(rnd(hTarget).nextDouble()));
+            return frame.assignValue(iReturn,
+                    nativeTemplates().get(xDec64.class).makeHandle(rnd(hTarget).nextDouble()));
 
         case "float32":
-            return frame.assignValue(iReturn, xFloat32.INSTANCE.makeHandle(rnd(hTarget).nextFloat()));
+            return frame.assignValue(iReturn,
+                    nativeTemplates().get(xFloat32.class).makeHandle(rnd(hTarget).nextFloat()));
 
         case "float64":
-            return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(rnd(hTarget).nextDouble()));
+            return frame.assignValue(iReturn,
+                    nativeTemplates().get(xFloat64.class).makeHandle(rnd(hTarget).nextDouble()));
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -242,7 +243,7 @@ public class xRTRandom
                     "Illegal exclusive maximum (" + lMax +"); maximum must be > 0"));
         }
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(computeRandom(rnd, lMax)));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, computeRandom(rnd, lMax)));
     }
 
     /**

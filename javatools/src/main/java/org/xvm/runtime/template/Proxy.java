@@ -32,12 +32,8 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
  */
 public class Proxy
         extends xService {
-    public static Proxy INSTANCE;
-
     public Proxy(Container container) {
-        super(container, xObject.INSTANCE.getStructure(), false);
-
-        INSTANCE = this;
+        super(container, container.nativeTemplates().get(xObject.class).getStructure(), false);
     }
 
     @Override
@@ -211,7 +207,7 @@ public class Proxy
      * service boundaries.
      */
     private FunctionHandle makeAsyncNativeHandle(ObjectHandle hTarget, MethodStructure method) {
-        return new AsyncHandle(INSTANCE.f_container, method) {
+        return new AsyncHandle(f_container, method) {
             @Override
             protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService) {
                 return hTarget;

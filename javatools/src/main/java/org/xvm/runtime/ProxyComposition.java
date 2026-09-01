@@ -20,7 +20,8 @@ public class ProxyComposition
     public ProxyComposition(TypeComposition clzOrigin, TypeConstant typeProxy) {
         super(clzOrigin);
 
-        f_typeProxy = typeProxy;
+        f_typeProxy     = typeProxy;
+        f_templateProxy = NativeTemplates.of(clzOrigin.getContainer()).get(Proxy.class);
     }
 
     /**
@@ -32,12 +33,12 @@ public class ProxyComposition
 
     @Override
     public OpSupport getSupport() {
-        return Proxy.INSTANCE;
+        return getTemplate();
     }
 
     @Override
     public ClassTemplate getTemplate() {
-        return Proxy.INSTANCE;
+        return f_templateProxy;
     }
 
     @Override
@@ -117,4 +118,10 @@ public class ProxyComposition
      * The revealed (proxying) type.
      */
     private final TypeConstant f_typeProxy;
+
+    /**
+     * The Proxy template of the container this composition belongs to; resolved once, since
+     * getSupport()/getTemplate() sit on the op-dispatch path.
+     */
+    private final ClassTemplate f_templateProxy;
 }

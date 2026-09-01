@@ -52,14 +52,8 @@ import org.xvm.runtime.template._native.mgmt.xCoreRepository;
  */
 public class xRTFileTemplate
         extends xRTComponentTemplate {
-    public static xRTFileTemplate INSTANCE;
-
     public xRTFileTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -93,12 +87,12 @@ public class xRTFileTemplate
 
         case "kind":
             return Utils.assignInitializedEnum(frame,
-                    INSTANCE.f_container.getTemplate("reflect.FileTemplate.Kind", xEnum.class)
-                            .getEnumByName(fileStruct.getFileKind().name()),
+                    f_container.getTemplate("reflect.FileTemplate.Kind", xEnum.class).
+                            getEnumByName(fileStruct.getFileKind().name()),
                     iReturn);
 
         case "moduleNames":
-            return frame.assignValue(iReturn, xString.makeArrayHandle(
+            return frame.assignValue(iReturn, xString.makeArrayHandle(frame.f_context.f_container,
                     fileStruct.buildFileInfo().modules().keySet().toArray(new String[0])));
 
         case "resolved":
@@ -114,10 +108,10 @@ public class xRTFileTemplate
                     BasicFileAttributes attr =
                             Files.readAttributes(fileOS.toPath(), BasicFileAttributes.class);
                     return frame.assignValue(iReturn,
-                            xInt64.makeHandle(attr.lastModifiedTime().toMillis()));
+                            xInt64.makeHandle(frame, attr.lastModifiedTime().toMillis()));
                 } catch (IOException ignore) {}
             }
-            return frame.assignValue(iReturn, xInt64.makeHandle(0L));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, 0L));
         }
         }
 
@@ -296,7 +290,8 @@ public class xRTFileTemplate
         }
         assert index == cModules;
 
-        TypeComposition clzArray = container.resolveClass(ensureComponentArrayType());
+        TypeComposition clzArray = container.resolveClass(
+                ensureComponentArrayType(container));
         return frame.assignValue(iReturn,
                 xArray.createImmutableArray(clzArray, ahModule));
 
@@ -305,7 +300,7 @@ public class xRTFileTemplate
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
         FileStructure module = componentTemplateHandle(hTarget).getFileStructure();
-        return frame.assignValue(iReturn, xString.makeHandle(module.getModuleId().getName()));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, module.getModuleId().getName()));
     }
 
 
@@ -321,8 +316,9 @@ public class xRTFileTemplate
      */
     public static ComponentTemplateHandle makeHandle(Container container, FileStructure fileStruct) {
         // note: no need to initialize the struct because there are no natural fields
-        TypeComposition clzFile = INSTANCE.ensureClass(container,
-                INSTANCE.getCanonicalType(), FILE_TEMPLATE_TYPE);
+        xRTFileTemplate template = container.nativeTemplates().get(xRTFileTemplate.class);
+        TypeComposition clzFile  = template.ensureClass(container, template.getCanonicalType(),
+                FILE_TEMPLATE_TYPE);
         return new ComponentTemplateHandle(clzFile, fileStruct);
     }
 

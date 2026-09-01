@@ -18,14 +18,8 @@ import org.xvm.runtime.template.numbers.xInt128;
  */
 public class xRTInt128Delegate
         extends LongLongDelegate {
-    public static xRTInt128Delegate INSTANCE;
-
     public xRTInt128Delegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, true);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -42,6 +36,6 @@ public class xRTInt128Delegate
 
     @Override
     protected ObjectHandle makeElementHandle(LongLong ll) {
-        return xInt128.INSTANCE.makeHandle(ll);
+        return nativeTemplates().get(xInt128.class).makeHandle(ll);
     }
    }

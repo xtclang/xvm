@@ -29,14 +29,8 @@ import org.xvm.runtime.template.collections.xArray;
  */
 public class xListMap
         extends ClassTemplate {
-    public static xListMap INSTANCE;
-
     public xListMap(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

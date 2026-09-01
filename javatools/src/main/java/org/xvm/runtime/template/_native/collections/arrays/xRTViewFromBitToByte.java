@@ -26,14 +26,8 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
  */
 public class xRTViewFromBitToByte
         extends xRTViewFromBit {
-    public static xRTViewFromBitToByte INSTANCE;
-
     public xRTViewFromBitToByte(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -86,7 +80,7 @@ public class xRTViewFromBitToByte
         if (tSource instanceof ByteView tView) {
             byte[] abBits = tView.getBytes(hSource, ofStart, cSize, fReverse);
 
-            return xRTUInt8Delegate.INSTANCE.makeHandle(abBits, cSize, mutability);
+            return nativeTemplates().get(xRTUInt8Delegate.class).makeHandle(abBits, cSize, mutability);
         }
 
         throw new UnsupportedOperationException();
@@ -101,7 +95,7 @@ public class xRTViewFromBitToByte
         if (tSource instanceof ByteView tView) {
             // the underlying delegate is a BitView, which is a ByteView
             return frame.assignValue(iReturn,
-                    xUInt8.INSTANCE.makeJavaLong(tView.extractByte(hSource, lIndex)));
+                    nativeTemplates().get(xUInt8.class).makeJavaLong(tView.extractByte(hSource, lIndex)));
         }
 
         throw new UnsupportedOperationException();

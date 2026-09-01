@@ -57,14 +57,8 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  */
 public class xConst
         extends ClassTemplate {
-    public static xConst INSTANCE;
-
     public xConst(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -80,7 +74,7 @@ public class xConst
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xConst.class)) {
             // equals and Comparable support
             getStructure().findMethod("equals",   3).markNative();
             getStructure().findMethod("compare",  3).markNative();
@@ -192,7 +186,7 @@ public class xConst
             }
 
             ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
-            ahArg[0] = xString.makeHandle(constLiteral.getValue());
+            ahArg[0] = xString.makeHandle(frame, constLiteral.getValue());
 
             return construct(frame, constructor, clz, null, ahArg, Op.A_STACK);
         }
@@ -357,7 +351,7 @@ public class xConst
     protected int callEqualsImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         // Note: the actual types could be subclasses of the specified class
-        return this == INSTANCE
+        return isNativeInstance(xConst.class)
                 ? frame.raiseException(xException.abstractMethod(frame, "Const.compare()"))
                 : new Equals((GenericHandle) hValue1, (GenericHandle) hValue2,
                     (ClassComposition) clazz, iReturn).doNext(frame);
@@ -367,7 +361,7 @@ public class xConst
     protected int callCompareImpl(Frame frame, TypeComposition clazz,
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         // Note: the actual types could be subclasses of the specified class
-        return this == INSTANCE
+        return isNativeInstance(xConst.class)
                 ? frame.raiseException(xException.abstractMethod(frame, "Const.compare()"))
                 : new Compare((GenericHandle) hValue1, (GenericHandle) hValue2,
                         (ClassComposition) clazz, iReturn).doNext(frame);
@@ -384,7 +378,7 @@ public class xConst
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int callHashCode(Frame frame, TypeConstant type, ObjectHandle hValue, int iReturn) {
-        return this == INSTANCE
+        return isNativeInstance(xConst.class)
                 ? frame.raiseException(xException.abstractMethod(frame, "Const.hashCode()"))
                 : buildHashCode(frame, getCanonicalClass(frame.f_context.f_container), hValue, iReturn);
     }
@@ -435,7 +429,7 @@ public class xConst
 
             return frame.call1(FN_ESTIMATE_LENGTH, null, ahVars, iReturn);
         } else {
-            return frame.assignValue(iReturn, xInt64.makeHandle(2));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, 2));
         }
     }
 
@@ -762,7 +756,7 @@ public class xConst
                 lResult = clzBase.hashCode();
             }
 
-            JavaLong hHash = xInt64.makeHandle(lResult);
+            JavaLong hHash = xInt64.makeHandle(frameCaller, lResult);
             if (fCache) {
                 hConst.setField(frameCaller, PROP_HASH, hHash);
             }

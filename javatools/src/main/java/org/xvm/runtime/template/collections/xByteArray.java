@@ -31,14 +31,8 @@ import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToFloa
  */
 public class xByteArray
         extends xArray {
-    public static xByteArray INSTANCE;
-
     public xByteArray(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -85,7 +79,7 @@ public class xByteArray
         case "asInt8Array": {
             ArrayHandle    hArray     = (ArrayHandle) hTarget;
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hView      = xRTViewFromByteToInt8.INSTANCE.createByteView(
+            DelegateHandle hView      = nativeTemplates().get(xRTViewFromByteToInt8.class).createByteView(
                                                 hArray.m_hDelegate, mutability, 1);
             return frame.assignValue(iReturn,
                     new ArrayHandle(getInt8ArrayComposition(), hView, mutability));
@@ -99,7 +93,7 @@ public class xByteArray
             }
 
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hView      = xRTViewFromByteToInt16.INSTANCE.createByteView(
+            DelegateHandle hView      = nativeTemplates().get(xRTViewFromByteToInt16.class).createByteView(
                                                 hArray.m_hDelegate, mutability, 2);
             return frame.assignValue(iReturn,
                     new ArrayHandle(getInt16ArrayComposition(), hView, mutability));
@@ -113,7 +107,7 @@ public class xByteArray
             }
 
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hView      = xRTViewFromByteToInt64.INSTANCE.createByteView(
+            DelegateHandle hView      = nativeTemplates().get(xRTViewFromByteToInt64.class).createByteView(
                                                 hArray.m_hDelegate, mutability, 8);
             return frame.assignValue(iReturn,
                     new ArrayHandle(getInt64ArrayComposition(), hView, mutability));
@@ -127,7 +121,7 @@ public class xByteArray
             }
 
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hView      = xRTViewFromByteToFloat64.INSTANCE.createByteView(
+            DelegateHandle hView      = nativeTemplates().get(xRTViewFromByteToFloat64.class).createByteView(
                                                 hArray.m_hDelegate, mutability, 8);
             return frame.assignValue(iReturn,
                     new ArrayHandle(getFloat64ArrayComposition(), hView, mutability));

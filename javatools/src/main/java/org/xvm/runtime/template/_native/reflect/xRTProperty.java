@@ -38,14 +38,8 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xRTProperty
         extends xConst {
-    public static xRTProperty INSTANCE;
-
     public xRTProperty(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -177,21 +171,24 @@ public class xRTProperty
      * @return the resulting {@link PropertyHandle} or a {@link DeferredCallHandle}
      */
     public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, PropertyInfo infoProp) {
-        Annotation[] aAnno    = infoProp.getPropertyAnnotations();
-        TypeConstant typeProp = infoProp.getIdentity().getValueType(frame.poolContext(), typeTarget);
+        Container    container = frame.f_context.f_container;
+        Annotation[] aAnno     = infoProp.getPropertyAnnotations();
+        TypeConstant typeProp  = infoProp.getIdentity().getValueType(frame.poolContext(), typeTarget);
 
         if (aAnno != null && aAnno.length > 0) {
             typeProp = frame.poolContext().ensureAnnotatedTypeConstant(typeProp, aAnno);
 
-            TypeComposition clzProp = INSTANCE.ensureClass(frame.f_context.f_container, typeProp);
+            TypeComposition clzProp = container.nativeTemplates().
+                    get(xRTProperty.class).ensureClass(container, typeProp);
             PropertyHandle  hStruct = new PropertyHandle(clzProp.ensureAccess(Access.STRUCT));
 
-            int iResult = INSTANCE.proceedConstruction(
+            int iResult = container.nativeTemplates().get(xRTProperty.class).proceedConstruction(
                                 frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK);
             return frame.popResultImmutable(iResult);
         }
 
-        return new PropertyHandle(INSTANCE.ensureClass(frame.f_context.f_container, typeProp));
+        return new PropertyHandle(container.nativeTemplates().
+                get(xRTProperty.class).ensureClass(container, typeProp));
     }
 
     /**
@@ -301,7 +298,7 @@ public class xRTProperty
      * Implements property: name.get()
      */
     public int getPropertyName(Frame frame, PropertyHandle hProp, int iReturn) {
-        return frame.assignValue(iReturn, xString.makeHandle(hProp.getPropertyConstant().getName()));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, hProp.getPropertyConstant().getName()));
     }
 
     /**

@@ -23,14 +23,8 @@ import org.xvm.runtime.template.collections.xByteArray;
  */
 public class xRTBuffer
         extends ClassTemplate {
-    public static xRTBuffer INSTANCE;
-
     public xRTBuffer(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

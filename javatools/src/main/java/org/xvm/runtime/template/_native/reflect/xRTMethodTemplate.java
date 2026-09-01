@@ -31,14 +31,8 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xRTMethodTemplate
         extends xRTComponentTemplate {
-    public static xRTMethodTemplate INSTANCE;
-
     public xRTMethodTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -66,11 +60,13 @@ public class xRTMethodTemplate
 
         case "parameterCount":
             return frame.assignValue(iReturn,
-                                     xInt64.makeHandle(((MethodStructure) hMethod.getComponent()).getParamCount()));
+                                     xInt64.makeHandle(frame,
+                                             ((MethodStructure) hMethod.getComponent()).getParamCount()));
 
         case "returnCount":
             return frame.assignValue(iReturn,
-                                     xInt64.makeHandle(((MethodStructure) hMethod.getComponent()).getReturnCount()));
+                                     xInt64.makeHandle(frame,
+                                             ((MethodStructure) hMethod.getComponent()).getReturnCount()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -133,7 +129,7 @@ public class xRTMethodTemplate
 
         ObjectHandle[] ahReturn = new ObjectHandle[5];
 
-        ahReturn[0] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
+        ahReturn[0] = sName == null ? xNullable.NULL : xString.makeHandle(frame, sName);
         ahReturn[1] = xRTTypeTemplate.makeHandle(frame.f_context.f_container, parameter.getType());
         ahReturn[2] = xBoolean.makeHandle(parameter.isTypeParameter());
         ahReturn[3] = xBoolean.makeHandle(fDefault);
@@ -168,7 +164,7 @@ public class xRTMethodTemplate
 
         ObjectHandle[] ahReturn = new ObjectHandle[3];
 
-        ahReturn[0] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
+        ahReturn[0] = sName == null ? xNullable.NULL : xString.makeHandle(frame, sName);
         ahReturn[1] = xRTTypeTemplate.makeHandle(frame.f_context.f_container, parameter.getType());
         ahReturn[2] = xBoolean.makeHandle(parameter.isConditionalReturn());
 
@@ -181,10 +177,12 @@ public class xRTMethodTemplate
     /**
      * @return the TypeComposition for an RTMethodTemplate
      */
-    public static TypeComposition ensureMethodTemplateComposition() { // TODO: use the container
+    // TODO: use the container - this still caches one composition process-wide
+    public static TypeComposition ensureMethodTemplateComposition(Container container) {
         TypeComposition clz = METHOD_TEMPLATE_COMP;
         if (clz == null) {
-            ClassTemplate templateRT   = INSTANCE;
+            ClassTemplate templateRT   = container.nativeTemplates().
+                    get(xRTMethodTemplate.class);
             ConstantPool  pool         = templateRT.pool();
             TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
             METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);
@@ -202,8 +200,8 @@ public class xRTMethodTemplate
      *
      * @return the newly created handle
      */
-    static ComponentTemplateHandle makeHandle(MethodStructure method) {
-        return new ComponentTemplateHandle(ensureMethodTemplateComposition(), method);
+    static ComponentTemplateHandle makeHandle(Container container, MethodStructure method) {
+        return new ComponentTemplateHandle(ensureMethodTemplateComposition(container), method);
     }
 
 

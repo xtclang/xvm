@@ -22,14 +22,8 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  */
 public class xInjector
         extends xService {
-    public static xInjector INSTANCE;
-
     public xInjector(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

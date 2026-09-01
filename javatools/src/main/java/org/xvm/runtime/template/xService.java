@@ -46,27 +46,23 @@ import org.xvm.runtime.template._native.temporal.xNanosTimer;
  */
 public class xService
         extends ClassTemplate {
-    public static xService INSTANCE;
-    public static ClassConstant INCEPTION_CLASS;
+    /**
+     * The rebased inception class for this container's Service template; null unless this is
+     * the container's native Service template.
+     */
+    private final ClassConstant f_idInception;
 
     public xService(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance) {
-            INSTANCE = this;
-            INCEPTION_CLASS = new NativeRebaseConstant(
-                (ClassConstant) structure.getIdentityConstant());
-        }
-    }
-
-    @Override
-    public void registerNativeTemplates() {
-        new Proxy(f_container); // this initializes the Proxy.INSTANCE reference
+        f_idInception = fInstance
+                ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
+                : null;
     }
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xService.class)) {
             SYNCHRONICITY = (xEnum) f_container.getTemplate("Service.Synchronicity");
 
             // since Service is an interface, we cannot annotate the properties naturally and need to do
@@ -85,7 +81,7 @@ public class xService
 
     @Override
     protected ClassConstant getInceptionClassConstant() {
-        return this == INSTANCE ? INCEPTION_CLASS : (ClassConstant) super.getInceptionClassConstant();
+        return isNativeInstance(xService.class) ? f_idInception : (ClassConstant) super.getInceptionClassConstant();
     }
 
     /**
@@ -320,7 +316,7 @@ public class xService
             return frame.f_context.f_container.ensureTypeSystemHandle(frame, iReturn);
 
         case "serviceName":
-            return frame.assignValue(iReturn, xString.makeHandle(hService.f_context.f_sName));
+            return frame.assignValue(iReturn, xString.makeHandle(frame, hService.f_context.f_sName));
 
         case "serviceControl":
             return frame.assignValue(iReturn, xRTServiceControl.makeHandle(hService.f_context));

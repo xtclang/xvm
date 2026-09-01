@@ -46,14 +46,8 @@ import org.xvm.util.ConsoleLog;
  */
 public class xTerminalConsole
         extends xService {
-    public static xTerminalConsole INSTANCE;
-
     public xTerminalConsole(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -139,19 +133,19 @@ public class xTerminalConsole
                     String sLine = CONSOLE_IN.readLine();
                     hLine = sLine == null
                         ? xString.EMPTY_STRING
-                        : xString.makeHandle(sLine);
+                        : xString.makeHandle(frame, sLine);
                 } else {
                     char[] achLine = CONSOLE.readPassword();
                     hLine = achLine == null
                         ? xString.EMPTY_STRING
-                        : xString.makeHandle(achLine);
+                        : xString.makeHandle(frame, achLine);
                 }
             } catch (IOException e) {
                 return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
             }
         } else {
             try {
-                hLine = xString.makeHandle(READER.readLine(sPrompt, fEcho ? null : '\0'));
+                hLine = xString.makeHandle(frame, READER.readLine(sPrompt, fEcho ? null : '\0'));
             } catch (UserInterruptException e) {
                 System.exit(0);
                 return 0; // not reachable

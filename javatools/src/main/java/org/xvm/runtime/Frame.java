@@ -236,7 +236,7 @@ public class Frame
      * @return a new frame
      */
     public Frame createWaitFrame(CompletableFuture<ObjectHandle> cfResult, int iReturn) {
-        return createWaitFrame(xFuture.makeHandle(cfResult), iReturn);
+        return createWaitFrame(xFuture.makeHandle(f_context.f_container, cfResult), iReturn);
     }
 
     /**
@@ -280,7 +280,7 @@ public class Frame
             CompletableFuture<ObjectHandle> cfReturn =
                     cfResult.thenApply(ahResult -> ahResult[iResult]);
 
-            ahFuture[i] = xFuture.makeHandle(cfReturn);
+            ahFuture[i] = xFuture.makeHandle(f_context.f_container, cfReturn);
 
             frameNext.f_aInfo[i] = new VarInfo(xFuture.TYPE, VAR_DYNAMIC_REF);
         }
@@ -1047,7 +1047,7 @@ public class Frame
         }
 
         if (isFuture(iReturn)) {
-            return assignValue(iReturn, xFuture.makeHandle(cfResult));
+            return assignValue(iReturn, xFuture.makeHandle(f_context.f_container, cfResult));
         }
 
         // the wait frame will deal with exceptions

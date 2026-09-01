@@ -11,6 +11,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
@@ -101,7 +102,7 @@ public abstract class LongBasedDelegate
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                xInt64.makeHandle((long) hDelegate.m_alValue.length * f_nValuesPerLong));
+                xInt64.makeHandle(frame, (long) hDelegate.m_alValue.length * f_nValuesPerLong));
     }
 
     @Override
@@ -577,15 +578,15 @@ public abstract class LongBasedDelegate
         public boolean checkAssign(ObjectHandle hValue) {
             ClassTemplate templateValue = hValue.getTemplate();
             return switch (getTemplate()) {
-                case xRTInt16Delegate   _ -> templateValue == xInt16.INSTANCE;
-                case xRTUInt16Delegate  _ -> templateValue == xUInt16.INSTANCE;
-                case xRTInt32Delegate   _ -> templateValue == xInt32.INSTANCE;
-                case xRTUInt32Delegate  _ -> templateValue == xUInt32.INSTANCE;
-                case xRTInt64Delegate   _ -> templateValue == xInt64.INSTANCE;
-                case xRTUInt64Delegate  _ -> templateValue == xUInt64.INSTANCE;
-                case xRTInt128Delegate  _ -> templateValue == xInt128.INSTANCE;
-                case xRTUInt128Delegate _ -> templateValue == xUInt128.INSTANCE;
-                case xRTNibbleDelegate _  -> templateValue == xNibble.INSTANCE;
+                case xRTInt16Delegate   _ -> templateValue == NativeTemplates.of(getComposition()).get(xInt16.class);
+                case xRTUInt16Delegate  _ -> templateValue == NativeTemplates.of(getComposition()).get(xUInt16.class);
+                case xRTInt32Delegate   _ -> templateValue == NativeTemplates.of(getComposition()).get(xInt32.class);
+                case xRTUInt32Delegate  _ -> templateValue == NativeTemplates.of(getComposition()).get(xUInt32.class);
+                case xRTInt64Delegate   _ -> templateValue == NativeTemplates.of(getComposition()).get(xInt64.class);
+                case xRTUInt64Delegate  _ -> templateValue == NativeTemplates.of(getComposition()).get(xUInt64.class);
+                case xRTInt128Delegate  _ -> templateValue == NativeTemplates.of(getComposition()).get(xInt128.class);
+                case xRTUInt128Delegate _ -> templateValue == NativeTemplates.of(getComposition()).get(xUInt128.class);
+                case xRTNibbleDelegate _  -> templateValue == NativeTemplates.of(getComposition()).get(xNibble.class);
                 default                   -> hValue.getType().isA(getElementType());
             };
         }
