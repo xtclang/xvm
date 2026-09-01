@@ -485,6 +485,11 @@ public class ClassComposition
     }
 
     @Override
+    public boolean isFieldLayoutComputed() {
+        return m_mapFields != null;
+    }
+
+    @Override
     public FieldInfo getFieldInfo(Object id) {
         if (id instanceof PropertyConstant idProp &&
                 idProp.getComponent().getAccess() != Access.PRIVATE) {

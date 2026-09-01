@@ -106,21 +106,37 @@ public class ParamInfo {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append("<")
           .append(isActualTypeSpecified() ? getActualType().getValueString() : getName());
 
+        // Display purity (see TypeInfo.toString()): the historical test was
+        //     !typeConstraint.equals(typeConstraint.getConstantPool().typeObject())
+        //         && !typeConstraint.isTuple()
+        // where typeObject() interns the canonical Object type, and isTuple() on a terminal type
+        // both writes back the resolved constant and throws IllegalStateException when the class
+        // structure is not loaded - taking down the render of the whole enclosing TypeInfo. The
+        // suppressed suffixes are identified by their already-computed value strings instead.
         TypeConstant typeConstraint = getConstraintType();
-        if (!typeConstraint.equals(typeConstraint.getConstantPool().typeObject()) &&
-            !typeConstraint.isTuple()) {
+        String       sConstraint    = typeConstraint.getValueString();
+        if (!"Object".equals(sConstraint) && !isTupleValueString(sConstraint)) {
             sb.append(" extends ")
-              .append(typeConstraint.getValueString());
+              .append(sConstraint);
         }
 
         sb.append(">");
 
         return sb.toString();
+    }
+
+    /**
+     * @return true iff the rendered type is the {@code Tuple} class, with or without type
+     *         parameters; decided on the rendered text so that no resolution or interning happens
+     *         on a display path
+     */
+    private static boolean isTupleValueString(String sType) {
+        return sType.equals("Tuple") || sType.startsWith("Tuple<");
     }
 
     // ----- fields --------------------------------------------------------------------------------

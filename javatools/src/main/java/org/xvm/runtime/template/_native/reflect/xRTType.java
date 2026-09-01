@@ -307,8 +307,11 @@ public class xRTType
         TypeHandle hType = (TypeHandle) hTarget;
         switch (method.getName()) {
         case "dump":
+            // Type.dump() is Ecstasy asking for the FULL member dump, so it names the forced
+            // rendering explicitly. (The no-arg TypeInfo.toString() is the pure header now, because
+            // that is the one Java and a debugger call implicitly.)
             return frame.assignValue(iReturn,
-                xString.makeHandle(hType.getUnsafeDataType().ensureTypeInfo().toString()));
+                xString.makeHandle(hType.getUnsafeDataType().ensureTypeInfo().dump()));
         }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }
@@ -1914,7 +1917,12 @@ public class xRTType
 
         @Override
         public String toString() {
-            return "(Type) " + getDataType().getValueString();
+            // Display purity (see TypeInfo.toString()): getDataType() goes through getType(),
+            // which augments - augmentType() calls freeze() because this handle is constructed
+            // non-mutable - and getParamType(0) falls back to pool.typeObject() when there is no
+            // parameter. Both intern, so a Type variable grew the very pool it describes.
+            TypeConstant typeData = getComposition().getType().peekParamType(0);
+            return "(Type) " + (typeData == null ? "<deferred>" : typeData.getValueString());
         }
 
         private final TypeConstant f_typeForeign;

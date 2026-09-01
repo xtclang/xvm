@@ -513,7 +513,7 @@ public class PropertyBody
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append(m_type.getValueString())
           .append(' ')
@@ -542,17 +542,20 @@ public class PropertyBody
             sb.append(", has-code");
         }
 
-        if (isInjected()) {
-            sb.append(", @Inject");
-        }
-        if (isExplicitAbstract()) {
-            sb.append(", @Abstract");
-        }
-        if (isExplicitOverride()) {
-            sb.append(", @Override");
-        }
-        if (isExplicitReadOnly()) {
-            sb.append(", @RO");
+        // Display purity (see TypeInfo.toString()): isInjected()/isExplicitAbstract()/
+        // isExplicitOverride()/isExplicitReadOnly() classify annotations by INTERNED IDENTITY -
+        // clzInject()/clzOverride()/clzRO() and TypeInfo.containsAnnotation()'s
+        // getImplicitlyImportedIdentity() each intern, and getPropertyAnnotations() forces the lazy
+        // property/ref annotation split. Display compares by name instead, off the raw
+        // contributions.
+        PropertyStructure prop = m_structProp;
+        if (prop != null && m_impl != Implementation.FromInto) {
+            for (String sAnno : ANNOTATIONS_DISPLAYED) {
+                if (prop.peekHasAnnotation(sAnno)) {
+                    sb.append(", @")
+                      .append(sAnno);
+                }
+            }
         }
 
         if (m_constInitVal != null) {
@@ -571,6 +574,12 @@ public class PropertyBody
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * The annotations {@link #toString()} reports, in the order it reports them. Matched by name so
+     * that rendering never interns the annotation class identities (see the note in toString()).
+     */
+    private static final String[] ANNOTATIONS_DISPLAYED = {"Inject", "Abstract", "Override", "RO"};
 
     /**
      * Represents the presence and effect of a "get()" or "set()" method.

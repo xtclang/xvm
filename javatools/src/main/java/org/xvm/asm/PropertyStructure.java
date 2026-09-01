@@ -201,6 +201,32 @@ public class PropertyStructure
     }
 
     /**
+     * The display-safe counterpart of {@link #isExplicitReadOnly()}, {@link #isExplicitOverride()},
+     * {@link #isInjected()} and friends. Those all go through {@code getConstantPool().clzRO()} /
+     * {@code clzOverride()} / {@code clzInject()}, which lazily INTERN the canonical class
+     * identity, and through {@link #getPropertyAnnotations()}, which forces the lazy
+     * property/ref annotation split (itself interning via {@code ensureTerminalTypeConstant} and
+     * {@code typeProperty()}). This one reads the raw contributions and compares by name, so it
+     * never grows the pool - which is what a {@code toString()} needs.
+     * <p/>
+     * Note that it does not distinguish "into Property" annotations from Ref annotations, because
+     * making that distinction is precisely the part that has to intern.
+     *
+     * @param sName  the unqualified annotation class name, e.g. {@code "Inject"}
+     *
+     * @return true iff this property carries an annotation of that name
+     */
+    public boolean peekHasAnnotation(String sName) {
+        for (Contribution contrib : getContributionsAsList()) {
+            if (contrib.getComposition() == Composition.Annotation
+                    && sName.equals(contrib.getAnnotation().peekAnnotationName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * @return true if the property is annotated by "@RO"
      */
     public boolean isExplicitReadOnly() {

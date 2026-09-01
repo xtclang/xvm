@@ -478,6 +478,18 @@ public abstract class TypeConstant
     }
 
     /**
+     * The display-safe counterpart of {@link #getParamType(int)}: it never falls back to
+     * {@code getConstantPool().typeObject()}, which lazily INTERNS the canonical Object type and so
+     * grows the pool merely because something was rendered.
+     *
+     * @return the type parameter at the specified index, or null if there is none
+     */
+    public TypeConstant peekParamType(int i) {
+        TypeConstant[] atypeParams = getParamTypesArray();
+        return i < atypeParams.length ? atypeParams[i] : null;
+    }
+
+    /**
      * @return true iff this type has a formal type parameter with the specified name
      */
     public boolean containsGenericParam(String sName) {

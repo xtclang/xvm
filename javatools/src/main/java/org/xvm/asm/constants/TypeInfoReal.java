@@ -2087,10 +2087,26 @@ public class TypeInfoReal
 
     // ----- Object methods ------------------------------------------------------------------------
 
+    /**
+     * The PURE rendering: a one-line header off already-computed state. Everything a debugger
+     * reaches implicitly ends up here, so nothing below may walk members.
+     */
     @Override
-    public String toString(boolean fRuntime) {
-        StringBuilder sb = new StringBuilder();
+    public String toString() {
+        // Display purity (see TypeInfo.toString()): isAbstract() would call ensureCaches(), which
+        // walks every method, populates the shared id/nid caches and computes m_fImplicitAbstract.
+        // Report the explicit flag (a final field) always, the implicit one only once computed.
+        return appendHeader(new StringBuilder(),
+                m_fExplicitAbstract || (m_fCacheReady && m_fImplicitAbstract)).toString();
+    }
 
+    /**
+     * Append the header that both {@link #toString()} and {@link #dump()} start with.
+     *
+     * @param fAbstract  whether to mark the type abstract; the caller decides, because determining
+     *                   it for real forces the lazy caches and only the forced dump may do that
+     */
+    private StringBuilder appendHeader(StringBuilder sb, boolean fAbstract) {
         sb.append("TypeInfo: ")
           .append(f_type)
           .append(" (");
@@ -2103,7 +2119,7 @@ public class TypeInfoReal
         sb.append("format=")
           .append(getFormat());
 
-        if (isAbstract()) {
+        if (fAbstract) {
             sb.append(", abstract");
         }
         if (isStatic()) {
@@ -2113,7 +2129,12 @@ public class TypeInfoReal
             sb.append(", singleton");
         }
 
-        sb.append(")");
+        return sb.append(")");
+    }
+
+    @Override
+    public String dump() {
+        var sb = appendHeader(new StringBuilder(), isAbstract());
 
         if (!f_mapTypeParams.isEmpty()) {
             sb.append("\n- Parameters (")
@@ -2198,25 +2219,15 @@ public class TypeInfoReal
               .append(')');
             int i = 0;
             for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet().stream().sorted(KeySorter).toList()) {
-                MethodInfo method = entry.getValue();
-                if (fRuntime && method.isCapped()) {
-                    continue;
-                }
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
                 if (f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool, null))) {
                     sb.append("(v) ");
                 }
-                if (fRuntime) {
-                    MethodBody[] chain = method.ensureOptimizedMethodChain(this);
-                    method = chain.length == 0
-                        ? new MethodInfo(new MethodBody(method.getHead(), Implementation.Native), 0)
-                        : new MethodInfo(chain, 0);
-                }
                 sb.append(entry.getKey())
                   .append("=")
-                  .append(method);
+                  .append(entry.getValue().dump());
             }
         }
 

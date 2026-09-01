@@ -2035,7 +2035,13 @@ public class TerminalTypeConstant
 
     @Override
     public String getValueString() {
-        return ensureResolvedConstant().getValueString();
+        // Display purity (see TypeInfo.toString()): ensureResolvedConstant() would write the
+        // resolved constant back into m_constId, collapsing an unresolved constant mid-compilation
+        // just because something rendered it. Read the resolution into a local instead; the
+        // write-back stays with the non-display callers.
+        Constant constId  = m_constId;
+        Constant resolved = constId.resolve();
+        return (resolved == null ? constId : resolved).getValueString();
     }
 
 

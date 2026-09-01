@@ -1609,13 +1609,20 @@ public class MethodInfo
         return Arrays.equals(this.m_aBody, that.m_aBody);
     }
 
+    /**
+     * The PURE rendering: signature plus bodies, off already-computed state only.
+     * <p/>
+     * Display purity (see {@link TypeInfo#toString()}): the {@code @Op} prefix deliberately is NOT
+     * here. Deciding it calls {@link #isOp()}, which reaches for the AMBIENT {@code ConstantPool}
+     * ({@code MethodBody.pool()} is a thread-local read) to intern the {@code Op} class identity,
+     * and forces {@code MethodBody.getMethodStructure()} to load and cache the method's component.
+     * On a thread with no pool bound - exactly a debugger's situation - that ambient read is null
+     * and the whole rendering throws. The classification stays on the explicitly-named
+     * {@link #dump()}.
+     */
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        if (isOp()) {
-            sb.append("@Op ");
-        }
-        sb.append(getSignature().getValueString());
+        var sb = new StringBuilder(getSignature().getValueString());
 
         int i = 0;
         for (MethodBody body : m_aBody) {
@@ -1625,6 +1632,18 @@ public class MethodInfo
               .append(body);
         }
         return sb.toString();
+    }
+
+    /**
+     * Render this MethodInfo the way the full {@link TypeInfo#dump(boolean) TypeInfo dump} does,
+     * including the {@code @Op} classification. Unlike {@link #toString()} this is a deliberate,
+     * explicitly-named diagnostic: {@link #isOp()} interns into the ambient ConstantPool and caches
+     * method structures, and it requires a pool to be bound to the calling thread.
+     *
+     * @return the full rendering of this MethodInfo
+     */
+    public String dump() {
+        return isOp() ? "@Op " + this : toString();
     }
 
     // ----- constants and fields ------------------------------------------------------------------

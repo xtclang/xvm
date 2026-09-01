@@ -5,9 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import org.xvm.asm.Constant;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -68,7 +65,10 @@ public abstract class BinaryAST {
      */
     @Override
     public String toString() {
-        reportUnimplemented("TODO implement toString() for " + this.getClass().getSimpleName());
+        // Display purity (see TypeInfo.toString()): this used to nag ("TODO implement toString()
+        // for ...") through a process-global Set that it added to, and write to System.err - so
+        // merely LOOKING at a node mutated shared, unsynchronized process state. A node with no
+        // richer rendering simply names its node type.
         return nodeType().name();
     }
 
@@ -264,17 +264,6 @@ public abstract class BinaryAST {
     public static final RegisterAST[]  NO_REGS   = new RegisterAST[0];
     public static final RegAllocAST[]  NO_ALLOCS = new RegAllocAST[0];
     public static final ExprAST        POISON    = PoisonAST.INSTANCE;
-
-
-    // ----- internal ------------------------------------------------------------------------------
-
-    private static final Set<String> ALREADY_DISPLAYED = new HashSet();
-
-    static void reportUnimplemented(String msg) {
-        if (ALREADY_DISPLAYED.add(msg)) {
-            System.err.println(msg);
-        }
-    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
