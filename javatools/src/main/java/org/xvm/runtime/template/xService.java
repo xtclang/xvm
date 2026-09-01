@@ -52,6 +52,16 @@ public class xService
      */
     private final ClassConstant f_idInception;
 
+    /**
+     * @param fInstance  true iff this is the rebased base template over the {@code Service}
+     *                   interface, rather than a template for a concrete service class
+     *
+     * Note: the flag cannot be replaced by a {@code NativeTemplates} lookup. The
+     * table only answers once construction has finished - that is what keeps a half-built template
+     * from escaping - and the answer is needed here, because {@link NativeRebaseConstant} may only
+     * be built over an interface. Every concrete service template (xRTKeyStore, xRTServer, ...)
+     * runs this constructor over a SERVICE structure, and would trip that assertion.
+     */
     public xService(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
