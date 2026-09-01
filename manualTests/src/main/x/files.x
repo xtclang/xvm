@@ -8,6 +8,7 @@ module TestFiles {
         testPaths();
         testInject();
         testModify();
+        testListing();
     }
 
     void testPaths() {
@@ -144,4 +145,49 @@ module TestFiles {
         // this will force the caller to wait
         return done;
     }
+
+    /**
+     * Covers `Directory.dirs()` and `files()`, including an entry that disappears while the
+     * (lazy) iteration is in progress: the listings themselves, and that a vanished entry is
+     * skipped rather than raising.
+     */
+    void testListing() {
+        console.print("\n** testListing()");
+
+        @Inject Directory tmpDir;
+
+        Directory probe = tmpDir.dirFor("xvm_listing_probe");
+        if (probe.exists) {
+            probe.deleteRecursively();
+        }
+        probe.ensure();
+
+        for (String name : ["a.txt", "b.txt", "c.txt", "d.txt", "e.txt"]) {
+            assert probe.fileFor(name).create();
+        }
+        assert probe.dirFor("sub").create();
+
+        assert probe.files().count() == 5;
+        assert probe.dirs().count() == 1;
+
+        // remove entries the iteration has not reached yet; they must be skipped, not asserted on
+        Int seen = 0;
+        for (File f : probe.files()) {
+            if (seen == 0) {
+                for (String name : ["d.txt", "e.txt"]) {
+                    if (File victim := probe.findFile(name)) {
+                        victim.delete();
+                    }
+                }
+            }
+            seen++;
+        }
+        assert seen >= 1 && seen <= 5;
+
+        probe.deleteRecursively();
+        assert !probe.exists;
+
+        console.print($"listing ok (after a mid-iteration delete, saw {seen} files)");
+    }
+
 }

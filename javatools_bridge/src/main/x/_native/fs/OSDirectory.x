@@ -1,3 +1,4 @@
+import ecstasy.fs.FileNode;
 import ecstasy.fs.FileWatcher;
 
 /**
@@ -21,36 +22,28 @@ const OSDirectory
 
     @Override
     Iterator<Directory> dirs() {
-        return names()
-            .filter(name -> {
-                if (File|Directory node := find(name)) {
-                    return node.is(Directory);
-                } else {
-                    // that is most probably a broken link
-                    return False;
-                }
-            })
-            .map(name -> {
-                assert File|Directory node := find(name);
-                return node.as(Directory);
-            });
+        return nodes().flatMap(node -> node.is(Directory) ? [node] : []);
     }
 
     @Override
     Iterator<File> files() {
-        return names()
-            .filter(name -> {
-                if (File|Directory node := find(name)) {
-                    return node.is(File);
-                } else {
-                    // that is most probably a broken link
-                    return False;
-                }
-            })
-            .map(name -> {
-                assert File|Directory node := find(name);
-                return node.as(File);
-            });
+        return nodes().flatMap(node -> node.is(File) ? [node] : []);
+    }
+
+    /**
+     * The nodes that this directory currently contains.
+     *
+     * A name obtained from the listing may no longer resolve: it may be a broken link, or may have
+     * been removed since the listing was taken. Such a name is simply not a node now, so it is
+     * dropped.
+     */
+    private Iterator<FileNode> nodes() {
+        return names().flatMap(name -> {
+            if (File|Directory node := find(name)) {
+                return [node];
+            }
+            return [];
+        });
     }
 
     @Override
