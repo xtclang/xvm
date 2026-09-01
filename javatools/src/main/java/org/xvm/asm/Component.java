@@ -3271,7 +3271,12 @@ public abstract class Component
                 sb.append('>');
             } else {
                 if (m_typeContrib != null) {
-                    sb.append(m_typeContrib.resolveTypedefs().getDescription());
+                    // NOTE: resolveTypedefs() runs ensureResolvedConstant(), which WRITES the
+                    // resolved constant back into the terminal type's m_constId. Every structure's
+                    // toString() reaches this line through getDescription(), so rendering a class
+                    // in a debugger advanced resolution state. A typedef now renders as itself,
+                    // which is also what the source actually says.
+                    sb.append(m_typeContrib.getDescription());
                 }
 
                 if (m_composition == Composition.Annotation && m_annotation != null) {

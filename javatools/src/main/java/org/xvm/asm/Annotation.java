@@ -153,6 +153,17 @@ public class Annotation
     }
 
     /**
+     * The display-safe way to identify an annotation. Comparing annotation classes by NAME is what
+     * lets a display path avoid {@code getImplicitlyImportedIdentity} / {@code clzInject()} /
+     * {@code clzOverride()} / {@code clzRO()}, all of which INTERN into the ConstantPool.
+     *
+     * @return the annotation's class name, without resolving or interning anything
+     */
+    public String peekAnnotationName() {
+        return peekAnnotationClass().getValueString();
+    }
+
+    /**
      * @return the type of the annotation (which is always the terminal type constant of the
      *         annotation class)
      */
