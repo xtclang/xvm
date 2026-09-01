@@ -139,11 +139,17 @@ public class xNanosTimer
         LongLongHandle llPicos = (LongLongHandle) hDuration.getField(frame, "picoseconds");
         long           cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
 
+        WeakCallback refCallback = new WeakCallback(frame, hAlarm);
         try {
             return frame.assignValue(iReturn,
-                    hTimer.addAlarm(frame.container(), cNanos, new WeakCallback(frame, hAlarm),
-                            hKeepAlive.get()));
+                    hTimer.addAlarm(frame.container(), cNanos, refCallback, hKeepAlive.get()));
         } catch (IllegalArgumentException | IllegalStateException e) {
+            // a WeakCallback registers itself in the service's callback map from its constructor,
+            // and only extractCallback() or discard() takes it back out. A failed addAlarm that
+            // just raises leaves the entry there for the life of the service, strongly holding the
+            // Frame and the alarm function. xLocalClock already rolls its registration back the
+            // same way, in cancelAfterScheduleFailure().
+            refCallback.discard();
             return frame.raiseException(e.getMessage());
         }
     }
