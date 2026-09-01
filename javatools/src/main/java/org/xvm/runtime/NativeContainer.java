@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -503,114 +504,67 @@ public class NativeContainer
         return hStorage;
     }
 
-    private ObjectHandle ensureFileStore(Frame frame, ObjectHandle hOpts) {
-        ObjectHandle hStore = m_hFileStore;
-        if (hStore == null) {
-            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-            PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("store").getIdentity();
-
-            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> publishConvergentFileStore(h));
+    /**
+     * Obtain an injected OSStorage-backed resource for the container that asked for it.
+     *
+     * These used to be cached in a single field on this container and handed to every child. The
+     * handle was built with the requesting frame, so its composition belonged to whichever container
+     * asked first, and every later sibling then received a value owned by an unrelated container -
+     * a TypeComposition from an unrelated container is never legitimate cross-container state.
+     * "First-wins convergence" is the right answer for racing threads and the wrong one for racing
+     * containers, because it bakes in the winner's owner.
+     *
+     * So cache per requesting container instead. Convergence is preserved where it was actually
+     * needed - two threads inside one container still converge on one handle - and the map is weak
+     * so a finished container is not retained by the plane that served it.
+     *
+     * @param frame     the requesting frame
+     * @param hOpts     the injection options
+     * @param sProp     the OSStorage property that supplies the resource
+     * @param mapOwned  the per-owner cache for that resource
+     *
+     * @return the resource handle, or a DeferredCallHandle that produces it
+     */
+    private ObjectHandle ensureOwnedResource(Frame frame, ObjectHandle hOpts, String sProp,
+                                             Map<Container, ObjectHandle> mapOwned) {
+        Container    owner    = frame.f_context.f_container;
+        ObjectHandle hOwned;
+        synchronized (mapOwned) {
+            hOwned = mapOwned.get(owner);
+        }
+        if (hOwned != null) {
+            return hOwned;
         }
 
-        return hStore;
+        ClassTemplate    template = getTemplate("_native.fs.OSStorage");
+        PropertyConstant idProp   = template.getCanonicalType().
+                ensureTypeInfo(frame.container().getErrorListener()).findProperty(sProp).getIdentity();
+
+        return getProperty(frame, ensureOSStorage(frame, hOpts), idProp, h -> {
+            synchronized (mapOwned) {
+                mapOwned.putIfAbsent(owner, h);
+            }
+        });
+    }
+
+    private ObjectHandle ensureFileStore(Frame frame, ObjectHandle hOpts) {
+        return ensureOwnedResource(frame, hOpts, "store", m_mapFileStore);
     }
 
     private ObjectHandle ensureRootDir(Frame frame, ObjectHandle hOpts) {
-        ObjectHandle hDir = m_hRootDir;
-        if (hDir == null) {
-            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-            PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("rootDir").getIdentity();
-
-            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> publishConvergentRootDir(h));
-        }
-
-        return hDir;
+        return ensureOwnedResource(frame, hOpts, "rootDir", m_mapRootDir);
     }
 
     private ObjectHandle ensureHomeDir(Frame frame, ObjectHandle hOpts) {
-        ObjectHandle hDir = m_hHomeDir;
-        if (hDir == null) {
-            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-            PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("homeDir").getIdentity();
-
-            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> publishConvergentHomeDir(h));
-        }
-
-        return hDir;
+        return ensureOwnedResource(frame, hOpts, "homeDir", m_mapHomeDir);
     }
 
     private ObjectHandle ensureCurDir(Frame frame, ObjectHandle hOpts) {
-        ObjectHandle hDir = m_hCurDir;
-        if (hDir == null) {
-            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-            PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("curDir").getIdentity();
-
-            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> publishConvergentCurDir(h));
-        }
-
-        return hDir;
+        return ensureOwnedResource(frame, hOpts, "curDir", m_mapCurDir);
     }
 
     private ObjectHandle ensureTmpDir(Frame frame, ObjectHandle hOpts) {
-        ObjectHandle hDir = m_hTmpDir;
-        if (hDir == null) {
-            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-            PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("tmpDir").getIdentity();
-
-            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> publishConvergentTmpDir(h));
-        }
-
-        return hDir;
-    }
-
-    private synchronized void publishConvergentFileStore(ObjectHandle h) {
-        // convergent (property of the single-flighted OSStorage service); first-wins so racing
-        // callers never flip the cache between equal-but-distinct reads
-        if (m_hFileStore == null) {
-            m_hFileStore = h;
-        }
-    }
-
-    private synchronized void publishConvergentRootDir(ObjectHandle h) {
-        // convergent (property of the single-flighted OSStorage service); first-wins so racing
-        // callers never flip the cache between equal-but-distinct reads
-        if (m_hRootDir == null) {
-            m_hRootDir = h;
-        }
-    }
-
-    private synchronized void publishConvergentHomeDir(ObjectHandle h) {
-        // convergent (property of the single-flighted OSStorage service); first-wins so racing
-        // callers never flip the cache between equal-but-distinct reads
-        if (m_hHomeDir == null) {
-            m_hHomeDir = h;
-        }
-    }
-
-    private synchronized void publishConvergentCurDir(ObjectHandle h) {
-        // convergent (property of the single-flighted OSStorage service); first-wins so racing
-        // callers never flip the cache between equal-but-distinct reads
-        if (m_hCurDir == null) {
-            m_hCurDir = h;
-        }
-    }
-
-    private synchronized void publishConvergentTmpDir(ObjectHandle h) {
-        // convergent (property of the single-flighted OSStorage service); first-wins so racing
-        // callers never flip the cache between equal-but-distinct reads
-        if (m_hTmpDir == null) {
-            m_hTmpDir = h;
-        }
+        return ensureOwnedResource(frame, hOpts, "tmpDir", m_mapTmpDir);
     }
 
     private ObjectHandle ensureProperties(Frame frame, ObjectHandle hOpts) {
@@ -995,11 +949,15 @@ public class NativeContainer
     private static final int    NATIVE_LENGTH  = NATIVE_PREFIX.length();
 
     private volatile ObjectHandle m_hOSStorage;
-    private volatile ObjectHandle m_hFileStore;
-    private volatile ObjectHandle m_hRootDir;
-    private volatile ObjectHandle m_hHomeDir;
-    private volatile ObjectHandle m_hCurDir;
-    private volatile ObjectHandle m_hTmpDir;
+    /**
+     * Injected OSStorage resources, cached per requesting container rather than per plane. Weak keys
+     * so a container that has finished is not kept alive by the plane that served it.
+     */
+    private final Map<Container, ObjectHandle> m_mapFileStore = new WeakHashMap<>();
+    private final Map<Container, ObjectHandle> m_mapRootDir   = new WeakHashMap<>();
+    private final Map<Container, ObjectHandle> m_mapHomeDir   = new WeakHashMap<>();
+    private final Map<Container, ObjectHandle> m_mapCurDir    = new WeakHashMap<>();
+    private final Map<Container, ObjectHandle> m_mapTmpDir    = new WeakHashMap<>();
     private ObjectHandle m_hProperties;
 
     private volatile ObjectHandle m_hSecureNetwork;

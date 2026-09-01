@@ -203,10 +203,14 @@ public final class FileStructure
         ModuleStructure moduleClone = module.cloneBody();
         moduleClone.setContaining(this);
 
-        // a fingerprint with the same id (e.g. cloned in by an earlier merge) is superseded by the
-        // real module; without this, addChild() would refuse the clone and keep the stub
+        // Anything already here under this id is superseded by the module being merged in - that is
+        // what "merge this module" means. A fingerprint stub is the common case (cloned in by an
+        // earlier merge), but a real module can already be present too: the native container boots
+        // with ecstasy loaded, so merging ecstasy finds itself. Leaving that one in place did not
+        // keep the old module, it reached addChild() with a name that already had a sibling and
+        // asserted inside adoptChildren(), because the deep-cloned newcomer is not childless.
         var moduleExist = getModule(moduleClone.getIdentityConstant());
-        if (moduleExist != null && moduleExist.isFingerprint()) {
+        if (moduleExist != null) {
             removeChild(moduleExist);
         }
 
