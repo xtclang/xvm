@@ -3056,10 +3056,63 @@ mutation sites disappear.
 mutates it. A module being compiled gets that compilation's listener; a library pool gets `RUNTIME`,
 because it is owned by no single compile.
 
-**D. Convert the 66 no-argument `ensureTypeInfo()` calls.** This is the one that actually fixes the
-parallel gap, because after it a library type resolves with the *caller's* listener rather than the
-library pool's. It is 53 distinct methods, so it is per-method work - but each conversion is
-independent and safe, and every threading pass in this campaign has surfaced a live defect.
+**D. Convert the no-argument `ensureTypeInfo()` calls - RECOMMENDATION: mostly DO NOT.**
+
+This row previously said D was what fixes the parallel gap, because a library type would otherwise
+resolve with the library pool's listener rather than the caller's. **That premise is wrong**, and
+the reason is worth recording because it is not obvious:
+
+```java
+// ConstantPool.register
+if (constant.getContaining() != this) {
+    constant = (T) constant.adoptedBy(this);
+}
+```
+
+**Constants are adopted into the pool that registers them.** A compile that references
+`ecstasy.collections.Map` registers it into its own pool, so `getContaining()` - and therefore
+`getConstantPool()`, and therefore the listener `ensureTypeInfo()` resolves - is the *compiling*
+pool, not the library's. The same is true of anything parameterized:
+`ensureParameterizedTypeConstant` builds `new ParameterizedTypeConstant(this, ...)`, where `this` is
+the interning pool.
+
+So the diagnostics a compile actually produces already reach that compile's listener. What stays
+library-owned is work done entirely inside the library's own structure - `prelinkSystemLibraries`,
+say - and a failure there is a broken or corrupt library, which is a system fault rather than a
+diagnostic about anybody's source.
+
+**Pros of doing D anyway:**
+
+- the invariant becomes "who asks wins" unconditionally, rather than "who asks wins because
+  adoption happens to make the asker the owner" - which is true but indirect, and could be broken by
+  a future change to adoption without anything failing loudly;
+- deleting the no-argument overload removes the last defaulting path entirely, so there is nothing
+  left to reason about;
+- the cascade is shallower than the site count suggests. A trial on eight helpers in four files
+  produced only four follow-on sites, all of which wanted `BLACKHOLE` anyway (two `toString()`
+  methods and two no-listener `getImplicitType` overloads).
+
+**Cons:**
+
+- ~70 methods across `asm`, `compiler` and `javajit`, for a guarantee that adoption already
+  delivers in every case a user can trigger;
+- it would route genuine system faults - a corrupt library - into a *user-facing* diagnostic with no
+  source position in the user's file. For an LSP that is worse, not better: "internal library error"
+  rendered as a squiggle on line 1;
+- it risks surfacing diagnostics that the current split suppresses deliberately.
+
+**Recommended instead:**
+
+1. Treat the adoption invariant as the mechanism, and say so where it matters - a comment on
+   `ensureTypeInfo()` pointing at `ConstantPool.register`, so the next reader does not re-derive it
+   or "fix" it.
+2. Convert opportunistically: where a listener is already in scope at the call site, pass it. That
+   has been done for 16 sites and cost nothing.
+3. Keep the no-argument overload as the documented path for **system-owned** work, which is what it
+   now means.
+
+That leaves the guarantee resting on adoption, which is worth one targeted test rather than seventy
+conversions.
 
 **E. Delete the no-argument overload.** Once D is done the pool default is never consulted, shared
 pools stop mattering, and the listener is genuinely a parameter everywhere.
