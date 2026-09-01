@@ -484,7 +484,11 @@ public class xClass
 
         @Override
         public String toString() {
-            return "(Class) " + getType().getParamType(0);
+            // NOTE: getType() augments (freeze() -> ImmutableTypeConstant intern once the handle is
+            // immutable) and getParamType(0) falls back to pool.typeObject() - another intern -
+            // when there is no parameter. Read the composition's own type instead.
+            TypeConstant typeClass = getComposition().getType().peekParamType(0);
+            return "(Class) " + (typeClass == null ? "<deferred>" : typeClass.getValueString());
         }
     }
 

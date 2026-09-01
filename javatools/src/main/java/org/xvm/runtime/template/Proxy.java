@@ -455,8 +455,10 @@ public class Proxy
 
         @Override
         public String toString() {
-            return "Proxy: " + f_hTarget.toString() +
-                    (f_fStrict ? " as " + getType().getValueString() : "");
+            // NOTE: getType() augments, and augmentType() interns a frozen/service TypeConstant.
+            // The composition already carries the label this wants, and rendering it is pure.
+            return "Proxy: " + f_hTarget +
+                    (f_fStrict ? " as " + getComposition() : "");
         }
     }
 }

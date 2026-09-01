@@ -18,7 +18,7 @@ import org.xvm.runtime.Runtime;
  * side effects they hunt for - pool interning, lazy forcing, resolution write-back - only happen
  * against real content.</p>
  */
-final class DisplayPurityFixture {
+public final class DisplayPurityFixture {
     /** Build-output roots that, when present, together form the system module path. */
     private static final List<String> SYSTEM_MODULE_PATHS = List.of(
             "lib_ecstasy/build/xtc/main/lib",
@@ -33,7 +33,7 @@ final class DisplayPurityFixture {
      * @return the system module repository assembled from whichever build outputs are present, or
      *         null if none are
      */
-    static ModuleRepository systemRepository() {
+    public static ModuleRepository systemRepository() {
         var repositories = SYSTEM_MODULE_PATHS.stream()
                 .map(DisplayPurityFixture::repositoryFor)
                 .filter(Objects::nonNull)
@@ -46,7 +46,7 @@ final class DisplayPurityFixture {
     /**
      * @return true iff the compiled core modules these tests need are on disk
      */
-    static boolean systemModulesAvailable() {
+    public static boolean systemModulesAvailable() {
         var repository = systemRepository();
         return repository != null
             && repository.loadModule(Constants.ECSTASY_MODULE) != null
@@ -57,7 +57,7 @@ final class DisplayPurityFixture {
     /**
      * @return a started runtime; the caller owns it and must {@code shutdownXVM()} it
      */
-    static Runtime startRuntime() {
+    public static Runtime startRuntime() {
         var runtime = new Runtime();
         runtime.start();
         return runtime;
@@ -66,7 +66,7 @@ final class DisplayPurityFixture {
     /**
      * @return the shared {@link ConstantPool} of a freshly created container zero
      */
-    static ConstantPool nativePool(Runtime runtime) {
+    public static ConstantPool nativePool(Runtime runtime) {
         return new NativeContainer(runtime, systemRepository()).getConstantPool();
     }
 

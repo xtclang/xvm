@@ -92,6 +92,18 @@ public interface TypeComposition {
     boolean isStruct();
 
     /**
+     * The display-safe guard for {@link #getFieldInfo(Object)}: that method reads the field-layout
+     * map, which is null until {@code ensureFieldLayout(Container)} has built it, so an unguarded
+     * lookup from a {@code toString()} would throw. Display code asks this first and renders a
+     * marker instead of building the layout.
+     *
+     * @return true iff this composition's field layout has already been computed
+     */
+    default boolean isFieldLayoutComputed() {
+        return false;
+    }
+
+    /**
      * @return true iff the inception type represents a const
      */
     default boolean isConst() {

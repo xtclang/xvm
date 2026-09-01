@@ -2102,7 +2102,7 @@ public class TypeInfoReal
     }
 
     /**
-     * Append the header that both {@link #toString()} and {@link #dump(boolean)} start with.
+     * Append the header that both {@link #toString()} and {@link #dump()} start with.
      *
      * @param fAbstract  whether to mark the type abstract; the caller decides, because determining
      *                   it for real forces the lazy caches and only the forced dump may do that
@@ -2134,7 +2134,7 @@ public class TypeInfoReal
     }
 
     @Override
-    public String dump(boolean fRuntime) {
+    public String dump() {
         StringBuilder sb = appendHeader(new StringBuilder(), isAbstract());
 
         if (!f_mapTypeParams.isEmpty()) {
@@ -2220,25 +2220,15 @@ public class TypeInfoReal
               .append(')');
             int i = 0;
             for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet().stream().sorted(KeySorter).toList()) {
-                MethodInfo method = entry.getValue();
-                if (fRuntime && method.isCapped()) {
-                    continue;
-                }
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
                 if (f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool, null))) {
                     sb.append("(v) ");
                 }
-                if (fRuntime) {
-                    MethodBody[] chain = method.ensureOptimizedMethodChain(this);
-                    method = chain.length == 0
-                        ? new MethodInfo(new MethodBody(method.getHead(), Implementation.Native), 0)
-                        : new MethodInfo(chain, 0);
-                }
                 sb.append(entry.getKey())
                   .append("=")
-                  .append(method.dump());
+                  .append(entry.getValue().dump());
             }
         }
 

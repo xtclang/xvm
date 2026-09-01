@@ -311,7 +311,7 @@ public class xRTType
             // rendering explicitly. (The no-arg TypeInfo.toString() is the pure header now, because
             // that is the one Java and a debugger call implicitly.)
             return frame.assignValue(iReturn,
-                xString.makeHandle(hType.getUnsafeDataType().ensureTypeInfo().dump(false)));
+                xString.makeHandle(hType.getUnsafeDataType().ensureTypeInfo().dump()));
         }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }
@@ -1917,7 +1917,14 @@ public class xRTType
 
         @Override
         public String toString() {
-            return "(Type) " + getDataType().getValueString();
+            // NOTE: getDataType() goes through getType(), and getType() augments - augmentType()
+            // calls freeze() because this handle is constructed non-mutable, which interns a fresh
+            // ImmutableTypeConstant into the pool, and getParamType(0) falls back to
+            // pool.typeObject() (another intern) when there is no parameter. Rendering a Type
+            // variable must not grow the pool it describes, so read the composition's own type
+            // straight off and decline rather than intern when the parameter is absent.
+            TypeConstant typeData = getComposition().getType().peekParamType(0);
+            return "(Type) " + (typeData == null ? "<deferred>" : typeData.getValueString());
         }
 
         private final TypeConstant f_typeForeign;

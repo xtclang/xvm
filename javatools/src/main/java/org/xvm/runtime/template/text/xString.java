@@ -393,9 +393,13 @@ public class xString
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder(super.toString());
+            // NOTE: getStringValue() MEMOIZES m_sValue. The write is idempotent, but it is still a
+            // write performed by the observer - rendering a string handle in a debugger changed the
+            // handle. Read the cache if it is already there and build a throwaway String if not.
+            String        sValue = m_sValue;
+            StringBuilder sb     = new StringBuilder(super.toString());
             sb.append('\"');
-            Handy.appendString(sb, getStringValue());
+            Handy.appendString(sb, sValue == null ? new String(m_achValue) : sValue);
             return sb.append('\"').toString();
         }
     }

@@ -863,9 +863,25 @@ public class xFuture
 
         @Override
         public String toString() {
-            return "(" + m_clazz + ") " + (
-                    getFuture().isDone() ? "Completed: " + toSafeString(): "Not completed"
-                    );
+            // NOTE: this used to call toSafeString(), which JOINS the future with get() and, when
+            // the future failed, ran Utils.translate(e) - allocating a fresh exception handle in
+            // the owning container from whatever thread happened to be rendering. It also NPE'd
+            // when FutureTupleHandle.getFuture() returned null. Report the state instead: getNow()
+            // neither blocks nor throws.
+            CompletableFuture<ObjectHandle> future = getFuture();
+            return "(" + m_clazz + ") " + describe(future);
+        }
+
+        private static String describe(CompletableFuture<ObjectHandle> future) {
+            if (future == null) {
+                return "<no future>";
+            }
+            if (!future.isDone()) {
+                return "Not completed";
+            }
+            return future.isCompletedExceptionally()
+                    ? future.isCancelled() ? "<cancelled>" : "<failed>"
+                    : "Completed: " + future.getNow(null);
         }
 
         protected String toSafeString() {

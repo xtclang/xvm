@@ -705,11 +705,17 @@ public abstract class TypeInfo {
     /**
      * Render a one-line header describing this TypeInfo: identity, progress, format and flags.
      * <p/>
-     * This method is called IMPLICITLY - by string concatenation, and by an IDE debugger rendering
-     * a row in the Variables view - so it must be pure: no member walk, no
-     * {@code resolveNestedIdentity} (which interns into the shared ConstantPool), no method-chain
-     * optimization, and no reach for the ambient pool. The full member dump lives on {@link
-     * #dump(boolean)}, which is only ever reached by naming it.
+     * <b>The display rule, which holds for every {@code toString()} in the compiler and the
+     * runtime:</b> {@code toString()} is called IMPLICITLY - by string concatenation, by
+     * {@code Throwable.toString()} while a stack trace prints, and by an IDE debugger rendering a
+     * row in the Variables view - so it must be SIDE-EFFECT-FREE. It may read already-computed
+     * state and nothing else: it must not intern into a {@link ConstantPool}, force a
+     * lazy cell, write a resolution back into a field, reach for the ambient (thread-local) pool,
+     * or throw. State that has not been computed renders as a marker such as
+     * {@code <deferred>}. Otherwise observing the program would change the program, and a debugger
+     * session could not be trusted. A richer rendering that needs to walk structures goes on an
+     * explicitly-named method - {@link #dump()} here, {@code dump()} on
+     * {@code XvmStructure} - which nothing reaches by accident.
      * <p/>
      * Declared abstract so that a new subclass cannot silently inherit a member-walking
      * {@code toString()}.
@@ -718,14 +724,32 @@ public abstract class TypeInfo {
     public abstract String toString();
 
     /**
-     * Render the full member dump of this TypeInfo. Unlike {@link #toString()} this is a
-     * deliberate, explicitly-named diagnostic: it walks every member, resolves nested identities
-     * (which interns into the shared ConstantPool), and - when {@code fRuntime} is set - computes
-     * and CACHES optimized method chains. Never call it from a display path.
-     *
-     * @param fRuntime  if specified, optimize the method call chains
+     * Render the full member dump of this TypeInfo: the header, plus every type parameter,
+     * contribution, property and method. This is the deliberate, explicitly-named rendering that
+     * {@code Type.dump()} returns to Ecstasy; {@link #toString()} is the pure header.
+     * <p/>
+     * Walking the members resolves nested identities, which interns into the shared ConstantPool -
+     * so this is not something to call from a display path, even though it does not force any lazy
+     * construction of its own.
      */
-    public abstract String dump(boolean fRuntime);
+    public abstract String dump();
+
+    /**
+     * @param fRuntime  ignored
+     *
+     * @return the same full member dump as {@link #dump()}
+     *
+     * @deprecated use {@link #dump()}. This overload was never safe for a debugger or for Java to
+     *             call implicitly, and its boolean selected a runtime-optimized VIEW - fewer
+     *             methods, with {@code ensureOptimizedMethodChain} computing and caching chains -
+     *             that had no caller anywhere in the repository. It is kept as a concrete delegate
+     *             only so that a subclass or embedder outside this repository does not break on the
+     *             removal of a public abstract method; note that it no longer optimizes chains.
+     */
+    @Deprecated
+    public final String toString(boolean fRuntime) {
+        return dump();
+    }
 
     protected abstract Progress getProgress();
 
