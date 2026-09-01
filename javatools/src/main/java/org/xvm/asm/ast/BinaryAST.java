@@ -65,11 +65,10 @@ public abstract class BinaryAST {
      */
     @Override
     public String toString() {
-        // NOTE: this used to nag ("TODO implement toString() for ...") through a process-global
-        // Set that it added to. toString() is called implicitly - by string concatenation and by a
-        // debugger rendering the Variables view - so that made merely LOOKING at a node mutate
-        // shared, unsynchronized process state and write to System.err. A node that has no richer
-        // rendering simply names its node type.
+        // Display purity (see TypeInfo.toString()): this used to nag ("TODO implement toString()
+        // for ...") through a process-global Set that it added to, and write to System.err - so
+        // merely LOOKING at a node mutated shared, unsynchronized process state. A node with no
+        // richer rendering simply names its node type.
         return nodeType().name();
     }
 

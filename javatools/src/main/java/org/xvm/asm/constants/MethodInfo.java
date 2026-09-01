@@ -1612,17 +1612,17 @@ public class MethodInfo
     /**
      * The PURE rendering: signature plus bodies, off already-computed state only.
      * <p/>
-     * NOTE: the {@code @Op} prefix deliberately is NOT here. Deciding it calls {@link #isOp()},
-     * which reaches for the AMBIENT {@code ConstantPool} ({@code MethodBody.pool()} is a
-     * thread-local read) to intern the {@code Op} class identity, and forces {@code
-     * MethodBody.getMethodStructure()} to load and cache the method's component. Rendered from a
-     * thread with no pool bound - exactly a debugger's situation - that ambient read is null and
-     * the whole rendering throws. The classification stays available on the explicitly-named
+     * Display purity (see {@link TypeInfo#toString()}): the {@code @Op} prefix deliberately is NOT
+     * here. Deciding it calls {@link #isOp()}, which reaches for the AMBIENT {@code ConstantPool}
+     * ({@code MethodBody.pool()} is a thread-local read) to intern the {@code Op} class identity,
+     * and forces {@code MethodBody.getMethodStructure()} to load and cache the method's component.
+     * On a thread with no pool bound - exactly a debugger's situation - that ambient read is null
+     * and the whole rendering throws. The classification stays on the explicitly-named
      * {@link #dump()}.
      */
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder(getSignature().getValueString());
+        var sb = new StringBuilder(getSignature().getValueString());
 
         int i = 0;
         for (MethodBody body : m_aBody) {

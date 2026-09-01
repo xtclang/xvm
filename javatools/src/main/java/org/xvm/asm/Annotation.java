@@ -293,8 +293,8 @@ public class Annotation
     public String getValueString() {
         var sb = new StringBuilder();
 
-        // NOTE: display must not resolve. getAnnotationClass() writes the resolved constant back
-        // into m_constClass, so rendering an annotation would advance name-resolution state.
+        // Display purity (see TypeInfo.toString()): getAnnotationClass() writes the resolved
+        // constant back into m_constClass, advancing name-resolution state.
         sb.append('@')
           .append(peekAnnotationClass().getValueString());
 

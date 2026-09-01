@@ -351,13 +351,13 @@ public abstract class ObjectHandle
         TypeComposition clz   = getComposition();
         String          sType = String.valueOf(clz);
 
-        // NOTE: the "don't say immutable twice" refinement used to ask clz.getType().isImmutable(),
-        // and on a terminal type that runs resolveTypedefs() -> ensureResolvedConstant(), which
-        // WRITES the resolved constant back into m_constId (and on the formal branches interns
-        // typeService() and writes a relation cache). This is the base toString() of nearly every
-        // handle, so every debugger row of every handle advanced resolution state. The same
-        // suppression is decided here from the handle's own final flag, the composition's format
-        // bits (a plain read of ClassStructure's flags), and the already-rendered label.
+        // Display purity (see TypeInfo.toString()): the "don't say immutable twice" refinement
+        // used to ask clz.getType().isImmutable(), and on a terminal type that runs
+        // resolveTypedefs() -> ensureResolvedConstant(), which writes the resolved constant back
+        // into m_constId (and on the formal branches interns typeService() and writes a relation
+        // cache). This is the base toString() of nearly every handle, so EVERY debugger row of
+        // EVERY handle hit it. The suppression is decided from the handle's own final flag, the
+        // composition's format bits (a plain read of ClassStructure's flags), and the label.
         boolean fImmutableAlready = clz != null && clz.isConst() || sType.startsWith("immutable ");
 
         return "(" + (m_fMutable || fImmutableAlready ? "" : "immutable ") + sType + ") ";
@@ -697,12 +697,11 @@ public abstract class ObjectHandle
 
         @Override
         public String toString() {
-            // NOTE: getField(null, "text") allocates a DeferredCallHandle wrapping a fresh
-            // exception handle when the property is absent, and throws when the field layout has
-            // not been built. Java calls this method itself - WrapperException.toString() delegates
-            // here, so it runs on every stack-trace print, not only in a debugger. Read the slot
-            // only if it is plainly readable; getStringValue() is likewise avoided because it
-            // memoizes.
+            // Display purity (see TypeInfo.toString()): getField(null, "text") allocates a
+            // DeferredCallHandle wrapping a fresh exception handle when the property is absent, and
+            // throws when the field layout has not been built. Java calls this one itself -
+            // WrapperException.toString() delegates here - so it runs on every stack-trace print,
+            // not only in a debugger. getStringValue() is avoided because it memoizes.
             ObjectHandle hText = peekField("text");
             return super.toString() +
                 (hText instanceof StringHandle hString
@@ -1006,9 +1005,9 @@ public abstract class ObjectHandle
 
         @Override
         public String toString() {
-            // NOTE: getType() augments, and augmentType() calls freeze() because this handle is
-            // never mutable - which INTERNS a fresh ImmutableTypeConstant into the pool on every
-            // single render. Print the composition's own label instead; that one is already pure.
+            // Display purity (see TypeInfo.toString()): getType() augments, and augmentType()
+            // calls freeze() because this handle is never mutable - interning a fresh
+            // ImmutableTypeConstant on EVERY render. The composition's own label is already pure.
             return "Deferred array initialization: " + f_clzArray;
         }
     }

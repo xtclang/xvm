@@ -980,13 +980,12 @@ public class ParameterizedTypeConstant
     public String getValueString() {
         var sb = new StringBuilder();
 
-        // NOTE: display must not touch the ConstantPool. The historical shape of this method asked
-        // m_constType.isA(pool.typeFunction()) and then pool.extractFunctionParams/Returns(this);
-        // typeFunction()/typeMethod() lazily INTERN the canonical types (growing the pool), isA()
-        // writes the type's relation cache and can call pool.register(this), and extractFunction*
-        // runs isA() twice more. Rendering one function-typed variable in a debugger therefore
-        // mutated two pools. The same "function R(P)" text is produced below purely, straight off
-        // this constant's own final fields.
+        // Display purity (see TypeInfo.toString()): this asked m_constType.isA(pool.typeFunction())
+        // and then pool.extractFunctionParams/Returns(this). typeFunction()/typeMethod() intern the
+        // canonical types, isA() writes the type's relation cache and can call pool.register(this),
+        // and extractFunction* runs isA() twice more - so rendering one function-typed variable
+        // mutated two pools. The same "function R(P)" text is produced below straight off this
+        // constant's own final fields.
         TypeConstant[] atypeParams  = functionShape(0);
         TypeConstant[] atypeReturns = functionShape(1);
         if (atypeParams != null && atypeReturns != null) {

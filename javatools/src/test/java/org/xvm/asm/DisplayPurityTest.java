@@ -141,7 +141,7 @@ public class DisplayPurityTest {
             // resolves it on purpose (registerConstants stores ensureResolvedConstant()). The
             // interesting state - an unresolved terminal type - is what the compiler holds before
             // registration, and it is exactly then that a debugger renders it.
-            TypeConstant type = new TerminalTypeConstant(pool, counter);
+            var type = new TerminalTypeConstant(pool, counter);
             counter.reset();
 
             assertEquals("Object", type.getValueString());

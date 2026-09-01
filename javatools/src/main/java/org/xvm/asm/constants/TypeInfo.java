@@ -705,8 +705,9 @@ public abstract class TypeInfo {
     /**
      * Render a one-line header describing this TypeInfo: identity, progress, format and flags.
      * <p/>
-     * <b>The display rule, which holds for every {@code toString()} in the compiler and the
-     * runtime:</b> {@code toString()} is called IMPLICITLY - by string concatenation, by
+     * <b>THE DISPLAY RULE. This is its canonical statement; every other display site in the
+     * compiler and the runtime points here rather than restating it.</b> {@code toString()} is
+     * called IMPLICITLY - by string concatenation, by
      * {@code Throwable.toString()} while a stack trace prints, and by an IDE debugger rendering a
      * row in the Variables view - so it must be SIDE-EFFECT-FREE. It may read already-computed
      * state and nothing else: it must not intern into a {@link ConstantPool}, force a

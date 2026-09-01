@@ -4,6 +4,8 @@ package org.xvm.runtime;
 import java.io.File;
 import java.io.IOException;
 
+import java.net.URI;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -13,7 +15,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ import org.xvm.runtime.template._native.reflect.xRTType;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -40,11 +42,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * never trigger a side effect.</b>
  *
  * <p>That is a promise about a whole family, not about a list of known offenders, so this test does
- * not name the classes it checks. It ENUMERATES every {@link ObjectHandle} subclass that declares
- * its own {@code toString()} - handles are what a watch window actually renders - and then requires
- * each one to be either exercised by the live population below or listed in {@link #NOT_EXERCISED}
- * with a stated reason. A {@code toString()} added tomorrow fails this test until someone does one
- * of those two things, which is what makes the guarantee hold for code nobody has written yet.</p>
+ * not name the classes it checks. It ENUMERATES, out of the COMPILED CLASSES, every
+ * {@link ObjectHandle} subclass that declares its own {@code toString()} - handles are what a
+ * watch window actually renders - and then requires each one to be either exercised by the live
+ * population below or listed in {@link #NOT_EXERCISED} with a stated reason. A {@code toString()}
+ * added tomorrow fails this test until someone does one of those two things, which is what makes
+ * the guarantee hold for code nobody has written yet.</p>
  *
  * <p>The mutation observable is shared-{@link ConstantPool} growth. It is a proxy, but a sharp one:
  * the display impurities found in this codebase all ended in an intern - {@code ensure*Constant},
@@ -54,7 +57,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *
  * <h2>What this test does and does not prove</h2>
  *
- * <p><b>Coverage: 12 of the 48 handle {@code toString()} implementations are exercised; 36 are
+ * <p><b>Coverage: 13 of the 49 handle {@code toString()} implementations are exercised; 36 are
  * listed in {@link #NOT_EXERCISED} with a reason.</b> So the ENUMERATION half is a true ratchet - a
  * {@code toString()} added tomorrow fails this test until it is covered or justified - while the
  * PURITY half only proves the 12 that a fixture can actually reach. Shrinking NOT_EXERCISED is
@@ -119,7 +122,7 @@ public class DisplayPurityCensusTest {
         Map.entry("xRTSignature$SignatureHandle", "as xRTMethod$MethodHandle"),
         Map.entry("Proxy$ProxyHandle", "requires a live cross-service proxy target"),
 
-        // --- protected template factories: value handles built only by their own template ---------
+        // --- protected template factories: value handles built only by their own template --------
         Map.entry("BaseInt128$LongLongHandle",
                   "protected factory on the template; its toString() renders a final LongLong plus "
                   + "the ObjectHandle base, which is exercised"),
@@ -131,7 +134,7 @@ public class DisplayPurityCensusTest {
                   "created only by a template's enum initialization; xBoolean's TRUE/FALSE are not "
                   + "available until the native container has run its enum warm-up"),
 
-        // --- array/delegate internals -------------------------------------------------------------
+        // --- array/delegate internals ------------------------------------------------------------
         Map.entry("xRTDelegate$DelegateHandle", "created by array internals, not directly"),
         Map.entry("xRTCharDelegate$CharArrayHandle", "as xRTDelegate$DelegateHandle"),
         Map.entry("xRTSlicingDelegate$SliceHandle", "as xRTDelegate$DelegateHandle"),
@@ -139,19 +142,12 @@ public class DisplayPurityCensusTest {
                   "requires a loaded Component from the reflection API"),
         Map.entry("xRTTypeTemplate$TypeTemplateHandle", "as xRTComponentTemplate"),
 
-        // --- require real OS, network or injection resources --------------------------------------
+        // --- require real OS, network or injection resources -------------------------------------
         Map.entry("xOSFileNode$NodeHandle", "requires a real file-system node"),
         Map.entry("xRawOSFileChannel$ChannelHandle", "requires an open OS file channel"),
         Map.entry("xRTServer$HttpServerHandle", "requires a bound HTTP server"),
         Map.entry("xRTConnector$ConnectorHandle", "requires a live network connector"),
         Map.entry("xInject$InjectedHandle", "requires an injector and a resource provider"));
-
-    /** Source roots to enumerate; tests run from either the repo root or the javatools project. */
-    private static final List<String> ROOTS = List.of(
-            "javatools/src/main/java/", "src/main/java/");
-
-    private static final Pattern CLASS_DECL =
-            Pattern.compile("\\bclass\\s+(\\w+)");
 
     // ----- the census ----------------------------------------------------------------------------
 
@@ -167,7 +163,8 @@ public class DisplayPurityCensusTest {
 
         var runtime = DisplayPurityFixture.startRuntime();
         try {
-            var          container  = new NativeContainer(runtime, DisplayPurityFixture.systemRepository());
+            var container = new NativeContainer(
+                    runtime, DisplayPurityFixture.systemRepository());
             List<Object> population = HandlePopulation.build(container);
 
             // an instance exercises the FIRST toString() up its hierarchy - that is the one that
@@ -214,7 +211,8 @@ public class DisplayPurityCensusTest {
 
         var runtime = DisplayPurityFixture.startRuntime();
         try {
-            var          container  = new NativeContainer(runtime, DisplayPurityFixture.systemRepository());
+            var container = new NativeContainer(
+                    runtime, DisplayPurityFixture.systemRepository());
             ConstantPool pool       = container.getConstantPool();
             List<Object> population = HandlePopulation.build(container);
 
@@ -271,7 +269,8 @@ public class DisplayPurityCensusTest {
 
         var runtime = DisplayPurityFixture.startRuntime();
         try {
-            var          container = new NativeContainer(runtime, DisplayPurityFixture.systemRepository());
+            var container = new NativeContainer(
+                    runtime, DisplayPurityFixture.systemRepository());
             ConstantPool pool      = container.getConstantPool();
 
             try (var ignore = ConstantPool.withPool(pool)) {
@@ -280,7 +279,8 @@ public class DisplayPurityCensusTest {
                 int          cControl    = pool.size();
                 typeControl.freeze();
                 assertTrue(pool.size() > cControl,
-                        "precondition failed: freeze() on a freshly built " + typeControl.getValueString()
+                        "precondition failed: freeze() on a freshly built "
+                        + typeControl.getValueString()
                         + " did not grow the pool, so this test cannot observe the interning it "
                         + "exists to catch - pick a type further off the beaten path");
 
@@ -343,7 +343,8 @@ public class DisplayPurityCensusTest {
 
         var runtime = DisplayPurityFixture.startRuntime();
         try {
-            var          container = new NativeContainer(runtime, DisplayPurityFixture.systemRepository());
+            var container = new NativeContainer(
+                    runtime, DisplayPurityFixture.systemRepository());
             ConstantPool pool      = container.getConstantPool();
 
             var offenders = renderAndAttributeGrowth(pool, List.of(new PoisonHandle(pool)));
@@ -384,57 +385,54 @@ public class DisplayPurityCensusTest {
     }
 
     /**
-     * Enumerate, from the source tree plus reflection, every {@link ObjectHandle} subclass that
-     * declares its own {@code toString()}. The source tree supplies candidate names (including
-     * nested ones); reflection supplies the truth about the hierarchy and the declaration.
+     * Enumerate, from the COMPILED OUTPUT, every {@link ObjectHandle} subclass that declares its
+     * own {@code toString()}.
+     *
+     * <p>This deliberately does not read source text. "Which classes subclass {@code ObjectHandle}
+     * and declare {@code toString()}" is a question the class files answer exactly, whereas a
+     * source scan can be fooled by formatting, by the token appearing in a comment or a string
+     * literal, by a file moving, and by the working directory the build happens to run from.</p>
      */
     private static Set<String> handleToStringCensus() throws IOException {
         var census = new TreeSet<String>();
-        try (Stream<Path> files = Files.walk(runtimeSourceRoot())) {
-            for (Path p : files.filter(f -> f.toString().endsWith(".java")).toList()) {
-                String source = Files.readString(p);
-                if (!source.contains("String toString()")) {
-                    continue;
-                }
-                for (Class<?> clz : candidateClasses(p, source)) {
-                    if (ObjectHandle.class.isAssignableFrom(clz) && declaresToString(clz)) {
-                        census.add(simpleName(clz));
-                    }
-                }
+        for (Class<?> clz : classesInCodeSourceOf(ObjectHandle.class)) {
+            if (ObjectHandle.class.isAssignableFrom(clz) && declaresToString(clz)) {
+                census.add(simpleName(clz));
             }
         }
         return census;
     }
 
-    private static List<Class<?>> candidateClasses(Path file, String source) {
-        String pkgPath = runtimeSourceRoot().getParent().getParent().getParent()
-                .relativize(file).toString();
-        String top     = pkgPath.substring(0, pkgPath.length() - ".java".length())
-                .replace(File.separatorChar, '.');
+    /**
+     * @return every class the compiled output containing {@code clzAnchor} holds, loaded but NOT
+     *         initialized, skipping any that cannot be resolved
+     */
+    private static List<Class<?>> classesInCodeSourceOf(Class<?> clzAnchor) throws IOException {
+        var source = clzAnchor.getProtectionDomain().getCodeSource();
+        assertNotNull(source, "no CodeSource for " + clzAnchor.getName()
+                + " - the census cannot enumerate the compiled output");
 
-        var names = new ArrayList<String>();
-        names.add(top);
-        CLASS_DECL.matcher(source).results()
-                .map(r -> r.group(1))
-                .distinct()
-                .forEach(sName -> {
-                    names.add(top + '$' + sName);           // nested
-                    names.add(top + "$1$" + sName);
-                });
-        // anonymous classes carry no name in the source; probe the usual low ordinals
-        for (int i = 1; i <= 6; i++) {
-            names.add(top + '$' + i);
-        }
+        var root = Path.of(URI.create(source.getLocation().toString()));
+        assertTrue(Files.isDirectory(root),
+                "expected the compiled classes directory, got " + root
+                + " - if javatools is now tested from a jar, this scan needs a JarFile branch");
 
-        var found = new ArrayList<Class<?>>();
-        for (String sName : names) {
-            try {
-                found.add(Class.forName(sName, false, DisplayPurityCensusTest.class.getClassLoader()));
-            } catch (Throwable ignore) {
-                // not a real class (a local class, an interface name reused, a probe miss)
+        var loader  = DisplayPurityCensusTest.class.getClassLoader();
+        var classes = new ArrayList<Class<?>>();
+        try (Stream<Path> files = Files.walk(root)) {
+            for (Path file : files.filter(f -> f.toString().endsWith(".class")).toList()) {
+                String sName = root.relativize(file).toString()
+                        .replace(File.separatorChar, '.');
+                sName = sName.substring(0, sName.length() - ".class".length());
+                try {
+                    classes.add(Class.forName(sName, false, loader));
+                } catch (Throwable ignore) {
+                    // a class whose dependencies are not on the test classpath; it cannot be a
+                    // live handle in this fixture either, so skipping it is safe
+                }
             }
         }
-        return found;
+        return classes;
     }
 
     private static boolean declaresToString(Class<?> clz) {
@@ -451,16 +449,6 @@ public class DisplayPurityCensusTest {
         String sName = clz.getName();
         int    ofPkg = sName.lastIndexOf('.');
         return ofPkg < 0 ? sName : sName.substring(ofPkg + 1);
-    }
-
-    private static Path runtimeSourceRoot() {
-        for (String sRoot : ROOTS) {
-            var dir = new File(sRoot + "org/xvm/runtime");
-            if (dir.isDirectory()) {
-                return dir.toPath();
-            }
-        }
-        throw new IllegalStateException("cannot locate the org.xvm.runtime source tree");
     }
 
     /**

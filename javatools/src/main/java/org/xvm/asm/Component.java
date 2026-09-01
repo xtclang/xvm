@@ -3222,7 +3222,7 @@ public abstract class Component
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             switch (m_composition) {
             case Annotation:
@@ -3271,11 +3271,11 @@ public abstract class Component
                 sb.append('>');
             } else {
                 if (m_typeContrib != null) {
-                    // NOTE: resolveTypedefs() runs ensureResolvedConstant(), which WRITES the
-                    // resolved constant back into the terminal type's m_constId. Every structure's
-                    // toString() reaches this line through getDescription(), so rendering a class
-                    // in a debugger advanced resolution state. A typedef now renders as itself,
-                    // which is also what the source actually says.
+                    // Display purity (see TypeInfo.toString()): resolveTypedefs() runs
+                    // ensureResolvedConstant(), which writes the resolved constant back into the
+                    // terminal type's m_constId - and every structure's toString() reaches this
+                    // line through getDescription(). A typedef now renders as itself, which is
+                    // also what the source says.
                     sb.append(m_typeContrib.getDescription());
                 }
 

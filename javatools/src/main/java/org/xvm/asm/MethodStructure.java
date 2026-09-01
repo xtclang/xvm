@@ -2131,10 +2131,10 @@ public class MethodStructure
           .append(fSrc);
 
         if (fSrc) {
-            // NOTE: getLineCount() normalizes the source, which interns one StringConstant per
-            // source line into the ConstantPool and writes m_aconstSrc/m_anIndents. Rendering a
-            // method in a debugger must not grow the pool by the size of its own source, so report
-            // the count only when the chopping has already happened.
+            // Display purity (see TypeInfo.toString()): getLineCount() normalizes the source,
+            // interning one StringConstant per source line and writing m_aconstSrc/m_anIndents -
+            // growing the pool by the size of the method's own source. Report the count only when
+            // the chopping has already happened.
             int cLines = m_source.peekLineCount();
             sb.append(", line-number=")
               .append(m_source.getLineNumber())

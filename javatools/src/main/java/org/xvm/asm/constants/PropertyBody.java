@@ -513,7 +513,7 @@ public class PropertyBody
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append(m_type.getValueString())
           .append(' ')
@@ -542,12 +542,12 @@ public class PropertyBody
             sb.append(", has-code");
         }
 
-        // NOTE: isInjected()/isExplicitAbstract()/isExplicitOverride()/isExplicitReadOnly() all
-        // classify annotations by INTERNED IDENTITY - clzInject()/clzOverride()/clzRO() and
-        // TypeInfo.containsAnnotation()'s getImplicitlyImportedIdentity() each intern into the
-        // pool, and getPropertyAnnotations() additionally forces the lazy property/ref annotation
-        // split. Rendering one property row grew the pool several constants. Display compares by
-        // name instead, off the raw contributions.
+        // Display purity (see TypeInfo.toString()): isInjected()/isExplicitAbstract()/
+        // isExplicitOverride()/isExplicitReadOnly() classify annotations by INTERNED IDENTITY -
+        // clzInject()/clzOverride()/clzRO() and TypeInfo.containsAnnotation()'s
+        // getImplicitlyImportedIdentity() each intern, and getPropertyAnnotations() forces the lazy
+        // property/ref annotation split. Display compares by name instead, off the raw
+        // contributions.
         PropertyStructure prop = m_structProp;
         if (prop != null && m_impl != Implementation.FromInto) {
             for (String sAnno : ANNOTATIONS_DISPLAYED) {

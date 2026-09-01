@@ -131,11 +131,11 @@ public class DisplayPurityRuntimeTest {
             list.addAll(info.getTypeParams().values());
 
             // the structures behind them: ClassStructure contributions, MethodStructure descriptions
-            ClassStructure struct = info.getClassStructure();
+            var struct = info.getClassStructure();
             if (struct != null) {
                 list.add(struct);
                 list.addAll(struct.getContributionsAsList());
-                struct.children().forEach(list::add);
+                list.addAll(struct.children());
             }
         }
 

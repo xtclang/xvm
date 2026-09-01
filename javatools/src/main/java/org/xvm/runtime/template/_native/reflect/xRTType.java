@@ -1917,12 +1917,10 @@ public class xRTType
 
         @Override
         public String toString() {
-            // NOTE: getDataType() goes through getType(), and getType() augments - augmentType()
-            // calls freeze() because this handle is constructed non-mutable, which interns a fresh
-            // ImmutableTypeConstant into the pool, and getParamType(0) falls back to
-            // pool.typeObject() (another intern) when there is no parameter. Rendering a Type
-            // variable must not grow the pool it describes, so read the composition's own type
-            // straight off and decline rather than intern when the parameter is absent.
+            // Display purity (see TypeInfo.toString()): getDataType() goes through getType(),
+            // which augments - augmentType() calls freeze() because this handle is constructed
+            // non-mutable - and getParamType(0) falls back to pool.typeObject() when there is no
+            // parameter. Both intern, so a Type variable grew the very pool it describes.
             TypeConstant typeData = getComposition().getType().peekParamType(0);
             return "(Type) " + (typeData == null ? "<deferred>" : typeData.getValueString());
         }

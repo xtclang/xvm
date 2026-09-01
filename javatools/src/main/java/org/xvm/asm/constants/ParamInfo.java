@@ -106,20 +106,18 @@ public class ParamInfo {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append("<")
           .append(isActualTypeSpecified() ? getActualType().getValueString() : getName());
 
-        // NOTE: display must not touch the ConstantPool, and must not throw. The historical shape
-        // of this test was
+        // Display purity (see TypeInfo.toString()): the historical test was
         //     !typeConstraint.equals(typeConstraint.getConstantPool().typeObject())
         //         && !typeConstraint.isTuple()
-        // where typeObject() lazily INTERNS the canonical Object type (growing the pool just
-        // because a type parameter was rendered) and isTuple() on a terminal type both writes back
-        // the resolved constant and throws IllegalStateException when the class structure is not
-        // loaded - taking down the rendering of the whole enclosing TypeInfo. The suppressed
-        // suffixes are identified by their already-computed value strings instead.
+        // where typeObject() interns the canonical Object type, and isTuple() on a terminal type
+        // both writes back the resolved constant and throws IllegalStateException when the class
+        // structure is not loaded - taking down the render of the whole enclosing TypeInfo. The
+        // suppressed suffixes are identified by their already-computed value strings instead.
         TypeConstant typeConstraint = getConstraintType();
         String       sConstraint    = typeConstraint.getValueString();
         if (!"Object".equals(sConstraint) && !isTupleValueString(sConstraint)) {

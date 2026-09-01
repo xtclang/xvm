@@ -2035,10 +2035,10 @@ public class TerminalTypeConstant
 
     @Override
     public String getValueString() {
-        // display must not advance resolution state: ensureResolvedConstant() would write the
-        // resolved constant back into m_constId, so merely rendering this type in a debugger (or in
-        // a log line) would collapse an unresolved constant mid-compilation. Read the resolution
-        // into a local instead; the write-back stays with the non-display callers.
+        // Display purity (see TypeInfo.toString()): ensureResolvedConstant() would write the
+        // resolved constant back into m_constId, collapsing an unresolved constant mid-compilation
+        // just because something rendered it. Read the resolution into a local instead; the
+        // write-back stays with the non-display callers.
         Constant constId  = m_constId;
         Constant resolved = constId.resolve();
         return (resolved == null ? constId : resolved).getValueString();
