@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Constants;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.DirRepository;
@@ -57,7 +58,7 @@ public class AtomicViewSharingTest {
 
         var runtime = new Runtime();
         try {
-            var container = NativeContainer.create(runtime, systemRepository());
+            var container = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var pool      = container.getConstantPool();
             var clz       = new ClassComposition(container, container.getTemplate("Object"),
                     pool.typeObject());
@@ -89,7 +90,7 @@ public class AtomicViewSharingTest {
 
         var runtime = new Runtime();
         try {
-            var container = NativeContainer.create(runtime, systemRepository());
+            var container = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var pool      = container.getConstantPool();
             var clz       = new ClassComposition(container, container.getTemplate("Object"),
                     pool.typeObject());
@@ -120,7 +121,7 @@ public class AtomicViewSharingTest {
 
         var runtime = new Runtime();
         try {
-            var container = NativeContainer.create(runtime, systemRepository());
+            var container = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var pool      = container.getConstantPool();
             var clz       = new ClassComposition(container, container.getTemplate("Object"),
                     pool.typeObject());
@@ -158,7 +159,7 @@ public class AtomicViewSharingTest {
 
         var runtime = new Runtime();
         try {
-            var container = NativeContainer.create(runtime, systemRepository());
+            var container = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var pool      = container.getConstantPool();
             var clz       = new ClassComposition(container, container.getTemplate("Object"),
                     pool.typeObject());

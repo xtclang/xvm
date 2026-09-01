@@ -103,17 +103,18 @@ public class NativeContainer
      * that work out of the constructor avoids exposing a partially constructed owner while
      * preserving the previous "ready before returned to the connector" behavior.
      */
-    public static NativeContainer create(Runtime runtime, ModuleRepository repository) {
+    public static NativeContainer create(Runtime runtime, ModuleRepository repository,
+            ErrorListener errs) {
         // register only after construction and template initialization complete, matching the
         // MainContainer/NestedContainer post-construction registration discipline; registration
         // makes the native parent visible to world-state diagnostics (snapshotWorld), which must
         // enumerate the WHOLE world from the runtime registry, native parents included
         return runtime.registerContainer(
-                new NativeContainer(runtime, repository).initializeNativeTemplates());
+                new NativeContainer(runtime, repository, errs).initializeNativeTemplates());
     }
 
-    private NativeContainer(Runtime runtime, ModuleRepository repository) {
-        super(runtime, null, null);
+    private NativeContainer(Runtime runtime, ModuleRepository repository, ErrorListener errs) {
+        super(runtime, null, null, errs);
 
         f_repository = repository;
     }

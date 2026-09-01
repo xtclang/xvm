@@ -111,13 +111,11 @@ public final class XtcEngine
         this.diagnosticSink  = Objects.requireNonNull(diagnosticSink, "diagnosticSink");
         this.runtime         = new Runtime();
         this.runtime.start();
-        this.containerNative = NativeContainer.create(this.runtime, this.repoLibrary);
+        this.containerNative = NativeContainer.create(this.runtime, this.repoLibrary,
+                diagnosticSink);
 
-        // Work a per-compile listener cannot reach, because it is not owned by any one compile:
-        // runtime metadata belongs to the container, and library-type resolution belongs to the
-        // library's own ConstantPool. Installed once, for the engine's lifetime - NOT per compile,
-        // which would put shared mutable state back and make parallel compiles fight over it.
-        this.containerNative.setErrorListener(diagnosticSink);
+        // The native container is the root of every run, and a NestedContainer with none of its own
+        // inherits from its parent - so a host sink set here reaches every run this engine starts.
     }
 
     public static @NotNull Builder builder() {

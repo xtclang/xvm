@@ -18,6 +18,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.LinkedRepository;
@@ -48,7 +49,7 @@ public class NativeInjectionSingletonTest {
 
         var runtime = new Runtime();
         try {
-            var container = NativeContainer.create(runtime, systemRepository());
+            var container = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var template  = NativeTemplates.get(container).injector();
 
             int cBefore = container.getServices().size();

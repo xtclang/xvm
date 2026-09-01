@@ -294,7 +294,7 @@ public final class CmpExpression
                     break CheckInference;
                 }
                 if (expr2New.isConstant() && !type2.equals(type1)) {
-                    checkConstType(ctx, expr1Name, type2);
+                    checkConstType(ctx, expr1Name, type2, errs);
                     break CheckInference;
                 }
             }
@@ -309,7 +309,7 @@ public final class CmpExpression
                     break CheckInference;
                 }
                 if (expr1New.isConstant() && !type1.equals(type2)) {
-                    checkConstType(ctx, expr2Name, type1);
+                    checkConstType(ctx, expr2Name, type1, errs);
                     // break CheckInference;
                 }
             }
@@ -497,7 +497,7 @@ public final class CmpExpression
     /**
      * Infer a type for a name from a comparison to a constant value.
      */
-    private void checkConstType(Context ctx, NameExpression exprTarget, TypeConstant type) {
+    private void checkConstType(Context ctx, NameExpression exprTarget, TypeConstant type, ErrorListener errs) {
         // replace an enum value type with the type of the enum; see Op.selectCommonType()
         TypeInfo info = type.ensureTypeInfo();
         if (info.getFormat() == Component.Format.ENUMVALUE) {

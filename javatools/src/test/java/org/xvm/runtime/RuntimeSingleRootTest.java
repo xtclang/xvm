@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.LinkedRepository;
@@ -43,7 +44,7 @@ public class RuntimeSingleRootTest {
         System.setProperty(OwnershipDiagnostics.VALIDATE_PROPERTY, "true");
         var runtime = new Runtime();
         try {
-            var containerNative = NativeContainer.create(runtime, systemRepository());
+            var containerNative = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var moduleEcstasy   = containerNative.getConstantPool().modEcstasy();
 
             var containerRoot = MainContainer.create(runtime, containerNative, moduleEcstasy);
@@ -71,7 +72,7 @@ public class RuntimeSingleRootTest {
 
         var runtime = new Runtime();
         try {
-            var containerNative = NativeContainer.create(runtime, systemRepository());
+            var containerNative = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var moduleEcstasy   = containerNative.getConstantPool().modEcstasy();
 
             assertNotNull(MainContainer.create(runtime, containerNative, moduleEcstasy));

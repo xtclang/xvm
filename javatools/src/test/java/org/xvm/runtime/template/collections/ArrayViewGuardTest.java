@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Constants;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.DirRepository;
@@ -57,7 +58,7 @@ public class ArrayViewGuardTest {
 
         var runtime = new Runtime();
         try {
-            var container = NativeContainer.create(runtime, systemRepository());
+            var container = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var pool      = container.getConstantPool();
             var clzArray  = (ClassComposition) container.resolveClass(pool.typeArray());
             var clzView   = clzArray.ensureAccess(Access.PROTECTED);
@@ -90,7 +91,7 @@ public class ArrayViewGuardTest {
 
         var runtime = new Runtime();
         try {
-            var container = NativeContainer.create(runtime, systemRepository());
+            var container = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var pool      = container.getConstantPool();
             var clzArray  = (ClassComposition) container.resolveClass(pool.typeArray());
             var clzView   = clzArray.ensureAccess(Access.PRIVATE);
@@ -125,7 +126,7 @@ public class ArrayViewGuardTest {
 
         var runtime = new Runtime();
         try {
-            var container = NativeContainer.create(runtime, systemRepository());
+            var container = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var pool      = container.getConstantPool();
             var clzArray  = (ClassComposition) container.resolveClass(pool.typeArray());
 

@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.LinkedRepository;
@@ -47,8 +48,8 @@ public class HandleConstantOwnerGuardTest {
 
         var runtime = new Runtime();
         try {
-            var containerA = NativeContainer.create(runtime, systemRepository());
-            var containerB = NativeContainer.create(runtime, systemRepository());
+            var containerA = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
+            var containerB = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var poolB      = containerB.getConstantPool();
 
             var clzB    = new ClassComposition(containerB, containerB.getTemplate("Object"),

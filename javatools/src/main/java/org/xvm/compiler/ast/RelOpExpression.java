@@ -188,7 +188,7 @@ public final class RelOpExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        MethodConstant method = getImplicitMethod(ctx);
+        MethodConstant method = getImplicitMethod(ctx, ErrorListener.BLACKHOLE);
         return method == null
                 ? null
                 : method.getRawReturns().get(0);
@@ -197,7 +197,7 @@ public final class RelOpExpression
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx) {
         if (operator.getId() == Id.DIVREM) {
-            MethodConstant method = getImplicitMethod(ctx);
+            MethodConstant method = getImplicitMethod(ctx, ErrorListener.BLACKHOLE);
             return method == null
                     ? null
                     : method.getRawReturns().unsafeArray();
@@ -210,7 +210,7 @@ public final class RelOpExpression
      * @return the method that the op will use implicitly if it is not provided an overriding type
      *         for inference purposes
      */
-    protected MethodConstant getImplicitMethod(Context ctx) {
+    protected MethodConstant getImplicitMethod(Context ctx, ErrorListener errs) {
         TypeConstant typeLeft = expr1.getImplicitType(ctx);
         if (typeLeft == null) {
             // if the type of the left-hand expression cannot be determined, then the result of the
@@ -425,7 +425,7 @@ public final class RelOpExpression
         }
 
         // using the inferred types (if any), validate the expressions
-        TypeConstant type1Req = guessLeftType(ctx, typeRequired);
+        TypeConstant type1Req = guessLeftType(ctx, typeRequired, errs);
 
         Expression expr1Copy = null;
         if (type1Req == null) {
@@ -444,11 +444,11 @@ public final class RelOpExpression
             type1Act = expr1New.getType();
         }
 
-        TypeConstant type2Req = selectRightType(ctx, typeRequired, type1Act);
+        TypeConstant type2Req = selectRightType(ctx, typeRequired, type1Act, errs);
         if (type2Req == null && type1Req != null) {
             // it's possible we narrowed the first type too aggressively; try to use the wider one
             type1Act = type1Req;
-            type2Req = selectRightType(ctx, typeRequired, type1Act);
+            type2Req = selectRightType(ctx, typeRequired, type1Act, errs);
         }
 
         Expression   expr2New = expr2.validate(ctx, type2Req, errs);
@@ -589,7 +589,7 @@ public final class RelOpExpression
      *
      * @return the type to request from the left expression, or null
      */
-    private TypeConstant guessLeftType(Context ctx, TypeConstant typeRequired) {
+    private TypeConstant guessLeftType(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         // all of these operators work the same way, in terms of types and left associativity:
         //
         // 1) there is a "required type", which is optional. if a required type is provided, then
@@ -675,7 +675,7 @@ public final class RelOpExpression
 
     /**
      * Calculate the type to use to validate the right expressions. This is a continuation of the
-     * logic described in {@link #guessLeftType(Context, TypeConstant)}.
+     * logic described in {@link #guessLeftType(Context, TypeConstant, errs)}.
      *
      * @param ctx           the compiler context
      * @param typeRequired  the type (or first type if more than one) required, or null
@@ -684,7 +684,7 @@ public final class RelOpExpression
      * @return the type to request from the right expression, or null
      */
     private TypeConstant selectRightType(Context ctx, TypeConstant typeRequired,
-                                         TypeConstant typeLeft) {
+                                         TypeConstant typeLeft, ErrorListener errs) {
         if (typeLeft == null) {
             // we're already screwed
             return null;

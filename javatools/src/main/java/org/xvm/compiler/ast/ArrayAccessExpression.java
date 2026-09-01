@@ -377,7 +377,7 @@ public final class ArrayAccessExpression
                     : typeArray.resolveGenericType("Index");
             if (typeIndex == null || !aexprIndexes[0].testFit(ctx, typeIndex, false, ErrorListener.BLACKHOLE).isFit()) {
                 typeIndex = aexprIndexes[0].getImplicitType(ctx);
-                typeIndex = determineIndexType(ctx, exprArray, typeArray, aexprIndexes, typeIndex);
+                typeIndex = determineIndexType(ctx, exprArray, typeArray, aexprIndexes, typeIndex, errs);
             }
 
             if (typeIndex != null) {
@@ -454,7 +454,7 @@ public final class ArrayAccessExpression
             typeArray = exprArray.getType();
 
             // find the element access operator
-            MethodConstant idGet = findArrayAccessor(ctx, typeArray, aexprIndexes, typeRequired);
+            MethodConstant idGet = findArrayAccessor(ctx, typeArray, aexprIndexes, typeRequired, errs);
             if (idGet == null) {
                 log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR_SIGNATURE,
                         "[]", typeArray.getValueString(), cIndexes);
@@ -681,7 +681,7 @@ public final class ArrayAccessExpression
             Context       ctx,
             TypeConstant  typeTarget,
             Expression[]  aexprArgs,
-            TypeConstant  typeReturn) {
+            TypeConstant  typeReturn, ErrorListener errs) {
         int            cArgs     = aexprArgs.length;
         TypeConstant[] atypeArgs = new TypeConstant[cArgs];
         for (int i = 0; i < cArgs; ++i) {
@@ -1159,7 +1159,7 @@ public final class ArrayAccessExpression
      * @return the type to use for the index of the array
      */
     private TypeConstant determineIndexType(Context ctx, Expression exprArray,
-            TypeConstant typeArray, Expression[] aexprIndexes, TypeConstant typeIndex) {
+            TypeConstant typeArray, Expression[] aexprIndexes, TypeConstant typeIndex, ErrorListener errs) {
         ConstantPool pool = pool();
         if (typeIndex == null) {
             if (typeArray != null) {

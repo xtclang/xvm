@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
@@ -91,7 +92,7 @@ public class ValueConstantFoldingTest {
 
         var runtime = new Runtime();
         try {
-            var pool = NativeContainer.create(runtime, systemRepository()).getConstantPool();
+            var pool = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME).getConstantPool();
             var abc  = pool.ensureStringConstant("abc");
             var abd  = pool.ensureStringConstant("abd");
 

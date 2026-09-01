@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
@@ -33,7 +34,7 @@ public class InterpreterConnector
         super(repository);
 
         f_runtime         = new Runtime();
-        f_containerNative = NativeContainer.create(f_runtime, repository);
+        f_containerNative = NativeContainer.create(f_runtime, repository, ErrorListener.RUNTIME);
     }
 
     @Override

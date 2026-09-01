@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.api.EmbeddingTestSupport;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -47,7 +48,7 @@ public class DisplayPurityRuntimeTest {
         runtime.start();
         try {
             ConstantPool pool = NativeContainer
-                    .create(runtime, EmbeddingTestSupport.systemRepository())
+                    .create(runtime, EmbeddingTestSupport.systemRepository(), ErrorListener.RUNTIME)
                     .getConstantPool();
 
             // ---- build the population FIRST; this legitimately interns ---------------------------

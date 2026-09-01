@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.LinkedRepository;
@@ -55,13 +56,13 @@ public class WorldSnapshotDemoTest {
         var runtime = new Runtime();
         try {
             banner("SEQUENTIAL RUNS: run 1 boots its world");
-            var containerA = NativeContainer.create(runtime, systemRepository());
+            var containerA = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var world1 = OwnershipDiagnostics.snapshotWorld(runtime);
             System.out.println(world1.render());
             assertTrue(world1.isValid(), () -> world1.validation().message());
 
             banner("SEQUENTIAL RUNS: run 2 boots; run 1's container still reachable");
-            var containerB = NativeContainer.create(runtime, systemRepository());
+            var containerB = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var world2 = OwnershipDiagnostics.snapshotWorld(runtime);
             System.out.println(world2.render());
             assertTrue(world2.isValid(), () -> world2.validation().message());
@@ -98,8 +99,8 @@ public class WorldSnapshotDemoTest {
 
         var runtime = new Runtime();
         try {
-            var containerA = NativeContainer.create(runtime, systemRepository());
-            var containerB = NativeContainer.create(runtime, systemRepository());
+            var containerA = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
+            var containerB = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
 
             banner("MULTIPLE CONTAINERS: one world, two containers, one consistency sweep");
             var world = OwnershipDiagnostics.snapshotWorld(runtime);

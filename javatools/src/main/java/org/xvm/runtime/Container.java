@@ -69,10 +69,20 @@ import static java.util.Objects.requireNonNull;
 public abstract class Container
         implements LinkerContext {
     protected Container(Runtime runtime, Container containerParent, ModuleConstant idModule) {
+        this(runtime, containerParent, idModule, null);
+    }
+
+    /**
+     * @param errs  the listener this container reports runtime metadata errors to, or null to
+     *              inherit from {@code containerParent}
+     */
+    protected Container(Runtime runtime, Container containerParent, ModuleConstant idModule,
+                        ErrorListener errs) {
         f_runtime  = runtime;
         f_parent   = containerParent;
         f_heap     = new ConstHeap();
         f_idModule = idModule;
+        f_errs     = errs;
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -920,29 +930,32 @@ public abstract class Container
     /**
      * The listener that runtime-lazy metadata synthesis reports to.
      *
-     * <p>Defaults to {@link ErrorListener#RUNTIME}, which is what the previous ambient walk through
+     * <p>Null means "inherit from my parent"; a root container with nothing configured answers
+     * {@link ErrorListener#RUNTIME}, which is what the previous ambient walk through
      * {@code FileStructure} resolved to for runtime callers. It is a field on the container rather
      * than a constant at each call site so an embedder can supply its own - the whole point of
      * threading the listener is that it can be chosen, and hardcoding {@code RUNTIME} in forty
      * places would have replaced one ambient default with forty fixed ones.
      */
-    private ErrorListener m_errs = ErrorListener.RUNTIME;
+    private final ErrorListener f_errs;
 
     /**
      * @return the listener this container reports runtime metadata errors to; never null
      */
     public ErrorListener getErrorListener() {
-        return m_errs;
+        ErrorListener errs = f_errs;
+        if (errs != null) {
+            return errs;
+        }
+
+        // Inherit from the container that created this one, so a nested container - which is what
+        // every run is - reports where its host said to. This is inheritance down a declared parent
+        // chain, not an ambient lookup: f_parent is the container that made this one, and a root
+        // container with nothing configured answers RUNTIME.
+        Container parent = f_parent;
+        return parent == null ? ErrorListener.RUNTIME : parent.getErrorListener();
     }
 
-    /**
-     * Supply the listener this container reports runtime metadata errors to.
-     *
-     * @param errs  the listener; required
-     */
-    public void setErrorListener(ErrorListener errs) {
-        m_errs = requireNonNull(errs, "errs");
-    }
 
     public final Runtime f_runtime;
 

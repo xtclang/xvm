@@ -3,6 +3,7 @@ package org.xvm.asm;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.api.EmbeddingTestSupport;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -41,7 +42,7 @@ public class TypeComparisonCorpusTest {
                     "compiled XDK system modules are required");
             m_runtime = new Runtime();
             m_runtime.start();
-            m_pool = NativeContainer.create(m_runtime, EmbeddingTestSupport.systemRepository())
+            m_pool = NativeContainer.create(m_runtime, EmbeddingTestSupport.systemRepository(), ErrorListener.RUNTIME)
                     .getConstantPool();
         }
         return m_pool;

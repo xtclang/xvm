@@ -3,6 +3,7 @@ package org.xvm.asm;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.api.EmbeddingTestSupport;
 
 import org.xvm.asm.constants.TypeInfo;
@@ -30,7 +31,7 @@ public class TypeInfoDisplayPurityTest {
                 "compiled XDK system modules are required");
         var runtime = new Runtime();
         runtime.start();
-        pool = NativeContainer.create(runtime, EmbeddingTestSupport.systemRepository()).getConstantPool();
+        pool = NativeContainer.create(runtime, EmbeddingTestSupport.systemRepository(), ErrorListener.RUNTIME).getConstantPool();
         return pool.typeInt64().ensureTypeInfo();   // fully build it first (legitimate population)
     }
 

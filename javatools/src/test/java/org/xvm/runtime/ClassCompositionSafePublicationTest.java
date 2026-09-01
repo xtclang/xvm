@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.LinkedRepository;
@@ -63,7 +64,7 @@ public class ClassCompositionSafePublicationTest {
 
         var runtime = new Runtime();
         try {
-            var container = NativeContainer.create(runtime, systemRepository());
+            var container = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var pool      = container.getConstantPool();
             var clz       = new ClassComposition(container, container.getTemplate("Object"),
                     pool.typeObject());
@@ -142,7 +143,7 @@ public class ClassCompositionSafePublicationTest {
 
         var runtime = new Runtime();
         try {
-            var container = NativeContainer.create(runtime, systemRepository());
+            var container = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var pool      = container.getConstantPool();
             var clzString = (ClassComposition) container.resolveClass(pool.typeString());
             var infoSize  = pool.typeString().ensureTypeInfo().findProperty("size");

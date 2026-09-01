@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.api.EmbeddingTestSupport;
 
 import org.xvm.asm.ConstantPool;
@@ -48,7 +49,7 @@ public class SharedPoolGrowthCharacterizationTest {
         var runtime = new Runtime();
         try {
             runtime.start();
-            var          containerNative = NativeContainer.create(runtime, systemRepo());
+            var          containerNative = NativeContainer.create(runtime, systemRepo(), ErrorListener.RUNTIME);
             ConstantPool sharedPool      = containerNative.getConstantPool();
 
             int   baseline = sharedPool.size();

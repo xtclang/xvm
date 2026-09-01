@@ -81,7 +81,7 @@ public final class ToIntExpression
      * @return the method or property constant to use to extract an IntNumber, or null if extraction
      *         is unnecessary
      */
-    public IdentityConstant getExtractor() {
+    public IdentityConstant getExtractor(ErrorListener errs) {
         switch (expr.getType().getEcstasyClassName()) {
         case "numbers.Int8":
         case "numbers.Int16":
@@ -157,7 +157,7 @@ public final class ToIntExpression
     /**
      * @return the method to use to extract an IntNumber, or null if extraction is unnecessary
      */
-    public MethodConstant getConvertMethod() {
+    public MethodConstant getConvertMethod(ErrorListener errs) {
         switch (expr.getType().getEcstasyClassName()) {
         case "numbers.Int8":
         case "numbers.Int16":
@@ -206,8 +206,8 @@ public final class ToIntExpression
 
     @Override
     public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
-        return !isConstant() && getExtractor() == null && getOffsetConstant() == null &&
-            getConvertMethod() == null
+        return !isConstant() && getExtractor(errs) == null && getOffsetConstant() == null &&
+            getConvertMethod(errs) == null
                 ? expr.generateArgument(ctx, code, fLocalPropOk, errs)
                 : super.generateArgument(ctx, code, fLocalPropOk, errs);
     }
@@ -218,9 +218,9 @@ public final class ToIntExpression
             super.generateAssignment(ctx, code, LVal, errs);
         }
 
-        IdentityConstant idExtract   = getExtractor();
+        IdentityConstant idExtract   = getExtractor(errs);
         Constant         constOffset = getOffsetConstant();
-        MethodConstant   idConvert   = getConvertMethod();
+        MethodConstant   idConvert   = getConvertMethod(errs);
 
         // step 1: extract the value from the underlying expression
         Argument argExtracted = expr.generateArgument(ctx, code, false, errs);
@@ -268,7 +268,7 @@ public final class ToIntExpression
 
         sb.append(expr);
 
-        IdentityConstant idExtract = getExtractor();
+        IdentityConstant idExtract = getExtractor(ErrorListener.BLACKHOLE);
         if (idExtract != null) {
             sb.append('.')
               .append(idExtract.getName());
@@ -287,7 +287,7 @@ public final class ToIntExpression
             }
         }
 
-        MethodConstant idConvert = getConvertMethod();
+        MethodConstant idConvert = getConvertMethod(ErrorListener.BLACKHOLE);
         if (idConvert != null) {
             if (pintOffset != null) {
                 sb.insert(0, '(')

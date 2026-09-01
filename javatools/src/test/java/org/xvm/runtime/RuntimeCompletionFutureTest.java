@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.api.EmbeddingTestSupport;
 
 import org.xvm.asm.DirRepository;
@@ -99,7 +100,7 @@ public class RuntimeCompletionFutureTest {
         var runtime = new Runtime();
         try {
             runtime.start();
-            var containerNative = NativeContainer.create(runtime, repository);
+            var containerNative = NativeContainer.create(runtime, repository, ErrorListener.RUNTIME);
 
             ModuleStructure moduleApp = repository.loadModule(sModule);
             FileStructure   structApp = containerNative.createFileStructure(moduleApp);

@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.api.EmbeddingTestSupport;
 
 import org.xvm.asm.FileStructure;
@@ -55,7 +56,7 @@ public class HostNestedContainerTest {
         try {
             runtime.start();
             // ONE native plane, reused by both nested runs (the warm engine)
-            var containerNative = NativeContainer.create(runtime, repository);
+            var containerNative = NativeContainer.create(runtime, repository, ErrorListener.RUNTIME);
 
             runNestedModule(containerNative, repository, "NestOne");
             runNestedModule(containerNative, repository, "NestTwo");

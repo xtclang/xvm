@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.LinkedRepository;
@@ -42,13 +43,13 @@ public class WorldSnapshotTest {
 
         var runtime = new Runtime();
         try {
-            var containerA = NativeContainer.create(runtime, systemRepository());
+            var containerA = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
 
             WorldSnapshot world1 = OwnershipDiagnostics.snapshotWorld(runtime);
             assertEquals(1, world1.containers().size());
             assertTrue(world1.isValid(), () -> world1.validation().message());
 
-            var containerB = NativeContainer.create(runtime, systemRepository());
+            var containerB = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
 
             WorldSnapshot world2 = OwnershipDiagnostics.snapshotWorld(runtime);
             assertEquals(2, world2.containers().size());

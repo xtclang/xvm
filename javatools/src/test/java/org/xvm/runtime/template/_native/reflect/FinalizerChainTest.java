@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.LinkedRepository;
@@ -45,7 +46,7 @@ public class FinalizerChainTest {
 
         var runtime = new Runtime();
         try {
-            var container = NativeContainer.create(runtime, systemRepository());
+            var container = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
             var hHead   = new FullyBoundHandle(container, null, Utils.OBJECTS_NONE);
             var hSecond = new FullyBoundHandle(container, null, Utils.OBJECTS_NONE);
             var hThird  = new FullyBoundHandle(container, null, Utils.OBJECTS_NONE);
