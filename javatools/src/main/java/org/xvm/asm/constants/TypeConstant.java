@@ -1674,8 +1674,38 @@ public abstract sealed class TypeConstant
     public TypeInfo ensureTypeInfo() {
         // Ask the pool that owns this constant. Every Constant can reach its pool, so this is the
         // one owner guaranteed to be in scope - which is what the previous version was reaching for
-        // when it walked the structure tree to a mutable field on FileStructure. A foreign pool's
-        // work is still reported to that pool's listener, because the constant carries its own pool.
+        // when it walked the structure tree to a mutable field on FileStructure.
+        //
+        // WHY THIS IS NOT A LEAK ACROSS COMPILES, and please read before "fixing" it:
+        //
+        // The obvious worry is that a library type would report to the LIBRARY's listener rather
+        // than to whichever compile is asking - so a host compiling two modules at once would get
+        // another compile's diagnostics, or none. That does not happen, because of an invariant
+        // that lives in ConstantPool.register:
+        //
+        //     if (constant.getContaining() != this) {
+        //         constant = (T) constant.adoptedBy(this);
+        //     }
+        //
+        // A constant is ADOPTED INTO THE POOL THAT REGISTERS IT. A compile that references
+        // ecstasy.collections.Map registers it into its own pool, so getContaining() - and
+        // therefore getConstantPool(), and therefore the listener resolved here - is the COMPILING
+        // pool, not the library's. Anything parameterized is the same by construction:
+        // ensureParameterizedTypeConstant builds `new ParameterizedTypeConstant(this, ...)`, where
+        // `this` is the interning pool.
+        //
+        // So "who owns the constant" and "who is asking" are the same pool for every constant a
+        // compile actually touches. What stays owned by a library pool is work done entirely inside
+        // the library's own structure - prelinking, say - and a failure there is a corrupt library,
+        // which is a system fault rather than a diagnostic about anybody's source. That is why it
+        // belongs on the engine's diagnostic sink and not on a compile's listener.
+        //
+        // Two things follow. Parallel compiles are isolated as a property of ownership rather than
+        // of timing. And threading a listener parameter into the ~75 remaining callers of this
+        // overload would buy an unconditional guarantee in place of one that adoption already
+        // delivers - at the cost of routing corrupt-library faults into user-facing diagnostics
+        // with no source position. See E35 step D; the recommendation is to test this invariant
+        // rather than remove the reliance on it.
         return ensureTypeInfo(getConstantPool().getErrorListener());
     }
 
