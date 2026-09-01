@@ -121,9 +121,9 @@ public class xOSFileNode
      */
     static int createHandle(Frame frame, ObjectHandle hOSStore, Path path, boolean fDir, int iReturn) {
         return fDir
-            ? frame.f_context.f_container.nativeTemplates().get(xOSDirectory.class).
+            ? frame.nativeTemplate(xOSDirectory.class).
                     createHandle(frame, hOSStore, path, iReturn)
-            : frame.f_context.f_container.nativeTemplates().get(xOSFile.class).
+            : frame.nativeTemplate(xOSFile.class).
                     createHandle(frame, hOSStore, path, iReturn);
     }
 

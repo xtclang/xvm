@@ -39,7 +39,7 @@ public class xRTPackageTemplate
      */
     public static ComponentTemplateHandle makeHandle(Container container, PackageStructure pkg) {
         // note: no need to initialize the struct because there are no natural fields
-        xRTPackageTemplate template = container.nativeTemplates().get(xRTPackageTemplate.class);
+        xRTPackageTemplate template = container.nativeTemplate(xRTPackageTemplate.class);
         TypeComposition clz      = template.ensureClass(container, template.getCanonicalType(),
                 PACKAGE_TEMPLATE_TYPE);
         return new ComponentTemplateHandle(clz, pkg);

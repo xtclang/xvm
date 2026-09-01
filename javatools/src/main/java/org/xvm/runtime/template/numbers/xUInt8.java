@@ -36,7 +36,7 @@ public class xUInt8
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return nativeTemplates().get(xInt8.class);
+        return f_container.nativeTemplate(xInt8.class);
     }
 
     @Override
@@ -65,14 +65,14 @@ public class xUInt8
      * @return a Byte handle owned by the specified container
      */
     public static JavaLong makeHandle(Container container, long lValue) {
-        return container.nativeTemplates().get(xUInt8.class).makeHandle(lValue);
+        return container.nativeTemplate(xUInt8.class).makeHandle(lValue);
     }
 
     /**
      * @return a Byte handle owned by the container the specified frame runs in
      */
     public static JavaLong makeHandle(Frame frame, long lValue) {
-        return makeHandle(frame.f_context.f_container, lValue);
+        return makeHandle(frame.container(), lValue);
     }
 
     private final JavaLong[] cache = new JavaLong[256];

@@ -52,7 +52,7 @@ public class xVar
         // subclasses (xFuture, xLazy, xAtomic) inherit this and are not themselves rebased, so the
         // answer is the container's own xVar template's constant - not this instance's, which
         // is only populated for that one template
-        return nativeTemplates().get(xVar.class).f_idInception;
+        return f_container.nativeTemplate(xVar.class).f_idInception;
     }
 
     @Override

@@ -140,7 +140,7 @@ public class xNanosTimer
         long           cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
 
         return frame.assignValue(iReturn,
-                hTimer.addAlarm(frame.f_context.f_container, cNanos,
+                hTimer.addAlarm(frame.container(), cNanos,
                         new WeakCallback(frame, hAlarm), hKeepAlive.get()));
     }
 
@@ -240,8 +240,8 @@ public class xNanosTimer
                 llPicos = new LongLong(Long.MAX_VALUE);
             }
 
-            hDuration.setField(null, "picoseconds", frame.f_context.f_container.
-                    nativeTemplates().get(xInt128.class).makeHandle(llPicos));
+            hDuration.setField(null, "picoseconds",
+                    frame.nativeTemplate(xInt128.class).makeHandle(llPicos));
             hDuration.makeImmutable();
 
             return hDuration;

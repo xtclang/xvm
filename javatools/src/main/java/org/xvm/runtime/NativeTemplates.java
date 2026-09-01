@@ -64,18 +64,26 @@ public final class NativeTemplates {
 
     // ----- resolving the table -------------------------------------------------------------------
 
+    // The adapter: whatever owner-bearing thing is in hand, this is its table. Its job is
+    // normalising the four inputs - in particular ClassTemplate and TypeComposition, which have no
+    // lookup method of their own and are not meant to grow one.
+    //
+    // The other two ways in are Container.nativeTemplates(), the table itself for bulk work, and
+    // Container.nativeTemplate(clz) / Frame.nativeTemplate(clz), the shorthand for a single lookup.
+    // Three layers, not three spellings of one thing; none of them is redundant.
+
     /**
      * @return the native template table for the specified container
      */
     public static NativeTemplates of(Container container) {
-        return requireNonNull(container, "container").getNativeContainer().nativeTemplates();
+        return requireNonNull(container, "container").nativeTemplates();
     }
 
     /**
      * @return the native template table for the container the specified frame runs in
      */
     public static NativeTemplates of(Frame frame) {
-        return of(requireNonNull(frame, "frame").f_context.f_container);
+        return of(requireNonNull(frame, "frame").container());
     }
 
     /**

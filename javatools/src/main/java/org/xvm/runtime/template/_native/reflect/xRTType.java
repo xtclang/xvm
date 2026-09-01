@@ -183,7 +183,7 @@ public class xRTType
                                  TypeConstant typeProxy, boolean fResponse) {
         // a proxy for a non-shareable TypeHandle is a "foreign" handle
         return frame.assignValue(Op.A_STACK,
-                makeForeignHandle(frame.f_context.f_container,
+                makeForeignHandle(frame.container(),
                         ((TypeHandle) hTarget).getUnsafeDataType()));
     }
 
@@ -607,12 +607,12 @@ public class xRTType
                     switch (getPropertyConstants(frame, hType, Op.A_STACK)) {
                     case Op.R_NEXT:
                         return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                nativeTemplates().get(xRTFunction.class).getCanonicalClass());
+                                f_container.nativeTemplate(xRTFunction.class).getCanonicalClass());
 
                     case Op.R_CALL:
                         frame.m_frameNext.addContinuation(frameCaller ->
                             createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                nativeTemplates().get(xRTFunction.class).getCanonicalClass()));
+                                f_container.nativeTemplate(xRTFunction.class).getCanonicalClass()));
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -740,12 +740,12 @@ public class xRTType
                     switch (getPropertyConstructors(frame, hType, Op.A_STACK)) {
                     case Op.R_NEXT:
                         return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                nativeTemplates().get(xRTFunction.class).getCanonicalClass());
+                                f_container.nativeTemplate(xRTFunction.class).getCanonicalClass());
 
                     case Op.R_CALL:
                         frame.m_frameNext.addContinuation(frameCaller ->
                             createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                nativeTemplates().get(xRTFunction.class).getCanonicalClass()));
+                                f_container.nativeTemplate(xRTFunction.class).getCanonicalClass()));
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -829,12 +829,12 @@ public class xRTType
                     switch (getPropertyFunctions(frame, hType, Op.A_STACK)) {
                     case Op.R_NEXT:
                         return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                nativeTemplates().get(xRTFunction.class).getCanonicalClass());
+                                f_container.nativeTemplate(xRTFunction.class).getCanonicalClass());
 
                     case Op.R_CALL:
                         frame.m_frameNext.addContinuation(frameCaller ->
                             createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                nativeTemplates().get(xRTFunction.class).getCanonicalClass()));
+                                f_container.nativeTemplate(xRTFunction.class).getCanonicalClass()));
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -899,12 +899,12 @@ public class xRTType
                     switch (getPropertyMethods(frame, hType, Op.A_STACK)) {
                     case Op.R_NEXT:
                         return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                nativeTemplates().get(xRTMethod.class).getCanonicalClass());
+                                f_container.nativeTemplate(xRTMethod.class).getCanonicalClass());
 
                     case Op.R_CALL:
                         frame.m_frameNext.addContinuation(frameCaller ->
                             createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                nativeTemplates().get(xRTMethod.class).getCanonicalClass()));
+                                f_container.nativeTemplate(xRTMethod.class).getCanonicalClass()));
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -961,12 +961,12 @@ public class xRTType
                     switch (getPropertyProperties(frame, hType, Op.A_STACK)) {
                     case Op.R_NEXT:
                         return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                nativeTemplates().get(xRTProperty.class).getCanonicalClass());
+                                f_container.nativeTemplate(xRTProperty.class).getCanonicalClass());
 
                     case Op.R_CALL:
                         frame.m_frameNext.addContinuation(frameCaller ->
                             createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                nativeTemplates().get(xRTProperty.class).getCanonicalClass()));
+                                f_container.nativeTemplate(xRTProperty.class).getCanonicalClass()));
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -1059,12 +1059,12 @@ public class xRTType
                     switch (getPropertyUnderlyingTypes(frame, hType, Op.A_STACK)) {
                     case Op.R_NEXT:
                         return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                nativeTemplates().get(xRTProperty.class).getCanonicalClass());
+                                f_container.nativeTemplate(xRTProperty.class).getCanonicalClass());
 
                     case Op.R_CALL:
                         frame.m_frameNext.addContinuation(frameCaller ->
                             createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                nativeTemplates().get(xRTProperty.class).getCanonicalClass()));
+                                f_container.nativeTemplate(xRTProperty.class).getCanonicalClass()));
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -1116,7 +1116,7 @@ public class xRTType
         if (hMixin instanceof ClassHandle hClass) {
             ArrayHandle hArgs = (ArrayHandle) hAnno.getField(frame, "arguments");
 
-            if (nativeTemplates().get(xArray.class).size(hArgs) > 0) {
+            if (f_container.nativeTemplate(xArray.class).size(hArgs) > 0) {
                 // TODO args
                 return frame.raiseException(xException.notImplemented(frame,
                     "Annotation arguments are not yet supported"));
@@ -1532,7 +1532,7 @@ public class xRTType
      * @return the handle to the appropriate Ecstasy {@code Type.Access} enum value
      */
     public static EnumHandle makeAccessHandle(Frame frame, Access access) {
-        xEnum enumAccess = (xEnum) frame.f_context.f_container.getTemplate("reflect.Access");
+        xEnum enumAccess = (xEnum) frame.container().getTemplate("reflect.Access");
         return switch (access) {
             case PUBLIC    -> enumAccess.getEnumByName("Public");
             case PROTECTED -> enumAccess.getEnumByName("Protected");
@@ -1550,7 +1550,7 @@ public class xRTType
      * @return the handle to the appropriate Ecstasy {@code Type.Form} enum value
      */
     protected static EnumHandle makeFormHandle(Frame frame, TypeConstant type) {
-        xEnum enumForm = (xEnum) frame.f_context.f_container.getTemplate("reflect.Type.Form");
+        xEnum enumForm = (xEnum) frame.container().getTemplate("reflect.Type.Form");
 
         switch (type.getFormat()) {
         case TerminalType:
@@ -1713,7 +1713,7 @@ public class xRTType
             case Op.R_NEXT:
                 ObjectHandle hElement = frame.popStack();
                 ahValue[i] = hElement instanceof TypeHandle hType
-                        ? xRTType.makeForeignHandle(frame.f_context.f_container,
+                        ? xRTType.makeForeignHandle(frame.container(),
                                 hType.getUnsafeType())
                         : Proxy.makeHandle(clzProxy, frame.f_context, hElement, false);
                 break;
@@ -1736,7 +1736,7 @@ public class xRTType
      */
     public static TypeComposition ensureTypeArrayComposition(Container container) {
         return container.ensureClassComposition(TYPE_ARRAY_TYPE,
-                container.nativeTemplates().get(xArray.class));
+                container.nativeTemplate(xArray.class));
     }
 
     /**
@@ -1781,10 +1781,8 @@ public class xRTType
         // unfortunately, "makeHandle" is called from places where we cannot easily invoke the
         // default initializer, so we need to do it by hand
         TypeHandle hType = fShared
-            ? new TypeHandle(container.nativeTemplates().
-                    get(xRTType.class).ensureClass(container, type.getType()), null)
-            : new TypeHandle(container.nativeTemplates().
-                    get(xRTType.class).getCanonicalClass(), type.getType());
+            ? new TypeHandle(container.nativeTemplate(xRTType.class).ensureClass(container, type.getType()), null)
+            : new TypeHandle(container.nativeTemplate(xRTType.class).getCanonicalClass(), type.getType());
 
         GenericHandle hMulti = (GenericHandle) hType.getField(null, "multimethods");
         hMulti.setField(null, GenericHandle.OUTER, hType);

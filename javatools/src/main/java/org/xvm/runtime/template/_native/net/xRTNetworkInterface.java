@@ -72,7 +72,7 @@ public class xRTNetworkInterface
 
         if (frame.f_context != hService.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                     callN(frame, hTarget, ahArg, aiReturn);
         }
 

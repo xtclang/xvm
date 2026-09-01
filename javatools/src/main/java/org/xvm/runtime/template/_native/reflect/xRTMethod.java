@@ -255,8 +255,7 @@ public class xRTMethod
         if (aAnno != null && aAnno.length > 0) {
             type = pool.ensureAnnotatedTypeConstant(type, aAnno);
 
-            TypeComposition clzMethod = container.nativeTemplates().
-                get(xRTMethod.class).ensureClass(container, type);
+            TypeComposition clzMethod = container.nativeTemplate(xRTMethod.class).ensureClass(container, type);
             MethodHandle    hStruct   = new MethodHandle(clzMethod.ensureAccess(Access.STRUCT),
                                             type, method, typeTarget);
 
@@ -265,8 +264,7 @@ public class xRTMethod
             return frame.popResultImmutable(iResult);
         }
 
-        return new MethodHandle(container.nativeTemplates().
-                get(xRTMethod.class).ensureClass(container, type), type, method, typeTarget);
+        return new MethodHandle(container.nativeTemplate(xRTMethod.class).ensureClass(container, type), type, method, typeTarget);
     }
 
     /**
@@ -343,7 +341,7 @@ public class xRTMethod
     public static ArrayConstant ensureEmptyArrayConstant(Container container) {
         ArrayConstant constant = EMPTY_ARRAY;
         if (constant == null) {
-            ConstantPool pool = container.nativeTemplates().get(xRTMethod.class).pool();
+            ConstantPool pool = container.nativeTemplate(xRTMethod.class).pool();
             EMPTY_ARRAY = constant = new ArrayConstant(pool, Constant.Format.Array,
                                             pool.ensureArrayType(pool.typeMethod()));
         }

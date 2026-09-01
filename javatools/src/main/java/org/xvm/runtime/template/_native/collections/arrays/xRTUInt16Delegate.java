@@ -36,6 +36,6 @@ public class xRTUInt16Delegate
 
     @Override
     protected ObjectHandle makeElementHandle(long lValue) {
-        return nativeTemplates().get(xUInt16.class).makeJavaLong(lValue);
+        return f_container.nativeTemplate(xUInt16.class).makeJavaLong(lValue);
     }
 }

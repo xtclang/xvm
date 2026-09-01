@@ -72,8 +72,8 @@ public class MoveRef
                     typeReg = infoSrc.getType();
                 }
             } else {
-                Container       container = frame.f_context.f_container;
-                TypeComposition clzRef    = container.nativeTemplates().get(xRef.class).
+                Container       container = frame.container();
+                TypeComposition clzRef    = container.nativeTemplate(xRef.class).
                         ensureParameterizedClass(container, infoSrc.getType());
                 hRef    = new RefHandle(clzRef, frame, m_nFromValue);
                 typeReg = hRef.getType();

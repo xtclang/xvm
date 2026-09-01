@@ -135,7 +135,7 @@ public class xRTModuleTemplate
     private static TypeConstant ensureListMapType(Container container) {
         TypeConstant type = LISTMAP_TYPE;
         if (type == null) {
-            ConstantPool pool = container.nativeTemplates().get(xRTModuleTemplate.class).pool();
+            ConstantPool pool = container.nativeTemplate(xRTModuleTemplate.class).pool();
             LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
                     pool.ensureEcstasyTypeConstant("maps.ListMap"),
                     pool.typeString(), MODULE_TEMPLATE_TYPE);
@@ -146,7 +146,7 @@ public class xRTModuleTemplate
     private static ArrayHandle makeTemplateArrayHandle(Container container, ObjectHandle[] ahTemplate) {
         TypeComposition clzArray = container.ensureClassComposition(
                 container.getConstantPool().ensureArrayType(MODULE_TEMPLATE_TYPE),
-                        container.nativeTemplates().get(xArray.class));
+                        container.nativeTemplate(xArray.class));
         return xArray.makeArrayHandle(clzArray, ahTemplate.length, ahTemplate, Mutability.Constant);
     }
 
@@ -161,7 +161,7 @@ public class xRTModuleTemplate
      */
     public static ComponentTemplateHandle makeHandle(Container container, ModuleStructure module) {
         // note: no need to initialize the struct because there are no natural fields
-        xRTModuleTemplate template = container.nativeTemplates().get(xRTModuleTemplate.class);
+        xRTModuleTemplate template = container.nativeTemplate(xRTModuleTemplate.class);
         TypeComposition  clz      = template.ensureClass(container, template.getCanonicalType(),
                 MODULE_TEMPLATE_TYPE);
         return new ComponentTemplateHandle(clz, module);

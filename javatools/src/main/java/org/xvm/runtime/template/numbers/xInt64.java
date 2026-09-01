@@ -21,7 +21,7 @@ public class xInt64
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return nativeTemplates().get(xUInt64.class);
+        return f_container.nativeTemplate(xUInt64.class);
     }
 
     @Override
@@ -60,13 +60,13 @@ public class xInt64
      * @return an Int64 handle owned by the specified container
      */
     public static JavaLong makeHandle(Container container, long lValue) {
-        return container.nativeTemplates().get(xInt64.class).makeJavaLong(lValue);
+        return container.nativeTemplate(xInt64.class).makeJavaLong(lValue);
     }
 
     /**
      * @return an Int64 handle owned by the container the specified frame runs in
      */
     public static JavaLong makeHandle(Frame frame, long lValue) {
-        return makeHandle(frame.f_context.f_container, lValue);
+        return makeHandle(frame.container(), lValue);
     }
 }

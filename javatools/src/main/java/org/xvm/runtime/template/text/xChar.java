@@ -117,7 +117,7 @@ public class xChar
         switch (sPropName) {
         case "codepoint":
             return frame.assignValue(iReturn,
-                    nativeTemplates().get(xUInt32.class).makeJavaLong(((JavaLong) hTarget).getValue()));
+                    f_container.nativeTemplate(xUInt32.class).makeJavaLong(((JavaLong) hTarget).getValue()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -193,14 +193,14 @@ public class xChar
      * @return a Char handle owned by the specified container
      */
     public static JavaLong makeHandle(Container container, long chValue) {
-        return container.nativeTemplates().get(xChar.class).makeHandle(chValue);
+        return container.nativeTemplate(xChar.class).makeHandle(chValue);
     }
 
     /**
      * @return a Char handle owned by the container the specified frame runs in
      */
     public static JavaLong makeHandle(Frame frame, long chValue) {
-        return makeHandle(frame.f_context.f_container, chValue);
+        return makeHandle(frame.container(), chValue);
     }
 
     private final JavaLong[] cache = new JavaLong[128];

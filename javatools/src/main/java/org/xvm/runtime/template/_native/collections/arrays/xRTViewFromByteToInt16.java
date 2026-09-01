@@ -55,7 +55,7 @@ public class xRTViewFromByteToInt16
                 anValue[i] = (short) (((short) bValue0) << 8 | (bValue1 & 0xFF));
             }
 
-            return nativeTemplates().get(xRTInt16Delegate.class).packHandle(anValue, mutability);
+            return f_container.nativeTemplate(xRTInt16Delegate.class).packHandle(anValue, mutability);
         }
 
         throw new UnsupportedOperationException();
@@ -73,7 +73,7 @@ public class xRTViewFromByteToInt16
 
             // using a "short" intermediary takes care of the sign handling
             short nValue = (short) (((short) bValue0) << 8 | (bValue1 & 0xFF));
-            return frame.assignValue(iReturn, nativeTemplates().get(xInt16.class).makeJavaLong(nValue));
+            return frame.assignValue(iReturn, f_container.nativeTemplate(xInt16.class).makeJavaLong(nValue));
         }
 
         throw new UnsupportedOperationException();

@@ -236,7 +236,7 @@ public class Frame
      * @return a new frame
      */
     public Frame createWaitFrame(CompletableFuture<ObjectHandle> cfResult, int iReturn) {
-        return createWaitFrame(xFuture.makeHandle(f_context.f_container, cfResult), iReturn);
+        return createWaitFrame(xFuture.makeHandle(container(), cfResult), iReturn);
     }
 
     /**
@@ -280,7 +280,7 @@ public class Frame
             CompletableFuture<ObjectHandle> cfReturn =
                     cfResult.thenApply(ahResult -> ahResult[iResult]);
 
-            ahFuture[i] = xFuture.makeHandle(f_context.f_container, cfReturn);
+            ahFuture[i] = xFuture.makeHandle(container(), cfReturn);
 
             frameNext.f_aInfo[i] = new VarInfo(xFuture.TYPE, VAR_DYNAMIC_REF);
         }
@@ -1047,7 +1047,7 @@ public class Frame
         }
 
         if (isFuture(iReturn)) {
-            return assignValue(iReturn, xFuture.makeHandle(f_context.f_container, cfResult));
+            return assignValue(iReturn, xFuture.makeHandle(container(), cfResult));
         }
 
         // the wait frame will deal with exceptions
@@ -1329,6 +1329,25 @@ public class Frame
      */
     public ConstantPool poolContext() {
         return f_context.f_pool;
+    }
+
+    /**
+     * @return the container that owns the service this frame is running on
+     */
+    public Container container() {
+        return f_context.f_container;
+    }
+
+    /**
+     * Look one native template up - the shorthand for the common case, over
+     * {@code container().nativeTemplates()}.
+     *
+     * @param clzTemplate  the native template class
+     *
+     * @return this frame's container's native template of that class
+     */
+    public <T extends ClassTemplate> T nativeTemplate(Class<T> clzTemplate) {
+        return container().nativeTemplate(clzTemplate);
     }
 
     /**

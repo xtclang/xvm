@@ -148,46 +148,46 @@ public class xRTRandom
             return frame.assignValue(iReturn, xNibble.makeHandle(frame, rnd(hTarget).nextInt()));
 
         case "int8":
-            return frame.assignValue(iReturn, nativeTemplates().get(xInt8.class).makeJavaLong(rnd(hTarget).nextInt()));
+            return frame.assignValue(iReturn, f_container.nativeTemplate(xInt8.class).makeJavaLong(rnd(hTarget).nextInt()));
 
         case "int16":
-            return frame.assignValue(iReturn, nativeTemplates().get(xInt16.class).makeJavaLong(rnd(hTarget).nextInt()));
+            return frame.assignValue(iReturn, f_container.nativeTemplate(xInt16.class).makeJavaLong(rnd(hTarget).nextInt()));
 
         case "int32":
-            return frame.assignValue(iReturn, nativeTemplates().get(xInt32.class).makeJavaLong(rnd(hTarget).nextInt()));
+            return frame.assignValue(iReturn, f_container.nativeTemplate(xInt32.class).makeJavaLong(rnd(hTarget).nextInt()));
 
         case "int64":
             return frame.assignValue(iReturn,
-                    nativeTemplates().get(xInt64.class).makeJavaLong(rnd(hTarget).nextLong()));
+                    f_container.nativeTemplate(xInt64.class).makeJavaLong(rnd(hTarget).nextLong()));
 
         case "uint8":
-            return frame.assignValue(iReturn, nativeTemplates().get(xUInt8.class).makeJavaLong(rnd(hTarget).nextInt()));
+            return frame.assignValue(iReturn, f_container.nativeTemplate(xUInt8.class).makeJavaLong(rnd(hTarget).nextInt()));
 
         case "uint16":
             return frame.assignValue(iReturn,
-                    nativeTemplates().get(xUInt16.class).makeJavaLong(rnd(hTarget).nextInt()));
+                    f_container.nativeTemplate(xUInt16.class).makeJavaLong(rnd(hTarget).nextInt()));
 
         case "uint32":
             return frame.assignValue(iReturn,
-                    nativeTemplates().get(xUInt32.class).makeJavaLong(rnd(hTarget).nextInt()));
+                    f_container.nativeTemplate(xUInt32.class).makeJavaLong(rnd(hTarget).nextInt()));
 
         case "uint64":
             return frame.assignValue(iReturn,
-                    nativeTemplates().get(xUInt64.class).makeJavaLong(rnd(hTarget).nextLong()));
+                    f_container.nativeTemplate(xUInt64.class).makeJavaLong(rnd(hTarget).nextLong()));
 
         case "dec64":
             // Float64 has more precision than Dec64, so this should work fine, although there
             // won't be as solid of a guarantee on a perfect distribution of random values
             return frame.assignValue(iReturn,
-                    nativeTemplates().get(xDec64.class).makeHandle(rnd(hTarget).nextDouble()));
+                    f_container.nativeTemplate(xDec64.class).makeHandle(rnd(hTarget).nextDouble()));
 
         case "float32":
             return frame.assignValue(iReturn,
-                    nativeTemplates().get(xFloat32.class).makeHandle(rnd(hTarget).nextFloat()));
+                    f_container.nativeTemplate(xFloat32.class).makeHandle(rnd(hTarget).nextFloat()));
 
         case "float64":
             return frame.assignValue(iReturn,
-                    nativeTemplates().get(xFloat64.class).makeHandle(rnd(hTarget).nextDouble()));
+                    f_container.nativeTemplate(xFloat64.class).makeHandle(rnd(hTarget).nextDouble()));
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);

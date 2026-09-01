@@ -31,7 +31,7 @@ public class xInt128
             if (ll.signum() < 0) {
                 ll = ll.complement().addUnchecked(LongLong.ONE);
             }
-            return frame.assignValue(iReturn, nativeTemplates().get(xUInt128.class).makeHandle(ll));
+            return frame.assignValue(iReturn, f_container.nativeTemplate(xUInt128.class).makeHandle(ll));
         }
         }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

@@ -190,7 +190,7 @@ public class xRTTypeTemplate
      * @return the resulting {@link TypeTemplateHandle}
      */
     public static TypeTemplateHandle makeHandle(Container container, TypeConstant type) {
-        xRTTypeTemplate template = container.nativeTemplates().get(xRTTypeTemplate.class);
+        xRTTypeTemplate template = container.nativeTemplate(xRTTypeTemplate.class);
         ConstantPool    pool     = template.pool();
         TypeComposition clz      = template.ensureClass(container, template.getCanonicalType(),
                 pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
@@ -576,7 +576,7 @@ public class xRTTypeTemplate
      * @return the TypeComposition for an Array of TypeTemplate
      */
     public static TypeComposition ensureArrayClassComposition(Container container) {
-        return container.ensureClassComposition(TEMPLATE_ARRAY_TYPE, container.nativeTemplates().get(xArray.class));
+        return container.ensureClassComposition(TEMPLATE_ARRAY_TYPE, container.nativeTemplate(xArray.class));
     }
 
     private static TypeConstant TEMPLATE_ARRAY_TYPE;

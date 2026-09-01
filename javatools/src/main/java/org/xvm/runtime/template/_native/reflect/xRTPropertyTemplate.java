@@ -177,8 +177,7 @@ public class xRTPropertyTemplate
     public static TypeComposition ensurePropertyTemplateComposition(Container container) {
         TypeComposition clz = PROPERTY_TEMPLATE_COMP;
         if (clz == null) {
-            ClassTemplate templateRT   = container.nativeTemplates().
-                    get(xRTPropertyTemplate.class);
+            ClassTemplate templateRT   = container.nativeTemplate(xRTPropertyTemplate.class);
             ConstantPool  pool         = templateRT.pool();
             TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
             PROPERTY_TEMPLATE_COMP = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);
@@ -193,7 +192,7 @@ public class xRTPropertyTemplate
     public static TypeComposition ensureArrayComposition(Container container) {
         TypeComposition clz = ARRAY_PROP_COMP;
         if (clz == null) {
-            ConstantPool pool = container.nativeTemplates().get(xRTPropertyTemplate.class).pool();
+            ConstantPool pool = container.nativeTemplate(xRTPropertyTemplate.class).pool();
             TypeConstant typePropertyTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
             TypeConstant typePropertyArray = pool.ensureArrayType(typePropertyTemplate);
             ARRAY_PROP_COMP = clz = container.getNativeContainer().

@@ -197,13 +197,13 @@ public class xRTPropertyClassTemplate
         for (Component child : prop.children()) {
             if (child instanceof PropertyStructure) {
                 listProps.add(xRTPropertyTemplate.makePropertyHandle(
-                        frame.f_context.f_container, (PropertyStructure) child));
+                        frame.container(), (PropertyStructure) child));
             }
         }
 
         ComponentTemplateHandle[] ahProp = listProps.toArray(xRTClassTemplate.NO_TEMPLATES);
         ObjectHandle hArray = xArray.createImmutableArray(
-                xRTPropertyTemplate.ensureArrayComposition(frame.f_context.f_container), ahProp);
+                xRTPropertyTemplate.ensureArrayComposition(frame.container()), ahProp);
         return frame.assignValue(iReturn, hArray);
     }
 
@@ -253,7 +253,7 @@ public class xRTPropertyClassTemplate
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
         return frame.assignValues(aiReturn,
             xBoolean.TRUE, xRTPropertyTemplate.makePropertyHandle(
-                        frame.f_context.f_container, prop));
+                        frame.container(), prop));
     }
 
 

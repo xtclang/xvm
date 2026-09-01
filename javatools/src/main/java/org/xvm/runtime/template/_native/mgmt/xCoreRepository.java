@@ -62,7 +62,7 @@ public class xCoreRepository
             ModuleRepository repo     = f_container.getModuleRepository();
             Set<String>      setNames = repo.getModuleNames();
 
-            ArrayHandle hArray = xString.makeArrayHandle(frame.f_context.f_container, setNames.toArray(Utils.NO_NAMES));
+            ArrayHandle hArray = xString.makeArrayHandle(frame.container(), setNames.toArray(Utils.NO_NAMES));
             return xArray.createListSet(frame, hArray, iReturn);
         }
         }

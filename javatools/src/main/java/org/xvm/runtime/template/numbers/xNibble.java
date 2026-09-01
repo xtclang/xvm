@@ -40,7 +40,7 @@ public class xNibble
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return nativeTemplates().get(xNibble.class);
+        return f_container.nativeTemplate(xNibble.class);
     }
 
     @Override
@@ -69,14 +69,14 @@ public class xNibble
      * @return a Nibble handle owned by the specified container
      */
     public static JavaLong makeHandle(Container container, long lValue) {
-        return container.nativeTemplates().get(xNibble.class).makeHandle(lValue);
+        return container.nativeTemplate(xNibble.class).makeHandle(lValue);
     }
 
     /**
      * @return a Nibble handle owned by the container the specified frame runs in
      */
     public static JavaLong makeHandle(Frame frame, long lValue) {
-        return makeHandle(frame.f_context.f_container, lValue);
+        return makeHandle(frame.container(), lValue);
     }
 
     @Override

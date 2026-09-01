@@ -237,8 +237,7 @@ public class xRTComponentTemplate
     public static TypeConstant ensureComponentArrayType(Container container) {
         TypeConstant type = COMPONENT_ARRAY_TYPE;
         if (type == null) {
-            ConstantPool pool = container.nativeTemplates().
-                    get(xRTComponentTemplate.class).pool();
+            ConstantPool pool = container.nativeTemplate(xRTComponentTemplate.class).pool();
             COMPONENT_ARRAY_TYPE = type = pool.ensureArrayType(
                     pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
         }
@@ -272,7 +271,7 @@ public class xRTComponentTemplate
      * @return the handle to the appropriate Ecstasy {@code ComponentTemplate.Format} enum value
      */
     protected static EnumHandle makeFormatHandle(Frame frame, Component.Format format) {
-        xEnum enumForm = frame.f_context.f_container.getTemplate(
+        xEnum enumForm = frame.container().getTemplate(
                 "reflect.ComponentTemplate.Format", xEnum.class);
 
         switch (format) {

@@ -33,7 +33,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 public class Proxy
         extends xService {
     public Proxy(Container container) {
-        super(container, container.nativeTemplates().get(xObject.class).getStructure(), false);
+        super(container, container.nativeTemplate(xObject.class).getStructure(), false);
     }
 
     @Override

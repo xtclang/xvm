@@ -481,7 +481,7 @@ public class xOSFile
         Path path = hFile.f_path;
         try {
             FileChannel channel = FileChannel.open(path, aOpenOpt);
-            return nativeTemplates().get(xRawOSFileChannel.class).createHandle(frame, channel, path, iReturn);
+            return f_container.nativeTemplate(xRawOSFileChannel.class).createHandle(frame, channel, path, iReturn);
         } catch (IOException e) {
             return raisePathException(frame, e, path);
         }

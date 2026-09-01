@@ -51,21 +51,21 @@ public class xRTViewToBit
             ConstantPool                    pool     = pool();
             Map<TypeConstant, xRTViewToBit> mapViews = new HashMap<>();
 
-            mapViews.put(pool.typeNibble(), nativeTemplates().get(xRTViewToBitFromNibble.class));
+            mapViews.put(pool.typeNibble(), f_container.nativeTemplate(xRTViewToBitFromNibble.class));
 
-            mapViews.put(pool.typeInt8()   , nativeTemplates().get(xRTViewToBitFromInt8.class));
-            mapViews.put(pool.typeInt16()  , nativeTemplates().get(xRTViewToBitFromInt16.class));
-            mapViews.put(pool.typeInt32()  , nativeTemplates().get(xRTViewToBitFromInt32.class));
-            mapViews.put(pool.typeInt64()  , nativeTemplates().get(xRTViewToBitFromInt64.class));
-            mapViews.put(pool.typeInt128() , nativeTemplates().get(xRTViewToBitFromInt128.class));
+            mapViews.put(pool.typeInt8()   , f_container.nativeTemplate(xRTViewToBitFromInt8.class));
+            mapViews.put(pool.typeInt16()  , f_container.nativeTemplate(xRTViewToBitFromInt16.class));
+            mapViews.put(pool.typeInt32()  , f_container.nativeTemplate(xRTViewToBitFromInt32.class));
+            mapViews.put(pool.typeInt64()  , f_container.nativeTemplate(xRTViewToBitFromInt64.class));
+            mapViews.put(pool.typeInt128() , f_container.nativeTemplate(xRTViewToBitFromInt128.class));
 
-            mapViews.put(pool.typeUInt8()  , nativeTemplates().get(xRTViewToBitFromUInt8.class));
-            mapViews.put(pool.typeUInt16() , nativeTemplates().get(xRTViewToBitFromUInt16.class));
-            mapViews.put(pool.typeUInt32() , nativeTemplates().get(xRTViewToBitFromUInt32.class));
-            mapViews.put(pool.typeUInt64() , nativeTemplates().get(xRTViewToBitFromUInt64.class));
-            mapViews.put(pool.typeUInt128(), nativeTemplates().get(xRTViewToBitFromUInt128.class));
+            mapViews.put(pool.typeUInt8()  , f_container.nativeTemplate(xRTViewToBitFromUInt8.class));
+            mapViews.put(pool.typeUInt16() , f_container.nativeTemplate(xRTViewToBitFromUInt16.class));
+            mapViews.put(pool.typeUInt32() , f_container.nativeTemplate(xRTViewToBitFromUInt32.class));
+            mapViews.put(pool.typeUInt64() , f_container.nativeTemplate(xRTViewToBitFromUInt64.class));
+            mapViews.put(pool.typeUInt128(), f_container.nativeTemplate(xRTViewToBitFromUInt128.class));
 
-            mapViews.put(pool.typeFloat64(), nativeTemplates().get(xRTViewToBitFromFloat64.class));
+            mapViews.put(pool.typeFloat64(), f_container.nativeTemplate(xRTViewToBitFromFloat64.class));
 
             VIEWS = mapViews;
         }

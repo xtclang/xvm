@@ -64,7 +64,7 @@ public abstract class LongBasedBitView
 
         byte[] abBits = getBits(hView, ofStart, cSize, fReverse);
 
-        return nativeTemplates().get(xRTBitDelegate.class).makeHandle(abBits, cSize, mutability);
+        return f_container.nativeTemplate(xRTBitDelegate.class).makeHandle(abBits, cSize, mutability);
     }
 
     @Override

@@ -38,7 +38,7 @@ public class xRTInt16Delegate
 
     @Override
     protected ObjectHandle makeElementHandle(long lValue) {
-        return nativeTemplates().get(xInt16.class).makeJavaLong(lValue);
+        return f_container.nativeTemplate(xInt16.class).makeJavaLong(lValue);
     }
 
     /**

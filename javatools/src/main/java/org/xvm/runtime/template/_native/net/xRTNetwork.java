@@ -85,7 +85,7 @@ public class xRTNetwork
 
         if (frame.f_context != hService.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                     call1(frame, hTarget, ahArg, iReturn);
         }
 
@@ -104,7 +104,7 @@ public class xRTNetwork
 
         if (frame.f_context != hService.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                     callN(frame, hTarget, ahArg, aiReturn);
         }
 
@@ -195,7 +195,7 @@ public class xRTNetwork
      * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
      */
     protected int instantiateNameService(Frame frame, ServiceHandle hNetwork, int iReturn) {
-        ClassTemplate    templateSvc  = nativeTemplates().get(xRTNameService.class);
+        ClassTemplate    templateSvc  = f_container.nativeTemplate(xRTNameService.class);
         ClassComposition clz          = templateSvc.getCanonicalClass();
         MethodStructure  constructor  = templateSvc.getStructure().findConstructor(getCanonicalType());
         ObjectHandle[]   ahParams     = new ObjectHandle[constructor.getMaxVars()];

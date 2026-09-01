@@ -165,18 +165,18 @@ public abstract class BaseDecFP
 
         case "toFloat64":
             return dec.isFinite()
-                ? frame.assignValue(iReturn, nativeTemplates().get(xFloat64.class).
+                ? frame.assignValue(iReturn, f_container.nativeTemplate(xFloat64.class).
                         makeHandle(dec.toBigDecimal().doubleValue()))
                 : overflow(frame);
 
         case "toDec32":
-            return frame.assignValue(iReturn, nativeTemplates().get(xDec32.class).makeHandle(toDec32(dec)));
+            return frame.assignValue(iReturn, f_container.nativeTemplate(xDec32.class).makeHandle(toDec32(dec)));
 
         case "toDec64":
-            return frame.assignValue(iReturn, nativeTemplates().get(xDec64.class).makeHandle(toDec64(dec)));
+            return frame.assignValue(iReturn, f_container.nativeTemplate(xDec64.class).makeHandle(toDec64(dec)));
 
         case "toDec128":
-            return frame.assignValue(iReturn, nativeTemplates().get(xDec128.class).makeHandle(toDec128(dec)));
+            return frame.assignValue(iReturn, f_container.nativeTemplate(xDec128.class).makeHandle(toDec128(dec)));
 
         case "toInt64": {
             boolean      fCheckBounds = ahArg[0] == xBoolean.TRUE;
@@ -441,7 +441,7 @@ public abstract class BaseDecFP
         }
 
         return frame.assignValue(iReturn,
-                nativeTemplates().get(xIntN.class).makeInt(new PackedInteger(roundedInteger(dec, hRound))));
+                f_container.nativeTemplate(xIntN.class).makeInt(new PackedInteger(roundedInteger(dec, hRound))));
     }
 
     protected int convertToUIntN(Frame frame, Decimal dec, ObjectHandle hRound, int iReturn) {
@@ -454,7 +454,7 @@ public abstract class BaseDecFP
             return overflow(frame);
         }
 
-        return frame.assignValue(iReturn, nativeTemplates().get(xUIntN.class).makeInt(new PackedInteger(n)));
+        return frame.assignValue(iReturn, f_container.nativeTemplate(xUIntN.class).makeInt(new PackedInteger(n)));
     }
 
     protected BigInteger roundedInteger(Decimal dec, ObjectHandle hRound) {

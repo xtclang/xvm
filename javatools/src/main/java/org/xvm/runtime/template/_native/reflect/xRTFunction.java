@@ -292,7 +292,7 @@ public class xRTFunction
 
             // TODO: what if any of the assigns below return a deferred handle?
             frame.assignValue(aiReturn[0], xBoolean.TRUE);
-            frame.assignValue(aiReturn[1], xRTMethodTemplate.makeHandle(frame.f_context.f_container, method));
+            frame.assignValue(aiReturn[1], xRTMethodTemplate.makeHandle(frame.container(), method));
             frame.assignValue(aiReturn[2], makeHandle(frame, method));
 
             Frame.Continuation stepNext = frameCaller ->
@@ -306,12 +306,12 @@ public class xRTFunction
     private int constructListMap(Frame frame,
                                  ObjectHandle[] ahParam, ObjectHandle[] ahValue, int iReturn) {
         ObjectHandle haParams = xArray.createImmutableArray(
-                xRTSignature.ensureParamArray(frame.f_context.f_container), ahParam);
+                xRTSignature.ensureParamArray(frame.container()), ahParam);
         ObjectHandle haValues = xArray.makeObjectArrayHandle(ahValue, Mutability.Constant);
 
         return Utils.constructListMap(frame,
-                frame.f_context.f_container.resolveClass(
-                        ensureListMapType(frame.f_context.f_container)),
+                frame.container().resolveClass(
+                        ensureListMapType(frame.container())),
                 haParams, haValues, iReturn);
     }
 
@@ -379,7 +379,7 @@ public class xRTFunction
          * Instantiate an immutable FunctionHandle for a method.
          */
         protected FunctionHandle(Container container, CallChain chain, int nDepth) {
-            super(container.nativeTemplates().get(xRTFunction.class).ensureClass(container,
+            super(container.nativeTemplate(xRTFunction.class).ensureClass(container,
                     chain.getMethod(nDepth).getIdentityConstant().getSignature().asFunctionType()),
                     chain, nDepth);
 
@@ -390,7 +390,7 @@ public class xRTFunction
          * Instantiate a mutable FunctionHandle for a method or function.
          */
         protected FunctionHandle(Container container, TypeConstant type, MethodStructure function) {
-            this(container.nativeTemplates().get(xRTFunction.class).ensureClass(container, type),
+            this(container.nativeTemplate(xRTFunction.class).ensureClass(container, type),
                     type, function);
         }
 
@@ -717,7 +717,7 @@ public class xRTFunction
     public static class NativeFunctionHandle
             extends FunctionHandle {
         public NativeFunctionHandle(Container container, xService.NativeOperation op) {
-            super(container, container.nativeTemplates().get(xRTFunction.class).getCanonicalType(),
+            super(container, container.nativeTemplate(xRTFunction.class).getCanonicalType(),
                     null);
 
             f_op       = op;
@@ -867,7 +867,7 @@ public class xRTFunction
 
         protected FullyBoundHandle(Container container, FunctionHandle hDelegate, ObjectHandle[] ahArg) {
             super(container, hDelegate == null
-                    ? container.nativeTemplates().get(xRTFunction.class).getCanonicalType()
+                    ? container.nativeTemplate(xRTFunction.class).getCanonicalType()
                     : hDelegate.getType(), hDelegate);
 
             f_ahArg = ahArg;
@@ -1312,7 +1312,7 @@ public class xRTFunction
      * The returned handle could be deferred.
      */
     public static ObjectHandle makeHandle(Frame frame, MethodStructure function) {
-        Container container = frame.f_context.f_container;
+        Container container = frame.container();
 
         Annotation[] aAnno = function.getAnnotations();
 
@@ -1320,8 +1320,7 @@ public class xRTFunction
             TypeConstant type = function.getIdentityConstant().getSignature().asFunctionType();
             type = container.getConstantPool().ensureAnnotatedTypeConstant(type, aAnno);
 
-            TypeComposition clzFunction = container.nativeTemplates().
-                    get(xRTFunction.class).ensureClass(container, function);
+            TypeComposition clzFunction = container.nativeTemplate(xRTFunction.class).ensureClass(container, function);
             FunctionHandle  hStruct     = new FunctionHandle(clzFunction.
                                             ensureAccess(Constants.Access.STRUCT), type, function);
 
@@ -1345,16 +1344,14 @@ public class xRTFunction
         TypeComposition clzConstruct;
 
         if (constructor == null) {
-            clzConstruct = container.nativeTemplates().
-                    get(xRTFunction.class).ensureClass(container, typeConstructor);
+            clzConstruct = container.nativeTemplate(xRTFunction.class).ensureClass(container, typeConstructor);
         } else {
             Annotation[] aAnno = constructor.getAnnotations();
             if (aAnno.length > 0) {
                 typeConstructor = container.getConstantPool().
                         ensureAnnotatedTypeConstant(typeConstructor, aAnno);
 
-                TypeComposition clzConstructor = container.nativeTemplates().
-                        get(xRTFunction.class).ensureClass(container, constructor).
+                TypeComposition clzConstructor = container.nativeTemplate(xRTFunction.class).ensureClass(container, constructor).
                         ensureAccess(Constants.Access.STRUCT);
 
                 ConstructorHandle hConstructor = new ConstructorHandle(
@@ -1364,8 +1361,7 @@ public class xRTFunction
                                     frame, null, true, hConstructor, Utils.OBJECTS_NONE, Op.A_STACK);
                 return frame.popResultImmutable(iResult);
             } else {
-                clzConstruct = container.nativeTemplates().
-                        get(xRTFunction.class).ensureClass(container, constructor);
+                clzConstruct = container.nativeTemplate(xRTFunction.class).ensureClass(container, constructor);
             }
         }
 
@@ -1400,8 +1396,7 @@ public class xRTFunction
         protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn) {
             TypeConstant    typeTuple = frame.poolContext().ensureTupleType(f_clzTarget.getType());
             Container       container = frame.f_context.f_container;
-            TypeComposition clzTuple  = container.nativeTemplates().
-                    get(xTuple.class).ensureClass(container, typeTuple);
+            TypeComposition clzTuple  = container.nativeTemplate(xTuple.class).ensureClass(container, typeTuple);
 
             switch (callImpl(frame, ahVar, Op.A_STACK)) {
             case Op.R_NEXT:
@@ -1496,7 +1491,7 @@ public class xRTFunction
      */
     public static TypeComposition ensureArrayComposition(Container container) {
         return container.ensureClassComposition(FUNCTION_ARRAY_TYPE,
-                container.nativeTemplates().get(xArray.class));
+                container.nativeTemplate(xArray.class));
     }
 
     /**
@@ -1517,7 +1512,7 @@ public class xRTFunction
     public static TypeConstant ensureListMapType(Container container) {
         TypeConstant type = LISTMAP_TYPE;
         if (type == null) {
-            ConstantPool pool = container.nativeTemplates().get(xRTFunction.class).pool();
+            ConstantPool pool = container.nativeTemplate(xRTFunction.class).pool();
             LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
                     pool.ensureEcstasyTypeConstant("maps.ListMap"),
                     pool.typeParameter(), pool.typeObject());

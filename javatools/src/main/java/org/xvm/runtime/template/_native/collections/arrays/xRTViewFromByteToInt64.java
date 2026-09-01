@@ -54,7 +54,7 @@ public class xRTViewFromByteToInt64
                 alValue[i] = Handy.byteArrayToLong(ab, 0);
             }
 
-            return nativeTemplates().get(xRTInt64Delegate.class).makeHandle(alValue, alValue.length, mutability);
+            return f_container.nativeTemplate(xRTInt64Delegate.class).makeHandle(alValue, alValue.length, mutability);
         }
 
         throw new UnsupportedOperationException();

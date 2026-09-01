@@ -17,6 +17,6 @@ public class xInt16
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return nativeTemplates().get(xUInt16.class);
+        return f_container.nativeTemplate(xUInt16.class);
     }
 }

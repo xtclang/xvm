@@ -102,7 +102,7 @@ public class xRTSocket
         }
 
         if (frame.f_context != hSocket.f_context) {
-            return xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                     call1(frame, hTarget, new ObjectHandle[] {hArg}, iReturn);
         }
 
@@ -123,7 +123,7 @@ public class xRTSocket
         }
 
         if (frame.f_context != hSocket.f_context) {
-            return xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                     call1(frame, hTarget, ahArg, iReturn);
         }
 
@@ -170,7 +170,7 @@ public class xRTSocket
                 InetAddress local   = socket.getLocalAddress();
                 byte[]      abLocal = local == null ? new byte[0] : local.getAddress();
                 int         nLocal  = socket.getLocalPort();
-                return frame.f_context.f_container.nativeTemplates().get(xRTSocket.class).
+                return frame.nativeTemplate(xRTSocket.class).
                         constructSocket(frameCaller, socket, abLocal, nLocal,
                         abRemoteIP, nRemotePort, aiReturn);
             } catch (Throwable e) {
@@ -224,9 +224,9 @@ public class xRTSocket
                 pool.typeByteArray(), pool.typeUInt16());
         ObjectHandle[]   ahParams     = new ObjectHandle[constructor.getMaxVars()];
         ahParams[0] = xArray.makeByteArrayHandle(abLocal, Mutability.Constant);
-        ahParams[1] = nativeTemplates().get(xUInt16.class).makeJavaLong(nLocalPort);
+        ahParams[1] = f_container.nativeTemplate(xUInt16.class).makeJavaLong(nLocalPort);
         ahParams[2] = xArray.makeByteArrayHandle(abRemote, Mutability.Constant);
-        ahParams[3] = nativeTemplates().get(xUInt16.class).makeJavaLong(nRemotePort);
+        ahParams[3] = f_container.nativeTemplate(xUInt16.class).makeJavaLong(nRemotePort);
 
         switch (template.construct(frame, constructor, clz, null, ahParams, Op.A_STACK)) {
         case Op.R_NEXT:

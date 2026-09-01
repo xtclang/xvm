@@ -54,6 +54,6 @@ public class xRTKeyGenerator
         int       nSize = key.getEncoded().length;
 
         return frame.assignValues(aiReturn, xInt64.makeHandle(frame, nSize),
-                new SecretHandle(frame.f_context.f_container, key));
+                new SecretHandle(frame.container(), key));
     }
 }

@@ -208,7 +208,7 @@ public class xContainerLinker
             return frame.raiseException(e);
         }
 
-        switch (nativeTemplates().get(xRTFileTemplate.class).invokeResolve(frame, file, hRepo,
+        switch (f_container.nativeTemplate(xRTFileTemplate.class).invokeResolve(frame, file, hRepo,
                     ahShared, ahAdditional, Op.A_STACK)) {
         case Op.R_NEXT:
             return completeResolveAndLink(frame, container, popModule(frame),
@@ -298,8 +298,7 @@ public class xContainerLinker
             }
 
             return frameCaller.assignValue(iReturn,
-                frameCaller.f_context.f_container.nativeTemplates().
-                        get(xContainerControl.class).makeHandle(container));
+                frameCaller.nativeTemplate(xContainerControl.class).makeHandle(container));
         }
 
         private final NestedContainer container;

@@ -84,8 +84,8 @@ public class xArray
         ConstantPool              pool         = f_container.getConstantPool();
         Map<TypeConstant, xArray> mapTemplates = new HashMap<>();
 
-        mapTemplates.put(pool.typeBit(),  nativeTemplates().get(xBitArray.class));
-        mapTemplates.put(pool.typeByte(), nativeTemplates().get(xByteArray.class));
+        mapTemplates.put(pool.typeBit(),  f_container.nativeTemplate(xBitArray.class));
+        mapTemplates.put(pool.typeByte(), f_container.nativeTemplate(xByteArray.class));
 
         ARRAY_TEMPLATES = mapTemplates;
 
@@ -119,7 +119,7 @@ public class xArray
         }
 
         // cache helper methods
-        FILL_FROM_ITERABLE = nativeTemplates().get(xRTDelegate.class).getStructure().findMethod("fillFromIterable", 4);
+        FILL_FROM_ITERABLE = f_container.nativeTemplate(xRTDelegate.class).getStructure().findMethod("fillFromIterable", 4);
         CREATE_LIST_SET    = Utils.CONST_HELPER.findMethod("createListSet", 2);
 
         // cache Mutability template
@@ -481,10 +481,10 @@ public class xArray
                     : Mutability.Fixed;
 
             DelegateHandle hView  =
-                    nativeTemplates().get(xRTViewToBit.class).createBitViewDelegate(hArray.m_hDelegate, mutability);
+                    f_container.nativeTemplate(xRTViewToBit.class).createBitViewDelegate(hArray.m_hDelegate, mutability);
 
             return frame.assignValue(iReturn,
-                    new ArrayHandle(nativeTemplates().get(xBitArray.class).getCanonicalClass(), hView, mutability));
+                    new ArrayHandle(f_container.nativeTemplate(xBitArray.class).getCanonicalClass(), hView, mutability));
         }
 
         case "clear": {
@@ -561,8 +561,8 @@ public class xArray
             TypeConstant   typeRef   = pool.ensureParameterizedTypeConstant(
                                            pool.typeVar(), hDelegate.getType());
 
-            ClassComposition clzRef  = frame.f_context.f_container.ensureClassComposition(typeRef,
-                    nativeTemplates().get(xRef.class));
+            ClassComposition clzRef  = frame.container().ensureClassComposition(typeRef,
+                    f_container.nativeTemplate(xRef.class));
             RefHandle        hRef    = new RefHandle(clzRef, "delegate", hDelegate);
 
             return frame.assignValue(iReturn, hRef);

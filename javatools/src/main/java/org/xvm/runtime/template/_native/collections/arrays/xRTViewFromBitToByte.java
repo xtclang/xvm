@@ -80,7 +80,7 @@ public class xRTViewFromBitToByte
         if (tSource instanceof ByteView tView) {
             byte[] abBits = tView.getBytes(hSource, ofStart, cSize, fReverse);
 
-            return nativeTemplates().get(xRTUInt8Delegate.class).makeHandle(abBits, cSize, mutability);
+            return f_container.nativeTemplate(xRTUInt8Delegate.class).makeHandle(abBits, cSize, mutability);
         }
 
         throw new UnsupportedOperationException();
@@ -95,7 +95,7 @@ public class xRTViewFromBitToByte
         if (tSource instanceof ByteView tView) {
             // the underlying delegate is a BitView, which is a ByteView
             return frame.assignValue(iReturn,
-                    nativeTemplates().get(xUInt8.class).makeJavaLong(tView.extractByte(hSource, lIndex)));
+                    f_container.nativeTemplate(xUInt8.class).makeJavaLong(tView.extractByte(hSource, lIndex)));
         }
 
         throw new UnsupportedOperationException();

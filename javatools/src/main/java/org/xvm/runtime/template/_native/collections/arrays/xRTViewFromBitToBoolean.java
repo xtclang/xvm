@@ -67,7 +67,7 @@ public class xRTViewFromBitToBoolean
         if (tSource instanceof BitView tView) {
             byte[] abBits = tView.getBytes(hSource, ofStart, cSize, fReverse);
 
-            return nativeTemplates().get(xRTBooleanDelegate.class).makeHandle(abBits, cSize, mutability);
+            return f_container.nativeTemplate(xRTBooleanDelegate.class).makeHandle(abBits, cSize, mutability);
         }
 
         throw new UnsupportedOperationException();

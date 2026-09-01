@@ -46,19 +46,19 @@ public class xAtomic
         Map<TypeConstant, xAtomic> mapTemplates = new HashMap<>();
 
         // Int128, UInt128
-        mapTemplates.put(pool.typeInt128(),  new xAtomicInt128(nativeTemplates().get(xInt128.class)));
-        mapTemplates.put(pool.typeUInt128(), new xAtomicInt128(nativeTemplates().get(xUInt128.class)));
+        mapTemplates.put(pool.typeInt128(),  new xAtomicInt128(f_container.nativeTemplate(xInt128.class)));
+        mapTemplates.put(pool.typeUInt128(), new xAtomicInt128(f_container.nativeTemplate(xUInt128.class)));
 
-        mapTemplates.put(pool.typeInt8(),    new xAtomicIntNumber(nativeTemplates().get(xInt8.class)));
-        mapTemplates.put(pool.typeInt16(),   new xAtomicIntNumber(nativeTemplates().get(xInt16.class)));
-        mapTemplates.put(pool.typeInt32(),   new xAtomicIntNumber(nativeTemplates().get(xInt32.class)));
-        mapTemplates.put(pool.typeInt64(),   new xAtomicIntNumber(nativeTemplates().get(xInt64.class)));
+        mapTemplates.put(pool.typeInt8(),    new xAtomicIntNumber(f_container.nativeTemplate(xInt8.class)));
+        mapTemplates.put(pool.typeInt16(),   new xAtomicIntNumber(f_container.nativeTemplate(xInt16.class)));
+        mapTemplates.put(pool.typeInt32(),   new xAtomicIntNumber(f_container.nativeTemplate(xInt32.class)));
+        mapTemplates.put(pool.typeInt64(),   new xAtomicIntNumber(f_container.nativeTemplate(xInt64.class)));
 
-        mapTemplates.put(pool.typeNibble(),  new xAtomicIntNumber(nativeTemplates().get(xNibble.class)));
-        mapTemplates.put(pool.typeUInt8(),   new xAtomicIntNumber(nativeTemplates().get(xUInt8.class)));
-        mapTemplates.put(pool.typeUInt16(),  new xAtomicIntNumber(nativeTemplates().get(xUInt16.class)));
-        mapTemplates.put(pool.typeUInt32(),  new xAtomicIntNumber(nativeTemplates().get(xUInt32.class)));
-        mapTemplates.put(pool.typeUInt64(),  new xAtomicIntNumber(nativeTemplates().get(xUInt64.class)));
+        mapTemplates.put(pool.typeNibble(),  new xAtomicIntNumber(f_container.nativeTemplate(xNibble.class)));
+        mapTemplates.put(pool.typeUInt8(),   new xAtomicIntNumber(f_container.nativeTemplate(xUInt8.class)));
+        mapTemplates.put(pool.typeUInt16(),  new xAtomicIntNumber(f_container.nativeTemplate(xUInt16.class)));
+        mapTemplates.put(pool.typeUInt32(),  new xAtomicIntNumber(f_container.nativeTemplate(xUInt32.class)));
+        mapTemplates.put(pool.typeUInt64(),  new xAtomicIntNumber(f_container.nativeTemplate(xUInt64.class)));
 
         NUMBER_TEMPLATES = mapTemplates;
 

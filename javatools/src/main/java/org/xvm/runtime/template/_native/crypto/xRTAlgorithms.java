@@ -137,7 +137,7 @@ public class xRTAlgorithms
                 MessageDigest digest = MessageDigest.getInstance(sName);
 
                 nBlockSize = 0;
-                hImpl      = new DigestHandle(frame.f_context.f_container, digest);
+                hImpl      = new DigestHandle(frame.container(), digest);
                 break;
             }
 
@@ -146,7 +146,7 @@ public class xRTAlgorithms
                 Cipher cipher = Cipher.getInstance(sName);
 
                 nBlockSize = cipher.getBlockSize();
-                hImpl      = new CipherHandle(frame.f_context.f_container, cipher);
+                hImpl      = new CipherHandle(frame.container(), cipher);
                 break;
             }
 
@@ -154,7 +154,7 @@ public class xRTAlgorithms
                 Mac mac = Mac.getInstance(sName);
 
                 nBlockSize = 0;
-                hImpl      = new MacHandle(frame.f_context.f_container, mac);
+                hImpl      = new MacHandle(frame.container(), mac);
                 break;
             }
 
@@ -162,7 +162,7 @@ public class xRTAlgorithms
                 Signature sig = Signature.getInstance(sName);
 
                 nBlockSize = 0;
-                hImpl      = new SignatureHandle(frame.f_context.f_container, sig);
+                hImpl      = new SignatureHandle(frame.container(), sig);
                 break;
             }
 
@@ -170,7 +170,7 @@ public class xRTAlgorithms
                 KeyGenerator generator = KeyGenerator.getInstance(sName);
 
                 nBlockSize = 0;
-                hImpl      = new KeyGenHandle(frame.f_context.f_container, generator);
+                hImpl      = new KeyGenHandle(frame.container(), generator);
                 break;
             }
 
@@ -283,7 +283,7 @@ public class xRTAlgorithms
     public static class DigestHandle
             extends ObjectHandle {
         protected DigestHandle(Container container, MessageDigest digest) {
-            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
+            super(container.nativeTemplate(xObject.class).getCanonicalClass());
 
             f_digest = digest;
         }
@@ -300,7 +300,7 @@ public class xRTAlgorithms
     public static class CipherHandle
             extends ObjectHandle {
         protected CipherHandle(Container container, Cipher cipher) {
-            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
+            super(container.nativeTemplate(xObject.class).getCanonicalClass());
 
             f_cipher = cipher;
         }
@@ -317,7 +317,7 @@ public class xRTAlgorithms
     public static class SignatureHandle
             extends ObjectHandle {
         protected SignatureHandle(Container container, Signature signature) {
-            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
+            super(container.nativeTemplate(xObject.class).getCanonicalClass());
 
             f_signature = signature;
         }
@@ -334,7 +334,7 @@ public class xRTAlgorithms
     public static class MacHandle
             extends ObjectHandle {
         protected MacHandle(Container container, Mac mac) {
-            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
+            super(container.nativeTemplate(xObject.class).getCanonicalClass());
 
             f_mac = mac;
         }
@@ -351,7 +351,7 @@ public class xRTAlgorithms
     public static class SecretHandle
             extends ObjectHandle {
         protected SecretHandle(Container container, Key key) {
-            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
+            super(container.nativeTemplate(xObject.class).getCanonicalClass());
 
             f_key = key;
         }
@@ -373,7 +373,7 @@ public class xRTAlgorithms
         public final KeyGenerator f_generator;
 
         protected KeyGenHandle(Container container, KeyGenerator generator) {
-            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
+            super(container.nativeTemplate(xObject.class).getCanonicalClass());
 
             f_generator = generator;
         }

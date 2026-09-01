@@ -139,15 +139,15 @@ public class xFPLiteral
 
         case "toDec32":
             return frame.assignValue(iReturn,
-                    nativeTemplates().get(xDec32.class).makeHandle(new Decimal32(hLiteral.getValue())));
+                    f_container.nativeTemplate(xDec32.class).makeHandle(new Decimal32(hLiteral.getValue())));
 
         case "toDec64":
             return frame.assignValue(iReturn,
-                    nativeTemplates().get(xDec64.class).makeHandle(new Decimal64(hLiteral.getValue())));
+                    f_container.nativeTemplate(xDec64.class).makeHandle(new Decimal64(hLiteral.getValue())));
 
         case "toDec128":
             return frame.assignValue(iReturn,
-                    nativeTemplates().get(xDec128.class).makeHandle(new Decimal128(hLiteral.getValue())));
+                    f_container.nativeTemplate(xDec128.class).makeHandle(new Decimal128(hLiteral.getValue())));
 
         case "toFloat128":
         case "toFloatN":

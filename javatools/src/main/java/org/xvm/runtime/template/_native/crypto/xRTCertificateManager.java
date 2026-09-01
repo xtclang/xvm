@@ -527,7 +527,7 @@ public class xRTCertificateManager
     private int invokeKeystoreFor(Frame frame, ObjectHandle[] ahArg, int iReturn) {
         ArrayHandle  hContent  = (ArrayHandle) ahArg[0];
         StringHandle hPwd      = xRTKeyStore.getPassword(frame, ahArg[1]);
-        ObjectHandle hKeyStore = nativeTemplates().get(xRTKeyStore.class).ensureKeyStore(frame, hContent, hPwd);
+        ObjectHandle hKeyStore = f_container.nativeTemplate(xRTKeyStore.class).ensureKeyStore(frame, hContent, hPwd);
 
         return frame.assignDeferredValue(iReturn, hKeyStore);
     }

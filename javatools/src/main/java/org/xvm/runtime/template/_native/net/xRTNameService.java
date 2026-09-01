@@ -86,7 +86,7 @@ public class xRTNameService
 
         if (frame.f_context != hService.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                     call1(frame, hTarget, ahArg, iReturn);
         }
 
@@ -101,7 +101,7 @@ public class xRTNameService
                 Frame.Continuation continuation = frameCaller -> {
                     try {
                         return frameCaller.assignValue(iReturn,
-                                xString.makeArrayHandle(frame.f_context.f_container, cfRecords.get()));
+                                xString.makeArrayHandle(frame.container(), cfRecords.get()));
                     } catch (Throwable e) {
                         return frameCaller.raiseException(
                             xException.obscureIoException(frameCaller, exceptionMessage(e)));
@@ -121,7 +121,7 @@ public class xRTNameService
 
         if (frame.f_context != hService.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                     callN(frame, hTarget, ahArg, aiReturn);
         }
 
@@ -192,7 +192,7 @@ public class xRTNameService
     // -----  helpers ------------------------------------------------------------------------------
 
     static TypeComposition ensureByteArrayArrayComposition(Container container) {
-        return container.ensureClassComposition(BYTE_ARRAY_ARRAY_TYPE, container.nativeTemplates().get(xArray.class));
+        return container.ensureClassComposition(BYTE_ARRAY_ARRAY_TYPE, container.nativeTemplate(xArray.class));
     }
 
     static String[] getAllRecords(String sName)

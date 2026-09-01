@@ -36,6 +36,6 @@ public class xRTUInt128Delegate
 
     @Override
     protected ObjectHandle makeElementHandle(LongLong ll) {
-        return nativeTemplates().get(xUInt128.class).makeHandle(ll);
+        return f_container.nativeTemplate(xUInt128.class).makeHandle(ll);
     }
    }

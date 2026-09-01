@@ -64,7 +64,7 @@ public class xRTViewFromBitToNibble
         if (tSource instanceof BitView tView) {
             byte[] abBits = tView.getBytes(hSource, ofStart/2, cSize/2, fReverse);
 
-            return nativeTemplates().get(xRTNibbleDelegate.class).packHandle(abBits, mutability);
+            return f_container.nativeTemplate(xRTNibbleDelegate.class).packHandle(abBits, mutability);
         }
 
         throw new UnsupportedOperationException();
@@ -84,7 +84,7 @@ public class xRTViewFromBitToNibble
             } else {
                 nNibble = nNibble & 0x0F;
             }
-            return frame.assignValue(iReturn, nativeTemplates().get(xNibble.class).makeJavaLong(nNibble));
+            return frame.assignValue(iReturn, f_container.nativeTemplate(xNibble.class).makeJavaLong(nNibble));
         }
 
         throw new UnsupportedOperationException();

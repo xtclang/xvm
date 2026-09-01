@@ -133,7 +133,7 @@ public class xRTConnector
                     ? invokeSendRequest(frame, hConnector, (StringHandle) ahArg[0],
                         (StringHandle) ahArg[1], (ArrayHandle) ahArg[2],
                         (ArrayHandle) ahArg[3], (ArrayHandle) ahArg[4], aiReturn)
-                    : xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+                    : xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                         callN(frame, hConnector, ahArg, aiReturn);
         }
         }
@@ -151,9 +151,9 @@ public class xRTConnector
         ArrayHandle hNames  = m_hDefaultNames;
         ArrayHandle hValues = m_hDefaultValues;
         if (hNames == null) {
-            m_hDefaultNames  = hNames  = xString.makeArrayHandle(frame.f_context.f_container,
+            m_hDefaultNames  = hNames  = xString.makeArrayHandle(frame.container(),
                     new String[] {"User-Agent"});
-            m_hDefaultValues = hValues = xString.makeArrayHandle(frame.f_context.f_container, new String[] {s_sAgent});
+            m_hDefaultValues = hValues = xString.makeArrayHandle(frame.container(), new String[] {s_sAgent});
         }
 
         return frame.assignValues(aiReturn, hNames, hValues);
@@ -258,8 +258,8 @@ public class xRTConnector
 
             return frame.assignValues(aiReturn,
                     xInt64.makeHandle(frame, nResponseCode),
-                    xString.makeArrayHandle(frame.f_context.f_container, asResponseNames),
-                    xString.makeArrayHandle(frame.f_context.f_container, asResponseValues),
+                    xString.makeArrayHandle(frame.container(), asResponseNames),
+                    xString.makeArrayHandle(frame.container(), asResponseValues),
                     hResponseBytes
                     );
         } catch (Exception e) {

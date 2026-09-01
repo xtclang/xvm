@@ -184,19 +184,19 @@ public class xRTServer
         case "setHeaders":
             return frame.f_context == hServer.f_context
                     ? invokeSetHeaders(frame, ahArg)
-                    : xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+                    : xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                             call1(frame, hServer, ahArg, iReturn);
 
         case "setBodyBytes":
             return frame.f_context == hServer.f_context
                     ? invokeSetBodyBytes(frame, ahArg)
-                    : xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+                    : xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                             call1(frame, hServer, ahArg, iReturn);
 
         case "readBody":
             return frame.f_context == hServer.f_context
                     ? invokeReadBody(frame, ahArg, iReturn)
-                    : xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+                    : xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                             call1(frame, hServer, ahArg, iReturn);
 
         case "closeImpl":
@@ -411,7 +411,7 @@ public class xRTServer
         assert method != null;
 
         FunctionHandle hFunction =
-                xRTFunction.makeInternalHandle(frame.f_context.f_container, method).
+                xRTFunction.makeInternalHandle(frame.container(), method).
                         bindTarget(frame, hWrapper);
         return new RequestHandler(hWrapper.f_context, hFunction, hServer);
     }
@@ -434,7 +434,7 @@ public class xRTServer
 
         return frame.assignValues(aiResult,
                 xByteArray.makeByteArrayHandle(ab, Mutability.Constant),
-                nativeTemplates().get(xUInt16.class).makeJavaLong(nPort));
+                f_container.nativeTemplate(xUInt16.class).makeJavaLong(nPort));
     }
 
     /**
@@ -447,7 +447,7 @@ public class xRTServer
 
         return frame.assignValues(aiResult,
                 xByteArray.makeByteArrayHandle(ab, Mutability.Constant),
-                nativeTemplates().get(xUInt16.class).makeJavaLong(nPort));
+                f_container.nativeTemplate(xUInt16.class).makeJavaLong(nPort));
     }
 
     /**
@@ -462,7 +462,7 @@ public class xRTServer
         return sName == null
             ? frame.assignValue(aiResult[0], xBoolean.FALSE)
             : frame.assignValues(aiResult, xBoolean.TRUE,
-                    xString.makeHandle(frame, sName), nativeTemplates().get(xUInt16.class).makeJavaLong(nPort));
+                    xString.makeHandle(frame, sName), f_container.nativeTemplate(xUInt16.class).makeJavaLong(nPort));
     }
 
     /**
@@ -481,7 +481,7 @@ public class xRTServer
         Headers headers = hCtx.f_exchange.getRequestHeaders();
 
         return frame.assignValue(iResult,
-                xString.makeArrayHandle(frame.f_context.f_container, headers.keySet().toArray(Utils.NO_NAMES)));
+                xString.makeArrayHandle(frame.container(), headers.keySet().toArray(Utils.NO_NAMES)));
     }
 
     /**
@@ -499,7 +499,7 @@ public class xRTServer
         }
 
         return frame.assignValues(aiResult, xBoolean.TRUE,
-                xString.makeArrayHandle(frame.f_context.f_container, listValues.toArray(Utils.NO_NAMES)));
+                xString.makeArrayHandle(frame.container(), listValues.toArray(Utils.NO_NAMES)));
     }
 
     /**
@@ -951,7 +951,7 @@ public class xRTServer
     protected static class HttpContextHandle
                 extends ObjectHandle {
         public HttpContextHandle(Container container, HttpExchange exchange) {
-            super(container.nativeTemplates().get(xObject.class).getCanonicalClass());
+            super(container.nativeTemplate(xObject.class).getCanonicalClass());
 
             f_exchange = exchange;
             m_fMutable = false;

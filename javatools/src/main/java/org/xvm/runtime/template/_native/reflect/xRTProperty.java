@@ -171,24 +171,22 @@ public class xRTProperty
      * @return the resulting {@link PropertyHandle} or a {@link DeferredCallHandle}
      */
     public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, PropertyInfo infoProp) {
-        Container    container = frame.f_context.f_container;
+        Container    container = frame.container();
         Annotation[] aAnno     = infoProp.getPropertyAnnotations();
         TypeConstant typeProp  = infoProp.getIdentity().getValueType(frame.poolContext(), typeTarget);
 
         if (aAnno != null && aAnno.length > 0) {
             typeProp = frame.poolContext().ensureAnnotatedTypeConstant(typeProp, aAnno);
 
-            TypeComposition clzProp = container.nativeTemplates().
-                    get(xRTProperty.class).ensureClass(container, typeProp);
+            TypeComposition clzProp = container.nativeTemplate(xRTProperty.class).ensureClass(container, typeProp);
             PropertyHandle  hStruct = new PropertyHandle(clzProp.ensureAccess(Access.STRUCT));
 
-            int iResult = container.nativeTemplates().get(xRTProperty.class).proceedConstruction(
+            int iResult = container.nativeTemplate(xRTProperty.class).proceedConstruction(
                                 frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK);
             return frame.popResultImmutable(iResult);
         }
 
-        return new PropertyHandle(container.nativeTemplates().
-                get(xRTProperty.class).ensureClass(container, typeProp));
+        return new PropertyHandle(container.nativeTemplate(xRTProperty.class).ensureClass(container, typeProp));
     }
 
     /**

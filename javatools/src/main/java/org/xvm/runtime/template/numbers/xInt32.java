@@ -17,6 +17,6 @@ public class xInt32
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return nativeTemplates().get(xUInt32.class);
+        return f_container.nativeTemplate(xUInt32.class);
     }
 }

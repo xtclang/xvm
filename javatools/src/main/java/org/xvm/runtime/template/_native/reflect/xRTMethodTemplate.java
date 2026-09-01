@@ -181,8 +181,7 @@ public class xRTMethodTemplate
     public static TypeComposition ensureMethodTemplateComposition(Container container) {
         TypeComposition clz = METHOD_TEMPLATE_COMP;
         if (clz == null) {
-            ClassTemplate templateRT   = container.nativeTemplates().
-                    get(xRTMethodTemplate.class);
+            ClassTemplate templateRT   = container.nativeTemplate(xRTMethodTemplate.class);
             ConstantPool  pool         = templateRT.pool();
             TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
             METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);

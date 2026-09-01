@@ -17,6 +17,6 @@ public class xCheckedInt64
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return nativeTemplates().get(xCheckedUInt64.class);
+        return f_container.nativeTemplate(xCheckedUInt64.class);
     }
 }

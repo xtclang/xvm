@@ -92,7 +92,7 @@ public class xRTFileTemplate
                     iReturn);
 
         case "moduleNames":
-            return frame.assignValue(iReturn, xString.makeArrayHandle(frame.f_context.f_container,
+            return frame.assignValue(iReturn, xString.makeArrayHandle(frame.container(),
                     fileStruct.buildFileInfo().modules().keySet().toArray(new String[0])));
 
         case "resolved":
@@ -316,7 +316,7 @@ public class xRTFileTemplate
      */
     public static ComponentTemplateHandle makeHandle(Container container, FileStructure fileStruct) {
         // note: no need to initialize the struct because there are no natural fields
-        xRTFileTemplate template = container.nativeTemplates().get(xRTFileTemplate.class);
+        xRTFileTemplate template = container.nativeTemplate(xRTFileTemplate.class);
         TypeComposition clzFile  = template.ensureClass(container, template.getCanonicalType(),
                 FILE_TEMPLATE_TYPE);
         return new ComponentTemplateHandle(clzFile, fileStruct);

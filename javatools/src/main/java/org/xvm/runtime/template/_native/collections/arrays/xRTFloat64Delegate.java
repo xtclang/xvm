@@ -122,7 +122,7 @@ public class xRTFloat64Delegate
         DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                nativeTemplates().get(xFloat64.class).makeHandle(hDelegate.m_adValue[(int) lIndex]));
+                f_container.nativeTemplate(xFloat64.class).makeHandle(hDelegate.m_adValue[(int) lIndex]));
     }
 
     @Override

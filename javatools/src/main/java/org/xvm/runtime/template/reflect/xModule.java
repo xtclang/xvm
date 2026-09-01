@@ -204,7 +204,7 @@ public class xModule
     public int invokeClassForName(Frame frame, PackageHandle hTarget, ObjectHandle hArg, int[] aiReturn) {
         ModuleStructure module  = (ModuleStructure) hTarget.getStructure();
         String          sClass  = ((StringHandle) hArg).getStringValue();
-        Object          oResult = resolveClass(frame.f_context.f_container,
+        Object          oResult = resolveClass(frame.container(),
                                     module.getFileStructure(), module, sClass);
         if (oResult == null) {
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -224,7 +224,7 @@ public class xModule
     public int invokeTypeForName(Frame frame, PackageHandle hTarget, ObjectHandle hArg, int[] aiReturn) {
         ModuleStructure module  = (ModuleStructure) hTarget.getStructure();
         String          sType   = ((StringHandle) hArg).getStringValue();
-        Object          oResult = resolveType(frame.f_context.f_container,
+        Object          oResult = resolveType(frame.container(),
                                     module.getFileStructure(), module, sType);
         if (oResult == null) {
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -271,7 +271,7 @@ public class xModule
                                              boolean fClass) {
         if (module == null) {
             module = structTS == null
-                ? container.nativeTemplates().get(xModule.class).
+                ? container.nativeTemplate(xModule.class).
                         f_struct.getFileStructure().getModule()  // only Ecstasy classes
                 : structTS.getModule();
         }
@@ -316,7 +316,7 @@ public class xModule
      */
     public static TypeComposition ensureArrayComposition(Container container) {
         return container.ensureClassComposition(MODULE_ARRAY_TYPE,
-                container.nativeTemplates().get(xArray.class));
+                container.nativeTemplate(xArray.class));
     }
 
     /**
@@ -337,7 +337,7 @@ public class xModule
     private static TypeConstant ensureListMapType(Container container) {
         TypeConstant type = LISTMAP_TYPE;
         if (type == null) {
-            ConstantPool pool = container.nativeTemplates().get(xModule.class).pool();
+            ConstantPool pool = container.nativeTemplate(xModule.class).pool();
             LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
                     pool.typeListMap(),
                     pool.typeString(), pool.typeModule());

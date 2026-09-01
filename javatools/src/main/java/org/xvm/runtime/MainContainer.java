@@ -67,7 +67,7 @@ public class MainContainer
             if (typeRequired.equals(typeStrings)) {
                 // require String[], return the whole List<String> as an array
                 String[] asValue = listValue.toArray(String[]::new);
-                return xString.makeArrayHandle(frame.f_context.f_container, asValue);
+                return xString.makeArrayHandle(frame.container(), asValue);
             }
             if (typeRequired.isEnum()) {
                 TypeComposition clz    = typeRequired.ensureClass(frame);

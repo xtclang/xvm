@@ -259,7 +259,7 @@ public class xRTCompiler
             haErrors    = xString.ensureEmptyArray();
         } else {
             haTemplates = xArray.makeArrayHandle(clzArray, 0, Utils.OBJECTS_NONE, Mutability.Constant);
-            haErrors    = xString.makeArrayHandle(frame.f_context.f_container, listErrors.toArray(Utils.NO_NAMES));
+            haErrors    = xString.makeArrayHandle(frame.container(), listErrors.toArray(Utils.NO_NAMES));
         }
 
         compiler.reset();

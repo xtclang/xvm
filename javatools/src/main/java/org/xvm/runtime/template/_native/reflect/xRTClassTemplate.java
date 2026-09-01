@@ -398,13 +398,13 @@ public class xRTClassTemplate
         List<ComponentTemplateHandle> listProps = new ArrayList<>();
         for (Component child : clz.children()) {
             if (child instanceof PropertyStructure prop) {
-                listProps.add(xRTPropertyTemplate.makePropertyHandle(frame.f_context.f_container, prop));
+                listProps.add(xRTPropertyTemplate.makePropertyHandle(frame.container(), prop));
             }
         }
 
         ComponentTemplateHandle[] ahProp = listProps.toArray(NO_TEMPLATES);
         ArrayHandle hArray = xArray.createImmutableArray(
-                xRTPropertyTemplate.ensureArrayComposition(frame.f_context.f_container), ahProp);
+                xRTPropertyTemplate.ensureArrayComposition(frame.container()), ahProp);
         return frame.assignValue(iReturn, hArray);
     }
 
@@ -513,7 +513,7 @@ public class xRTClassTemplate
      */
     public static ComponentTemplateHandle makeHandle(Container container, ClassStructure struct) {
         // note: no need to initialize the struct because there are no natural fields
-        xRTClassTemplate template = container.nativeTemplates().get(xRTClassTemplate.class);
+        xRTClassTemplate template = container.nativeTemplate(xRTClassTemplate.class);
         TypeComposition   clz      = template.ensureClass(container, template.getCanonicalType(),
                 CLASS_TEMPLATE_TYPE);
         return new ComponentTemplateHandle(clz, struct);
@@ -523,7 +523,7 @@ public class xRTClassTemplate
      * @return the ClassComposition for an Array of Contributions
      */
     public static TypeComposition ensureContribArrayComposition(Container container) {
-        return container.ensureClassComposition(CONTRIBUTION_ARRAY_TYPE, container.nativeTemplates().get(xArray.class));
+        return container.ensureClassComposition(CONTRIBUTION_ARRAY_TYPE, container.nativeTemplate(xArray.class));
     }
 
     /**
@@ -531,28 +531,28 @@ public class xRTClassTemplate
      */
     public static TypeComposition ensureClassTemplateArrayComposition(Container container) {
         return container.ensureClassComposition(CLASS_TEMPLATE_ARRAY_TYPE,
-                container.nativeTemplates().get(xArray.class));
+                container.nativeTemplate(xArray.class));
     }
 
     /**
      * @return the ClassComposition for an Array of MultiMethodTemplates
      */
     public static TypeComposition ensureMultiMethodTemplateArrayComposition(Container container) {
-        return container.ensureClassComposition(MULTI_METHOD_ARRAY_TYPE, container.nativeTemplates().get(xArray.class));
+        return container.ensureClassComposition(MULTI_METHOD_ARRAY_TYPE, container.nativeTemplate(xArray.class));
     }
 
     /**
      * @return the ClassComposition for an Array of MethodTemplates
      */
     public static TypeComposition ensureMethodTemplateArrayComposition(Container container) {
-        return container.ensureClassComposition(METHOD_ARRAY_TYPE, container.nativeTemplates().get(xArray.class));
+        return container.ensureClassComposition(METHOD_ARRAY_TYPE, container.nativeTemplate(xArray.class));
     }
 
     /**
      * @return the ClassComposition for an Array of AnnotationTemplates
      */
     public static TypeComposition ensureAnnotationTemplateArrayComposition(Container container) {
-        return container.ensureClassComposition(ANNOTATION_ARRAY_TYPE, container.nativeTemplates().get(xArray.class));
+        return container.ensureClassComposition(ANNOTATION_ARRAY_TYPE, container.nativeTemplate(xArray.class));
     }
 
     /**
@@ -563,7 +563,7 @@ public class xRTClassTemplate
         if (haEmpty == null) {
             haEmpty = xArray.createImmutableArray(
                         container.ensureClassComposition(EMPTY_PARAMETER_ARRAY.getType(),
-                                nativeTemplates().get(xArray.class)),
+                                f_container.nativeTemplate(xArray.class)),
                         Utils.OBJECTS_NONE);
             container.f_heap.saveConstHandle(EMPTY_PARAMETER_ARRAY, haEmpty);
         }

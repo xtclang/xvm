@@ -20,7 +20,7 @@ public class xInt8
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return nativeTemplates().get(xUInt8.class);
+        return f_container.nativeTemplate(xUInt8.class);
     }
 
     @Override

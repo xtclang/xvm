@@ -50,11 +50,11 @@ public class xNibbleArray
             ArrayHandle hArray = (ArrayHandle) hTarget;
 
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hDelegate  = nativeTemplates().get(xRTViewToBitFromNibble.class).createBitViewDelegate(
+            DelegateHandle hDelegate  = f_container.nativeTemplate(xRTViewToBitFromNibble.class).createBitViewDelegate(
                     hArray.m_hDelegate, mutability);
 
             return frame.assignValue(iReturn, new ArrayHandle(
-                    nativeTemplates().get(xBitArray.class).getCanonicalClass(), hDelegate, mutability));
+                    f_container.nativeTemplate(xBitArray.class).getCanonicalClass(), hDelegate, mutability));
         }
 
         case "asByteArray": {
@@ -66,11 +66,11 @@ public class xNibbleArray
             }
 
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hDelegate  = nativeTemplates().get(xRTViewFromBitToByte.class).createBitViewDelegate(
+            DelegateHandle hDelegate  = f_container.nativeTemplate(xRTViewFromBitToByte.class).createBitViewDelegate(
                     hArray.m_hDelegate, mutability);
 
             return frame.assignValue(iReturn, new ArrayHandle(
-                    nativeTemplates().get(xByteArray.class).getCanonicalClass(), hDelegate, mutability));
+                    f_container.nativeTemplate(xByteArray.class).getCanonicalClass(), hDelegate, mutability));
         }
         }
 

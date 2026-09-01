@@ -91,8 +91,7 @@ public abstract class Utils {
         ANNOTATION_TEMPLATE_CONSTRUCT = ANNOTATION_TEMPLATE_TEMPLATE.getStructure().findMethod("construct", 2);
         ARGUMENT_CONSTRUCT            = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
         RT_PARAMETER_CONSTRUCT        = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
-        LIST_MAP_CONSTRUCT            = container.nativeTemplates().
-                                            get(xListMap.class).ensureConstructor();
+        LIST_MAP_CONSTRUCT            = container.nativeTemplate(xListMap.class).ensureConstructor();
         ANNOTATION_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Annotation"));
         ARGUMENT_ARRAY_TYPE           = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Argument"));
         CONST_HELPER                  = container.getClassStructure("_native.ConstHelper");
@@ -138,7 +137,7 @@ public abstract class Utils {
 
         return methodFinally == null
             ? null
-            : xRTFunction.makeInternalHandle(frame.f_context.f_container, methodFinally).
+            : xRTFunction.makeInternalHandle(frame.container(), methodFinally).
                     bindArguments(ahArg);
     }
 
@@ -876,12 +875,10 @@ public abstract class Utils {
 
         switch (constValue.getFormat()) {
         case Module:
-            return frame.f_context.f_container.nativeTemplates().
-                    get(xModule.class).createConstHandle(frame, constValue);
+            return frame.nativeTemplate(xModule.class).createConstHandle(frame, constValue);
 
         case Package:
-            return frame.f_context.f_container.nativeTemplates().
-                    get(xPackage.class).createConstHandle(frame, constValue);
+            return frame.nativeTemplate(xPackage.class).createConstHandle(frame, constValue);
 
         case Property:
             return callPropertyInitializer(frame, (PropertyConstant) constValue);
@@ -1548,7 +1545,7 @@ public abstract class Utils {
     public static ArrayHandle makeAnnoArrayHandle(Container container, ObjectHandle[] ahAnno) {
         return xArray.makeArrayHandle(
                 container.ensureClassComposition(ANNOTATION_ARRAY_TYPE,
-                        container.nativeTemplates().get(xArray.class)),
+                        container.nativeTemplate(xArray.class)),
                 ahAnno.length, ahAnno, Mutability.Constant);
     }
 
@@ -1558,7 +1555,7 @@ public abstract class Utils {
     public static ArrayHandle makeArgumentArrayHandle(Container container, ObjectHandle[] ahArg) {
         return xArray.makeArrayHandle(
                 container.ensureClassComposition(ARGUMENT_ARRAY_TYPE,
-                        container.nativeTemplates().get(xArray.class)),
+                        container.nativeTemplate(xArray.class)),
                 ahArg.length, ahArg, Mutability.Constant);
     }
 

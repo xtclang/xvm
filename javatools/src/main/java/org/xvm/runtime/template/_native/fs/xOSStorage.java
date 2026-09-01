@@ -89,15 +89,15 @@ public class xOSStorage
         // the handles below are cached by the Container.initResources()
         switch (sPropName) {
         case "homeDir":
-            return nativeTemplates().get(xOSDirectory.class).createHandle(frame, hStore,
+            return f_container.nativeTemplate(xOSDirectory.class).createHandle(frame, hStore,
                 Paths.get(System.getProperty("user.home")), iReturn);
 
         case "curDir":
-            return nativeTemplates().get(xOSDirectory.class).createHandle(frame, hStore,
+            return f_container.nativeTemplate(xOSDirectory.class).createHandle(frame, hStore,
                 Paths.get(System.getProperty("user.dir")), iReturn);
 
         case "tmpDir":
-            return nativeTemplates().get(xOSDirectory.class).createHandle(frame, hStore,
+            return f_container.nativeTemplate(xOSDirectory.class).createHandle(frame, hStore,
                 Paths.get(System.getProperty("java.io.tmpdir")), iReturn);
         }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -109,7 +109,7 @@ public class xOSStorage
         ServiceHandle hStorage = (ServiceHandle) hTarget;
 
         if (frame.f_context != hStorage.f_context) {
-            return xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                 call1(frame, hTarget, new ObjectHandle[] {hArg}, iReturn);
         }
 
@@ -124,7 +124,7 @@ public class xOSStorage
 
                 return cNames == 0
                          ? frame.assignValue(iReturn, xString.ensureEmptyArray())
-                         : frame.assignValue(iReturn, xString.makeArrayHandle(frame.f_context.f_container, asName));
+                         : frame.assignValue(iReturn, xString.makeArrayHandle(frame.container(), asName));
             } catch (InvalidPathException e) {
                 return frame.raiseException(xException.ioException(frame, e.getMessage()));
             }
@@ -205,7 +205,7 @@ public class xOSStorage
 
         if (hStorage != null && frame.f_context != hStorage.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                     call1(frame, hTarget, ahArg, iReturn);
         }
 
@@ -224,7 +224,7 @@ public class xOSStorage
 
         if (frame.f_context != hStorage.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                     callN(frame, hTarget, ahArg, aiReturn);
         }
 
@@ -320,17 +320,17 @@ public class xOSStorage
                 Path pathRelative = (Path) event.context();
                 Path pathAbsolute = pathDir.resolve(pathRelative);
 
-                FunctionHandle hfnOnEvent = xRTFunction.makeInternalHandle(
-                        context.hStorage.f_context.f_container, s_methodOnEvent).
+                Container      container  = context.hStorage.f_context.f_container;
+                FunctionHandle hfnOnEvent = xRTFunction.
+                        makeInternalHandle(container, s_methodOnEvent).
                                 bindTarget(null, context.hStorage);
 
-                Container    container = context.hStorage.f_context.f_container;
                 StringHandle hPathDir  = xString.makeHandle(container, pathDir.toString());
                 StringHandle hPathNode = xString.makeHandle(container, pathAbsolute.toString());
 
                 ObjectHandle[] ahArg = new ObjectHandle[] {
                     hPathDir, hPathNode, xBoolean.TRUE,
-                    xInt64.makeHandle(context.hStorage.f_context.f_container, iKind)
+                    xInt64.makeHandle(container, iKind)
                 };
                 context.hStorage.f_context.callLater(hfnOnEvent, ahArg);
             }

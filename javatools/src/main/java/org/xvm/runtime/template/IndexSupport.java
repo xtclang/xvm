@@ -89,11 +89,11 @@ public interface IndexSupport {
         try {
             TypeConstant typeEl = getElementType(frame, hTarget, lIndex);
 
-            Container       container = frame.f_context.f_container;
+            Container       container = frame.container();
             TypeComposition clzRef    = fReadOnly
-                ? container.nativeTemplates().get(xRef.class).
+                ? container.nativeTemplate(xRef.class).
                         ensureParameterizedClass(container, typeEl)
-                : container.nativeTemplates().get(xVar.class).
+                : container.nativeTemplate(xVar.class).
                         ensureParameterizedClass(container, typeEl);
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);

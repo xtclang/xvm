@@ -614,7 +614,7 @@ public class xTuple
 
                 int iResult = index < cTypes
                     ? atype[index].callEquals(frameCaller, h1, h2, Op.A_STACK)
-                    : frameCaller.f_context.f_container.nativeTemplates().get(xObject.class).
+                    : frameCaller.nativeTemplate(xObject.class).
                             callEquals(frameCaller, xObject.CLASS, h1, h2, Op.A_STACK);
                 switch (iResult) {
                 case Op.R_NEXT:

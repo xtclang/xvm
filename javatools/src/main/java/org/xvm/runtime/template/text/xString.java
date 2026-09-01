@@ -417,28 +417,28 @@ public class xString
      * @return a String handle owned by the specified container
      */
     public static StringHandle makeHandle(Container container, String sValue) {
-        return container.nativeTemplates().get(xString.class).makeHandle(sValue);
+        return container.nativeTemplate(xString.class).makeHandle(sValue);
     }
 
     /**
      * @return a String handle owned by the specified container
      */
     public static StringHandle makeHandle(Container container, char[] achValue) {
-        return container.nativeTemplates().get(xString.class).makeHandle(achValue);
+        return container.nativeTemplate(xString.class).makeHandle(achValue);
     }
 
     /**
      * @return a String handle owned by the container the specified frame runs in
      */
     public static StringHandle makeHandle(Frame frame, String sValue) {
-        return makeHandle(frame.f_context.f_container, sValue);
+        return makeHandle(frame.container(), sValue);
     }
 
     /**
      * @return a String handle owned by the container the specified frame runs in
      */
     public static StringHandle makeHandle(Frame frame, char[] achValue) {
-        return makeHandle(frame.f_context.f_container, achValue);
+        return makeHandle(frame.container(), achValue);
     }
 
 

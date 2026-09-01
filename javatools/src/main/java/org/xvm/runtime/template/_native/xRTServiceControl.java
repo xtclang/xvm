@@ -73,7 +73,7 @@ public class xRTServiceControl
             }
             return frame.f_context == context
                 ? context.shutdown(frame)
-                : xRTFunction.makeAsyncNativeHandle(frame.f_context.f_container, method).
+                : xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                         call1(frame, hService, ahArg, iReturn);
         }
 
@@ -107,8 +107,7 @@ public class xRTServiceControl
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     public static ObjectHandle makeHandle(ServiceContext context) {
-        return new ControlHandle(context.f_container.nativeTemplates().
-                get(xRTServiceControl.class).m_clzControl, context);
+        return new ControlHandle(context.f_container.nativeTemplate(xRTServiceControl.class).m_clzControl, context);
     }
 
     protected static class ControlHandle

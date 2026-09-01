@@ -26,7 +26,7 @@ public class xUInt64
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return nativeTemplates().get(xInt64.class);
+        return f_container.nativeTemplate(xInt64.class);
     }
 
     @Override

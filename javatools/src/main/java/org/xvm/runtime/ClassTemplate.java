@@ -147,10 +147,14 @@ public abstract class ClassTemplate
     }
 
     /**
+     * Obtain this template's container's table of native templates - for registering a template,
+     * or anything else that works on the table itself. To just look one up, prefer the shorthand
+     * {@link Container#nativeTemplate} on {@link #f_container}.
+     *
      * @return this template's container's table of native templates
      */
     protected NativeTemplates nativeTemplates() {
-        return NativeTemplates.of(f_container);
+        return f_container.nativeTemplates();
     }
 
     /**
@@ -165,7 +169,7 @@ public abstract class ClassTemplate
      *         than one of the per-structure templates that the same class also backs
      */
     protected boolean isNativeInstance(Class<? extends ClassTemplate> clzTemplate) {
-        return this == nativeTemplates().get(clzTemplate);
+        return this == f_container.nativeTemplate(clzTemplate);
     }
 
     /**
@@ -218,7 +222,7 @@ public abstract class ClassTemplate
                 if ("Object".equals(f_sName)) {
                     return null;
                 }
-                templateSuper = m_templateSuper = nativeTemplates().get(xObject.class);
+                templateSuper = m_templateSuper = f_container.nativeTemplate(xObject.class);
             } else {
                 templateSuper = m_templateSuper =
                     f_container.getTemplate(f_structSuper.getIdentityConstant());
@@ -2465,7 +2469,7 @@ public abstract class ClassTemplate
             if (hfn == null) {
                 // in case super constructors have their own finalizers, we need a non-null anchor
                 // that may be replaced by Frame.chainFinalizers()
-                hfn = FullyBoundHandle.ensureNoOp(frame.f_context.f_container);
+                hfn = FullyBoundHandle.ensureNoOp(frame.container());
             }
 
             frame.m_hfnFinally = hfn;

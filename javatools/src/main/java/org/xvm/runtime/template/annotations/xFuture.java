@@ -51,7 +51,7 @@ public class xFuture
         ConstantPool  pool     = pool();
         ClassConstant idMixin  = (ClassConstant) f_struct.getIdentityConstant();
         Annotation    anno     = pool.ensureAnnotation(idMixin);
-        TypeConstant  typeVar  = nativeTemplates().get(xVar.class).getCanonicalType();
+        TypeConstant  typeVar  = f_container.nativeTemplate(xVar.class).getCanonicalType();
 
         TYPE       = pool.ensureAnnotatedTypeConstant(typeVar, anno);
         COMPLETION = (xEnum) f_container.getTemplate("annotations.Future.Completion");
@@ -746,7 +746,7 @@ public class xFuture
 
     public static FutureHandle makeHandle(Container container,
                                           CompletableFuture<ObjectHandle> future) {
-        return makeHandle(container.nativeTemplates().get(xFuture.class).getCanonicalClass(),
+        return makeHandle(container.nativeTemplate(xFuture.class).getCanonicalClass(),
                 future);
     }
 

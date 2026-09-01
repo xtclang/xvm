@@ -35,7 +35,7 @@ public class xException
     public void initNative() {
         if (isNativeInstance(xException.class)) {
             // cache all the well-known exception classes
-            s_clzException                  = nativeTemplates().get(xException.class).getCanonicalClass();
+            s_clzException                  = f_container.nativeTemplate(xException.class).getCanonicalClass();
             s_clzDeadlock                   = f_container.getTemplate("Deadlock"                     ).getCanonicalClass();
             s_clzIllegalArgument            = f_container.getTemplate("IllegalArgument"              ).getCanonicalClass();
             s_clzIllegalState               = f_container.getTemplate("IllegalState"                 ).getCanonicalClass();

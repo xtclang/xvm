@@ -93,8 +93,8 @@ public class xClass
                         frame.getGenericsResolver(typeClz.containsDynamicType()));
 
             ClassTemplate template = switch (idClz.getComponent().getFormat()) {
-                case ENUMVALUE -> nativeTemplates().get(xEnumValue.class);
-                case ENUM      -> nativeTemplates().get(xEnumeration.class);
+                case ENUMVALUE -> f_container.nativeTemplate(xEnumValue.class);
+                case ENUM      -> f_container.nativeTemplate(xEnumeration.class);
                 default        -> this;
             };
 
@@ -490,7 +490,7 @@ public class xClass
      */
     public static TypeComposition ensureArrayComposition(Container container) {
         return container.ensureClassComposition(CLASS_ARRAY_TYPE,
-                container.nativeTemplates().get(xArray.class));
+                container.nativeTemplate(xArray.class));
     }
 
 

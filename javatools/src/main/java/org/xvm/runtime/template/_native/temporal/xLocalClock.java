@@ -125,7 +125,7 @@ public class xLocalClock
             return frame.raiseException(e.getMessage());
         }
 
-        FunctionHandle hCancel = new NativeFunctionHandle(frame.f_context.f_container,
+        FunctionHandle hCancel = new NativeFunctionHandle(frame.container(),
                 (_, _, _) -> {
                     alarm.cancel();
                     return Op.R_NEXT;

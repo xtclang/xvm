@@ -111,7 +111,7 @@ public class xRef
         // subclasses (xInject) inherit this and are not themselves rebased, so the
         // answer is the container's own xRef template's constant - not this instance's, which
         // is only populated for that one template
-        return nativeTemplates().get(xRef.class).f_idInception;
+        return f_container.nativeTemplate(xRef.class).f_idInception;
     }
 
     @Override

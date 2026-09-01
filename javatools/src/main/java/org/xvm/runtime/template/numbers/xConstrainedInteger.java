@@ -279,7 +279,7 @@ public abstract class xConstrainedInteger
 
         case "stepsTo":
             // the return value must be an Int!
-            return nativeTemplates().get(xInt64.class).invokeSub(frame, hArg, hTarget, iReturn);
+            return f_container.nativeTemplate(xInt64.class).invokeSub(frame, hArg, hTarget, iReturn);
 
         case "toInt8":
         case "toInt16":

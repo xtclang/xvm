@@ -53,7 +53,7 @@ public class xRTViewFromByteToFloat64
                 adValue[i] = Double.longBitsToDouble(Handy.byteArrayToLong(ab, 0));
             }
 
-            return nativeTemplates().get(xRTFloat64Delegate.class).makeHandle(adValue, adValue.length, mutability);
+            return f_container.nativeTemplate(xRTFloat64Delegate.class).makeHandle(adValue, adValue.length, mutability);
         }
 
         throw new UnsupportedOperationException();
@@ -69,7 +69,7 @@ public class xRTViewFromByteToFloat64
             byte[] ab = tView.getBytes(hSource, lIndex*8, 8, false);
             double d  = Double.longBitsToDouble(Handy.byteArrayToLong(ab, 0));
 
-            return frame.assignValue(iReturn, nativeTemplates().get(xFloat64.class).makeHandle(d));
+            return frame.assignValue(iReturn, f_container.nativeTemplate(xFloat64.class).makeHandle(d));
         }
 
         throw new UnsupportedOperationException();

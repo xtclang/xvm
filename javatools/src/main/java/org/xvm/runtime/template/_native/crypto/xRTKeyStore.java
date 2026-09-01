@@ -208,7 +208,7 @@ public class xRTKeyStore
             try {
                 ArrayList<String> listNames = Collections.list(hStore.f_keyStore.aliases());
                 return frame.assignValue(iReturn,
-                        xString.makeArrayHandle(frame.f_context.f_container, listNames.toArray(Utils.NO_NAMES)));
+                        xString.makeArrayHandle(frame.container(), listNames.toArray(Utils.NO_NAMES)));
             } catch (KeyStoreException e) {
                 return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
             }
@@ -342,7 +342,7 @@ public class xRTKeyStore
             list.add(xString.makeHandle(frame, sAlgorithm));
             list.add(xInt64.makeHandle(frame, cKeyBits >>> 3));
             list.add(xByteArray.makeByteArrayHandle(abPublic, Mutability.Constant));
-            list.add(new SecretHandle(frame.f_context.f_container, publicKey));
+            list.add(new SecretHandle(frame.container(), publicKey));
             list.add(xByteArray.makeByteArrayHandle(abDer, Mutability.Constant));
 
             return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
@@ -452,12 +452,12 @@ public class xRTKeyStore
                 list.add(xBoolean.TRUE);
                 list.add(xString.makeHandle(frame, sAlgorithm));
                 list.add(xInt64.makeHandle(frame, cKeyBits >>> 3));
-                list.add(new SecretHandle(frame.f_context.f_container, key));
+                list.add(new SecretHandle(frame.container(), key));
                 if (publicKey == null) {
                     list.add(xNullable.NULL);
                     list.add(xArray.ensureEmptyByteArray());
                 } else {
-                    list.add(new SecretHandle(frame.f_context.f_container, publicKey));
+                    list.add(new SecretHandle(frame.container(), publicKey));
                     list.add(xArray.makeByteArrayHandle(abPublic, Mutability.Constant));
                 }
                 return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
