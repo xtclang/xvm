@@ -87,6 +87,7 @@ surface graduate into individual rows on the bug list.
 | E32 | Thread one `ErrorListener`; stop null-defaulting and blackholing diagnostics | 3 stages, stage 1 alone is mechanical | independent | 665 params, 87 BLACKHOLE, 28 null-guards |
 | E33 | Census of every `Object` in the tree: 61 are `equals` and untouchable, ~132 are real | reference row; feeds E27/E28/E30/E32 | independent | 393 array initializers noted separately |
 | E34 | `ResolutionCollector.getErrorListener()` smuggles the error sink; pass it explicitly | 1 PR, ~60 mechanical sites | complements E32 | removes `NameResolver`'s un-cleaned stash |
+| E35 | Finish the listener: parallel gap, last 3 mutable fields, `withListener` | A-C one PR; D incremental; E one line | after E32/E34 | the parallel gap and the ambient default are one problem |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -3010,3 +3011,75 @@ Measured, so this can be scheduled rather than guessed:
 About sixty sites, all mechanical, no behavioural change intended: every site that logs today still
 logs, but because it was handed a listener rather than because it asked a callback for one. Worth
 doing as its own PR, after E32 stage 1 so the two are reviewable apart.
+
+
+## E35 — Finishing the listener: parallel isolation, the last three mutable fields, and `withListener`
+
+**Depends on:** E32/E34, which are implemented. This is what is left, and the three questions turn
+out to have one shared answer.
+
+### The parallel-compile gap
+
+Each `FileStructure` builds its own `ConstantPool`, and a compile sets the listener only on its own
+module's pool, so **two concurrent compiles never touch each other's listener**. Isolation is fine.
+
+What is not fine is *completeness*. Library modules are shared, so `libType.ensureTypeInfo()` -
+the no-argument form - resolves through the **library's** pool, whose listener is `RUNTIME`. A
+diagnostic raised while resolving a library type therefore never reaches the caller's sink, and an
+LSP relying on catching everything would silently miss it.
+
+The fix is not a per-compile library pool. It is that **the caller's listener must win over the
+constant's**. `ensureTypeInfo(errs)` already does exactly that; the gap is the 66 sites that still
+call the no-argument form. So the parallel problem and the "delete the ambient default" problem are
+the same problem, and solving one solves the other.
+
+### The last three mutable fields have the same shape
+
+| field | mutated by | can it be final? |
+| --- | --- | --- |
+| `ConstantPool.m_errs` | exactly 2 sites, both `Compiler` (the registration silence and its restore) | **yes**, once the silence stops being a mode |
+| `Container.m_errs` | the setter only | **yes** - `Container` has a single constructor, so inject it |
+| `Parser.m_errs` | the bounded swap in one method | no - see below |
+
+### Suggested order
+
+**A. `Container` takes its listener at construction.** One constructor, so this is small.
+`NestedContainer.createForHost` grows a parameter, defaulting to `ErrorListener.RUNTIME`; the field
+becomes `final`. This also gives `XtcEngine.run`/`start` a place to put a host listener, which they
+currently have no way to supply.
+
+**B. The registration silence stops being a mode.** `Compiler` currently sets `BLACKHOLE` on the
+pool and restores afterwards. Pass `BLACKHOLE` to the calls that should be silent instead. Two
+mutation sites disappear.
+
+**C. `ConstantPool` takes its listener at construction and becomes `final`.** After B nothing
+mutates it. A module being compiled gets that compilation's listener; a library pool gets `RUNTIME`,
+because it is owned by no single compile.
+
+**D. Convert the 66 no-argument `ensureTypeInfo()` calls.** This is the one that actually fixes the
+parallel gap, because after it a library type resolves with the *caller's* listener rather than the
+library pool's. It is 53 distinct methods, so it is per-method work - but each conversion is
+independent and safe, and every threading pass in this campaign has surfaced a live defect.
+
+**E. Delete the no-argument overload.** Once D is done the pool default is never consulted, shared
+pools stop mattering, and the listener is genuinely a parameter everywhere.
+
+A through C are small and can ship as one PR. D is the long tail and should be incremental. E is one
+line and is the proof that the rest landed.
+
+### `withListener(...)`: yes for `Parser`, no as a general mechanism
+
+For `Parser` it is a real improvement. The swap there is hand-rolled save/restore around a
+speculative scan, and `withListener(errs, body)` would make it un-leakable, greppable, and
+impossible to forget the `finally`. Worth doing, with `Parser` as the only caller.
+
+**It should not become general policy.** It is *scoped dynamic binding* - a listener found rather
+than passed - which is the same shape as the `ConstantPool` thread-local that E3 deleted and the
+`FileStructure` field that E32 deleted. Making it ergonomic would re-legitimise the pattern
+immediately after removing it, and it is only safe while the object is confined to one thread.
+`Parser` is; a `TypeConstant` shared across services is not.
+
+So: parameters as the rule, `withListener` as a named exception for a class whose entire API reads a
+field and where threading a parameter through thousands of call sites is disproportionate. If it is
+added, its javadoc should say that explicitly, so the next person does not read it as an
+endorsement.
