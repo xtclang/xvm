@@ -1383,8 +1383,20 @@ public final class OwnershipDiagnostics {
                 return expected;
             }
 
-            NativeContainer nativeOwner = safe(() -> expected.getNativeContainer());
-            return actual == nativeOwner ? nativeOwner : expected;
+            // Any ANCESTOR's value is legitimate here, not only the native container's.
+            // ConstHeap.getConstHandle walks to owner.f_parent and, when the handle passes
+            // isShared(owner), deliberately caches the ancestor's handle in this container's own
+            // heap - designed sharing with an explicit correctness gate. Accepting only the native
+            // container made this walker stricter than both the runtime it inspects and the
+            // reachability sweep beside it, which treats every ancestor as related; it reported
+            // nested containers as broken merely for inheriting constants from the container that
+            // created them, which is what runner.x does.
+            for (Container c = expected; c != null; c = c.f_parent) {
+                if (c == actual) {
+                    return actual;
+                }
+            }
+            return expected;
         }
 
         private static Container effectivePoolOwner(Container expected, ConstantPool actual,
