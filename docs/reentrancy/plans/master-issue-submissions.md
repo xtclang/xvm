@@ -62,6 +62,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 9 | Alarm callback registry is timer-thread safe | unfiled | independent | `xRTClock` |
 | 10 | Native callback registration rolls back | unfiled | independent | `NativeContainer` |
 | 9b | Exception escaping a Trigger kills the process-wide alarm Timer | unfiled | independent of 9/10, either order | `xLocalClock`, one guard |
+| 9c | `callLater`'s completion handler loses non-`WrapperException` failures | unfiled | rides with 9b or 9/10 | `ServiceContext`, 2 lambdas |
 | 11 | Hash/equality contracts (`Register`, `VersionTree`, `MethodBody`) | unfiled | independent | `asm` |
 | 12 | Handle view lifecycle state shared or refused | unfiled | independent | `ObjectHandle` |
 | 13 | `HandleConstant` does not serve live handles cross-container | unfiled | independent | `HandleConstant` |
@@ -1015,6 +1016,53 @@ Independent in both directions; either can land first.
   `TIMER` die and a subsequent `schedule` throw `Timer already cancelled`.
 - Filed AFTER row 9, that route is gone, so the test must inject a thrower directly (a `Trigger`
   subclass, or a callback whose `callLater` fails). Slightly more work, same defect.
+
+## 9c. `callLater`'s completion handler loses any failure that is not a bare `WrapperException`
+
+Found 2026-09-01 while checking whether the discarded `callLater` future in `Alarm.run()` mattered.
+It does not - but this does. Both `ServiceContext.callLater` overloads carry the identical lambda:
+
+```java
+future.whenComplete((r, x) -> {
+    if (x != null) {
+        callUnhandledExceptionHandler(((WrapperException) x).getExceptionHandle());
+    }
+});
+```
+
+**Open question the fix depends on:** `whenComplete` on a *dependent* stage receives the failure
+wrapped in `CompletionException`, not the original. Whether that reaches this lambda depends on how
+`postRequest`'s future is completed and whether any stage is chained in between. If `x` is provably
+always a bare `WrapperException`, this is a defensive hardening; if a `CompletionException` or a raw
+`Error` can arrive, it is a live bug. **Trace it before writing the PR description** - the framing
+differs completely.
+
+### Why this belongs with §4b and not with a tidy-up
+
+A blind cast normally announces itself. This one cannot: **`CompletableFuture` swallows anything
+thrown inside `whenComplete`**. So the wrong cast produces no visible `ClassCastException` - it
+produces the *absence* of `callUnhandledExceptionHandler` ever running. The type system was
+disabled at precisely the point where the failure of that assumption becomes unobservable, and the
+code being type-punned is the error-handling path itself. A wrong guess therefore converts a
+**reported** failure into a **lost** one, which is strictly worse than an ordinary bad cast.
+
+### For the PR description - the general argument, once the trace above settles the specifics
+
+This is the concrete exhibit for the "Python in Java" case that E2 and E14 make in the enhancement
+list: promoting a type distinction to a runtime cast means the compiler cannot prove the dispatch is
+complete, so a case the author did not consider compiles cleanly and fails at run time. What makes
+this instance worth putting in a PR description rather than an audit document is the extra turn -
+here the failure is not merely deferred to run time, it is **silenced**, because the swallowing
+happens in a completion stage. That is the sharpest available argument for typing the failure
+channel rather than casting it, and it should be stated in whichever PR carries the fix.
+
+### Placement
+
+Not yet decided. `master-clock-callback-registry` already edits `ServiceContext.java` (no new
+conflict surface); `master-alarm-timer-survives-callback-failure` has the closer story (its guard
+covers the synchronous escape that kills the timer, this covers the asynchronous one that vanishes).
+Counter-argument: `callLater` has many callers, so this is a general `ServiceContext` defect that
+alarms merely hit. Fix both overloads or neither.
 
 ## 10. Native callback registration rolls back on startup failure
 
