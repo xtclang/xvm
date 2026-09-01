@@ -55,7 +55,7 @@ public class Lexer
         }
 
         m_source        = source;
-        m_errorListener = requireNonNull(errorListener, "errorListener");
+        m_errs = requireNonNull(errorListener, "errorListener");
 
         // Constructors must not dispatch through overridable tokenization hooks; subclasses are
         // still incomplete here. Keep the old leading-whitespace priming through a private helper.
@@ -67,7 +67,7 @@ public class Lexer
      */
     protected Lexer(Lexer parent) {
         m_source        = parent.m_source;
-        m_errorListener = parent.m_errorListener;
+        m_errs = parent.m_errs;
         m_fWhitespace   = parent.m_fWhitespace;
     }
 
@@ -306,7 +306,7 @@ public class Lexer
      * terminator. Whitespace does not include comments.
      */
     protected boolean eatWhitespace() {
-        boolean fWhitespace = eatInitialWhitespace(m_source, m_errorListener);
+        boolean fWhitespace = eatInitialWhitespace(m_source, m_errs);
         m_fWhitespace = fWhitespace;
         return fWhitespace;
     }
@@ -2510,8 +2510,8 @@ public class Lexer
      * Log an error.
      */
     protected void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd) {
-        if (m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd)) {
-            throw new CompilerException("error list is full: " + m_errorListener);
+        if (m_errs.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd)) {
+            throw new CompilerException("error list is full: " + m_errs);
         }
     }
 
@@ -2890,7 +2890,7 @@ public class Lexer
     /**
      * The ErrorListener to report errors to.
      */
-    private final @NotNull ErrorListener m_errorListener;
+    private final @NotNull ErrorListener m_errs;
 
     /**
      * Keeps track of whether whitespace was encountered.

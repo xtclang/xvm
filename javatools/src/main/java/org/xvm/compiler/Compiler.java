@@ -301,7 +301,11 @@ public class Compiler {
             // not this compilation succeeded. It used to be cleared inside the branch above, so a
             // compilation that produced serious errors left the structure silenced for good - the
             // clear only ran on the path that had nothing to report.
-            m_structFile.getConstantPool().setErrorListener(ErrorListener.RUNTIME);
+            // restore to THIS compiler's listener, not the runtime default: metadata resolved
+            // after registration is still this compilation's work, so it belongs in the caller's
+            // sink. That is what makes a host-supplied listener (XtcEngine.compile, an LSP) a
+            // single controlling point rather than one that only sees the compiler's own stages.
+            m_structFile.getConstantPool().setErrorListener(m_errs);
         }
 
         return m_mgr.isComplete();
