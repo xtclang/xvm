@@ -60,6 +60,8 @@ import org.xvm.runtime.template._native.temporal.xNanosTimer;
 import org.xvm.util.Lazy;
 import org.xvm.util.concurrent.ConcurrentWeakHasherMap;
 
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * The base Container functionality.
@@ -915,6 +917,33 @@ public abstract class Container
     /**
      * The runtime.
      */
+    /**
+     * The listener that runtime-lazy metadata synthesis reports to.
+     *
+     * <p>Defaults to {@link ErrorListener#RUNTIME}, which is what the previous ambient walk through
+     * {@code FileStructure} resolved to for runtime callers. It is a field on the container rather
+     * than a constant at each call site so an embedder can supply its own - the whole point of
+     * threading the listener is that it can be chosen, and hardcoding {@code RUNTIME} in forty
+     * places would have replaced one ambient default with forty fixed ones.
+     */
+    private ErrorListener m_errs = ErrorListener.RUNTIME;
+
+    /**
+     * @return the listener this container reports runtime metadata errors to; never null
+     */
+    public ErrorListener getErrorListener() {
+        return m_errs;
+    }
+
+    /**
+     * Supply the listener this container reports runtime metadata errors to.
+     *
+     * @param errs  the listener; required
+     */
+    public void setErrorListener(ErrorListener errs) {
+        m_errs = requireNonNull(errs, "errs");
+    }
+
     public final Runtime f_runtime;
 
     /**

@@ -174,7 +174,7 @@ public class xClass
      */
     public int getPropertyAbstract(Frame frame, ObjectHandle hTarget, int iReturn) {
         TypeConstant typeTarget = getClassType(hTarget);
-        ObjectHandle hResult    = xBoolean.makeHandle(frame, typeTarget.ensureTypeInfo(ErrorListener.RUNTIME).isAbstract());
+        ObjectHandle hResult    = xBoolean.makeHandle(frame, typeTarget.ensureTypeInfo(frame.container().getErrorListener()).isAbstract());
         return frame.assignValue(iReturn, hResult);
     }
 
@@ -215,7 +215,7 @@ public class xClass
     public int invokeAllocate(Frame frame, ObjectHandle hTarget, ObjectHandle hParent, int[] aiReturn) {
         TypeConstant typePublic = getClassType(hTarget);
 
-        if (typePublic.ensureTypeInfo(ErrorListener.RUNTIME).isSingleton()) {
+        if (typePublic.ensureTypeInfo(frame.container().getErrorListener()).isSingleton()) {
             return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
 
@@ -385,7 +385,7 @@ public class xClass
      */
     public int invokeIsSingleton(Frame frame, ObjectHandle hTarget, int[] aiReturn) {
         TypeConstant typeClz = getClassType(hTarget);
-        if (typeClz.ensureTypeInfo(ErrorListener.RUNTIME).isSingleton()) {
+        if (typeClz.ensureTypeInfo(frame.container().getErrorListener()).isSingleton()) {
             IdentityConstant idClz         = typeClz.getSingleUnderlyingClass(false);
             ConstantPool     pool          = frame.poolContext();
             Constant         constInstance = pool.ensureSingletonConstConstant(idClz);

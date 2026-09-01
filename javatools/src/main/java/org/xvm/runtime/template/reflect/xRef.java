@@ -679,7 +679,7 @@ public class xRef
             if (hContainer != null && sName != null) {
                 TypeConstant typeContainer = hContainer.getType();
                 PropertyInfo infoProp      = frame.poolContext().ensureAccessTypeConstant(
-                        typeContainer, Access.PRIVATE).ensureTypeInfo(ErrorListener.RUNTIME).findProperty(sName);
+                        typeContainer, Access.PRIVATE).ensureTypeInfo(frame.container().getErrorListener()).findProperty(sName);
                 if (infoProp == null) {
                     return frame.raiseException(
                             xException.unknownProperty(frame, sName, typeContainer));

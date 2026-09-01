@@ -945,7 +945,7 @@ public abstract class ClassTemplate
      */
     private int getInjectedProperty(Frame frame, GenericHandle hThis, PropertyConstant idProp,
                                     int iReturn) {
-        TypeInfo     info      = hThis.getType().ensureAccess(Access.PRIVATE).ensureTypeInfo(ErrorListener.RUNTIME);
+        TypeInfo     info      = hThis.getType().ensureAccess(Access.PRIVATE).ensureTypeInfo(frame.container().getErrorListener());
         PropertyInfo prop      = info.findProperty(idProp, true);
         Annotation   anno      = prop.getRefAnnotations()[0];
         Constant[]   aParams   = anno.getParams();

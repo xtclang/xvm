@@ -256,7 +256,7 @@ public class xRTMethod
         MethodStructure method    = idMethod.getComponent();
 
         if (method == null) {
-            TypeInfo   infoTarget = typeTarget.ensureTypeInfo(ErrorListener.RUNTIME);
+            TypeInfo   infoTarget = typeTarget.ensureTypeInfo(frame.container().getErrorListener());
             MethodInfo infoMethod = infoTarget.getMethodById(idMethod, true);
 
             method = infoMethod == null

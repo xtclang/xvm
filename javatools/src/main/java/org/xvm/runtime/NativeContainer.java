@@ -507,7 +507,7 @@ public class NativeContainer
         if (hStore == null) {
             ClassTemplate    template = getTemplate("_native.fs.OSStorage");
             PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(ErrorListener.RUNTIME).findProperty("store").getIdentity();
+                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("store").getIdentity();
 
             return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
                     h -> publishConvergentFileStore(h));
@@ -521,7 +521,7 @@ public class NativeContainer
         if (hDir == null) {
             ClassTemplate    template = getTemplate("_native.fs.OSStorage");
             PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(ErrorListener.RUNTIME).findProperty("rootDir").getIdentity();
+                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("rootDir").getIdentity();
 
             return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
                     h -> publishConvergentRootDir(h));
@@ -535,7 +535,7 @@ public class NativeContainer
         if (hDir == null) {
             ClassTemplate    template = getTemplate("_native.fs.OSStorage");
             PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(ErrorListener.RUNTIME).findProperty("homeDir").getIdentity();
+                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("homeDir").getIdentity();
 
             return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
                     h -> publishConvergentHomeDir(h));
@@ -549,7 +549,7 @@ public class NativeContainer
         if (hDir == null) {
             ClassTemplate    template = getTemplate("_native.fs.OSStorage");
             PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(ErrorListener.RUNTIME).findProperty("curDir").getIdentity();
+                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("curDir").getIdentity();
 
             return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
                     h -> publishConvergentCurDir(h));
@@ -563,7 +563,7 @@ public class NativeContainer
         if (hDir == null) {
             ClassTemplate    template = getTemplate("_native.fs.OSStorage");
             PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(ErrorListener.RUNTIME).findProperty("tmpDir").getIdentity();
+                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("tmpDir").getIdentity();
 
             return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
                     h -> publishConvergentTmpDir(h));
