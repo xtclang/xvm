@@ -64,6 +64,45 @@ public class XtcEngineTest {
     }
 
     /**
+     * The two sinks are different things, and a host that wants everything sets both.
+     *
+     * <p>{@code compile(listener, ...)} receives the diagnostics of ONE compile. The builder's
+     * {@code diagnosticSink} receives what no single compile owns - library-type resolution and
+     * runtime metadata, which belong to the shared library pools and the container. A per-compile
+     * listener cannot be given that work without making parallel compiles share mutable state.
+     */
+    @Test
+    public void theEngineSinkAndTheCompileListenerAreSeparate() throws Exception {
+        assumeTrue(EmbeddingTestSupport.systemModulesAvailable(),
+                "compiled XDK system modules are required");
+
+        var engineSeen  = new CopyOnWriteArrayList<String>();
+        var compileSeen = new CopyOnWriteArrayList<String>();
+        ErrorListener engineSink     = err -> { engineSeen.add(err.getCode()); return false; };
+        ErrorListener compileSink    = err -> { compileSeen.add(err.getCode()); return false; };
+
+        try (var engine = XtcEngine.builder()
+                .modulePath(xdkModulePath())
+                .diagnosticSink(engineSink)
+                .build()) {
+            var compiled = engine.compile(compileSink, new XtcEngine.SourceUnit("TwoSinks", """
+                    module TwoSinks {
+                        void run() {
+                            this is not ecstasy
+                        }
+                    }
+                    """));
+
+            assertFalse(compiled.isSuccess(), "the source is deliberately invalid");
+            assertFalse(compileSeen.isEmpty(),
+                    "the compile's own diagnostics go to the compile listener");
+            assertTrue(engineSeen.isEmpty(),
+                    () -> "a healthy library produces nothing for the engine sink, but saw: "
+                            + engineSeen);
+        }
+    }
+
+    /**
      * Two compiles running at once must not report into each other's listener. Each compiled
      * module owns its own ConstantPool, and that pool owns the listener, so the isolation is a
      * property of the ownership rather than of timing.

@@ -104,12 +104,20 @@ public final class XtcEngine
     private final ModuleRepository repoLibrary;
     private final Runtime          runtime;
     private final NativeContainer  containerNative;
+    private final ErrorListener    diagnosticSink;
 
-    private XtcEngine(@NotNull ModuleRepository repoLibrary) {
-        this.repoLibrary = Objects.requireNonNull(repoLibrary, "repoLibrary");
-        this.runtime     = new Runtime();
+    private XtcEngine(@NotNull ModuleRepository repoLibrary, @NotNull ErrorListener diagnosticSink) {
+        this.repoLibrary     = Objects.requireNonNull(repoLibrary, "repoLibrary");
+        this.diagnosticSink  = Objects.requireNonNull(diagnosticSink, "diagnosticSink");
+        this.runtime         = new Runtime();
         this.runtime.start();
         this.containerNative = NativeContainer.create(this.runtime, this.repoLibrary);
+
+        // Work a per-compile listener cannot reach, because it is not owned by any one compile:
+        // runtime metadata belongs to the container, and library-type resolution belongs to the
+        // library's own ConstantPool. Installed once, for the engine's lifetime - NOT per compile,
+        // which would put shared mutable state back and make parallel compiles fight over it.
+        this.containerNative.setErrorListener(diagnosticSink);
     }
 
     public static @NotNull Builder builder() {
@@ -324,12 +332,17 @@ public final class XtcEngine
      * is what lets the engine supply turtle/native from its own configured module path instead of
      * making every caller name those modules explicitly.
      */
-    private static void prelinkSystemLibraries(ModuleRepository repo) {
+    private void prelinkSystemLibraries(ModuleRepository repo) {
         for (var sModule : List.of(Constants.ECSTASY_MODULE, Constants.TURTLE_MODULE)) {
             ModuleStructure module = repo.loadModule(sModule);
             if (module != null) {
                 FileStructure struct = module.getFileStructure();
                 if (struct != null) {
+                    // A library module owns its own ConstantPool, so resolving a library type
+                    // reports to THAT pool - not to whichever compile happened to ask. Point it at
+                    // the engine's sink so a host still hears it. Per-compile diagnostics are
+                    // unaffected: they are owned by the pool of the module being compiled.
+                    struct.getConstantPool().setErrorListener(diagnosticSink);
                     struct.linkModules(repo, false);
                 }
             }
@@ -700,6 +713,26 @@ public final class XtcEngine
 
     public static final class Builder {
         private final List<File> modulePath = new ArrayList<>();
+        private ErrorListener    diagnosticSink = ErrorListener.RUNTIME;
+
+        /**
+         * Supply a sink for diagnostics that no single compile owns - library-type resolution and
+         * runtime metadata.
+         *
+         * <p>This is NOT the same thing as the listener passed to {@link #compile}. That one
+         * receives the diagnostics of one compile, and two compiles running at once each keep their
+         * own. This one is engine-scoped and receives the work that belongs to the shared library
+         * pools and the runtime container, which no per-compile listener can be given without
+         * reintroducing shared mutable state.
+         *
+         * <p>A host that wants to observe everything sets both.
+         *
+         * @param diagnosticSink  the engine-lifetime sink; defaults to {@link ErrorListener#RUNTIME}
+         */
+        public @NotNull Builder diagnosticSink(@NotNull ErrorListener diagnosticSink) {
+            this.diagnosticSink = Objects.requireNonNull(diagnosticSink, "diagnosticSink");
+            return this;
+        }
 
         public @NotNull Builder modulePath(@NotNull File @NotNull... dirs) {
             for (File dir : dirs) {
@@ -721,7 +754,7 @@ public final class XtcEngine
             ModuleRepository repo = repositories.size() == 1
                     ? repositories.get(0)
                     : new LinkedRepository(repositories.toArray(ModuleRepository.NO_REPOS));
-            return new XtcEngine(repo);
+            return new XtcEngine(repo, diagnosticSink);
         }
     }
 }
