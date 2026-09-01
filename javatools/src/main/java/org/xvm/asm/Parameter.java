@@ -424,8 +424,6 @@ public class Parameter
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        verifyMutable();
-
         m_aAnnotations = Constant.registerConstants(pool, m_aAnnotations);
         m_constType    = pool.register(m_constType);
         m_constName    = pool.register(m_constName);

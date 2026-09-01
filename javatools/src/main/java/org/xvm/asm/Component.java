@@ -2172,20 +2172,22 @@ public abstract class Component
         Component thisParent = (Component) getContaining();
         Component thatParent = thisParent.findThisIn(thatFileStructure);
 
-        IdentityConstant idCopy = (IdentityConstant)
-                thatFileStructure.getConstantPool().getConstant(getIdentityConstant());
-        Component original = thisParent.getChild(getIdentityConstant());
-        Component copy     = thatParent.getChild(idCopy);
+        IdentityConstant idThis = this.getIdentityConstant();
+        IdentityConstant idThat = (IdentityConstant)
+                thatFileStructure.getConstantPool().getConstant(idThis);
 
-        while (original != this && original != null && copy != null) {
-            original = original.getNextSibling();
-            copy     = copy.getNextSibling();
+        Component thisChild = thisParent.getChild(getIdentityConstant());
+        Component thatChild = thatParent.getChild(idThat);
+
+        while (thisChild != this && thisChild != null && thatChild != null) {
+            thisChild = thisChild.getNextSibling();
+            thatChild = thatChild.getNextSibling();
         }
 
-        if (original != this || copy == null) {
+        if (thisChild != this || thatChild == null) {
             throw new IllegalStateException("unable to locate component in FileStructure copy");
         }
-        return copy;
+        return thatChild;
     }
 
     @Override
@@ -2224,7 +2226,6 @@ public abstract class Component
 
     @Override
     protected void markModified() {
-        verifyMutable();
         m_fModified = true;
     }
 
@@ -2300,7 +2301,6 @@ public abstract class Component
     @Override
     protected void registerConstants(ConstantPool pool) {
         assert getContaining() == null || getContaining() instanceof Component;
-        verifyMutable();
 
         m_constId = pool.register(m_constId);
         m_cond    = pool.register(m_cond);

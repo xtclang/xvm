@@ -44,7 +44,7 @@ public class XvmStructureTest {
     @Test
     public void testEnsureReadOnlyCascadesAndGuardsMutations() {
         Fixture fixture = createFixture();
-        assertTrue(fixture.file.verifyMutable());
+        assertTrue(!fixture.file.isReadOnly());
         Parameter[]  params           = fixture.method.getParamArray();
         Annotation[] methodAnnos      = fixture.method.getAnnotations();
         Annotation[] parameterAnnos   = fixture.parameter.getAnnotations();
@@ -64,7 +64,6 @@ public class XvmStructureTest {
         assertTrue(fixture.parameter.isReadOnly());
         assertTrue(fixture.constant.isReadOnly());
 
-        assertThrows(IllegalStateException.class, fixture.clz::verifyMutable);
         assertThrows(IllegalStateException.class, () -> fixture.clz.setSynthetic(true));
         assertFalse(fixture.clz.isSynthetic());
 
@@ -313,7 +312,7 @@ public class XvmStructureTest {
                     .map(XvmStructureTest::loadClass)
                     .filter(clz -> clz != XvmStructure.class
                             && XvmStructure.class.isAssignableFrom(clz))
-                    .map(XvmStructureTest::asStructureClass)
+                    .<Class<? extends XvmStructure>>map(XvmStructureTest::asStructureClass)
                     .toList();
         }
     }

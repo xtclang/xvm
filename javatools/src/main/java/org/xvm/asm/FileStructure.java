@@ -347,11 +347,7 @@ public class FileStructure
      */
     public void writeTo(DataOutput out)
             throws IOException {
-        if (isReadOnly()) {
-            ensureMutable().writeTo(out);
-            return;
-        }
-
+        // this is not considered a "mutation" of the FileStructure
         reregisterConstants(true);
         assemble(out);
         resetModified();
@@ -1347,8 +1343,8 @@ public class FileStructure
      * Re-registers all referenced constants with the pool.
      */
     public void reregisterConstants(boolean fOptimize) {
-        verifyMutable();
-
+        // this is not considered a "mutation" of the FileStructure, although there is the potential
+        // for internal changes
         ConstantPool pool = m_pool;
         pool.preRegisterAll();
         registerConstants(pool);
@@ -1474,10 +1470,8 @@ public class FileStructure
 
     @Override
     public void setErrorListener(ErrorListener errs) {
-        if (m_errs != errs) {
-            verifyMutable();
-            m_errs = errs;
-        }
+        // this is not considered a "mutation" of the FileStructure
+        m_errs = errs;
     }
 
     // ----- Object methods ------------------------------------------------------------------------
