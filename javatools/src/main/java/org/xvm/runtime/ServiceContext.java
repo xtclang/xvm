@@ -1025,7 +1025,7 @@ public class ServiceContext {
         if (future != null) {
             future.whenComplete((r, x) -> {
                 if (x != null) {
-                    callUnhandledExceptionHandler(((WrapperException) x).getExceptionHandle());
+                    reportUnhandledException(x);
                 }
             });
         }
@@ -1048,7 +1048,7 @@ public class ServiceContext {
         if (future != null) {
             future.whenComplete((r, x) -> {
                 if (x != null) {
-                    callUnhandledExceptionHandler(((WrapperException) x).getExceptionHandle());
+                    reportUnhandledException(x);
                 }
             });
         }
@@ -1499,6 +1499,34 @@ public class ServiceContext {
         addRequest(request);
 
         return request.f_future;
+    }
+
+    /**
+     * Report a failed "callLater" to the unhandled exception handler.
+     * <p/>
+     * This runs inside a {@link CompletableFuture} completion stage, which discards anything thrown
+     * out of it - so nothing here may assume what the failure is, and nothing here may throw. The
+     * previous code cast the throwable straight to {@link WrapperException}: any other failure
+     * turned into a ClassCastException that the completion stage swallowed, taking the original
+     * failure with it and leaving the handler uncalled. A reported failure became a silent one.
+     *
+     * @param e  the throwable the future completed with; never null
+     */
+    private void reportUnhandledException(Throwable e) {
+        try {
+            // translate() unwraps CompletionException/ExecutionException, maps a WrapperException
+            // to its handle, and renders anything else - including a cancellation, an interrupt, or
+            // a native failure - as a visible exception rather than discarding it
+            ExceptionHandle hException = Utils.translate(e);
+            if (hException != null) {
+                callUnhandledExceptionHandler(hException);
+            }
+        } catch (Throwable eReport) {
+            // must not happen, and must not escape into the completion stage that would swallow it
+            System.err.println("Unexpected failure reporting an unhandled exception: " + f_sName);
+            eReport.printStackTrace(System.err);
+            e.printStackTrace(System.err);
+        }
     }
 
     protected void callUnhandledExceptionHandler(ExceptionHandle hException) {
