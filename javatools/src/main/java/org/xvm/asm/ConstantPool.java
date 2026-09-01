@@ -362,8 +362,7 @@ public class ConstantPool
         case Time:
         case TimeZone:
         case Duration:
-        case Path:
-        case RegEx: {
+        case Path: {
             LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(format).get(s);
             if (constant == null) {
                 constant = register(new LiteralConstant(this, format, s, oValue));

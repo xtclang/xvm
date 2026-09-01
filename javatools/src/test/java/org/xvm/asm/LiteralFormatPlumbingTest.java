@@ -7,7 +7,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -79,6 +81,103 @@ public class LiteralFormatPlumbingTest {
             assertInstanceOf(LiteralConstant.class, constant, () -> "for " + format);
             assertEquals(format, constant.getFormat(), () -> "for " + format);
         });
+    }
+
+    /**
+     * Stage 1b: the two lists behind stage 1 must be the SAME list.
+     * {@code ConstantPool.ensureLiteralConstant} decides which formats it hands to
+     * {@link LiteralConstant}, and {@link LiteralConstant}'s constructor decides which formats it
+     * will hold. Those are separate switches, so a format can sit in one and not the other, in
+     * either direction, and neither javac nor stage 1 notices.
+     *
+     * <p>A format in the pool's list but not LiteralConstant's is an arm that can only ever throw
+     * {@code IllegalStateException: unsupported format}. {@code Format.RegEx} was exactly that: the
+     * pool advertised a RegEx literal that {@link LiteralConstant} has never had a case for, because
+     * a regular expression is not a LiteralConstant at all - {@code RegExConstant} extends
+     * {@code ValueConstant} and is built by {@code ensureRegExConstant(String, int)}, which takes
+     * flags the literal path has no way to express.</p>
+     *
+     * <p>Neither set is written down here. Both are measured by driving every {@link Format} through
+     * the two entry points, so this also fails for the next format added to one switch and forgotten
+     * in the other - which is precisely what {@code Format.TimeZone} was.</p>
+     *
+     * <p>{@code Format.Version} is in neither set, and that is correct: {@link LiteralConstant}
+     * refuses to hold one unless it is a {@code VersionConstant}, and the pool routes versions to
+     * {@code ensureVersionConstant} instead.</p>
+     */
+    @Test
+    public void poolOffersExactlyTheFormatsLiteralConstantAccepts() {
+        ConstantPool pool = new FileStructure("test").getConstantPool();
+
+        var offered  = new LinkedHashSet<Format>();
+        var accepted = new LinkedHashSet<Format>();
+        for (Format format : Format.values()) {
+            if (poolRoutesToLiteralConstant(pool, format)) {
+                offered.add(format);
+            }
+            if (literalConstantAccepts(pool, format)) {
+                accepted.add(format);
+            }
+        }
+
+        var deadArms = new LinkedHashSet<>(offered);
+        deadArms.removeAll(accepted);
+        var unreachable = new LinkedHashSet<>(accepted);
+        unreachable.removeAll(offered);
+
+        assertEquals(accepted, offered,
+                () -> "ConstantPool.ensureLiteralConstant and LiteralConstant keep separate lists of"
+                      + " the formats a LiteralConstant can hold, and they have drifted."
+                      + " ensureLiteralConstant hands " + deadArms + " to LiteralConstant, whose"
+                      + " constructor rejects it, so those arms can only ever throw;"
+                      + " LiteralConstant accepts " + unreachable + " that ensureLiteralConstant"
+                      + " has no arm for.");
+    }
+
+    /**
+     * @return true iff {@code ensureLiteralConstant} routes the format into {@link LiteralConstant},
+     *         whether or not LiteralConstant then accepts it - a rejection thrown from
+     *         LiteralConstant's own constructor still counts as offered, because the pool did
+     *         advertise the format and only the callee refused
+     */
+    private static boolean poolRoutesToLiteralConstant(ConstantPool pool, Format format) {
+        try {
+            return pool.ensureLiteralConstant(format, sampleLiteral(format), null)
+                    instanceof LiteralConstant literal && literal.getFormat() == format;
+        } catch (RuntimeException | AssertionError e) {
+            return reachedLiteralConstantConstructor(e);
+        }
+    }
+
+    /**
+     * Both switches throw {@code IllegalStateException("unsupported format: " + format)} with the
+     * same text, so the message cannot say which of them refused. The stack can.
+     */
+    private static boolean reachedLiteralConstantConstructor(Throwable e) {
+        return Arrays.stream(e.getStackTrace())
+                .anyMatch(frame -> LiteralConstant.class.getName().equals(frame.getClassName())
+                                   && "<init>".equals(frame.getMethodName()));
+    }
+
+    /**
+     * @return true iff {@link LiteralConstant} will hold a value of this format
+     */
+    private static boolean literalConstantAccepts(ConstantPool pool, Format format) {
+        try {
+            return new LiteralConstant(pool, format, sampleLiteral(format), null)
+                    .getFormat() == format;
+        } catch (RuntimeException | AssertionError e) {
+            return false;
+        }
+    }
+
+    /**
+     * A plausible literal for a format, so that a rejection is about the format and not about the
+     * string. Formats with no sample of their own get a value the numeric paths can parse; no
+     * literal format validates its string yet, so any of them accepts it.
+     */
+    private static String sampleLiteral(Format format) {
+        return literalFormats().getOrDefault(format, "1");
     }
 
     /**
