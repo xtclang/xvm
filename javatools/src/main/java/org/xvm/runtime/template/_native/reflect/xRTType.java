@@ -307,8 +307,11 @@ public class xRTType
         TypeHandle hType = (TypeHandle) hTarget;
         switch (method.getName()) {
         case "dump":
+            // Type.dump() is Ecstasy asking for the FULL member dump, so it names the forced
+            // rendering explicitly. (The no-arg TypeInfo.toString() is the pure header now, because
+            // that is the one Java and a debugger call implicitly.)
             return frame.assignValue(iReturn,
-                xString.makeHandle(hType.getUnsafeDataType().ensureTypeInfo().toString()));
+                xString.makeHandle(hType.getUnsafeDataType().ensureTypeInfo().dump(false)));
         }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }

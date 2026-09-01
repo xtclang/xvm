@@ -2087,10 +2087,27 @@ public class TypeInfoReal
 
     // ----- Object methods ------------------------------------------------------------------------
 
+    /**
+     * The PURE rendering: a one-line header off already-computed state. Everything a debugger
+     * reaches implicitly ends up here, so nothing below may walk members.
+     */
     @Override
-    public String toString(boolean fRuntime) {
-        StringBuilder sb = new StringBuilder();
+    public String toString() {
+        // NOTE: isAbstract() would call ensureCaches(), which walks every method, populates the
+        // shared id/nid caches and computes m_fImplicitAbstract. The header must not build lazy
+        // metadata just because something rendered this TypeInfo, so the explicit flag (a final
+        // field) is always reported and the implicit one only once it has actually been computed.
+        return appendHeader(new StringBuilder(),
+                m_fExplicitAbstract || (m_fCacheReady && m_fImplicitAbstract)).toString();
+    }
 
+    /**
+     * Append the header that both {@link #toString()} and {@link #dump(boolean)} start with.
+     *
+     * @param fAbstract  whether to mark the type abstract; the caller decides, because determining
+     *                   it for real forces the lazy caches and only the forced dump may do that
+     */
+    private StringBuilder appendHeader(StringBuilder sb, boolean fAbstract) {
         sb.append("TypeInfo: ")
           .append(f_type)
           .append(" (");
@@ -2103,7 +2120,7 @@ public class TypeInfoReal
         sb.append("format=")
           .append(getFormat());
 
-        if (isAbstract()) {
+        if (fAbstract) {
             sb.append(", abstract");
         }
         if (isStatic()) {
@@ -2113,7 +2130,12 @@ public class TypeInfoReal
             sb.append(", singleton");
         }
 
-        sb.append(")");
+        return sb.append(")");
+    }
+
+    @Override
+    public String dump(boolean fRuntime) {
+        StringBuilder sb = appendHeader(new StringBuilder(), isAbstract());
 
         if (!f_mapTypeParams.isEmpty()) {
             sb.append("\n- Parameters (")
@@ -2216,7 +2238,7 @@ public class TypeInfoReal
                 }
                 sb.append(entry.getKey())
                   .append("=")
-                  .append(method);
+                  .append(method.dump());
             }
         }
 

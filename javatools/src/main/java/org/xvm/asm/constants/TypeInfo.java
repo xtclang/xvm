@@ -702,15 +702,30 @@ public abstract class TypeInfo {
      */
     public abstract ListMap<String, ChildInfo> getChildInfosByName();
 
+    /**
+     * Render a one-line header describing this TypeInfo: identity, progress, format and flags.
+     * <p/>
+     * This method is called IMPLICITLY - by string concatenation, and by an IDE debugger rendering
+     * a row in the Variables view - so it must be pure: no member walk, no
+     * {@code resolveNestedIdentity} (which interns into the shared ConstantPool), no method-chain
+     * optimization, and no reach for the ambient pool. The full member dump lives on {@link
+     * #dump(boolean)}, which is only ever reached by naming it.
+     * <p/>
+     * Declared abstract so that a new subclass cannot silently inherit a member-walking
+     * {@code toString()}.
+     */
     @Override
-    public String toString() {
-        return toString(false);
-    }
+    public abstract String toString();
 
     /**
+     * Render the full member dump of this TypeInfo. Unlike {@link #toString()} this is a
+     * deliberate, explicitly-named diagnostic: it walks every member, resolves nested identities
+     * (which interns into the shared ConstantPool), and - when {@code fRuntime} is set - computes
+     * and CACHES optimized method chains. Never call it from a display path.
+     *
      * @param fRuntime  if specified, optimize the method call chains
      */
-    public abstract String toString(boolean fRuntime);
+    public abstract String dump(boolean fRuntime);
 
     protected abstract Progress getProgress();
 
