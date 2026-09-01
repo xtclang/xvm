@@ -139,6 +139,20 @@ public class Annotation
     }
 
     /**
+     * The display-safe counterpart of {@link #getAnnotationClass()}: it reads the resolution but
+     * never writes it back into {@code m_constClass}, so rendering an annotation - which happens
+     * implicitly, from a log line or a debugger's Variables view - cannot advance name-resolution
+     * state mid-compilation.
+     *
+     * @return the annotation class as it can be seen right now, resolved if it already resolves
+     */
+    private Constant peekAnnotationClass() {
+        Constant constClass = m_constClass;
+        Constant resolved   = constClass.resolve();
+        return resolved instanceof TypedefConstant || resolved == null ? constClass : resolved;
+    }
+
+    /**
      * @return the type of the annotation (which is always the terminal type constant of the
      *         annotation class)
      */
@@ -268,8 +282,10 @@ public class Annotation
     public String getValueString() {
         var sb = new StringBuilder();
 
+        // NOTE: display must not resolve. getAnnotationClass() writes the resolved constant back
+        // into m_constClass, so rendering an annotation would advance name-resolution state.
         sb.append('@')
-          .append(getAnnotationClass().getValueString());
+          .append(peekAnnotationClass().getValueString());
 
         if (m_aParams.length > 0) {
             sb.append('(')
@@ -330,7 +346,7 @@ public class Annotation
         int cParams = m_aParams.length;
 
         sb.append("class=")
-          .append(getAnnotationClass().getValueString())
+          .append(peekAnnotationClass().getValueString())
           .append(", params=")
           .append(cParams);
 

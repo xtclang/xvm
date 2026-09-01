@@ -980,14 +980,20 @@ public class ParameterizedTypeConstant
     public String getValueString() {
         var sb = new StringBuilder();
 
-        ConstantPool pool = getConstantPool();
-        if (m_constType.isA(pool.typeFunction())) {
+        // NOTE: display must not touch the ConstantPool. The historical shape of this method asked
+        // m_constType.isA(pool.typeFunction()) and then pool.extractFunctionParams/Returns(this);
+        // typeFunction()/typeMethod() lazily INTERN the canonical types (growing the pool), isA()
+        // writes the type's relation cache and can call pool.register(this), and extractFunction*
+        // runs isA() twice more. Rendering one function-typed variable in a debugger therefore
+        // mutated two pools. The same "function R(P)" text is produced below purely, straight off
+        // this constant's own final fields.
+        TypeConstant[] atypeParams  = functionShape(0);
+        TypeConstant[] atypeReturns = functionShape(1);
+        if (atypeParams != null && atypeReturns != null) {
             sb.append("function ");
 
-            TypeConstant[] atypeParams  = pool.extractFunctionParams(this);
-            TypeConstant[] atypeReturns = pool.extractFunctionReturns(this);
-            int            cParams      = atypeParams.length;
-            int            cReturns     = atypeReturns.length;
+            int cParams  = atypeParams.length;
+            int cReturns = atypeReturns.length;
 
             switch (cReturns) {
             case 0:
@@ -1039,6 +1045,44 @@ public class ParameterizedTypeConstant
         }
 
         return sb.toString();
+    }
+
+    /**
+     * Determine, structurally and without touching the {@link ConstantPool}, whether this is a
+     * {@code Function<<params>, <returns>>} and, if so, unpack one of the two tuples.
+     * <p/>
+     * This is the display-safe counterpart of {@code ConstantPool.extractFunctionParams/Returns}:
+     * those ask {@code isA(typeFunction())}, which interns the canonical {@code Function} type and
+     * writes the relation cache. Here the shape is read straight off the already-materialized
+     * fields, so it is exact for the {@code Function} spelling every function type actually has
+     * (see {@code ConstantPool.buildFunctionType}) and simply declines - falling back to the
+     * generic {@code Base<...>} rendering - for anything more exotic.
+     *
+     * @param iTuple  0 for the parameter tuple, 1 for the return tuple
+     *
+     * @return the element types of that tuple, or null if this is not a plainly-shaped function
+     */
+    private TypeConstant[] functionShape(int iTuple) {
+        return m_atypeParams.length == 2 && isNamed(m_constType, "Function")
+                ? tupleElements(m_atypeParams[iTuple])
+                : null;
+    }
+
+    /**
+     * @return the element types of the given type if it is plainly a parameterized {@code Tuple},
+     *         otherwise null
+     */
+    private static TypeConstant[] tupleElements(TypeConstant type) {
+        return type instanceof ParameterizedTypeConstant that && isNamed(that.m_constType, "Tuple")
+                ? that.m_atypeParams
+                : null;
+    }
+
+    /**
+     * @return true iff the type renders as exactly the given (unqualified) class name
+     */
+    private static boolean isNamed(TypeConstant type, String sName) {
+        return type instanceof TerminalTypeConstant && sName.equals(type.getValueString());
     }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
