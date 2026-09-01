@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -68,7 +70,7 @@ public abstract sealed class ConditionalStatement
     protected int getLabelId() {
         int n = m_nLabel;
         if (n == 0) {
-            m_nLabel = n = ++s_nLabelCounter;
+            m_nLabel = n = LABEL_COUNTER.incrementAndGet();
         }
         return n;
     }
@@ -79,7 +81,12 @@ public abstract sealed class ConditionalStatement
     protected Token         keyword;
     protected List<AstNode> conds;
 
-    private static    int   s_nLabelCounter;
+    /**
+     * Label ids are handed out across every compilation in the process, so this is the one piece of
+     * mutable state the compiler shares between concurrent compiles. A plain {@code ++} on it loses
+     * updates when two compiles run at once and hands the same id to both.
+     */
+    private static final AtomicInteger LABEL_COUNTER = new AtomicInteger();
     private transient int   m_nLabel;
 
     // ----- copy support --------------------------------------------------------------------------
