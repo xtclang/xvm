@@ -36,10 +36,6 @@ const OSDirectory
      * A name obtained from the listing may no longer resolve: it may be a broken link, or may have
      * been removed since the listing was taken. Such a name is simply not a node now, so it is
      * dropped.
-     *
-     * Each name is resolved exactly once. Resolving it a second time - to test it and then again
-     * to convert it - lets the two lookups disagree, and a directory changing under the scan then
-     * trips whichever of them assumed the node was still there.
      */
     private Iterator<FileNode> nodes() {
         return names().flatMap(name -> {

@@ -148,13 +148,8 @@ module TestFiles {
 
     /**
      * Covers `Directory.dirs()` and `files()`, including an entry that disappears while the
-     * (lazy) iteration is in progress.
-     *
-     * Both were implemented as `names().filter(find).map(find)` - two lookups per name, where the
-     * filter treated a missing node as normal and the map asserted it was impossible. A directory
-     * mutating under the scan could therefore trip the assertion; CI hit it when several xunit
-     * runners shared a build directory. This asserts the listings themselves and that a vanished
-     * entry is skipped rather than raising.
+     * (lazy) iteration is in progress: the listings themselves, and that a vanished entry is
+     * skipped rather than raising.
      */
     void testListing() {
         console.print("\n** testListing()");
