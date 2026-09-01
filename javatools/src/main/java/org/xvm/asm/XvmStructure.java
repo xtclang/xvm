@@ -430,14 +430,6 @@ public abstract class XvmStructure
         return m_xsParent.getErrorListener(pool);
     }
 
-    /**
-     * Specify an error listener.
-     *
-     * @param errs  the error listener
-     */
-    public void setErrorListener(ErrorListener errs) {
-        m_xsParent.setErrorListener(errs);
-    }
 
 
     // ----- debugging support ---------------------------------------------------------------------

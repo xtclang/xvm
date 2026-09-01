@@ -1418,17 +1418,13 @@ public final class FileStructure
         // branch deleted (E3). Rather than dropping that routing, the caller now states its pool
         // explicitly: a foreign pool's work is still reported through that pool's listener, but the
         // ownership is a parameter instead of a hidden thread-local that can name the wrong pool.
-        ErrorListener errs = m_errs;
-        if (errs == null && poolCaller != null && poolCaller != m_pool) {
+        ErrorListener errs = null;
+        if (poolCaller != null && poolCaller != m_pool) {
             errs = poolCaller.getErrorListener();
         }
         return errs == null ? ErrorListener.RUNTIME : errs;
     }
 
-    @Override
-    public void setErrorListener(ErrorListener errs) {
-        m_errs = errs;
-    }
 
     // ----- Object methods ------------------------------------------------------------------------
 
@@ -1609,5 +1605,4 @@ public final class FileStructure
      * ErrorListener implies that either the ErrorListener from the ConstantPool associated with
      * the current thread should be used, or failing that, the runtime ErrorListener should be used.
      */
-    private transient ErrorListener m_errs;
 }

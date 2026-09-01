@@ -1672,9 +1672,11 @@ public abstract sealed class TypeConstant
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
     public TypeInfo ensureTypeInfo() {
-        // pass this type's own pool explicitly, so a foreign pool's work is still routed to that
-        // pool's listener without consulting an ambient "current pool" (E3)
-        return ensureTypeInfo(getErrorListener(getConstantPool()));
+        // Ask the pool that owns this constant. Every Constant can reach its pool, so this is the
+        // one owner guaranteed to be in scope - which is what the previous version was reaching for
+        // when it walked the structure tree to a mutable field on FileStructure. A foreign pool's
+        // work is still reported to that pool's listener, because the constant carries its own pool.
+        return ensureTypeInfo(getConstantPool().getErrorListener());
     }
 
     /**

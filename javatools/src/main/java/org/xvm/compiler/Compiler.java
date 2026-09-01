@@ -132,7 +132,7 @@ public class Compiler {
                 throw new CompilerException("failed to create module");
             }
             m_structFile = m_stmtModule.getComponent().getFileStructure();
-            m_structFile.setErrorListener(ErrorListener.BLACKHOLE);
+            m_structFile.getConstantPool().setErrorListener(ErrorListener.BLACKHOLE);
             setStage(Stage.Registered);
         }
 
@@ -301,7 +301,7 @@ public class Compiler {
             // not this compilation succeeded. It used to be cleared inside the branch above, so a
             // compilation that produced serious errors left the structure silenced for good - the
             // clear only ran on the path that had nothing to report.
-            m_structFile.setErrorListener(null);
+            m_structFile.getConstantPool().setErrorListener(ErrorListener.RUNTIME);
         }
 
         return m_mgr.isComplete();

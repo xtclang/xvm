@@ -56,13 +56,45 @@ import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 import static org.xvm.util.Handy.copyOf;
 
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * A shared pool of all Constant objects used in a particular FileStructure.
  */
 public class ConstantPool
         extends XvmStructure {
-    // ----- constructors --------------------------------------------------------------------------
+        /**
+     * The listener that work owned by this pool reports to.
+     *
+     * <p>Every {@link Constant} and {@link XvmStructure} can reach its pool, so this is the one
+     * owner that is in scope wherever constants are resolved - which is what the previous design
+     * was reaching for when it walked the structure tree to a mutable field on
+     * {@link FileStructure}. Owning it here removes the walk, and removes the need for
+     * {@code XvmStructure.setErrorListener} to mutate a parent's state.
+     *
+     * <p>Defaults to {@link ErrorListener#RUNTIME}: a pool that nobody has told otherwise is being
+     * used at run time, which is what the old walk resolved to when the field was unset.
+     */
+    private volatile ErrorListener m_errs = ErrorListener.RUNTIME;
+
+    /**
+     * @return the listener work owned by this pool reports to; never null
+     */
+    public ErrorListener getErrorListener() {
+        return m_errs;
+    }
+
+    /**
+     * Supply the listener that work owned by this pool reports to.
+     *
+     * @param errs  the listener; required
+     */
+    public void setErrorListener(ErrorListener errs) {
+        m_errs = requireNonNull(errs, "errs");
+    }
+
+// ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct a ConstantPool.

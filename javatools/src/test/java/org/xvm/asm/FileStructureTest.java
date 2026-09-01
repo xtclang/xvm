@@ -46,20 +46,28 @@ public class FileStructureTest {
      * File diagnostics must not be selected from hidden current-pool state. The old fallback could
      * send a single-threaded nested compile/load diagnostic to another file's listener, and it could
      * crash when no ambient pool was installed.
+     *
+     * <p>The listener now belongs to the {@link ConstantPool} that owns the constants rather than
+     * to a mutable field on the structure, so the isolation this guards is asserted at that owner:
+     * setting one file's listener must not reach another's, and a file nobody has configured still
+     * answers {@link ErrorListener#RUNTIME}.
      */
     @Test
     public void errorListenerIgnoresAmbientPool() {
-        var file = new FileStructure("owner");
+        var file  = new FileStructure("owner");
         var other = new FileStructure("other");
         ErrorListener otherListener = err -> false;
-        other.setErrorListener(otherListener);
+        other.getConstantPool().setErrorListener(otherListener);
 
+        // configuring another file must not reach this one
+        assertSame(ErrorListener.RUNTIME, file.getConstantPool().getErrorListener());
         assertSame(ErrorListener.RUNTIME, file.getErrorListener());
 
-        assertSame(ErrorListener.RUNTIME, file.getErrorListener());
+        file.getConstantPool().setErrorListener(otherListener);
+        assertSame(otherListener, file.getConstantPool().getErrorListener());
 
-        file.setErrorListener(otherListener);
-        assertSame(otherListener, file.getErrorListener());
+        // and the other file is still its own
+        assertSame(otherListener, other.getConstantPool().getErrorListener());
     }
 
     @Test @Disabled("TODO: Re-enable test")
