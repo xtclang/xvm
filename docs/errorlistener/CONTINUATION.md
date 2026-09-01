@@ -5,8 +5,9 @@ Paste everything below the line into a fresh session.
 ---
 
 Continue the **ErrorListener threading campaign** in `/Users/marcus/src/xtclang0`, branch
-`lagergren/lazy-instance`. Tree is clean at `9653e8c7d`; last full run was **791 tests, 0 failures**,
-xdk builds, `array.x` and `numbers.x` clean.
+`lagergren/lazy-instance`. Tree is clean at `01cdacc23` (the listener work ends at `9653e8c7d`; later commits are docs and
+unrelated PR maintenance). Last full run was **791 tests, 0 failures**; xdk builds; `array.x`
+and `numbers.x` clean.
 
 ## Read these first
 
