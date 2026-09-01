@@ -89,6 +89,8 @@ public class UnresolvedNameConstant
      * @param consumer  the consumer to add
      */
     public void addConsumer(Consumer<Constant> consumer) {
+        verifyMutable();
+
         Consumer<Constant> consumerCurr = m_consumer;
         if (consumerCurr == null) {
             m_consumer = consumer;
@@ -112,6 +114,7 @@ public class UnresolvedNameConstant
     public void resolve(Constant constant) {
         assert m_constId == null || m_constId == constant || m_constId.equals(constant);
         assert !(constant instanceof TypeConstant);
+        verifyMutable();
         m_constId = constant;
 
         if (m_consumer != null) {

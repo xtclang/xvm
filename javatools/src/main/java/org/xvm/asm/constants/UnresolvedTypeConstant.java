@@ -67,6 +67,7 @@ public class UnresolvedTypeConstant
      * Mark this unresolved type as recursive.
      */
     public void markRecursive() {
+        verifyMutable();
         m_fRecursive = true;
     }
 
@@ -96,6 +97,7 @@ public class UnresolvedTypeConstant
     public void resolve(Constant constant) {
         if (!m_fRecursive) {
             assert m_type == null || m_type == constant;
+            verifyMutable();
             m_type = (TypeConstant) constant;
         }
     }

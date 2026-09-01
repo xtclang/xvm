@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 
 import java.util.function.Consumer;
@@ -254,6 +255,8 @@ public abstract class Component
      * @param idNew  the new identity to use for this component
      */
     protected void replaceThisIdentityConstant(IdentityConstant idNew) {
+        verifyMutable();
+
         IdentityConstant idOld = m_constId;
         for (Iterator<Component> iter = siblings(); iter.hasNext(); ) {
             iter.next().m_constId = idNew;
@@ -271,6 +274,8 @@ public abstract class Component
      * @param idNew  the new identity to use instead of the old identity
      */
     protected void replaceChildIdentityConstant(IdentityConstant idOld, IdentityConstant idNew) {
+        verifyMutable();
+
         // nothing to do unless the name changed, which we don't support anyhow
         assert idOld.getName().equals(idNew.getName());
     }
@@ -298,6 +303,7 @@ public abstract class Component
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~ACCESS_MASK) | (access.ordinal() << ACCESS_SHIFT);
         if (nFlagsNew != nFlagsOld) {
+            verifyMutable();
             m_nFlags = (short) nFlagsNew;
             markModified();
         }
@@ -319,6 +325,7 @@ public abstract class Component
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~ABSTRACT_BIT) | (fAbstract ? ABSTRACT_BIT : 0);
         if (nFlagsNew != nFlagsOld) {
+            verifyMutable();
             m_nFlags = (short) nFlagsNew;
             markModified();
         }
@@ -340,6 +347,7 @@ public abstract class Component
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~STATIC_BIT) | (fStatic ? STATIC_BIT : 0);
         if (nFlagsNew != nFlagsOld) {
+            verifyMutable();
             m_nFlags = (short) nFlagsNew;
             markModified();
         }
@@ -361,6 +369,7 @@ public abstract class Component
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~SYNTHETIC_BIT) | (fSynthetic ? SYNTHETIC_BIT : 0);
         if (nFlagsNew != nFlagsOld) {
+            verifyMutable();
             m_nFlags = (short) nFlagsNew;
             markModified();
         }
@@ -382,6 +391,7 @@ public abstract class Component
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~COND_RET_BIT) | (fConditional ? COND_RET_BIT : 0);
         if (nFlagsNew != nFlagsOld) {
+            verifyMutable();
             m_nFlags = (short) nFlagsNew;
             markModified();
         }
@@ -402,6 +412,7 @@ public abstract class Component
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~AUXILIARY_BIT) | AUXILIARY_BIT;
         if (nFlagsNew != nFlagsOld) {
+            verifyMutable();
             m_nFlags = (short) nFlagsNew;
             markModified();
         }
@@ -466,11 +477,9 @@ public abstract class Component
      */
     public List<Contribution> getContributionsAsList() {
         List<Contribution> list = m_listContribs;
-        if (list == null) {
-            return Collections.emptyList();
-        }
-        assert (list = Collections.unmodifiableList(m_listContribs)) != null;
-        return list;
+        return list == null
+                ? Collections.emptyList()
+                : Collections.unmodifiableList(list);
     }
 
     /**
@@ -509,6 +518,7 @@ public abstract class Component
      * @param constType    the contribution class type
      */
     public Contribution addContribution(Composition composition, TypeConstant constType) {
+        verifyMutable();
         return addContribution(new Contribution(composition, constType));
     }
 
@@ -519,6 +529,7 @@ public abstract class Component
      */
     public void addImport(ModuleConstant constModule) {
         assert this instanceof PackageStructure;
+        verifyMutable();
         addContribution(new Contribution(constModule));
     }
 
@@ -529,6 +540,7 @@ public abstract class Component
      * @param aconstParam  the annotation parameters (optional)
      */
     public void addAnnotation(IdentityConstant constAnno, Constant... aconstParam) {
+        verifyMutable();
         addAnnotation(getConstantPool().ensureAnnotation(constAnno, aconstParam));
     }
 
@@ -538,6 +550,7 @@ public abstract class Component
      * @param annotation  the Annotation
      */
     public void addAnnotation(Annotation annotation) {
+        verifyMutable();
         addContribution(new Contribution(annotation));
     }
 
@@ -548,6 +561,7 @@ public abstract class Component
      * @param constProp   the property specifying the reference to delegate to
      */
     public Contribution addDelegation(TypeConstant constClass, PropertyConstant constProp) {
+        verifyMutable();
         return addContribution(new Contribution(constClass, constProp));
     }
 
@@ -559,6 +573,8 @@ public abstract class Component
      */
     public Contribution addIncorporates(TypeConstant constClass,
                                 Map<String, TypeConstant> mapConstraints) {
+        verifyMutable();
+
         ListMap<StringConstant, TypeConstant> map = null;
         if (mapConstraints != null) {
             ConstantPool pool = getConstantPool();
@@ -577,6 +593,8 @@ public abstract class Component
      * @param contrib  the contribution to add to the end of the list
      */
     protected Contribution addContribution(Contribution contrib) {
+        verifyMutable();
+
         List<Contribution> list = m_listContribs;
         if (list == null) {
             m_listContribs = list = new ArrayList<>();
@@ -605,8 +623,10 @@ public abstract class Component
      */
     public void removeContribution(Contribution contrib) {
         List<Contribution> list = m_listContribs;
-        if (list != null) {
+        if (list != null && list.contains(contrib)) {
+            verifyMutable();
             list.remove(contrib);
+            markModified();
         }
     }
 
@@ -676,7 +696,10 @@ public abstract class Component
      */
     protected void setNextSibling(Component sibling) {
         assert sibling == null || isSiblingAllowed();
-        m_sibling = sibling;
+        if (m_sibling != sibling) {
+            verifyMutable();
+            m_sibling = sibling;
+        }
     }
 
     /**
@@ -738,7 +761,9 @@ public abstract class Component
     public Map<String, Component> getChildByNameMap() {
         ensureChildren();
         Map<String, Component> map = m_childByName;
-        return map == null ? Collections.emptyMap() : map;
+        return map == null
+                ? Collections.emptyMap()
+                : Collections.unmodifiableMap(map);
     }
 
     /**
@@ -749,6 +774,7 @@ public abstract class Component
      * @return obtain the actual map from name to child component, creating the map if necessary
      */
      public synchronized Map<String, Component> ensureChildByNameMap() {
+        verifyMutable();
         ensureChildren();
 
         Map<String, Component> map = m_childByName;
@@ -857,6 +883,7 @@ public abstract class Component
     protected boolean addChild(Component child) {
         // if the child is a method, it can only be contained by a MultiMethodStructure
         assert !(child instanceof MethodStructure) && !(child instanceof ModuleStructure);
+        verifyMutable();
 
         Map<String, Component> kids  = ensureChildByNameMap();
         String                 sName = child.getName();
@@ -921,6 +948,7 @@ public abstract class Component
         // not supported by this operation
         assert m_abChildren       == null;
         assert m_childByName      == null;
+        verifyMutable();
 
         // make sure that the various sibling-shared fields are configured
         m_abChildren  = that.m_abChildren;
@@ -934,6 +962,7 @@ public abstract class Component
      */
     public void removeChild(Component child) {
         assert child.getParent() == this;
+        verifyMutable();
 
         Map<String, Component> kids  = ensureChildByNameMap();
         String                 sName = child.getName();
@@ -956,6 +985,7 @@ public abstract class Component
         assert childOld.getParent() == this;
         assert childNew.getParent() == this;
         assert childOld.getIdentityConstant().equals(childNew.getIdentityConstant());
+        verifyMutable();
 
         // warning: brute force
         ensureChildByNameMap().put(childNew.getName(), childNew);
@@ -971,6 +1001,8 @@ public abstract class Component
      * @param sibling  the sibling component to unlink
      */
     protected void unlinkSibling(Map kids, Object id, Component child, Component sibling) {
+        verifyMutable();
+
         if (sibling == child && child.getNextSibling() == null) {
             // most common case: the specified child is the only sibling with that id
             markModified();
@@ -1018,6 +1050,7 @@ public abstract class Component
     public PackageStructure createPackage(Access access, String sName, ConditionalConstant cond) {
         assert sName != null;
         assert access != null;
+        verifyMutable();
 
         if (!isPackageContainer()) {
             throw new IllegalStateException("this (" + this + ") cannot contain a package");
@@ -1061,6 +1094,7 @@ public abstract class Component
     public ClassStructure createClass(Access access, Format format, String sName, ConditionalConstant cond) {
         assert sName != null;
         assert access != null;
+        verifyMutable();
 
         if (!isClassContainer()) {
             throw new IllegalStateException("this (" + this + ") cannot contain a class");
@@ -1115,6 +1149,7 @@ public abstract class Component
         assert accessRef != null;
         assert accessVar == null || accessRef.ordinal() <= accessVar.ordinal();
         assert constType != null;
+        verifyMutable();
 
         if (!isClassContainer()) {
             throw new IllegalStateException("this (" + this + ") cannot contain a property");
@@ -1150,6 +1185,7 @@ public abstract class Component
         assert sName != null;
         assert access != null;
         assert constType != null;
+        verifyMutable();
 
         if (!isClassContainer()) {
             throw new IllegalStateException("this (" + this + ") cannot contain a typedef");
@@ -1191,6 +1227,7 @@ public abstract class Component
                                         boolean fHasCode, boolean fUsesSuper) {
         assert sName != null;
         assert access != null;
+        verifyMutable();
 
         MultiMethodStructure multimethod = ensureMultiMethodStructure(sName);
         return multimethod == null
@@ -1208,6 +1245,8 @@ public abstract class Component
 
             sibling = sibling.getNextSibling();
         }
+
+        verifyMutable();
 
         MultiMethodConstant  constId = getConstantPool().ensureMultiMethodConstant(getIdentityConstant(), sName);
         MultiMethodStructure struct  = new MultiMethodStructure(this, Format.MULTIMETHOD.ordinal(), constId, null);
@@ -1248,6 +1287,7 @@ public abstract class Component
      */
     protected void addAndCondition(ConditionalConstant cond) {
         if (cond != null) {
+            verifyMutable();
             ConditionalConstant condOld = m_cond;
             m_cond = condOld == null ? cond : condOld.addAnd(cond);
             markModified();
@@ -1261,6 +1301,7 @@ public abstract class Component
      */
     protected void addOrCondition(ConditionalConstant cond) {
         if (cond != null) {
+            verifyMutable();
             ConditionalConstant condOld = m_cond;
             m_cond = condOld == null ? cond : condOld.addOr(cond);
             markModified();
@@ -1831,6 +1872,8 @@ public abstract class Component
      * @return a clone of this component
      */
     public Component replaceWithTemporary() {
+        verifyMutable();
+
         // re-arrange the siblings so that this is the oldest, because we're about to replace
         // all of the siblings with the clone, so re-ordering them prevents the rest of the
         // siblings from being lost
@@ -2011,7 +2054,7 @@ public abstract class Component
             List<Contribution> listClone = new ArrayList<>(listContribs.size());
 
             for (Contribution listContrib : listContribs) {
-                listClone.add((Contribution) listContrib.clone());
+                listClone.add(that.new Contribution(listContrib));
             }
             that.m_listContribs = listClone;
         }
@@ -2103,12 +2146,49 @@ public abstract class Component
 
     @Override
     public void setDocumentation(String sDoc) {
-        m_sDoc = sDoc;
-        markModified();
+        if (!Objects.equals(m_sDoc, sDoc)) {
+            verifyMutable();
+            m_sDoc = sDoc;
+            markModified();
+        }
     }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    protected void markReadOnly() {
+        if (!isReadOnly()) {
+            List<Contribution> contributions = m_listContribs;
+            if (contributions != null) {
+                contributions.forEach(Contribution::markReadOnly);
+            }
+            super.markReadOnly();
+        }
+    }
+
+    @Override
+    protected Component findThisIn(FileStructure thatFileStructure) {
+        Component thisParent = (Component) getContaining();
+        Component thatParent = thisParent.findThisIn(thatFileStructure);
+
+        IdentityConstant idThis = this.getIdentityConstant();
+        IdentityConstant idThat = (IdentityConstant)
+                thatFileStructure.getConstantPool().getConstant(idThis);
+
+        Component thisChild = thisParent.getChild(getIdentityConstant());
+        Component thatChild = thatParent.getChild(idThat);
+
+        while (thisChild != this && thisChild != null && thatChild != null) {
+            thisChild = thisChild.getNextSibling();
+            thatChild = thatChild.getNextSibling();
+        }
+
+        if (thisChild != this || thatChild == null) {
+            throw new IllegalStateException("unable to locate component in FileStructure copy");
+        }
+        return thatChild;
+    }
 
     @Override
     public Iterable<? extends XvmStructure> getContained() {
@@ -2268,8 +2348,11 @@ public abstract class Component
 
     @Override
     public void setCondition(ConditionalConstant condition) {
-        m_cond = condition;
-        markModified();
+        if (!Objects.equals(m_cond, condition)) {
+            verifyMutable();
+            m_cond = condition;
+            markModified();
+        }
     }
 
     /**
@@ -2599,8 +2682,26 @@ public abstract class Component
      * abstract sense, meaning any class, interface, mixin, const, enum, or service) can be composed
      * of any number of contributing components.
      */
-    public class Contribution
-            implements Cloneable {
+    public class Contribution {
+        /**
+         * Copy a Contribution onto this Contribution's containing Component.
+         *
+         * @param that  the Contribution to copy
+         */
+        private Contribution(Contribution that) {
+            m_composition  = that.m_composition;
+            m_typeContrib  = that.m_typeContrib;
+            m_constProp    = that.m_constProp;
+            m_annotation   = that.m_annotation;
+            m_mapParams    = that.m_mapParams == null
+                    ? null
+                    : new ListMap<>(that.m_mapParams);
+            m_constInjector = that.m_constInjector;
+            m_listInject    = that.m_listInject == null
+                    ? null
+                    : new ArrayList<>(that.m_listInject);
+        }
+
         /**
          * @see XvmStructure#disassemble(DataInput)
          */
@@ -2800,6 +2901,8 @@ public abstract class Component
          * @param listInject     optional list of injections
          */
         void addInjector(SingletonConstant constInjector, List<Injection> listInject) {
+            Component.this.verifyMutable();
+
             if (m_composition != Composition.Import) {
                 throw new IllegalStateException("the contribution must be a package that imports a module");
             }
@@ -2829,7 +2932,9 @@ public abstract class Component
          *         indicates that all injections are handled by the injector
          */
         public List<Injection> getInjections() {
-            return m_listInject;
+            return Component.this.isReadOnly() && m_listInject != null
+                    ? Collections.unmodifiableList(m_listInject)
+                    : m_listInject;
         }
 
         /**
@@ -2891,6 +2996,7 @@ public abstract class Component
          */
         public void narrowType(TypeConstant type) {
             assert m_typeContrib != null && type.isA(m_typeContrib);
+            Component.this.verifyMutable();
             m_typeContrib = type;
         }
 
@@ -2926,8 +3032,23 @@ public abstract class Component
             if (map == null) {
                 return null;
             }
+            if (Component.this.isReadOnly()) {
+                return Collections.unmodifiableMap(map);
+            }
             assert (map = Collections.unmodifiableMap(map)) != null;
             return map;
+        }
+
+        /**
+         * Detach mutable values that may have been supplied by a caller.
+         */
+        private void markReadOnly() {
+            if (m_listInject != null) {
+                m_listInject = Collections.unmodifiableList(new ArrayList<>(m_listInject));
+            }
+            if (m_mapParams != null) {
+                m_mapParams = new ListMap<>(m_mapParams);
+            }
         }
 
         /**
@@ -3171,15 +3292,6 @@ public abstract class Component
                     }
                 }
                 break;
-            }
-        }
-
-        @Override
-        protected Object clone() {
-            try {
-                return super.clone();
-            } catch (CloneNotSupportedException e) {
-                throw new IllegalStateException(e);
             }
         }
 

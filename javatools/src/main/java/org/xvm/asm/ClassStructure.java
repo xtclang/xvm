@@ -100,8 +100,11 @@ public class ClassStructure
      * @param constPath  the literal constant indicating the source path, or Null
      */
     public void setSourcePath(LiteralConstant constPath) {
-        m_constPath = constPath;
-        markModified();
+        if (m_constPath != constPath) {
+            verifyMutable();
+            m_constPath = constPath;
+            markModified();
+        }
     }
 
     /**
@@ -225,7 +228,7 @@ public class ClassStructure
                 m_aAnnoMixin = annos;
             }
         }
-        return annos;
+        return isReadOnly() ? annos.clone() : annos;
     }
 
     /**
@@ -548,7 +551,7 @@ public class ClassStructure
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
                 ? ListMap.EMPTY
-                : mapThis;
+                : new ListMap<>(mapThis);
     }
 
     /**
@@ -560,7 +563,9 @@ public class ClassStructure
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
                 ? Collections.emptyList()
-                : mapThis.asList();
+                : mapThis.entrySet().stream()
+                        .map(entry -> Map.entry(entry.getKey(), entry.getValue()))
+                        .toList();
     }
 
     /**
@@ -572,6 +577,8 @@ public class ClassStructure
      * @return a newly created PropertyStructure that represents the generic type parameter
      */
     public PropertyStructure addTypeParam(String sName, TypeConstant typeConstraint) {
+        verifyMutable();
+
         ListMap<StringConstant, TypeConstant> map = m_mapParams;
         if (map == null) {
             m_mapParams = map = new ListMap<>();
@@ -621,6 +628,8 @@ public class ClassStructure
      * @param typeConstraint  the new constraint type
      */
     public void updateConstraint(String sName, TypeConstant typeConstraint) {
+        verifyMutable();
+
         ListMap<StringConstant, TypeConstant> map = m_mapParams;
         assert map != null;
 
@@ -1015,6 +1024,9 @@ public class ClassStructure
             mapThat.putAll(mapThis);
             that.m_mapParams = mapThat;
         }
+
+        that.m_aAnnoClass = null;
+        that.m_aAnnoMixin = null;
 
         return that;
     }
@@ -3155,6 +3167,7 @@ public class ClassStructure
      */
     public void synthesizeConstInterface(boolean fRuntime) {
         assert getFormat() == Format.CONST || getFormat() == Format.ENUM;
+        verifyMutable();
 
         ConstantPool pool = getConstantPool();
 
@@ -3317,6 +3330,22 @@ public class ClassStructure
 
 
     // ----- XvmStructure/Component methods --------------------------------------------------------
+
+    @Override
+    protected void markReadOnly() {
+        if (!isReadOnly()) {
+            if (m_mapParams != null) {
+                m_mapParams = new ListMap<>(m_mapParams);
+            }
+            if (m_aAnnoClass != null) {
+                m_aAnnoClass = m_aAnnoClass.clone();
+            }
+            if (m_aAnnoMixin != null) {
+                m_aAnnoMixin = m_aAnnoMixin.clone();
+            }
+            super.markReadOnly();
+        }
+    }
 
     @Override
     protected void disassemble(DataInput in)
@@ -3621,6 +3650,7 @@ public class ClassStructure
      */
     public void addImplicitTypeParameters(ConstantPool pool, ErrorListener errs) {
         assert getFormat() == Format.MIXIN || getFormat() == Format.ANNOTATION;
+        verifyMutable();
 
         ListMap<String, TypeConstant> mapTypeParams = null;
         for (Contribution contrib : getContributionsAsList()) {

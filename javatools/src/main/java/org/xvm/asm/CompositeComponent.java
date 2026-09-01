@@ -5,7 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.PrintWriter;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -30,7 +29,7 @@ public class CompositeComponent
      */
     protected CompositeComponent(Component parent, List<Component> siblings) {
         super(parent);
-        f_siblings = siblings;
+        f_siblings = List.copyOf(siblings);
     }
 
 
@@ -40,9 +39,7 @@ public class CompositeComponent
      * @return a read-only list of components that are represented by this composite component
      */
     public List<Component> components() {
-        List<Component> list = f_siblings;
-        assert (list = Collections.unmodifiableList(list)) != null;
-        return list;
+        return f_siblings;
     }
 
     // ----- Component methods ---------------------------------------------------------------------
@@ -390,6 +387,27 @@ public class CompositeComponent
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    protected CompositeComponent findThisIn(FileStructure thatFileStructure) {
+        Component parent     = (Component) getContaining();
+        Component parentCopy = parent.findThisIn(thatFileStructure);
+        IdentityArrayList<Component> siblingCopies = new IdentityArrayList<>();
+        for (Component sibling : f_siblings) {
+            siblingCopies.add(sibling.findThisIn(thatFileStructure));
+        }
+        return new CompositeComponent(parentCopy, siblingCopies);
+    }
+
+    @Override
+    protected void markReadOnly() {
+        if (!isReadOnly()) {
+            for (Component sibling : f_siblings) {
+                sibling.markReadOnly();
+            }
+            super.markReadOnly();
+        }
+    }
 
     @Override
     public Iterable<? extends XvmStructure> getContained() {

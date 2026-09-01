@@ -60,7 +60,7 @@ import static org.xvm.util.Handy.stream;
  *
  * <li>The manner in which a hierarchy is created from a binary is called disassembly. Disassembly
  * is triggered in a recursive manner by constructing a {@link FileStructure FileStructure}, which
- * represents an outer-most "envelope" for XVM structures. The result of disassembly should be equal
+ * represents an outermost "envelope" for XVM structures. The result of disassembly should be equal
  * to the XVM structure from which the binary was originally created from. Furthermore, the result
  * should itself be mutable, and subsequently persistable; that means that a binary can be
  * constituted (disassembled) into an XVM structure, modified, and persisted, supporting a wide
@@ -118,7 +118,10 @@ public abstract class XvmStructure
      * @param xsParent  the XvmStructure that will contain this XvmStructure
      */
     protected void setContaining(XvmStructure  xsParent) {
-        m_xsParent = xsParent;
+        if (m_xsParent != xsParent) {
+            verifyMutable();
+            m_xsParent = xsParent;
+        }
     }
 
     /**
@@ -159,6 +162,96 @@ public abstract class XvmStructure
     public Iterable<? extends XvmStructure> getContained() {
         return List.of();
     }
+
+    /**
+     * @return true iff this XVM structure cannot be modified
+     */
+    public final boolean isReadOnly() {
+        return m_fReadOnly;
+    }
+
+    /**
+     * Verify that this XVM structure can be modified.
+     *
+     * @return true
+     *
+     * @throws IllegalStateException  if this XVM structure is read-only
+     */
+    protected final boolean verifyMutable() {
+        if (isReadOnly()) {
+            throw new IllegalStateException(getClass().getSimpleName() + " is read-only");
+        }
+        return true;
+    }
+
+    /**
+     * Obtain a mutable version of this XVM structure. If this structure is read-only, then the
+     * entire containing FileStructure is copied and the corresponding structure from that mutable
+     * copy is returned.
+     *
+     * @return this XVM structure if it is mutable, otherwise its counterpart in a mutable copy of
+     *         the FileStructure that contains this XVM structure
+     */
+    protected XvmStructure ensureMutable() {
+        return isReadOnly()
+                ? findThisIn(new FileStructure(getFileStructure()))
+                : this;
+    }
+
+    /**
+     * Make the entire FileStructure that contains this XVM structure read-only.
+     *
+     * @return this XVM structure, marked as read-only
+     */
+    protected XvmStructure ensureReadOnly() {
+        if (!isReadOnly()) {
+            FileStructure fileStructure = getFileStructure();
+            if (fileStructure == null) {
+                throw new IllegalStateException("this " + getClass().getSimpleName()
+                        + " is not part of a FileStructure");
+            }
+            fileStructure.markReadOnly();
+            if (!isReadOnly()) {
+                markReadOnly();
+            }
+        }
+        return this;
+    }
+
+    /**
+     * Mark this structure and all structures contained by it as read-only.
+     */
+    protected void markReadOnly() {
+        if (!m_fReadOnly) {
+            getContained().forEach(XvmStructure::markContainedReadOnly);
+            m_fReadOnly = true;
+        }
+    }
+
+    /**
+     * Mark a directly contained structure, including any component siblings, as read-only.
+     *
+     * @param structure  the directly contained structure
+     */
+    private static void markContainedReadOnly(XvmStructure structure) {
+        if (structure instanceof Component component) {
+            for (Component sibling = component.getEldestSibling(); sibling != null;
+                    sibling = sibling.getNextSibling()) {
+                sibling.markReadOnly();
+            }
+        } else {
+            structure.markReadOnly();
+        }
+    }
+
+    /**
+     * Locate the copy of this XVM structure in a copy of its containing FileStructure.
+     *
+     * @param thatFileStructure  the FileStructure copy
+     *
+     * @return the XVM structure in thatFileStructure that corresponds to this
+     */
+    protected abstract XvmStructure findThisIn(FileStructure thatFileStructure);
 
     /**
      * Determine if the XVM structure (or any nested XVM structure) has been modified.
@@ -576,6 +669,14 @@ public abstract class XvmStructure
     public abstract boolean equals(Object obj);
 
     @Override
+    protected XvmStructure clone()
+            throws CloneNotSupportedException {
+        XvmStructure that = (XvmStructure) super.clone();
+        that.m_fReadOnly = false;
+        return that;
+    }
+
+    @Override
     public String toString() {
         return getClass().getSimpleName() + '{' + getDescription() + '}';
     }
@@ -587,4 +688,9 @@ public abstract class XvmStructure
      * The containing XVM structure.
      */
     private XvmStructure m_xsParent;
+
+    /**
+     * True iff this XVM structure cannot be modified.
+     */
+    private boolean m_fReadOnly;
 }

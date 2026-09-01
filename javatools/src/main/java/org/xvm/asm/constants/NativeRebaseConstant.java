@@ -95,7 +95,6 @@ public class NativeRebaseConstant
         return "Native(" + m_constIface.getValueString() + ')';
     }
 
-
     // ----- data fields ---------------------------------------------------------------------------
 
     /**

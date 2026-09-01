@@ -243,7 +243,6 @@ public class PendingTypeConstant
         return "PendingTypeParameter";
     }
 
-
     // ----- data fields ---------------------------------------------------------------------------
 
     private final TypeConstant f_typeConstraint;

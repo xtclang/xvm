@@ -56,7 +56,10 @@ public class TypedefStructure
      */
     public void setType(TypeConstant type) {
         assert type != null;
-        m_type = type;
+        if (!type.equals(m_type)) {
+            verifyMutable();
+            m_type = type;
+        }
     }
 
 

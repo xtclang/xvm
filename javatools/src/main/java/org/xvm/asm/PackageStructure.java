@@ -27,7 +27,6 @@ public class PackageStructure
         super(xsParent, nFlags, constId, condition);
     }
 
-
     // ----- accessors --------------------------------------------------------------------------------------
 
     /**
@@ -109,6 +108,7 @@ public class PackageStructure
     public void setImportedModuleInjector(SingletonConstant constInjector, List<Injection> listInject) {
         assert isModuleImport();
         assert listInject == null || constInjector != null;
+        verifyMutable();
 
         findContribution(Composition.Import).addInjector(constInjector, listInject);
     }

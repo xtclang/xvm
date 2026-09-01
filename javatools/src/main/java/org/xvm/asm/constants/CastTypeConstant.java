@@ -123,5 +123,7 @@ public class CastTypeConstant
             + m_constType2.getValueString() + ")";
     }
 
+    // ----- fields --------------------------------------------------------------------------------
+
     private final TypeConstant f_constType1Orig;
 }

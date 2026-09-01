@@ -172,6 +172,7 @@ public class MethodConstant
         assert isLambda();
         assert isNascent();
         assert sig != null;
+        verifyMutable();
         m_constSig = sig;
     }
 
