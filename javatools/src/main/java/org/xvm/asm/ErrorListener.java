@@ -23,6 +23,27 @@ import static org.xvm.util.Handy.copyOf;
  * XVM structures.
  */
 @FunctionalInterface
+/*
+ * TODO: this interface is the single sink every diagnostic in the compiler and runtime now flows
+ *       through, so it is where the following belong. Each is a DECORATOR - wrap a listener, pass
+ *       everything on, and do the extra work on the way past - not a change to this interface:
+ *
+ *       - log sinks (slf4j and friends). See Slf4jErrorListener in this package for the shape;
+ *         the mapping that matters is Severity -> log level, and the guard that matters is
+ *         isXxxEnabled() so a disabled level costs a boolean read.
+ *
+ *       - JFR events. See JfrErrorListener. JFR is already used by XtcEngine, so no dependency is
+ *         involved, and an Event that is not being recorded costs a shouldCommit() check.
+ *
+ *       - LSP diagnostics. XtcEngine.compile(ErrorListener, ...) already hands a host its own sink
+ *         and TeeErrorListener already shows how to observe without disturbing the primary's
+ *         abort/serious-error semantics, which is exactly what an LSP needs.
+ *
+ *       This is true BECAUSE of the threading work: the listener is reached by ownership
+ *       (ConstantPool for compile-time work, Container for runtime work) rather than found in
+ *       ambient state, so wrapping one place actually captures everything downstream of it. It was
+ *       not true while half the paths defaulted to BLACKHOLE or consulted a mutable field.
+ */
 public interface ErrorListener {
     // ----- API -----------------------------------------------------------------------------------
 
