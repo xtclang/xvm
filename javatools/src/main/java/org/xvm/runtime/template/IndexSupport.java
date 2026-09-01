@@ -22,19 +22,12 @@ import org.xvm.runtime.template.reflect.xVar;
  */
 public interface IndexSupport {
     /**
-     * Narrow an index to an {@code int}, but only if it is within range.
+     * Narrow the specified {@code long} index to an {@code int}, but only if it is within range.
      *
-     * <p>An index arrives here as a {@code long} while the underlying storage is addressed by
-     * {@code int}, so the narrowing has to happen somewhere. Doing it together with the range
-     * check is what keeps the two consistent: narrowing first and then checking the result
-     * accepts any index whose low 32 bits happen to be in range, so an index of
-     * 2<sup>32</sup>&nbsp;+&nbsp;4 reads element 4.</p>
+     * @param lIndex  the index
+     * @param cSize   the upper bound
      *
-     * @param lIndex  the index, as supplied
-     * @param cSize   the number of elements
-     *
-     * @return the index as an {@code int}, or {@code -1} if it is out of range; a valid index is
-     *         never negative, so the caller can branch on that without a second check
+     * @return the index as an {@code int}, or {@code -1} if the value is out of range
      */
     static int checkedIndex(long lIndex, int cSize) {
         return lIndex >= 0 && lIndex < cSize ? (int) lIndex : -1;

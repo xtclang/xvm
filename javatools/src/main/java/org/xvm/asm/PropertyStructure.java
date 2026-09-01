@@ -155,7 +155,7 @@ public class PropertyStructure
      */
     public void setType(TypeConstant type) {
         assert type != null;
-        if (!type.equals(m_type)) {
+        if (type != m_type) {
             verifyMutable();
             m_type = type;
             getIdentityConstant().invalidateCache();

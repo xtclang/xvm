@@ -21,24 +21,15 @@ const OSDirectory
     Iterator<String> names() = store.names(this:protected).iterator();
 
     @Override
-    Iterator<Directory> dirs() {
-        return nodes().flatMap(node -> node.is(Directory) ? [node] : []);
-    }
+    Iterator<Directory> dirs() = nodes().flatMap(node -> node.is(Directory) ? [node] : []);
 
     @Override
-    Iterator<File> files() {
-        return nodes().flatMap(node -> node.is(File) ? [node] : []);
-    }
+    Iterator<File> files() = nodes().flatMap(node -> node.is(File) ? [node] : []);
 
-    /**
-     * The nodes that this directory currently contains.
-     *
-     * A name obtained from the listing may no longer resolve: it may be a broken link, or may have
-     * been removed since the listing was taken. Such a name is simply not a node now, so it is
-     * dropped.
-     */
     private Iterator<FileNode> nodes() {
         return names().flatMap(name -> {
+            // a name obtained from the listing may no longer resolve: it may be a broken link, or
+            // may have been removed since the listing was taken - ignore it
             if (File|Directory node := find(name)) {
                 return [node];
             }

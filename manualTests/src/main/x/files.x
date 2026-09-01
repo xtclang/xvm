@@ -147,9 +147,7 @@ module TestFiles {
     }
 
     /**
-     * Covers `Directory.dirs()` and `files()`, including an entry that disappears while the
-     * (lazy) iteration is in progress: the listings themselves, and that a vanished entry is
-     * skipped rather than raising.
+     * Covers `Directory.dirs()` and `files()`.
      */
     void testListing() {
         console.print("\n** testListing()");
@@ -170,7 +168,7 @@ module TestFiles {
         assert probe.files().count() == 5;
         assert probe.dirs().count() == 1;
 
-        // remove entries the iteration has not reached yet; they must be skipped, not asserted on
+        // remove entries the iteration has not reached yet; they must be skipped
         Int seen = 0;
         for (File f : probe.files()) {
             if (seen == 0) {
@@ -186,8 +184,5 @@ module TestFiles {
 
         probe.deleteRecursively();
         assert !probe.exists;
-
-        console.print($"listing ok (after a mid-iteration delete, saw {seen} files)");
     }
-
 }

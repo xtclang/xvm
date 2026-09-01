@@ -86,17 +86,11 @@ module TestArray {
         assert &s1 == &s2;
         assert &s1 != &s3;
 
-        console.print($"&nums[1..3] == &nums[1..3]: {&s1 == &s2}");
-        console.print($"&nums[1..3] == &nums[0..2]: {&s1 == &s3}");
-
         // Same for a view, which likewise owns no element storage.
         UInt8[] bytes = [1, 2, 3, 4];
         Bit[]   v1    = bytes.asBitArray();
         Bit[]   v2    = bytes.asBitArray();
-
         assert &v1 == &v2;
-
-        console.print($"&bytes.asBitArray() == &bytes.asBitArray(): {&v1 == &v2}");
 
         // The reverse direction dispatches to the CONCRETE delegate, which resolves the template
         // from the first handle only and used to cast the second one too. Each element type below
@@ -133,15 +127,6 @@ module TestArray {
         assert &intsSlice    != &ints;
         assert &int128sSlice != &int128s;
         assert &objsSlice    != &objs;
-
-        // one line of actual data rather than a bare "it worked": each of these is a different
-        // delegate, and each used to raise instead of answering
-        console.print($|&chars=={&chars == &charsSlice} &strs=={&strs == &strsSlice} \
-                       |&floats=={&floats == &floatsSlice} &int8s=={&int8s == &int8sSlice} \
-                       |&ints=={&ints == &intsSlice} &int128s=={&int128s == &int128sSlice} \
-                       |&objs=={&objs == &objsSlice}
-                      );
-
     }
 
     void testArrayList() {
@@ -400,7 +385,7 @@ module TestArray {
             }
 
             while (String s := iter.next()) {
-                console.print($"s={s}");
+                console.print($"{s=}");
             }
         }
 
@@ -414,7 +399,7 @@ module TestArray {
         console.print($"knownEmpty={iter.knownEmpty()}");
         console.print($"knownSize={iter.knownSize()}");
         if (Int size := iter.knownSize()) {
-            console.print($"size={size}");
+            console.print($"{size=}");
         }
 
         console.print("\n   --> misc tests");
@@ -424,8 +409,8 @@ module TestArray {
         assert String min := strs.iterator().min();
         assert String max := strs.iterator().max();
         assert Range<String> range := strs.iterator().range();
-        console.print($"min={min}; max={max}");
-        console.print($"range={range}");
+        console.print($"{min=}; {max=}");
+        console.print($"{range=}");
     }
 
     void testConstOrdinalList() {
@@ -442,20 +427,12 @@ module TestArray {
             assert val == vals[Loop.count] && val == col[Loop.count];
         }
 
-        console.print($"col={col}");
+        console.print($"{col=}");
         console.print($"bytes={col.contents}");
     }
 
     /**
      * `deleteAll(range)` across every element type that has its own storage.
-     *
-     * Array storage is chosen per element type - a byte-backed delegate for `Int8`, a `String[]`
-     * one for `String`, an `ObjectHandle[]` one for everything else - and each implements the
-     * delete itself. Two of them were wrong in ways a single-element delete could not show:
-     * the byte-backed one copied from the wrong offset and silently produced the wrong elements,
-     * and `String` had no implementation at all and inherited the one for object arrays, which
-     * failed with a cast error. So this deletes a MULTI-element range, and does it for every type,
-     * because each type is a different implementation.
      */
     void testDeleteRange() {
         console.print("\n** testDeleteRange()");
@@ -475,15 +452,13 @@ module TestArray {
         assert new Array<Nibble> (Mutable, [0, 1, 2, 3, 4]).deleteAll(1..2) == [0, 3, 4];
         assert new Array<Object> (Mutable, [1, 2, 3, 4, 5]).deleteAll(1..2).size == 3;
 
-        // a single-element delete took a different path and always worked; keep it covered
+        // a single-element delete
         assert new Array<String>(Mutable, ["a", "b", "c", "d"]).deleteAll(1..1) == ["a", "c", "d"];
         assert new Array<Int8>  (Mutable, [1, 2, 3, 4]).deleteAll(1..1) == [1, 3, 4];
 
-        // and a range reaching the end, where the copy is skipped entirely
+        // a range reaching the end
         assert new Array<Int8>  (Mutable, [1, 2, 3, 4, 5]).deleteAll(3..4) == [1, 2, 3];
         assert new Array<String>(Mutable, ["a", "b", "c", "d", "e"]).deleteAll(3..4) == ["a", "b", "c"];
-
-        console.print("deleteAll(range) ok for every element type");
     }
 
     void testIndexBounds() {
@@ -536,5 +511,4 @@ module TestArray {
             return False;
         }
     }
-
 }
