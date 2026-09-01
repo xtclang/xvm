@@ -796,14 +796,4 @@ public class Dec128 extends DecimalFPNumber {
         ctx.i0 = nHBits;
         return nLBits;
     }
-
-    @Override
-    protected long[] $longValues() {
-        return new long[]{$highBits, $lowBits};
-    }
-
-    @Override
-    protected long bitLength$get$p() {
-        return 128;
-    }
 }

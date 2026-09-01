@@ -49,8 +49,8 @@ public abstract class nLongLongBasedArray<ArrayType extends nLongLongBasedArray<
 
         long[] storage = $storage;
         for (int i = 0, len = (int) size * 2; i < len; i += 2) {
-            storage[i]   = lowValue;
-            storage[i+1] = highValue;
+            storage[i]   = highValue;
+            storage[i+1] = lowValue;
         }
         $size((int) size);
     }

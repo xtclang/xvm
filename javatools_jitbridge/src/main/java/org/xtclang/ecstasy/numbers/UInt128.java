@@ -77,16 +77,6 @@ public class UInt128 extends UIntNumber {
         return new BigDecimal($asBigInteger());
     }
 
-    @Override
-    protected long[] $longValues() {
-        return new long[]{$highValue, $lowValue};
-    }
-
-    @Override
-    protected long bitLength$get$p() {
-        return 128;
-    }
-
     /**
      * A helper method to perform 128-bit integer division.
      *

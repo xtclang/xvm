@@ -66,16 +66,6 @@ public class UInt16 extends UIntNumber {
         return BigDecimal.valueOf($value);
     }
 
-    @Override
-    protected long[] $longValues() {
-        return new long[]{(long) $value << 48};
-    }
-
-    @Override
-    protected long bitLength$get$p() {
-        return 16;
-    }
-
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override public java.lang.String toString() {

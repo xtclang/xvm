@@ -4,9 +4,12 @@ import java.math.BigInteger;
 
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.Boolean;
+import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nType;
+
+import org.xtclang.ecstasy.collections.ArrayᐸBitᐳ;
 
 import org.xtclang.ecstasy.text.String;
 
@@ -30,7 +33,7 @@ public class IntN extends IntNumber {
     /**
      * The value of this IntN.
      */
-    private final BigInteger $value;
+    public final BigInteger $value;
 
     /**
      * Construct an {@link IntN} wrapping a {@link BigInteger}.
@@ -39,20 +42,6 @@ public class IntN extends IntNumber {
      */
     private IntN(BigInteger value) {
         this.$value = value;
-    }
-
-    /**
-     * Create a new {@link IntN} from an Ecstasy String value.
-     */
-    public static IntN $new(Ctx ctx, String value) {
-        return new IntN(new BigInteger(value.toString()));
-    }
-
-    /**
-     * Create a new {@link IntN} from a Java String value.
-     */
-    public static IntN $new(java.lang.String value) {
-        return new IntN(new BigInteger(value));
     }
 
     /**
@@ -69,8 +58,12 @@ public class IntN extends IntNumber {
         return new IntN(BigInteger.valueOf(value));
     }
 
-    @Override
-    protected long[] $longValues() {
+    /**
+     * Return this IntN as an array of long values suitable for creating an {@link ArrayᐸBitᐳ}
+     * <p>
+     * The bit length the long values represent is returned in {@link Ctx#i0}.
+     */
+    protected long[] $longValues(Ctx ctx) {
         byte[] ab = $value.toByteArray();
         int    cb = ab.length;
         int    cl = (cb + 7) / 8;
@@ -78,6 +71,7 @@ public class IntN extends IntNumber {
         for (int i = 0; i < cb; ++i) {
             al[i / 8] |= (long) (ab[i] & 0xFF) << (56 - (i % 8) * 8);
         }
+        ctx.i0 = (long) cb * 8;
         return al;
     }
 
@@ -85,9 +79,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of;
-     * <pre>
      *     static Numeric zero();
-     * </pre>
      */
     public static IntN zero(Ctx ctx) {
         return ZERO;
@@ -95,9 +87,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of;
-     * <pre>
      *     static Numeric one();
-     * </pre>
      */
     public static IntN one(Ctx ctx) {
         return ONE;
@@ -105,9 +95,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *     static conditional Range<Numeric> range();
-     * </pre>
      */
     public static Boolean range(Ctx ctx) {
         return Boolean.False;
@@ -115,9 +103,7 @@ public class IntN extends IntNumber {
 
     /**
      * The primitive implementation of:
-     * <pre>
      *     static conditional Range<Numeric> range();
-     * </pre>
      */
     public static boolean range$p(Ctx ctx) {
         return false;
@@ -125,26 +111,27 @@ public class IntN extends IntNumber {
 
     // ----- Number --------------------------------------------------------------------------------
 
-    @Override
-    protected long bitLength$get$p() {
-        return $value.bitLength();
+    /**
+     * The native implementation of:
+     *     Bit[] bits.get()
+     */
+    protected ArrayᐸBitᐳ bits$get(Ctx ctx) {
+        long[] longs = $longValues(ctx);
+        return ArrayᐸBitᐳ.$fromLongs(ctx, ctx.i0, longs);
     }
 
     /**
      * The primitive implementation of:
-     * <pre>
      *     Int bitLength.get()
-     * </pre>
      */
     public long bitLength$get$p(Ctx ctx) {
-        return $value.bitLength();
+        int bitLength = $value.bitLength();
+        return bitLength == 0 ? 8 : ((bitLength + 7L) / 8L) * 8L;
     }
 
     /**
      * The native implementation of:
-     * <pre>
      *     IntNumber bitCount.get()
-     * </pre>
      */
     public UIntN magnitude$get$p(Ctx ctx) {
         return abs(ctx).toUIntN(ctx);
@@ -152,9 +139,7 @@ public class IntN extends IntNumber {
 
     /**
      * The primitive implementation of:
-     * <pre>
      *     Int byteLength.get()
-     * </pre>
      */
     protected long byteLength$get$p(Ctx ctx) {
         return ($value.bitLength() + 7) / 8;
@@ -162,9 +147,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    Number neg();
-     * </pre>
      */
     public IntN neg(Ctx ctx) {
         return new IntN($value.negate());
@@ -172,9 +155,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    IntN add(IntN n);
-     * </pre>
      */
     public IntN add(Ctx ctx, IntN n) {
         return new IntN($value.add(n.$value));
@@ -182,9 +163,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    IntN sub(IntN n);
-     * </pre>
      */
     public IntN sub(Ctx ctx, IntN n) {
         return new IntN($value.subtract(n.$value));
@@ -192,9 +171,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    IntN mul(IntN n);
-     * </pre>
      */
     public IntN mul(Ctx ctx, IntN n) {
         return new IntN($value.multiply(n.$value));
@@ -202,9 +179,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    IntN div(IntN n);
-     * </pre>
      */
     public IntN div(Ctx ctx, IntN n) {
         return new IntN($value.divide(n.$value));
@@ -212,9 +187,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    IntN mod(IntN n);
-     * </pre>
      */
     public IntN mod(Ctx ctx, IntN n) {
         return new IntN($value.mod(n.$value));
@@ -222,9 +195,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    IntN divrem(IntN n);
-     * </pre>
      */
     public IntN divrem(Ctx ctx, IntN n) {
         BigInteger[] results = $value.divideAndRemainder(n.$value);
@@ -234,9 +205,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    IntN remainder(IntN n);
-     * </pre>
      */
     public IntN remainder(Ctx ctx, IntN n) {
         return new IntN($value.remainder(n.$value));
@@ -244,9 +213,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    IntN abs();
-     * </pre>
      */
     public IntN abs(Ctx ctx) {
         if ($value.signum() >= 0) {
@@ -257,9 +224,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    IntN pow(IntN n);
-     * </pre>
      */
     public IntN pow(Ctx ctx, IntN n) {
         if (n.$value.bitLength() > 32) {
@@ -278,9 +243,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *     UIntN magnitude.get()
-     * </pre>
      */
     public UIntN magnitude$get(Ctx ctx) {
         return UIntN.$box($value.abs());
@@ -288,9 +251,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *     IntNumber leftmostBit.get()
-     * </pre>
      */
     public IntN leftmostBit$get(Ctx ctx) {
         if ($value.bitCount() == 0) {
@@ -307,9 +268,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *     IntNumber rightmostBit.get()
-     * </pre>
      */
     public IntN rightmostBit$get(Ctx ctx) {
         int lowest = $value.getLowestSetBit();
@@ -321,9 +280,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *     IntNumber leadingZeroCount.get()
-     * </pre>
      */
     public int leadingZeroCount$get$p(Ctx ctx) {
         byte[] bytes = $value.toByteArray();
@@ -337,9 +294,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *     IntNumber trailingZeroCount.get()
-     * </pre>
      */
     public int trailingZeroCount$get$p(Ctx ctx) {
         byte[] bytes = $value.toByteArray();
@@ -353,9 +308,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *     IntNumber bitCount.get()
-     * </pre>
      */
     public int bitCount$get$p(Ctx ctx) {
         return $value.bitCount();
@@ -363,9 +316,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    IntNumber and(IntN n);
-     * </pre>
      */
     public IntNumber and(Ctx ctx, IntNumber that) {
         return new IntN($value.and(((IntN) that).$value));
@@ -373,9 +324,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    IntNumber or(IntN n);
-     * </pre>
      */
     public IntNumber or(Ctx ctx, IntNumber that) {
         return new IntN($value.or(((IntN) that).$value));
@@ -383,9 +332,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    IntNumber xor(IntN n);
-     * </pre>
      */
     public IntNumber xor(Ctx ctx, IntNumber that) {
         return new IntN($value.xor(((IntN) that).$value));
@@ -393,9 +340,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *    IntNumber not();
-     * </pre>
      */
     public IntNumber not(Ctx ctx) {
         return new IntN($value.not());
@@ -403,9 +348,7 @@ public class IntN extends IntNumber {
 
     /**
      * The primitive implementation of:
-     * <pre>
      *    IntNumber shiftLeft(Int n);
-     * </pre>
      */
     public IntNumber shiftLeft$p(Ctx ctx, long n) {
         if (n == 0) {
@@ -416,9 +359,7 @@ public class IntN extends IntNumber {
 
     /**
      * The primitive implementation of:
-     * <pre>
      *    IntNumber shiftRight(Int n);
-     * </pre>
      */
     public IntNumber shiftRight$p(Ctx ctx, long n) {
         if (n == 0) {
@@ -429,9 +370,7 @@ public class IntN extends IntNumber {
 
     /**
      * The primitive implementation of:
-     * <pre>
      *    IntNumber shiftAllRight(Int n);
-     * </pre>
      */
     public IntNumber shiftAllRight$p(Ctx ctx, long n) {
         if (n == 0) {
@@ -446,9 +385,7 @@ public class IntN extends IntNumber {
 
     /**
      * The primitive implementation of:
-     * <pre>
      *    IntNumber rotateLeft(Int n);
-     * </pre>
      */
     public IntNumber rotateLeft$p(Ctx ctx, long n) {
         // Handle distances larger than bitLength
@@ -473,9 +410,7 @@ public class IntN extends IntNumber {
 
     /**
      * The primitive implementation of:
-     * <pre>
      *    IntNumber rotateRight(Int n);
-     * </pre>
      */
     public IntNumber rotateRight$p(Ctx ctx, long n) {
         // Handle distances larger than bitLength
@@ -502,9 +437,7 @@ public class IntN extends IntNumber {
 
     /**
      * The primitive implementation of:
-     * <pre>
      *    IntNumber retainLSBits(Int count)
-     * </pre>
      */
     public IntNumber retainLSBits$p(Ctx ctx, long count) {
         // Handle edge cases for zero or negative boundaries
@@ -523,9 +456,7 @@ public class IntN extends IntNumber {
 
     /**
      * The primitive implementation of:
-     * <pre>
      *    IntNumber retainMSBits(Int count)
-     * </pre>
      */
     public IntNumber retainMSBits$p(Ctx ctx, long count) {
         // Handle edge cases for zero or negative boundaries
@@ -548,9 +479,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *     (Boolean, IntN) next()
-     * </pre>
      */
     public boolean next$p(Ctx ctx) {
         ctx.o0 = new IntN($value.add(BigInteger.ONE));
@@ -559,9 +488,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *     IntN nextValue()
-     * </pre>
      */
     public IntN nextValue(Ctx ctx) {
         return new IntN($value.add(BigInteger.ONE));
@@ -569,9 +496,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *     (Boolean, IntN) prev()
-     * </pre>
      */
     public boolean prev$p(Ctx ctx) {
         ctx.o0 = new IntN($value.subtract(BigInteger.ONE));
@@ -580,9 +505,7 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *     IntN prevValue()
-     * </pre>
      */
     public IntN prevValue(Ctx ctx) {
         return new IntN($value.subtract(BigInteger.ONE));
@@ -590,9 +513,7 @@ public class IntN extends IntNumber {
 
     /**
      * The primitive implementation of:
-     * <pre>
      *     Int stepsTo(IntNumber that)
-     * </pre>
      */
     public long stepsTo$p(Ctx ctx, IntNumber that) {
         return ((IntN) that).$value.subtract(this.$value).longValue();
@@ -600,9 +521,7 @@ public class IntN extends IntNumber {
 
     /**
      * The primitive implementation of:
-     * <pre>
      *     IntNumber skip(Int steps)
-     * </pre>
      */
     public IntNumber skip$p(Ctx ctx, long steps) {
         return steps == 0 ? this : new IntN($value.add(BigInteger.valueOf(steps)));
@@ -621,11 +540,10 @@ public class IntN extends IntNumber {
      * @return this IntN value as a Java {@code int}
      */
     public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value.bitLength() >= Byte.SIZE) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "IntN value " + $value + " is not a valid Int8 value");
+        if ($checkBounds(checkBounds, dfltCheckBounds, Byte.SIZE, true)) {
+            return $value.byteValue();
         }
-        return $value.byteValue();
+        throw Exception.$oob(ctx, "IntN value " + $value + " is not a valid Int8 value");
     }
 
     /**
@@ -639,11 +557,10 @@ public class IntN extends IntNumber {
      * @return this IntN value as a Java {@code int}
      */
     public int toInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value.bitLength() >= Short.SIZE) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "IntN value " + $value + " is not a valid Int16 value");
+        if ($checkBounds(checkBounds, dfltCheckBounds, Short.SIZE, true)) {
+            return $value.shortValue();
         }
-        return $value.shortValue();
+        throw Exception.$oob(ctx, "IntN value " + $value + " is not a valid Int16 value");
     }
 
     /**
@@ -657,11 +574,10 @@ public class IntN extends IntNumber {
      * @return this IntN value as a Java {@code int}
      */
     public int toInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value.bitLength() >= Integer.SIZE) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "IntN value " + $value + " is not a valid Int32 value");
+        if ($checkBounds(checkBounds, dfltCheckBounds, Integer.SIZE, true)) {
+            return $value.intValue();
         }
-        return $value.intValue();
+        throw Exception.$oob(ctx, "IntN value " + $value + " is not a valid Int32 value");
     }
 
     /**
@@ -689,11 +605,10 @@ public class IntN extends IntNumber {
      * @return this IntN value as a Java long
      */
     public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value.bitLength() >= Long.SIZE) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "IntN value " + $value + " is not a valid Int64 value");
+        if ($checkBounds(checkBounds, dfltCheckBounds, Long.SIZE, true)) {
+            return $value.longValue();
         }
-        return $value.longValue();
+        throw Exception.$oob(ctx, "IntN value " + $value + " is not a valid Int64 value");
     }
 
     /**
@@ -707,13 +622,10 @@ public class IntN extends IntNumber {
      * @return this IntN value as an Int128
      */
     public long toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value.bitLength() >= 128) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "IntN value " + $value + " is not a valid Int128 value");
+        if ($checkBounds(checkBounds, dfltCheckBounds, 128, true)) {
+            return Int128.$fromBigInteger(ctx, $value);
         }
-        long[] longs = $longValues();
-        ctx.i0 = longs.length > 1 ? longs[1] : 0;
-        return longs.length > 0 ? longs[0] : 0;
+        throw Exception.$oob(ctx, "IntN value " + $value + " is not a valid Int128 value");
     }
 
     /**
@@ -727,11 +639,10 @@ public class IntN extends IntNumber {
      * @return this IntN value as a Java {@code int}
      */
     public int toNibble$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value.bitLength() > 4) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "IntN value " + $value + " is not a valid Nibble value");
+        if ($checkBounds(checkBounds, dfltCheckBounds, 4, false)) {
+            return $value.byteValue() & 0x0F;
         }
-        return $value.byteValue() & 0x0F;
+        throw Exception.$oob(ctx, "IntN value " + $value + " is not a valid Nibble value");
     }
 
     /**
@@ -745,11 +656,10 @@ public class IntN extends IntNumber {
      * @return this IntN value as a Java {@code int}
      */
     public int toUInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value.bitLength() > Byte.SIZE) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "IntN value " + $value + " is not a valid UInt8 value");
+        if ($checkBounds(checkBounds, dfltCheckBounds, Byte.SIZE, false)) {
+            return $value.byteValue() & 0xFF;
         }
-        return $value.byteValue() & 0xFF;
+        throw Exception.$oob(ctx, "IntN value " + $value + " is not a valid UInt8 value");
     }
 
     /**
@@ -763,11 +673,10 @@ public class IntN extends IntNumber {
      * @return this IntN value as a Java {@code int}
      */
     public int toUInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value.bitLength() > Short.SIZE) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "IntN value " + $value + " is not a valid UInt16 value");
+        if ($checkBounds(checkBounds, dfltCheckBounds, Short.SIZE, false)) {
+            return $value.shortValue() & 0xFFFF;
         }
-        return $value.shortValue() & 0xFFFF;
+        throw Exception.$oob(ctx, "IntN value " + $value + " is not a valid UInt16 value");
     }
 
     /**
@@ -781,11 +690,10 @@ public class IntN extends IntNumber {
      * @return this IntN value as a Java {@code int}
      */
     public int toUInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value.bitLength() > Integer.SIZE) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "IntN value " + $value + " is not a valid UInt32 value");
+        if ($checkBounds(checkBounds, dfltCheckBounds, Integer.SIZE, false)) {
+            return $value.intValue();
         }
-        return $value.intValue();
+        throw Exception.$oob(ctx, "IntN value " + $value + " is not a valid UInt32 value");
     }
 
     /**
@@ -813,11 +721,10 @@ public class IntN extends IntNumber {
      * @return this IntN value as a Java long
      */
     public long toUInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value.bitLength() > Long.SIZE) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "IntN value " + $value + " is not a valid UInt64 value");
+        if ($checkBounds(checkBounds, dfltCheckBounds, Long.SIZE, false)) {
+            return $value.longValue();
         }
-        return $value.longValue();
+        throw Exception.$oob(ctx, "IntN value " + $value + " is not a valid UInt64 value");
     }
 
     /**
@@ -831,20 +738,17 @@ public class IntN extends IntNumber {
      * @return this IntN value as a UInt128
      */
     public long toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value.bitLength() > 128) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "IntN value " + $value + " is not a valid UInt128 value");
+        if ($checkBounds(checkBounds, dfltCheckBounds, 128, false)) {
+            long[] longs = $longValues(ctx);
+            ctx.i0 = longs.length > 1 ? longs[1] : 0;
+            return longs.length > 0 ? longs[0] : 0;
         }
-        long[] longs = $longValues();
-        ctx.i0 = longs.length > 1 ? longs[1] : 0;
-        return longs.length > 0 ? longs[0] : 0;
+        throw Exception.$oob(ctx, "IntN value " + $value + " is not a valid UInt128 value");
     }
 
     /**
      * The native implementation of:
-     * <pre>
      *     IntN toIntN()
-     * </pre>
      */
     public IntN toIntN(Ctx ctx) {
         return this;
@@ -852,16 +756,34 @@ public class IntN extends IntNumber {
 
     /**
      * The native implementation of:
-     * <pre>
      *     IntN toIntN()
-     * </pre>
      */
     public UIntN toUIntN(Ctx ctx) {
         if ($value.signum() < 0) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "IntN value " + $value + " is not a valid UIntN value");
+            throw Exception.$oob(ctx, "IntN value " + $value + " is not a valid UIntN value");
         }
         return UIntN.$box($value);
+    }
+
+    /**
+     * Determine whether this IntN fits within the bounds of a given bit length.
+     */
+    public boolean $checkBounds(boolean checkBounds, boolean dfltCheckBounds,
+                                       int bitLength, boolean signed) {
+        return $checkBounds($value, checkBounds, dfltCheckBounds, bitLength, signed);
+    }
+
+    /**
+     * Determine whether this IntN fits within the bounds of a given bit length.
+     */
+    public static boolean $checkBounds(BigInteger thi$, boolean checkBounds,
+                                       boolean dfltCheckBounds, int bitLength, boolean signed) {
+        if (!dfltCheckBounds && checkBounds) {
+            int signum = thi$.signum();
+            int bits   = signum >= 0 ? thi$.bitLength() : thi$.bitLength() + 1;
+            return (signed || signum >= 0) && bits <= bitLength;
+        }
+        return true;
     }
 
     // ----- Orderable interface -------------------------------------------------------------------
