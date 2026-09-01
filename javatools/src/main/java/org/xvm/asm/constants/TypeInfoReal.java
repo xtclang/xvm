@@ -2089,10 +2089,9 @@ public class TypeInfoReal
      */
     @Override
     public String toString() {
-        // NOTE: isAbstract() would call ensureCaches(), which walks every method, populates the
-        // shared id/nid caches and computes m_fImplicitAbstract. The header must not build lazy
-        // metadata just because something rendered this TypeInfo, so the explicit flag (a final
-        // field) is always reported and the implicit one only once it has actually been computed.
+        // Display purity (see TypeInfo.toString()): isAbstract() would call ensureCaches(), which
+        // walks every method, populates the shared id/nid caches and computes m_fImplicitAbstract.
+        // Report the explicit flag (a final field) always, the implicit one only once computed.
         return appendHeader(new StringBuilder(),
                 m_fExplicitAbstract || (m_fCacheReady && m_fImplicitAbstract)).toString();
     }
@@ -2131,7 +2130,7 @@ public class TypeInfoReal
 
     @Override
     public String dump() {
-        StringBuilder sb = appendHeader(new StringBuilder(), isAbstract());
+        var sb = appendHeader(new StringBuilder(), isAbstract());
 
         if (!f_mapTypeParams.isEmpty()) {
             sb.append("\n- Parameters (")

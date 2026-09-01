@@ -29,6 +29,7 @@ import org.xvm.runtime.template.text.xChar;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTType;
 
 
@@ -90,6 +91,9 @@ final class HandlePopulation {
                     xInt64.makeHandle(7L))));
             add(list, () -> xFuture.makeHandle(
                     CompletableFuture.failedFuture(new IllegalStateException("nope"))));
+
+            // the no-op bound-function singleton: a public static handle with a constant rendering
+            add(list, () -> xRTFunction.FullyBoundHandle.NO_OP);
 
             // compositions and templates, which handle rendering delegates into
             add(list, () -> xString.INSTANCE.getCanonicalClass());
