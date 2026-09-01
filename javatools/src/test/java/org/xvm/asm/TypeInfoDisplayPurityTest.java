@@ -56,15 +56,27 @@ public class TypeInfoDisplayPurityTest {
             // ambient requirements, because nothing reaches it implicitly.
             String dump;
             try (var ignore = ConstantPool.withPool(pool)) {
-                dump = info.dump(false);
+                dump = info.dump();
             }
             // rendered after the dump, so both agree on the lazily-computed "abstract" marker that
             // only the forced path is allowed to compute
             assertTrue(dump.startsWith(info.toString()),
                     "the dump starts with exactly the header toString() produces");
             assertTrue(dump.contains("\n- Methods"),
-                    "dump(false) is the full member dump - this is what Type.dump() returns");
-            assertTrue(dump.contains("\n- Properties"), "dump(false) lists properties");
+                    "dump() is the full member dump - this is what Type.dump() returns");
+            assertTrue(dump.contains("\n- Properties"), "dump() lists properties");
+
+            // the retained deprecated overload must be exactly dump(), for either argument, and
+            // must not mutate either - it is still a toString and someone will call it
+            int cAfterDump = pool.size();
+            try (var ignore = ConstantPool.withPool(pool)) {
+                assertEquals(dump, info.toString(false), "toString(false) must delegate to dump()");
+                assertEquals(dump, info.toString(true),
+                        "toString(true) must delegate to dump() too - the optimized-chain view it "
+                        + "used to select was the mutating branch and had no callers");
+            }
+            assertEquals(cAfterDump, pool.size(),
+                    "the deprecated toString(boolean) overload grew the shared ConstantPool");
         } finally {
             runtime.shutdownXVM();
         }
