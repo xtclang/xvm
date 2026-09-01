@@ -234,6 +234,89 @@ public class LazyTest {
     }
 
     @Test
+    public void testBoundReset() {
+        var computed = new AtomicInteger();
+        class Owner {
+            final Lazy.Bound<Owner, Integer> value = Lazy.ofBound(Owner::compute);
+            Integer compute() {
+                return computed.incrementAndGet();
+            }
+        }
+
+        var owner = new Owner();
+        assertEquals(1, owner.value.get(owner));
+        assertEquals(1, owner.value.get(owner));
+
+        owner.value.reset();
+
+        assertEquals(2, owner.value.get(owner), "recomputed after reset");
+        assertEquals(2, owner.value.get(owner), "and cached again");
+        assertEquals(2, computed.get());
+    }
+
+    @Test
+    public void testBoundResetKeepsTheOwnerBinding() {
+        class Owner {
+            final Lazy.Bound<Owner, String> value = Lazy.ofBound(o -> "v");
+        }
+
+        var first  = new Owner();
+        var second = new Owner();
+        first.value.get(first);
+        first.value.reset();
+
+        assertThrows(IllegalArgumentException.class, () -> first.value.get(second),
+                "a reset must not quietly re-bind the holder to a different owner");
+    }
+
+    @Test
+    public void testBoundResetBeforeComputing() {
+        var computed = new AtomicInteger();
+        class Owner {
+            final Lazy.Bound<Owner, Integer> value = Lazy.ofBound(o -> computed.incrementAndGet());
+        }
+
+        var owner = new Owner();
+        owner.value.reset();
+
+        assertEquals(1, owner.value.get(owner));
+        assertEquals(1, computed.get(), "nothing was discarded, because nothing was computed");
+    }
+
+    @Test
+    public void testOfResettable() {
+        var computed = new AtomicInteger();
+        var lazy     = Lazy.ofResettable(computed::incrementAndGet);
+
+        assertFalse(lazy.isComputed());
+        assertEquals(1, lazy.get());
+        assertTrue(lazy.isComputed());
+        assertEquals(1, lazy.get(), "cached");
+
+        lazy.reset();
+
+        assertFalse(lazy.isComputed(), "reset puts it back to uncomputed");
+        assertEquals(2, lazy.get(), "and the next get computes again");
+        assertEquals(2, computed.get());
+    }
+
+    @Test
+    public void testOfResettableResetBeforeComputing() {
+        var computed = new AtomicInteger();
+        var lazy     = Lazy.ofResettable(computed::incrementAndGet);
+
+        lazy.reset();
+
+        assertEquals(1, lazy.get());
+        assertEquals(1, computed.get());
+    }
+
+    @Test
+    public void testOfResettableNullSupplierThrows() {
+        assertThrows(NullPointerException.class, () -> Lazy.ofResettable(null));
+    }
+
+    @Test
     public void testOfExpiringBasic() throws InterruptedException {
         AtomicInteger counter = new AtomicInteger(0);
         Supplier<Integer> expiring = Lazy.ofExpiring(counter::incrementAndGet, 50, TimeUnit.MILLISECONDS);
