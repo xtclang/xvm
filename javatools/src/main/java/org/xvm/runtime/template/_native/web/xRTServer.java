@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -251,6 +250,8 @@ public class xRTServer
         int          nHttpPort  = (int) ((JavaLong) ahArg[2]).getValue();
         int          nHttpsPort = (int) ((JavaLong) ahArg[3]).getValue();
 
+        ExecutorService executor            = null;
+        boolean         fCallbackRegistered = false;
         try {
             configureHttpServer (hServer, new InetSocketAddress(sBindAddr, nHttpPort));
             configureHttpsServer(hServer, new InetSocketAddress(sBindAddr, nHttpsPort));
@@ -274,7 +275,7 @@ public class xRTServer
             // (see HttpHandler.x in xenia.xtclang.org module).
             // If necessary, we can change the start() method to take an array of handlers and
             // demultiplex it earlier by the native code
-            Executor executor = Executors.newCachedThreadPool(factory);
+            executor = Executors.newCachedThreadPool(factory);
 
             httpServer.setExecutor(executor);
             httpServer.start();
@@ -284,6 +285,7 @@ public class xRTServer
 
             // prevent the container from being terminated
             hServer.f_context.f_container.registerNativeCallback();
+            fCallbackRegistered = true;
 
             Router router = hServer.getRouter();
             httpServer .createContext("/", router);
@@ -291,6 +293,7 @@ public class xRTServer
 
             return Op.R_NEXT;
         } catch (Exception e) {
+            rollbackBind(hServer, executor, fCallbackRegistered);
             frame.f_context.f_container.terminate(hServer.f_context);
             return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
         }
@@ -332,7 +335,52 @@ public class xRTServer
 
     private void configureBinding(HttpServerHandle hServer, ObjectHandle hBinding) {
         hServer.setBinding(hBinding);
-}
+    }
+
+    /**
+     * Undo everything a failed {@link #invokeBind} attempt may have claimed. Without this, a
+     * failure after the keep-alive registration pinned the container's native callback count
+     * forever - preventing idle termination and hanging "join()" - and left partially configured
+     * Java servers and their thread pool behind.
+     */
+    private static void rollbackBind(
+            HttpServerHandle hServer, ExecutorService executor, boolean fCallbackRegistered) {
+        if (fCallbackRegistered) {
+            hServer.f_context.f_container.unregisterNativeCallback();
+        }
+
+        closeServerQuietly(hServer.getHttpServer());
+        closeServerQuietly(hServer.getHttpsServer());
+
+        if (executor != null) {
+            executor.shutdown();
+        }
+
+        Router router = hServer.getRouter();
+        if (router != null) {
+            router.mapRoutes.clear();
+        }
+        hServer.clear();
+    }
+
+    private static void closeServerQuietly(HttpServer server) {
+        if (server == null) {
+            return;
+        }
+
+        try {
+            // a server that never got an executor was never started, and com.sun's HttpServer only
+            // releases such a socket after a start/stop pair
+            if (server.getExecutor() == null) {
+                server.start();
+            }
+            server.stop(0);
+        } catch (RuntimeException _) {
+            // deliberately swallowed: the bind failure that triggered the rollback is the error
+            // natural code needs to see, not whatever this half-configured server says on the way
+            // out
+        }
+    }
 
     /**
      * Implementation of "void addRouteImpl(String hostName, UInt16 httpPort, UInt16 httpsPort,

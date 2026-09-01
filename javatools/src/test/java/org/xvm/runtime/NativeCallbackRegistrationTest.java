@@ -1,13 +1,7 @@
 package org.xvm.runtime;
 
 
-import java.io.File;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import java.util.List;
-import java.util.Objects;
+import java.util.Timer;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -15,13 +9,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
-import org.xvm.asm.Constants;
-import org.xvm.asm.DirRepository;
-import org.xvm.asm.LinkedRepository;
-import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.op.Return_0;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
+
+import org.xvm.runtime.template.xBoolean;
+
+import org.xvm.runtime.template.numbers.LongLong;
+import org.xvm.runtime.template.numbers.xInt128;
+
+import org.xvm.runtime.template._native.temporal.xLocalClock;
+import org.xvm.runtime.template._native.temporal.xNanosTimer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -33,8 +31,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 
 /**
- * Behavioral tests for the native alarm callback registry. These boot a real {@link
- * NativeContainer} over the compiled system modules and drive the real runtime classes.
+ * Behavioral tests for the native alarm callback registry and for keep-alive ownership on the
+ * alarm-scheduling failure path. These boot a real {@link NativeContainer} and drive the real
+ * runtime classes; nothing here inspects source text.
  */
 public class NativeCallbackRegistrationTest {
     /**
@@ -46,9 +45,9 @@ public class NativeCallbackRegistrationTest {
      */
     @Test
     public void callbackRegistryIsLiveBeforeAnyCallbackIsRegistered() {
-        assumeTrue(systemModulesAvailable(), "compiled XDK system modules are required");
+        assumeTrue(RuntimeTestSupport.systemModulesAvailable(), "compiled XDK system modules are required");
 
-        ServiceContext context = newRuntime().createServiceContext("registry");
+        ServiceContext context = RuntimeTestSupport.newContainer().createServiceContext("registry");
 
         assertNotNull(context.getCallbackMap(),
                 "the callback registry must exist before the first callback is registered");
@@ -65,10 +64,10 @@ public class NativeCallbackRegistrationTest {
      */
     @Test
     public void extractingAMissingCallbackReturnsNullInsteadOfThrowing() {
-        assumeTrue(systemModulesAvailable(), "compiled XDK system modules are required");
+        assumeTrue(RuntimeTestSupport.systemModulesAvailable(), "compiled XDK system modules are required");
 
-        ServiceContext context = newRuntime().createServiceContext("extract");
-        WeakCallback   ref     = new WeakCallback(entryFrame(context), null);
+        ServiceContext context = RuntimeTestSupport.newContainer().createServiceContext("extract");
+        WeakCallback   ref     = new WeakCallback(RuntimeTestSupport.entryFrame(context), null);
 
         assertNotNull(ref.extractCallback(), "the first extraction must hand back the callback");
         assertNull(ref.extractCallback(),
@@ -85,10 +84,10 @@ public class NativeCallbackRegistrationTest {
      */
     @Test
     public void registryToleratesConcurrentServiceAndTimerThreadAccess() throws InterruptedException {
-        assumeTrue(systemModulesAvailable(), "compiled XDK system modules are required");
+        assumeTrue(RuntimeTestSupport.systemModulesAvailable(), "compiled XDK system modules are required");
 
-        ServiceContext context = newRuntime().createServiceContext("race");
-        Frame          frame   = entryFrame(context);
+        ServiceContext context = RuntimeTestSupport.newContainer().createServiceContext("race");
+        Frame          frame   = RuntimeTestSupport.entryFrame(context);
 
         var pending   = new ArrayBlockingQueue<WeakCallback>(QUEUE_DEPTH);
         var failures  = new CopyOnWriteArrayList<Throwable>();
@@ -127,93 +126,107 @@ public class NativeCallbackRegistrationTest {
                 "a fully drained registry must be empty");
     }
 
-
-    // ----- helpers -------------------------------------------------------------------------------
-
     /**
-     * @return a fresh primordial container over the compiled system modules
+     * Keep-alive ownership is a lifecycle count that pins the container open while a native timer
+     * may still call back into it. Registration used to happen in the Alarm constructor, so when
+     * Timer.schedule(...) then failed, the recovery path called cancel() - whose unregister was
+     * gated on TimerTask.cancel(), which reports false for a task that was never scheduled. The
+     * count stayed up forever: the container could never go idle, so a "once and done" run could
+     * not terminate.
+     * <p/>
+     * This drives the real native "schedule" entry point with the shared timer forced into a state
+     * where scheduling fails.
      */
-    private static NativeContainer newRuntime() {
-        return new NativeContainer(new Runtime(), systemRepository());
-    }
+    @Test
+    public void failedAlarmScheduleDoesNotPinTheContainerAlive() {
+        assumeTrue(RuntimeTestSupport.systemModulesAvailable(), "compiled XDK system modules are required");
 
-    /**
-     * Create a native entry frame for the specified service, of the shape a native method receives.
-     */
-    private static Frame entryFrame(ServiceContext context) {
-        var message = new ServiceContext.Message(null) {
-            @Override
-            public boolean isAsync() {
-                return true;
-            }
+        NativeContainer container = RuntimeTestSupport.newContainer();
+        ServiceContext  context   = container.createServiceContext("alarm");
+        Frame           frame     = RuntimeTestSupport.entryFrame(context);
 
-            @Override
-            public int getCallDepth() {
-                return 0;
-            }
+        GenericHandle hDelay = new GenericHandle(
+                container.getTemplate("temporal.Duration").getCanonicalClass());
+        hDelay.setField(null, "picoseconds",
+                xInt128.INSTANCE.makeHandle(new LongLong(PICOS_PER_MILLI)));
 
-            @Override
-            public ObjectHandle getTimeoutHandle() {
-                return null;
-            }
+        // keepAlive=True, so a successful schedule would pin the container until the alarm fires
+        ObjectHandle[] ahArg = new ObjectHandle[]{hDelay, null, xBoolean.TRUE};
 
-            @Override
-            public long getTimeoutStamp() {
-                return 0L;
-            }
+        assertTrue(container.isIdle(), "a container with no alarms must start out idle");
 
-            @Override
-            Frame createFrame(ServiceContext ctx) {
-                return ctx.createServiceEntryFrame(this, 0, NATIVE_OPS);
-            }
-        };
-        return context.createServiceEntryFrame(message, 0, NATIVE_OPS);
-    }
+        Timer timerLive = xLocalClock.TIMER;
+        Timer timerDead = new Timer("test-cancelled-timer", true);
+        timerDead.cancel();
+        xLocalClock.TIMER = timerDead;
+        try {
+            int nResult = xLocalClock.INSTANCE.invokeNativeN(frame,
+                    xLocalClock.INSTANCE.getStructure().findMethod("schedule", 3),
+                    null, ahArg, Op.A_IGNORE);
 
-    private static boolean systemModulesAvailable() {
-        ModuleRepository repository = systemRepository();
-        return repository != null
-            && repository.loadModule(Constants.ECSTASY_MODULE) != null
-            && repository.loadModule(Constants.TURTLE_MODULE)  != null
-            && repository.loadModule(Constants.NATIVE_MODULE)  != null;
-    }
-
-    /**
-     * Test-only locator for the gradle build outputs that hold the compiled system modules.
-     */
-    private static ModuleRepository systemRepository() {
-        var repositories = SYSTEM_MODULE_PATHS.stream()
-                .map(NativeCallbackRegistrationTest::repositoryFor)
-                .filter(Objects::nonNull)
-                .toList();
-        return repositories.isEmpty()
-                ? null
-                : new LinkedRepository(repositories.toArray(ModuleRepository.NO_REPOS));
-    }
-
-    private static ModuleRepository repositoryFor(String path) {
-        File directory = checkoutFile(path);
-        return directory.isDirectory() ? new DirRepository(directory, true) : null;
-    }
-
-    private static File checkoutFile(String path) {
-        Path root = Path.of("").toAbsolutePath();
-        while (root != null && !Files.isDirectory(root.resolve("javatools"))) {
-            root = root.getParent();
+            assertEquals(Op.R_EXCEPTION, nResult,
+                    "a scheduler failure must be reported to natural code");
+            assertNotNull(frame.m_hException, "the raised exception must be recorded on the frame");
+        } finally {
+            xLocalClock.TIMER = timerLive;
         }
-        return Objects.requireNonNull(root, "checkout root").resolve(path).toFile();
+
+        assertTrue(container.isIdle(),
+                "a failed alarm schedule must not leave the container pinned alive");
     }
 
+    /**
+     * The NanoTimer variant of the same defect, with an extra failure of its own: scheduling ran
+     * under "catch (Throwable)" that cancelled the trigger and then fell through to return a
+     * perfectly ordinary "cancel" function. Natural code was told the alarm had been scheduled when
+     * it never would fire, and the keep-alive count stayed elevated on top of that. The scheduler
+     * failure has to reach natural code as an exception, with the registration unwound.
+     */
+    @Test
+    public void failedNanosTimerScheduleIsReportedAndUnwound() {
+        assumeTrue(RuntimeTestSupport.systemModulesAvailable(), "compiled XDK system modules are required");
+
+        NativeContainer container = RuntimeTestSupport.newContainer();
+        ServiceContext  context   = container.createServiceContext("nanos");
+        Frame           frame     = RuntimeTestSupport.entryFrame(context);
+
+        ObjectHandle hTimer = xNanosTimer.INSTANCE.ensureTimer(frame, null);
+        xNanosTimer.INSTANCE.invokeNativeN(frame,
+                xNanosTimer.INSTANCE.getStructure().findMethod("start", 0),
+                hTimer, Utils.OBJECTS_NONE, Op.A_IGNORE);
+
+        GenericHandle hDelay = new GenericHandle(
+                container.getTemplate("temporal.Duration").getCanonicalClass());
+        hDelay.setField(null, "picoseconds",
+                xInt128.INSTANCE.makeHandle(new LongLong(PICOS_PER_MILLI)));
+
+        ObjectHandle[] ahArg = new ObjectHandle[]{hDelay, null, xBoolean.TRUE};
+
+        assertTrue(container.isIdle(), "a container with no alarms must start out idle");
+
+        Timer timerLive = xLocalClock.TIMER;
+        Timer timerDead = new Timer("test-cancelled-timer", true);
+        timerDead.cancel();
+        xLocalClock.TIMER = timerDead;
+        try {
+            int nResult = xNanosTimer.INSTANCE.invokeNativeN(frame,
+                    xNanosTimer.INSTANCE.getStructure().findMethod("schedule", 3),
+                    hTimer, ahArg, Op.A_IGNORE);
+
+            assertEquals(Op.R_EXCEPTION, nResult,
+                    "a swallowed scheduler failure would hand natural code an alarm "
+                            + "that can never fire");
+        } finally {
+            xLocalClock.TIMER = timerLive;
+        }
+
+        assertTrue(container.isIdle(),
+                "a failed alarm schedule must not leave the container pinned alive");
+    }
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static final List<String> SYSTEM_MODULE_PATHS = List.of(
-            "lib_ecstasy/build/xtc/main/lib",
-            "javatools_bridge/build/xtc/main/lib",
-            "xdk/build/install/xdk/lib",
-            "xdk/build/install/xdk/javatools");
-
-    private static final Op[] NATIVE_OPS = new Op[]{Return_0.INSTANCE};
+    private static final long PICOS_PER_MILLI = 1_000_000_000L;
 
     private static final int CALLBACK_COUNT = 50_000;
 

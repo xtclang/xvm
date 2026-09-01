@@ -145,8 +145,17 @@ public class xNanosTimer
         LongLongHandle llPicos = (LongLongHandle) hDuration.getField(frame, "picoseconds");
         long           cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
 
-        return frame.assignValue(iReturn,
-                hTimer.addAlarm(cNanos, new WeakCallback(frame, hAlarm), hKeepAlive.get()));
+        WeakCallback refCallback = new WeakCallback(frame, hAlarm);
+        try {
+            return frame.assignValue(iReturn,
+                    hTimer.addAlarm(cNanos, refCallback, hKeepAlive.get()));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            // the JVM scheduler refused the task; drop the registry entry we just created and
+            // report the failure to natural code instead of silently returning an alarm that will
+            // never fire
+            refCallback.discard();
+            return frame.raiseException(e.getMessage());
+        }
     }
 
 
@@ -261,8 +270,15 @@ public class xNanosTimer
                 f_setAlarms.add(alarm);
             }
 
-            if (isRunning()) {
-                alarm.start();
+            try {
+                if (isRunning()) {
+                    alarm.start();
+                }
+            } catch (RuntimeException | Error e) {
+                synchronized (f_setAlarms) {
+                    f_setAlarms.remove(alarm);
+                }
+                throw e;
             }
 
             return new NativeFunctionHandle((_frame, _ah, _iReturn) -> {
@@ -294,7 +310,7 @@ public class xNanosTimer
             public Alarm(long cNanosDelay, WeakCallback refCallback, boolean fKeepAlive) {
                 f_cNanosAlarm = cNanosDelay + refCallback.get().f_container.nanoTime();
                 f_refCallback = refCallback;
-                f_fRegistered = fKeepAlive;
+                f_fKeepAlive  = fKeepAlive;
             }
 
             /**
@@ -310,14 +326,16 @@ public class xNanosTimer
 
                 Trigger trigger = createTrigger();
                 try {
-                    if (f_fRegistered) {
-                        container.registerNativeCallback();
-                    }
+                    registerKeepAlive(container);
 
                     long cDelay = (f_cNanosAlarm - m_cNanosStart - m_cNanosBurnt) / NANOS_PER_MILLI;
                     xLocalClock.TIMER.schedule(trigger, Math.max(1, cDelay));
-                } catch (Throwable e) {
+                } catch (RuntimeException | Error e) {
+                    // the old code swallowed this, handing natural code an alarm that would never
+                    // fire while the keep-alive count stayed elevated forever
                     cancelTrigger();
+                    unregisterKeepAlive();
+                    throw e;
                 }
             }
 
@@ -373,28 +391,26 @@ public class xNanosTimer
                     m_trigger = null;
                 }
 
-                ServiceContext context = f_refCallback.get();
-                if (context != null) {
-                    WeakCallback.Callback callback = f_refCallback.extractCallback();
-                    if (callback != null) {
-                        context.callLater(callback.frame(), callback.functionHandle(),
-                                Utils.OBJECTS_NONE);
+                try {
+                    ServiceContext context = f_refCallback.get();
+                    if (context != null) {
+                        WeakCallback.Callback callback = f_refCallback.extractCallback();
+                        if (callback != null) {
+                            context.callLater(callback.frame(), callback.functionHandle(),
+                                    Utils.OBJECTS_NONE);
+                        }
                     }
-                    if (f_fRegistered) {
-                        context.f_container.unregisterNativeCallback();
-                    }
+                } finally {
+                    unregisterKeepAlive();
+                    TimerHandle.this.removeAlarm(this);
                 }
-                TimerHandle.this.removeAlarm(this);
             }
 
             /**
              * Called after alarm has finished or has been canceled.
              */
             public void unregister() {
-                ServiceContext context = f_refCallback.get();
-                if (context != null && f_fRegistered) {
-                    context.f_container.unregisterNativeCallback();
-                }
+                unregisterKeepAlive();
             }
 
             /**
@@ -413,6 +429,7 @@ public class xNanosTimer
                     // would otherwise leak the captured frame and function for the lifetime of the
                     // service
                     f_refCallback.discard();
+                    unregisterKeepAlive();
                 }
 
                 TimerHandle.this.removeAlarm(this);
@@ -426,6 +443,29 @@ public class xNanosTimer
                 if (m_trigger != null) {
                     m_trigger.cancel();
                     m_trigger = null;
+                }
+            }
+
+            /**
+             * Claim container keep-alive ownership for this alarm, remembering the exact owner.
+             * The WeakCallback can legitimately clear before cleanup runs, but keep-alive ownership
+             * must still unwind against the container it was taken from.
+             */
+            private synchronized void registerKeepAlive(Container container) {
+                if (f_fKeepAlive && m_containerRegistered == null) {
+                    container.registerNativeCallback();
+                    m_containerRegistered = container;
+                }
+            }
+
+            /**
+             * Release container keep-alive ownership, if this alarm still holds it. Idempotent.
+             */
+            private synchronized void unregisterKeepAlive() {
+                Container container = m_containerRegistered;
+                if (container != null) {
+                    m_containerRegistered = null;
+                    container.unregisterNativeCallback();
                 }
             }
 
@@ -487,9 +527,10 @@ public class xNanosTimer
 
             private final    WeakCallback f_refCallback;
             private final    long         f_cNanosAlarm;
-            private final    boolean f_fRegistered;
+            private final    boolean      f_fKeepAlive;
             private          long         m_cNanosStart;
             private          long         m_cNanosBurnt;
+            private          Container    m_containerRegistered;
             private volatile boolean      m_fDead;
             private volatile Trigger      m_trigger;
         }
