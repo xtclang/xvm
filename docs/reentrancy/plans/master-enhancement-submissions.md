@@ -1280,9 +1280,14 @@ constId.getFormat() == Format.Property     // excludes FormalTypeChildConstant
 constId instanceof PropertyConstant        // INCLUDES FormalTypeChildConstant
 ```
 
-**154 `instanceof`/`case` sites** sit on those four superclasses, against **28** sites using the
-format equality. Every one of the 182 picked a spelling, and nothing in the source says the choice
-was load-bearing.
+**99 `instanceof`/`case` sites** sit on those four superclasses on `origin/master`, against **28**
+sites using the format equality. Every one of the 127 picked a spelling, and nothing in the source
+says the choice was load-bearing.
+
+> Measured on master 2026-09-01. The **154** figure previously quoted here was counted on
+> `lagergren/lazy-instance`, not master; the 28 format-equality sites match master exactly. Step 3's
+> per-superclass split (75 / 63 / 8 / 8) was derived from the branch count and must be re-measured
+> against master before it is used for planning.
 
 ### This is live, not theoretical
 
@@ -1293,6 +1298,28 @@ mistaken for a generic type parameter. The full Java unit suite stays green; onl
 `xdk:installDist` catches it.
 
 ### The incremental path
+
+> **Steps 1 and 2 are DONE on `lagergren/master-format-vs-hierarchy`** (2026-09-01, not yet filed).
+> The ratchet **computes** the divergence set rather than hardcoding it: it walks the compiled output
+> from `Constant.class.getProtectionDomain().getCodeSource()` and reads each class's own
+> `getFormat()` out of the bytecode with `java.lang.classfile`, treating a class as fixing a format
+> only when its body yields exactly one literal `GETSTATIC` of `Constant$Format`. Divergence is then
+> "a class whose fixed format differs from the nearest ancestor that also fixes one", which matches
+> dispatch. Computed answer on master: exactly the four, and it correctly does NOT flag two
+> near-misses - `DecoratedClassConstant` (extends `IdentityConstant`, so no concrete parent format)
+> and `EnumValueConstant` (whose parent `SingletonConstant.getFormat()` returns a constructor-supplied
+> field - that is the *other* mismatch, one class with several wire tags). Proved live by mutation.
+>
+> **The `COMPILER-145` demonstration reproduced exactly on current master**, and the important half
+> held: rewriting `ClassStructure.checkGenericTypeVisibility`'s visitor to `instanceof
+> PropertyConstant` left `:javatools:test` (351) and `:javatools_utils:test` (107) **fully green -
+> not one test noticed** - while `xdk:installDist` failed with four `COMPILER-145: Unresolvable type
+> parameter(s): OuterType` errors in `lib_ecstasy/.../reflect/Class.x` (lines 95, 337, 538, 558).
+>
+> Step 2 added `PropertyConstant.isFormalTypeChild()`, `ClassConstant.isNativeRebase()`,
+> `TerminalTypeConstant.isRecursiveType()`, `IntersectionTypeConstant.isCastType()`, and the ratchet
+> now DERIVES the expected query name from the subclass, so a fifth divergence must be named as well
+> as declared. No call sites were changed.
 
 **Step 1 - pin it (one test file, landable today).** `ConstantFormatHierarchyTest` asserts the
 divergence set is exactly those four, and separately that every constant whose format is

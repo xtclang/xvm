@@ -38,6 +38,17 @@ another, the dependency is named and must land first.
 
 Status is as of this file's last update; check the PR before re-filing.
 
+> **Status verified against GitHub 2026-09-01.** Merged: #547 (row 27), #548 (29), #550 (30),
+> #556 (31), #558 (33), #560 (35), #563 (36), #564 (37+38). Still open: **#549** (row 28) and
+> **#559** (row 32) and **#566** (row 19). Everything numbered 1-18 and 20-26 is still unfiled.
+>
+> **Row 34 is fixed on master but PR #557 was closed unmerged.** The maintainer's reason, verbatim:
+> *"I don't think there is a reason to clutter the repo with such a trivial typo fix. I pushed it as
+> a minimal change."* Verified: `IntersectionTypeConstant.mergeChildren` on `origin/master` now
+> reads `info2 == null ? ListMap.EMPTY : info2.getChildInfosByName()`. **Read this as filing
+> guidance**: a one-word fix on its own is not worth a PR to this maintainer. Bundle small fixes by
+> theme, or hand the fix over directly.
+
 | # | Issue | Status | Depends on | Scope |
 | --- | --- | --- | --- | --- |
 | 1 | jsondb rollback failure retention | unfiled | independent | `lib_jsondb`, one catch |
@@ -50,6 +61,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 8 | MainContainer startup preserves causes | unfiled | independent | `MainContainer` |
 | 9 | Alarm callback registry is timer-thread safe | unfiled | independent | `xRTClock` |
 | 10 | Native callback registration rolls back | unfiled | independent | `NativeContainer` |
+| 9b | Exception escaping a Trigger kills the process-wide alarm Timer | unfiled | independent of 9/10, either order | `xLocalClock`, one guard |
 | 11 | Hash/equality contracts (`Register`, `VersionTree`, `MethodBody`) | unfiled | independent | `asm` |
 | 12 | Handle view lifecycle state shared or refused | unfiled | independent | `ObjectHandle` |
 | 13 | `HandleConstant` does not serve live handles cross-container | unfiled | independent | `HandleConstant` |
@@ -58,19 +70,20 @@ Status is as of this file's last update; check the PR before re-filing.
 | 16 | `Contribution` body copies re-own outer component | unfiled | independent | `asm` |
 | 17 | `MethodStructure.Source` copies re-own outer method | unfiled | independent | `asm` |
 | 18 | `FullyBoundHandle.chain()` appends | unfiled | independent | `xRTFunction` |
-| 19-26 | (see the sections below; each states its own scope) | unfiled | independent unless stated | varies |
-| 27 | DirRepository scan-cache data race | **merged** (#547) | - | - |
-| 28 | MethodStructure native/code state publication | unfiled | independent | `MethodStructure` |
-| 29 | `FileStructure.getErrorListener()` NPE | **merged** | - | - |
-| 30 | `Version.isSameAs()` indexes the wrong array | PR #550 | independent | one word + test |
-| 31 | `Op.toString()` throws on 16 opcodes | PR #556 | independent | 16 case labels + test |
-| 32 | `Format.TimeZone` rejected by the pool | PR #559 | independent | 7 sites + `TimeZone.x` |
-| 33 | `AstNode.fieldsForNames` dead guard / null holes | **merged** (#558) | - | - |
-| 34 | `IntersectionTypeConstant.mergeChildren` wrong guard | PR #557 | independent | one word + test |
-| 35 | String/Type index a long by its low 32 bits | PR #560 | independent | 2 methods + `IndexSupport.checkedIndex` |
-| 36 | `deleteAll(range)` wrong elements / crash | PR #563 | independent | 1 offset + 1 missing override |
-| 37 | `&slice1 == &slice2` / `&view1 == &view2` crash with a Java `ClassCastException` | PR #564 | independent | 2 missing overrides |
-| 38 | `&a == &slice_of_a` crashes for every non-generic element type | folding into PR #564 | extends 37 | 7 guarded casts |
+| 19 | Implicit-identity cache written from service threads | **filed, OPEN** (#566) | independent | one line + test |
+| 20-26 | (see the sections below; each states its own scope) | unfiled | independent unless stated | varies |
+| 27 | DirRepository scan-cache data race | **merged** (#547, 2026-08-28) | - | - |
+| 28 | MethodStructure native/code state publication | **filed, OPEN** (#549) | independent | `MethodStructure` |
+| 29 | `FileStructure.getErrorListener()` NPE | **merged** (#548, 2026-08-31) | - | - |
+| 30 | `Version.isSameAs()` indexes the wrong array | **merged** (#550, 2026-08-29) | - | - |
+| 31 | `Op.toString()` throws on 16 opcodes | **merged** (#556, 2026-08-30) | - | - |
+| 32 | `Format.TimeZone` rejected by the pool | **filed, OPEN** (#559) | independent | 7 sites + `TimeZone.x` |
+| 33 | `AstNode.fieldsForNames` dead guard / null holes | **merged** (#558, 2026-08-31) | - | - |
+| 34 | `IntersectionTypeConstant.mergeChildren` wrong guard | **fixed on master**; #557 CLOSED unmerged - see note below | - | - |
+| 35 | String/Type index a long by its low 32 bits | **merged** (#560, 2026-09-01) | - | - |
+| 36 | `deleteAll(range)` wrong elements / crash | **merged** (#563, 2026-08-31) | - | - |
+| 37 | `&slice1 == &slice2` / `&view1 == &view2` crash with a Java `ClassCastException` | **merged** (#564, 2026-08-31) | - | - |
+| 38 | `&a == &slice_of_a` crashes for every non-generic element type | **merged** (#564, 2026-08-31) | - | - |
 
 ### Filing a row as an issue or PR
 
@@ -460,6 +473,46 @@ A full cherry-pick conflicts only on branch-only reentrancy docs; file the
 source/test slice, not the branch docs.
 
 **Dependencies/order:** None.
+
+## 4b. Worker-thread VM defects are reported as success (analysis, 2026-09-01)
+
+Not a new row - this is the **worker-failure channel** that row 5 already depends on and that row 8's
+seed carries. Recorded here because the analysis behind it was done properly and the headline
+consequence was not previously written down.
+
+**Four real master defects, all cross-thread:**
+
+| | site (master) | what happens |
+|---|---|---|
+| A | `Container.schedule:147-151` | `catch (Throwable)` -> print; the `finally` still decrements `f_pendingWorkCount`, so the container returns to idle **as if the work succeeded**. `Runtime.submitService` uses `f_executorXVM.submit(task)` and **discards the Future**, so an escaping exception would be swallowed by the `FutureTask` anyway. |
+| B | `ServiceContext.drainWork:322-329` | `catch (Throwable)` -> print, then returns a normal scheduling verdict after a VM defect. |
+| C | op loop `:554-557` | `catch (Throwable)` -> `raiseException("Run-time error: " + e)`, which builds the **base XTC `Exception`** - so a JVM `NullPointerException` inside an op is catchable by any user `catch (Exception e)`. |
+| D | `InterpreterConnector.join():121-135` | busy-waits to idle, returns `m_containerMain.getResult()`; `m_nResult` is an `int` defaulting to 0 and set only on normal return. `Runner.java:242` returns it as the process exit code. **A worker-thread VM defect therefore exits 0.** |
+
+**Why there is no smaller master-shaped fix.** A, B and D fail on the worker thread itself. There is
+no caller on that stack to catch a rethrow, and `submit()` actively swallows into a dropped Future,
+so "wrap and rethrow at the existing site" cannot work by construction. Any fix must record on the
+worker and observe on the joiner - which is what a failure slot is. C is strictly downstream of B:
+throwing from the op loop lands in `drainWork`'s `catch (Throwable)`, so fixing C alone just moves
+the swallow.
+
+**A hypothesis worth recording because it was disproved.** The op-loop catch was suspected to be
+load-bearing for stack overflow. It is not: `Frame.ensureInitialized:358-360` guards `f_nDepth > 128`
+and raises a properly-typed XTC `StackOverflow`. Confirmed by running deep XTC recursion - the
+op-loop catch is never reached. C is therefore cleaner than it looks, but still needs B.
+
+**Why this did NOT ride along on the rows 2/3/4/8 branch.** Same defect class, different risk tier.
+Those rows preserve a cause on a path that **already fails**. These make paths that currently report
+**success** start throwing - `join()` goes from total to partial, changing `Runner`'s exit-code
+contract and every embedder's. That is a behaviour change for currently-working programs.
+
+**The blocking prerequisite is proof, not code.** Master has no way to make a worker die on demand,
+so a test today could only be source-shape assertions - exactly the weak proof the other rows avoided.
+A follow-up branch needs, in order: a **fault-injection seam** so a worker failure can be provoked in
+a real test; then the `Container` failure slot (`recordRuntimeFailure` / `getRuntimeFailure` /
+`throwIfRuntimeFailed`, ~40 lines) with its two record sites and two `join()` check sites; a decision
+on `Runner`'s exit code and what `xec` prints; and only then, separately, the op-loop split, which
+changes what every running XTC program can catch and needs broad runtime testing.
 
 ## 5. Raw file submit observes queued write failures
 
@@ -895,6 +948,74 @@ on the branch patch context.
 **Dependencies/order:** Can land with issue 10 if review prefers one native
 callback lifecycle PR; otherwise independent.
 
+## 9b. An exception escaping a Trigger kills the process-wide alarm Timer
+
+**Deliberately NOT part of rows 9/10.** Filed separately because it stands alone against unmodified
+master and because its fix is structurally different: rows 9 and 10 remove *known* throwers, this one
+says the timer thread must survive an *unknown* one.
+
+### The defect, with exact sites on `origin/master`
+
+`xLocalClock.java:282`
+```java
+public static Timer TIMER = new Timer("ecstasy:LocalClock", true);
+```
+**One process-wide static `java.util.Timer`** - one thread, shared by every alarm in every container
+in the JVM.
+
+`xLocalClock.java:265-268`, the only thing scheduled on it:
+```java
+protected static class Trigger extends TimerTask {
+    @Override
+    public void run() {
+        f_alarm.run();          // no try/catch
+    }
+}
+```
+
+`java.util.Timer`'s own thread catches nothing. **An exception escaping `TimerTask.run()` terminates
+the timer thread and cancels the Timer permanently.** Every later `TIMER.schedule(...)` - at
+`:128`, `:226` and `:239` - then throws `IllegalStateException: Timer already cancelled`.
+
+So one bad alarm silently disables **all** alarms, in **all** containers, for the rest of the process.
+
+### Why it is reachable today, not theoretical
+
+`Alarm.run()` (`:231-236`) does:
+```java
+WeakCallback.Callback callback = f_refCallback.extractCallback();
+context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
+```
+
+and `WeakCallback.extractCallback()` on master (`WeakCallback.java:29-38`) ends in a bare
+`throw new IllegalStateException();` whenever the context is gone or the callback id is already
+removed - i.e. exactly the shutdown/cancel race a timer thread is most likely to hit. Row 9 removes
+*that* thrower. It does not make the `Trigger` safe: `context.callLater(...)` reaches `postRequest`
+and the fiber machinery on a possibly-shutting-down service, and any future thrower on this path has
+the same process-wide blast radius.
+
+### Why the symptom is so unpleasant
+
+The failure does not surface where it happens. A dead `Timer` means alarms **silently never fire**,
+so the observable behaviour is a hang - in an unrelated container, arbitrarily later. Nothing logs.
+
+### The fix, and what it is NOT
+
+Guard `Trigger.run()` so the timer thread survives, and record the failure rather than discarding it.
+**Do not wrap `context.callLater(...)` in a blanket `catch`** - that swallows real errors at the one
+place a diagnostic would be useful. The right shape is the same "record on the worker, observe on the
+joiner" channel as §4b, so this may want to land after it.
+
+### Ordering relative to rows 9/10
+
+Independent in both directions; either can land first.
+
+- Filed FIRST (against unmodified master), the red-on-master test can use master's own
+  `extractCallback()` throw as the injection mechanism - schedule an alarm, drop the callback, watch
+  `TIMER` die and a subsequent `schedule` throw `Timer already cancelled`.
+- Filed AFTER row 9, that route is gone, so the test must inject a thrower directly (a `Trigger`
+  subclass, or a callback whose `callLater` fails). Slightly more work, same defect.
+
 ## 10. Native callback registration rolls back on startup failure
 
 **Issue title:** Roll back native callback keep-alive registration when timer or
@@ -1282,6 +1403,46 @@ apply cleanly to `origin/master` at `61e555a68cd82a866f82aea40a3bb97a424a3809`.
 
 **Dependencies/order:** None if the helper stays tiny. Do not pull in the full
 clone-free adoption API.
+
+## Verdicts from the 2026-09-01 master-porting pass
+
+Recorded because each one changes how the row must be argued, and re-deriving them is expensive.
+
+**Row 15 (short-hand property override copies super `Parameter`) is LATENT, not observable.** The
+sharing is **accidental**, not a deliberate optimisation: `MethodStructure`'s constructor does
+`m_aParams = aParams` with no copy and no comment, `Parameter.equals` is by value, and nothing keys a
+map on `Parameter` identity. "Nothing mutates a `Parameter`" is flatly false - `addAnnotation`,
+`resolveAnnotations`, `markDefaultValue`, `setDefaultValue`, `markImplicitDeref`, `deref` and
+`registerConstants` all mutate after construction. Master already knows a `Parameter` belongs to one
+method (`cloneBody` copies each and calls `setContaining`); that discipline was never wired to the
+*create* path.
+
+But the corruption **self-heals**: assembling the user module rewrites the library element's type
+constant into the user's pool, and the library's next `pool.register()` maps it back to the identical
+interned object. The residual hazard is only the window - `xcc` accepts multiple source modules in one
+JVM, so a read of the library's parameter type inside that window sees a constant whose
+`getConstantPool()` is the wrong pool, and pool identity is what `indexOf` uses when writing a module.
+That window could not be turned into an end-to-end failure. **Argue this row as a correctness and
+ownership fix, not as a bug fix.**
+
+*Cost, measured over a full 20-module XDK build:* 1153 short-hand override sites compiled, **1118**
+super `Parameter` elements borrowed (595 cross-module), so the fix is 1118 small allocations for the
+whole build - about 60 per module compile, at compile time only, zero runtime cost. That is the number
+to answer "copying overhead" with.
+
+*Not fixed, same defect:* the borrowed-parameter pattern also exists at `ClassStructure:2958` and
+`:3009` (delegated-method factory) and `ClassTemplate:2053` and `:2211` (runtime synthesis).
+
+**Row 14 (reflection `Method.invoke` aliases caller tuple storage) is a LIVE, observable bug**, proven
+red-then-green at run time with ordinary single-threaded Ecstasy: a method that assigns to its own
+parameters mutates the caller's tuple. An early probe wrongly appeared clean because its callee's
+`maxVars` exceeded its parameter count, so `Utils.ensureSize` grew - and therefore copied - the array.
+
+The same aliasing shape exists in 11 ISA ops (`Call_T*`, `Invoke_T*`, `Construct_T`, `New_T`,
+`NewG_T`), and fixing them rides along - but **they are decode-only today**: `m_fTupleArg` is never
+assigned anywhere in the repo, and `Construct_T` is an outright `UnsupportedOperationException`. So
+that half cannot be exercised by a test, because the compiler cannot emit the bytecode. Source-shape
+assertions are the only available guard there, and the PR should say so.
 
 ## 16. Contribution body copies re-own the hidden outer component
 
@@ -2354,6 +2515,42 @@ both-absent control (which always worked, because the wrong guard is accidentall
 when the two arguments agree) plus a pin on the guard itself.
 
 **Dependencies/order:** Independent.
+
+## Findings from the locator-typing pass (2026-09-01) - filed, and why NEITHER gets a branch
+
+Both were found while typing `ConstantPool`'s locator tables. Recorded so nobody re-derives them;
+neither is worth a PR, for different reasons.
+
+### A. `ensureLiteralConstant` advertises `Format.RegEx` and always throws
+
+`ConstantPool.ensureLiteralConstant` (master `:365`) lists `case RegEx:` in its `LiteralConstant`
+group, so the switch reads as though RegEx literals are supported. They are not:
+`LiteralConstant`'s validating constructor has **no `case RegEx:`** and falls to
+`default: throw new IllegalStateException("unsupported format: " + format)`. So the arm can only
+ever throw.
+
+**It is dead, not a collision.** An earlier reading called this "two producers claiming one
+format+locator space" - `ensureRegExConstant` files a `RegExConstant` under `Format.RegEx` keyed by
+the pattern string, and this arm would file a `LiteralConstant` under the same format and key.
+That collision **cannot happen**: the second producer throws before it registers anything. The real
+producer, `ensureRegExConstant`, is unaffected.
+
+**Why no branch.** Red-on-master is trivial (`assertThrows` on
+`pool.ensureLiteralConstant(Format.RegEx, "abc")`) - but there is no meaningful green. Deleting the
+arm leaves the call throwing from `ConstantPool`'s own `default` instead of from `LiteralConstant`;
+routing it to `ensureRegExConstant` would make the 2-arg overload's `(LiteralConstant)` cast throw a
+`ClassCastException` instead, since `RegExConstant` is not a `LiteralConstant`. Which of those is
+"correct" is a design call with no observable benefit either way, on an arm nothing reaches. This is
+the shape of change that got PR #557 closed as clutter. **Fix it opportunistically inside a PR that
+is already in this switch** - the TimeZone work (#559) is literally editing these lines.
+
+### B. `LiteralExpression:365` passes `Format.TimeZone` to a switch with no TimeZone arm
+
+**Already covered by PR #559** (row 32), which is open and adds `Format.TimeZone` end to end -
+`ConstantPool`, `LiteralConstant`, `NativeContainer`, `xConst` and a `Destringable` `TimeZone.x`.
+Currently unreachable anyway: `TimeZone:Z` is rejected earlier with `COMPILER-163: Illegal literal
+value`, so the throw is never hit. Do not file it again; if #559 stalls, this is one of the symptoms
+that argues for it.
 
 ## Items intentionally not in the 18
 
