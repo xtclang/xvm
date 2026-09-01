@@ -102,6 +102,37 @@ public abstract class Lazy<T> implements Supplier<T> {
     }
 
     /**
+     * Creates a thread-safe lazy value that can be discarded and recomputed.
+     *
+     * <p>For a cache whose inputs change. The alternative is a nullable field with an
+     * {@code if (x == null)} read and an {@code x = null} invalidation, which cannot be
+     * {@code final} and puts "is it computed yet" into every reader.
+     *
+     * <p>Unlike {@link #of}, this keeps its supplier rather than releasing it after the first
+     * computation - that is what makes a recomputation possible. Where the supplier is a
+     * non-capturing lambda or method reference the JVM caches it as a singleton, so retaining it
+     * costs nothing; where it captures a large transient, prefer {@link #of} and accept that the
+     * value cannot be discarded.
+     *
+     * <p><b>If the value derives from its owner, use {@link #ofBound} and {@link Bound#reset}
+     * instead.</b> Writing {@code Lazy.ofResettable(() -> this.compute())} in a field initializer
+     * captures {@code this} during construction - a constructor this-escape, which
+     * {@code -Xlint:this-escape} reports and which this project is working to eliminate. The bound
+     * form takes the owner at access time, so the function never sees a partially constructed
+     * object; and because {@code MyClass::compute} is non-capturing, the JVM shares one instance of
+     * it across every holder. This factory is for values that do NOT derive from an owner.
+     *
+     * @param supplier the supplier to compute the value, called again after each {@link
+     *                 Resettable#reset}
+     * @param <T> the value type
+     *
+     * @return a resettable lazy holder for the value
+     */
+    public static <T> Resettable<T> ofResettable(Supplier<T> supplier) {
+        return new Resettable<>(supplier);
+    }
+
+    /**
      * Creates a non-thread-safe lazy value for single-threaded use.
      * Faster than {@link #of} but not safe for concurrent access.
      *
@@ -301,6 +332,68 @@ public abstract class Lazy<T> implements Supplier<T> {
     }
 
     /**
+     * A thread-safe lazy value whose computation can be discarded and repeated.
+     *
+     * <p>Held in a {@code final} field like any other {@link Lazy}; {@link #reset} changes what it
+     * holds, not which holder the field points at.
+     *
+     * @param <T> the value type
+     */
+    public static final class Resettable<T> extends Lazy<T> {
+        private static final Object UNSET = new Object();
+
+        private final Supplier<T> supplier;
+        private volatile Object   value = UNSET;
+
+        Resettable(Supplier<T> supplier) {
+            this.supplier = requireNonNull(supplier, "supplier");
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public T get() {
+            Object current = value;
+            if (current != UNSET) {
+                return (T) current;
+            }
+
+            synchronized (this) {
+                current = value;
+                if (current != UNSET) {
+                    return (T) current;
+                }
+
+                current = supplier.get();
+                value   = current;
+                return (T) current;
+            }
+        }
+
+        @Override
+        public boolean isComputed() {
+            return value != UNSET;
+        }
+
+        /**
+         * Discard the computed value, so the next {@link #get} computes it again.
+         *
+         * <p>Harmless before anything has been computed: there is nothing to discard, and the next
+         * {@code get} behaves as the first one would have.
+         */
+        public void reset() {
+            synchronized (this) {
+                value = UNSET;
+            }
+        }
+
+        @Override
+        public String toString() {
+            Object current = value;
+            return current == UNSET ? "Lazy.Resettable[unset]" : "Lazy.Resettable[" + current + "]";
+        }
+    }
+
+    /**
      * Thread-safe lazy implementation for values computed from an explicit owner passed at access
      * time, bound to the first owner it computes from. This preserves final-field lazy caching
      * without constructing a supplier that captures the owner from its constructor.
@@ -349,12 +442,17 @@ public abstract class Lazy<T> implements Supplier<T> {
                     return (T) value;
                 }
 
+                // A holder that has computed before stays bound to the owner it computed from,
+                // even across a reset - otherwise resetting would silently allow re-binding.
+                if (this.owner != null) {
+                    checkOwner(owner);
+                }
+
                 value = function.apply(owner);
                 // The owner write must precede the value volatile-write so that a reader observing
                 // the value on the unsynchronized fast path also observes the owner.
                 this.owner = owner;
                 VALUE.setVolatile(this, value);
-                function = null; // Allow GC of the function after the value is computed.
                 return (T) value;
             }
         }
@@ -366,6 +464,28 @@ public abstract class Lazy<T> implements Supplier<T> {
          */
         public boolean isComputed() {
             return VALUE.getVolatile(this) != UNSET;
+        }
+
+        /**
+         * Discard the computed value, so the next {@link #get} recomputes it.
+         *
+         * <p>For a cache whose inputs have changed - the pattern otherwise written as a nullable
+         * field with an {@code if (x == null)} read and an {@code x = null} invalidation, which
+         * cannot be {@code final} and puts "is it computed" into every reader.
+         *
+         * <p>Supporting this means the holder keeps its function rather than releasing it after the
+         * first computation. That costs nothing for the function this class is designed around: a
+         * non-capturing method reference such as {@code MyClass::compute}, which the JVM caches as
+         * a singleton, so the field points at one shared instance whether or not any holder
+         * references it - and the field exists either way.
+         *
+         * <p>The owner binding deliberately survives: a holder that has computed once stays bound
+         * to that owner, so a reset cannot quietly re-bind it to a different one.
+         */
+        public void reset() {
+            synchronized (this) {
+                VALUE.setVolatile(this, UNSET);
+            }
         }
 
         private void checkOwner(O owner) {
