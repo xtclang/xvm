@@ -502,6 +502,15 @@ public final class OwnershipDiagnostics {
 
             if (clz.getName().startsWith("org.xvm")) {
                 for (Class<?> c = clz; c != null && c != Object.class; c = c.getSuperclass()) {
+                    // Stop the climb where org.xvm stops. A runtime carrier extending a JDK
+                    // collection (ListMap extends AbstractMap, say) inherits private view fields -
+                    // keySet, values - that JPMS refuses to open, and reflecting into them produced
+                    // one blind spot per instance while adding nothing: the entries themselves are
+                    // already walked by the generic-carrier handling above. Climbing out of org.xvm
+                    // measured the module system, not the runtime.
+                    if (!c.getName().startsWith("org.xvm")) {
+                        break;
+                    }
                     for (Field field : c.getDeclaredFields()) {
                         if (Modifier.isStatic(field.getModifiers())
                                 || field.getType().isPrimitive()) {
