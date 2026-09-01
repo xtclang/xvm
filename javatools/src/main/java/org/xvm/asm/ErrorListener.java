@@ -39,10 +39,25 @@ import static org.xvm.util.Handy.copyOf;
  *         and TeeErrorListener already shows how to observe without disturbing the primary's
  *         abort/serious-error semantics, which is exactly what an LSP needs.
  *
- *       This is true BECAUSE of the threading work: the listener is reached by ownership
- *       (ConstantPool for compile-time work, Container for runtime work) rather than found in
- *       ambient state, so wrapping one place actually captures everything downstream of it. It was
- *       not true while half the paths defaulted to BLACKHOLE or consulted a mutable field.
+ *       WHAT WRAPPING ACTUALLY CAPTURES - stated precisely, because the obvious claim is wrong.
+ *       The listener is reached by OWNERSHIP: ConstantPool for compile-time work, Container for
+ *       runtime work. So wrapping the listener handed to XtcEngine.compile captures everything
+ *       owned by THAT pool - the module being compiled, its stages, its metadata. It does NOT
+ *       capture work owned by a different pool. Every FileStructure builds its own ConstantPool,
+ *       so resolving a LIBRARY type runs `libType.ensureTypeInfo()` -> the library's pool ->
+ *       ErrorListener.RUNTIME, and the caller never hears it.
+ *
+ *       That is a real hole for a host that wants every diagnostic, and the fix is not a shared
+ *       library listener - that would put back the mutable shared state this replaced, and would
+ *       make two parallel compiles fight over one field. The fix is that "who is asking" must beat
+ *       "who owns the constant": pass the caller's listener to ensureTypeInfo instead of letting
+ *       the no-argument overload consult the pool. 66 call sites still use that overload; see E35
+ *       step D in the enhancement list. The pool default is a sound FALLBACK, but it should never
+ *       win over an explicit caller.
+ *
+ *       What IS newly true is that wrapping one owner captures everything downstream OF THAT OWNER.
+ *       That was not true at all while half the paths defaulted to BLACKHOLE or consulted a mutable
+ *       field on FileStructure - there was no single place to wrap.
  */
 public interface ErrorListener {
     // ----- API -----------------------------------------------------------------------------------
