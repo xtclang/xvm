@@ -72,16 +72,6 @@ public class UInt8 extends UIntNumber {
         return BigDecimal.valueOf($value);
     }
 
-    @Override
-    protected long[] $longValues() {
-        return new long[]{(long) $value << 56};
-    }
-
-    @Override
-    protected long bitLength$get$p() {
-        return 8;
-    }
-
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override public java.lang.String toString() {

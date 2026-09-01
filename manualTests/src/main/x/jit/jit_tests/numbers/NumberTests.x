@@ -70,10 +70,11 @@ class NumberTests {
         assert UInt128.one().bitLength == 128;
         testBitLengthUIntNumber(UInt128.one(), 128);
 
-        assert IntN.one().bitLength == 1;
-        testBitLengthIntNumber(IntN.one(), 1);
-        assert UIntN.one().bitLength == 1;
-        testBitLengthUIntNumber(UIntN.one(), 1);
+        // IntN and UIntN bit length is always a multiple of 8
+        assert IntN.one().bitLength == 8;
+        testBitLengthIntNumber(IntN.one(), 8);
+        assert UIntN.one().bitLength == 8;
+        testBitLengthUIntNumber(UIntN.one(), 8);
     }
 
     void testBitLengthNumber(Number n, Int expected) {
@@ -145,10 +146,11 @@ class NumberTests {
         assertBitArray(UInt128.one().bits, 128);
         testBitsUIntNumber(UInt128.one(), 128);
 
-        assertBitArray(IntN.one().bits, 1);
-        testBitsIntNumber(IntN.one(), 1);
-        assertBitArray(UIntN.one().bits, 1);
-        testBitsUIntNumber(UIntN.one(), 1);
+        // IntN and UIntN bit length is always a multiple of 8
+        assertBitArray(IntN.one().bits, 8);
+        testBitsIntNumber(IntN.one(), 8);
+        assertBitArray(UIntN.one().bits, 8);
+        testBitsUIntNumber(UIntN.one(), 8);
     }
 
     void assertBitArray(Bit[] bits, Int size) {

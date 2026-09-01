@@ -118,6 +118,10 @@ public class Exception extends nConst {
         return new Exception(ctx).$init(ctx, text, null);
     }
 
+    public static nException $illegalArg(Ctx ctx, java.lang.String text) {
+        return new IllegalArgument(ctx).$init(ctx, text);
+    }
+
     // ----- Const interface -----------------------------------------------------------------------
 
     /**

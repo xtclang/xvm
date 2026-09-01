@@ -1,6 +1,7 @@
 package org.xtclang.ecstasy.numbers;
 
-import org.bouncycastle.util.Exceptions;
+import org.xtclang.ecstasy.AppenderᐸCharᐳ;
+import org.xtclang.ecstasy.Exception;
 
 import org.xtclang.ecstasy.collections.Array;
 import org.xtclang.ecstasy.collections.ArrayᐸNibbleᐳ;
@@ -28,11 +29,47 @@ public class Nibble extends UIntNumber {
 
     @Override
     public String toString(Ctx ctx) {
-        return String.of(ctx, Integer.toUnsignedString($value));
+        return String.of(ctx, Character.toString(toChar$p($value, ctx)));
     }
 
+    /**
+     * The primitive implementation of:
+     *     String toString()
+     */
     public static String toString$p(int thi$, Ctx ctx) {
-        return String.of(ctx, Integer.toUnsignedString(thi$));
+        return String.of(ctx, Character.toString(toChar$p(thi$, ctx)));
+    }
+
+    /**
+     * The primitive implementation of:
+     *     Int estimateStringLength()
+     */
+    public static long estimateStringLength$p(int thi$, Ctx ctx) {
+        return 1;
+    }
+
+    /**
+     * The native implementation of:
+     *     Appender<Char> appendTo(Appender<Char> buf)
+     */
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+        return Nibble.appendTo$p($value, ctx, appender);
+    }
+
+    /**
+     * The primitive implementation of:
+     *     Appender<Char> appendTo(Appender<Char> buf)
+     */
+    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
+        return appender.add$p(ctx, toChar$p(thi$, ctx));
+    }
+
+    /**
+     * The primitive implementation of:
+     *     Char toChar()
+     */
+    public static int toChar$p(int thi$, Ctx ctx) {
+        return thi$ <= 9 ? '0' + thi$ : 'A' + thi$ - 0xA;
     }
 
     /**
@@ -52,22 +89,18 @@ public class Nibble extends UIntNumber {
 
     /**
      * The primitive implementation of:
-     * <pre>
      *     static Nibble of(Int n)
-     * </pre>
      */
     public static int of$p(Ctx ctx, long n) {
         if (n < 0 || n > 15) {
-            throw Exceptions.illegalArgumentException("Int value " + n + " must be in the range 0..15", null);
+            throw Exception.$illegalArg(ctx, "\"0 <= n <= 0xF\": n=" + n);
         }
         return (int) n;
     }
 
     /**
      * The primitive implementation of:
-     * <pre>
      *     static Nibble of(Char ch)
-     * </pre>
      */
     public static int of$1$p(Ctx ctx, int ch) {
         if (ch >= '0' && ch <= '9') {
@@ -79,7 +112,7 @@ public class Nibble extends UIntNumber {
         }
         java.lang.String msg = "Illegal character \"" + ch + "; the character value must be in " +
                                "the range \"0..9\", \"A..F\", or \"a..f\"";
-        throw Exceptions.illegalArgumentException(msg, null);
+        throw Exception.$illegalArg(ctx, msg);
     }
 
     /**
@@ -91,16 +124,6 @@ public class Nibble extends UIntNumber {
     public static ArrayᐸNibbleᐳ values$init(Ctx ctx) {
         return ArrayᐸNibbleᐳ.$fromLongs(ctx, Array.Mutability.Constant.$INSTANCE, 64,
                 0x0123_4567_89AB_CDEFL);
-    }
-
-    @Override
-    protected long[] $longValues() {
-        return new long[]{(long) $value << 60};
-    }
-
-    @Override
-    protected long bitLength$get$p() {
-        return 4;
     }
 
     // ----- debugging support ---------------------------------------------------------------------

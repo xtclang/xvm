@@ -42,6 +42,8 @@ package numbers {
                 passed &= runTest(() -> new NibbleTests().run());
                 passed &= runTest(() -> new NumberTests().run());
                 passed &= runTest(() -> new FPNumberTests().run());
+
+                passed &= runTest(() -> new BitsToNumberConversionTests().run());
             } catch (IllegalState e) {
                 console.print(e);
             }

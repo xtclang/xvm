@@ -65,16 +65,6 @@ public class Int32 extends IntNumber {
         return BigDecimal.valueOf($value);
     }
 
-    @Override
-    protected long[] $longValues() {
-        return new long[]{(long) $value << 32};
-    }
-
-    @Override
-    protected long bitLength$get$p() {
-        return 32;
-    }
-
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override public java.lang.String toString() {
