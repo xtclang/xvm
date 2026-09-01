@@ -135,21 +135,22 @@ public class Parser {
     /**
      * Quick-scan the file for the module name.
      *
+     * <p>Best-effort: answers null if the name cannot be determined. Failure needs no error
+     * listener to detect - {@code parseQualifiedName} signals it by throwing, since {@code expect}
+     * logs and then throws a {@link CompilerException} - so this does not substitute a listener of
+     * its own. Whether the scan is silent is therefore the caller's choice, made when it constructs
+     * the Parser; {@code ModuleInfo} passes {@link ErrorListener#BLACKHOLE}, which is what "ignore
+     * everything else" means for its use.
+     *
      * @return the module name
      */
     public String parseModuleNameIgnoreEverythingElse() {
-        ErrorListener errsPrev = m_errs;
         try {
-            m_errs = ErrorListener.BLACKHOLE;
-
             Loop: while (!eof()) {
                 if (match(Id.MODULE) != null) {
                     if (!eof()) {
-                        // a branch of the caller's listener, not a fresh unrelated one: the errors
-                        // stay related to the parse that produced them, and are simply not merged
-                        m_errs = errsPrev.branch(null);
                         List<Token> tokens = parseQualifiedName();
-                        if (!m_errs.hasSeriousErrors()) {
+                        {
                             StringBuilder sb = new StringBuilder();
                             for (int i = 0, c = tokens.size(); i < c; ++i) {
                                 if (i > 0) {
@@ -169,12 +170,12 @@ public class Parser {
                 }
             }
         } catch (RuntimeException e) {
-            // a quick scan is best-effort and answers null when it cannot determine the name, but
-            // swallowing every RuntimeException silently would also hide real defects, so say so
-            errsPrev.log(Severity.WARNING, Compiler.FATAL_ERROR, null, m_source,
+            // parseQualifiedName signals failure by throwing - expect() logs and then throws a
+            // CompilerException - so reaching here IS the failure signal, and answering null is the
+            // documented outcome. The listener still hears about it, because whatever expect()
+            // logged went to the caller's listener on the way past.
+            m_errs.log(Severity.WARNING, Compiler.FATAL_ERROR, null, m_source,
                     m_source.getPosition(), m_source.getPosition());
-        } finally {
-            m_errs = errsPrev;
         }
 
         return null;
@@ -5815,7 +5816,7 @@ public class Parser {
     /**
      * The ErrorListener to report errors to.
      */
-    private ErrorListener m_errs;
+    private final ErrorListener m_errs;
 
     /**
      * The lexical analyzer.
