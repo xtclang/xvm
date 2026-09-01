@@ -36,6 +36,7 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -46,9 +47,15 @@ import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
+import java.nio.file.Path;
+
+import java.util.function.Function;
+
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
+
+import org.xvm.tool.ModuleInfo;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.NativeContainer;
@@ -203,15 +210,142 @@ public final class XtcEngine
         event.modules = Arrays.stream(units).map(SourceUnit::moduleName).collect(Collectors.joining(","));
         event.begin();
         try {
-            return compileInternal(errsCaller, event, units);
+            return compileInternal(errsCaller, event, errs -> parseSources(errs, units));
         } finally {
             event.commit();
         }
     }
 
-    private @NotNull CompileResult compileInternal(@NotNull ErrorListener errsCaller,
-                                                   @NotNull CompileEvent event,
-                                                   @NotNull SourceUnit @NotNull... units) {
+    /**
+     * Compile modules that live on disk, as source files or source directory trees.
+     *
+     * <p>This is the entry point a build tool wants: it hands over the same {@code .x} paths the CLI
+     * would be given, and the module node tree is built through {@link ModuleInfo} - the same walk the
+     * CLI compiler performs - instead of shelling out to a new JVM. Everything after parsing is the
+     * pipeline the in-memory {@link #compile(SourceUnit...)} form uses, so a path-compiled module and a
+     * buffer-compiled one are produced identically.</p>
+     *
+     * @param paths  the module source files or directories to compile
+     *
+     * @return the compile result
+     */
+    public @NotNull CompileResult compile(@NotNull Path @NotNull... paths) {
+        return compile(ErrorListener.BLACKHOLE, paths);
+    }
+
+    /**
+     * Compile on-disk modules, each with its own resource root.
+     *
+     * <p>A module's resources are not a section bolted onto the artifact - the compiler inlines them
+     * while compiling, because Ecstasy source can name a file or directory literal and that content
+     * is baked into the module as constants. So a module with resources cannot be compiled correctly
+     * without knowing where to resolve those literals, which is what
+     * {@link ModuleSource#resourceDirs} supplies.</p>
+     *
+     * @param sources  the modules to compile, each pairing a source path with its resource root
+     *
+     * @return the compile result
+     */
+    public @NotNull CompileResult compile(@NotNull ModuleSource @NotNull... sources) {
+        return compile(ErrorListener.BLACKHOLE, sources);
+    }
+
+    /**
+     * Compile on-disk modules with resource roots, reporting diagnostics to the caller's listener.
+     *
+     * @param errsCaller  the caller's diagnostic sink (use {@link ErrorListener#BLACKHOLE} to discard)
+     * @param sources     the modules to compile, each pairing a source path with its resource root
+     *
+     * @return the compile result
+     */
+    public @NotNull CompileResult compile(@NotNull ErrorListener errsCaller,
+                                          @NotNull ModuleSource @NotNull... sources) {
+        Objects.requireNonNull(errsCaller, "errsCaller (use ErrorListener.BLACKHOLE to discard)");
+        Objects.requireNonNull(sources, "sources");
+
+        var event     = new CompileEvent();
+        event.modules = Arrays.stream(sources)
+                .map(source -> source.source().toString()).collect(Collectors.joining(","));
+        event.begin();
+        try {
+            return compileInternal(errsCaller, event, errs -> parseModuleSources(errs, sources));
+        } finally {
+            event.commit();
+        }
+    }
+
+    /**
+     * Compile on-disk modules, reporting diagnostics to the caller's listener as they are logged.
+     *
+     * @param errsCaller  the caller's diagnostic sink (use {@link ErrorListener#BLACKHOLE} to discard)
+     * @param paths       the module source files or directories to compile
+     *
+     * @return the compile result
+     */
+    public @NotNull CompileResult compile(@NotNull ErrorListener errsCaller,
+                                          @NotNull Path @NotNull... paths) {
+        Objects.requireNonNull(errsCaller, "errsCaller (use ErrorListener.BLACKHOLE to discard)");
+        Objects.requireNonNull(paths, "paths");
+
+        var event     = new CompileEvent();
+        event.modules = Arrays.stream(paths).map(Path::toString).collect(Collectors.joining(","));
+        event.begin();
+        try {
+            return compileInternal(errsCaller, event, errs -> parseSourceTrees(errs, paths));
+        } finally {
+            event.commit();
+        }
+    }
+
+    /**
+     * Parse in-memory sources into module node trees.
+     */
+    private static List<TypeCompositionStatement> parseSources(ErrorListener errs, SourceUnit[] units) {
+        var listModules = new ArrayList<TypeCompositionStatement>(units.length);
+        for (var unit : units) {
+            TypeCompositionStatement stmtModule = parseModule(unit.source(), errs);
+            if (stmtModule != null) {
+                listModules.add(stmtModule);
+            }
+        }
+        return listModules;
+    }
+
+    /**
+     * Parse on-disk sources into module node trees, through the same {@link ModuleInfo} walk the CLI
+     * compiler uses, so a directory-tree module is handled exactly as the CLI handles it.
+     */
+    private static List<TypeCompositionStatement> parseSourceTrees(ErrorListener errs, Path[] paths) {
+        var aSource = new ModuleSource[paths.length];
+        for (int i = 0; i < paths.length; i++) {
+            aSource[i] = ModuleSource.of(paths[i]);
+        }
+        return parseModuleSources(errs, aSource);
+    }
+
+    /**
+     * Parse on-disk sources into module node trees, through the same {@link ModuleInfo} walk the CLI
+     * compiler uses, resolving each module's file/directory literals against its resource root.
+     */
+    private static List<TypeCompositionStatement> parseModuleSources(ErrorListener errs,
+                                                                     ModuleSource[] sources) {
+        var listModules = new ArrayList<TypeCompositionStatement>(sources.length);
+        for (ModuleSource source : sources) {
+            List<File> listResource = source.resourceDirs();
+            var        info         = new ModuleInfo(source.source().toFile(), true,
+                                          listResource.isEmpty() ? null : listResource, null);
+            ModuleInfo.Node node = info.getSourceTree(errs);
+            if (node != null) {
+                listModules.add(node.type());
+            }
+        }
+        return listModules;
+    }
+
+    private @NotNull CompileResult compileInternal(
+            @NotNull ErrorListener errsCaller,
+            @NotNull CompileEvent event,
+            @NotNull Function<ErrorListener, List<TypeCompositionStatement>> fnParse) {
         var errsCollect = ErrorList.unlimited();
         // Always tee - never a null listener to test for. The ErrorList stays the PRIMARY so its
         // abort/serious-error semantics keep driving the compiler stages; the caller's sink (possibly
@@ -233,11 +367,7 @@ public final class XtcEngine
         prelinkSystemLibraries(repoCompile);
 
         // stage 1: parse each source and create its initial module structure in the build repo
-        for (var unit : units) {
-            TypeCompositionStatement stmtModule = parseModule(unit.source(), errs);
-            if (stmtModule == null) {
-                continue; // parse errors already in errs
-            }
+        for (var stmtModule : fnParse.apply(errs)) {
             var           compiler = new Compiler(stmtModule, errs);
             FileStructure struct   = compiler.generateInitialFileStructure();
             if (struct == null) {
@@ -246,7 +376,7 @@ public final class XtcEngine
             try {
                 repoBuild.storeModule(struct.getModule());
             } catch (Exception e) {
-                throw new IllegalStateException("storing module " + unit.moduleName(), e);
+                throw new IllegalStateException("storing module " + stmtModule.getName(), e);
             }
             compilers.add(compiler);
         }
@@ -386,6 +516,19 @@ public final class XtcEngine
         boolean run(Compiler compiler, boolean fLastAttempt);
     }
 
+    /**
+     * The engine's native container - the single root of its container plane.
+     *
+     * Exposed for host-side diagnostics: a host that wants to assert container ownership after a
+     * run needs a handle on the plane the run happened in, and every nested run container is
+     * reachable from this one. It is not an execution entry point.
+     *
+     * @return the native ("-1") container this engine booted
+     */
+    public @NotNull Container diagnosticContainer() {
+        return containerNative;
+    }
+
     // ----- run -----------------------------------------------------------------------------------
 
     /**
@@ -405,13 +548,46 @@ public final class XtcEngine
             throw new IllegalArgumentException("module not in compile result: " + sModuleName);
         }
 
-        // The native container assembles the run-time FileStructure: it merges its own boot-resolved
-        // turtle prototype (whose pool already carries the NakedRef type) into a fresh combined pool, so
-        // an assembled app module runs here exactly as a module loaded from disk would - no hand-patching
-        // of the run-time pool is needed (that is the whole point of assembling the module at compile).
-        var             repoRun   = new LinkedRepository(result.buildRepository(), repoLibrary);
+        return runFrom(new LinkedRepository(result.buildRepository(), repoLibrary), sModuleName, "run");
+    }
+
+    /**
+     * Run a module that is already built and sitting on this engine's module path, as a nested
+     * container under the shared native plane.
+     *
+     * <p>This is the entry point for a host that did not compile the module through this engine -
+     * a build plugin running an artifact it produced in an earlier task, for instance. The
+     * {@link #run(CompileResult, String)} overload exists for the compile-then-run case, where the
+     * module is still only in the build repository; both reach the same nested-container path.</p>
+     *
+     * @param sModuleName  the module to run, resolved against the engine's module path
+     * @param sMethodName  the module method to invoke (the CLI default is {@code "run"})
+     *
+     * @return the run-completion future
+     */
+    public @NotNull CompletableFuture<ObjectHandle> run(@NotNull String sModuleName,
+                                                        @NotNull String sMethodName) {
+        return runFrom(repoLibrary, sModuleName, sMethodName);
+    }
+
+    /**
+     * The one nested-container run path, reached by both {@code run} overloads.
+     *
+     * The native container assembles the run-time FileStructure: it merges its own boot-resolved
+     * turtle prototype (whose pool already carries the NakedRef type) into a fresh combined pool, so
+     * an assembled app module runs here exactly as a module loaded from disk would - no hand-patching
+     * of the run-time pool is needed (that is the whole point of assembling the module at compile).
+     */
+    private @NotNull CompletableFuture<ObjectHandle> runFrom(@NotNull ModuleRepository repoRun,
+                                                             @NotNull String sModuleName,
+                                                             @NotNull String sMethodName) {
         ModuleStructure moduleApp = repoRun.loadModule(sModuleName);
-        FileStructure   struct    = containerNative.createFileStructure(moduleApp);
+        if (moduleApp == null) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException(
+                    "module not found on the module path: " + sModuleName));
+        }
+
+        FileStructure struct = containerNative.createFileStructure(moduleApp);
 
         ModuleConstant idMissing = struct.linkModules(repoRun, true);
         if (idMissing != null) {
@@ -420,7 +596,7 @@ public final class XtcEngine
         }
 
         Container containerRun = NestedContainer.createForHost(containerNative, struct.getModuleId(), List.of());
-        return containerRun.runModule("run");
+        return containerRun.runModule(sMethodName);
     }
 
     /**
@@ -655,6 +831,41 @@ public final class XtcEngine
     }
 
     /**
+     * An on-disk module to compile: its source file or directory, and the resource root against which
+     * file and directory literals in that source are resolved.
+     *
+     * @param source        the module's source file or source directory
+     * @param resourceDirs  the module's resource roots, in aggregate; empty when it has none
+     */
+    public record ModuleSource(@NotNull Path source, @NotNull List<File> resourceDirs) {
+        public ModuleSource {
+            Objects.requireNonNull(source, "source");
+            // copied, so the record is immutable whatever the caller does with its list afterwards
+            resourceDirs = List.copyOf(resourceDirs);
+        }
+
+        /**
+         * A module with no resources.
+         *
+         * @param source  the module's source file or source directory
+         */
+        public static @NotNull ModuleSource of(@NotNull Path source) {
+            return new ModuleSource(source, List.of());
+        }
+
+        /**
+         * A module whose file and directory literals resolve against the given resource roots, in
+         * aggregate - the same way the CLI accepts more than one resource location.
+         *
+         * @param source        the module's source file or source directory
+         * @param resourceDirs  the resource roots
+         */
+        public static @NotNull ModuleSource of(@NotNull Path source, @NotNull File @NotNull... resourceDirs) {
+            return new ModuleSource(source, List.of(resourceDirs));
+        }
+    }
+
+    /**
      * A structured compile/run diagnostic (the LSP-facing shape).
      *
      * @param severity  the severity
@@ -697,6 +908,19 @@ public final class XtcEngine
          * @return the files written, one per module
          */
         public @NotNull List<File> writeTo(@NotNull File dir) throws IOException {
+            return writeTo(dir, null);
+        }
+
+        /**
+         * Persist the compiled modules, optionally stamping a version onto each.
+         *
+         * @param dir      the destination directory
+         * @param version  the version to stamp, or null to leave the modules unversioned
+         *
+         * @return the files written
+         */
+        public @NotNull List<File> writeTo(@NotNull File dir, @Nullable Version version)
+                throws IOException {
             if (!isSuccess()) {
                 throw new IllegalStateException("cannot persist a failed compilation: " + diagnostics);
             }
@@ -706,7 +930,11 @@ public final class XtcEngine
             var repoDir = new DirRepository(dir, false);
             var written = new ArrayList<File>(modules.size());
             for (var id : modules) {
-                repoDir.storeModule(buildRepository.loadModule(id.getName()));
+                ModuleStructure module = buildRepository.loadModule(id.getName());
+                if (version != null) {
+                    module.setVersion(version);
+                }
+                repoDir.storeModule(module);
                 written.add(new File(dir, id.getUnqualifiedName() + ".xtc"));
             }
             return List.copyOf(written);

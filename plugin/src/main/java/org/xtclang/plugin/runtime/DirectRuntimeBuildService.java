@@ -103,7 +103,8 @@ public abstract class DirectRuntimeBuildService
                 loader,
                 executorType.getMethod("executeCompile", DirectCompileRequest.class, Logger.class),
                 executorType.getMethod("executeRun", DirectRunRequest.class, Logger.class),
-                executorType.getMethod("executeTest", DirectTestRequest.class, Logger.class)
+                executorType.getMethod("executeTest", DirectTestRequest.class, Logger.class),
+                executorType.getMethod("closeEngines")
             );
             logger.debug("[plugin] [DIRECT] Cached isolated runtimes after creation: {}", runtimes.size() + 1);
             return entry;
@@ -154,7 +155,8 @@ public abstract class DirectRuntimeBuildService
             PluginRuntimeClassLoader classLoader,
             Method compileMethod,
             Method runMethod,
-            Method testMethod) implements Closeable {
+            Method testMethod,
+            Method closeEnginesMethod) implements Closeable {
 
         Method executorMethod(final String methodName, final Class<?>[] parameterTypes) throws NoSuchMethodException {
             return switch (methodName) {
@@ -167,6 +169,14 @@ public abstract class DirectRuntimeBuildService
 
         @Override
         public void close() {
+            // Shut the engines down BEFORE the classloader: an engine owns a started runtime with
+            // live threads, and closing a classloader does not stop threads. Reversing these two
+            // leaks a thread pool per build, each one pinning a classloader that should be gone.
+            try {
+                closeEnginesMethod.invoke(null);
+            } catch (final IllegalAccessException | InvocationTargetException e) {
+                throw failure(e, "Failed to close isolated direct runtime engines");
+            }
             try {
                 classLoader.close();
             } catch (final IOException e) {
