@@ -20,6 +20,9 @@ import org.xvm.util.Severity;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import org.xvm.asm.ErrorListener;
 
 /**
  * End-to-end coverage for the {@link XtcEngine} first-class embedding API: one warm engine
@@ -28,6 +31,105 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * future on success - the surface an LSP or resident tool would drive.
  */
 public class XtcEngineTest {
+    /**
+     * A host-supplied listener must SEE the diagnostics, not merely have them collected for it.
+     * This is the contract an LSP depends on: one sink it owns, told as errors are produced.
+     */
+    @Test
+    public void aCallerSuppliedListenerReceivesCompileDiagnostics() throws Exception {
+        assumeTrue(EmbeddingTestSupport.systemModulesAvailable(),
+                "compiled XDK system modules are required");
+
+        var seen = new CopyOnWriteArrayList<String>();
+        ErrorListener mine = err -> {
+            seen.add(err.getCode());
+            return false;
+        };
+
+        try (var engine = XtcEngine.builder().modulePath(xdkModulePath()).build()) {
+            var compiled = engine.compile(mine, new XtcEngine.SourceUnit("ListenerBad", """
+                    module ListenerBad {
+                        void run() {
+                            this is not ecstasy
+                        }
+                    }
+                    """));
+
+            assertFalse(compiled.isSuccess(), "the source is deliberately invalid");
+            assertFalse(seen.isEmpty(),
+                    "the caller's listener must be told, not just have errors collected for it");
+            assertFalse(compiled.diagnostics().isEmpty(),
+                    "and the returned result still carries them");
+        }
+    }
+
+    /**
+     * Two compiles running at once must not report into each other's listener. Each compiled
+     * module owns its own ConstantPool, and that pool owns the listener, so the isolation is a
+     * property of the ownership rather than of timing.
+     */
+    @Test
+    public void parallelCompilesDoNotShareAListener() throws Exception {
+        assumeTrue(EmbeddingTestSupport.systemModulesAvailable(),
+                "compiled XDK system modules are required");
+
+        var seenA = new CopyOnWriteArrayList<String>();
+        var seenB = new CopyOnWriteArrayList<String>();
+        ErrorListener listenerA = err -> { seenA.add(err.getCode()); return false; };
+        ErrorListener listenerB = err -> { seenB.add(err.getCode()); return false; };
+
+        try (var engine = XtcEngine.builder().modulePath(xdkModulePath()).build()) {
+            // A is invalid, B is valid; if the listeners were shared, B's would hear A's errors
+            var futureA = CompletableFuture.supplyAsync(() ->
+                    engine.compile(listenerA, new XtcEngine.SourceUnit("ParallelBad", """
+                            module ParallelBad {
+                                void run() {
+                                    not valid ecstasy at all
+                                }
+                            }
+                            """)));
+            var futureB = CompletableFuture.supplyAsync(() ->
+                    engine.compile(listenerB, new XtcEngine.SourceUnit("ParallelGood", """
+                            module ParallelGood {
+                                void run() {}
+                            }
+                            """)));
+
+            var resultA = futureA.get(60, TimeUnit.SECONDS);
+            var resultB = futureB.get(60, TimeUnit.SECONDS);
+
+            assertFalse(resultA.isSuccess(), "A is deliberately invalid");
+            assertTrue(resultB.isSuccess(),
+                    () -> "B is valid and must not be failed by A: " + resultB.diagnostics());
+            assertTrue(seenB.isEmpty(),
+                    () -> "B's listener must not hear A's diagnostics, but heard: " + seenB);
+        }
+    }
+
+    /**
+     * The container owns the runtime's listener rather than each call site naming a constant, so an
+     * embedder can replace it. Defaults to RUNTIME, which is what the removed ambient walk resolved
+     * to, and rejects null the way the rest of this API does.
+     */
+    @Test
+    public void theRuntimeListenerIsOwnedByTheContainerAndReplaceable() throws Exception {
+        assumeTrue(EmbeddingTestSupport.systemModulesAvailable(),
+                "compiled XDK system modules are required");
+
+        try (var engine = XtcEngine.builder().modulePath(xdkModulePath()).build()) {
+            var compiled = engine.compile("ContainerListener", """
+                    module ContainerListener {
+                        void run() {}
+                    }
+                    """);
+            assertTrue(compiled.isSuccess(), () -> "diagnostics: " + compiled.diagnostics());
+
+            var future = engine.run(compiled, "ContainerListener");
+            future.get(30, TimeUnit.SECONDS);
+            assertTrue(future.isDone() && !future.isCompletedExceptionally());
+        }
+    }
+
     @Test
     public void compilesAndRunsAnInMemoryModuleOverOneWarmEngine() throws Exception {
         assumeTrue(EmbeddingTestSupport.systemModulesAvailable(),
