@@ -20,7 +20,7 @@ import org.xvm.type.Decimal64;
  */
 public class xDec64
         extends BaseDecFP {
-    public xDec64(Container container, ClassStructure structure, boolean fInstance) {
+    public xDec64(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 64);
     }
 

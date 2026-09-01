@@ -48,7 +48,7 @@ import org.xvm.runtime.template.numbers.xUInt64;
  */
 public class xRTRandom
         extends xService {
-    public xRTRandom(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTRandom(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

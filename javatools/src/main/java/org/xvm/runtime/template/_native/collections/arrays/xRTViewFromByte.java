@@ -17,7 +17,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
  */
 public class xRTViewFromByte
         extends xRTView {
-    public xRTViewFromByte(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewFromByte(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
     }
 

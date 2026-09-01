@@ -46,7 +46,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
  */
 public class xOSStorage
         extends xService {
-    public xOSStorage(Container container, ClassStructure structure, boolean fInstance) {
+    public xOSStorage(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

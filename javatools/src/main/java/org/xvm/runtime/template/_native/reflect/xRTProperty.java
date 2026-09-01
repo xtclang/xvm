@@ -38,7 +38,7 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xRTProperty
         extends xConst {
-    public xRTProperty(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTProperty(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

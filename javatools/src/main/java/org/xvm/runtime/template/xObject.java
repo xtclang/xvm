@@ -15,7 +15,7 @@ public class xObject
         extends ClassTemplate {
     public static ClassComposition CLASS;
 
-    public xObject(Container container, ClassStructure structure, boolean fInstance) {
+    public xObject(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
     }
 

@@ -34,10 +34,10 @@ public class xVar
      */
     private final ClassConstant f_idInception;
 
-    public xVar(Container container, ClassStructure structure, boolean fInstance) {
+    public xVar(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
 
-        f_idInception = fInstance
+        f_idInception = fBaseTemplate
                 ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
                 : null;
     }

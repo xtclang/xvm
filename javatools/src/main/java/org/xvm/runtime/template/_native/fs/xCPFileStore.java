@@ -37,7 +37,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public class xCPFileStore
         extends xConst {
-    public xCPFileStore(Container container, ClassStructure structure, boolean fInstance) {
+    public xCPFileStore(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

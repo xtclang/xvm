@@ -28,7 +28,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public abstract class xNumber
         extends xConst {
-    public xNumber(Container container, ClassStructure structure, boolean fInstance) {
+    public xNumber(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

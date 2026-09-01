@@ -22,7 +22,7 @@ import org.xvm.runtime.template.text.xChar;
  */
 public class xNibble
         extends xUnsignedConstrainedInt {
-    public xNibble(Container container, ClassStructure structure, boolean fInstance) {
+    public xNibble(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 0, 15, 4, false);
     }
 

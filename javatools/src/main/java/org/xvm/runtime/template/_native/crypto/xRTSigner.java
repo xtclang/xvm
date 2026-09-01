@@ -38,7 +38,7 @@ import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SignatureHandle;
  */
 public class xRTSigner
         extends xService {
-    public xRTSigner(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTSigner(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

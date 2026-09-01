@@ -42,7 +42,7 @@ public class xFuture
     public static TypeConstant TYPE;
     public static xEnum COMPLETION;
 
-    public xFuture(Container container, ClassStructure structure, boolean fInstance) {
+    public xFuture(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

@@ -50,7 +50,7 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  */
 public class xContainerLinker
         extends xService {
-    public xContainerLinker(Container container, ClassStructure structure, boolean fInstance) {
+    public xContainerLinker(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

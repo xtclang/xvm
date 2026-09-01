@@ -14,7 +14,7 @@ import org.xvm.runtime.Container;
  */
 public class xRTViewToBitFromUInt128
         extends LongBasedBitView {
-    public xRTViewToBitFromUInt128(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewToBitFromUInt128(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 128);
     }
 

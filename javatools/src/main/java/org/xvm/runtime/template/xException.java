@@ -27,7 +27,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public class xException
         extends xConst {
-    public xException(Container container, ClassStructure structure, boolean fInstance) {
+    public xException(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

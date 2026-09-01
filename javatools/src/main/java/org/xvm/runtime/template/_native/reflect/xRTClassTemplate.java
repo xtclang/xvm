@@ -49,7 +49,7 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  */
 public class xRTClassTemplate
         extends xRTComponentTemplate {
-    public xRTClassTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTClassTemplate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

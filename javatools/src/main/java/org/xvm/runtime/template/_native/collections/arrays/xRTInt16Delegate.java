@@ -20,7 +20,7 @@ import org.xvm.runtime.template.numbers.xInt16;
 public class xRTInt16Delegate
         extends LongBasedDelegate
         implements ByteView {
-    public xRTInt16Delegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTInt16Delegate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 16, true);
     }
 

@@ -66,10 +66,10 @@ public class xRef
      */
     private final ClassConstant f_idInception;
 
-    public xRef(Container container, ClassStructure structure, boolean fInstance) {
+    public xRef(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
 
-        f_idInception = fInstance
+        f_idInception = fBaseTemplate
                 ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
                 : null;
     }

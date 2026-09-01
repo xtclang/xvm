@@ -11,7 +11,7 @@ import org.xvm.runtime.Container;
  */
 public class xCheckedInt8
         extends xCheckedConstrainedInt {
-    public xCheckedInt8(Container container, ClassStructure structure, boolean fInstance) {
+    public xCheckedInt8(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, Byte.MIN_VALUE, Byte.MAX_VALUE, 8, false);
     }
 

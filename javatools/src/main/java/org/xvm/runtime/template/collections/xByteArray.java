@@ -31,7 +31,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToFloa
  */
 public class xByteArray
         extends xArray {
-    public xByteArray(Container container, ClassStructure structure, boolean fInstance) {
+    public xByteArray(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

@@ -50,7 +50,7 @@ import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTe
  */
 public class xRTTypeTemplate
         extends xConst {
-    public xRTTypeTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTTypeTemplate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

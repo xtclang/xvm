@@ -16,7 +16,7 @@ import org.xvm.runtime.TypeComposition;
  */
 public class xRTPackageTemplate
         extends xRTClassTemplate {
-    public xRTPackageTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTPackageTemplate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

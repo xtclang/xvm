@@ -53,7 +53,7 @@ public class xRTSocket
         extends xService {
     public static final int CONNECT_TIMEOUT_MS = 15_000;
 
-    public xRTSocket(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTSocket(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

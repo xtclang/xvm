@@ -48,10 +48,10 @@ public class xTuple
     private final ClassConstant f_idInception;
     public static TupleHandle H_VOID;
 
-    public xTuple(Container container, ClassStructure structure, boolean fInstance) {
+    public xTuple(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
 
-        f_idInception = fInstance
+        f_idInception = fBaseTemplate
                 ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
                 : null;
     }

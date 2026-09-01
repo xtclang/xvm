@@ -30,7 +30,7 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xBit
         extends xConst {
-    public xBit(Container container, ClassStructure structure, boolean fInstance) {
+    public xBit(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

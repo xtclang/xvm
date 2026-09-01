@@ -23,7 +23,7 @@ import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SecretHandle;
  */
 public class xRTKeyGenerator
         extends xService {
-    public xRTKeyGenerator(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTKeyGenerator(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

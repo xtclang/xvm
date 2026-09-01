@@ -77,7 +77,7 @@ public class xRTType
         extends xConst
         implements IndexSupport { // for turtle types
 
-    public xRTType(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTType(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

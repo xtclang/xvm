@@ -14,7 +14,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
  */
 public class xCheckedUInt64
         extends xCheckedUnsignedInt {
-    public xCheckedUInt64(Container container, ClassStructure structure, boolean fInstance) {
+    public xCheckedUInt64(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 0L, 0xFFFF_FFFF_FFFF_FFFFL, 64);
     }
 

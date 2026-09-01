@@ -31,7 +31,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public class xRTStringDelegate
         extends xRTDelegate {
-    public xRTStringDelegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTStringDelegate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

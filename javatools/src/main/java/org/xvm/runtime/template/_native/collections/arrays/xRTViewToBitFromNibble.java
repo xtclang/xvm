@@ -14,7 +14,7 @@ import org.xvm.runtime.Container;
  */
 public class xRTViewToBitFromNibble
         extends LongBasedBitView {
-    public xRTViewToBitFromNibble(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewToBitFromNibble(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 4);
     }
 

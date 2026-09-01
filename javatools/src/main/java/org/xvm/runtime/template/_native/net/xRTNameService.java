@@ -50,7 +50,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public class xRTNameService
         extends xService {
-    public xRTNameService(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTNameService(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

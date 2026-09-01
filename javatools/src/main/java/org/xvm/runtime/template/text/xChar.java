@@ -40,7 +40,7 @@ import org.xvm.util.Handy;
  */
 public class xChar
         extends xConst {
-    public xChar(Container container, ClassStructure structure, boolean fInstance) {
+    public xChar(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

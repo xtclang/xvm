@@ -68,10 +68,10 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
  */
 public class xRTConnector
         extends xService {
-    public xRTConnector(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTConnector(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
 
-        if (fInstance) {
+        if (fBaseTemplate) {
             s_sAgent = "Mozilla/5.0 (compatible; Ecstasy/"
                        + structure.getFileStructure().getModule().getVersionString()
                        + ')' ;

@@ -29,7 +29,7 @@ import org.xvm.runtime.template.numbers.xInt64;
  */
 public class xRTFloat64Delegate
         extends xRTDelegate {
-    public xRTFloat64Delegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTFloat64Delegate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

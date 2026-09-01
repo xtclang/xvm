@@ -31,7 +31,7 @@ import org.xvm.runtime.template.text.xChar;
  */
 public class xRTCharDelegate
         extends xRTDelegate {
-    public xRTCharDelegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTCharDelegate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

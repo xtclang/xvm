@@ -19,7 +19,7 @@ import org.xvm.runtime.template.xEnum;
  */
 public class xEnumValue
         extends xClass {
-    public xEnumValue(Container container, ClassStructure structure, boolean fInstance) {
+    public xEnumValue(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

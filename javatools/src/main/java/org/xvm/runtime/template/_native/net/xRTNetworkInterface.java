@@ -28,7 +28,7 @@ import org.xvm.runtime.template.collections.xByteArray;
  */
 public class xRTNetworkInterface
         extends xService {
-    public xRTNetworkInterface(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTNetworkInterface(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

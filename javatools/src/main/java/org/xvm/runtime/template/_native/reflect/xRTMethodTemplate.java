@@ -31,7 +31,7 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xRTMethodTemplate
         extends xRTComponentTemplate {
-    public xRTMethodTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTMethodTemplate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

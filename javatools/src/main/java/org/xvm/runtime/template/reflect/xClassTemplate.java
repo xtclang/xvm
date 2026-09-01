@@ -20,7 +20,7 @@ import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTe
  */
 public class xClassTemplate
         extends ClassTemplate {
-    public xClassTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xClassTemplate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
     }
 

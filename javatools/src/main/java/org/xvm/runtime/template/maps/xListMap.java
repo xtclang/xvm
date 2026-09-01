@@ -29,7 +29,7 @@ import org.xvm.runtime.template.collections.xArray;
  */
 public class xListMap
         extends ClassTemplate {
-    public xListMap(Container container, ClassStructure structure, boolean fInstance) {
+    public xListMap(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
     }
 

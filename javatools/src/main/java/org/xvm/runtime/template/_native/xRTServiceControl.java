@@ -28,7 +28,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
  */
 public class xRTServiceControl
         extends ClassTemplate {
-    public xRTServiceControl(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTServiceControl(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
     }
 

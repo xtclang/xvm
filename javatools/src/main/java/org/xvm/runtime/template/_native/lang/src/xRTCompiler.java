@@ -64,7 +64,7 @@ import org.xvm.util.Severity;
  */
 public class xRTCompiler
         extends xService {
-    public xRTCompiler(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTCompiler(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

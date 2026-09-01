@@ -25,7 +25,7 @@ public class xBasicHashCollector
 
     private static final String[] TYPE_HASH_COLLECTOR = { "collections.HashCollector" };
 
-    public xBasicHashCollector(Container container, ClassStructure structure, boolean fInstance) {
+    public xBasicHashCollector(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
     }
 

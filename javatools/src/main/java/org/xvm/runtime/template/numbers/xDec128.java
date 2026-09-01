@@ -20,7 +20,7 @@ import org.xvm.type.Decimal128;
  */
 public class xDec128
         extends BaseDecFP {
-    public xDec128(Container container, ClassStructure structure, boolean fInstance) {
+    public xDec128(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 128);
     }
 

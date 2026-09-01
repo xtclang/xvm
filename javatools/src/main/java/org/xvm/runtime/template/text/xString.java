@@ -45,7 +45,7 @@ import org.xvm.util.Handy;
 public class xString
         extends xConst
         implements IndexSupport {
-    public xString(Container container, ClassStructure structure, boolean fInstance) {
+    public xString(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

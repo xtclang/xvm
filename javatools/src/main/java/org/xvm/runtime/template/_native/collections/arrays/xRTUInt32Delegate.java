@@ -18,7 +18,7 @@ import org.xvm.runtime.template.numbers.xUInt32;
 public class xRTUInt32Delegate
         extends LongBasedDelegate
         implements ByteView {
-    public xRTUInt32Delegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTUInt32Delegate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 32, false);
     }
 

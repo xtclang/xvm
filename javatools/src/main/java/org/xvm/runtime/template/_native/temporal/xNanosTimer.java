@@ -39,7 +39,7 @@ import org.xvm.util.ListSet;
  */
 public class xNanosTimer
         extends xService {
-    public xNanosTimer(Container container, ClassStructure structure, boolean fInstance) {
+    public xNanosTimer(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

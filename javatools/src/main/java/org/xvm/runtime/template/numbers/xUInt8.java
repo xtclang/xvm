@@ -18,7 +18,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
  */
 public class xUInt8
         extends xUnsignedConstrainedInt {
-    public xUInt8(Container container, ClassStructure structure, boolean fInstance) {
+    public xUInt8(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 0, 255, 8, false);
     }
 

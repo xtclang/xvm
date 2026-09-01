@@ -42,7 +42,7 @@ import org.xvm.runtime.template.xNullable;
  */
 public class xRegEx
         extends xConst {
-    public xRegEx(Container container, ClassStructure structure, boolean fInstance) {
+    public xRegEx(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

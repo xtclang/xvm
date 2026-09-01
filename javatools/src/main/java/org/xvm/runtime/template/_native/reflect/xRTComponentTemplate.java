@@ -37,7 +37,7 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xRTComponentTemplate
         extends ClassTemplate {
-    public xRTComponentTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTComponentTemplate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
     }
 

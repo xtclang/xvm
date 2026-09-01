@@ -11,7 +11,7 @@ import org.xvm.runtime.Container;
  */
 public class xCheckedUInt32
         extends xCheckedUnsignedInt {
-    public xCheckedUInt32(Container container, ClassStructure structure, boolean fInstance) {
+    public xCheckedUInt32(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 0L, 0xFFFF_FFFFL, 32);
     }
 

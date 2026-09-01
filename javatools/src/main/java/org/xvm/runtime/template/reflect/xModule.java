@@ -47,7 +47,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public class xModule
         extends xPackage {
-    public xModule(Container container, ClassStructure structure, boolean fInstance) {
+    public xModule(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

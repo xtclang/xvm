@@ -26,7 +26,7 @@ import org.xvm.runtime.template.numbers.xConstrainedInteger;
  */
 public class xAtomicIntNumber
         extends xAtomic {
-    public xAtomicIntNumber(Container container, ClassStructure structure, boolean fInstance) {
+    public xAtomicIntNumber(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
 
         f_templateReferent = null;

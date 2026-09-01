@@ -47,7 +47,7 @@ import org.xvm.runtime.template._native.io.xRawChannel;
  */
 public class xRawOSFileChannel
         extends xRawChannel {
-    public xRawOSFileChannel(Container container, ClassStructure structure, boolean fInstance) {
+    public xRawOSFileChannel(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
     }
 

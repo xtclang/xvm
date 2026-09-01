@@ -53,7 +53,7 @@ import org.xvm.util.Handy;
  */
 public class xOSFile
         extends xOSFileNode {
-    public xOSFile(Container container, ClassStructure structure, boolean fInstance) {
+    public xOSFile(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

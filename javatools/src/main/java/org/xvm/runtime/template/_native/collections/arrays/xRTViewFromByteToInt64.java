@@ -25,7 +25,7 @@ import org.xvm.util.Handy;
  */
 public class xRTViewFromByteToInt64
         extends xRTViewFromByte {
-    public xRTViewFromByteToInt64(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewFromByteToInt64(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

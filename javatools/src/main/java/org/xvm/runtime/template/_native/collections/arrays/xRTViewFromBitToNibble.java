@@ -26,7 +26,7 @@ import org.xvm.runtime.template.numbers.xNibble;
  */
 public class xRTViewFromBitToNibble
         extends xRTViewFromBit {
-    public xRTViewFromBitToNibble(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewFromBitToNibble(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

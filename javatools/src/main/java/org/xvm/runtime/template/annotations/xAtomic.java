@@ -33,7 +33,7 @@ import org.xvm.runtime.template.reflect.xVar;
  */
 public class xAtomic
         extends xVar {
-    public xAtomic(Container container, ClassStructure structure, boolean fInstance) {
+    public xAtomic(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

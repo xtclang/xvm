@@ -32,7 +32,7 @@ import org.xvm.runtime.template.collections.xArray;
  */
 public class xRTPropertyClassTemplate
         extends xRTComponentTemplate {
-    public xRTPropertyClassTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTPropertyClassTemplate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

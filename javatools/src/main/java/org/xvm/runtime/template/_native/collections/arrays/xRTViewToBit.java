@@ -20,7 +20,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
  */
 public class xRTViewToBit
         extends xRTView {
-    public xRTViewToBit(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewToBit(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
     }
 

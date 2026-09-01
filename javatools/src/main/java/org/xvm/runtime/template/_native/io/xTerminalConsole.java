@@ -46,7 +46,7 @@ import org.xvm.util.ConsoleLog;
  */
 public class xTerminalConsole
         extends xService {
-    public xTerminalConsole(Container container, ClassStructure structure, boolean fInstance) {
+    public xTerminalConsole(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

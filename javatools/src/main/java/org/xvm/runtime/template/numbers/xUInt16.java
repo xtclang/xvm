@@ -11,7 +11,7 @@ import org.xvm.runtime.Container;
  */
 public class xUInt16
         extends xUnsignedConstrainedInt {
-    public xUInt16(Container container, ClassStructure structure, boolean fInstance) {
+    public xUInt16(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 0, 2L * (long) Short.MAX_VALUE + 1, 16, false);
     }
 

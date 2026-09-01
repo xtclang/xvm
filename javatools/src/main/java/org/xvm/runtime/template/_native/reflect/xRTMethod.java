@@ -38,7 +38,7 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
  */
 public class xRTMethod
         extends xRTSignature {
-    public xRTMethod(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTMethod(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

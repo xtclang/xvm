@@ -26,7 +26,7 @@ import org.xvm.runtime.template.xConst;
  */
 public class xCPFile
         extends xConst {
-    public xCPFile(Container container, ClassStructure structure, boolean fInstance) {
+    public xCPFile(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

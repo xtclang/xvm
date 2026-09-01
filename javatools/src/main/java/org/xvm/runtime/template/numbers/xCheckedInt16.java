@@ -11,7 +11,7 @@ import org.xvm.runtime.Container;
  */
 public class xCheckedInt16
         extends xCheckedConstrainedInt {
-    public xCheckedInt16(Container container, ClassStructure structure, boolean fInstance) {
+    public xCheckedInt16(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, Short.MIN_VALUE, Short.MAX_VALUE, 16, false);
     }
 

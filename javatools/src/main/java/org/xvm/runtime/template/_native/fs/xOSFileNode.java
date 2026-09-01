@@ -33,7 +33,7 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xOSFileNode
         extends xConst {
-    public xOSFileNode(Container container, ClassStructure structure, boolean fInstance) {
+    public xOSFileNode(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

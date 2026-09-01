@@ -52,7 +52,7 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  */
 public class xClass
         extends xConst {
-    public xClass(Container container, ClassStructure structure, boolean fInstance) {
+    public xClass(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

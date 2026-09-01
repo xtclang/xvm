@@ -27,7 +27,7 @@ import org.xvm.runtime.template._native.crypto.xRTAlgorithms.DigestHandle;
  */
 public class xRTHasher
         extends xService {
-    public xRTHasher(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTHasher(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

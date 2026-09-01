@@ -65,7 +65,7 @@ public class xArray
         implements IndexSupport {
     public static xEnum  MUTABILITY;
 
-    public xArray(Container container, ClassStructure structure, boolean fInstance) {
+    public xArray(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
     }
 

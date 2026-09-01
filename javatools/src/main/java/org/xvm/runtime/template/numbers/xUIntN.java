@@ -11,7 +11,7 @@ import org.xvm.runtime.Container;
  */
 public class xUIntN
         extends xUnconstrainedInteger {
-    public xUIntN(Container container, ClassStructure structure, boolean fInstance) {
+    public xUIntN(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 }

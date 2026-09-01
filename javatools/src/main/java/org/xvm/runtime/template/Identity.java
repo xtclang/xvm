@@ -28,10 +28,10 @@ public class Identity
      */
     private final ClassConstant f_idInception;
 
-    public Identity(Container container, ClassStructure structure, boolean fInstance) {
+    public Identity(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
 
-        f_idInception = fInstance
+        f_idInception = fBaseTemplate
                 ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
                 : null;
     }

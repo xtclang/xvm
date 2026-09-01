@@ -15,7 +15,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
  */
 public class xInt64
         extends xConstrainedInteger {
-    public xInt64(Container container, ClassStructure structure, boolean fInstance) {
+    public xInt64(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, Long.MIN_VALUE, Long.MAX_VALUE, 64, false, false);
     }
 

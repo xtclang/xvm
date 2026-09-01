@@ -19,7 +19,7 @@ public class xOrdered
     public static EnumHandle EQUAL;
     public static EnumHandle GREATER;
 
-    public xOrdered(Container container, ClassStructure structure, boolean fInstance) {
+    public xOrdered(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

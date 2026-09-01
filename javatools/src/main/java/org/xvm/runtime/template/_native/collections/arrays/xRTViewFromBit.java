@@ -16,7 +16,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 public class xRTViewFromBit
         extends xRTView
         implements ByteView {
-    public xRTViewFromBit(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewFromBit(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
     }
 

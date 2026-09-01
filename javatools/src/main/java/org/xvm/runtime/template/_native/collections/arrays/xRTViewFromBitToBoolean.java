@@ -25,7 +25,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
  */
 public class xRTViewFromBitToBoolean
         extends xRTViewFromBit {
-    public xRTViewFromBitToBoolean(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewFromBitToBoolean(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

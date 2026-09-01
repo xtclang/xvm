@@ -46,7 +46,7 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  */
 public class xRTFunction
         extends xRTSignature {
-    public xRTFunction(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTFunction(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

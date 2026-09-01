@@ -36,7 +36,7 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xRTNetwork
         extends xService {
-    public xRTNetwork(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTNetwork(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

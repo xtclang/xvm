@@ -19,7 +19,7 @@ public class xBoolean
     public static BooleanHandle TRUE;
     public static BooleanHandle FALSE;
 
-    public xBoolean(Container container, ClassStructure structure, boolean fInstance) {
+    public xBoolean(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

@@ -82,7 +82,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTBooleanDelegate;
  */
 public class xRTKeyStore
         extends xService {
-    public xRTKeyStore(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTKeyStore(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

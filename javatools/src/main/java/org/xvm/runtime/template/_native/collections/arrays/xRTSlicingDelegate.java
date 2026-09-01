@@ -22,7 +22,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
  */
 public class xRTSlicingDelegate
         extends xRTDelegate {
-    public xRTSlicingDelegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTSlicingDelegate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

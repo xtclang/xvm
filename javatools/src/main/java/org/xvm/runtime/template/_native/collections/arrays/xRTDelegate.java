@@ -42,7 +42,7 @@ import org.xvm.runtime.template.numbers.xInt64;
 public class xRTDelegate
         extends ClassTemplate
         implements IndexSupport {
-    public xRTDelegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTDelegate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
     }
 

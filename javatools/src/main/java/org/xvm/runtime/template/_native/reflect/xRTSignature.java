@@ -36,7 +36,7 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xRTSignature
         extends ClassTemplate {
-    public xRTSignature(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTSignature(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
     }
 

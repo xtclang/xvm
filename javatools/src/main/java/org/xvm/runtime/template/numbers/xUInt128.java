@@ -9,7 +9,7 @@ import org.xvm.runtime.Frame;
 
 public class xUInt128
         extends BaseInt128 {
-    public xUInt128(Container container, ClassStructure structure, boolean fInstance) {
+    public xUInt128(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

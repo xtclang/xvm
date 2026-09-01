@@ -36,7 +36,7 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xEnum
         extends xConst {
-    public xEnum(Container container, ClassStructure structure, boolean fInstance) {
+    public xEnum(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

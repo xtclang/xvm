@@ -33,7 +33,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public class xRTModuleTemplate
         extends xRTClassTemplate {
-    public xRTModuleTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTModuleTemplate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

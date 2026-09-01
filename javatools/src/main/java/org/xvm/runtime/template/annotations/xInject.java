@@ -33,7 +33,7 @@ import org.xvm.runtime.template.reflect.xRef;
  */
 public class xInject
         extends xRef {
-    public xInject(Container container, ClassStructure structure, boolean fInstance) {
+    public xInject(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

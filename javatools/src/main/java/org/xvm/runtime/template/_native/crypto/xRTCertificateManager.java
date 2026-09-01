@@ -74,7 +74,7 @@ import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
 public class xRTCertificateManager
         extends xService {
 
-    public xRTCertificateManager(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTCertificateManager(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 
