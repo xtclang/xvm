@@ -13,6 +13,7 @@ module TestReflection {
         testMethods();
         testInvoke();
         testInvoke2();
+        testInvokeTupleAliasing();
         testInvokeAsync();
         testBind();
         testChildTypes();
@@ -203,6 +204,31 @@ module TestReflection {
 
         f2.invoke(());
         f4.invoke((42, "goodbye"));
+    }
+
+    void testInvokeTupleAliasing() {
+        console.print("\n** testInvokeTupleAliasing");
+
+        class Probe {
+            void setB(String a, Int b) {
+                // reassigning a parameter must not be visible to the caller
+                a = "MUTATED";
+                b = -1;
+            }
+        }
+
+        Probe p = new Probe();
+
+        // the callee needs no more registers than it has parameters, which is the case where the
+        // call machinery used to hand the callee this very tuple's element storage as its frame
+        Tuple<String, Int> args = ("origB", 7);
+
+        Method<Probe, <String, Int>, <>> m = Probe.setB;
+        m.invoke(p, args);
+
+        console.print($"args after invoke={args}");
+        assert args[0] == "origB" && args[1] == 7
+                as $"callee wrote through into the caller's tuple: {args}";
     }
 
     void testInvoke2() {
