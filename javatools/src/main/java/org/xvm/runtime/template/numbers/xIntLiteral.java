@@ -393,7 +393,7 @@ public class xIntLiteral
         try {
             return new BigInteger(sText, 10);
         } catch (NumberFormatException e) {
-            ErrorList errs  = new ErrorList(5);
+            ErrorList errs  = ErrorList.firstError();
             Lexer     lexer = new Lexer(new Source(sText), errs);
 
             if (!lexer.hasNext()) {
@@ -422,7 +422,7 @@ public class xIntLiteral
                 throw e;
             }
             boolean   fNeg   = false;
-            ErrorList errs   = new ErrorList(5);
+            ErrorList errs   = ErrorList.firstError();
             Lexer     lexer  = new Lexer(new Source(sText), errs);
             Token     tokLit = lexer.next();
             if (tokLit.getId() == Id.SUB) {

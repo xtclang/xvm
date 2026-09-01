@@ -58,6 +58,15 @@ import static org.xvm.util.Handy.resolveFile;
  * right now.
  */
 public class ModuleInfo {
+    /**
+     * How many errors one build-tree node accumulates before it asks the process to abort.
+     *
+     * <p>The value is arbitrary - it was the literal 341, which cannot have been chosen
+     * deliberately - and is preserved only so this stays a naming change. Any node that has
+     * produced three hundred errors is already telling the user everything they need.
+     */
+    private static final int MAX_NODE_ERRORS = 341;
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -847,7 +856,7 @@ public class ModuleInfo {
         public ErrorList errs() {
             ErrorList errs = m_errs;
             if (errs == null) {
-                m_errs = errs = new ErrorList(341);
+                m_errs = errs = new ErrorList(MAX_NODE_ERRORS);
             }
             return errs;
         }

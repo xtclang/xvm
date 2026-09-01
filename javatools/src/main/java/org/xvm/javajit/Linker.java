@@ -29,6 +29,12 @@ import static org.xvm.util.Handy.require;
  */
 public class Linker {
     /**
+     * How many errors the linking process collects before asking to abort. Arbitrary; preserved
+     * from the literal it replaced so this stays a naming change.
+     */
+    private static final int MAX_LINK_ERRORS = 24;
+
+    /**
      * @param xvm  the Xvm that this Linker will link and create a TypeSystem for
      */
     protected Linker(Xvm xvm) {
@@ -73,7 +79,7 @@ public class Linker {
     /**
      * A structure for collecting information, warnings, and errors from the linking process.
      */
-    private final ErrorList errors = new ErrorList(24);
+    private final ErrorList errors = new ErrorList(MAX_LINK_ERRORS);
 
     /**
      * Internal cache: Set to `true` once a serious Error has been spotted.

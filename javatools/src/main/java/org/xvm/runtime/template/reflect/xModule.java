@@ -51,6 +51,12 @@ import org.xvm.util.Lazy;
  */
 public class xModule
         extends xPackage {
+    /**
+     * How many errors a reflective module query collects before asking to abort. Arbitrary;
+     * preserved from the literal it replaced.
+     */
+    private static final int MAX_MODULE_ERRORS = 10;
+
 
     public static xModule getInstance(Frame frame) {
         return NativeTemplates.get(frame).module();
@@ -281,7 +287,7 @@ public class xModule
         }
 
         Source         source = new Source(sClassOrType);
-        ErrorList      errs   = new ErrorList(10);
+        ErrorList      errs   = new ErrorList(MAX_MODULE_ERRORS);
         Parser         parser = new Parser(source, errs);
         TypeExpression expr   = null;
         try {
