@@ -2131,10 +2131,15 @@ public class MethodStructure
           .append(fSrc);
 
         if (fSrc) {
+            // NOTE: getLineCount() normalizes the source, which interns one StringConstant per
+            // source line into the ConstantPool and writes m_aconstSrc/m_anIndents. Rendering a
+            // method in a debugger must not grow the pool by the size of its own source, so report
+            // the count only when the chopping has already happened.
+            int cLines = m_source.peekLineCount();
             sb.append(", line-number=")
               .append(m_source.getLineNumber())
               .append(", line-count=")
-              .append(m_source.getLineCount());
+              .append(cLines < 0 ? "<deferred>" : String.valueOf(cLines));
         }
 
         return sb.toString();
@@ -2822,6 +2827,17 @@ public class MethodStructure
         public int getLineCount() {
             normalize();
             return m_aconstSrc == null ? 0 : m_aconstSrc.length;
+        }
+
+        /**
+         * The display-safe counterpart of {@link #getLineCount()}: it never calls
+         * {@link #normalize()}, which would intern one {@link StringConstant} per source line into
+         * the ConstantPool and publish {@code m_aconstSrc}/{@code m_anIndents} unsynchronized.
+         *
+         * @return the number of lines of source, or -1 if the source has not been chopped up yet
+         */
+        public int peekLineCount() {
+            return m_aconstSrc == null ? -1 : m_aconstSrc.length;
         }
 
         /**
