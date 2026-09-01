@@ -7,6 +7,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -25,57 +26,18 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * program: setting a breakpoint alters behaviour and the debugger session stops being
  * trustworthy.</p>
  *
- * <p>This test builds a broad population of real, fully-realized type-system objects, snapshots the
- * shared {@code ConstantPool}, then renders every one of them repeatedly through {@code toString()}
- * / {@code getValueString()} / {@code getDescription()} and asserts the pool did not grow. Pool
- * growth is the sharpest available signal because the dominant display impurities all end in an
- * intern: {@code ensure*Constant}, {@code getImplicitlyImportedIdentity}, the canonical
- * {@code typeObject()}/{@code typeFunction()} getters, and {@code Source.normalize()}'s
- * one-{@code StringConstant}-per-source-line.</p>
+ * <p>Two things need a real, fully-realized type system rather than the cold synthetic pool
+ * {@link DisplayPurityTest} uses: rendering on a thread with NO pool bound (a debugger's actual
+ * situation), and the {@code TypeInfo} header / {@code dump()} split.</p>
+ *
+ * <p>NOTE: there is deliberately no "render everything and assert the pool did not grow" test here
+ * any more. Against a warmed container-zero pool that assertion catches nothing - every constant a
+ * display path reaches for is already interned - and an earlier version of it passed against code
+ * that was still impure. A revert sweep confirmed it was the unique catcher for nothing at all.
+ * The cold-pool assertions live in {@link DisplayPurityTest}; the per-object, first-render version
+ * lives in the runtime census.</p>
  */
 public class DisplayPurityRuntimeTest {
-    @Test
-    public void renderingTheTypeSystemDoesNotGrowTheConstantPool() {
-        assumeTrue(DisplayPurityFixture.systemModulesAvailable(),
-                "compiled XDK system modules are required");
-
-        var runtime = DisplayPurityFixture.startRuntime();
-        try {
-            ConstantPool pool = DisplayPurityFixture.nativePool(runtime);
-
-            // ---- build the population FIRST; this legitimately interns --------------------------
-            List<Object> population = buildPopulation(pool);
-            assertTrue(population.size() > 100,
-                    "the population must be broad enough to be meaningful, was " + population.size());
-
-            // warm every renderer once, so a one-shot memoization inside a renderer is not counted
-            try (var ignore = ConstantPool.withPool(pool)) {
-                render(population);
-            }
-
-            // ---- now the pool must be stable across repeated rendering --------------------------
-            int cBefore = pool.size();
-            try (var ignore = ConstantPool.withPool(pool)) {
-                for (int i = 0; i < 3; i++) {
-                    render(population);
-                }
-            }
-            assertEquals(cBefore, pool.size(),
-                    "rendering the type system grew the shared ConstantPool - a display method is "
-                    + "interning, so merely looking at a value in a debugger mutates the program");
-
-            // ---- negative control: prove pool.size() actually detects interning -----------------
-            // Without this, a green above could merely mean the instrument is dead.
-            pool.ensureParameterizedTypeConstant(pool.typeTuple(),
-                    pool.typeInt64(), pool.typeString(), pool.typeObject(), pool.typeBoolean());
-            assertTrue(pool.size() > cBefore,
-                    "negative control failed: interning a fresh type did not grow the pool, so the "
-                    + "purity assertion above proves nothing");
-        } finally {
-            runtime.shutdownXVM();
-        }
-    }
-
     /**
      * A debugger renders on whatever thread is suspended, and that thread has no {@code
      * ConstantPool} bound to it - {@code ConstantPool.getCurrentPool()} returns null. A display
@@ -95,6 +57,63 @@ public class DisplayPurityRuntimeTest {
             assertNull(ConstantPool.getCurrentPool(),
                     "this test is only meaningful with no ambient pool bound");
             render(population);
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    @Test
+    public void toStringIsAPureHeaderAndDumpIsTheFullMemberList() {
+        assumeTrue(DisplayPurityFixture.systemModulesAvailable(),
+                "compiled XDK system modules are required");
+
+        var runtime = DisplayPurityFixture.startRuntime();
+        try {
+            ConstantPool pool = DisplayPurityFixture.nativePool(runtime);
+            TypeInfo     info = pool.typeInt64().ensureTypeInfo();  // build it first: that is legitimate
+
+            int    cBefore = pool.size();
+            String header  = info.toString();
+
+            assertTrue(header.startsWith("TypeInfo:"), header);
+            assertFalse(header.contains("\n"),
+                    "the pure toString() is a one-line header, not a member dump: " + header);
+            assertFalse(header.contains("- Methods"),
+                    "the pure toString() must not walk members: " + header);
+
+            for (int i = 0; i < 5; i++) {
+                info.toString();
+            }
+            assertEquals(cBefore, pool.size(),
+                    "the pure toString() grew the shared ConstantPool");
+
+            // The full dump is still available, still starts with the same header, and is what
+            // Ecstasy's Type.dump() returns. It needs a pool bound to the thread, exactly as the
+            // historical toString() did - that is the point: the FORCED rendering may keep its
+            // ambient requirements, because nothing reaches it implicitly.
+            String dump;
+            try (var ignore = ConstantPool.withPool(pool)) {
+                dump = info.dump();
+            }
+            // rendered after the dump, so both agree on the lazily-computed "abstract" marker that
+            // only the forced path is allowed to compute
+            assertTrue(dump.startsWith(info.toString()),
+                    "the dump starts with exactly the header toString() produces");
+            assertTrue(dump.contains("\n- Methods"),
+                    "dump() is the full member dump - this is what Type.dump() returns");
+            assertTrue(dump.contains("\n- Properties"), "dump() lists properties");
+
+            // the retained deprecated overload must be exactly dump(), for either argument, and
+            // must not mutate either - it is still a toString and someone will call it
+            int cAfterDump = pool.size();
+            try (var ignore = ConstantPool.withPool(pool)) {
+                assertEquals(dump, info.toString(false), "toString(false) must delegate to dump()");
+                assertEquals(dump, info.toString(true),
+                        "toString(true) must delegate to dump() too - the optimized-chain view it "
+                        + "used to select was the mutating branch and had no callers");
+            }
+            assertEquals(cAfterDump, pool.size(),
+                    "the deprecated toString(boolean) overload grew the shared ConstantPool");
         } finally {
             runtime.shutdownXVM();
         }
