@@ -400,6 +400,13 @@ public abstract class Container
     }
 
     /**
+     * @return this container's table of native templates
+     */
+    public NativeTemplates nativeTemplates() {
+        return getNativeContainer().f_templates;
+    }
+
+    /**
      * @return a ClassTemplate for a type associated with the specified name (core classes only)
      */
     public ClassTemplate getTemplate(String sName) {

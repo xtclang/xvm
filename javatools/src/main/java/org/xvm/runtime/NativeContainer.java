@@ -884,6 +884,11 @@ public class NativeContainer
     private ObjectHandle m_hSecureNetwork;
     private ObjectHandle m_hInsecureNetwork;
 
+    /**
+     * This container's native template table; see {@link NativeTemplates}.
+     */
+    final NativeTemplates f_templates = new NativeTemplates(this);
+
     private final ModuleRepository f_repository;
     private       ModuleStructure  m_moduleSystem;
     private       ModuleStructure  m_moduleTurtle;

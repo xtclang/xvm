@@ -127,7 +127,38 @@ public abstract class ClassTemplate
      * @param template  the new template
      */
     protected void registerNativeTemplate(ClassTemplate template) {
+        registerAuxiliaryTemplate(template);
+
+        // this template implements a composite type declared by "this" one, so it has no name of
+        // its own to be found under; publish it into the container's native template table
+        nativeTemplates().register(template);
+    }
+
+    /**
+     * Register a native template that serves an additional structure using a template class that
+     * is already spoken for. Unlike {@link #registerNativeTemplate}, this does not make the
+     * template its class's native instance - {@link NativeTemplates#get} must keep answering with
+     * the template registered for the class's own structure.
+     *
+     * @param template  the new template
+     */
+    protected void registerAuxiliaryTemplate(ClassTemplate template) {
         ((NativeContainer) f_container).registerNativeTemplate(template.getCanonicalType(), template);
+    }
+
+    /**
+     * @return this template's container's table of native templates
+     */
+    protected NativeTemplates nativeTemplates() {
+        return NativeTemplates.of(f_container);
+    }
+
+    /**
+     * @return true iff this is the container's native template for its class, rather than one of
+     *         the per-structure templates that the same class also backs
+     */
+    protected boolean isNativeInstance() {
+        return nativeTemplates().isNativeInstance(this);
     }
 
     /**

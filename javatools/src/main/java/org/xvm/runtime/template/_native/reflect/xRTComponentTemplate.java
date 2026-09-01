@@ -51,7 +51,7 @@ public class xRTComponentTemplate
     public void registerNativeTemplates() {
         if (this == INSTANCE) {
             ClassStructure struct = f_container.getClassStructure("_native.reflect.RTMultiMethodTemplate");
-            registerNativeTemplate(new xRTComponentTemplate(f_container, struct, false));
+            registerAuxiliaryTemplate(new xRTComponentTemplate(f_container, struct, false));
         }
     }
 
