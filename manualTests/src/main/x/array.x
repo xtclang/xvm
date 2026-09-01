@@ -511,8 +511,6 @@ module TestArray {
         assert !checkedGet(s, -1);
         assert !checkedGet(arr, 8);
         assert !checkedGet(arr, -1);
-
-        console.print("index bounds ok");
     }
 
     /**
