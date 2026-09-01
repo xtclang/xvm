@@ -252,12 +252,16 @@ public abstract class Builder {
                             : new MultiSlot(bctx, XvmPrimitive, type, CD_UInt128, CDs_LongLong);
                 }
                 case IntN, UIntN -> {
-                    TypeConstant   type  = intConstant.getType();
-                    ClassDesc      cd    = ensureClassDesc(type);
-                    String         value = intConstant.getValueString();
-                    MethodTypeDesc md    = MethodTypeDesc.of(cd, CD_JavaString);
-                    code.ldc(value);
-                    code.invokestatic(cd, "$new", md);
+                    TypeConstant type  = intConstant.getType();
+                    ClassDesc    cd    = ensureClassDesc(type);
+                    String       value = intConstant.getIntValue().getBigInteger().toString();
+                    ClassDesc    biCD  = ClassDesc.of(BigInteger.class.getName());
+
+                    code.new_(biCD)
+                        .dup()
+                        .ldc(value)
+                        .invokespecial(biCD, INIT_NAME, MethodTypeDesc.of(CD_void, CD_JavaString))
+                        .invokestatic(cd, "$box", MethodTypeDesc.of(cd, biCD));
                     yield new SingleSlot(type, Specific, cd, "");
                 }
                 default ->

@@ -65,16 +65,6 @@ public class UInt64 extends UIntNumber {
         return new BigDecimal(Long.toUnsignedString($value));
     }
 
-    @Override
-    protected long[] $longValues() {
-        return new long[]{$value};
-    }
-
-    @Override
-    protected long bitLength$get$p() {
-        return 64;
-    }
-
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override public java.lang.String toString() {

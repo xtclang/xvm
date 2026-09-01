@@ -3,6 +3,7 @@ package org.xtclang.ecstasy.numbers;
 import java.math.BigDecimal;
 
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
+
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
@@ -70,16 +71,6 @@ public class Int8 extends IntNumber {
     @Override
     public BigDecimal $toBigDecimal() {
         return BigDecimal.valueOf($value);
-    }
-
-    @Override
-    protected long[] $longValues() {
-        return new long[]{(long) $value << 56};
-    }
-
-    @Override
-    protected long bitLength$get$p() {
-        return 8;
     }
 
     // ----- debugging support ---------------------------------------------------------------------
