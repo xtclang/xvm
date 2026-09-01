@@ -109,6 +109,8 @@ public class xConst
                 findMethod("construct", 1, pool.typeString());
             TIMEOFDAY_CONSTRUCT = f_container.getClassStructure("temporal.TimeOfDay").
                 findMethod("construct", 1, pool.typeString());
+            TIMEZONE_CONSTRUCT  = f_container.getClassStructure("temporal.TimeZone").
+                findMethod("construct", 1, pool.typeString());
             DURATION_CONSTRUCT  = f_container.getClassStructure("temporal.Duration").
                 findMethod("construct", 1, pool.typeString());
             VERSION_CONSTRUCT   = f_container.getClassStructure("reflect.Version").
@@ -170,6 +172,11 @@ public class xConst
             case TimeOfDay:
                 clz         = ensureClass(container, pool.typeTimeOfDay());
                 constructor = TIMEOFDAY_CONSTRUCT;
+                break;
+
+            case TimeZone:
+                clz         = ensureClass(container, pool.typeTimeZone());
+                constructor = TIMEZONE_CONSTRUCT;
                 break;
 
             case Duration:
@@ -785,6 +792,7 @@ public class xConst
     private static MethodStructure TIME_CONSTRUCT;
     private static MethodStructure DATE_CONSTRUCT;
     private static MethodStructure TIMEOFDAY_CONSTRUCT;
+    private static MethodStructure TIMEZONE_CONSTRUCT;
     private static MethodStructure DURATION_CONSTRUCT;
     private static MethodStructure VERSION_CONSTRUCT;
     private static MethodStructure PATH_CONSTRUCT;

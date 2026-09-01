@@ -84,6 +84,10 @@ public class LiteralConstant
             // TODO
             break;
 
+        case TimeZone:
+            // TODO
+            break;
+
         case Duration:
             // TODO
             break;
@@ -125,6 +129,7 @@ public class LiteralConstant
         case Date:
         case TimeOfDay:
         case Time:
+        case TimeZone:
         case Duration:
         case Version:
         case Path:
@@ -171,6 +176,7 @@ public class LiteralConstant
             case Date       -> pool.typeDate();
             case TimeOfDay  -> pool.typeTimeOfDay();
             case Time       -> pool.typeTime();
+            case TimeZone   -> pool.typeTimeZone();
             case Duration   -> pool.typeDuration();
             case Version    -> pool.typeVersion();
             case Path       -> pool.typePath();
