@@ -38,8 +38,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class ObjectHandleDisplayPurityTest {
     @Test
     public void renderingAHandleNeverAsksItsCompositionForATypeConstant() {
-        var clz     = new CountingComposition(false);
-        var handle  = new GenericHandle(clz);
+        var clz    = new CountingComposition(false);
+        var handle = new GenericHandle(clz);
+
+        // NOTE: the handle must be FROZEN. The pre-fix body was
+        //     m_fMutable || clz.getType().isImmutable()
+        // so on a mutable handle the || short-circuits and getType() is never reached - this
+        // assertion would then hold against the unfixed code and prove nothing. (The revert sweep
+        // caught exactly that.)
+        handle.m_fMutable = false;
+
         String sOut = handle.toString();
 
         assertTrue(sOut.contains("counting-composition"),

@@ -36,6 +36,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * looks like while it is being compiled.</p>
  */
 public class DisplayPurityTest {
+    private static final String SOURCE = """
+            void hello() {
+                @Inject Console console;
+                console.print("hello");
+            }
+            """;
+
     private static ConstantPool coldPool() {
         return new FileStructure("PurityTest").getConstantPool();
     }
@@ -197,6 +204,42 @@ public class DisplayPurityTest {
         assertEquals("StmtBlock", rendered, "a node with no richer rendering names its node type");
         assertEquals("", captured.toString(),
                 "rendering an AST node wrote to System.err and added to a process-global Set");
+    }
+
+    /**
+     * {@code MethodStructure.getDescription()} is the funnel every method rendering goes through
+     * ({@code XvmStructure.toString()} delegates to it). It reported {@code line-count=} from
+     * {@code Source.getLineCount()}, which calls {@code Source.normalize()}: the source text is
+     * chopped into lines, ONE {@code StringConstant} PER LINE is interned, and
+     * {@code m_aconstSrc}/{@code m_anIndents} are published unsynchronized. Expanding a method node
+     * in a debugger grew the pool by the size of that method's own source.
+     */
+    @Test
+    public void renderingAMethodDoesNotNormalizeItsSourceIntoThePool() {
+        var file   = new FileStructure("PurityTest");
+        var pool   = file.getConstantPool();
+        var method = file.getModule().createMethod(true, Constants.Access.PUBLIC, null,
+                Parameter.NO_PARAMS, "hello", Parameter.NO_PARAMS, true, false);
+        method.configureSource(SOURCE, 1);
+
+        int    cBefore     = pool.size();
+        String description = method.getDescription();
+
+        assertTrue(description.contains("hasSource=true"), description);
+        assertTrue(description.contains("line-count=<deferred>"),
+                "an un-normalized source must report a deferred line count rather than chopping "
+                + "itself up to answer: " + description);
+        assertEquals(cBefore, pool.size(),
+                "rendering a method interned its source lines into the ConstantPool");
+
+        // the forced path is still there and still works when someone asks for it deliberately
+        assertEquals(5, method.getSourceLineCount());
+        assertTrue(pool.size() > cBefore,
+                "negative control failed: normalizing the source did not grow the pool, so the "
+                + "purity assertion above proves nothing");
+
+        // and once it IS normalized, the description reports the real count
+        assertTrue(method.getDescription().contains("line-count=5"), method.getDescription());
     }
 
     /** Prove {@code pool.size()} really does move when something interns; otherwise the assertions

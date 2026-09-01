@@ -24,7 +24,27 @@ import org.xvm.asm.DisplayPurityFixture;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import java.util.concurrent.CompletableFuture;
+
+import java.util.function.Supplier;
+
 import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
+
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
+
+import org.xvm.runtime.template.annotations.xFuture;
+
+import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xTuple;
+
+import org.xvm.runtime.template.numbers.xInt64;
+
+import org.xvm.runtime.template.text.xChar;
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction;
 
 import org.xvm.runtime.template.reflect.xClass;
 
@@ -80,6 +100,18 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *     is. Their fixes rest on the call chain, not on a failing assertion; the assertions below are
  *     kept as regression guards, not as evidence.</li>
  * </ul>
+ *
+ * <p><b>Production changes on this branch that NO test catches.</b> Measured by reverting each
+ * production hunk one at a time and running the whole suite: 9 of the 18 reverts turn something
+ * red, 9 do not. The uncaught ones are {@code PropertyBody.toString},
+ * {@code Component.Contribution.toString}, the {@code ensureCaches()} avoidance in
+ * {@code TypeInfoReal.toString}, {@code ExceptionHandle.toString},
+ * {@code Proxy.ProxyHandle.toString}, {@code xRTType.TypeHandle.toString},
+ * {@code xClass.ClassHandle.toString}, {@code xFuture.FutureHandle.toString} and
+ * {@code xString.StringHandle.toString}. Each mutates by a mechanism a warmed pool cannot show -
+ * an already-interned canonical constant, a private lazy cache, an allocation, or a memoized
+ * field - so they are inspection-verified only. Closing any of them means finding an observable,
+ * not adding an assertion to what is already here.</p>
  */
 public class DisplayPurityCensusTest {
     /**
@@ -165,7 +197,7 @@ public class DisplayPurityCensusTest {
         try {
             var container = new NativeContainer(
                     runtime, DisplayPurityFixture.systemRepository());
-            List<Object> population = HandlePopulation.build(container);
+            List<Object> population = buildPopulation(container);
 
             // an instance exercises the FIRST toString() up its hierarchy - that is the one that
             // actually runs - so a subclass that does not override still covers its parent's
@@ -214,7 +246,7 @@ public class DisplayPurityCensusTest {
             var container = new NativeContainer(
                     runtime, DisplayPurityFixture.systemRepository());
             ConstantPool pool       = container.getConstantPool();
-            List<Object> population = HandlePopulation.build(container);
+            List<Object> population = buildPopulation(container);
 
             assertTrue(population.size() > 20,
                     "population too small to be meaningful: " + population.size());
@@ -382,6 +414,88 @@ public class DisplayPurityCensusTest {
             }
         }
         return offenders;
+    }
+
+    /**
+     * Build a population of LIVE handles over a real container.
+     *
+     * <p>Building a handle may intern, allocate and force whatever it likes - that is normal
+     * program behaviour. The census only requires that RENDERING one afterwards does not. Each
+     * entry is built inside a guard, because a factory that fails here must not silently shrink
+     * the population: the coverage assertion then reports the class as uncovered and fails.</p>
+     */
+    private static List<Object> buildPopulation(Container container) {
+        var list = new ArrayList<>();
+        var pool = container.getConstantPool();
+
+        try (var ignore = ConstantPool.withPool(pool)) {
+            add(list, () -> xString.makeHandle("hello"));
+            add(list, () -> xString.makeHandle("with \"quotes\" and \\ backslash"));
+            add(list, () -> xInt64.makeHandle(42L));
+            add(list, () -> xInt64.makeHandle(Long.MIN_VALUE));
+            add(list, () -> xChar.makeHandle('x'));
+            add(list, () -> xBoolean.makeHandle(true));
+            add(list, () -> xBoolean.makeHandle(false));
+            add(list, () -> ObjectHandle.DEFAULT);
+            add(list, () -> new ObjectHandle.ConstantHandle(pool.ensureStringConstant("konst")));
+            add(list, () -> new ObjectHandle.ConstantHandle(pool.typeInt64()));
+
+            // reflection handles - these are the ones whose toString() used to freeze/intern
+            add(list, () -> xRTType.makeHandle(container, pool.typeInt64(), true));
+            add(list, () -> xRTType.makeHandle(container, pool.typeString(), false));
+            add(list, () -> xRTType.makeHandle(container,
+                    pool.ensureParameterizedTypeConstant(pool.typeList(), pool.typeInt64()), true));
+            add(list, () -> xClass.INSTANCE.createStruct(null, container.resolveClass(
+                    pool.ensureParameterizedTypeConstant(pool.typeClass(), pool.typeInt64()))));
+
+            // aggregates
+            add(list, () -> xTuple.makeImmutableHandle(xTuple.INSTANCE.getCanonicalClass(),
+                            xString.makeHandle("a"), xInt64.makeHandle(1L)));
+            add(list, () -> xArray.makeStringArrayHandle(new StringHandle[] {
+                    xString.makeHandle("a"), xString.makeHandle("b")}));
+
+            // a deferred array: its toString() interned an ImmutableTypeConstant on EVERY render
+            add(list, () -> new DeferredArrayHandle(
+                    xArray.INSTANCE.getCanonicalClass(),
+                    new ObjectHandle[] {xInt64.makeHandle(1L)}));
+
+            // exception handles: Java itself renders these while printing a stack trace
+            add(list, () -> xException.makeHandle(null, "boom"));
+            add(list, () -> xException.makeHandle(null, "boom").getException());
+
+            // a future that has NOT completed - rendering must not join it
+            add(list, () -> xFuture.makeHandle(new CompletableFuture<>()));
+            add(list, () -> xFuture.makeHandle(CompletableFuture.completedFuture(
+                    xInt64.makeHandle(7L))));
+            add(list, () -> xFuture.makeHandle(
+                    CompletableFuture.failedFuture(new IllegalStateException("nope"))));
+
+            // the no-op bound-function singleton: a public static handle with a constant rendering
+            add(list, () -> xRTFunction.FullyBoundHandle.NO_OP);
+
+            // compositions and templates, which handle rendering delegates into
+            add(list, () -> xString.INSTANCE.getCanonicalClass());
+            add(list, () -> xInt64.INSTANCE.getCanonicalClass());
+            add(list, () -> xString.INSTANCE);
+            add(list, () -> container);
+        }
+
+        return list;
+    }
+
+    /**
+     * Add one handle, tolerating a factory that cannot run in this fixture. Nothing is hidden: a
+     * miss shows up as an uncovered class in the census's coverage assertion.
+     */
+    private static void add(List<Object> list, Supplier<Object> supplier) {
+        try {
+            Object o = supplier.get();
+            if (o != null) {
+                list.add(o);
+            }
+        } catch (Throwable ignore) {
+            // the census reports the resulting coverage gap
+        }
     }
 
     /**
