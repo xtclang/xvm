@@ -264,7 +264,19 @@ public class xLocalClock
 
             @Override
             public void run() {
-                f_alarm.run();
+                try {
+                    f_alarm.run();
+                } catch (Throwable e) {
+                    // must not happen - and must not escape either. TIMER is a single
+                    // process-wide java.util.Timer with one thread, shared by every alarm in
+                    // every container, and java.util.Timer kills that thread and cancels the
+                    // Timer permanently if a TimerTask throws. Letting this out would silently
+                    // disable every alarm in the JVM, surfacing much later as an unrelated hang.
+                    // TODO: report this through a runtime failure channel once one exists,
+                    //       rather than to stderr
+                    System.err.println("Unexpected alarm failure on the shared LocalClock timer");
+                    e.printStackTrace(System.err);
+                }
             }
 
             private final Alarm f_alarm;

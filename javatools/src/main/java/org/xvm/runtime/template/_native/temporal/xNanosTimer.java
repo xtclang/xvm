@@ -452,14 +452,24 @@ public class xNanosTimer
 
                 @Override
                 public void run() {
-                    Alarm alarm       = m_alarm;
-                    long cExtraMillis = alarm.checkReadyMillis();
-                    if (cExtraMillis == 0) {
-                        m_alarm = null;
-                        alarm.run();
-                    } else {
-                        // reschedule
-                        xLocalClock.TIMER.schedule(alarm.createTrigger(), cExtraMillis);
+                    try {
+                        Alarm alarm       = m_alarm;
+                        long cExtraMillis = alarm.checkReadyMillis();
+                        if (cExtraMillis == 0) {
+                            m_alarm = null;
+                            alarm.run();
+                        } else {
+                            // reschedule
+                            xLocalClock.TIMER.schedule(alarm.createTrigger(), cExtraMillis);
+                        }
+                    } catch (Throwable e) {
+                        // see xLocalClock.Alarm.Trigger.run(): these triggers are scheduled onto
+                        // the very same process-wide timer, so an escaping exception would kill
+                        // that one shared thread and disable every alarm in the JVM
+                        // TODO: report this through a runtime failure channel once one exists,
+                        //       rather than to stderr
+                        System.err.println("Unexpected alarm failure on the shared NanoTimer trigger");
+                        e.printStackTrace(System.err);
                     }
                 }
 
