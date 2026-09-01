@@ -26,6 +26,10 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import org.jetbrains.annotations.NotNull;
+
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * A recursive descent parser for Ecstasy source code.
@@ -34,12 +38,26 @@ public class Parser {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a parser that discards what it finds wrong.
+     *
+     * <p>A parser always has a listener - there is no "no listener" state - so a caller that only
+     * wants to know whether the source parses says so by choosing this constructor, rather than by
+     * passing a null the parser would have to decode.
+     *
+     * @param source  the source to parse
+     */
+    public Parser(@NotNull Source source) {
+        this(source, ErrorListener.BLACKHOLE);
+    }
+
+    /**
      * Construct an Ecstasy lexical analyzer.
      *
      * @param source   the source to parse
-     * @param listener the error listener
+     * @param listener the error listener; required - pass {@link ErrorListener#BLACKHOLE}, or use
+     *                 {@link #Parser(Source)}, to discard the diagnostics
      */
-    public Parser(Source source, ErrorListener listener) {
+    public Parser(@NotNull Source source, @NotNull ErrorListener listener) {
         this(source, listener, new Lexer(source, listener));
     }
 
@@ -53,18 +71,10 @@ public class Parser {
         this(parent.m_source, parent.m_errs, parent.m_lexer.createLexer(atoken));
     }
 
-    private Parser(Source source, ErrorListener errs, Lexer lexer) {
-        if (source == null) {
-            throw new IllegalArgumentException("Source required");
-        }
-
-        if (errs == null) {
-            throw new IllegalArgumentException("ErrorListener required");
-        }
-
-        m_source        = source;
-        m_errs = errs;
-        m_lexer         = lexer;
+    private Parser(@NotNull Source source, @NotNull ErrorListener errs, Lexer lexer) {
+        m_source = requireNonNull(source, "source");
+        m_errs   = requireNonNull(errs, "errs");
+        m_lexer  = lexer;
 
         // Do not prime with next() from the constructor. Subclasses can override token handling, so
         // the first token is pulled lazily after construction completes.
@@ -5608,9 +5618,17 @@ public class Parser {
     protected void log(Severity severity, String sCode, long lPosStart, long lPosEnd, Object... aoParam) {
         if (m_lookAhead != null) {
             m_lookAhead.log(severity, sCode, aoParam, lPosStart, lPosEnd);
-        } else if (m_errs.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd)) {
+            return;
+        }
+
+        m_errs.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd);
+
+        // Report, then ask. The listener records; whether parsing can continue is a separate
+        // question with a separate answer, and it is asked here rather than read out of log().
+        // The old message said "error list is full" whatever the reason - a FATAL aborts too.
+        if (m_errs.isAbortDesired()) {
             m_fAvoidRecovery = true;
-            throw new CompilerException("error list is full: " + m_errs);
+            throw new CompilerException("aborting the parser; " + m_errs);
         }
     }
 
@@ -5816,7 +5834,7 @@ public class Parser {
     /**
      * The ErrorListener to report errors to.
      */
-    private final ErrorListener m_errs;
+    private final @NotNull ErrorListener m_errs;
 
     /**
      * The lexical analyzer.

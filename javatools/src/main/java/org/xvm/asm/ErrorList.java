@@ -52,14 +52,14 @@ public class ErrorList
      * @return an ErrorList for a speculative attempt, which only needs to know whether anything
      *         went wrong rather than collect a report
      */
-    public static ErrorList firstError() {
+    public static @NotNull ErrorList firstError() {
         return new ErrorList(1);
     }
 
     /**
      * @return an ErrorList that collects everything and never asks the process to abort
      */
-    public static ErrorList unlimited() {
+    public static @NotNull ErrorList unlimited() {
         return new ErrorList(Integer.MAX_VALUE);
     }
 
@@ -67,12 +67,12 @@ public class ErrorList
     // ----- ErrorListener methods -----------------------------------------------------------------
 
     @Override
-    public ErrorListener branch(AstNode node) {
+    public @NotNull ErrorListener branch(AstNode node) {
         return new BranchedErrorListener(this, f_cMaxErrors, node);
     }
 
     @Override
-    public boolean log(ErrorInfo err) {
+    public void log(ErrorInfo err) {
         String uid = err.genUID();
         if (f_setUID.add(uid)) {
             // remember the highest severity encountered
@@ -90,8 +90,6 @@ public class ErrorList
                 ++m_cErrors;
             }
         }
-
-        return isAbortDesired();
     }
 
     @Override
@@ -209,21 +207,23 @@ public class ErrorList
         }
 
         @Override
-        public ErrorListener branch(AstNode node) {
+        public @NotNull ErrorListener branch(AstNode node) {
             return new BranchedErrorListener(this, getSeriousErrorMax(),
                     node == null ? f_node : node);
         }
 
         @Override
-        public boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
-            return f_node == null
-                ? super.log(severity, sCode, aoParam, xs)
-                : log(severity, sCode, aoParam,
+        public void log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
+            if (f_node == null) {
+                super.log(severity, sCode, aoParam, xs);
+            } else {
+                log(severity, sCode, aoParam,
                         f_node.getSource(), f_node.getStartPosition(), f_node.getEndPosition());
+            }
         }
 
         @Override
-        public ErrorListener merge() {
+        public @NotNull ErrorListener merge() {
             if (hasErrors()) {
                 logTo(f_listener);
             }

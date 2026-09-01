@@ -18,6 +18,10 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.stream;
 
+import org.jetbrains.annotations.NotNull;
+
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * Represents any of the various XVM structures, which are hierarchical in nature, and include such
@@ -388,32 +392,21 @@ public abstract class XvmStructure
     /**
      * Log an error against this structure.
      *
-     * @param errs     the error list to log to, or null to use the runtime ErrorListener
+     * @param errs     the listener to log to; required - pass {@link ErrorListener#BLACKHOLE} to
+     *                 discard the diagnostic
      * @param sev      the severity of the error
      * @param sCode    the error code
      * @param aoParam  the parameters of the error
      */
-    public boolean log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
+    public void log(@NotNull ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
         // TODO need a way to log to compiler error list if we have compile-time info on the location in the source code
-        return ensureErrorListener(errs).log(sev, sCode, aoParam, this);
+        requireNonNull(errs, "errs").log(sev, sCode, aoParam, this);
     }
 
     /**
-     * Make sure that an error listener is returned to use.
-     *
-     * @param  errs  an error listener, or null
-     *
-     * @return the error listener passed in, if it was not null, otherwise the previously specified
-     *         error listener, otherwise the runtime error listener
+     * @return the listener this structure's work reports to; never null
      */
-    public ErrorListener ensureErrorListener(ErrorListener errs) {
-        return errs == null ? getErrorListener() : errs;
-    }
-
-    /**
-     * @return the error listener, if provided, otherwise the runtime error listener
-     */
-    public ErrorListener getErrorListener() {
+    public @NotNull ErrorListener getErrorListener() {
         return m_xsParent.getErrorListener();
     }
 
@@ -426,7 +419,7 @@ public abstract class XvmStructure
      *
      * @return the error listener to report that pool's work through
      */
-    public ErrorListener getErrorListener(ConstantPool pool) {
+    public @NotNull ErrorListener getErrorListener(ConstantPool pool) {
         return m_xsParent.getErrorListener(pool);
     }
 

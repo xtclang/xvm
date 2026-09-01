@@ -115,7 +115,7 @@ public final class TernaryExpression
                 // only one of the branches fits; there's a possibility that a type inference
                 // introduced by the condition expression will make both fit; since the caller
                 // relies on an "exhaustive" check, let's spare no effort
-                return testFitMultiExhaustive(ctx, atypeRequired, errs);
+                return testFitMultiExhaustive(ctx, errs, atypeRequired);
             }
             return TypeFit.NoFit;
         }

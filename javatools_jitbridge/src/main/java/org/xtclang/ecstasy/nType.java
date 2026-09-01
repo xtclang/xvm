@@ -57,7 +57,7 @@ public class nType
             java.lang.String className   = $dataType.ensureJitClassName(typeSystem);
             java.lang.String classOfType = TypeSystem.classOfClass(className);
             try {
-                java.lang.Class clz;
+                java.lang.Class<?> clz;
                 try {
                     clz = typeSystem.loader.loadClass(classOfType);
                 } catch (ClassNotFoundException cnfe) {
@@ -124,9 +124,7 @@ public class nType
         }
 
         try {
-            java.lang.Boolean result = (java.lang.Boolean)
-                    equalsMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
-            return result.booleanValue();
+            return (java.lang.Boolean) equalsMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
         } catch (IllegalAccessException e) {
             throw invocationUnsupported("equals()");
         } catch (InvocationTargetException e) {
@@ -261,15 +259,15 @@ public class nType
     private Method ensureMethod(java.lang.String methodName, int valueCount) {
         TypeSystem       typeSystem = $ctx.container.typeSystem;
         java.lang.String clzName    = $dataType.ensureJitClassName(typeSystem);
-        java.lang.Class  clz        = $xvmClass($ctx).getClass();
-        java.lang.Class  valueClass;
+        java.lang.Class<?> clz      = $xvmClass($ctx).getClass();
+        java.lang.Class<?> valueClass;
         try {
             valueClass = typeSystem.loader.loadClass(clzName);
         } catch (ClassNotFoundException e) {
             throw Exception.$unsupported($ctx, "No such class " + clzName);
         }
 
-        java.lang.Class[] paramClasses = new java.lang.Class[2 + valueCount];
+        java.lang.Class<?>[] paramClasses = new java.lang.Class<?>[2 + valueCount];
         paramClasses[0] = Ctx.class;
         paramClasses[1] = nType.class;
         for (int i = 2; i < paramClasses.length; i++) {

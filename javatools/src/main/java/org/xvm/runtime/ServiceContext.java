@@ -66,6 +66,10 @@ import org.xvm.runtime.template._native.temporal.xLocalClock;
 
 import org.xvm.util.concurrent.VarHandles;
 
+import org.xvm.util.Severity;
+
+import static org.xvm.asm.Constants.RT_DEBUGGER_RESULT_UNSUPPORTED;
+
 
 /**
  * The service context.
@@ -752,7 +756,8 @@ public class ServiceContext {
                 int nResult = getDebugger().checkBreakPoint(frame, iPC);
                 switch (nResult) {
                 default -> {
-                    System.err.println("Not supported result: " + nResult);
+                    f_container.getErrorListener().log(Severity.WARNING,
+                        RT_DEBUGGER_RESULT_UNSUPPORTED, null, nResult);
                     aOp[iPC] = opReset;
                     return iPC; // repeat with a real op
                 }

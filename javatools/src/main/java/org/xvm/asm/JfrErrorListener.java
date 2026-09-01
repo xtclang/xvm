@@ -38,7 +38,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class JfrErrorListener
         implements ErrorListener {
-    private final ErrorListener delegate;
+    private final @NotNull ErrorListener delegate;
 
     /**
      * @param delegate  the listener to pass everything on to
@@ -50,12 +50,12 @@ public class JfrErrorListener
     /**
      * @return the listener this one wraps
      */
-    public ErrorListener getDelegate() {
+    public @NotNull ErrorListener getDelegate() {
         return delegate;
     }
 
     @Override
-    public boolean log(ErrorInfo err) {
+    public void log(ErrorInfo err) {
         var event = new DiagnosticEvent();
         if (event.shouldCommit()) {
             // only now is the message worth formatting
@@ -64,7 +64,7 @@ public class JfrErrorListener
             event.message  = err.getMessage();
             event.commit();
         }
-        return delegate.log(err);
+        delegate.log(err);
     }
 
     @Override

@@ -87,7 +87,7 @@ public final class ElvisExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
         // first try the less likely (and more complicated) "conditional" use case
-        ErrorListener  errsTemp  = errs == null ? ErrorListener.BLACKHOLE : errs.branch(this);
+        ErrorListener  errsTemp  = errs.branch(this);
         TypeConstant[] atypeCond = new TypeConstant[]{pool().typeBoolean(), typeRequired};
         TypeFit        fit       = expr1.testFitMulti(ctx, atypeCond, fExhaustive, errsTemp);
         if (fit.isFit()) {

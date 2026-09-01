@@ -42,7 +42,7 @@ public final class AsExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        return ((TypeExpression) expr2).ensureTypeConstant(ctx, null);
+        return ((TypeExpression) expr2).ensureTypeConstant(ctx, ErrorListener.BLACKHOLE);
     }
 
     @Override

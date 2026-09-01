@@ -188,7 +188,7 @@ public final class RelOpExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        MethodConstant method = getImplicitMethod(ctx, ErrorListener.BLACKHOLE);
+        MethodConstant method = getImplicitMethod(ctx);
         return method == null
                 ? null
                 : method.getRawReturns().get(0);
@@ -197,7 +197,7 @@ public final class RelOpExpression
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx) {
         if (operator.getId() == Id.DIVREM) {
-            MethodConstant method = getImplicitMethod(ctx, ErrorListener.BLACKHOLE);
+            MethodConstant method = getImplicitMethod(ctx);
             return method == null
                     ? null
                     : method.getRawReturns().unsafeArray();
@@ -210,7 +210,9 @@ public final class RelOpExpression
      * @return the method that the op will use implicitly if it is not provided an overriding type
      *         for inference purposes
      */
-    protected MethodConstant getImplicitMethod(Context ctx, ErrorListener errs) {
+    // No ErrorListener: "for inference purposes" says it - this is a guess, and both callers
+    // already passed BLACKHOLE. It never used the listener it took.
+    protected MethodConstant getImplicitMethod(Context ctx) {
         TypeConstant typeLeft = expr1.getImplicitType(ctx);
         if (typeLeft == null) {
             // if the type of the left-hand expression cannot be determined, then the result of the
@@ -218,7 +220,7 @@ public final class RelOpExpression
             return null;
         }
 
-        Set<MethodConstant> setOpsLeft = typeLeft.ensureTypeInfo().findOpMethods(
+        Set<MethodConstant> setOpsLeft = typeLeft.typeInfo().findOpMethods(
                 getDefaultMethodName(), operator.getId().TEXT, 1);
 
         MethodConstant idBestLeft = setOpsLeft.size() == 1 ? setOpsLeft.iterator().next() : null;
@@ -238,7 +240,8 @@ public final class RelOpExpression
                  typeLeft.getConverterTo(typeRight) != null) {
             // the left type's ops didn't give us a match, but left type is convertible to the right;
             // see if we can find something based on the right type ops
-            Set<MethodConstant> setOpsRight = typeRight.ensureTypeInfo().findOpMethods(
+            Set<MethodConstant> setOpsRight = typeRight.typeInfo()
+                    .findOpMethods(
                     getDefaultMethodName(), operator.getId().TEXT, 1);
             if (!setOpsRight.isEmpty()) {
                 idBest = chooseBest(setOpsRight, typeRight, mapBest);
@@ -425,7 +428,7 @@ public final class RelOpExpression
         }
 
         // using the inferred types (if any), validate the expressions
-        TypeConstant type1Req = guessLeftType(ctx, typeRequired, errs);
+        TypeConstant type1Req = guessLeftType(ctx, typeRequired);
 
         Expression expr1Copy = null;
         if (type1Req == null) {
@@ -444,11 +447,11 @@ public final class RelOpExpression
             type1Act = expr1New.getType();
         }
 
-        TypeConstant type2Req = selectRightType(ctx, typeRequired, type1Act, errs);
+        TypeConstant type2Req = selectRightType(ctx, typeRequired, type1Act);
         if (type2Req == null && type1Req != null) {
             // it's possible we narrowed the first type too aggressively; try to use the wider one
             type1Act = type1Req;
-            type2Req = selectRightType(ctx, typeRequired, type1Act, errs);
+            type2Req = selectRightType(ctx, typeRequired, type1Act);
         }
 
         Expression   expr2New = expr2.validate(ctx, type2Req, errs);
@@ -589,7 +592,10 @@ public final class RelOpExpression
      *
      * @return the type to request from the left expression, or null
      */
-    private TypeConstant guessLeftType(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
+    // No ErrorListener: this is a guess, and a guess that comes out "no" is an answer, not a
+    // diagnostic. It used to take one and never use it - every call inside it passes BLACKHOLE
+    // explicitly - which read as if the method reported when it deliberately does not.
+    private TypeConstant guessLeftType(Context ctx, TypeConstant typeRequired) {
         // all of these operators work the same way, in terms of types and left associativity:
         //
         // 1) there is a "required type", which is optional. if a required type is provided, then
@@ -632,7 +638,8 @@ public final class RelOpExpression
         String sMethod = getDefaultMethodName();
         String sOp     = operator.getId().TEXT;
         if (expr1.testFit(ctx, typeRequired, false, ErrorListener.BLACKHOLE).isFit()) {
-            Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
+            Set<MethodConstant> setOps = typeRequired.typeInfo()
+                                                     .findOpMethods(sMethod, sOp, 1);
             for (MethodConstant idMethod : setOps) {
                 if (expr2.testFit(ctx, idMethod.getRawParams().get(0), false, ErrorListener.BLACKHOLE).isFit()) {
                     TypeConstant typeReturn = idMethod.getRawReturns().get(0);
@@ -651,7 +658,8 @@ public final class RelOpExpression
         if (typeRequired.isParamsSpecified()) {
             for (TypeConstant typeParam : typeRequired.getParamTypesArray()) {
                 if (expr1.testFit(ctx, typeParam, false, ErrorListener.BLACKHOLE).isFit()) {
-                    Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
+                    Set<MethodConstant> setOps = typeParam.typeInfo()
+                                                          .findOpMethods(sMethod, sOp, 1);
                     for (MethodConstant idMethod : setOps) {
                         if (expr2.testFit(ctx, idMethod.getRawParams().get(0), false, ErrorListener.BLACKHOLE).isFit()) {
                             TypeConstant typeReturn = idMethod.getRawReturns().get(0);
@@ -675,7 +683,7 @@ public final class RelOpExpression
 
     /**
      * Calculate the type to use to validate the right expressions. This is a continuation of the
-     * logic described in {@link #guessLeftType(Context, TypeConstant, errs)}.
+     * logic described in {@link #guessLeftType(Context, TypeConstant)}.
      *
      * @param ctx           the compiler context
      * @param typeRequired  the type (or first type if more than one) required, or null
@@ -683,8 +691,9 @@ public final class RelOpExpression
      *
      * @return the type to request from the right expression, or null
      */
+    // No ErrorListener, for the same reason as guessLeftType above.
     private TypeConstant selectRightType(Context ctx, TypeConstant typeRequired,
-                                         TypeConstant typeLeft, ErrorListener errs) {
+                                         TypeConstant typeLeft) {
         if (typeLeft == null) {
             // we're already screwed
             return null;
@@ -709,7 +718,7 @@ public final class RelOpExpression
                 TypeConstant typeParam = idMethod.getRawParams().get(0);
                 TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, ErrorListener.BLACKHOLE);
                 if (!fit.isFit()) {
-                    fit = expr2.testFitExhaustive(ctx, typeParam, null);
+                    fit = expr2.testFitMultiExhaustive(ctx, ErrorListener.BLACKHOLE, typeParam);
                 }
 
                 if (fit.betterThan(fitBest)) {

@@ -105,6 +105,10 @@ import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
 
 import static org.xvm.javajit.TypeSystem.HASH;
 
+import org.xvm.util.Severity;
+
+import static org.xvm.asm.Constants.RT_TYPES_UNRECONCILABLE;
+
 /**
  * Whatever is necessary for the method bytecode production.
  */
@@ -1764,8 +1768,9 @@ public class BuildContext {
                             typeFrom.getValueString() + " -> " + typeTo.getValueString(), ctxSlot(code));
                     // unfortunately, if generated for any reachable code, this will throw
                     // during the verification phase without any useful information to debug
-                    System.err.println("*** Unreconcilable types " +
-                            typeFrom.getValueString() + " -> " + typeTo.getValueString());
+                    typeSystem.pool().getErrorListener().log(Severity.WARNING,
+                            RT_TYPES_UNRECONCILABLE, methodStruct,
+                            typeFrom.getValueString(), typeTo.getValueString());
                     return;
                 }
 

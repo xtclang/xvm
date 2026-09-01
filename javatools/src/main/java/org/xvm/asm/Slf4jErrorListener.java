@@ -38,7 +38,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class Slf4jErrorListener
         implements ErrorListener {
-    private final ErrorListener delegate;
+    private final @NotNull ErrorListener delegate;
     private final Logger        logger;
 
     /**
@@ -60,14 +60,14 @@ public class Slf4jErrorListener
     /**
      * @return the listener this one wraps
      */
-    public ErrorListener getDelegate() {
+    public @NotNull ErrorListener getDelegate() {
         return delegate;
     }
 
     @Override
-    public boolean log(ErrorInfo err) {
+    public void log(ErrorInfo err) {
         mirror(err);
-        return delegate.log(err);
+        delegate.log(err);
     }
 
     /**

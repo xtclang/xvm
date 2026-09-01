@@ -18,6 +18,8 @@ import org.xvm.util.Severity;
 import static org.xvm.javajit.Refiner.DefaultRefiner;
 import static org.xvm.util.Handy.require;
 
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * A TypeSystem Linker is the "builder" for new TypeSystems.
@@ -79,7 +81,7 @@ public class Linker {
     /**
      * A structure for collecting information, warnings, and errors from the linking process.
      */
-    private final ErrorList errors = new ErrorList(MAX_LINK_ERRORS);
+    private final @NotNull ErrorList errors = new ErrorList(MAX_LINK_ERRORS);
 
     /**
      * Internal cache: Set to `true` once a serious Error has been spotted.
@@ -349,7 +351,7 @@ public class Linker {
      *
      * @return a non-null ErrorList, which may be empty
      */
-    public ErrorList errorList() {
+    public @NotNull ErrorList errorList() {
         if (errors.hasErrors()) {
             bad = true;
         }

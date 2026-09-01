@@ -350,7 +350,10 @@ public class Runner extends Launcher<RunnerOptions> {
      * @return a new Connector (not yet started)
      */
     protected Connector createBaseConnector(ModuleRepository repo, boolean isJit) {
-        return isJit ? new JitConnector(repo) : new InterpreterConnector(repo);
+        // m_errors, not the default: the launcher was given a listener by whoever invoked it, and
+        // the container is where runtime diagnostics are owned. Using the one-argument constructor
+        // here left the CLI's listener wired to the compiler and silently absent from the run.
+        return isJit ? new JitConnector(repo) : new InterpreterConnector(repo, m_errors);
     }
 
     /**

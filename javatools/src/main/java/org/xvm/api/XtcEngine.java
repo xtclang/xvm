@@ -104,7 +104,7 @@ public final class XtcEngine
     private final ModuleRepository repoLibrary;
     private final Runtime          runtime;
     private final NativeContainer  containerNative;
-    private final ErrorListener    diagnosticSink;
+    private final @NotNull ErrorListener diagnosticSink;
 
     private XtcEngine(@NotNull ModuleRepository repoLibrary, @NotNull ErrorListener diagnosticSink) {
         this.repoLibrary     = Objects.requireNonNull(repoLibrary, "repoLibrary");
@@ -581,15 +581,21 @@ public final class XtcEngine
     private record TeeErrorListener(ErrorList primary, ErrorListener secondary)
             implements ErrorListener {
         @Override
-        public boolean log(ErrorInfo err) {
-            boolean fAbort = primary.log(err);
+        public void log(ErrorInfo err) {
+            primary.log(err);
             secondary.log(err);
-            return fAbort;
         }
 
         @Override
         public boolean isAbortDesired() {
-            return primary.isAbortDesired();
+            // BOTH, not just the engine's own list. The caller's listener is how a host
+            // PARTICIPATES rather than merely observes - wrapping a real ErrorList and passing it
+            // to compile() is exactly what the documentation tells a host to do when it wants a say
+            // in when compilation gives up. Consulting only `primary` silently made that advice
+            // false through this path: a host could pass ErrorList.firstError() and still watch the
+            // compiler run to completion. A host that only observes is unaffected, because a
+            // stateless listener answers false.
+            return primary.isAbortDesired() || secondary.isAbortDesired();
         }
 
         @Override
@@ -711,7 +717,7 @@ public final class XtcEngine
 
     public static final class Builder {
         private final List<File> modulePath = new ArrayList<>();
-        private ErrorListener    diagnosticSink = ErrorListener.RUNTIME;
+        private @NotNull ErrorListener diagnosticSink = ErrorListener.RUNTIME;
 
         /**
          * Supply a sink for diagnostics that no single compile owns - library-type resolution and

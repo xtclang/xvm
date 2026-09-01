@@ -594,6 +594,125 @@ public interface Constants {
      * "mixin {0} into {1}" extends "mixin {2} into {3}", but type {1} does not narrow type {3}.
      */
     String VE_INCOMPATIBLE_INTO                   = "VERIFY-93";
+    /**
+     * Resolving the typedefs of {0} produced {1}, which already specifies type parameters.
+     */
+    String VE_TYPE_PARAMS_ALREADY_SPECIFIED       = "VERIFY-94";
+    /**
+     * The type parameter {0} cannot be adopted by {1}; the existing type parameters are retained.
+     */
+    String VE_TYPE_PARAM_UNADOPTABLE              = "VERIFY-95";
+    /**
+     * {0} is not a supported tuple type.
+     */
+    String VE_TUPLE_TYPE_UNSUPPORTED              = "VERIFY-96";
+    /**
+     * The assignability of {1} to {0} was rejected because the check recursed.
+     */
+    String VE_RELATION_RECURSIVE                  = "VERIFY-97";
+    /**
+     * {2} declares the conflicting method signatures {0} and {1}; {0} is used.
+     */
+    String VE_METHOD_SIGNATURE_CONFLICT           = "VERIFY-98";
+    /**
+     * {0} on {1} is ambiguous; it matches {2}.
+     */
+    String VE_METHOD_MATCH_AMBIGUOUS              = "VERIFY-99";
+    /**
+     * The AST for {0} could not be assembled: {1}.
+     */
+    String VE_AST_ASSEMBLY_FAILED                 = "VERIFY-100";
+
+
+    // ----- runtime error codes -------------------------------------------------------------------
+
+    /*
+     * Diagnostics detected while running or JIT-compiling, rather than while compiling or verifying
+     * source. They report through an owner the same way everything else does - a Container for the
+     * runtime (reached from a Frame), a ConstantPool for the JIT builders (reached from a
+     * TypeSystem) - so that a host hears them instead of a stream nobody is reading.
+     *
+     * Nearly all of these are WARNING: they name an inconsistency and then continue with a defined
+     * answer, and the default listener for an unconfigured owner is ErrorListener.RUNTIME, which
+     * throws from inside log() at ERROR and above. See docs/errorlistener/README.md section 7.
+     */
+
+    /**
+     * A reference wrapping is required from {0} to {1}.
+     */
+    String RT_WRAPPING_REQUIRED                   = "RUNTIME-01";
+    /**
+     * Suspicious assignment in {0} from {1} to {2}.
+     */
+    String RT_SUSPICIOUS_ASSIGNMENT               = "RUNTIME-02";
+    /**
+     * The type {0} could not be fully resolved.
+     */
+    String RT_TYPE_UNRESOLVED                     = "RUNTIME-03";
+    /**
+     * The debugger returned the unsupported result {0}.
+     */
+    String RT_DEBUGGER_RESULT_UNSUPPORTED         = "RUNTIME-04";
+    /**
+     * The method chain for {0} belongs to a foreign pool and cannot be cached.
+     */
+    String RT_FOREIGN_METHOD_CHAIN                = "RUNTIME-05";
+    /**
+     * The nested method {0} of {1} belongs to a foreign pool and cannot be cached.
+     */
+    String RT_FOREIGN_NESTED_METHOD               = "RUNTIME-06";
+    /**
+     * The module {1} does not have a {0} method.
+     */
+    String RT_MODULE_METHOD_MISSING               = "RUNTIME-07";
+    /**
+     * Invalid argument type {0} for the {1} operation on {2}.
+     */
+    String RT_ARGUMENT_TYPE_INVALID               = "RUNTIME-08";
+    /**
+     * The {0} operation on {1} is ambiguous.
+     */
+    String RT_OPERATION_AMBIGUOUS                 = "RUNTIME-09";
+    /**
+     * The native method {0}.{1} {2}->{3} does not exist.
+     */
+    String RT_NATIVE_METHOD_MISSING               = "RUNTIME-10";
+    /**
+     * The native property {0}.{1} does not exist.
+     */
+    String RT_NATIVE_PROPERTY_MISSING             = "RUNTIME-11";
+    /**
+     * {0} is a symbolic link; native support for link files is not implemented.
+     */
+    String RT_LINK_UNSUPPORTED                    = "RUNTIME-12";
+    /**
+     * The runtime detail attached to the exception {0} is: {1}.
+     */
+    String RT_EXCEPTION_DETAIL                    = "RUNTIME-13";
+    /**
+     * There is no class builder for {0}.
+     */
+    String RT_CLASS_BUILDER_MISSING               = "RUNTIME-14";
+    /**
+     * Unreconcilable types {0} and {1}.
+     */
+    String RT_TYPES_UNRECONCILABLE                = "RUNTIME-15";
+    /**
+     * The native implementation of {0}#{1} for {2} is missing.
+     */
+    String RT_NATIVE_IMPL_MISSING                 = "RUNTIME-16";
+    /**
+     * The capped virtual constructor {0}, narrowed by {1}, is not yet supported.
+     */
+    String RT_VIRTUAL_CTOR_CAPPED                 = "RUNTIME-17";
+    /**
+     * Some methods of {0} were skipped during code generation.
+     */
+    String RT_METHODS_SKIPPED                     = "RUNTIME-18";
+    /**
+     * Code generation for {0} was skipped.
+     */
+    String RT_CODE_GEN_SKIPPED                    = "RUNTIME-19";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

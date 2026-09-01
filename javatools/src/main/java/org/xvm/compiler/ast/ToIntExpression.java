@@ -81,7 +81,8 @@ public final class ToIntExpression
      * @return the method or property constant to use to extract an IntNumber, or null if extraction
      *         is unnecessary
      */
-    public IdentityConstant getExtractor(ErrorListener errs) {
+    // No ErrorListener: a lookup by class name, whose "nothing to extract" is the return value.
+    public IdentityConstant getExtractor() {
         switch (expr.getType().getEcstasyClassName()) {
         case "numbers.Int8":
         case "numbers.Int16":
@@ -102,14 +103,15 @@ public final class ToIntExpression
         case "numbers.Nibble":
         case "text.Char": {
             // at least one of these does NOT have an @Auto method that converts to<Int>()
-            MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
+            MethodConstant id = expr.getType().typeInfo().findCallable(
                     "toInt64", true, false, getTypes(), TypeConstant.NO_TYPES);
             assert id != null;
             return id;
         }
 
         default: {
-            PropertyConstant id = expr.getType().ensureTypeInfo().findProperty("ordinal").getIdentity();
+            PropertyConstant id = expr.getType().typeInfo()
+                                        .findProperty("ordinal").getIdentity();
             assert id != null;
             return id;
         }
@@ -157,7 +159,8 @@ public final class ToIntExpression
     /**
      * @return the method to use to extract an IntNumber, or null if extraction is unnecessary
      */
-    public MethodConstant getConvertMethod(ErrorListener errs) {
+    // No ErrorListener: as getExtractor above.
+    public MethodConstant getConvertMethod() {
         switch (expr.getType().getEcstasyClassName()) {
         case "numbers.Int8":
         case "numbers.Int16":
@@ -171,7 +174,7 @@ public final class ToIntExpression
         case "numbers.UInt128":
         case "numbers.UIntN":
             // most of these do NOT have an @Auto method that converts to<Int>()
-            MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
+            MethodConstant id = expr.getType().typeInfo().findCallable(
                     "toInt64", true, false, getTypes(), TypeConstant.NO_TYPES);
             assert id != null;
             return id;
@@ -206,8 +209,8 @@ public final class ToIntExpression
 
     @Override
     public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
-        return !isConstant() && getExtractor(errs) == null && getOffsetConstant() == null &&
-            getConvertMethod(errs) == null
+        return !isConstant() && getExtractor() == null && getOffsetConstant() == null &&
+            getConvertMethod() == null
                 ? expr.generateArgument(ctx, code, fLocalPropOk, errs)
                 : super.generateArgument(ctx, code, fLocalPropOk, errs);
     }
@@ -218,9 +221,9 @@ public final class ToIntExpression
             super.generateAssignment(ctx, code, LVal, errs);
         }
 
-        IdentityConstant idExtract   = getExtractor(errs);
+        IdentityConstant idExtract   = getExtractor();
         Constant         constOffset = getOffsetConstant();
-        MethodConstant   idConvert   = getConvertMethod(errs);
+        MethodConstant   idConvert   = getConvertMethod();
 
         // step 1: extract the value from the underlying expression
         Argument argExtracted = expr.generateArgument(ctx, code, false, errs);
@@ -268,7 +271,7 @@ public final class ToIntExpression
 
         sb.append(expr);
 
-        IdentityConstant idExtract = getExtractor(ErrorListener.BLACKHOLE);
+        IdentityConstant idExtract = getExtractor();
         if (idExtract != null) {
             sb.append('.')
               .append(idExtract.getName());
@@ -287,7 +290,7 @@ public final class ToIntExpression
             }
         }
 
-        MethodConstant idConvert = getConvertMethod(ErrorListener.BLACKHOLE);
+        MethodConstant idConvert = getConvertMethod();
         if (idConvert != null) {
             if (pintOffset != null) {
                 sb.insert(0, '(')

@@ -43,6 +43,8 @@ import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 import static org.xvm.util.Handy.copyOf;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * The compiler of the "eval" script used by the debugger.
  */
@@ -67,7 +69,7 @@ public class EvalCompiler {
      */
     public MethodStructure createLambda(TypeConstant typeReturn) {
         ConstantPool pool = f_frame.poolContext();
-        ErrorList    errs = m_errs = ErrorList.firstError();
+        ErrorList    errs = f_errs;
 
         MethodStructure      method = f_frame.f_function;
         ClassStructure       clz    = method.getContainingClass();
@@ -150,7 +152,7 @@ public class EvalCompiler {
      * @return a list of errors
      */
     public List<ErrorListener.ErrorInfo> getErrors() {
-        return m_errs.getErrors();
+        return f_errs.getErrors();
     }
 
     /**
@@ -313,8 +315,13 @@ public class EvalCompiler {
 
     /**
      * The errors.
+     *
+     * <p>Created with the compiler rather than by {@code createLambda}, which left
+     * {@link #getErrors()} throwing a NullPointerException if anyone asked before compiling. An
+     * EvalCompiler is one-shot - the debugger builds one per evaluation - so one list is one
+     * evaluation's errors.
      */
-    private ErrorList m_errs;
+    private final @NotNull ErrorList f_errs = ErrorList.firstError();
 
     /**
      * A synthetic MethodDeclarationStatement that contains the eval body.

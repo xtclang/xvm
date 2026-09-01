@@ -22,19 +22,41 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.text.xString;
 
+import org.jetbrains.annotations.NotNull;
+
+import static java.util.Objects.requireNonNull;
+
 /**
  * The Connector implementation using the interpreter.
  */
 public class InterpreterConnector
         extends Connector {
     /**
-     * Construct the Connector based on the specified ModuleRepository.
+     * Construct the Connector based on the specified ModuleRepository, reporting runtime
+     * diagnostics through {@link ErrorListener#RUNTIME} - which prints them.
      */
     public InterpreterConnector(ModuleRepository repository) {
+        this(repository, ErrorListener.RUNTIME);
+    }
+
+    /**
+     * Construct the Connector based on the specified ModuleRepository.
+     *
+     * <p>The listener is the native container's, and every container created under it inherits it,
+     * so this is the one place an embedder has to name to hear everything the runtime reports. The
+     * seam existed on {@link NativeContainer#create} already; this constructor is what makes it
+     * reachable without building the runtime and the native container by hand.
+     *
+     * @param repository  the modules to run against
+     * @param errs        the listener runtime diagnostics report through; required - pass
+     *                    {@link ErrorListener#BLACKHOLE} to discard them
+     */
+    public InterpreterConnector(ModuleRepository repository, @NotNull ErrorListener errs) {
         super(repository);
 
         f_runtime         = new Runtime();
-        f_containerNative = NativeContainer.create(f_runtime, repository, ErrorListener.RUNTIME);
+        f_containerNative = NativeContainer.create(f_runtime, repository,
+                                requireNonNull(errs, "errs"));
     }
 
     @Override

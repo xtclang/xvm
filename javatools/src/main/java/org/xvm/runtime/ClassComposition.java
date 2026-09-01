@@ -12,6 +12,8 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.util.Severity;
+
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
@@ -41,6 +43,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.Lazy;
 import org.xvm.util.ListMap;
+
+import static org.xvm.asm.Constants.RT_FOREIGN_METHOD_CHAIN;
+import static org.xvm.asm.Constants.RT_FOREIGN_NESTED_METHOD;
 
 
 /**
@@ -324,7 +329,8 @@ public final class ClassComposition
                     } else {
                         // what else can we do here?
                         fCache = false;
-                        System.err.println("WARNING: Foreign method chain for " + sig); // TODO: remove
+                        f_container.getErrorListener().log(Severity.WARNING,
+                            RT_FOREIGN_METHOD_CHAIN, null, sig.getValueString());
                     }
                 }
             } else {
@@ -336,8 +342,8 @@ public final class ClassComposition
                         nidMethod = idParent.appendNestedIdentity(pool, idNested);
                     } else {
                         fCache = false;
-                        System.err.println("WARNING: Foreign nested method " + idNested +
-                                           " for " + idParent); // TODO: remove
+                        f_container.getErrorListener().log(Severity.WARNING,
+                            RT_FOREIGN_NESTED_METHOD, null, idNested, idParent.getValueString());
                     }
                 }
             }

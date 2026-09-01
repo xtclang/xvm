@@ -71,6 +71,13 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 import org.xvm.util.Handy;
 import static org.xvm.util.Handy.copyOf;
 
+import org.xvm.util.Severity;
+
+import static org.xvm.asm.Constants.RT_ARGUMENT_TYPE_INVALID;
+import static org.xvm.asm.Constants.RT_NATIVE_METHOD_MISSING;
+import static org.xvm.asm.Constants.RT_NATIVE_PROPERTY_MISSING;
+import static org.xvm.asm.Constants.RT_OPERATION_AMBIGUOUS;
+
 
 /**
  * ClassTemplate represents a run-time class.
@@ -1813,9 +1820,10 @@ public abstract class ClassTemplate
                 TypeConstant typeParam = sig.getRawParams().get(0);
 
                 if (!typeArg.isA(typeParam)) {
-                    // soft assert
-                    System.err.println("Invalid argument type \"" + typeArg.getValueString() +
-                        "\" for \"" + sName + "\" operation on " + hTarget.getType().getValueString());
+                    // A soft assert: null is returned either way, so this reports and carries on.
+                    container().getErrorListener().log(Severity.WARNING, RT_ARGUMENT_TYPE_INVALID,
+                        f_struct, typeArg.getValueString(), sName,
+                        hTarget.getType().getValueString());
                     return null;
                 }
             }
@@ -1863,9 +1871,9 @@ public abstract class ClassTemplate
                 }
             }
 
-            // soft assert
-            System.err.println("Ambiguous \"" + sName + "\" operation on " +
-                    hTarget.getType().getValueString());
+            // A soft assert: null is returned either way, so this reports and carries on.
+            container().getErrorListener().log(Severity.WARNING, RT_OPERATION_AMBIGUOUS,
+                    f_struct, sName, hTarget.getType().getValueString());
             return null;
         }
         }
@@ -1905,9 +1913,9 @@ public abstract class ClassTemplate
                 return hTarget.getComposition().getMethodCallChain(sig);
             }
 
-            // soft assert
-            System.err.println("Ambiguous \"" + sOp + "\" operation on " +
-                    hTarget.getType().getValueString());
+            // A soft assert: null is returned either way, so this reports and carries on.
+            container().getErrorListener().log(Severity.WARNING, RT_OPERATION_AMBIGUOUS,
+                    f_struct, sOp, hTarget.getType().getValueString());
             return null;
         }
         }
@@ -2117,8 +2125,11 @@ public abstract class ClassTemplate
             });
 
         if (method == null) {
-            System.err.println("Missing method " + f_sName + '.' + sName + ' '
-                    + Arrays.toString(asParamType) + "->" + Arrays.toString(asRetType));
+            // ERROR: a native template naming a method the Ecstasy source does not declare is a
+            // defect in the runtime's own wiring, found while the native container is being built.
+            container().getErrorListener().log(Severity.ERROR, RT_NATIVE_METHOD_MISSING,
+                    f_struct, f_sName, sName, Arrays.toString(asParamType),
+                    Arrays.toString(asRetType));
         } else {
             if (!method.isNative()) {
                 ClassStructure clz = method.getContainingClass();
@@ -2472,7 +2483,9 @@ public abstract class ClassTemplate
     public void markNativeProperty(String sPropName) {
         PropertyStructure prop = getStructure().findPropertyDeep(sPropName);
         if (prop == null) {
-            System.err.println("Missing property " + f_sName + "." + sPropName);
+            // ERROR: see markNativeMethod above - the same wiring defect, for a property.
+            container().getErrorListener().log(Severity.ERROR, RT_NATIVE_PROPERTY_MISSING,
+                    f_struct, f_sName, sPropName);
         } else {
             Access accessRef = prop.getAccess();
             if (!prop.isNative()) {

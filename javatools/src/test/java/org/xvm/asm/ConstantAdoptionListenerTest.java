@@ -24,8 +24,8 @@ public class ConstantAdoptionListenerTest {
         var library  = new FileStructure("library");
         var compiling = new FileStructure("compiling");
 
-        ErrorListener libraryListener   = err -> false;
-        ErrorListener compilingListener = err -> false;
+        ErrorListener libraryListener   = err -> {};
+        ErrorListener compilingListener = err -> {};
         library.getConstantPool().setErrorListener(libraryListener);
         compiling.getConstantPool().setErrorListener(compilingListener);
 

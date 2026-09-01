@@ -34,17 +34,13 @@ public class Compiler {
      * @param stmtModule  the statement representing all of the code in the module
      * @param errs    the listener to log any errors to during the various phases of compilation
      */
-    public Compiler(TypeCompositionStatement stmtModule, ErrorListener errs) {
+    public Compiler(TypeCompositionStatement stmtModule, @NotNull ErrorListener errs) {
         if (stmtModule == null) {
             throw new IllegalArgumentException("AST node for module required");
         }
         if (stmtModule.getCategory().getId() != Token.Id.MODULE) {
             throw new IllegalArgumentException("AST node for module is not a module statement");
         }
-        if (errs == null) {
-            throw new IllegalArgumentException("ErrorListener required");
-        }
-
         m_stmtModule = stmtModule;
         m_errs       = requireNonNull(errs, "errs");
     }
@@ -63,7 +59,7 @@ public class Compiler {
     /**
      * @return the ErrorListener that the compiler reports errors to
      */
-    public ErrorListener getErrorListener() {
+    public @NotNull ErrorListener getErrorListener() {
         validateCompiler();
         return m_errs;
     }
@@ -132,7 +128,12 @@ public class Compiler {
                 throw new CompilerException("failed to create module");
             }
             m_structFile = m_stmtModule.getComponent().getFileStructure();
-            m_structFile.getConstantPool().setErrorListener(ErrorListener.BLACKHOLE);
+            // The pool holds this compilation's listener from here on, and keeps it. It used to be
+            // blanked to BLACKHOLE here and restored after code generation, which made every
+            // ambient ask - anything reaching getConstantPool().getErrorListener() - silent for the
+            // whole compile. Exactly one call site needed that silence, TypeConstant.getConverterTo
+            // (a speculative "is there a conversion?" query), and it now asks for BLACKHOLE itself.
+            m_structFile.getConstantPool().setErrorListener(m_errs);
             setStage(Stage.Registered);
         }
 
@@ -296,16 +297,6 @@ public class Compiler {
                 m_structFile.reregisterConstants(true);
                 m_structFile.validate(m_errs);
             }
-
-            // Lift the registration-phase silence set in generateInitialFileStructure, whether or
-            // not this compilation succeeded. It used to be cleared inside the branch above, so a
-            // compilation that produced serious errors left the structure silenced for good - the
-            // clear only ran on the path that had nothing to report.
-            // restore to THIS compiler's listener, not the runtime default: metadata resolved
-            // after registration is still this compilation's work, so it belongs in the caller's
-            // sink. That is what makes a host-supplied listener (XtcEngine.compile, an LSP) a
-            // single controlling point rather than one that only sees the compiler's own stages.
-            m_structFile.getConstantPool().setErrorListener(m_errs);
         }
 
         return m_mgr.isComplete();

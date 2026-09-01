@@ -3576,7 +3576,7 @@ public abstract sealed class Component
         /**
          * @return the listener this collector was constructed with
          */
-        public ErrorListener getErrorListener() {
+        public @NotNull ErrorListener getErrorListener() {
             return m_errs;
         }
 

@@ -816,7 +816,7 @@ public final class MethodStructure
                                          boolean fParam, Map<FormalConstant, TypeConstant> mapTypeParams) {
         if (typeResult != null) {
             // downgrade enum value types to their base type (e.g. True -> Boolean)
-            TypeInfo info = typeResult.ensureTypeInfo(ErrorListener.BLACKHOLE);
+            TypeInfo info = typeResult.typeInfo();
             if (info.getFormat() == Format.ENUMVALUE) {
                 typeResult = info.getExtends();
             }
@@ -2154,9 +2154,14 @@ public final class MethodStructure
                 m_ast.write(new DataOutputStream(collectAst), m_registry);
                 m_abAst = collectAst.toByteArray();
             } catch (IOException e) {
-                System.err.println("Error in MethodStructure.assemble() of AST for "
-                                       + this.getParent().getContainingClass().getName() + "."
-                                       + this.getName() + ": " + e);
+                // Report, then throw explicitly. The throw is what stops the assembly; log()'s
+                // return value is deliberately not consulted, so the decision to abort does not
+                // depend on which listener happens to be installed. Note that the pool's default
+                // listener, ErrorListener.RUNTIME, throws from inside log() at ERROR and above, so
+                // there it raises IllegalStateException carrying this same message rather than
+                // reaching the IOException below.
+                log(getConstantPool().getErrorListener(), Severity.FATAL, VE_AST_ASSEMBLY_FAILED,
+                        this.getParent().getContainingClass().getName() + "." + this.getName(), e);
                 throw new IOException(e);
             }
         }

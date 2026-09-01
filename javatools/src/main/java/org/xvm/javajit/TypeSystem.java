@@ -38,6 +38,10 @@ import static org.xvm.util.Handy.require;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
+import org.xvm.util.Severity;
+
+import static org.xvm.asm.Constants.RT_CLASS_BUILDER_MISSING;
+
 /**
  * As part of the Ecstasy JIT implementation targeting the JVM, this class represents an Ecstasy
  * TypeSystem, which is a collection of Ecstasy modules that are linked together. This class is
@@ -457,7 +461,8 @@ public class TypeSystem {
             if (publicType.isEnumValue()) {
                 return new EnumerationBuilder(this, art);
             } else {
-                System.err.println("Missing class builder " + type.getValueString());
+                pool.getErrorListener().log(Severity.WARNING, RT_CLASS_BUILDER_MISSING, null,
+                        type.getValueString());
             }
         }
 

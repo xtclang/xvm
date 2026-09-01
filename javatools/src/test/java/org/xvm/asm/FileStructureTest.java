@@ -56,7 +56,7 @@ public class FileStructureTest {
     public void errorListenerIgnoresAmbientPool() {
         var file  = new FileStructure("owner");
         var other = new FileStructure("other");
-        ErrorListener otherListener = err -> false;
+        ErrorListener otherListener = err -> {};
         other.getConstantPool().setErrorListener(otherListener);
 
         // configuring another file must not reach this one

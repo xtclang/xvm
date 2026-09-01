@@ -81,7 +81,7 @@ class BundlerTest {
     void testBundleCommandDispatch() {
         // -h takes the help path through the real Bundler launcher and returns success
         int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {"-h"},
-                new Console() {}, null);
+                new Console() {});
         assertEquals(0, result);
     }
 
@@ -204,7 +204,7 @@ class BundlerTest {
         int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {
                 "-o", tempDir.resolve("out.xtc").toString(),
                 fileFirst.getPath(),
-                fileSecond.getPath()}, console, null);
+                fileSecond.getPath()}, console);
 
         assertEquals(1, result);
         var output = console.getAllOutput();
@@ -263,7 +263,7 @@ class BundlerTest {
             args.add(input.getPath());
         }
         return Launcher.launch(Launcher.CMD_BUNDLE, args.toArray(new String[0]),
-                new CaptureConsole(), null);
+                new CaptureConsole());
     }
 
     private static final class CaptureConsole implements Console {

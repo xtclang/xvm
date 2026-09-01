@@ -62,6 +62,10 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
+import org.jetbrains.annotations.NotNull;
+
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * Common base class for all statements and expressions.
@@ -729,15 +733,10 @@ public abstract sealed class AstNode
      *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
      * @param sCode       the error code that identifies the error message
      * @param aoParam     the parameters for the error message; may be null
-     *
-     * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt to continue the process
      */
-    public boolean log(ErrorListener errs, Severity severity, String sCode, Object... aoParam) {
+    public void log(@NotNull ErrorListener errs, Severity severity, String sCode, Object... aoParam) {
         Source source = getSource();
-        return errs == null
-                ? severity.ordinal() >= Severity.ERROR.ordinal()
-                : errs.log(severity, sCode, aoParam, source,
+        requireNonNull(errs, "errs").log(severity, sCode, aoParam, source,
                 source == null ? 0L : getStartPosition(),
                 source == null ? 0L : getEndPosition());
     }

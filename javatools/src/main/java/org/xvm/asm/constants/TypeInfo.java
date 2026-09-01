@@ -14,6 +14,7 @@ import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 
@@ -118,6 +119,56 @@ public abstract sealed class TypeInfo
      *         contents, or if the info needs to be rebuilt for another reason
      */
     public abstract boolean needsRebuild(Set<IdentityConstant> setModified);
+
+
+    // ----- diagnostics ---------------------------------------------------------------------------
+
+    /**
+     * The diagnostics that building this TypeInfo produced.
+     *
+     * <p>Building a TypeInfo is also what VALIDATES the type, so construction is where a large class
+     * of type errors is found - and because the result is memoized, those errors used to be reported
+     * to whichever caller happened to ask first and to nobody afterwards. Recording them here makes
+     * "what is wrong with this type" a property OF the type rather than an accident of call ordering:
+     * every caller that asks can be told, and a caller that is only asking whether the type works
+     * can decline to be told. See {@link TypeConstant#ensureTypeInfo(ErrorListener)}.
+     *
+     * @return the diagnostics produced while building this TypeInfo; empty if it built cleanly
+     */
+    public List<ErrorInfo> diagnostics() {
+        return m_listDiagnostics;
+    }
+
+    /**
+     * Attach the diagnostics that building this TypeInfo produced. Called once, by the builder, on a
+     * complete TypeInfo before it is handed back.
+     *
+     * @param list  the diagnostics; may be empty
+     */
+    void recordDiagnostics(List<ErrorInfo> list) {
+        m_listDiagnostics = List.copyOf(list);
+    }
+
+    /**
+     * Report this TypeInfo's construction diagnostics to a listener.
+     *
+     * <p>Safe to call more than once, and from more than one caller: {@link org.xvm.asm.ErrorList}
+     * deduplicates by UID, so a diagnostic replayed twice into one listener is recorded once.
+     *
+     * @param errs  the listener to report to
+     */
+    public void replayDiagnostics(ErrorListener errs) {
+        for (ErrorInfo err : m_listDiagnostics) {
+            errs.log(err);
+        }
+    }
+
+    /**
+     * Volatile because the builder attaches this after the TypeInfo has been published, and readers
+     * on the memoized path are not synchronized. A reader that wins that race replays nothing, which
+     * is what EVERY reader used to get; it cannot observe a partially built list.
+     */
+    private volatile List<ErrorInfo> m_listDiagnostics = List.of();
 
     /**
      * @return the ClassStructure, or null if none is available; a non-abstract type will always

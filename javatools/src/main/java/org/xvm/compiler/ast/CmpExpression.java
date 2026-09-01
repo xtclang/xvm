@@ -499,7 +499,9 @@ public final class CmpExpression
      */
     private void checkConstType(Context ctx, NameExpression exprTarget, TypeConstant type, ErrorListener errs) {
         // replace an enum value type with the type of the enum; see Op.selectCommonType()
-        TypeInfo info = type.ensureTypeInfo();
+        // The caller's listener, not the pool's: this runs from validate(), where the type is
+        // being asserted rather than guessed, so its diagnostics belong to the caller.
+        TypeInfo info = type.ensureTypeInfo(errs);
         if (info.getFormat() == Component.Format.ENUMVALUE) {
             type = info.getExtends();
         }

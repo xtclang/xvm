@@ -45,6 +45,7 @@ import org.xvm.util.Auto;
 import org.xvm.util.FrozenArray;
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
+import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
@@ -55,6 +56,8 @@ import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 import static org.xvm.util.Handy.copyOf;
+
+import org.jetbrains.annotations.NotNull;
 
 import static java.util.Objects.requireNonNull;
 
@@ -76,12 +79,12 @@ public class ConstantPool
      * <p>Defaults to {@link ErrorListener#RUNTIME}: a pool that nobody has told otherwise is being
      * used at run time, which is what the old walk resolved to when the field was unset.
      */
-    private volatile ErrorListener m_errs = ErrorListener.RUNTIME;
+    private volatile @NotNull ErrorListener m_errs = ErrorListener.RUNTIME;
 
     /**
      * @return the listener work owned by this pool reports to; never null
      */
-    public ErrorListener getErrorListener() {
+    public @NotNull ErrorListener getErrorListener() {
         return m_errs;
     }
 
@@ -3719,8 +3722,10 @@ public class ConstantPool
         }
 
 
-        // should never happen; soft assert
-        System.err.println("Unsupported tuple type: " + idLeft.getValueString());
+        // Should never happen; a soft assert. The answer is INCOMPATIBLE either way, so this
+        // reports and carries on. WARNING rather than ERROR because this pool may be a run-time
+        // one, whose listener is ErrorListener.RUNTIME - and that turns ERROR into a throw.
+        log(getErrorListener(), Severity.WARNING, VE_TUPLE_TYPE_UNSUPPORTED, idLeft.getValueString());
         return Relation.INCOMPATIBLE;
     }
 
@@ -4367,11 +4372,16 @@ public class ConstantPool
             s_implicits       = Map.copyOf(mapFrozen);
             s_implicitsByPath = Map.copyOf(mapByPath);
 
+            // This is the one place with no owner to report to: it runs in ConstantPool's static
+            // initializer, before any pool instance exists, so there is nothing to hand the list
+            // to. What it can do is fail with the evidence instead of printing it and then throwing
+            // an exception with no message - which is what a reader of the crash actually needs,
+            // and the same "report, then throw explicitly" shape used everywhere else.
+            if (errs.hasSeriousErrors()) {
+                throw new IllegalStateException("failed to parse implicit.x: " + errs.getErrors());
+            }
             for (ErrorListener.ErrorInfo err : errs.getErrors()) {
                 System.err.println(err);
-            }
-            if (errs.hasSeriousErrors()) {
-                throw new IllegalStateException();
             }
         } catch (Exception e) {
             throw e instanceof RuntimeException ex ? ex : new RuntimeException(e);

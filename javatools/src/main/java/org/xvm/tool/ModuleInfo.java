@@ -48,6 +48,8 @@ import static org.xvm.util.Handy.readFileChars;
 import static org.xvm.util.Handy.removeExtension;
 import static org.xvm.util.Handy.resolveFile;
 
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * Information gleaned about a module from a single specified file. This is a lazily populated
@@ -831,47 +833,42 @@ public class ModuleInfo {
         public abstract TypeCompositionStatement type();
 
         @Override
-        public boolean log(ErrorInfo err) {
-            return errs().log(err);
+        public void log(ErrorInfo err) {
+            // errs(), not f_errs: DirNode overrides it to route its diagnostics to the source node
+            // for the module or package declaration the directory stands for.
+            errs().log(err);
         }
 
         @Override
         public boolean isAbortDesired() {
-            return m_errs != null && m_errs.isAbortDesired();
+            return f_errs.isAbortDesired();
         }
 
         @Override
         public boolean hasSeriousErrors() {
-            return m_errs != null && m_errs.hasSeriousErrors();
+            return f_errs.hasSeriousErrors();
         }
 
         @Override
         public boolean hasError(String sCode) {
-            return m_errs != null && m_errs.hasError(sCode);
+            return f_errs.hasError(sCode);
         }
 
         /**
          * @return the list containing any errors accumulated on (or under) this node
          */
-        public ErrorList errs() {
-            ErrorList errs = m_errs;
-            if (errs == null) {
-                m_errs = errs = new ErrorList(MAX_NODE_ERRORS);
-            }
-            return errs;
+        public @NotNull ErrorList errs() {
+            return f_errs;
         }
 
         /**
          * Log any errors accumulated on (or under) this node
          */
         public void logErrors(ErrorListener errs) {
-            ErrorList deferred = m_errs;
-            if (deferred != null) {
-                for (ErrorInfo err : deferred.getErrors()) {
-                    errs.log(err);
-                }
-                deferred.clear();
+            for (ErrorInfo err : f_errs.getErrors()) {
+                errs.log(err);
             }
+            f_errs.clear();
         }
 
 
@@ -893,9 +890,13 @@ public class ModuleInfo {
         protected ResourceDir m_resdir;
 
         /**
-         * The error list which buffers errors for the file node, if any.
+         * The list that buffers the errors accumulated on (or under) this node.
+         *
+         * <p>Created with the node rather than on first use. A Node is itself an ErrorListener, so
+         * "the list does not exist yet" was never a state a caller could act on - it only meant four
+         * accessors had to decode it, and {@link #errs()} had to mutate to answer a question.
          */
-        private ErrorList m_errs;
+        private final @NotNull ErrorList f_errs = new ErrorList(MAX_NODE_ERRORS);
     }
 
     /**
@@ -1097,12 +1098,13 @@ public class ModuleInfo {
         }
 
         @Override
-        public ErrorList errs() {
-            if (sourceNode() != null) {
-                return sourceNode().errs();
-            }
-
-            return null;
+        public @NotNull ErrorList errs() {
+            // A directory's diagnostics belong with the source node for the module or package
+            // declaration it stands for. Before there is one, they belong to the directory itself -
+            // which is also drained by logErrors() below, through super. This used to answer null,
+            // which a Node - being itself an ErrorListener - could not act on.
+            FileNode nodeSrc = sourceNode();
+            return nodeSrc == null ? super.errs() : nodeSrc.errs();
         }
 
         @Override

@@ -38,6 +38,8 @@ import static org.xvm.util.Severity.FATAL;
 import static org.xvm.util.Severity.INFO;
 import static org.xvm.util.Severity.WARNING;
 
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * This is the command-line Ecstasy compiler.
@@ -107,7 +109,7 @@ import static org.xvm.util.Severity.WARNING;
 public class Compiler extends Launcher<CompilerOptions> {
 
     public Compiler(CompilerOptions options) {
-        this(options, Launcher.DEFAULT_CONSOLE, null);
+        this(options, Launcher.DEFAULT_CONSOLE, ErrorListener.BLACKHOLE);
     }
 
     /**
@@ -115,9 +117,10 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param options     pre-configured compiler options
      * @param console     representation of the terminal within which this command is run, or null
-     * @param errListener optional ErrorListener to receive errors, or null for no delegation
+     * @param errListener the ErrorListener to receive errors; required - pass
+     *                    {@link ErrorListener#BLACKHOLE} for no delegation
      */
-    public Compiler(CompilerOptions options, Console console, ErrorListener errListener) {
+    public Compiler(CompilerOptions options, Console console, @NotNull ErrorListener errListener) {
         super(options, console, errListener);
     }
 

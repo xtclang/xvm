@@ -30,6 +30,10 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
+import org.xvm.util.Severity;
+
+import static org.xvm.asm.Constants.RT_MODULE_METHOD_MISSING;
+
 
 /**
  * The main container (zero) associated with the main module.
@@ -200,7 +204,10 @@ public class MainContainer
         try {
             MethodConstant idMethod = findModuleMethod(sMethodName, ahArg);
             if (idMethod == null) {
-                System.err.println("Missing: " +  sMethodName + " method for " + f_idModule.getValueString());
+                // ERROR: the entry point does not exist, so nothing runs. That is a failure of
+                // the operation the caller asked for, not an oddity worth noting.
+                getErrorListener().log(Severity.ERROR, RT_MODULE_METHOD_MISSING, null,
+                        sMethodName, f_idModule.getValueString());
                 return;
             }
 

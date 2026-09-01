@@ -69,8 +69,10 @@ public class CompilerThisEscapeConstructionTest {
     @Test
     public void parserConstructorDoesNotPrimeTokenStream() throws IOException {
         String source = source("org/xvm/compiler/Parser.java");
-        String ctor   = between(source, "private Parser(Source source, ErrorListener errs, Lexer lexer)",
-                "// ----- parsing");
+        // Anchor on the declaration, not its full signature: this test is about what the
+        // constructor BODY does, and spelling out every parameter made it fail when the parameters
+        // gained annotations. There is exactly one private Parser constructor.
+        String ctor   = between(source, "private Parser(", "// ----- parsing");
 
         assertFalse(ctor.contains("next();"));
         assertTrue(source.contains("private void ensurePrimed()"));

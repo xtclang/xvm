@@ -167,7 +167,7 @@ public class StageMgr {
     /**
      * @return this Stage Manager's error list
      */
-    public ErrorListener getErrorListener() {
+    public @NotNull ErrorListener getErrorListener() {
         return m_errs;
     }
 

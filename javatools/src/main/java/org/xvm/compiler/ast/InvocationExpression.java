@@ -67,6 +67,8 @@ import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 import org.xvm.util.Severity;
 import static org.xvm.util.Handy.copyOf;
 
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * Invocation expression represents calling a method or function. An oversimplification of the
@@ -322,7 +324,7 @@ public final class InvocationExpression
         }
 
         TypeConstant[] atype = resolveReturnTypes(ctx, atypeRequired, fExhaustive,
-                                    errs == null ? ErrorListener.BLACKHOLE : errs);
+                                    requireNonNull(errs, "errs"));
 
         return calcFitMulti(ctx, atype, atypeRequired);
     }

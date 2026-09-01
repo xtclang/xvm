@@ -17,6 +17,8 @@ import org.xvm.util.Severity;
 import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.copyOf;
 
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * A listener for errors being reported about source code, compilation, assembly, or verification of
@@ -51,26 +53,35 @@ import static org.xvm.util.Handy.copyOf;
  *       library listener - that would put back the mutable shared state this replaced, and would
  *       make two parallel compiles fight over one field. The fix is that "who is asking" must beat
  *       "who owns the constant": pass the caller's listener to ensureTypeInfo instead of letting
- *       the no-argument overload consult the pool. 66 call sites still use that overload; see E35
+ *       the no-argument overload consult the pool. 75 call sites still use that overload; see E35
  *       step D in the enhancement list. The pool default is a sound FALLBACK, but it should never
  *       win over an explicit caller.
  *
  *       What IS newly true is that wrapping one owner captures everything downstream OF THAT OWNER.
  *       That was not true at all while half the paths defaulted to BLACKHOLE or consulted a mutable
  *       field on FileStructure - there was no single place to wrap.
+ *
+ *       Note also that a decorator only has to forward log(); it does NOT have to think about
+ *       control flow, because log() no longer carries any. Whether to stop is asked separately,
+ *       through isAbortDesired(), which a decorator delegates to the listener it wraps.
  */
 public interface ErrorListener {
     // ----- API -----------------------------------------------------------------------------------
 
     /**
-     * Handles the logging of an error that originates in Ecstasy source code.
+     * Record a diagnostic.
+     *
+     * <p>Recording only. Whether the process that reported the diagnostic should stop is a separate
+     * question, asked separately, through {@link #isAbortDesired()}.
+     *
+     * <p>This used to return a boolean meaning "abort", which conflated observing with
+     * participating and left a host with no correct value to return: {@code false} suppressed a
+     * legitimate abort, {@code true} invented one. Making it {@code void} is what makes an observer
+     * impossible to get wrong - a lambda that only wants to watch now simply watches.
      *
      * @param err  the error info
-     *
-     * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt to continue the process
      */
-    boolean log(ErrorInfo err);
+    void log(ErrorInfo err);
 
     /**
      * Handles the logging of an error that originates in Ecstasy source code.
@@ -83,13 +94,10 @@ public interface ErrorListener {
      * @param source      the source code (optional)
      * @param lPosStart   the position in the source where the error was detected
      * @param lPosEnd     the position in the source at which the error concluded
-     *
-     * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt to continue the process
      */
-    default boolean log(Severity severity, String sCode, Object[] aoParam,
+    default void log(Severity severity, String sCode, Object[] aoParam,
             Source source, long lPosStart, long lPosEnd) {
-        return log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
+        log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
     }
 
     /**
@@ -102,12 +110,9 @@ public interface ErrorListener {
      * @param aoParam     the parameters for the error message; may be null
      * @param xs          the XvmStructure that the error is related to; may
      *                    be null
-     *
-     * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt continue the process
      */
-    default boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
-        return log(new ErrorInfo(severity, sCode, aoParam, xs));
+    default void log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
+        log(new ErrorInfo(severity, sCode, aoParam, xs));
     }
 
     /**
@@ -122,11 +127,9 @@ public interface ErrorListener {
      * @param sCode     the error code
      * @param xs        the XvmStructure the error relates to
      * @param aoParam   the error message parameters
-     *
-     * @return true if the process should be aborted
      */
-    default boolean log(Severity severity, String sCode, XvmStructure xs, Object... aoParam) {
-        return log(new ErrorInfo(severity, sCode, aoParam, xs));
+    default void log(Severity severity, String sCode, XvmStructure xs, Object... aoParam) {
+        log(new ErrorInfo(severity, sCode, aoParam, xs));
     }
 
     /**
@@ -138,12 +141,10 @@ public interface ErrorListener {
      * @param lPosStart  the position in the source where the error begins
      * @param lPosEnd    the position in the source where the error ends
      * @param aoParam    the error message parameters
-     *
-     * @return true if the process should be aborted
      */
-    default boolean log(Severity severity, String sCode, Source source, long lPosStart, long lPosEnd,
+    default void log(Severity severity, String sCode, Source source, long lPosStart, long lPosEnd,
             Object... aoParam) {
-        return log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
+        log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
     }
 
     /**
@@ -155,7 +156,7 @@ public interface ErrorListener {
      *
      * @return the branched-out ErrorListener
      */
-    default ErrorListener branch(AstNode node) {
+    default @NotNull ErrorListener branch(AstNode node) {
         return new ErrorList.BranchedErrorListener(this, 1, node);
     }
 
@@ -181,7 +182,7 @@ public interface ErrorListener {
      *
      * @return a listener that collects subsequent errors without surfacing them
      */
-    default ErrorListener suppressCascade() {
+    default @NotNull ErrorListener suppressCascade() {
         return branch(null);
     }
 
@@ -190,11 +191,17 @@ public interface ErrorListener {
      *
      * @return the ErrorListener this one was {@link #branch branched out} of
      */
-    default ErrorListener merge() {
+    default @NotNull ErrorListener merge() {
         throw new UnsupportedOperationException("nothing to merge");
     }
 
     /**
+     * Ask whether the process that is reporting diagnostics should stop.
+     *
+     * <p>This is the ONLY question about control flow. {@link #log} records; this decides. A
+     * listener that keeps no state cannot answer it, and answers "no" - which is right: an observer
+     * has no basis for stopping a compilation.
+     *
      * @return true if the ErrorListener has decided to abort the process that reported the error
      */
     default boolean isAbortDesired() {
@@ -234,12 +241,11 @@ public interface ErrorListener {
     class BlackholeErrorListener
             implements ErrorListener {
         @Override
-        public boolean log(ErrorInfo err) {
-            return false;
+        public void log(ErrorInfo err) {
         }
 
         @Override
-        public ErrorListener merge() {
+        public @NotNull ErrorListener merge() {
             return this;
         }
 
@@ -258,19 +264,29 @@ public interface ErrorListener {
     // ----- inner class: Runtime ErrorListener ----------------------------------------------------
 
     /**
-     * A simple implementation of the ErrorListener that can be used at runtime. Errors will throw,
-     * and non-errors will go to standard out.
+     * The listener an owner that nobody configured answers with: it prints, and that is all.
+     *
+     * <p>It used to throw {@link IllegalStateException} from inside {@code log} at ERROR and above.
+     * That was the same defect as {@code log} returning "abort", in a sharper form - the listener
+     * decided control flow, and it decided it differently from every other listener. A compile
+     * logging an ERROR to an {@link ErrorList} records it and carries on; the same code logging the
+     * same ERROR at run time blew up from wherever it happened to be. Worse, the throw pre-empted
+     * whatever the detecting code intended to throw next, so the exception TYPE depended on who
+     * owned the pool.
+     *
+     * <p>Now the runtime behaves like the compiler: the diagnostic is reported, and stopping is the
+     * detecting code's decision, taken explicitly. Serious diagnostics go to {@code System.err} so
+     * they are still hard to miss.
      */
     class RuntimeErrorListener
             implements ErrorListener {
         @Override
-        public boolean log(ErrorInfo err) {
-            String s = err.toString();
+        public void log(ErrorInfo err) {
+            String s = err.getSeverity() + ": " + err;
             if (err.getSeverity().ordinal() >= Severity.ERROR.ordinal()) {
-                throw new IllegalStateException(s);
+                System.err.println(s);
             } else {
-                System.out.println(err.getSeverity() + ": " + s);
-                return false;
+                System.out.println(s);
             }
         }
 

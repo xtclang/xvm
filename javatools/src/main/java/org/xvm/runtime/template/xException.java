@@ -25,6 +25,10 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.Lazy;
 
+import org.xvm.util.Severity;
+
+import static org.xvm.asm.Constants.RT_EXCEPTION_DETAIL;
+
 
 /**
  * Native Exception implementation.
@@ -64,7 +68,10 @@ public class xException
             ObjectHandle hText = hException.getField(frame, "text");
             if (hException.f_sRTError != null) {
                 String sTag = ((StringHandle) hText).getStringValue();
-                System.err.println("*** " + sTag + '\n' + hException.f_sRTError);
+                // INFO: internal detail attached to an exception the program is already
+                // handling. Reading it is not itself a problem.
+                frame.container().getErrorListener().log(Severity.INFO, RT_EXCEPTION_DETAIL,
+                        null, sTag, hException.f_sRTError);
             }
             return frame.assignValue(iReturn, hText);
         }

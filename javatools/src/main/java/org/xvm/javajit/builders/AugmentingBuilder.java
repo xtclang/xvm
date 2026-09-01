@@ -28,6 +28,10 @@ import org.xvm.javajit.TypeSystem.Artifact;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 import static java.lang.constant.ConstantDescs.MTD_void;
 
+import org.xvm.util.Severity;
+
+import static org.xvm.asm.Constants.RT_NATIVE_IMPL_MISSING;
+
 /**
  * The builder for native types that uses an existing Java class to augment with the Ecstasy natural
  * code.
@@ -192,8 +196,11 @@ public class AugmentingBuilder extends CommonBuilder {
 
         if (method.getHead().isNative()) {
             // throw new IllegalStateException(...);
-            System.err.println("*** Native implementation is missing " + art.className() + "#" + jitName +
-                " for " + method.getSignature().getValueString());
+            // ERROR: the method is left with no implementation at all. The line above this used
+            // to be a commented-out `throw new IllegalStateException(...)`, which is what the
+            // author thought of it; the severity now says the same thing without the throw.
+            typeSystem.pool().getErrorListener().log(Severity.ERROR, RT_NATIVE_IMPL_MISSING,
+                null, art.className(), jitName, method.getSignature().getValueString());
             return;
         }
 

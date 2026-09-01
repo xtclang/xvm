@@ -82,6 +82,12 @@ import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyList;
 
+import org.xvm.util.Severity;
+
+import static org.xvm.asm.Constants.RT_CODE_GEN_SKIPPED;
+import static org.xvm.asm.Constants.RT_METHODS_SKIPPED;
+import static org.xvm.asm.Constants.RT_VIRTUAL_CTOR_CAPPED;
+
 /**
  * Generic Java class builder.
  */
@@ -239,7 +245,8 @@ public class CommonBuilder
                 MethodInfo method2 = typeInfo.getNarrowingMethod(method);
                 String     name2   = method2.ensureJitMethodName(typeSystem);
 
-                System.err.println("TODO: capped virtual constructor");
+                typeSystem.pool().getErrorListener().log(Severity.WARNING,
+                        RT_VIRTUAL_CTOR_CAPPED, null, name1, name2);
             }
             String jitName = virtCtor.getIdentity().
                     ensureJitMethodName(typeSystem).replace("construct", NEW);
@@ -3968,7 +3975,8 @@ public class CommonBuilder
 
             if (NO_JIT_METHODS.getOrDefault(className, Set.of()).contains(methodId.getName())) {
                 if (METHOD_SKIP_SET.add(className)) {
-                    System.err.println("*** Skipping some methods for " + className);
+                    typeSystem.pool().getErrorListener().log(Severity.WARNING,
+                            RT_METHODS_SKIPPED, null, className);
                 }
                 SKIP_SET.add(className); // stops the skipping class log message
                 break GenerateStub;
@@ -3979,7 +3987,8 @@ public class CommonBuilder
         }
 
         if (SKIP_SET.add(className)) {
-            System.err.println("*** Skipping code gen for " + className);
+            typeSystem.pool().getErrorListener().log(Severity.WARNING, RT_CODE_GEN_SKIPPED,
+                    null, className);
         }
         defaultLoad(code, md.returnType());
         addReturn(code, md.returnType());

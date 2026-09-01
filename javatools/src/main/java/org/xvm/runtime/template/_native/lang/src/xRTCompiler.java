@@ -60,6 +60,8 @@ import org.xvm.tool.ModuleInfo.Node;
 import org.xvm.util.Lazy;
 import org.xvm.util.Severity;
 
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * Native xRTCompiler implementation.
@@ -315,7 +317,7 @@ public class xRTCompiler
         private List<Node>                      m_allNodes;
 
         // error collection
-        private final ErrorList m_errorList;
+        private final @NotNull ErrorList m_errorList;
 
         protected CompilerAdapter(CompilerOptions options) {
             super(options, null, m_errorList = new ErrorList(ErrorList.DEFAULT_MAX_ERRORS));

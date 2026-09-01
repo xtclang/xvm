@@ -60,6 +60,8 @@ import org.xvm.runtime.template._native.temporal.xNanosTimer;
 import org.xvm.util.Lazy;
 import org.xvm.util.concurrent.ConcurrentWeakHasherMap;
 
+import org.jetbrains.annotations.NotNull;
+
 import static java.util.Objects.requireNonNull;
 
 
@@ -82,7 +84,16 @@ public abstract class Container
         f_parent   = containerParent;
         f_heap     = new ConstHeap();
         f_idModule = idModule;
-        f_errs     = errs;
+
+        // Resolve the inheritance once, here, rather than encoding "inherit" as a null that the
+        // accessor decodes on every call. This is exactly equivalent: the field is final and there
+        // is no setter, so a parent's listener cannot change after the parent exists, and a parent
+        // always exists before the child that names it. What it buys is that the field is now
+        // genuinely never null, so nothing downstream has to check.
+        f_errs     = requireNonNull(
+                       errs != null            ? errs
+                     : containerParent == null ? ErrorListener.RUNTIME
+                                               : containerParent.getErrorListener(), "errs");
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -937,23 +948,22 @@ public abstract class Container
      * threading the listener is that it can be chosen, and hardcoding {@code RUNTIME} in forty
      * places would have replaced one ambient default with forty fixed ones.
      */
-    private final ErrorListener f_errs;
+    /**
+     * The listener this container reports runtime metadata errors to.
+     *
+     * <p>Never null. A container constructed without one inherits from the container that created
+     * it - which is what makes a host-configured engine hear the runs it starts, since every run is
+     * a nested container. That inheritance is resolved in the constructor, walking a declared parent
+     * chain rather than looking anything up ambiently; a root container with nothing configured
+     * resolves to {@link ErrorListener#RUNTIME}.
+     */
+    private final @NotNull ErrorListener f_errs;
 
     /**
      * @return the listener this container reports runtime metadata errors to; never null
      */
-    public ErrorListener getErrorListener() {
-        ErrorListener errs = f_errs;
-        if (errs != null) {
-            return errs;
-        }
-
-        // Inherit from the container that created this one, so a nested container - which is what
-        // every run is - reports where its host said to. This is inheritance down a declared parent
-        // chain, not an ambient lookup: f_parent is the container that made this one, and a root
-        // container with nothing configured answers RUNTIME.
-        Container parent = f_parent;
-        return parent == null ? ErrorListener.RUNTIME : parent.getErrorListener();
+    public @NotNull ErrorListener getErrorListener() {
+        return f_errs;
     }
 
 

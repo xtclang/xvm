@@ -39,6 +39,10 @@ import org.xvm.util.Severity;
 import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.copyOf;
 
+import static java.util.Objects.requireNonNull;
+
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * Base class for all Ecstasy expressions.
@@ -295,25 +299,25 @@ public abstract sealed class Expression
     }
 
     /**
-     * An implementation of the "tesFit" API via the validation of the cloned expression.
+     * An implementation of the "testFit" API via the validation of the cloned expression.
      *
-     * This implementation could be computationally expensive and should be used sparingly.
-     */
-    protected TypeFit testFitExhaustive(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
-        return testFitMultiExhaustive(ctx, new TypeConstant[] {typeRequired}, errs);
-    }
-
-    /**
-     * An implementation of the "tesFit" API via the validation of the cloned expression.
+     * <p>This implementation could be computationally expensive and should be used sparingly.
      *
-     * This implementation could be computationally expensive and should be used sparingly.
+     * <p>The required types are trailing varargs, so the single-type case is just a one-element
+     * call rather than a wrapper method that exists only to write {@code new TypeConstant[] {...}}.
+     * That is why the listener comes before them: a varargs parameter has to be last.
+     *
+     * @param ctx            the compiler context
+     * @param errs           the listener to report through; required - pass
+     *                       {@link ErrorListener#BLACKHOLE} for a purely speculative test
+     * @param atypeRequired  the type(s) the expression is being tested against
      */
-    protected TypeFit testFitMultiExhaustive(Context ctx, TypeConstant[] atypeRequired,
-                                             ErrorListener errs) {
+    protected TypeFit testFitMultiExhaustive(Context ctx, @NotNull ErrorListener errs,
+                                             TypeConstant... atypeRequired) {
         Expression exprTemp = (Expression) deepCopy();
         Context    ctxTemp  = ctx.enter();
         Expression exprNew  = exprTemp.validateMulti(ctxTemp, atypeRequired,
-                                        errs == null ? ErrorListener.BLACKHOLE : errs);
+                                        requireNonNull(errs, "errs"));
         exprTemp.discard(true);
         ctxTemp.discard();
 

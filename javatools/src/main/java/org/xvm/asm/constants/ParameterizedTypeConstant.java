@@ -285,8 +285,13 @@ public final class ParameterizedTypeConstant
         TypeConstant constResolved = constOriginal.resolveTypedefs();
 
         if (constResolved.isParamsSpecified()) {
-            // TODO: soft assert; needs to be removed
-            System.err.println("Unexpected type parameters for " + constOriginal.getValueString());
+            // A soft assert: the resolution is structurally inconsistent, but the caller cannot act
+            // on it, so this reports and carries on rather than aborting. WARNING rather than ERROR
+            // because this runs at run time too, where the pool's listener is ErrorListener.RUNTIME,
+            // which turns anything at ERROR or above into a throw.
+            log(getConstantPool().getErrorListener(), Severity.WARNING,
+                    VE_TYPE_PARAMS_ALREADY_SPECIFIED,
+                    constOriginal.getValueString(), constResolved.getValueString());
             return constResolved;
         }
 
@@ -475,8 +480,12 @@ public final class ParameterizedTypeConstant
                     // unfortunately, there is no way to merge the adoptees and current types
                     // in a predictable manner; need to discard the entire batch in favor of the
                     // current types
-                    // TODO: soft assert; needs to be removed
-                    System.err.println("Un-adoptable type parameter " + typeAdopt + " for " + this);
+                    // A soft assert; see resolveTypedefs above for why this reports at WARNING.
+                    // The listener comes from the pool the caller named, not from this constant's
+                    // own pool: the adoption is the caller's work, and who is asking owns the
+                    // diagnostic.
+                    log(pool.getErrorListener(), Severity.WARNING, VE_TYPE_PARAM_UNADOPTABLE,
+                            typeAdopt.getValueString(), getValueString());
                     atypeParams = atypeParams();
                     break;
                 }

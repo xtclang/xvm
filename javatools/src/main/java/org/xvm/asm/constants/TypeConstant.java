@@ -1667,10 +1667,41 @@ public abstract sealed class TypeConstant
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     /**
-     * Obtain the information about this type, resolved from its recursive composition.
+     * Obtain the information about this type, resolved from its recursive composition, reporting
+     * through the listener of the pool that owns this constant.
+     *
+     * <p>This builds and validates; see {@link #ensureTypeInfo(ErrorListener)} for what that means
+     * and for how a caller decides between its own listener and
+     * {@link ErrorListener#BLACKHOLE}. Using this overload says "whoever owns this constant owns
+     * the diagnostics", which the adoption invariant below makes a sound default - but an explicit
+     * caller should always win over it.
      *
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
+    /**
+     * Obtain the information about this type without reporting anything about it.
+     *
+     * <p>This is the "question" half of {@link #ensureTypeInfo(ErrorListener)}. It builds and caches
+     * exactly the same TypeInfo; what it says is that this caller is ASKING whether the type works,
+     * not asserting that it does. Fit tests, searches, guesses, and accessors that memoize an answer
+     * of their own belong here.
+     *
+     * <p>Nothing is lost by not listening. Whatever building the type found is recorded on the
+     * TypeInfo ({@link TypeInfo#diagnostics()}), so a later caller that IS asserting the type's
+     * validity still hears it - which is exactly what was NOT true before, when the diagnostics went
+     * to whoever asked first and to nobody after.
+     *
+     * <p>Prefer this to {@code typeInfo()}: passing a listener in order
+     * to say "do not listen" is the mode-flag-in-disguise that
+     * {@link #ensureTypeInfo(ErrorListener)} describes, and `TypeInfoModeIsExplicitTest` pins that
+     * it does not come back.
+     *
+     * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
+     */
+    public TypeInfo typeInfo() {
+        return ensureTypeInfo(ErrorListener.BLACKHOLE);
+    }
+
     public TypeInfo ensureTypeInfo() {
         // Ask the pool that owns this constant. Every Constant can reach its pool, so this is the
         // one owner guaranteed to be in scope - which is what the previous version was reaching for
@@ -1725,7 +1756,71 @@ public abstract sealed class TypeConstant
     /**
      * Obtain the information about this type, resolved from its recursive composition.
      *
-     * @param errs  the error listener to log errors to
+     * <p><b>This is not a getter, and {@code errs} is not really an error listener.</b> Read the
+     * next four paragraphs before deciding what to pass, because the obvious reading of the
+     * parameter is wrong and the design doc (docs/errorlistener/README.md section 8) exists because
+     * of it.
+     *
+     * <p><b>What this actually does.</b> It BUILDS the flattened TypeInfo: every method, property,
+     * child and contribution the type has after walking extends / implements / incorporates / into
+     * / annotations, resolving generics, normalizing type parameters and resolving auto-narrowing.
+     * On the way it interns constants into the pool (hence the runtime synthesis window), memoizes
+     * the answer, and copes with mutual recursion - to build X you may need Y, which needs X -
+     * through a deferred queue, a placeholder TypeInfo, and a notion of an INCOMPLETE answer that
+     * is completed later. And it VALIDATES: buildTypeInfo logs around ninety distinct diagnostics.
+     * VERIFY-67 ("property information contains conflicting types"), VERIFY-70 ("an @Override names
+     * a super method that cannot be found"), NAME_UNRESOLVABLE. Building a TypeInfo is where a large
+     * class of type errors is DISCOVERED, which is why there is a listener parameter at all.
+     *
+     * <p><b>What goes wrong.</b> The answer is memoized, so those diagnostics are produced by
+     * whichever caller asks FIRST. The compiler asks speculatively all the time - testFit,
+     * getImplicitType, getConverterTo, guessLeftType, all of them meaning "would this work?" - so if
+     * a speculative probe is first:
+     * <ul>
+     * <li>the probe produces user-visible errors for a candidate that was never going to be used,
+     *     burying the real diagnostic under failed guesses; and</li>
+     * <li>the later caller that actually cared gets the cached TypeInfo and hears NOTHING.</li>
+     * </ul>
+     * Which caller "owns" the errors is therefore decided by call ordering, which is not a property
+     * anybody can reason about. This code half-knows that: ensureTypeInfoInWindow refuses to cache a
+     * TypeInfo whose build produced serious errors, precisely so the next caller rebuilds and can
+     * hear them again. That is a real mitigation and also an admission - it only covers ERROR and
+     * above, and it means a type that fails is rebuilt on every subsequent ask, forever.
+     * ({@code PropertyClassTypeConstant.getPropertyInfo} has no such escape hatch: it memoizes
+     * unconditionally, which is why it passes BLACKHOLE.)
+     *
+     * <p><b>So what is the parameter?</b> This method fuses two operations with different natures -
+     * COMPUTE the metadata (idempotent, cacheable, must never report) and VALIDATE the type
+     * (diagnostics owned by whoever asked, at a source position they own). Because they are fused,
+     * every caller has to choose a mode, and the mode is expressed by which listener it hands in.
+     * {@link ErrorListener#BLACKHOLE} means "I am in the compute half". <b>The listener parameter is
+     * a mode flag in disguise.</b> That is the whole reason call sites pass BLACKHOLE to something
+     * that looks like it should be given the real listener.
+     *
+     * <p><b>How to choose.</b> Ask whether the call is ASSERTING that this type is valid or ASKING
+     * whether it is. Assertions - validate(), emit(), anything that has already committed to the
+     * type - pass the caller's listener. Questions - fit tests, searches, guesses, and any accessor
+     * that memoizes - pass {@link ErrorListener#BLACKHOLE}, with the reason at the call site.
+     *
+     * <p><b>The fix, and why it has not been done.</b> The honest shape is a {@code typeInfo()} that
+     * never reports and always caches, plus a {@code validate(errs)} that reports once, called by
+     * the stage that owns the source position; then nobody passes BLACKHOLE because nobody is
+     * choosing a mode. The obstacle is that building is WHERE the errors are found, so buildTypeInfo
+     * would have to record its diagnostics into the TypeInfo and let a caller replay them - which
+     * has to survive the incomplete/deferred machinery above, where a type can be built twice and a
+     * diagnostic must be neither duplicated nor lost when a partial build is discarded.
+     *
+     * <p>That is a project rather than a rename, but it is a tractable one, and three things it
+     * needs already exist here: {@link ErrorList} deduplicates by UID, so replaying the same
+     * diagnostics into one compile's list twice yields one diagnostic; {@code isComplete(info)}
+     * already separates a partial build from a final one; and the build already collects into a
+     * branch and only merges at the end. It would also DELETE the invalidateTypeInfo() escape hatch
+     * below rather than need it, which is a performance win as well as a correctness one.
+     * docs/errorlistener/README.md section 8.4 has the staged migration and, more importantly, the
+     * order the steps have to go in - doing them out of order loses diagnostics silently.
+     *
+     * @param errs  the listener to report through; {@link ErrorListener#BLACKHOLE} if this call is
+     *              a question rather than an assertion (see above)
      *
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
@@ -1735,6 +1830,12 @@ public abstract sealed class TypeConstant
 
         TypeInfo info = getTypeInfo();
         if (isComplete(info) && isUpToDate(info)) {
+            // Replay what building this TypeInfo found. Without this, the memoization means the
+            // FIRST caller hears the diagnostics and nobody after it does - so which caller gets
+            // told depends on call ordering, and a speculative probe that happens to ask first can
+            // leave the validate() that actually cared hearing nothing. Replaying is safe to do
+            // from every caller: ErrorList deduplicates by UID.
+            info.replayDiagnostics(errs);
             return info;
         }
 
@@ -1798,7 +1899,10 @@ public abstract sealed class TypeConstant
                     + this + "; deferred types=" + takeDeferredTypeInfo());
         }
 
-        errs = errs.branch(null);
+        // Collect into a branch, as before - but keep it typed, because what it collects is now
+        // attached to the finished TypeInfo rather than only promoted to this one caller.
+        ErrorList errsBuild = (ErrorList) errs.branch(null);
+        errs = errsBuild;
 
         Set<TypeConstant> setInvalidate = null;
         try {
@@ -1876,13 +1980,32 @@ public abstract sealed class TypeConstant
             throw e;
         }
 
-        if (errs.hasSeriousErrors()) {
-            // we need to return what we've got, but don't cache it
+        // RECORD BEFORE DECIDING WHAT TO DO WITH THE CACHE. The order is the safeguard: whichever
+        // branch runs below, what this build found is already attached to the TypeInfo, so it can
+        // never be "produced by a caller that was not listening, and therefore lost".
+        //
+        // Only a COMPLETE TypeInfo keeps its diagnostics: a partial build's complaints are about the
+        // incompleteness, and the completion pass goes on to fix them.
+        if (isComplete(info)) {
+            info.recordDiagnostics(errsBuild.getErrors());
+        }
+
+        if (errsBuild.hasSeriousErrors()) {
+            // Return what we've got, but do not cache it, so the next caller rebuilds.
+            //
+            // This is NOT what makes the diagnostics reachable. The record above plus the replay on
+            // the memoized path in ensureTypeInfo(ErrorListener) already guarantee that any later
+            // caller which is ASSERTING this type's validity is told, cached or not - which is the
+            // point of recording them, and the reason typeInfo() can decline to listen without
+            // costing anyone else the diagnostic. What this branch buys is separate: a type known to
+            // be broken is not served from cache at all, and the pool-wide invalidation that fires
+            // with it gets a chance to unstick whatever depended on it.
             invalidateTypeInfo();
             if (setInvalidate != null) {
                 setInvalidate.forEach(TypeConstant::invalidateTypeInfo);
             }
         }
+
         errs.merge();
         return info;
     }
@@ -2121,6 +2244,11 @@ public abstract sealed class TypeConstant
 
     /**
      * Create a TypeInfo for this type.
+     *
+     * <p>This is where the diagnostics come from - around ninety distinct ones across this method
+     * and what it calls. It is also why {@link #ensureTypeInfo(ErrorListener)} has a listener
+     * parameter at all, and why that parameter ends up being a mode flag rather than a sink: see
+     * the discussion there before deciding what a caller should pass.
      *
      * @param errs  the error list to log any errors to
      *
@@ -6034,7 +6162,11 @@ public abstract sealed class TypeConstant
                 String sRecursion = "left=" + typeLeft.getValueString()
                                   + "; right=" + typeRight.getValueString();
                 if (s_setRecursions.add(sRecursion)) {
-                    System.err.println("rejecting isA() due to a recursion: " + sRecursion);
+                    // WARNING rather than ERROR: the answer is INCOMPATIBLE either way, and
+                    // relations are computed at run time as well as at compile time, where the pool
+                    // answers with ErrorListener.RUNTIME - which turns ERROR into a throw.
+                    log(pool.getErrorListener(), Severity.WARNING, VE_RELATION_RECURSIVE,
+                            typeLeft.getValueString(), typeRight.getValueString());
                 }
             }
             mapRelations.put(keyRelation, Relation.INCOMPATIBLE);
@@ -6656,7 +6788,17 @@ public abstract sealed class TypeConstant
      *         multiple ambiguous answers exist)
      */
     public MethodConstant getConverterTo(TypeConstant that) {
-        return ensureTypeInfo().findConversion(that);
+        // BLACKHOLE, explicitly. This is a speculative query - every caller uses it as a predicate
+        // ("is there a conversion?") - so the TypeInfo it forces must not report. Same reasoning as
+        // the testFit/getImplicitType family that E32 stage 2 made explicit: a fit test that fails
+        // is not a diagnostic.
+        //
+        // This one call site is why the compiler used to blank the pool's listener for the whole
+        // compile (ConstantPool.setErrorListener(BLACKHOLE) after registration, restored after code
+        // generation). Asking for silence here instead means the pool can hold the compilation's
+        // real listener throughout, and the silence is visible at the site that wants it rather
+        // than being a field swapped a hundred and seventy lines apart.
+        return typeInfo().findConversion(that);
     }
 
     /**
@@ -7392,7 +7534,7 @@ public abstract sealed class TypeConstant
             return getUnderlyingType().getInstanceJitType();
         }
 
-        assert ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
+        assert typeInfo().isNewable(false, ErrorListener.BLACKHOLE);
         return removeAutoNarrowing();
     }
 
@@ -8426,9 +8568,14 @@ public abstract sealed class TypeConstant
     private transient volatile TypeConstant m_typeNormalized;
 
     /**
-     * Process-wide diagnostic suppression for recursion pairs. This state only prevents repeated
-     * stderr messages, but type relation checks can run concurrently across pools, so the set must
-     * not be a plain HashSet.
+     * Process-wide diagnostic suppression for recursion pairs. This state only prevents the same
+     * recursion being reported more than once, but type relation checks can run concurrently across
+     * pools, so the set must not be a plain HashSet.
+     *
+     * <p>Note that the suppression is process-wide while the listener it suppresses is per-compile,
+     * so a recursion first seen by one compilation is not reported to a later one in the same JVM.
+     * That is deliberate for the seeded entry below - a known-benign pair that should never be
+     * reported - and is the price of keeping the seed.
      */
     private static final Set<String> s_setRecursions = ConcurrentHashMap.newKeySet();
     static {

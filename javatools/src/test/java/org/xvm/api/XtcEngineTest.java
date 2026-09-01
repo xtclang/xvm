@@ -41,10 +41,9 @@ public class XtcEngineTest {
                 "compiled XDK system modules are required");
 
         var seen = new CopyOnWriteArrayList<String>();
-        ErrorListener mine = err -> {
-            seen.add(err.getCode());
-            return false;
-        };
+        // An observer, and now it can only be an observer: log() is void, so there is no value
+        // to return that could suppress or invent an abort.
+        ErrorListener mine = err -> seen.add(err.getCode());
 
         try (var engine = XtcEngine.builder().modulePath(xdkModulePath()).build()) {
             var compiled = engine.compile(mine, new XtcEngine.SourceUnit("ListenerBad", """
@@ -78,8 +77,8 @@ public class XtcEngineTest {
 
         var engineSeen  = new CopyOnWriteArrayList<String>();
         var compileSeen = new CopyOnWriteArrayList<String>();
-        ErrorListener engineSink     = err -> { engineSeen.add(err.getCode()); return false; };
-        ErrorListener compileSink    = err -> { compileSeen.add(err.getCode()); return false; };
+        ErrorListener engineSink     = err -> engineSeen.add(err.getCode());
+        ErrorListener compileSink    = err -> compileSeen.add(err.getCode());
 
         try (var engine = XtcEngine.builder()
                 .modulePath(xdkModulePath())
@@ -114,8 +113,8 @@ public class XtcEngineTest {
 
         var seenA = new CopyOnWriteArrayList<String>();
         var seenB = new CopyOnWriteArrayList<String>();
-        ErrorListener listenerA = err -> { seenA.add(err.getCode()); return false; };
-        ErrorListener listenerB = err -> { seenB.add(err.getCode()); return false; };
+        ErrorListener listenerA = err -> seenA.add(err.getCode());
+        ErrorListener listenerB = err -> seenB.add(err.getCode());
 
         try (var engine = XtcEngine.builder().modulePath(xdkModulePath()).build()) {
             // A is invalid, B is valid; if the listeners were shared, B's would hear A's errors

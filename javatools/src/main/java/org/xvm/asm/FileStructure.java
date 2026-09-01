@@ -44,6 +44,8 @@ import static org.xvm.util.Handy.toInputStream;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writeUtf8String;
 
+import org.jetbrains.annotations.NotNull;
+
 
 /**
  * A representation of the file structure that contains one or more Ecstasy (XVM) modules. The
@@ -1408,21 +1410,25 @@ public final class FileStructure
     }
 
     @Override
-    public ErrorListener getErrorListener() {
+    public @NotNull ErrorListener getErrorListener() {
         return getErrorListener(null);
     }
 
     @Override
-    public ErrorListener getErrorListener(ConstantPool poolCaller) {
+    public @NotNull ErrorListener getErrorListener(ConstantPool poolCaller) {
         // Master consulted ConstantPool.getCurrentPool() here - an ambient thread-local that this
         // branch deleted (E3). Rather than dropping that routing, the caller now states its pool
         // explicitly: a foreign pool's work is still reported through that pool's listener, but the
         // ownership is a parameter instead of a hidden thread-local that can name the wrong pool.
-        ErrorListener errs = null;
-        if (poolCaller != null && poolCaller != m_pool) {
-            errs = poolCaller.getErrorListener();
-        }
-        return errs == null ? ErrorListener.RUNTIME : errs;
+        //
+        // Master also guarded that lookup with `poolCurrent != m_pool`, because it had a listener
+        // field of its own here and that field was meant to answer for its own pool. The field is
+        // gone - the listener lives on the pool now - so keeping the guard left "my own pool is
+        // driving" falling through to RUNTIME, which made this accessor disagree with
+        // getConstantPool().getErrorListener() for the whole of a compilation. Whoever is named
+        // answers; when nobody is named, this file's own pool does.
+        ConstantPool pool = poolCaller == null ? m_pool : poolCaller;
+        return pool == null ? ErrorListener.RUNTIME : pool.getErrorListener();
     }
 
 

@@ -110,7 +110,7 @@ public final class ListExpression
             return pool.typeArray();
         }
 
-        return type.ensureTypeConstant(ctx, null);
+        return type.ensureTypeConstant(ctx, ErrorListener.BLACKHOLE);
     }
 
     private TypeConstant getImplicitElementType(Context ctx) {

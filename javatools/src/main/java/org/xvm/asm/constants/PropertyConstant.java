@@ -11,6 +11,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.PropertyStructure;
 
@@ -395,7 +396,13 @@ public sealed class PropertyConstant
         }
 
         TypeConstant typePrivate  = typeTarget.ensureAccess(Access.PRIVATE);
-        PropertyInfo infoProp     = typePrivate.ensureTypeInfo().findProperty(this);
+        // BLACKHOLE, explicitly: this is a metadata lookup, not an operation that produces
+        // diagnostics. Whoever asked for typeTarget to be validated owns the errors that building
+        // its TypeInfo turns up; a caller asking "what type does this property hold?" does not, and
+        // is routinely a speculative one (NewExpression.testFit reaches here through
+        // PropertyDeclarationStatement.validateContent).
+        PropertyInfo infoProp     = typePrivate.typeInfo()
+                                            .findProperty(this);
         TypeConstant typeReferent = infoProp.getType();
         TypeConstant typeImpl     = pool.ensurePropertyClassTypeConstant(typePrivate, this);
 

@@ -11,6 +11,8 @@ import java.util.concurrent.CompletableFuture;
 import org.xvm.asm.Component.Injection;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.util.Severity;
+
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
@@ -60,6 +62,10 @@ import org.xvm.runtime.template._native.collections.arrays.xRTDelegate;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
+
+import static org.xvm.asm.Constants.RT_SUSPICIOUS_ASSIGNMENT;
+import static org.xvm.asm.Constants.RT_TYPE_UNRESOLVED;
+import static org.xvm.asm.Constants.RT_WRAPPING_REQUIRED;
 
 
 /**
@@ -922,8 +928,10 @@ public class Frame
                     // "add(Object o)" method needs to be wrapped on "lo" reference, to ensure the
                     // run-time type of "String"
                     if (REPORT_WRAPPING) {
-                        System.err.println("WARNING: wrapping required from: " +
-                            typeFrom.getValueString() + " to: " + typeTo.getValueString());
+                        // INFO: this is emitted only under -DDEBUG=all. It is a developer asking to
+                        // watch, not the runtime reporting that something is wrong.
+                        container().getErrorListener().log(Severity.INFO, RT_WRAPPING_REQUIRED,
+                            f_function, typeFrom.getValueString(), typeTo.getValueString());
                     }
                     break;
 
@@ -955,8 +963,8 @@ public class Frame
                         // arrays allow to delegate to instances of different types using views
                         break;
                     }
-                    System.err.println("WARNING: suspicious assignment " + this +
-                        " from: " + typeFrom.getValueString() + " to: " + typeTo.getValueString());
+                    container().getErrorListener().log(Severity.WARNING, RT_SUSPICIOUS_ASSIGNMENT,
+                        f_function, this, typeFrom.getValueString(), typeTo.getValueString());
                     break;
                 }
                 break;
@@ -1526,8 +1534,13 @@ public class Frame
             type = type.resolveGenerics(pool, getGenericsResolver(type.containsDynamicType()));
 
             if (type.containsFormalType(true)) {
-                // soft assertion
-                System.err.println("ERROR: Unresolved type " + type);
+                // ERROR: the type genuinely did not resolve, and the caller gets a type that is
+                // still formal. This reported at WARNING only while ErrorListener.RUNTIME threw
+                // from inside log() at ERROR and above; it does not, so the severity can say what
+                // actually happened. Nothing at run time gates on hasSeriousErrors, so this
+                // informs a host without changing what the runtime does.
+                container().getErrorListener().log(Severity.ERROR, RT_TYPE_UNRESOLVED,
+                    f_function, type.getValueString());
             }
         }
 

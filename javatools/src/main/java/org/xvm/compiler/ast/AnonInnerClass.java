@@ -111,7 +111,7 @@ public class AnonInnerClass {
      *
      * @return the error listener to use to report errors
      */
-    protected ErrorListener getErrorListener(boolean fError) {
+    protected @NotNull ErrorListener getErrorListener(boolean fError) {
         if (fError) {
             markInvalid();
         }

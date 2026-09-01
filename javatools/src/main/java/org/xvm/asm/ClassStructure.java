@@ -1761,10 +1761,12 @@ public sealed class ClassStructure
                 : listRight;
 
         if (!fTuple && cParamsMax > listFormal.size()) {
-            // soft assert
-            System.err.println("Invalid number of arguments for " + getName()
-                    + ": required=" + listFormal.size()
-                    + ", provided " + cParamsMax);
+            // A soft assert: the answer is INCOMPATIBLE either way, so this reports and carries on.
+            // WARNING rather than ERROR because assignability is computed at run time as well as at
+            // compile time, and a run-time pool answers with ErrorListener.RUNTIME, which turns
+            // anything at ERROR or above into a throw.
+            log(pool.getErrorListener(), Severity.WARNING, VE_TYPE_PARAMS_WRONG_NUMBER,
+                    getName(), listFormal.size(), cParamsMax);
             return Relation.INCOMPATIBLE;
         }
 

@@ -2510,8 +2510,13 @@ public class Lexer
      * Log an error.
      */
     protected void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd) {
-        if (m_errs.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd)) {
-            throw new CompilerException("error list is full: " + m_errs);
+        m_errs.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd);
+
+        // Report, then ask. The listener records; whether lexing can continue is a separate
+        // question with a separate answer, and it is asked here rather than read out of log().
+        // The old message said "error list is full" whatever the reason - a FATAL aborts too.
+        if (m_errs.isAbortDesired()) {
+            throw new CompilerException("aborting the lexer; " + m_errs);
         }
     }
 
@@ -2641,9 +2646,10 @@ public class Lexer
             long lStartPos = source.getPosition();
             source.setPosition(lPos);
 
-            if (errorListener.log(Severity.ERROR, UNEXPECTED_EOF, null, source, lStartPos,
-                    source.getPosition())) {
-                throw new CompilerException("error list is full: " + errorListener);
+            errorListener.log(Severity.ERROR, UNEXPECTED_EOF, null, source, lStartPos,
+                    source.getPosition());
+            if (errorListener.isAbortDesired()) {
+                throw new CompilerException("aborting the lexer; " + errorListener);
             }
         }
         return ch;

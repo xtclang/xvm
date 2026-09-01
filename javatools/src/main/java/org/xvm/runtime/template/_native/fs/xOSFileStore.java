@@ -31,6 +31,10 @@ import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.util.Severity;
+
+import static org.xvm.asm.Constants.RT_LINK_UNSUPPORTED;
+
 
 /**
  * Native OSFileStore implementation.
@@ -166,7 +170,8 @@ public class xOSFileStore
 
                 if (Files.isSymbolicLink(path)) {
                     // TODO: implement native support for link files
-                    System.err.println("*** File is a link: " + path);
+                    frame.container().getErrorListener().log(Severity.WARNING, RT_LINK_UNSUPPORTED,
+                            null, path);
                 }
                 return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
             } catch (InvalidPathException e) {

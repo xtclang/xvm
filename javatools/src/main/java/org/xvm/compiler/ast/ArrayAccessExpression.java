@@ -377,7 +377,7 @@ public final class ArrayAccessExpression
                     : typeArray.resolveGenericType("Index");
             if (typeIndex == null || !aexprIndexes[0].testFit(ctx, typeIndex, false, ErrorListener.BLACKHOLE).isFit()) {
                 typeIndex = aexprIndexes[0].getImplicitType(ctx);
-                typeIndex = determineIndexType(ctx, exprArray, typeArray, aexprIndexes, typeIndex, errs);
+                typeIndex = determineIndexType(ctx, exprArray, typeArray, aexprIndexes, typeIndex);
             }
 
             if (typeIndex != null) {
@@ -454,13 +454,13 @@ public final class ArrayAccessExpression
             typeArray = exprArray.getType();
 
             // find the element access operator
-            MethodConstant idGet = findArrayAccessor(ctx, typeArray, aexprIndexes, typeRequired, errs);
+            MethodConstant idGet = findArrayAccessor(ctx, typeArray, aexprIndexes, typeRequired);
             if (idGet == null) {
                 log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR_SIGNATURE,
                         "[]", typeArray.getValueString(), cIndexes);
                 fValid = false;
             } else {
-                TypeInfo   infoArray = typeArray.ensureTypeInfo();
+                TypeInfo   infoArray = typeArray.ensureTypeInfo(errs);
                 MethodInfo infoGet   = infoArray.getMethodById(idGet);
                 assert infoGet != null;
                 if (!infoGet.isOp("getElement", "[]", -1)) {
@@ -675,13 +675,16 @@ public final class ArrayAccessExpression
      * @param aexprArgs   the arguments
      * @param typeReturn  the (optional) desired result type
      *
-     * @return the selected method to use as the array accessor
+     * @return the selected method to use as the array accessor, or null if there is none
      */
+    // No ErrorListener: this searches, and "no accessor matches" is the return value. The caller
+    // reports it (MISSING_OPERATOR_SIGNATURE) against a source position, which this method does not
+    // have. It used to take a listener and never use it.
     private MethodConstant findArrayAccessor(
             Context       ctx,
             TypeConstant  typeTarget,
             Expression[]  aexprArgs,
-            TypeConstant  typeReturn, ErrorListener errs) {
+            TypeConstant  typeReturn) {
         int            cArgs     = aexprArgs.length;
         TypeConstant[] atypeArgs = new TypeConstant[cArgs];
         for (int i = 0; i < cArgs; ++i) {
@@ -691,7 +694,7 @@ public final class ArrayAccessExpression
                     : exprArg.getImplicitType(ctx);
         }
 
-        TypeInfo infoTarget = typeTarget.ensureTypeInfo();
+        TypeInfo infoTarget = typeTarget.typeInfo();
         boolean  fTuple     = typeTarget.isTuple();
 
         // collect the matching method ids and the methods structures for them
@@ -1158,8 +1161,11 @@ public final class ArrayAccessExpression
      *
      * @return the type to use for the index of the array
      */
+    // No ErrorListener: this searches for an index type that fits, and "none fits" is the answer
+    // rather than a diagnostic. It used to take one and never use it - every call inside it passes
+    // BLACKHOLE explicitly - which read as if the method reported when it deliberately does not.
     private TypeConstant determineIndexType(Context ctx, Expression exprArray,
-            TypeConstant typeArray, Expression[] aexprIndexes, TypeConstant typeIndex, ErrorListener errs) {
+            TypeConstant typeArray, Expression[] aexprIndexes, TypeConstant typeIndex) {
         ConstantPool pool = pool();
         if (typeIndex == null) {
             if (typeArray != null) {
@@ -1181,7 +1187,8 @@ public final class ArrayAccessExpression
             return typeIndex;
         }
 
-        Set<MethodInfo> setInfos = typeIndex.ensureTypeInfo().getAutoMethodInfos();
+        Set<MethodInfo> setInfos = typeIndex.typeInfo()
+                                            .getAutoMethodInfos();
         for (MethodInfo info : setInfos) {
             typeIndex = info.getSignature().getRawReturns().get(0);
             if (exprArray.testFit(ctx,

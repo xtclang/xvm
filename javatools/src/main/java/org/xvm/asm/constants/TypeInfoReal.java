@@ -1564,8 +1564,12 @@ public final class TypeInfoReal
             return methodBest;
         }
 
-        // soft assert
-        System.err.println("conflicting " + sigBest + " vs. " + sigTest); // TODO log error?
+        // A soft assert: methodBest is used either way, so this reports and carries on. WARNING
+        // rather than ERROR because a TypeInfo is built at run time as well as at compile time, and
+        // a run-time pool answers with ErrorListener.RUNTIME, which turns ERROR into a throw.
+        typeCtx.log(pool().getErrorListener(), Severity.WARNING,
+                Constants.VE_METHOD_SIGNATURE_CONFLICT,
+                sigBest.getValueString(), sigTest.getValueString(), typeCtx.getValueString());
         return methodBest;
     }
 
@@ -1756,7 +1760,13 @@ public final class TypeInfoReal
         //   single selection, then that single selection is used.
         // - Otherwise, the ambiguity is an error.
         // TODO - how to factor in conversions?
-        System.err.println("conflicting matches " + mapMatch);
+        // A soft assert: the ambiguity is an error, but this returns null and leaves the caller to
+        // report it against a source position the user can act on. WARNING for the same reason as
+        // chooseBest above. Only the matching identities are rendered; the MethodInfo values that
+        // the old stderr line printed with them say nothing a reader of this message can use.
+        f_type.log(pool().getErrorListener(), Severity.WARNING,
+                Constants.VE_METHOD_MATCH_AMBIGUOUS,
+                sName, f_type.getValueString(), mapMatch.keySet());
         return null;
     }
 
