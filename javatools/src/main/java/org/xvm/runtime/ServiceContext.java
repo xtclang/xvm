@@ -7,7 +7,6 @@ import java.lang.ref.WeakReference;
 
 import java.util.Arrays;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -16,6 +15,7 @@ import java.util.TimerTask;
 import java.util.WeakHashMap;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 
@@ -276,19 +276,8 @@ public class ServiceContext {
      *
      * @return the map of callbacks keyed by unique ids
      */
-    protected Map<Long, WeakCallback.Callback> ensureCallbackMap() {
-        Map<Long, WeakCallback.Callback> map = m_mapCallbacks;
-        if (map == null) {
-            map = m_mapCallbacks = new HashMap<>();
-        }
-        return map;
-    }
-
-    /**
-     * @return the map of callbacks keyed by unique ids
-     */
     protected Map<Long, WeakCallback.Callback> getCallbackMap() {
-        return m_mapCallbacks;
+        return f_mapCallbacks;
     }
 
 
@@ -2179,9 +2168,12 @@ public class ServiceContext {
     private Map<TransientId, ObjectHandle> m_mapTransient;
 
     /**
-     * A "service-local" cache for service callbacks.
+     * The registered service callbacks. The map is deliberately eager, final, and concurrent: the
+     * owning service registers callbacks on its own thread, but alarm maturation extracts them on
+     * the shared native timer thread and alarm cancellation discards them from natural code, so
+     * this registry is mutated from multiple threads by design.
      */
-    private Map<Long, WeakCallback.Callback> m_mapCallbacks;
+    private final Map<Long, WeakCallback.Callback> f_mapCallbacks = new ConcurrentHashMap<>();
 
     /**
      * A wake-up scheduler to process registered timeouts.

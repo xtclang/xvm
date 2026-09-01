@@ -376,7 +376,10 @@ public class xNanosTimer
                 ServiceContext context = f_refCallback.get();
                 if (context != null) {
                     WeakCallback.Callback callback = f_refCallback.extractCallback();
-                    context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
+                    if (callback != null) {
+                        context.callLater(callback.frame(), callback.functionHandle(),
+                                Utils.OBJECTS_NONE);
+                    }
                     if (f_fRegistered) {
                         context.f_container.unregisterNativeCallback();
                     }
@@ -405,6 +408,11 @@ public class xNanosTimer
                     m_fDead = true;
 
                     cancelTrigger();
+
+                    // m_fDead guarantees run() has not fired and never will, so the registry entry
+                    // would otherwise leak the captured frame and function for the lifetime of the
+                    // service
+                    f_refCallback.discard();
                 }
 
                 TimerHandle.this.removeAlarm(this);

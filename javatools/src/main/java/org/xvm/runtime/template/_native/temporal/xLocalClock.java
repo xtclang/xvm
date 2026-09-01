@@ -230,7 +230,10 @@ public class xLocalClock
                 long ldtNow = container.currentTimeMillis();
                 if (ldtNow >= f_ldtWakeup) {
                     WeakCallback.Callback callback = f_refCallback.extractCallback();
-                    context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
+                    if (callback != null) {
+                        context.callLater(callback.frame(), callback.functionHandle(),
+                                Utils.OBJECTS_NONE);
+                    }
                     if (f_Registered) {
                         container.unregisterNativeCallback();
                     }
@@ -247,8 +250,14 @@ public class xLocalClock
         public boolean cancel() {
             boolean        fCancelled = m_trigger.cancel();
             ServiceContext context    = f_refCallback.get();
-            if (context != null && fCancelled && f_Registered) {
-                context.f_container.unregisterNativeCallback();
+            if (fCancelled) {
+                // the trigger will never run, so the registry entry would otherwise leak the
+                // captured frame and function for the lifetime of the service
+                f_refCallback.discard();
+
+                if (context != null && f_Registered) {
+                    context.f_container.unregisterNativeCallback();
+                }
             }
             return fCancelled;
         }
