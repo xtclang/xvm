@@ -226,7 +226,6 @@ module TestReflection {
         Method<Probe, <String, Int>, <>> m = Probe.setB;
         m.invoke(p, args);
 
-        console.print($"args after invoke={args}");
         assert args[0] == "origB" && args[1] == 7
                 as $"callee wrote through into the caller's tuple: {args}";
     }
@@ -596,6 +595,6 @@ module TestReflection {
         val container = new Container<String,Int,Char>();
         val containee = container.new Containee<Char,String,Map<Int, String>>();
         console.print($"Container<String,Int,Char>.Containee<Char,String,Map<Int, String>> = {&containee.type}");
-        }
+    }
     }
 }
