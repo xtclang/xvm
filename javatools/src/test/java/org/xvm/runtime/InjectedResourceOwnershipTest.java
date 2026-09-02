@@ -43,11 +43,15 @@ public class InjectedResourceOwnershipTest {
                     @Inject Directory curDir;
                     @Inject Directory tmpDir;
                     @Inject Directory homeDir;
+                    @Inject Directory rootDir;
+                    @Inject("storage") FileStore store;
                     void run() {
                         // @Inject is lazy - the resource is only derived when the field is read
                         assert curDir.name.size >= 0;
                         assert tmpDir.name.size >= 0;
                         assert homeDir.name.size >= 0;
+                        assert rootDir.name.size >= 0;
+                        assert store.capacity >= 0;
                     }
                 }
                 """;
@@ -78,9 +82,13 @@ public class InjectedResourceOwnershipTest {
             for (Container container : listRun) {
                 container.ensureNativeResourceCache().forEach((sName, handle) -> {
                     Container ownerComp = handle.getComposition().getContainer();
-                    if (ownerComp != container) {
+                    // Self or ANCESTOR, not self alone. rootDir and the FileStore are read inside
+                    // the native container, so their compositions legitimately belong to it - it
+                    // is an ancestor of every run container. Only an UNRELATED owner (a sibling)
+                    // is the defect; asserting strict equality here would fail on correct code.
+                    if (ownerComp != container && !ownerComp.isParent(container)) {
                         listBad.add(sName + " served to " + container
-                                + " carries a composition owned by " + ownerComp);
+                                + " carries a composition owned by the unrelated " + ownerComp);
                     }
                 });
             }

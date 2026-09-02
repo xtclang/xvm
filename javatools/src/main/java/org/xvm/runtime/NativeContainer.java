@@ -511,7 +511,7 @@ public class NativeContainer
     }
 
     private ObjectHandle ensureFileStore(Frame frame, ObjectHandle hOpts) {
-        return ensureStorageProperty(frame, hOpts, "fileStore");
+        return ensureStorageProperty(frame, hOpts, "store");
     }
 
     private ObjectHandle ensureRootDir(Frame frame, ObjectHandle hOpts) {
