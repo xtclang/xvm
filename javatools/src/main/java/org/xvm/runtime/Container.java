@@ -189,6 +189,34 @@ public abstract class Container
      *
      * @return the published cache value
      */
+    /**
+     * Cache of the native filesystem resources this container has had injected, keyed by the
+     * OSStorage property they were derived from ("curDir", "rootDir", ...).
+     *
+     * <p>Per container, deliberately. The backing {@code OSStorage} service is plane-wide - a
+     * service handle is legitimate cross-container currency - but the {@code Directory} and
+     * {@code FileStore} handles derived from it are ordinary {@link ObjectHandle.GenericHandle}s
+     * that carry a {@code TypeComposition}, and a composition belongs to exactly one container.
+     * Caching those on the native container hands the second container a value whose composition
+     * belongs to the first, which for two sibling containers is a reference to an unrelated
+     * owner. Deriving per asker also keeps the handle's lifetime tied to the container that asked
+     * for it, instead of pinning the first requester for the life of the process.</p>
+     *
+     * @return this container's native-resource cache, created on first use
+     */
+    public ConcurrentMap<String, ObjectHandle> ensureNativeResourceCache() {
+        ConcurrentMap<String, ObjectHandle> map = m_mapNativeResources;
+        if (map == null) {
+            synchronized (this) {
+                map = m_mapNativeResources;
+                if (map == null) {
+                    m_mapNativeResources = map = new ConcurrentHashMap<>();
+                }
+            }
+        }
+        return map;
+    }
+
     public <T> T putRuntimeOpCacheIfAbsent(Op op, Enum<?> category, T cache, Class<T> type) {
         ConcurrentMap<Enum<?>, Object> byCategory = f_mapRuntimeOpCache.computeIfAbsent(op,
                 key -> new ConcurrentHashMap<>());
@@ -988,6 +1016,11 @@ public abstract class Container
      */
     private final ConcurrentMap<Op, ConcurrentMap<Enum<?>, Object>> f_mapRuntimeOpCache =
             new ConcurrentHashMap<>();
+
+    /**
+     * Native filesystem resources derived for THIS container; see ensureNativeResourceCache().
+     */
+    private volatile ConcurrentMap<String, ObjectHandle> m_mapNativeResources;
 
     /**
      * Owner-local cache for shared Type handles. The key is a TypeConstant from this container's

@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import java.util.function.Consumer;
 
@@ -510,113 +511,62 @@ public class NativeContainer
     }
 
     private ObjectHandle ensureFileStore(Frame frame, ObjectHandle hOpts) {
-        ObjectHandle hStore = m_hFileStore;
-        if (hStore == null) {
-            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-            PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("store").getIdentity();
-
-            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> publishConvergentFileStore(h));
-        }
-
-        return hStore;
+        return ensureStorageProperty(frame, hOpts, "fileStore");
     }
 
     private ObjectHandle ensureRootDir(Frame frame, ObjectHandle hOpts) {
-        ObjectHandle hDir = m_hRootDir;
-        if (hDir == null) {
-            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-            PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("rootDir").getIdentity();
-
-            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> publishConvergentRootDir(h));
-        }
-
-        return hDir;
+        return ensureStorageProperty(frame, hOpts, "rootDir");
     }
 
     private ObjectHandle ensureHomeDir(Frame frame, ObjectHandle hOpts) {
-        ObjectHandle hDir = m_hHomeDir;
-        if (hDir == null) {
-            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-            PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("homeDir").getIdentity();
-
-            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> publishConvergentHomeDir(h));
-        }
-
-        return hDir;
+        return ensureStorageProperty(frame, hOpts, "homeDir");
     }
 
     private ObjectHandle ensureCurDir(Frame frame, ObjectHandle hOpts) {
-        ObjectHandle hDir = m_hCurDir;
-        if (hDir == null) {
-            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-            PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("curDir").getIdentity();
-
-            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> publishConvergentCurDir(h));
-        }
-
-        return hDir;
+        return ensureStorageProperty(frame, hOpts, "curDir");
     }
 
     private ObjectHandle ensureTmpDir(Frame frame, ObjectHandle hOpts) {
-        ObjectHandle hDir = m_hTmpDir;
-        if (hDir == null) {
-            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-            PropertyConstant idProp   = template.getCanonicalType().
-                    ensureTypeInfo(frame.container().getErrorListener()).findProperty("tmpDir").getIdentity();
-
-            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
-                    h -> publishConvergentTmpDir(h));
-        }
-
-        return hDir;
+        return ensureStorageProperty(frame, hOpts, "tmpDir");
     }
 
-    private synchronized void publishConvergentFileStore(ObjectHandle h) {
-        // convergent (property of the single-flighted OSStorage service); first-wins so racing
-        // callers never flip the cache between equal-but-distinct reads
-        if (m_hFileStore == null) {
-            m_hFileStore = h;
-        }
-    }
+    /**
+     * Derive one of {@code OSStorage}'s filesystem properties for the container that is asking,
+     * and cache it there.
+     *
+     * <p>The {@code OSStorage} service itself stays plane-wide: it is a service, which is
+     * legitimate cross-container currency, and giving each container its own would start a second
+     * storage service. What must not be plane-wide is the value read off it. {@code curDir} and
+     * friends are {@code GenericHandle}s carrying a {@code TypeComposition}, and a composition
+     * belongs to exactly one container. Caching them on the native container gave whichever
+     * container asked first ownership of the composition, and served that same handle to every
+     * later container - so two sibling containers under one native plane ended up sharing a
+     * composition owned by neither's ancestor. Deriving per asker means the handle, and every
+     * handle in its fields, is built against the frame of the container that will hold it, which
+     * is what masking could not do: masking rebuilds the outer handle but leaves the field
+     * handles pointing at the original owner's compositions.</p>
+     *
+     * @param frame  the asking frame; its container owns the derived handle
+     * @param hOpts  the injection options
+     * @param sProp  the {@code OSStorage} property to read
+     */
+    private ObjectHandle ensureStorageProperty(Frame frame, ObjectHandle hOpts, String sProp) {
+        Container                           container = frame.container();
+        ConcurrentMap<String, ObjectHandle> mapCache  = container.ensureNativeResourceCache();
 
-    private synchronized void publishConvergentRootDir(ObjectHandle h) {
-        // convergent (property of the single-flighted OSStorage service); first-wins so racing
-        // callers never flip the cache between equal-but-distinct reads
-        if (m_hRootDir == null) {
-            m_hRootDir = h;
+        ObjectHandle hCached = mapCache.get(sProp);
+        if (hCached != null) {
+            return hCached;
         }
-    }
 
-    private synchronized void publishConvergentHomeDir(ObjectHandle h) {
-        // convergent (property of the single-flighted OSStorage service); first-wins so racing
-        // callers never flip the cache between equal-but-distinct reads
-        if (m_hHomeDir == null) {
-            m_hHomeDir = h;
-        }
-    }
+        ClassTemplate    template = getTemplate("_native.fs.OSStorage");
+        PropertyConstant idProp   = template.getCanonicalType().
+                ensureTypeInfo(container.getErrorListener()).findProperty(sProp).getIdentity();
 
-    private synchronized void publishConvergentCurDir(ObjectHandle h) {
-        // convergent (property of the single-flighted OSStorage service); first-wins so racing
-        // callers never flip the cache between equal-but-distinct reads
-        if (m_hCurDir == null) {
-            m_hCurDir = h;
-        }
-    }
-
-    private synchronized void publishConvergentTmpDir(ObjectHandle h) {
-        // convergent (property of the single-flighted OSStorage service); first-wins so racing
-        // callers never flip the cache between equal-but-distinct reads
-        if (m_hTmpDir == null) {
-            m_hTmpDir = h;
-        }
+        // first-wins on the put, so racing fibers in one container never flip the cache between
+        // equal-but-distinct reads; the race is within a container now, not across them
+        return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
+                h -> mapCache.putIfAbsent(sProp, h));
     }
 
     private ObjectHandle ensureProperties(Frame frame, ObjectHandle hOpts) {
@@ -1001,11 +951,6 @@ public class NativeContainer
     private static final int    NATIVE_LENGTH  = NATIVE_PREFIX.length();
 
     private volatile ObjectHandle m_hOSStorage;
-    private volatile ObjectHandle m_hFileStore;
-    private volatile ObjectHandle m_hRootDir;
-    private volatile ObjectHandle m_hHomeDir;
-    private volatile ObjectHandle m_hCurDir;
-    private volatile ObjectHandle m_hTmpDir;
     private ObjectHandle m_hProperties;
 
     private volatile ObjectHandle m_hSecureNetwork;
