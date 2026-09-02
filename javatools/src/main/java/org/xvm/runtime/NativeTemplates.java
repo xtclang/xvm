@@ -180,6 +180,63 @@ import org.xvm.util.Lazy;
  * owner that computes it and throws if a second owner asks, so a mistake fails loudly rather than
  * serving the wrong owner quietly.</p>
  *
+ * <h2>What can actually go wrong on master</h2>
+ *
+ * <p>These are not hypotheses about the shape; they are what the statics are used for. Each needs
+ * only a second {@link NativeContainer} in the JVM, which every {@code Connector} creates.</p>
+ *
+ * <p><b>A container taken out of a JVM-global field.</b> Eighteen sites read
+ * {@code INSTANCE.f_container} - {@code Proxy.makeAsyncNativeHandle} builds
+ * {@code new AsyncHandle(INSTANCE.f_container, method)}, and {@code xRTComponentTemplate} resolves
+ * templates and enums through it. Whatever container the last plane to boot happened to install is
+ * the container every one of those sites then uses, including on behalf of an earlier plane: wrong
+ * pool, wrong type system, no error.</p>
+ *
+ * <p><b>Every string handle's composition comes from a static.</b> {@code xString.makeHandle(char[])}
+ * returns the shared {@code EMPTY_STRING} for a zero-length array and otherwise builds
+ * {@code new StringHandle(INSTANCE.getCanonicalClass(), achValue)}. So the class every String is
+ * created against - and through it the owning container - is whichever template won the assignment.
+ * The same shape holds for {@code xArray}'s {@code *_ARRAY_CLZ} compositions and
+ * {@code xBoolean.TRUE}/{@code FALSE}, {@code xNullable.NULL}, {@code xObject.CLASS}.</p>
+ *
+ * <p><b>Initialisation that is decided by who won.</b> {@code xEnum.initNative()} branches on
+ * {@code this == INSTANCE}, so whether native rebase initialisation runs at all depends on which
+ * template object got there first. That is behaviour selected by a race, not a cache.</p>
+ *
+ * <p><b>And nothing would report it.</b> Master has no publication marker and no ownership sweep,
+ * so a value belonging to one plane being served to another is not a failure there - it is
+ * invisible. The symptom surfaces far from the cause, as a wrong type or a missing initialisation
+ * inside code that looks correct.</p>
+ *
+ * <h2>Where this leaves the runtime, against master</h2>
+ *
+ * <p>On master the metadata is assigned into mutable statics from {@code initNative()}, which the
+ * native container runs eagerly over every template at the end of its boot. That has one property
+ * worth keeping - nothing is derived after the runtime starts - and one that breaks as soon as a
+ * JVM holds two planes, because the second boot overwrites the first's statics.</p>
+ *
+ * <p>This branch reached the same place by a different route and briefly lost the good half. The
+ * statics became per-template lazy cells, which fixed the ownership: a cell belongs to the template
+ * that holds it, and templates are per container. But a lazy cell is computed on first use, so
+ * derivation moved from boot into execution - and separately this branch had taught the pool to
+ * reject a NEW constant registered after {@code markRuntimePublished}, on the grounds that compiler
+ * and serializer phases must not mutate a pool the runtime can already read. The two changes were
+ * compatible only by luck: these ecstasy types happen to be interned when the XDK modules load, so
+ * the lookups find them instead of registering. A plane-wide value whose type was not already
+ * interned would have been registered late, by whichever container asked first, and would have
+ * tripped the guard.</p>
+ *
+ * <p>{@link #warmPlaneWideValues} restores master's timing without giving up the detection master
+ * lacks: every plane-wide key is resolved at the end of the native container's boot, before the pool
+ * is published, exactly where {@code initNative()} did the same work. That is only expressible
+ * because the keys are a registry - lazy cells scattered across template classes offered nothing to
+ * enumerate, which is part of why the incompatibility went unnoticed in the first place.</p>
+ *
+ * <p>So against master: the ownership is fixed rather than accidental, the timing is the same, and
+ * the guard that would catch a regression exists here and does not exist there. Master is not safe
+ * in this area so much as unmonitored - it has no publication marker, so a constant registered into
+ * a live pool is not a failure there, merely invisible.</p>
+ *
  * <h2>What this does not fix</h2>
  *
  * <p>Owner-bearing values still reachable through other routes are a separate problem: handles

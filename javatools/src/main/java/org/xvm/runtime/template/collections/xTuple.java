@@ -673,9 +673,24 @@ public class xTuple
     }
 
     public static TupleHandle ensureEmptyTuple(Container container) {
-        xTuple template = getInstance(container);
-        return template.f_hVoid.get(template);
+        return NativeTemplates.get(container).get(VOID_TUPLE);
     }
+
+    /**
+     * The void tuple.
+     *
+     * <p>Plane-wide: built from the template's canonical class, which is the native container's, so
+     * one handle served every container - as the {@code public static TupleHandle H_VOID} it
+     * replaced did, only without the last-plane-to-boot-wins that came with a static. It is also
+     * immutable, which is legitimate cross-container currency in its own right; the reason it is
+     * declared plane-wide is where it is derived from, not that.</p>
+     */
+    private static final NativeTemplates.CacheKey<TupleHandle> VOID_TUPLE =
+            NativeTemplates.CacheKey.ofPlane("void tuple handle", container -> {
+                xTuple template = NativeTemplates.get(container).tuple();
+                return xTuple.makeImmutableHandle(
+                        template.getCanonicalClass(), Utils.OBJECTS_NONE);
+            });
 
     public static class TupleHandle
             extends ObjectHandle {

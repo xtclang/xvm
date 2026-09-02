@@ -322,7 +322,7 @@ public class xModule
     public static TypeComposition ensureArrayComposition(Container container) {
         xModule template = template(container);
         return container.ensureClassComposition(
-                template.f_typeModuleArray.get(template), xArray.getInstance(container));
+                NativeTemplates.get(container).get(MODULE_ARRAY_TYPE), xArray.getInstance(container));
     }
 
     /**
@@ -330,7 +330,7 @@ public class xModule
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
         xModule       template   = template(container);
-        ArrayConstant constEmpty = template.f_constEmptyModuleArray.get(template);
+        ArrayConstant constEmpty = NativeTemplates.get(container).get(EMPTY_MODULE_ARRAY);
         // Keep the owner heap local: this is shorter than repeated accessor chains and makes the
         // get/save pair visibly use the same owner-local cache.
         var           heap       = container.getConstHeap();
@@ -359,11 +359,24 @@ public class xModule
 
     // These constants are tied to this template's ConstantPool. Lazy final fields preserve the
     // previous single-computation behavior without sharing one container's constants globally.
-    private final Lazy.Bound<xModule, TypeConstant> f_typeModuleArray = Lazy.ofBound(owner ->
-            owner.pool().ensureArrayType(owner.pool().typeModule()));
+    /**
+     * The {@code Module[]} type and the empty {@code Module[]} constant.
+     *
+     * <p>Both plane-wide: derived from {@code owner.pool()}, which for a template is the native
+     * container's pool. Which pool a constant belongs to must not depend on which container reached
+     * it first.</p>
+     */
+    private static final NativeTemplates.CacheKey<TypeConstant> MODULE_ARRAY_TYPE =
+            NativeTemplates.CacheKey.ofPlane("Module[] type", container -> {
+                ConstantPool pool = container.getConstantPool();
+                return pool.ensureArrayType(pool.typeModule());
+            });
 
-    private final Lazy.Bound<xModule, ArrayConstant> f_constEmptyModuleArray = Lazy.ofBound(owner ->
-            owner.pool().ensureArrayConstant(owner.f_typeModuleArray.get(owner), Constant.NO_CONSTS));
+    private static final NativeTemplates.CacheKey<ArrayConstant> EMPTY_MODULE_ARRAY =
+            NativeTemplates.CacheKey.ofPlane("empty Module[] constant", container ->
+                    container.getConstantPool().ensureArrayConstant(
+                            NativeTemplates.get(container).get(MODULE_ARRAY_TYPE),
+                            Constant.NO_CONSTS));
 
     private final Lazy.Bound<xModule, VersionConstant> f_constDefaultVersion = Lazy.ofBound(owner ->
             owner.pool().ensureVersionConstant(new Version("CI")));
