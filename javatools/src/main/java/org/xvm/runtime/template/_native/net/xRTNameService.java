@@ -21,6 +21,7 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -197,7 +198,7 @@ public class xRTNameService
     static TypeComposition ensureByteArrayArrayComposition(Container container) {
         xRTNameService template = NativeTemplates.get(container).nameService();
         return container.ensureClassComposition(
-                template.f_typeByteArrayArray.get(template), xArray.getInstance(container));
+                NativeTemplates.get(container).get(BYTE_ARRAY_ARRAY_TYPE), xArray.getInstance(container));
     }
 
     static String[] getAllRecords(String sName)
@@ -284,8 +285,17 @@ public class xRTNameService
                 pool.ensureModuleConstant("net.xtclang.org"), "NameService"));
     });
 
-    private final Lazy.Bound<xRTNameService, TypeConstant> f_typeByteArrayArray =
-            Lazy.ofBound(owner -> owner.pool().ensureArrayType(owner.pool().typeByteArray()));
+    /**
+     * Plane-wide, for the same reason as the other array types: interned in the native
+     * container's pool, while the composition built from it is per asker.
+     */
+    private static final NativeTemplates.CacheKey<TypeConstant> BYTE_ARRAY_ARRAY_TYPE =
+            NativeTemplates.CacheKey.ofPlane("Byte[][] type",
+                    container -> {
+                        ConstantPool pool = container.getConstantPool();
+                        return pool.ensureArrayType(pool.typeByteArray());
+                    });
+
 
     private static final String[] NO_RECORD_FIELDS = new String[0];
 

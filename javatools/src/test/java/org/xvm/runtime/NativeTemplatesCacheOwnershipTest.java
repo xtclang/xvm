@@ -34,8 +34,17 @@ public class NativeTemplatesCacheOwnershipTest {
 
             // plane-wide values are resolved during boot, before the pool is published, so that a
             // constant is never first registered into a pool the runtime can already see
-            assertTrue(templates.resolvedKeys().size() > 0,
-                    "the native container must warm its plane-wide values at boot");
+            // Every plane-wide key must be resolved by boot, including ones declared in classes
+            // far from the boot path: a key registers itself when its declaring class initialises,
+            // and every native template class is instantiated during boot. A key left unwarmed
+            // would be first resolved during execution, where registering a new constant into a
+            // published pool is exactly what the pool guard rejects.
+            var listWarmed = templates.resolvedKeys();
+            assertTrue(listWarmed.size() > 10,
+                    "the native container must warm its plane-wide values at boot: " + listWarmed);
+            assertTrue(listWarmed.contains("Byte[][] type"),
+                    "a key declared in a far-flung template class must still be warmed: "
+                            + listWarmed);
 
             var reportBefore = OwnershipDiagnostics.sweepForeignReferences(container);
             assertTrue(reportBefore.isClean(), "baseline sweep: " + reportBefore.render());

@@ -582,7 +582,7 @@ public class xRTTypeTemplate
     public static TypeComposition ensureArrayClassComposition(Container container) {
         xRTTypeTemplate template = NativeTemplates.get(container).typeTemplate();
         return container.ensureClassComposition(
-                template.f_typeTemplateArray.get(template), xArray.getInstance(container));
+                NativeTemplates.get(container).get(TYPE_TEMPLATE_ARRAY_TYPE), xArray.getInstance(container));
     }
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -874,8 +874,18 @@ public class xRTTypeTemplate
         private MethodStructure               constructor;
     }
 
-    private final Lazy.Bound<xRTTypeTemplate, TypeConstant> f_typeTemplateArray = Lazy.ofBound(owner ->
-            owner.pool().ensureArrayType(owner.pool().ensureEcstasyTypeConstant("reflect.TypeTemplate")));
+    /**
+     * Plane-wide. The ensureClassComposition() built from it takes the asking container, so
+     * the composition stays per asker while the type it is built from does not.
+     */
+    private static final NativeTemplates.CacheKey<TypeConstant> TYPE_TEMPLATE_ARRAY_TYPE =
+            NativeTemplates.CacheKey.ofPlane("reflect.TypeTemplate[] type",
+                    container -> {
+                        ConstantPool pool = container.getConstantPool();
+                        return pool.ensureArrayType(
+                                pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
+                    });
+
 
     private final Lazy.Bound<xRTTypeTemplate, MethodStructure> f_methodCreateComposition = Lazy.ofBound(owner ->
             owner.f_struct.findMethod("createComposition", 2));

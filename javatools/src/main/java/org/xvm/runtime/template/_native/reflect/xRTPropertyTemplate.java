@@ -13,6 +13,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
@@ -175,16 +176,14 @@ public class xRTPropertyTemplate
      * @return the TypeComposition for an RTPropertyTemplate
      */
     public static TypeComposition ensurePropertyTemplateComposition(Container container) {
-        xRTPropertyTemplate template = template(container);
-        return template.f_compPropertyTemplate.get(template);
+        return NativeTemplates.get(container).get(PROPERTY_TEMPLATE_COMPOSITION);
     }
 
     /**
      * @return the TypeComposition for an Array of PropertyTemplate
      */
     public static TypeComposition ensureArrayComposition(Container container) {
-        xRTPropertyTemplate template = template(container);
-        return template.f_compPropertyTemplateArray.get(template);
+        return NativeTemplates.get(container).get(PROPERTY_TEMPLATE_ARRAY_COMPOSITION);
     }
 
 
@@ -208,26 +207,30 @@ public class xRTPropertyTemplate
     // ----- data members --------------------------------------------------------------------------
 
     /**
-     * PropertyTemplate compositions are container-owned metadata. The old static caches could mix
-     * one container's template with another container's handles.
+     * The PropertyTemplate composition, and the composition for an array of them.
+     *
+     * <p>Both plane-wide. The cells these replace resolved through the template's own container -
+     * {@code ensureClass(owner.container(), ...)} and {@code owner.container().resolveClass(...)} -
+     * and a template's container is the native one, so each was shared by every container rather
+     * than built per asker. Being a composition is not what decides that; which container was passed
+     * is.</p>
      */
-    private final Lazy.Bound<xRTPropertyTemplate, TypeComposition> f_compPropertyTemplate =
-            Lazy.ofBound(owner -> {
-        ConstantPool    pool         = owner.pool();
-        TypeConstant    typeTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
-        TypeComposition clz          = owner.ensureClass(owner.container(), typeTemplate);
-        assert clz != null;
-        return clz;
-    });
+    private static final NativeTemplates.CacheKey<TypeComposition> PROPERTY_TEMPLATE_COMPOSITION =
+            NativeTemplates.CacheKey.ofPlane("reflect.PropertyTemplate composition", container -> {
+                xRTPropertyTemplate template = template(container);
+                TypeComposition     clz      = template.ensureClass(container,
+                        container.getConstantPool()
+                                .ensureEcstasyTypeConstant("reflect.PropertyTemplate"));
+                assert clz != null;
+                return clz;
+            });
 
-    private final Lazy.Bound<xRTPropertyTemplate, TypeComposition> f_compPropertyTemplateArray =
-            Lazy.ofBound(owner -> {
-        ConstantPool pool                 = owner.pool();
-        TypeConstant typePropertyTemplate =
-                pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
-        TypeConstant typePropertyArray    = pool.ensureArrayType(typePropertyTemplate);
-        TypeComposition clz               = owner.container().resolveClass(typePropertyArray);
-        assert clz != null;
-        return clz;
-    });
+    private static final NativeTemplates.CacheKey<TypeComposition> PROPERTY_TEMPLATE_ARRAY_COMPOSITION =
+            NativeTemplates.CacheKey.ofPlane("reflect.PropertyTemplate[] composition", container -> {
+                ConstantPool    pool = container.getConstantPool();
+                TypeComposition clz  = container.resolveClass(pool.ensureArrayType(
+                        pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate")));
+                assert clz != null;
+                return clz;
+            });
 }

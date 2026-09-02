@@ -248,7 +248,7 @@ public class xRTComponentTemplate
         // container parameter here preserves the old cache behavior without using a process-global
         // TypeConstant from whichever container initialized last.
         xRTComponentTemplate template = NativeTemplates.get(container).componentTemplate();
-        return template.f_typeComponentArray.get(template);
+        return NativeTemplates.get(container).get(COMPONENT_ARRAY_TYPE);
     }
 
     /**
@@ -256,7 +256,7 @@ public class xRTComponentTemplate
      */
     public static TypeComposition getMultiMethodTemplateComposition(Container container) {
         xRTComponentTemplate template   = NativeTemplates.get(container).componentTemplate();
-        ClassTemplate        templateRT = template.f_templateMultiMethod.get(template);
+        ClassTemplate        templateRT = NativeTemplates.get(container).get(MULTI_METHOD_TEMPLATE);
 
         ConstantPool pool         = container.getConstantPool();
         TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MultiMethodTemplate");
@@ -389,10 +389,25 @@ public class xRTComponentTemplate
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private final Lazy.Bound<xRTComponentTemplate, TypeConstant> f_typeComponentArray =
-            Lazy.ofBound(owner -> owner.pool().ensureArrayType(
-                    owner.pool().ensureEcstasyTypeConstant("reflect.ComponentTemplate")));
+    /**
+     * Plane-wide: a type interned in the native container's pool. The composition built from
+     * it is resolved per asker at the call site and is deliberately not cached here.
+     */
+    private static final NativeTemplates.CacheKey<TypeConstant> COMPONENT_ARRAY_TYPE =
+            NativeTemplates.CacheKey.ofPlane("reflect.ComponentTemplate[] type",
+                    container -> {
+                        ConstantPool pool = container.getConstantPool();
+                        return pool.ensureArrayType(
+                                pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
+                    });
 
-    private final Lazy.Bound<xRTComponentTemplate, ClassTemplate> f_templateMultiMethod =
-            Lazy.ofBound(owner -> owner.container().getTemplate("_native.reflect.RTMultiMethodTemplate"));
+
+    /**
+     * Plane-wide: getTemplate(String) resolves through getNativeContainer(), so this was
+     * always the native container's template whichever container asked.
+     */
+    private static final NativeTemplates.CacheKey<ClassTemplate> MULTI_METHOD_TEMPLATE =
+            NativeTemplates.CacheKey.ofPlane("_native.reflect.RTMultiMethodTemplate template",
+                    container -> container.getTemplate("_native.reflect.RTMultiMethodTemplate"));
+
 }
