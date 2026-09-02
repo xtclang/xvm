@@ -10,9 +10,20 @@ module TestServices {
     }
 
     void testSharedContext() {
-        using (UserId.withValue("u1")) {
-            new TestService("u1").validateContext^();
+        TestService     svc         = new TestService();
+        Future<Tuple>[] validations = new Future[];
+        for (Int i : 1..20) {
+            String userId = $"u{i}";
+            using (UserId.withValue(userId)) {
+                @Future Tuple validation = svc.validateContext(userId);
+                validations += &validation;
+            }
         }
+
+        for (Future<Tuple> validation : validations) {
+            validation.get();
+        }
+
         using (UserId.withValue("u2")) {
             new TestService("u2").validateContext();
         }
@@ -140,8 +151,10 @@ module TestServices {
     }
 
     service TestService(String userId = "") {
-        void validateContext() {
-            assert String user := UserId.hasValue(), user == userId;
+        void validateContext() = validateContext(userId);
+
+        void validateContext(String expected) {
+            assert String user := UserId.hasValue(), user == expected;
         }
 
         Int simulateSlowIO(Duration delay, Boolean log = False) {
