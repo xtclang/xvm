@@ -28,14 +28,9 @@
  *       worker.join()
  *   PY
  *
- *   export XDK_HOME="$PWD/xdk/build/install/xdk"
- *   "$XDK_HOME/bin/xcc" -L "$XDK_HOME/lib" -o /tmp/repro \
- *       manualTests/src/main/x/slow/socketTimeout.x
- *   "$XDK_HOME/bin/xec" -L /tmp/repro -L "$XDK_HOME/lib" /tmp/repro/TestReadTimeoutLeak.xtc
- *
- *
+ *   manualTests> xec -L build/xtc/main/lib src/main/x/slow/socketTimeout.x
  */
-module TestReadTimeoutLeak {
+module socketTimeout {
     @Inject Console console;
 
     package net import net.xtclang.org;
