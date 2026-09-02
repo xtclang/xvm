@@ -11,6 +11,7 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -177,9 +178,7 @@ public class xRTMethodTemplate
      * @return the TypeComposition for an RTMethodTemplate
      */
     public static TypeComposition ensureMethodTemplateComposition(Container container) {
-        xRTMethodTemplate template =
-                container.getTemplate("_native.reflect.RTMethodTemplate", xRTMethodTemplate.class);
-        return template.f_compMethodTemplate.get(template);
+        return NativeTemplates.get(container).get(METHOD_TEMPLATE_COMPOSITION);
     }
 
     // ----- ObjectHandle support ------------------------------------------------------------------
@@ -202,11 +201,18 @@ public class xRTMethodTemplate
      * The old cache was process-global and reached through INSTANCE. The composition is owned by
      * the native template's container, so cache it on that template instead.
      */
-    private final Lazy.Bound<xRTMethodTemplate, TypeComposition> f_compMethodTemplate = Lazy.ofBound(owner -> {
-        ConstantPool     pool         = owner.pool();
-        TypeConstant     typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
-        TypeComposition  clz          = owner.ensureClass(owner.container(), typeTemplate);
-        assert clz != null;
-        return clz;
-    });
+    /**
+     * Plane-wide: the cell this replaces called {@code ensureClass(owner.container(), ...)}, and a
+     * template's container is the native one, so every container shared the composition.
+     */
+    private static final NativeTemplates.CacheKey<TypeComposition> METHOD_TEMPLATE_COMPOSITION =
+            NativeTemplates.CacheKey.ofPlane("reflect.MethodTemplate composition", container -> {
+                xRTMethodTemplate template = container.getTemplate(
+                        "_native.reflect.RTMethodTemplate", xRTMethodTemplate.class);
+                TypeComposition   clz      = template.ensureClass(container,
+                        container.getConstantPool()
+                                .ensureEcstasyTypeConstant("reflect.MethodTemplate"));
+                assert clz != null;
+                return clz;
+            });
 }

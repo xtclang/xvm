@@ -114,11 +114,79 @@ import org.xvm.util.Lazy;
 
 
 /**
- * Container-owned lookup table for native templates.
+ * Container-owned lookup for native templates and the values a container derives from them.
  *
- * <p>The keys are immutable JVM constants, but the resolved template objects are cached by the
- * owning {@link Container}. This preserves the old "one base template per container" behavior
- * without constructor-published process-global INSTANCE fields.</p>
+ * <p>Keys are immutable JVM constants; everything they resolve to is cached against the owning
+ * {@link Container}. Nothing here is published through a process-global field.</p>
+ *
+ * <h2>What this replaced, and why it was wrong even single-threaded</h2>
+ *
+ * <p>Each of 139 native template classes carried its own {@code public static INSTANCE}, assigned
+ * from the constructor under a flag: {@code if (fInstance) INSTANCE = this;}. Alongside them sat
+ * about 150 further mutable statics holding owner-bearing values - {@code xObject.CLASS},
+ * {@code xBoolean.TRUE}, {@code xNullable.NULL}, {@code xArray}'s {@code *_ARRAY_CLZ} compositions,
+ * {@code xPackage.LIST_MAP_TEMPLATE} - all assigned from {@code initNative()}.</p>
+ *
+ * <p>The usual defence is that this code is not run concurrently, so a racy cache is harmless. That
+ * misses the failure, which needs no concurrency at all. Only a {@link NativeContainer} constructs
+ * native templates, and a JVM can hold more than one: every {@code Connector} builds its own
+ * ({@code new Runtime()} plus {@code new NativeContainer(...)}), and a host that runs several
+ * modules therefore has several planes alive at once. The last one to boot wins the statics, and
+ * code acting for an earlier plane then reads a template belonging to a later one - wrong container,
+ * wrong pool, wrong type system. Sequential, deterministic, and silent.</p>
+ *
+ * <p>The sharpest case was {@code Proxy.makeAsyncNativeHandle}, which did
+ * {@code new AsyncHandle(INSTANCE.f_container, method)}: it took a {@link Container} out of a
+ * JVM-global mutable field. And {@code xEnum.initNative()} branched on {@code this == INSTANCE}, so
+ * which object won the assignment decided whether native rebase initialisation ran at all. That is
+ * behaviour, not caching.</p>
+ *
+ * <h2>Why one place beats 139</h2>
+ *
+ * <p>The mechanical win is the obvious one: a pattern that appeared 139 times, and would have to be
+ * corrected 139 times, is now stated once. Less obvious, and the reason this was built: with the
+ * lookup in one place a container can be <em>asked</em> what it has pulled in. {@link #resolvedKeys}
+ * is one call; against 139 statics the question could not be expressed at all, and footprinting a
+ * long-lived host was the problem that started this.</p>
+ *
+ * <p>It also made a whole-class of fix possible that per-class state could not. {@link #PLANE_KEYS}
+ * lets the native container resolve every plane-wide value during boot - see
+ * {@link #warmPlaneWideValues} - which restored a timing property that had been quietly lost. That
+ * fix is only expressible because the keys are a registry; lazy cells scattered across template
+ * classes offered nothing to enumerate.</p>
+ *
+ * <h2>Ownership is declared, not inferred</h2>
+ *
+ * <p>A cached value belongs either to the container plane or to the container that asks, and
+ * {@link CacheKey} makes the site say which. {@link CacheKey#ofPlane} hands its resolver the native
+ * container and caches there; {@link CacheKey#ofContainer} hands it the asker. A resolver therefore
+ * cannot reach for the wrong container, which is not hypothetical - a first pass at this took the
+ * pool from the asking container and would have moved plane metadata onto whoever asked first.</p>
+ *
+ * <p>The guard has a limit worth stating: it stops a resolver taking the wrong container, not a
+ * declaration being wrong. Deciding which a value is means reading what the code did before -
+ * {@code getNativeContainer()} or a template's own {@code f_container} means plane-wide, a
+ * caller-supplied {@code container} parameter means per asker. Two keys here were first declared
+ * per-asker and corrected after checking the original, which had resolved them through
+ * {@code getNativeContainer()}.</p>
+ *
+ * <h2>Why first-wins is safe here and was not before</h2>
+ *
+ * <p>Resolution still races: the first caller computes, the rest observe. The difference is that the
+ * winner's identity no longer escapes into the result. An {@code ofPlane} resolver is always handed
+ * the native container, so every possible winner produces the same value with the same owner,
+ * whereas a static took its owner from whichever container happened to get there first. Each
+ * container has its own cache map, so a cell is never shared; and {@link Lazy.Bound} binds to the
+ * owner that computes it and throws if a second owner asks, so a mistake fails loudly rather than
+ * serving the wrong owner quietly.</p>
+ *
+ * <h2>What this does not fix</h2>
+ *
+ * <p>Owner-bearing values still reachable through other routes are a separate problem: handles
+ * cached on pool-level constants ({@code SingletonConstant.setHandle}), and injected resources
+ * cached on the native container with the first requester's owner. Both are the same mistake in a
+ * different place - a value shared across containers created by whoever asked first, rather than by
+ * the ancestor they share - and neither is addressed here.</p>
  */
 public final class NativeTemplates {
     NativeTemplates(Container container) {
