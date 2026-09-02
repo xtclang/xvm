@@ -15,6 +15,7 @@ import java.util.TimerTask;
 import java.util.WeakHashMap;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 
@@ -1559,7 +1560,7 @@ public class ServiceContext {
      * Base class for an asynchronous cross-service messages based on a CompletableFuture.
      */
     public abstract static class Message {
-        protected Message(Frame frameCaller) {
+        protected Message(Frame frameCaller, boolean fAsync) {
             if (frameCaller == null) {
                 f_fiberCaller = null;
                 f_fnCaller    = null;
@@ -1571,9 +1572,14 @@ public class ServiceContext {
                 f_fnCaller    = frameCaller.f_function;
                 f_iCallerId   = frameCaller.f_iId;
                 f_iCallerPC   = frameCaller.m_iPC;
-                f_mapTokens   = frameCaller.f_fiber.getTokens();
+
+                Map<ObjectHandle, ObjectHandle> mapTokens = frameCaller.f_fiber.getTokens();
+                f_mapTokens = fAsync && mapTokens != null
+                        ? new ConcurrentHashMap<>(mapTokens)
+                        : mapTokens;
             }
 
+            f_fAsync = fAsync;
             f_future = new CompletableFuture();
         }
 
@@ -1581,7 +1587,9 @@ public class ServiceContext {
          * @return true iff the request is sent in asynchronous manner; otherwise the caller is
          *         blocked waiting for a response
          */
-        abstract public boolean isAsync();
+        public boolean isAsync() {
+            return f_fAsync;
+        }
 
         /**
          * @return the caller's stack depth
@@ -1667,6 +1675,11 @@ public class ServiceContext {
         public final CompletableFuture f_future;
 
         /**
+         * True iff the request is sent in asynchronous manner.
+         */
+        private final boolean f_fAsync;
+
+        /**
          * The Fiber this message runs on (assigned by {@link #createFrame}).
          */
         public Fiber m_fiber;
@@ -1709,20 +1722,14 @@ public class ServiceContext {
          */
         protected OpRequest(Frame frameCaller, Op op, int cReturns, boolean fAsync,
                             TypeSupplier typeSupplier) {
-            super(frameCaller);
+            super(frameCaller, fAsync);
 
             f_op           = op;
             f_cReturns     = cReturns;
-            f_fAsync       = fAsync;
             f_typeSupplier = typeSupplier;
             f_nDepth       = frameCaller.f_nDepth;
             f_hTimeout     = frameCaller.f_fiber.getTimeoutHandle();
             f_ldtTimeout   = frameCaller.f_fiber.getTimeoutStamp();
-        }
-
-        @Override
-        public boolean isAsync() {
-            return f_fAsync;
         }
 
         @Override
@@ -1864,7 +1871,6 @@ public class ServiceContext {
 
         private final Op           f_op;
         private final int          f_cReturns;
-        private final boolean      f_fAsync;
         private final TypeSupplier f_typeSupplier;
         private final int          f_nDepth;
         private final ObjectHandle f_hTimeout;
@@ -1882,18 +1888,13 @@ public class ServiceContext {
 
         public CallLaterRequest(Frame frameCaller, FunctionHandle hFunction, ObjectHandle[] ahArg,
                                 int cReturns) {
-            super(frameCaller);
+            super(frameCaller, true);
 
             assert cReturns <= 1; // multiple returns are not supported for now
 
             f_hFunction = hFunction;
             f_ahArg     = ahArg;
             f_cReturns  = cReturns;
-        }
-
-        @Override
-        public boolean isAsync() {
-            return true;
         }
 
         @Override
