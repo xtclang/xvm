@@ -117,11 +117,19 @@ public class LinkedRepository
                 if (i > 0 && readThrough) {
                     try {
                         // create a copy, allowing the compiler to mutate the repos[0] contents
-                        FileStructure fileClone = new FileStructure(module, false);
-                        repos[0].storeModule(module = fileClone.getModule());
+                        FileStructure   fileClone   = new FileStructure(module, false);
+                        ModuleStructure moduleClone = fileClone.getModule();
+                        repos[0].storeModule(moduleClone);
+                        module = moduleClone;
                     } catch (IOException e) {
-                        System.err.println(e.getMessage());
-                        break;
+                        // Populating the front repository is a cache write, not the lookup. This
+                        // used to break out of the search, so a module that WAS found came back as
+                        // null whenever repos[0] could not be written - a read-only build output
+                        // directory does it every time - and the only trace was a line on stderr.
+                        // That is the same collapse into "module not found" the load path below
+                        // was hardened against. Serve what was found; the cache stays cold.
+                        System.err.println("failed to cache " + sModule + " into "
+                                + repos[0] + ": " + e.getMessage());
                     }
                 }
 
