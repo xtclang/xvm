@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -26,6 +28,8 @@ import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
+
+import org.xvm.util.Auto;
 
 /**
  * The main container (zero) associated with the main module.
@@ -181,6 +185,52 @@ public class MainContainer
         m_mapInjections = Objects.requireNonNull(mapInjections);
 
         ensureServiceContext();
+    }
+
+    /**
+     * Post an asynchronous request to a method on the main module.
+     *
+     * @param sMethodName  the method name
+     * @param ahArg        the method arguments
+     *
+     * @return the future result of the invocation
+     */
+    public CompletableFuture<ObjectHandle> postRequest(
+            String sMethodName, ObjectHandle... ahArg) {
+        try (Auto ignore = ConstantPool.withPool(f_idModule.getConstantPool())) {
+            MethodConstant idMethod = findModuleMethod(sMethodName, ahArg);
+            if (idMethod == null) {
+                throw new IllegalArgumentException(
+                        "Missing: " + sMethodName + " method for " + f_idModule.getValueString());
+            }
+
+            TypeConstant      typeModule = f_idModule.getType();
+            TypeComposition   clzModule  = resolveClass(typeModule);
+            SignatureConstant sigMethod  = idMethod.getSignature();
+            CallChain         chain      = clzModule.getMethodCallChain(sigMethod);
+            int               cReturns   = sigMethod.getReturnCount();
+            if (cReturns > 1) {
+                throw new IllegalArgumentException(
+                        "Method returns more than one value: " + idMethod.getValueString());
+            }
+
+            FunctionHandle function = new NativeFunctionHandle((frame, args, iReturn) -> {
+                SingletonConstant idModule =
+                        frame.poolContext().ensureSingletonConstConstant(f_idModule);
+                ObjectHandle hModule = frame.getConstHandle(idModule);
+                return Op.isDeferred(hModule)
+                        ? hModule.proceed(frame, frameCaller ->
+                            chain.invoke(frameCaller, frameCaller.popStack(), args, iReturn))
+                        : chain.invoke(frame, hModule, args, iReturn);
+            });
+
+            CompletableFuture<ObjectHandle> future =
+                    m_contextMain.postRequest(null, function, ahArg, cReturns);
+            if (future == null) {
+                throw new IllegalStateException("Main service has terminated");
+            }
+            return future;
+        }
     }
 
     /**

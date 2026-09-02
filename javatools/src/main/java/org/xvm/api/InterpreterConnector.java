@@ -112,6 +112,23 @@ public class InterpreterConnector
     }
 
     /**
+     * @return the native container used by this connector
+     */
+    NativeContainer getNativeContainer() {
+        return f_containerNative;
+    }
+
+    /**
+     * @return the main container used by this connector
+     */
+    MainContainer getMainContainer() {
+        if (!m_fStarted) {
+            throw new IllegalStateException("The container has not been started");
+        }
+        return m_containerMain;
+    }
+
+    /**
      * Wait for the container termination.
      *
      * @return zero if the main method was void or the return type not an int-convertible; otherwise
