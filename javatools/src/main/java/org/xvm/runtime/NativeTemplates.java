@@ -908,9 +908,7 @@ public final class NativeTemplates {
      * had nothing to enumerate.</p>
      */
     void warmPlaneWideValues() {
-        for (CacheKey<?> key : PLANE_KEYS) {
-            get(key);
-        }
+        PLANE_KEYS.forEach(this::get);
     }
 
     /**

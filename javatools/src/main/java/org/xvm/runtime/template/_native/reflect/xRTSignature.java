@@ -572,17 +572,18 @@ public class xRTSignature
                             NativeTemplates.get(container).get(RT_PARAM_TYPE), xConst.class));
 
     /**
-     * Compositions, by contrast, belong to the container that asks: resolveClass() does not share
-     * upward. Their plane-wide inputs are reached through keys of their own, so the mixture is
-     * visible here rather than implied.
+     * These two are plane-wide as well, which is not obvious from the word "composition": the code
+     * they replace resolved them through {@code container.getNativeContainer().resolveClass(...)},
+     * so every container shared one. A composition is per-asker only when the asker is what gets
+     * passed to {@code resolveClass}/{@code ensureClassComposition}; here it never was.
      */
     private static final NativeTemplates.CacheKey<TypeComposition> RETURN_ARRAY_COMPOSITION =
-            NativeTemplates.CacheKey.ofContainer("Return[] composition",
+            NativeTemplates.CacheKey.ofPlane("Return[] composition",
                     container -> container.resolveClass(container.getConstantPool().ensureArrayType(
                             NativeTemplates.get(container).get(RETURN_TYPE))));
 
     private static final NativeTemplates.CacheKey<TypeComposition> PARAM_ARRAY_COMPOSITION =
-            NativeTemplates.CacheKey.ofContainer("Parameter[] composition",
+            NativeTemplates.CacheKey.ofPlane("Parameter[] composition",
                     container -> container.resolveClass(container.getConstantPool().ensureArrayType(
                             NativeTemplates.get(container).get(PARAM_TYPE))));
 }
