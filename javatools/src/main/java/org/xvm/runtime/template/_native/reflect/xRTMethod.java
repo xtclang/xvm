@@ -203,7 +203,7 @@ public class xRTMethod
     public int invokeInvoke(Frame frame, MethodHandle hMethod, ObjectHandle[] ahArg, int iReturn) {
         ObjectHandle   hTarget = ahArg[0];
         TupleHandle    hTuple  = (TupleHandle) ahArg[1];
-        ObjectHandle[] ahPass  = hTuple.m_ahValue;  // TODO GG+CP do we need to check these?
+        ObjectHandle[] ahPass  = hTuple.valuesCopy();
         CallChain      chain   = hMethod.getCallChain(frame, hTarget);
 
         return chain.invokeT(frame, hTarget, ahPass, iReturn);

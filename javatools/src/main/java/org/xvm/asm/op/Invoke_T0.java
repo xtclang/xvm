@@ -88,9 +88,9 @@ public class Invoke_T0
         return isDeferred(hArg)
                 ? hArg.proceed(frame, frameCaller ->
                      complete(frameCaller, hTarget,
-                         ((TupleHandle) frameCaller.popStack()).m_ahValue))
+                         ((TupleHandle) frameCaller.popStack()).valuesCopy()))
                 : complete(frame, hTarget,
-                    ((TupleHandle) hArg).m_ahValue);
+                    ((TupleHandle) hArg).valuesCopy());
     }
 
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg) {

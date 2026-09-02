@@ -670,6 +670,14 @@ public class xTuple
             extends ObjectHandle {
         public ObjectHandle[] m_ahValue;
 
+        /**
+         * Copy the values array.
+         */
+        public ObjectHandle[] valuesCopy() {
+            ObjectHandle[] ahValue = m_ahValue;
+            return Arrays.copyOf(ahValue, ahValue.length);
+        }
+
         protected TupleHandle(TypeComposition clazz, ObjectHandle[] ahValue, boolean fMutable) {
             super(clazz);
 

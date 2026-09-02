@@ -94,9 +94,9 @@ public class Call_T1
                 return isDeferred(hArg)
                         ? hArg.proceed(frame, frameCaller ->
                             chain.callSuperN1(frameCaller,
-                                ((TupleHandle) frameCaller.popStack()).m_ahValue, m_nRetValue, false))
+                                ((TupleHandle) frameCaller.popStack()).valuesCopy(), m_nRetValue, false))
                         : chain.callSuperN1(frame,
-                            ((TupleHandle) hArg).m_ahValue, m_nRetValue, false);
+                            ((TupleHandle) hArg).valuesCopy(), m_nRetValue, false);
             }
 
             if (m_nFunctionId <= CONSTANT_OFFSET) {
@@ -130,7 +130,7 @@ public class Call_T1
     protected int complete(Frame frame, MethodStructure function, TupleHandle hArg) {
         checkReturnRegister(frame, function);
 
-        ObjectHandle[] ahArg = hArg.m_ahValue;
+        ObjectHandle[] ahArg = hArg.valuesCopy();
         if (ahArg.length != function.getParamCount()) {
             return frame.raiseException("Invalid tuple argument");
         }
@@ -147,7 +147,7 @@ public class Call_T1
     protected int complete(Frame frame, FunctionHandle hFunction, TupleHandle hArg) {
         checkReturnRegister(frame, hFunction.getMethod());
 
-        ObjectHandle[] ahArg = hArg.m_ahValue;
+        ObjectHandle[] ahArg = hArg.valuesCopy();
         if (ahArg.length != hFunction.getParamCount()) {
             return frame.raiseException("Invalid tuple argument");
         }
