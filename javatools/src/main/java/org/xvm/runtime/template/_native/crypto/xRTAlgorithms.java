@@ -146,7 +146,9 @@ public class xRTAlgorithms
             }
 
             case 1:   // SymmetricalCipher
-            case 2: { // AsymmetricalCipher
+            case 2:   // AsymmetricalCipher
+            case 6:   // AuthenticatedCipher
+            case 7: { // KeyWrappingCipher
                 Cipher cipher = Cipher.getInstance(sName);
 
                 nBlockSize = cipher.getBlockSize();
