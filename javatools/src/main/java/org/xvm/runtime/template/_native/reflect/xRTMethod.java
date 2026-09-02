@@ -203,11 +203,6 @@ public class xRTMethod
     public int invokeInvoke(Frame frame, MethodHandle hMethod, ObjectHandle[] ahArg, int iReturn) {
         ObjectHandle   hTarget = ahArg[0];
         TupleHandle    hTuple  = (TupleHandle) ahArg[1];
-        // the call chain grows the argument array into the callee frame's register file only when
-        // the callee needs more registers than there are arguments; otherwise it uses the array as
-        // it was handed over. Copy the tuple's storage so that the callee cannot write through its
-        // registers into the caller's (possibly immutable, possibly const-heap-cached) tuple. This
-        // mirrors the copy that xRTFunction.invokeInvoke already makes for the same reason.
         ObjectHandle[] ahPass  = hTuple.valuesCopy();
         CallChain      chain   = hMethod.getCallChain(frame, hTarget);
 

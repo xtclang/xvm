@@ -671,14 +671,7 @@ public class xTuple
         public ObjectHandle[] m_ahValue;
 
         /**
-         * The tuple-argument call paths must never hand the tuple's own storage toward a frame:
-         * {@link Utils#ensureSize} is grow-only and returns the array it was given when no growth
-         * is needed, so the tuple's storage would become the callee's register file and a callee
-         * parameter reassignment would write straight back into this tuple - which may well be
-         * immutable, or cached on the const heap.
-         *
-         * @return a copy of the tuple's element storage, for use as (or growth into) a callee
-         *         frame's register file
+         * Copy the values array.
          */
         public ObjectHandle[] valuesCopy() {
             ObjectHandle[] ahValue = m_ahValue;
