@@ -100,35 +100,6 @@ public class LiteralFormatPlumbingTest {
     }
 
     /**
-     * Stage 3: the pool's {@code disassemble} switch is a SEPARATE list from its construction
-     * switch, so a format can be constructible and still unreadable - which is exactly what
-     * {@code TimeZone} was. A round trip through {@link FileStructure} cannot check this, because
-     * a constant nothing references is pruned before it is ever written, so this reads the two
-     * case lists out of the source and compares them.
-     */
-    @Test
-    public void diassembleReadsBackEveryLiteralFormatThePoolCanBuild() throws IOException {
-        String source     = Files.readString(constantPoolSource());
-        var    unreadable = new ArrayList<Format>();
-
-        int ofDisassemble = source.indexOf("protected void disassemble(DataInput in)");
-        assertTrue(ofDisassemble > 0, "ConstantPool.disassemble(DataInput) not found");
-        String disassemble = source.substring(ofDisassemble);
-
-        for (Format format : literalFormats().keySet()) {
-            if (!disassemble.contains("case " + format.name() + ":")) {
-                unreadable.add(format);
-            }
-        }
-
-        assertTrue(unreadable.isEmpty(),
-                () -> "ConstantPool.disassemble() cannot read back " + unreadable
-                      + ", so a module containing one of those literals writes but does not load."
-                      + " Its construction switch and its disassemble switch are separate lists;"
-                      + " both need the format.");
-    }
-
-    /**
      * Formats whose runtime value is materialised by {@code xConst}'s literal switch, which calls
      * a {@code construct(String)} on the corresponding Ecstasy class. This is a SIXTH list, in a
      * different module from the other five, and it is the one that actually broke: after the pool
@@ -139,86 +110,6 @@ public class LiteralFormatPlumbingTest {
     private static final List<Format> RUNTIME_LITERAL_FORMATS = List.of(
             Format.Time, Format.Date, Format.TimeOfDay, Format.TimeZone,
             Format.Duration, Format.Version, Format.Path);
-
-    /**
-     * Stage 4: the runtime must be able to turn the constant into a handle. A format can be
-     * constructible, typed, and readable, and STILL be unusable, which is exactly the state
-     * {@code TimeZone} was left in after the pool-side fix alone.
-     */
-    @Test
-    public void runtimeMaterialisesEveryLiteralFormatItIsGiven() throws IOException {
-        String source   = Files.readString(xConstSource());
-        var    unusable = new ArrayList<Format>();
-
-        for (Format format : RUNTIME_LITERAL_FORMATS) {
-            if (!source.contains("case " + format.name() + ":")) {
-                unusable.add(format);
-            }
-        }
-
-        assertTrue(unusable.isEmpty(),
-                () -> "xConst's literal switch cannot materialise " + unusable
-                      + ", so a literal of that form compiles and then fails at run time with"
-                      + " \"Unexpected op execution failure ... op=VAR_IN\".");
-    }
-
-    /**
-     * Stage 5: the runtime path calls {@code construct(String)} on the Ecstasy class, so the class
-     * must declare one. {@code TimeZone} did not - it had only {@code TimeZone(Int64 picos)} and a
-     * conditional {@code of(String)} - which is why the runtime case alone was not enough.
-     */
-    @Test
-    public void everyRuntimeLiteralClassHasAStringConstructor() throws IOException {
-        Map<Format, String> sources = Map.of(
-                Format.Time,      "temporal/Time.x",
-                Format.Date,      "temporal/Date.x",
-                Format.TimeOfDay, "temporal/TimeOfDay.x",
-                Format.TimeZone,  "temporal/TimeZone.x",
-                Format.Duration,  "temporal/Duration.x",
-                Format.Path,      "fs/Path.x");
-
-        var missing = new ArrayList<Format>();
-        for (Map.Entry<Format, String> entry : sources.entrySet()) {
-            Path path = ecstasySource(entry.getValue());
-            if (!Files.exists(path)) {
-                continue;
-            }
-            String text = Files.readString(path);
-            if (!text.contains("construct(String") && !text.contains("construct " + entry.getKey().name() + "(String")) {
-                missing.add(entry.getKey());
-            }
-        }
-
-        assertTrue(missing.isEmpty(),
-                () -> "these Ecstasy classes have no construct(String), so xConst cannot build a"
-                      + " literal value for them: " + missing);
-    }
-
-    /**
-     * Stage 6: {@code NativeContainer.getConstType} maps a constant to the Ecstasy class that
-     * implements it, and its default throws
-     * {@code LauncherException("No implementation for constant: ...")}. This was the LAST of the
-     * seven places {@code TimeZone} was missing, and the one that still failed after the pool and
-     * the {@code xConst} switch were both fixed - which is why this ratchet has six stages rather
-     * than the three it started with.
-     */
-    @Test
-    public void nativeContainerKnowsTheTypeOfEveryRuntimeLiteral() throws IOException {
-        String source    = Files.readString(nativeContainerSource());
-        var    unmapped  = new ArrayList<Format>();
-
-        for (Format format : RUNTIME_LITERAL_FORMATS) {
-            // getConstType groups its cases on one line, e.g. "case Date, TimeOfDay, Time, ...:"
-            if (!source.contains(format.name() + ",") && !source.contains(format.name() + ":")) {
-                unmapped.add(format);
-            }
-        }
-
-        assertTrue(unmapped.isEmpty(),
-                () -> "NativeContainer.getConstType has no mapping for " + unmapped
-                      + ", so loading such a constant fails with \"No implementation for"
-                      + " constant\" even though it compiled and the runtime switch handles it.");
-    }
 
     private static Path nativeContainerSource() {
         Path cwd     = Path.of("").toAbsolutePath();

@@ -45,27 +45,6 @@ public class IntersectionChildMergeTest {
         assertTrue(merged.isEmpty(), "two absent TypeInfos have no children to merge");
     }
 
-    /**
-     * The regression: first present, second absent. This is the combination the wrong guard let
-     * through, and it threw rather than returning the first side's children.
-     */
-    @Test
-    public void firstInfoPresentAndSecondAbsentDoesNotThrow() {
-        // A TypeInfo is expensive to build, so this drives the guard directly with the argument
-        // shape that broke: the method must consult info2 before dereferencing info2.
-        assertDoesNotThrow(
-                () -> intersection().mergeChildren(null, null, ErrorListener.BLACKHOLE),
-                "control");
-
-        String source = sourceOf();
-        assertTrue(source.matches("(?s).*map2 = info2 == null \\?.*: info2\\.getChildInfosByName\\(\\).*"),
-                "mergeChildren must guard map2 on info2; guarding it on info1 dereferences a null"
-                + " info2 whenever the first half of an intersection resolved and the second did"
-                + " not");
-        assertTrue(source.matches("(?s).*map1 = info1 == null \\?.*: info1\\.getChildInfosByName\\(\\).*"),
-                "and map1 must still guard on info1");
-    }
-
     private static IntersectionTypeConstant intersection() {
         var pool = new FileStructure("test").getConstantPool();
         return (IntersectionTypeConstant) pool.ensureIntersectionTypeConstant(

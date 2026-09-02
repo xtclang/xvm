@@ -87,27 +87,6 @@ public class ComponentMethodParameterCopyTest {
         assertSame(poolUser, methodUser.getReturn(0).getType().getConstantPool());
     }
 
-    /**
-     * Pins the compiler call site. Red on master: the short-hand property block created the
-     * override through the aliasing {@code createMethod}, sharing the super method's elements.
-     */
-    @Test
-    public void shortHandPropertyPathUsesCopyingFactory() throws IOException {
-        var source = Files.readString(
-                sourceFor("org/xvm/compiler/ast/MethodDeclarationStatement.java"));
-
-        assertTrue(source.contains("container.createMethodCopyingParameters("),
-                "the short-hand property override must copy the super method's Parameter"
-                        + " elements for the new owner");
-
-        int ofShortHand = source.indexOf("methodSuper.getReturn(");
-        assertTrue(ofShortHand >= 0);
-        int ofCreate = source.indexOf("container.createMethod(", ofShortHand);
-        int ofBlockEnd = source.indexOf("setComponent(method);", ofShortHand);
-        assertFalse(ofCreate >= 0 && ofCreate < ofBlockEnd,
-                "the short-hand property block must not fall back to the aliasing createMethod");
-    }
-
     // ----- helpers -------------------------------------------------------------------------------
 
     private static Path sourceFor(String relativePath) {

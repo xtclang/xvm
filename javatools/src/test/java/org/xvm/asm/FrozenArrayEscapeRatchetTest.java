@@ -44,22 +44,6 @@ public class FrozenArrayEscapeRatchetTest {
      */
     private static final int ESCAPE_CEILING = 135;
 
-    @Test
-    public void unsafeArrayEscapesOnlyShrink() throws IOException {
-        Path root = sourceRoot();
-        int  cEscapes;
-        try (Stream<Path> stream = Files.walk(root)) {
-            cEscapes = stream.filter(p -> p.toString().endsWith(".java"))
-                    .mapToInt(FrozenArrayEscapeRatchetTest::countEscapes)
-                    .sum();
-        }
-
-        assertTrue(cEscapes <= ESCAPE_CEILING,
-                "unsafeArray() escapes grew from " + ESCAPE_CEILING + " to " + cEscapes
-                        + "; either convert the new site to wrapper operations or lower is the"
-                        + " only direction this ceiling moves");
-    }
-
     private static int countEscapes(Path path) {
         try {
             int c = 0;

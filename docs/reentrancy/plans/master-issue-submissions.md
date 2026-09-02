@@ -2948,3 +2948,44 @@ For contrast, two invariants moved the other way and are now stronger than the s
 replaced: no template declares or reads an `INSTANCE` static, and `m_fMutable` is written only by a
 constructor or the sanctioned transitions. Both read compiled classes, so neither can be fooled by
 how the code is spelled.
+
+### Second pass: the rest of the source-shape tests
+
+Same treatment, same reason. Recorded here so the invariants are not lost with the tests.
+
+**`Op.toName` throws for opcodes that are declared.** Converting the coverage test from parsing the
+`instantiate` switch to reflection over `Op`'s own constants made it stricter, and it immediately
+found eight: `OP_NEWV_T`, and the whole `OP_M_GET`/`OP_M_SET`/`OP_M_VAR`/`OP_M_REF` and
+`OP_MIP_INC`/`OP_MIP_DEC`/`OP_MIP_INCA` family all raise `IllegalStateException`. `Op.toString()`
+calls `toName`, so `toString()` on any of those still throws - which is the failure PR #556 set out
+to remove. Worth someone deciding whether those opcodes should have names or whether `toName`
+should answer for a declared-but-unimplemented opcode. The reflection test cannot be kept as-is
+because it also covers opcodes that can never appear; scoping it correctly needs the instantiate
+switch, which is why the original read source.
+
+**Literal format plumbing** (was `LiteralFormatPlumbingTest`, four tests). That the pool can build
+every literal format, that disassembly reads each back, that every runtime literal class has a
+String constructor, and that the native container knows each one's type. All four enumerated the
+formats by reading source. Doing it properly: enumerate `Constant.Format` and the runtime literal
+classes by reflection, then exercise each - build, serialize, read back, materialise. That is a
+behavioural round-trip and needs no source at all.
+
+**The short-hand property override uses the copying factory** (was
+`ComponentMethodParameterCopyTest`). Expressible as a class-file scan: `MethodDeclarationStatement`
+should invoke `createMethodCopyingParameters`, not `createMethod`, on that path.
+
+**Decoded ops do not cache runtime operands** (was `OpRuntimeCacheTest`) and **the semantic
+current-pool lookup is bridge-only** (was `ConstantPoolDiagnosticsTest`). Both are "no site does X"
+census claims and both are class-file scans: a `putfield` on a decoded op, and a call to the bridge
+lookup from outside the bridge.
+
+**Unsafe array escapes only shrink** (was `FrozenArrayEscapeRatchetTest`), **intersection child
+merge does not throw when the first info is present and the second absent** (was
+`IntersectionChildMergeTest`), **JIT failures set a non-zero result and rethrow natural exceptions**
+(was `JitFailurePropagationTest`), and **finishConnect returns the masked handle** (was
+`SocketHandleStateSharingTest`). Every one of these names a behaviour. Each needs a test that runs
+the code and asserts the outcome, not one that checks the method is written a particular way.
+
+**The tuple-argument copy** (was `MethodInvokeArgumentAliasingTest`, two tests) is already pinned
+properly on the tuple-alias branch by a class-file scan for `getfield m_ahValue`, plus an Ecstasy
+reproducer. This branch does not carry that migration, so neither applies here yet.

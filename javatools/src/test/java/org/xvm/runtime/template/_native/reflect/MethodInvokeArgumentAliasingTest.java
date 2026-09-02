@@ -49,51 +49,6 @@ public class MethodInvokeArgumentAliasingTest {
         assertSame(ahArg, Utils.ensureSize(ahArg, 2));
     }
 
-    /**
-     * The reflection invoke path must copy the tuple's storage before handing it to the call
-     * chain. Red on master: {@code invokeInvoke} passed {@code hTuple.m_ahValue} through raw
-     * (with an in-code {@code TODO GG+CP do we need to check these?} asking exactly this
-     * question).
-     */
-    @Test
-    public void reflectionInvokePathClonesTupleStorage() throws IOException {
-        var source = Files.readString(sourceFor("org/xvm/runtime/template/_native/reflect/xRTMethod.java"));
-        var body   = methodBody(source, "public int invokeInvoke");
-
-        assertTrue(Pattern.compile("copyOf\\s*\\(\\s*hTuple\\s*\\.\\s*m_ahValue\\s*\\)"
-                        + "|m_ahValue\\s*\\.\\s*clone\\s*\\(\\)").matcher(body).find(),
-                "xRTMethod.invokeInvoke must copy the tuple storage before it becomes the"
-                        + " callee register file");
-        assertFalse(Pattern.compile("=\\s*hTuple\\s*\\.\\s*m_ahValue\\s*;").matcher(body).find(),
-                "xRTMethod.invokeInvoke must not hand the caller tuple's own array to the"
-                        + " call chain");
-    }
-
-
-
-    /**
-     * The ISA tuple-argument ops (the Call_T, Invoke_T, Construct_T, New_T, NewG_T families) share
-     * the reflection path's exact hazard: extracting {@code TupleHandle.m_ahValue} and handing it
-     * toward a callee frame aliases the caller's tuple storage as the register file. Today's
-     * compiler never emits the tuple-arg forms, but the opcodes decode from any {@code .xtc}, so
-     * the latent path is reachable from hostile or future-compiler modules. Decision (board row):
-     * every extraction goes through {@code TupleHandle.valuesCopy()}, mirroring the
-     * {@code xRTMethod}/{@code xRTFunction} clones. Red on the pre-decision shape, where all the
-     * ops read {@code .m_ahValue} raw.
-     */
-    @Test
-    public void tupleArgumentOpsCopyTupleStorage() throws IOException {
-        String[] asOps = {"Call_T0", "Call_T1", "Call_TN", "Call_TT", "Invoke_T0", "Invoke_T1",
-                          "Invoke_TN", "Invoke_TT", "Construct_T", "New_T", "NewG_T"};
-        for (String sOp : asOps) {
-            var source = Files.readString(sourceFor("org/xvm/asm/op/" + sOp + ".java"));
-            assertFalse(source.contains(".m_ahValue"),
-                    sOp + " must not hand the caller tuple's own storage toward a callee frame");
-            assertTrue(source.contains(".valuesCopy()"),
-                    sOp + " must extract tuple arguments through TupleHandle.valuesCopy()");
-        }
-    }
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**

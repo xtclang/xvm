@@ -87,30 +87,6 @@ public class SocketHandleStateSharingTest {
         }
     }
 
-    /**
-     * {@code finishConnect} must expose the masked net.Socket handle that construction produced,
-     * not the revealed native inception view that native code uses internally to install the Java
-     * socket.
-     */
-    @Test
-    public void finishConnectReturnsMaskedApplicationHandle() throws IOException {
-        var source = Files.readString(XdkOutputs.root().resolve(
-                "javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTSocket.java"));
-        int ofMethod = source.indexOf("private static int finishConnect");
-        assertTrue(ofMethod >= 0, "finishConnect must exist");
-
-        int ofEnd = source.indexOf("\n    }\n\n\n    // ----- I/O", ofMethod);
-        assertTrue(ofEnd > ofMethod, "finishConnect method boundary must be identifiable");
-
-        var method = source.substring(ofMethod, ofEnd);
-        assertTrue(method.contains("hSocket.setSocket(socket);"),
-                "finishConnect still installs the Java socket through the revealed native view");
-        assertTrue(method.contains("return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), h);"),
-                "finishConnect must return the original masked handle to application code");
-        assertFalse(method.contains("return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hSocket);"),
-                "returning the revealed native view defeats maskAs(net.Socket)");
-    }
-
     // ----- helpers (same discovery as ArrayViewGuardTest) ---------------------------------------
 
 

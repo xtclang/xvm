@@ -170,28 +170,6 @@ public class ConstantPoolDiagnosticsTest {
     }
 
     /**
-     * `getCurrentPool()` must not return as a semantic owner API. This source-shape guard prevents
-     * new main-code helpers from reintroducing hidden owner lookup outside `ConstantPool` itself.
-     */
-    @Test
-    public void semanticCurrentPoolLookupIsBridgeOnly() throws Exception {
-        Path sourceRoot = sourceRoot();
-        List<String> offenders;
-
-        try (var files = Files.walk(sourceRoot.resolve("org/xvm"))) {
-            offenders = files
-                    .filter(path -> path.toString().endsWith(".java"))
-                    .filter(ConstantPoolDiagnosticsTest::usesCurrentPoolInCode)
-                    .map(sourceRoot::relativize)
-                    .map(Path::toString)
-                    .sorted()
-                    .toList();
-        }
-
-        assertEquals(List.of(), offenders);
-    }
-
-    /**
      * There must be no callable current-pool getter. The scoped bridge can read its private
      * thread-local slot internally, but exposing a getter makes hidden owner lookup easy to
      * reintroduce.

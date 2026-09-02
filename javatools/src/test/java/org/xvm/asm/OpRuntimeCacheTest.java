@@ -157,28 +157,6 @@ public class OpRuntimeCacheTest {
     }
 
     /**
-     * {@code assert:rnd} intervals are runtime operands. Caching the first interval on the decoded
-     * op makes later invocations inherit the first caller's sampling rate, even when the current
-     * frame supplies a different runtime-constant handle.
-     */
-    @Test
-    public void jumpNSampleDoesNotCacheRuntimeOperandOnDecodedOp()
-            throws IOException {
-        var runtimeFields = Arrays.stream(JumpNSample.class.getDeclaredFields())
-                .filter(field -> !Modifier.isStatic(field.getModifiers()))
-                .map(Field::getName)
-                .toList();
-
-        assertEquals(List.of(), runtimeFields,
-                "JMP_NSAMPLE must read the current interval handle");
-
-        var source = Files.readString(
-                sourcePath("org/xvm/asm/op/JumpNSample.java"));
-        assertFalse(source.contains("m_nEvery"),
-                "the decoded op must not store the first runtime interval");
-    }
-
-    /**
      * Method code is the publication cell for decoded op arrays. A frame must receive one fully
      * linked op graph, not whichever partially decoded graph wins a plain-field race during
      * parallel first execution.

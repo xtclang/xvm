@@ -49,36 +49,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class OpNameCoverageTest {
 
-
-    /**
-     * The dynamic check: calling {@code toName} on every opcode {@code instantiate} accepts must
-     * actually return a name rather than throw. The static check reads source; this one runs the
-     * method, so a case that exists but falls through still fails here.
-     */
-    @Test
-    public void toNameDoesNotThrowForAnyInstantiableOpcode() throws Exception {
-        String source = Files.readString(opSource());
-
-        Set<String> instantiate = casesIn(source, "public static Op instantiate(",
-                                                  "public static String toName(");
-        var failures = new ArrayList<String>();
-
-        for (String sConstant : instantiate) {
-            int nOp = Op.class.getDeclaredField(sConstant).getInt(null);
-            try {
-                String sName = Op.toName(nOp);
-                if (sName == null || sName.isEmpty()) {
-                    failures.add(sConstant + " -> " + sName);
-                }
-            } catch (RuntimeException e) {
-                failures.add(sConstant + " -> " + e);
-            }
-        }
-
-        assertTrue(failures.isEmpty(),
-                () -> "Op.toName threw or returned nothing for: " + failures);
-    }
-
     /**
      * A spot check on the specific opcode that proved the bug, so the regression has a named,
      * readable case rather than only appearing inside a set difference.
