@@ -17,7 +17,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
+import java.io.File;
+
+import java.util.Objects;
+
+import java.util.concurrent.CancellationException;
+
 import org.junit.jupiter.api.Test;
+
+import org.xvm.asm.Constants;
+import org.xvm.asm.DirRepository;
+import org.xvm.asm.LinkedRepository;
+import org.xvm.asm.ModuleRepository;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.template._native.reflect.xRTType;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.numbers.xInt64;
@@ -30,12 +45,15 @@ import org.xvm.runtime.template._native.collections.arrays.xRTDelegate;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Coverage for replacing the per-template {@code INSTANCE} statics with the container-owned table.
  *
- * <p>Both tests read javatools' own compiled classes - not XTC modules, and nothing from the XDK.
+ * <p>The first two tests read javatools' own compiled classes - not XTC modules, and nothing from the XDK.
  * {@code compileJava} is upstream of {@code test}, so those class files exist by construction; that
  * is what lets these run everywhere without an assumption, unlike anything that needs a built
  * distribution.</p>
@@ -108,6 +126,35 @@ public class NativeTemplatePerContainerTest {
                 NativeTemplates.componentNameOf(xRTDelegate.class));
     }
 
+    /**
+     * Threading a container through the static factories must not break the paths that have no
+     * frame and no container to give.
+     *
+     * <p>{@code Utils.translate} turns a native throwable into an exception handle with a null
+     * frame, and a "foreign" type handle is built for a type outside the asking type system.
+     * Both used to read a process-global template and so never needed an owner; both now take one
+     * from the composition they are building against.</p>
+     */
+    @Test
+    public void ownerlessFactoryPathsStillWork() {
+        assumeTrue(systemModulesAvailable(), "compiled XDK system modules are required");
+
+        var runtime = new Runtime();
+        try {
+            var container = new NativeContainer(runtime, systemRepository());
+
+            ObjectHandle.ExceptionHandle hEx =
+                    Utils.translate(new CancellationException());
+            assertNotNull(hEx, "a native throwable must translate without a frame");
+
+            TypeConstant type = container.getTemplate("Object").getCanonicalType();
+            assertNotNull(xRTType.makeForeignHandle(container, type),
+                    "a foreign type handle must be creatable");
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
     // ----- helpers -----------------------------------------------------------------------------
 
     @FunctionalInterface
@@ -144,5 +191,47 @@ public class NativeTemplatePerContainerTest {
             }
         }
         return cScanned;
+    }
+    private static boolean systemModulesAvailable() {
+        var repository = systemRepository();
+        return repository != null
+            && repository.loadModule(Constants.ECSTASY_MODULE) != null
+            && repository.loadModule(Constants.TURTLE_MODULE)  != null
+            && repository.loadModule(Constants.NATIVE_MODULE)  != null;
+    }
+
+    private static ModuleRepository systemRepository() {
+        var repositories = Stream.of(
+                "lib_ecstasy/build/xtc/main/lib",
+                "javatools_bridge/build/xtc/main/lib",
+                "xdk/build/install/xdk/lib")
+                .map(NativeTemplatePerContainerTest::repositoryFor)
+                .filter(Objects::nonNull)
+                .toList();
+
+        return switch (repositories.size()) {
+        case 0  -> null;
+        case 1  -> repositories.getFirst();
+        default -> new LinkedRepository(repositories.toArray(ModuleRepository.NO_REPOS));
+        };
+    }
+
+    private static ModuleRepository repositoryFor(String sPath) {
+        File dir = checkoutRoot().resolve(sPath).toFile();
+        return dir.isDirectory()
+                ? new DirRepository(dir, true)
+                : null;
+    }
+
+    private static Path checkoutRoot() {
+        var path = Path.of("").toAbsolutePath();
+        while (path != null) {
+            if (Files.isDirectory(path.resolve("javatools"))
+                    && Files.isDirectory(path.resolve("lib_ecstasy"))) {
+                return path;
+            }
+            path = path.getParent();
+        }
+        throw new IllegalStateException("Cannot locate checkout root");
     }
 }
