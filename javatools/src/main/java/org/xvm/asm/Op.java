@@ -1821,7 +1821,13 @@ public abstract class Op {
         case OP_SYN_INIT:    return "SYN_INIT";
 
         default:
-            throw new IllegalStateException("op=" + byteToHexString(nOp));
+            // Never throw. toName() is called from toString() and, more importantly, from inside
+            // the construction of the exceptions this class raises - OpGeneral and OpCondJump
+            // both do `throw new ...Exception(toName(getOpCode()) + ...)`. Throwing here replaced
+            // the real failure with a secondary one and lost it. Twenty-two declared opcodes have
+            // no case (the OP_M_* and OP_MIP_* families, and OP_NEWV_T), and an opcode added later
+            // would join them, so rendering the unnamed ones is the only shape that cannot regress.
+            return "OP_" + byteToHexString(nOp);
         }
     }
 
