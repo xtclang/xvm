@@ -1020,6 +1020,13 @@ public final class OwnershipDiagnostics {
             dumpLazyFields(templates, container, 2, true);
             dumpMap("nativeTemplateKeys", readField(templates, "f_mapTemplates"),
                     container, 2, true, templates);
+
+            // The keyed cache holds the values that used to be mutable statics - compositions,
+            // handles, constants - so it is the table a reader most wants to see the contents and
+            // the owner of. Ancestor ownership is legitimate here for the same reason as above:
+            // a plane-wide key is resolved and cached on the native container.
+            dumpMap("nativeTemplateCache", readField(templates, "f_mapCached"),
+                    container, 2, true, templates);
         }
 
         private void dumpLazyFields(Object owner, Container expected, int indent) {
