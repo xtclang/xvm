@@ -8,6 +8,7 @@ import org.xvm.asm.PackageStructure;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.util.Lazy;
@@ -41,7 +42,7 @@ public class xRTPackageTemplate
         xRTPackageTemplate template = container.getTemplate("_native.reflect.RTPackageTemplate",
                 xRTPackageTemplate.class);
         TypeComposition clz = template.ensureClass(container,
-                template.getCanonicalType(), template.f_typePackageTemplate.get(template));
+                template.getCanonicalType(), NativeTemplates.get(container).get(PACKAGE_TEMPLATE_TYPE));
         return new ComponentTemplateHandle<>(clz, pkg);
     }
 
@@ -49,11 +50,11 @@ public class xRTPackageTemplate
     // ----- data members --------------------------------------------------------------------------
 
     /**
-     * PackageTemplate is a container-owned type constant, not JVM-global metadata.
+     * Plane-wide: the cell this replaces resolved through the template's own container, which is
+     * the native one, so every container shared the constant.
      */
-    private final Lazy.Bound<xRTPackageTemplate, TypeConstant> f_typePackageTemplate =
-            Lazy.ofBound(owner -> {
-        ConstantPool pool = owner.container().getConstantPool();
-        return pool.ensureEcstasyTypeConstant("reflect.PackageTemplate");
-    });
+    private static final NativeTemplates.CacheKey<TypeConstant> PACKAGE_TEMPLATE_TYPE =
+            NativeTemplates.CacheKey.ofPlane("reflect.PackageTemplate type",
+                    container -> container.getConstantPool()
+                            .ensureEcstasyTypeConstant("reflect.PackageTemplate"));
 }
