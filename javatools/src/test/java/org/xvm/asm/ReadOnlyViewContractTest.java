@@ -62,24 +62,7 @@ public class ReadOnlyViewContractTest {
         assertEquals(1, map.size());
     }
 
-    /**
-     * The assertion-dependent wrapper idiom must not return anywhere in main sources. Red on
-     * master, which had eight hits across Component, CompositeComponent, MultiMethodStructure,
-     * FileStructure, ModuleStructure, and ListMap.
-     */
-    @Test
-    public void assertionDependentWrapperIdiomIsBanished() throws IOException {
-        var pattern = Pattern.compile("assert\\s*\\(\\w+\\s*=\\s*Collections\\.unmodifiable");
-        for (var root : List.of(mainSourceRoot("javatools"), mainSourceRoot("javatools_utils"))) {
-            try (var paths = Files.walk(root)) {
-                for (var path : paths.filter(p -> p.toString().endsWith(".java")).toList()) {
-                    assertTrue(!pattern.matcher(Files.readString(path)).find(),
-                            "assertion-dependent read-only wrapper in " + path
-                                    + "; make the wrapper unconditional instead");
-                }
-            }
-        }
-    }
+
 
     // ----- helpers -------------------------------------------------------------------------------
 

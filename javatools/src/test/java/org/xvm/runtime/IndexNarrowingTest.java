@@ -52,38 +52,7 @@ public class IndexNarrowingTest {
     private static final Pattern INDEXED_METHOD = Pattern.compile(
             "public int (extractArrayValue|assignArrayValue)\\([^)]*long (\\w+)[^)]*\\)");
 
-    @Test
-    public void noIndexedMethodRangeChecksANarrowedIndex() throws IOException {
-        List<String> offenders = new ArrayList<>();
 
-        for (Path path : runtimeSources()) {
-            String  source  = Files.readString(path);
-            Matcher method  = INDEXED_METHOD.matcher(source);
-            while (method.find()) {
-                String longParam = method.group(2);
-                String body      = bodyOf(source, method.end());
-
-                Matcher narrowing = NARROWING.matcher(body);
-                while (narrowing.find()) {
-                    if (!narrowing.group(2).equals(longParam)) {
-                        continue;
-                    }
-                    String narrowed = narrowing.group(1);
-                    // the guard is the comparison; using the narrowed name there is the defect
-                    if (Pattern.compile("\\b" + narrowed + "\\b\\s*(<|>=|>|<=)").matcher(body).find()) {
-                        offenders.add(path.getFileName() + "." + method.group(1)
-                                      + ": narrows " + longParam + " to " + narrowed
-                                      + " and range-checks " + narrowed);
-                    }
-                }
-            }
-        }
-
-        assertTrue(offenders.isEmpty(),
-                () -> "an index arrives as a long and must be range-checked before it is narrowed;"
-                      + " (int) keeps only the low 32 bits, so an index of 2^32 + n passes a check"
-                      + " written against the narrowed value and reads element n: " + offenders);
-    }
 
 
 

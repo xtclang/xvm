@@ -69,19 +69,7 @@ public class MethodInvokeArgumentAliasingTest {
                         + " call chain");
     }
 
-    /**
-     * The function invoke path keeps its existing defensive copy; this pins the precedent the
-     * method path now mirrors, so neither path can silently regress to sharing storage.
-     */
-    @Test
-    public void functionInvokePathKeepsItsDefensiveCopy() throws IOException {
-        var source = Files.readString(sourceFor("org/xvm/runtime/template/_native/reflect/xRTFunction.java"));
-        var body   = methodBody(source, "public int invokeInvoke");
 
-        assertTrue(Pattern.compile("copyOf\\s*\\(|\\.\\s*clone\\s*\\(\\)").matcher(body).find(),
-                "xRTFunction.invokeInvoke must keep cloning the tuple storage when the callee"
-                        + " needs no extra registers");
-    }
 
     /**
      * The ISA tuple-argument ops (the Call_T, Invoke_T, Construct_T, New_T, NewG_T families) share

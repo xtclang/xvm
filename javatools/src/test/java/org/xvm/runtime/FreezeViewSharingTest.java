@@ -4,6 +4,12 @@ package org.xvm.runtime;
 import java.io.File;
 import java.io.IOException;
 
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.Opcode;
+import java.lang.classfile.instruction.FieldInstruction;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -75,28 +81,59 @@ public class FreezeViewSharingTest {
     }
 
     /**
-     * The flag's write discipline is constructor-only: views cannot exist during construction, so
-     * direct field writes there are safe, but every post-construction transition must go through
-     * setMutable()/makeImmutable() or it bypasses the shared freeze cell and reintroduces the
-     * split. This ratchet pins the blessed constructor-write count; if it fails, either a new
-     * constructor write was added (update the count) or - the bug this guards against - a
-     * post-construction path writes the field directly and must use setMutable() instead.
+     * Every write to the mutability flag happens in a constructor.
+     *
+     * <p>Read from the compiled classes: a {@code putfield m_fMutable} from anywhere but a
+     * constructor or one of the sanctioned transitions is the defect, wherever it is and however it
+     * is spelled. The previous version counted regex matches across the source and asserted the
+     * total was exactly 24 - a number any refactor broke, and which never checked the property its
+     * own name claims.</p>
      */
+    /**
+     * The only methods allowed to write the flag: construction, and the two transitions that exist
+     * precisely so a change is visible to every view sharing the freeze state.
+     */
+    private static final List<String> MUTABILITY_WRITERS =
+            List.of("<init>", "setMutable", "makeImmutable");
+
     @Test
-    public void mutabilityFlagWritesAreConstructorOnly() throws IOException {
-        var pattern = Pattern.compile("m_fMutable\\s*=[^=]");
-        var count   = 0;
-        try (Stream<Path> paths = Files.walk(mainSourceRoot())) {
-            for (Path path : paths.filter(p -> p.toString().endsWith(".java")).toList()) {
-                var matcher = pattern.matcher(Files.readString(path));
-                while (matcher.find()) {
-                    ++count;
+    public void mutabilityFlagWritesAreConstructorOnly() throws IOException, URISyntaxException {
+        var listOffenders = new ArrayList<String>();
+        var cScanned      = 0;
+
+        Path pathAnchor = Path.of(ObjectHandle.class.getProtectionDomain()
+                .getCodeSource().getLocation().toURI());
+        assertTrue(Files.isDirectory(pathAnchor),
+                "the runtime must be scannable as exploded classes, but the code source is "
+                        + pathAnchor);
+
+        Path pathRuntime = pathAnchor.resolve("org/xvm/runtime");
+        try (Stream<Path> files = Files.walk(pathRuntime)) {
+            for (Path path : files.filter(f -> f.toString().endsWith(".class")).toList()) {
+                var sClass = pathAnchor.relativize(path).toString();
+                for (var method : ClassFile.of().parse(Files.readAllBytes(path)).methods()) {
+                    var sMethod = method.methodName().stringValue();
+                    method.code().ifPresent(code -> code.elementList().stream()
+                            .filter(FieldInstruction.class::isInstance)
+                            .map(FieldInstruction.class::cast)
+                            .filter(field -> "m_fMutable".equals(field.name().stringValue())
+                                    && field.opcode() == Opcode.PUTFIELD)
+                            .forEach(field -> {
+                                if (!MUTABILITY_WRITERS.contains(sMethod)) {
+                                    listOffenders.add(sClass + '.' + sMethod);
+                                }
+                            }));
                 }
+                cScanned++;
             }
         }
-        assertEquals(24, count,
-                "m_fMutable writes must stay constructor-only; post-construction transitions"
-                        + " must use setMutable()/makeImmutable() so views share the freeze state");
+
+        assertTrue(cScanned > 100,
+                "expected the runtime tree; only " + cScanned + " classes were scanned");
+        assertEquals(List.of(), listOffenders,
+                "m_fMutable must only be written in a constructor; a post-construction transition"
+                        + " has to go through setMutable()/makeImmutable() so views share the"
+                        + " freeze state");
     }
 
     private static Path mainSourceRoot() {

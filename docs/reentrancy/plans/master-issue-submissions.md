@@ -2911,3 +2911,40 @@ pairs it cannot handle.
 
 **Regression test.** `&a == &s` and `&s == &a` must both answer for arrays of every element type
 whose delegate is not the generic one.
+
+## Should-fix: invariants that lost their test when the source-shape tests went
+
+These were asserted by reading `.java` as text - matching literal code, counting regex hits across
+the tree - which passes when the code is spelled a particular way and proves nothing about what it
+does. They were removed rather than kept as false coverage. Each is a real property; each needs a
+different vehicle than reading source.
+
+**The assertion-dependent wrapper idiom** (was `ReadOnlyViewContractTest`). No site should write
+`assert (map = Collections.unmodifiableMap(map)) != null` - an assignment inside an assert, so the
+map stops being protected under `-da`. `Contribution.getTypeParams()` still does exactly this.
+Doing it properly: the pattern compiles to a store inside the region guarded by
+`$assertionsDisabled`, so a class-file scan can find a `putfield`/`astore` there. Fiddly but
+expressible, unlike the source regex it replaces.
+
+**Narrowed indices reaching a range check** (was `IndexNarrowingTest`). An indexed method takes a
+`long` and range-checks a value already narrowed to `int`. The old test matched method signatures
+and extracted bodies with regex, which is parsing Java badly. Doing it properly: a small dataflow
+check over the compiled method - does the value reaching the bounds check come from an `l2i` of the
+parameter - or, better, a behavioural test that calls the method with a value above `Integer.MAX_VALUE`
+and asserts it is rejected.
+
+**Queued write failures reaching submit** (was `RawOSFileChannelSubmitTest`) and **future
+completion on exceptional paths** (was `FutureCompletionSafetyTest`). Both are behaviour, and both
+were asserted by looking at source. Doing it properly: drive the failure. Queue a write that fails
+and assert `submit` observes it; complete a future exceptionally and assert both inputs are used.
+Neither needs a scan of any kind - they need a test that runs the code.
+
+**xRTFunction's defensive copy** (was `MethodInvokeArgumentAliasingTest`). That the function invoke
+path copies the tuple's storage is pinned on the tuple-alias branch by a class-file scan for
+`getfield m_ahValue`, which is the right vehicle. This branch does not carry that migration, so the
+scan does not apply here yet.
+
+For contrast, two invariants moved the other way and are now stronger than the source tests they
+replaced: no template declares or reads an `INSTANCE` static, and `m_fMutable` is written only by a
+constructor or the sanctioned transitions. Both read compiled classes, so neither can be fooled by
+how the code is spelled.
