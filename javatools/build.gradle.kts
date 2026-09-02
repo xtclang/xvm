@@ -237,3 +237,11 @@ val versionOutputTest = tasks.register<Test>("versionOutputTest") {
         logger.info("[javatools] Verifying version output contains expected git and API information")
     }
 }
+
+// Tests must never go looking for a checkout. ".git" is a directory in a clone, a FILE in a linked
+// worktree, and absent altogether in a container or an exported source tree - and the walk that used
+// to do this failed into an assumeTrue skip, so the suite reported green while the tests never ran.
+// This build knows where the composite root is; see org.xvm.test.XdkOutputs.
+tasks.withType<Test>().configureEach {
+    systemProperty("xvm.checkout.root", rootDir.parentFile.absolutePath)
+}

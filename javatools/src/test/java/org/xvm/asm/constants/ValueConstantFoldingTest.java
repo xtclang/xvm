@@ -13,6 +13,8 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ErrorListener;
+
+import org.xvm.test.XdkOutputs;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
@@ -88,11 +90,11 @@ public class ValueConstantFoldingTest {
      */
     @Test
     public void comparisonFolding() {
-        assumeTrue(systemModulesAvailable(), "compiled XDK system modules are required");
+        assumeTrue(XdkOutputs.systemModulesAvailable(), "compiled XDK system modules are required");
 
         var runtime = new Runtime();
         try {
-            var pool = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME).getConstantPool();
+            var pool = NativeContainer.create(runtime, XdkOutputs.systemRepository(), ErrorListener.RUNTIME).getConstantPool();
             var abc  = pool.ensureStringConstant("abc");
             var abd  = pool.ensureStringConstant("abd");
 
@@ -136,55 +138,8 @@ public class ValueConstantFoldingTest {
 
     // ----- helpers (same discovery as ArrayViewGuardTest) ---------------------------------------
 
-    private static boolean systemModulesAvailable() {
-        var repository = systemRepository();
-        return repository != null
-            && repository.loadModule(Constants.ECSTASY_MODULE) != null
-            && repository.loadModule(Constants.TURTLE_MODULE)  != null
-            && repository.loadModule(Constants.NATIVE_MODULE)  != null;
-    }
 
-    private static ModuleRepository systemRepository() {
-        var manualRepository = repositoryFor("manualTests/build/xtc/xdk/lib");
-        if (manualRepository != null) {
-            return manualRepository;
-        }
 
-        var repositories = Stream.of(
-                "lib_ecstasy/build/xtc/main/lib",
-                "javatools_bridge/build/xtc/main/lib",
-                "xdk/build/install/xdk/lib")
-                .map(ValueConstantFoldingTest::repositoryFor)
-                .filter(Objects::nonNull)
-                .toList();
 
-        return switch (repositories.size()) {
-        case 0  -> null;
-        case 1  -> repositories.get(0);
-        default -> new LinkedRepository(repositories.toArray(ModuleRepository.NO_REPOS));
-        };
-    }
 
-    private static ModuleRepository repositoryFor(String path) {
-        var directory = checkoutFile(path);
-        return directory.isDirectory()
-                ? new DirRepository(directory, true)
-                : null;
-    }
-
-    private static File checkoutFile(String path) {
-        return checkoutRoot().resolve(path).toFile();
-    }
-
-    private static Path checkoutRoot() {
-        var path = Path.of("").toAbsolutePath();
-        while (path != null) {
-            if (Files.isDirectory(path.resolve("javatools")) &&
-                    Files.isDirectory(path.resolve("manualTests"))) {
-                return path;
-            }
-            path = path.getParent();
-        }
-        throw new IllegalStateException("Cannot locate checkout root");
-    }
 }

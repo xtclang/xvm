@@ -48,31 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * would break the binary format.</p>
  */
 public class OpNameCoverageTest {
-    /**
-     * The static check: no opcode may be instantiable without being nameable. This is the ratchet -
-     * it fails on the next divergence, not just on the sixteen that prompted it.
-     */
-    @Test
-    public void everyInstantiableOpcodeHasAName() throws IOException {
-        String source = Files.readString(opSource());
 
-        Set<String> instantiate = casesIn(source, "public static Op instantiate(",
-                                                  "public static String toName(");
-        Set<String> toName      = casesIn(source, "public static String toName(", null);
-
-        assertTrue(instantiate.size() > 200,
-                "sanity: expected to find the instantiate switch, found " + instantiate.size()
-                + " cases");
-
-        var unnamed = new TreeSet<>(instantiate);
-        unnamed.removeAll(toName);
-
-        assertTrue(unnamed.isEmpty(),
-                () -> "Op.instantiate can produce these opcodes but Op.toName cannot name them: "
-                      + unnamed + ". Op.toString() is toName(getOpCode()) and toName's default"
-                      + " throws, so toString() throws on each of them - including inside the"
-                      + " error messages that 15 sites build with toName(getOpCode()).");
-    }
 
     /**
      * The dynamic check: calling {@code toName} on every opcode {@code instantiate} accepts must

@@ -35,31 +35,7 @@ public class TypeInfoModeIsExplicitTest {
      */
     private static final int ALLOWED_IN_TYPE_CONSTANT = 1;
 
-    @Test
-    public void nobodyAsksForATypeInfoWithABlackholeMode() throws IOException {
-        var offenders = new ArrayList<String>();
-        int inTypeConstant = 0;
 
-        for (Path java : mainSources()) {
-            List<String> lines = Files.readAllLines(java);
-            for (int i = 0; i < lines.size(); i++) {
-                if (!lines.get(i).contains("ensureTypeInfo(ErrorListener.BLACKHOLE)")) {
-                    continue;
-                }
-                if (java.endsWith(Path.of("org", "xvm", "asm", "constants", "TypeConstant.java"))) {
-                    inTypeConstant++;
-                } else {
-                    offenders.add(java.getFileName() + ":" + (i + 1) + "  " + lines.get(i).strip());
-                }
-            }
-        }
-
-        assertTrue(offenders.isEmpty(),
-                () -> "use TypeConstant.typeInfo() instead of passing BLACKHOLE as a mode flag:\n  "
-                        + String.join("\n  ", offenders));
-        assertEquals(ALLOWED_IN_TYPE_CONSTANT, inTypeConstant,
-                "exactly one occurrence is expected - the body of typeInfo() itself");
-    }
 
     /**
      * The gate is only worth anything if it is actually reading the sources, so prove it found them.

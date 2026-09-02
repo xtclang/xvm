@@ -1,5 +1,7 @@
 package org.xvm.asm;
 
+import org.xvm.test.XdkOutputs;
+
 
 import java.io.File;
 import java.io.IOException;
@@ -47,7 +49,7 @@ public class LinkedRepositoryReadThroughTest {
 
     @Test
     public void aFailedCacheWriteStillServesTheModuleItFound() {
-        File dirSource = checkoutRoot().resolve("lib_ecstasy/build/xtc/main/lib").toFile();
+        File dirSource = XdkOutputs.root().resolve("lib_ecstasy/build/xtc/main/lib").toFile();
         assumeTrue(dirSource.isDirectory(), "needs compiled lib_ecstasy");
 
         var repoSource = new DirRepository(dirSource, true);
@@ -63,12 +65,4 @@ public class LinkedRepositoryReadThroughTest {
                         + " copy into the front repository cannot be written");
     }
 
-    private static Path checkoutRoot() {
-        // ".git" is a directory in a clone and a file in a linked worktree
-        var path = Path.of("").toAbsolutePath();
-        while (path != null && !Files.exists(path.resolve(".git"))) {
-            path = path.getParent();
-        }
-        return path == null ? Path.of("").toAbsolutePath() : path;
-    }
 }

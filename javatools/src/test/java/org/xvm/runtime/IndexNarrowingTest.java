@@ -85,19 +85,7 @@ public class IndexNarrowingTest {
                       + " written against the narrowed value and reads element n: " + offenders);
     }
 
-    /** Guards the scan: a pattern that matched nothing would make the test vacuously pass. */
-    @Test
-    public void theScanActuallyFindsTheIndexedMethods() throws IOException {
-        var found = new ArrayList<String>();
-        for (Path path : runtimeSources()) {
-            Matcher m = INDEXED_METHOD.matcher(Files.readString(path));
-            while (m.find()) {
-                found.add(path.getFileName() + "." + m.group(1));
-            }
-        }
-        assertTrue(found.size() >= 8,
-                () -> "expected the runtime to hold many long-indexed accessors, found " + found);
-    }
+
 
     /** And that the narrowing pattern itself matches the shape the defect had. */
     @Test

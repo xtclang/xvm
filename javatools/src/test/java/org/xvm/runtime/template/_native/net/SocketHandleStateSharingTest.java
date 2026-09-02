@@ -16,6 +16,8 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ErrorListener;
+
+import org.xvm.test.XdkOutputs;
 import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.LinkedRepository;
@@ -52,11 +54,11 @@ public class SocketHandleStateSharingTest {
      */
     @Test
     public void socketStateIsSharedAcrossViews() {
-        assumeTrue(systemModulesAvailable(), "compiled XDK system modules are required");
+        assumeTrue(XdkOutputs.systemModulesAvailable(), "compiled XDK system modules are required");
 
         var runtime = new Runtime();
         try {
-            var container = NativeContainer.create(runtime, systemRepository(), ErrorListener.RUNTIME);
+            var container = NativeContainer.create(runtime, XdkOutputs.systemRepository(), ErrorListener.RUNTIME);
             var template  = NativeTemplates.get(container).socket();
             var context   = container.createServiceContext("socket-view-test");
             var hMasked   = new SocketHandle(template.getCanonicalClass(), context);
@@ -92,9 +94,8 @@ public class SocketHandleStateSharingTest {
      */
     @Test
     public void finishConnectReturnsMaskedApplicationHandle() throws IOException {
-        var source = Files.readString(checkoutFile(
-                "javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTSocket.java")
-                .toPath());
+        var source = Files.readString(XdkOutputs.root().resolve(
+                "javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTSocket.java"));
         int ofMethod = source.indexOf("private static int finishConnect");
         assertTrue(ofMethod >= 0, "finishConnect must exist");
 
@@ -112,55 +113,8 @@ public class SocketHandleStateSharingTest {
 
     // ----- helpers (same discovery as ArrayViewGuardTest) ---------------------------------------
 
-    private static boolean systemModulesAvailable() {
-        var repository = systemRepository();
-        return repository != null
-            && repository.loadModule(Constants.ECSTASY_MODULE) != null
-            && repository.loadModule(Constants.TURTLE_MODULE)  != null
-            && repository.loadModule(Constants.NATIVE_MODULE)  != null;
-    }
 
-    private static ModuleRepository systemRepository() {
-        var manualRepository = repositoryFor("manualTests/build/xtc/xdk/lib");
-        if (manualRepository != null) {
-            return manualRepository;
-        }
 
-        var repositories = Stream.of(
-                "lib_ecstasy/build/xtc/main/lib",
-                "javatools_bridge/build/xtc/main/lib",
-                "xdk/build/install/xdk/lib")
-                .map(SocketHandleStateSharingTest::repositoryFor)
-                .filter(Objects::nonNull)
-                .toList();
 
-        return switch (repositories.size()) {
-        case 0  -> null;
-        case 1  -> repositories.get(0);
-        default -> new LinkedRepository(repositories.toArray(ModuleRepository.NO_REPOS));
-        };
-    }
 
-    private static ModuleRepository repositoryFor(String path) {
-        var directory = checkoutFile(path);
-        return directory.isDirectory()
-                ? new DirRepository(directory, true)
-                : null;
-    }
-
-    private static File checkoutFile(String path) {
-        return checkoutRoot().resolve(path).toFile();
-    }
-
-    private static Path checkoutRoot() {
-        var path = Path.of("").toAbsolutePath();
-        while (path != null) {
-            if (Files.isDirectory(path.resolve("javatools")) &&
-                    Files.isDirectory(path.resolve("manualTests"))) {
-                return path;
-            }
-            path = path.getParent();
-        }
-        throw new IllegalStateException("Cannot locate checkout root");
-    }
 }
