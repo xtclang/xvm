@@ -5,7 +5,6 @@ package enumTests {
     void run() {
         @Inject Console console;
 
-
         Color c = Blue;
         assert c.ordinal == 2;
         assert c.text == "B";

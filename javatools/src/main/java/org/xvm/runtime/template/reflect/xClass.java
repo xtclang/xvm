@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.reflect;
 
-
 import java.util.Iterator;
 
 import org.xvm.asm.Annotation;
@@ -45,7 +44,6 @@ import org.xvm.runtime.template._native.reflect.xRTComponentTemplate;
 import org.xvm.runtime.template._native.reflect.xRTPropertyClassTemplate;
 import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
-
 
 /**
  * Native Class implementation.
@@ -173,7 +171,6 @@ public class xClass
         return frame.assignValue(iReturn, xInt64.makeHandle(getClassType(hTarget).hashCode()));
     }
 
-
     // ----- property implementations --------------------------------------------------------------
 
     /**
@@ -212,7 +209,6 @@ public class xClass
         ObjectHandle hResult    = xBoolean.makeHandle(typeTarget.isVirtualChild());
         return frame.assignValue(iReturn, hResult);
     }
-
 
     // ----- method implementations ----------------------------------------------------------------
 
@@ -416,7 +412,6 @@ public class xClass
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -488,7 +483,6 @@ public class xClass
         }
     }
 
-
     // ----- Composition and handle caching --------------------------------------------------------
 
     /**
@@ -497,7 +491,6 @@ public class xClass
     public static TypeComposition ensureArrayComposition(Container container) {
         return container.ensureClassComposition(CLASS_ARRAY_TYPE, xArray.INSTANCE);
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import java.util.Arrays;
 
 import org.xvm.asm.Op;
@@ -16,7 +15,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt64;
-
 
 /**
  * A base class for native ArrayDelegate implementations based on bit arrays.
@@ -41,7 +39,6 @@ public abstract class BitBasedDelegate
         }
         return new BitArrayHandle(getCanonicalClass(), ab, cSize, mutability);
     }
-
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
@@ -235,7 +232,6 @@ public abstract class BitBasedDelegate
         hDelegate.m_cSize -= cDelete;
     }
 
-
     // ----- BitView implementation ----------------------------------------------------------------
 
     @Override
@@ -267,7 +263,6 @@ public abstract class BitBasedDelegate
 
         setBit(hBits.m_abValue, (int) of, fBit);
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 
@@ -382,7 +377,6 @@ public abstract class BitBasedDelegate
     public static byte tailMask(long iBit) {
         return (byte) (0xFF << (7 - (iBit & 0x7)));
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -15,7 +14,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Represent a range of two constant values.
@@ -96,7 +94,6 @@ public class RangeConstant
         m_const1 = pool.getConstant(m_iVal1);
         m_const2 = pool.getConstant(m_iVal2);
     }
-
 
     // ----- type-specific methods -----------------------------------------------------------------
 
@@ -235,7 +232,6 @@ public class RangeConstant
         return isReverse() ? getEffectiveFirst() : getEffectiveLast();
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     @Override
@@ -265,7 +261,6 @@ public class RangeConstant
     public Constant[] getValue() {
         return new Constant[] {m_const1, m_const2};
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -324,7 +319,6 @@ public class RangeConstant
             + ".." + m_const2.getValueString() + (m_fExclude2 ? ')' : ']');
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -352,7 +346,6 @@ public class RangeConstant
         return getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -362,7 +355,6 @@ public class RangeConstant
                Hash.of(m_fExclude1,
                Hash.of(m_fExclude2))));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

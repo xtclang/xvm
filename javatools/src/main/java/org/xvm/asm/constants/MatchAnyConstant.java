@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -13,7 +12,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Represent the "_" used in a case statement to match any value of a particular type.
@@ -59,7 +57,6 @@ public class MatchAnyConstant
         m_constType = getConstantPool().getConstant(m_iType, TypeConstant.class);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     @Override
@@ -72,7 +69,6 @@ public class MatchAnyConstant
         // there is no correct answer to this question, although null is tempting
         return "_";
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -116,7 +112,6 @@ public class MatchAnyConstant
         return "<" + m_constType.getValueString() + "> _";
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -136,14 +131,12 @@ public class MatchAnyConstant
         return "match-any=" + getType().getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_constType);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

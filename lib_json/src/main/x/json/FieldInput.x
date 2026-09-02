@@ -46,7 +46,6 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
      */
     FieldInput!<FieldInput> openObject(String name);
 
-
     // ----- object fields -------------------------------------------------------------------------
 
     /**
@@ -85,7 +84,6 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
      *         `Null` if all fields were read
      */
     Map<String, Doc>? takeRemainder();
-
 
     // ----- single values -------------------------------------------------------------------------
 
@@ -326,7 +324,6 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             return element.readUsing<Serializable>(mapping, defaultValue);
         }
     }
-
 
     // ----- array values --------------------------------------------------------------------------
 

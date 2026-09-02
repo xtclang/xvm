@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.Arrays;
@@ -31,7 +30,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 
 import org.xvm.util.Severity;
-
 
 /**
  * A tuple expression is an expression containing some number (0 or more) expressions.
@@ -96,7 +94,6 @@ public class TupleExpression
         }
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -134,7 +131,6 @@ public class TupleExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -476,7 +472,6 @@ public class TupleExpression
         return new TupleExprAST(getType(), aAstArg);
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -490,7 +485,6 @@ public class TupleExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -22,14 +22,12 @@ service PseudoRandom(UInt64 seed = 0)
         this.seed = seed;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The most recent rolling random seed.
      */
     private UInt64 seed;
-
 
     // ----- Random interface ----------------------------------------------------------------------
 

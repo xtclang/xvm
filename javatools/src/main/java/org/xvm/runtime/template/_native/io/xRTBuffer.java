@@ -77,7 +77,6 @@ public class xRTBuffer
         return Op.R_NEXT;
     }
 
-
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     /**

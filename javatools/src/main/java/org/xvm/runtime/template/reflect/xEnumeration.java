@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.reflect;
 
-
 import java.util.List;
 
 import org.xvm.asm.ClassStructure;
@@ -23,7 +22,6 @@ import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
-
 
 /**
  * Native Enumeration implementation.
@@ -119,7 +117,6 @@ public class xEnumeration
                     ahVal[i] = hValue;
                 }
             }
-
 
             ConstantPool pool    = frame.poolContext();
             TypeConstant typeMap = pool.ensureMapType(pool.typeString(), idEnumeration.getType());

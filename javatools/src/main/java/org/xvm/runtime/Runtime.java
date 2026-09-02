@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -17,7 +16,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.util.concurrent.ConcurrentLinkedBlockingQueue;
-
 
 /**
  * The runtime.
@@ -124,7 +122,6 @@ public class Runtime {
     public void setDebuggerActive(boolean fActive) {
         m_fDebugger = fActive;
     }
-
 
     // ----- constants and fields ------------------------------------------------------------------
 

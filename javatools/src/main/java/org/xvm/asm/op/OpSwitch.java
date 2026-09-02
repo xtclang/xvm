@@ -282,7 +282,6 @@ public abstract class OpSwitch
 
     protected abstract void appendArgDescription(StringBuilder sb);
 
-
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override

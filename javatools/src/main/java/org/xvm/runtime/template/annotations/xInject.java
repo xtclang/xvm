@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.annotations;
 
-
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -26,7 +25,6 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template.reflect.xRef;
-
 
 /**
  * Native Inject implementation.
@@ -156,7 +154,6 @@ public class xInject
             throw new IllegalStateException();
         }
     }
-
 
     // ----- handle class --------------------------------------------------------------------------
 

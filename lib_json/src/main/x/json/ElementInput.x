@@ -26,7 +26,6 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      */
     FieldInput<ElementInput> openObject();
 
-
     // ----- single values -------------------------------------------------------------------------
 
     /**
@@ -249,7 +248,6 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
 
         return mapping.read(this);
     }
-
 
     // ----- array values --------------------------------------------------------------------------
 

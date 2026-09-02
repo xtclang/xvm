@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -20,7 +19,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-
 
 /**
  * CALL_00 rvalue-function.

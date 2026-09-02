@@ -46,7 +46,6 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
      */
     protected/private Channel? rawChannel = Null;
 
-
     // ----- Socket methods ------------------------------------------------------------------------
 
     @Override

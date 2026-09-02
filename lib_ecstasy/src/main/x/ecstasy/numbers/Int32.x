@@ -13,7 +13,6 @@ const Int32
      */
     static IntLiteral MaxValue =  0x7FFFFFFF;
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -35,7 +34,6 @@ const Int32
     static conditional Range<Int32> range() {
         return True, MinValue..MaxValue;
     }
-
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -73,7 +71,6 @@ const Int32
         construct Int32(new IntLiteral(text).toInt32().bits);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
@@ -89,7 +86,6 @@ const Int32
     UInt32 magnitude.get() {
         return toInt64().abs().toUInt32();
     }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -145,7 +141,6 @@ const Int32
         return result;
     }
 
-
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
@@ -165,7 +160,6 @@ const Int32
 
         return False;
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

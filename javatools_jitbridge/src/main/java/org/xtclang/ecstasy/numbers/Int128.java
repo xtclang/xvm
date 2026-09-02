@@ -117,7 +117,6 @@ public class Int128 extends IntNumber {
         return $fromBigInteger(ctx, n1.mod(n2));
     }
 
-
     /**
      * @return this Int128 as a {@link BigInteger}
      */

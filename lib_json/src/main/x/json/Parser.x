@@ -51,7 +51,6 @@ class Parser
         this.lexer = raw.lexer;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -93,7 +92,6 @@ class Parser
         return token == Null;
     }
 
-
     // ----- Markable ------------------------------------------------------------------------------
 
     protected static const Mark(immutable Object mark, Token? token);
@@ -120,7 +118,6 @@ class Parser
         lexer.unmark(mark.mark);
     }
 
-
     // ----- Iterator ------------------------------------------------------------------------------
 
     @Override
@@ -129,7 +126,6 @@ class Parser
                 ? False
                 : (True, parseDoc());
     }
-
 
     // ----- other ---------------------------------------------------------------------------------
 
@@ -164,7 +160,6 @@ class Parser
 
         return skipped ?: [];
     }
-
 
     // ----- parsing (advanced) --------------------------------------------------------------------
 
@@ -632,7 +627,6 @@ class Parser
         return new ObjectParser(this);
     }
 
-
     // ----- token handling (advanced) -------------------------------------------------------------
 
     /**
@@ -791,7 +785,6 @@ class Parser
 
         return False;
     }
-
 
     // ----- nested parser support -----------------------------------------------------------------
 

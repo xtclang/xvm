@@ -95,7 +95,6 @@ module Hello {
 
     sessions.Broker createSessionBroker() = cookieBroker;
 
-
     // ----- Web services --------------------------------------------------------------------------
 
     /**

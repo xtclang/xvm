@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -13,7 +12,6 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
-
 /**
  * A break statement represents the "break" keyword.
  */
@@ -24,7 +22,6 @@ public class BreakStatement
     public BreakStatement(Token keyword, Token name) {
         super(keyword, name);
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 

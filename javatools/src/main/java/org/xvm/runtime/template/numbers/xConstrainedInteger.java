@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -26,7 +25,6 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.text.xChar;
 
 import org.xvm.util.PackedInteger;
-
 
 /**
  * Abstract base class for constrained integers that fit into 64 bits
@@ -570,7 +568,6 @@ public abstract class xConstrainedInteger
         return frame.assignValue(iReturn, makeJavaLong(~l));
     }
 
-
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
@@ -595,7 +592,6 @@ public abstract class xConstrainedInteger
 
         return frame.assignValue(iReturn, xInt64.makeHandle(l));
     }
-
 
     // ----- type specific -------------------------------------------------------------------------
 
@@ -663,7 +659,6 @@ public abstract class xConstrainedInteger
         }
         return new JavaLong(getCanonicalClass(), lValue);
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -752,7 +747,6 @@ public abstract class xConstrainedInteger
         return l;
     }
 
-
     // ----- Uint64 helpers ------------------------------------------------------------------------
 
     public static long divUnsigned(long l1, long l2) {
@@ -804,7 +798,6 @@ public abstract class xConstrainedInteger
 
         return l1 % l2;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

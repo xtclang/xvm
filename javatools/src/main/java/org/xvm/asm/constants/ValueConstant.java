@@ -1,9 +1,7 @@
 package org.xvm.asm.constants;
 
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-
 
 /**
  * Represent a constant whose purpose is to represent a constant value.
@@ -21,7 +19,6 @@ public abstract class ValueConstant
         super(pool);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     @Override
@@ -36,7 +33,6 @@ public abstract class ValueConstant
      * @return the value of the constant (type-specific)
      */
     public abstract Object getValue();
-
 
     // ----- XvmStructure operations ---------------------------------------------------------------
 

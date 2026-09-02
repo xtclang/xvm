@@ -1,10 +1,8 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
-
 
 /**
  * A "goto" statement is any statement that impacts the control flow of the program by jumping
@@ -26,7 +24,6 @@ public abstract class GotoStatement
         this.keyword = keyword;
         this.name    = name;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -148,7 +145,6 @@ public abstract class GotoStatement
         }
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -170,7 +166,6 @@ public abstract class GotoStatement
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template;
 
-
 import java.util.function.Consumer;
 
 import org.xvm.asm.Op;
@@ -15,7 +14,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.reflect.xRef;
 import org.xvm.runtime.template.reflect.xRef.IndexedRefHandle;
 import org.xvm.runtime.template.reflect.xVar;
-
 
 /**
  * Support for index-based (array or tuple) op-codes.

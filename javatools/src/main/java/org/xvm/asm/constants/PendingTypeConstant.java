@@ -29,7 +29,6 @@ public class PendingTypeConstant
         f_typeConstraint = typeConstraint == null ? pool.typeObject() : typeConstraint;
     }
 
-
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
@@ -197,7 +196,6 @@ public class PendingTypeConstant
     protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams) {
         return Usage.NO;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 

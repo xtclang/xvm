@@ -23,7 +23,6 @@ service RTNetworkInterface(String name, immutable IPAddress[] addresses)
         construct RTNetworkInterface(name, addresses.freeze(True));
     }
 
-
     // ----- NetworkInterface methods --------------------------------------------------------------
 
     @Override
@@ -50,7 +49,6 @@ service RTNetworkInterface(String name, immutable IPAddress[] addresses)
     String toString() {
         return "NetworkInterface";
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 

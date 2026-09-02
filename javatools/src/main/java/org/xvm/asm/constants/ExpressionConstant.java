@@ -1,12 +1,10 @@
 package org.xvm.asm.constants;
 
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.ast.Expression;
 import org.xvm.util.Hash;
-
 
 /**
  * Represent a synthetic compile-time only constant that represents an {@link Expression}.
@@ -27,7 +25,6 @@ public class ExpressionConstant
         m_expr = expr;
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -36,7 +33,6 @@ public class ExpressionConstant
     public Expression getExpression() {
         return m_expr;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -63,7 +59,6 @@ public class ExpressionConstant
         return m_expr.toString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -71,14 +66,12 @@ public class ExpressionConstant
         return "expression=" + m_expr;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_expr);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

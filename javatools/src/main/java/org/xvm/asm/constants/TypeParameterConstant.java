@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -22,7 +21,6 @@ import org.xvm.util.TransientThreadLocal;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Represent a type parameter constant, which specifies a particular virtual machine register.
@@ -64,7 +62,6 @@ public class TypeParameterConstant
         f_iReg = readMagnitude(in);
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -80,7 +77,6 @@ public class TypeParameterConstant
     public int getRegister() {
         return f_iReg;
     }
-
 
     // ----- FormalConstant methods ----------------------------------------------------------------
 
@@ -139,7 +135,6 @@ public class TypeParameterConstant
         return ctx.getParameter(getRegister()).getRegisterAST();
     }
 
-
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
@@ -153,7 +148,6 @@ public class TypeParameterConstant
         return that.getConstantPool().ensureRegisterConstant(
                 (MethodConstant) that, getRegister(), getName());
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -214,7 +208,6 @@ public class TypeParameterConstant
         }
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -238,9 +231,7 @@ public class TypeParameterConstant
         return "method=" + getMethod().getName() + ", register=" + f_iReg;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
-
 
     @Override
     public int computeHashCode() {
@@ -250,7 +241,6 @@ public class TypeParameterConstant
                Hash.of(idMethod.getName(),
                Hash.of(idMethod.getNamespace()))));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

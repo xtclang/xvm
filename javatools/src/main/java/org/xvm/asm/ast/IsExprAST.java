@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -9,7 +8,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * An "is" expression. It differs from {@link RelOpExprAST} that it may have two return types, where

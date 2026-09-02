@@ -9,7 +9,6 @@ import SessionCookie.CookieId;
 import SessionImpl.Event_;
 import SessionStore.IOResult;
 
-
 /**
  * A service that keeps track of all of the `Session` objects.
  *
@@ -66,7 +65,6 @@ service SessionManager
         this.encryptedCookieName = CookieId.Encrypted.cookieName + httpsSuffix;
         this.consentCookieName   = CookieId.Consent.cookieName   + httpsSuffix;
     }
-
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -198,7 +196,6 @@ service SessionManager
      */
     private Boolean[] reported = new Boolean[Event_.count];
 
-
     // ----- cookie encoding support ---------------------------------------------------------------
 
     void configureEncryption(Decryptor cookieDecryptor) {
@@ -239,7 +236,6 @@ service SessionManager
             return False;
         }
     }
-
 
     // ----- session control -----------------------------------------------------------------------
 
@@ -474,14 +470,12 @@ service SessionManager
         store.erase^(id);
     }
 
-
     // ----- lifecycle -----------------------------------------------------------------------------
 
     @Override
     void close(Exception? e = Null) {
         purger.stopPurging();
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 

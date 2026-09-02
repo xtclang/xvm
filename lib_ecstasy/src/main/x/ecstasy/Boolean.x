@@ -65,14 +65,12 @@ enum Boolean
         }
     };
 
-
     // ----- logical operations --------------------------------------------------------------------
 
     @Op("&") Boolean and(Boolean that);
     @Op("|") Boolean or(Boolean that);
     @Op("^") Boolean xor(Boolean that);
     @Op("~") Boolean not();
-
 
     // ----- conversion methods --------------------------------------------------------------------
 

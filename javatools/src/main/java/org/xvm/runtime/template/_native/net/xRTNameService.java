@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.net;
 
-
 import java.net.InetAddress;
 
 import java.util.ArrayList;
@@ -43,7 +42,6 @@ import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
-
 
 /**
  * Native implementation of a network name service.
@@ -192,7 +190,6 @@ public class xRTNameService
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
 
-
     // -----  helpers ------------------------------------------------------------------------------
 
     static TypeComposition ensureByteArrayArrayComposition(Container container) {
@@ -273,7 +270,6 @@ public class xRTNameService
             default                   -> sData;
         };
     }
-
 
     // ----- constants and fields ------------------------------------------------------------------
 

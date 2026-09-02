@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import java.math.BigDecimal;
 import java.math.MathContext;
 
@@ -11,7 +10,6 @@ import org.xvm.asm.constants.Float32Constant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
-
 
 /**
  * Native Float32 support.

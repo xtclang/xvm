@@ -122,7 +122,6 @@ const FixedRealm(String name, Principal[] principals, Group[] groups = [],
         return entitlements.filter(match).toArray(Constant).freeze(True);
     }
 
-
     @Override
     conditional Entitlement findEntitlement(String scheme, String locator) {
         return entitlementIndex.get($"{scheme}:{locator}");

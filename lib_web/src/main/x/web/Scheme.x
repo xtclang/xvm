@@ -6,7 +6,6 @@ const Scheme(String name, Boolean tls, Scheme? upgradeToTls = Null) {
         assert tls ^ (upgradeToTls != Null);
     }
 
-
     // ----- constants -----------------------------------------------------------------------------
 
     /**
@@ -39,7 +38,6 @@ const Scheme(String name, Boolean tls, Scheme? upgradeToTls = Null) {
             WS.name    = WS,
             WSS.name   = WSS,
             ];
-
 
     // ----- properties ----------------------------------------------------------------------------
 

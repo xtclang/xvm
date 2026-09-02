@@ -41,7 +41,6 @@ interface ParameterTemplate
      */
     Category category;
 
-
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override

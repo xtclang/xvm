@@ -1,13 +1,11 @@
 package org.xvm.runtime;
 
-
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.Proxy;
-
 
 /**
  * ProxyComposition represents a Proxy object.
@@ -109,7 +107,6 @@ public class ProxyComposition
     public String toString() {
         return "Proxy: " + f_clzOrigin.toString() + " as " + f_typeProxy.getValueString();
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

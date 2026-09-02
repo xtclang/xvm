@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -34,7 +33,6 @@ import org.xvm.runtime.template.text.xChar;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.Handy;
-
 
 /**
  * Runtime operates on Object handles holding the struct references or the values themselves
@@ -367,7 +365,6 @@ public abstract class ObjectHandle
         public ObjectHandle[] getFields() {
             return m_aFields;
         }
-
 
         // ----- id-based field access -------------------------------------------------------------
 

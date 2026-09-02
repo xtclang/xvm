@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.crypto;
 
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
@@ -62,7 +61,6 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
-
 
 /**
  * Native implementation of the xRTCertificateManager.x service.
@@ -161,7 +159,6 @@ public class xRTCertificateManager
         };
         return frame.waitForIO(cfResult, continuation);
     }
-
 
     // ----- certificate creation ------------------------------------------------------------------
 
@@ -349,7 +346,6 @@ public class xRTCertificateManager
         return csrBuilder;
     }
 
-
     // ----- certificate revocation ----------------------------------------------------------------
 
     /**
@@ -420,7 +416,6 @@ public class xRTCertificateManager
         }
     }
 
-
     // ----- symmetric key & password management ---------------------------------------------------
 
     /**
@@ -477,7 +472,6 @@ public class xRTCertificateManager
             return xException.obscureIoException(frame, e.getMessage());
         }
     }
-
 
     // ----- key extraction & password change ------------------------------------------------------
 
@@ -559,7 +553,6 @@ public class xRTCertificateManager
         }
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
@@ -596,7 +589,6 @@ public class xRTCertificateManager
     private File getChallengePath(StringHandle hPath) {
         return new File(Path.of(hPath.getStringValue()).toFile().getParentFile(), ".challenge");
     }
-
 
     // ----- data fields and constants -------------------------------------------------------------
 

@@ -42,7 +42,6 @@ service RTNameService(Network network)
         return "NameService";
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     conditional Byte[][] nativeResolve(String name) {TODO("Native");}

@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -8,7 +7,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MultiMethodStructure;
-
 
 /**
  * Represent a collection of methods or functions with the same name.
@@ -60,14 +58,12 @@ public class MultiMethodConstant
         }
     }
 
-
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
     public IdentityConstant replaceParentConstant(IdentityConstant idParent) {
         return new MultiMethodConstant(getConstantPool(), idParent, getName());
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -99,7 +95,6 @@ public class MultiMethodConstant
     public IdentityConstant appendTrailingSegmentTo(IdentityConstant that) {
         return that.getConstantPool().ensureMultiMethodConstant(that, getName());
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

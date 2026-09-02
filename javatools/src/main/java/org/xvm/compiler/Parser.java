@@ -1,6 +1,5 @@
 package org.xvm.compiler;
 
-
 import java.io.File;
 import java.io.IOException;
 
@@ -25,7 +24,6 @@ import org.xvm.tool.ResourceDir;
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
-
 
 /**
  * A recursive descent parser for Ecstasy source code.
@@ -69,7 +67,6 @@ public class Parser {
         // prime the token stream
         next();
     }
-
 
     // ----- parsing -------------------------------------------------------------------------------
 
@@ -4804,7 +4801,6 @@ public class Parser {
         }
     }
 
-
     /**
      * Parse a list of package injections, starting with the opening parenthesis.
      *
@@ -5636,7 +5632,6 @@ public class Parser {
         return !eof() && !m_fAvoidRecovery && m_lookAhead == null;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -5663,7 +5658,6 @@ public class Parser {
 
         return sb.toString();
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 
@@ -5777,7 +5771,6 @@ public class Parser {
      * Semicolon is missing.
      */
     public static final String MISSING_SEMICOLON = "PARSER-29";
-
 
     // ----- data members --------------------------------------------------------------------------
 

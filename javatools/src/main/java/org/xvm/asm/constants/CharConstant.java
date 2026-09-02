@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -19,7 +18,6 @@ import static org.xvm.util.Handy.appendIntAsHex;
 import static org.xvm.util.Handy.quotedChar;
 import static org.xvm.util.Handy.readUtf8Char;
 import static org.xvm.util.Handy.writeUtf8Char;
-
 
 /**
  * Represent a unicode character constant.
@@ -54,7 +52,6 @@ public class CharConstant
         m_chVal = chVal;
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -65,7 +62,6 @@ public class CharConstant
     public Integer getValue() {
         return Integer.valueOf(m_chVal);
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -197,7 +193,6 @@ public class CharConstant
                 : quotedChar((char) m_chVal);
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -212,14 +207,12 @@ public class CharConstant
         return "char=" + getValueString() + ", index=" + m_chVal;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_chVal);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

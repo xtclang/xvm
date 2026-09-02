@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
@@ -18,7 +17,6 @@ import org.xvm.asm.op.MoveCast;
 
 import org.xvm.compiler.Token;
 
-
 /**
  * Expression for "expression as type".
  */
@@ -31,7 +29,6 @@ public class AsExpression
 
         lEndPos = tokClose.getEndPosition();
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -133,14 +130,12 @@ public class AsExpression
                 : typeTarget;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString() {
         return String.valueOf(expr1) + '.' + operator.getId().TEXT + '(' + expr2 + ')';
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

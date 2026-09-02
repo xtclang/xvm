@@ -3,7 +3,6 @@ import ecstasy.reflect.MethodTemplate;
 import ecstasy.reflect.PropertyTemplate;
 import ecstasy.reflect.TypeTemplate;
 
-
 /**
  * The native reflected PropertyTemplate implementation.
  */

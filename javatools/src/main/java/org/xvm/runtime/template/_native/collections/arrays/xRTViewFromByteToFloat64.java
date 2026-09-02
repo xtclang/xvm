@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
@@ -17,7 +16,6 @@ import org.xvm.runtime.template.numbers.BaseBinaryFP.FloatHandle;
 import org.xvm.runtime.template.numbers.xFloat64;
 
 import org.xvm.util.Handy;
-
 
 /**
  * The native RTViewFromByte<Float64> implementation.
@@ -40,7 +38,6 @@ public class xRTViewFromByteToFloat64
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(), pool.typeFloat64());
     }
-
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 

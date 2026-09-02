@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.List;
@@ -8,7 +7,6 @@ import java.util.stream.Collectors;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * A type expression that represents a list of type expressions.
@@ -22,7 +20,6 @@ public class TupleTypeExpression
         this.lStartPos    = lStartPos;
         this.lEndPos      = lEndPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -44,7 +41,6 @@ public class TupleTypeExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -72,7 +68,6 @@ public class TupleTypeExpression
                 : null;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -86,7 +81,6 @@ public class TupleTypeExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

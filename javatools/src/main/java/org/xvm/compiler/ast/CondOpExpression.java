@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -28,7 +27,6 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
-
 /**
  * Conditional operator expressions "||" and "&&".
  *
@@ -53,7 +51,6 @@ public class CondOpExpression
             throw new IllegalArgumentException("operator: " + operator);
         }
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -82,7 +79,6 @@ public class CondOpExpression
                 ? expr1.toConditionalConstant().addAnd(expr2.toConditionalConstant())
                 : expr1.toConditionalConstant().addOr (expr2.toConditionalConstant());
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -335,7 +331,6 @@ public class CondOpExpression
                  expr2.getExprAST(ctx));
         }
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

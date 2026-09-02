@@ -93,7 +93,6 @@ const CPDirectory(Object cookie, FileStore? fileStore, Path path, Time created, 
     @Override
     Cancellable watchRecursively(FileWatcher watch) = () -> {};
 
-
     // ----- native support ------------------------------------------------------------------------
 
     @Lazy protected ListMap<String, CPDirectory|CPFile> contents.calc() {

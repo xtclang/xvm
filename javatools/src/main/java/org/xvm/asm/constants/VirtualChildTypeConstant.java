@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -16,7 +15,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * A TypeConstant that represents an instance child of a class; for example:
@@ -164,7 +162,6 @@ public class VirtualChildTypeConstant
         throw new IllegalStateException("unknown child " + sChild + " of type " + typeParent);
     }
 
-
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
@@ -273,7 +270,6 @@ public class VirtualChildTypeConstant
         return super.calculateRelationToLeft(typeLeft);
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -322,7 +318,6 @@ public class VirtualChildTypeConstant
                 m_typeOriginParent.getValueString() + '.' + m_constName.getValue();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -347,7 +342,6 @@ public class VirtualChildTypeConstant
         out.writeBoolean(m_fThisClass);
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -356,7 +350,6 @@ public class VirtualChildTypeConstant
                Hash.of(m_constName,
                Hash.of(m_fThisClass)));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -51,7 +51,6 @@ const CPFileNode(Object cookie, FileStore? fileStore, Path path, Time created, T
     @Override
     Cancellable watch(FileWatcher watch)  = () -> {};
 
-
     // ----- native support ------------------------------------------------------------------------
 
     /**

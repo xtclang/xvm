@@ -4,7 +4,6 @@ import io.IllegalUTF;
 
 import numbers.IntConvertible;
 
-
 /**
  * This is the implementation of a Unicode character, which represents a single Unicode _codepoint_.
  *
@@ -127,14 +126,12 @@ const Char(UInt32 codepoint)
         construct Char(text[0].codepoint);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The unicode code-point for this character.
      */
     UInt32 codepoint;
-
 
     // ----- Sequential ----------------------------------------------------------------------------
 
@@ -149,7 +146,6 @@ const Char(UInt32 codepoint)
 
     @Override
     Char skip(Int steps) = this + steps.toUInt32();
-
 
     // ----- operators ---------------------------------------------------------------------------
 
@@ -189,7 +185,6 @@ const Char(UInt32 codepoint)
         }
         return buf.toString();
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 
@@ -232,7 +227,6 @@ const Char(UInt32 codepoint)
 
         return buf.toString();
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 
@@ -545,7 +539,6 @@ const Char(UInt32 codepoint)
         }
     }
 
-
     // ----- ASCII support -------------------------------------------------------------------------
 
     /**
@@ -762,7 +755,6 @@ const Char(UInt32 codepoint)
      */
     conditional Char asciiLowercase() = 'a' <= this <= 'z' ? (True, this) : False;
 
-
     // ----- numeric conversion support ------------------------------------------------------------
 
     /**
@@ -780,7 +772,6 @@ const Char(UInt32 codepoint)
             default: False;
         };
     }
-
 
     // ----- surrogate pair support ----------------------------------------------------------------
 
@@ -865,7 +856,6 @@ const Char(UInt32 codepoint)
         static UInt32 SURROGATE_OFFSET = (0xD800 << 10) + 0xDC00 - 0x10000;
         return new Char((hi << 10) + lo - SURROGATE_OFFSET);
     }
-
 
     // ----- Unicode support -----------------------------------------------------------------------
 
@@ -1547,7 +1537,6 @@ const Char(UInt32 codepoint)
         TODO CharCombineClass.dat
     }
 
-
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
@@ -1555,7 +1544,6 @@ const Char(UInt32 codepoint)
 
     @Override
     Appender<Char!> appendTo(Appender<Char!> buf) = buf.add(this);
-
 
     // ----- Hashable functions --------------------------------------------------------------------
 

@@ -27,7 +27,6 @@ interface DocOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      */
     void prepareMetadata(String attribute, Doc doc);
 
-
     // ----- context -------------------------------------------------------------------------------
 
     /**
@@ -79,7 +78,6 @@ interface DocOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      */
     conditional FieldOutput<ParentOutput> insideObject();
 
-
     // ----- pointers ------------------------------------------------------------------------------
 
     /**
@@ -103,7 +101,6 @@ interface DocOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      * @return (conditional) the pointer for the object, if one was found
      */
     <Serializable> conditional String findPointer(Serializable object);
-
 
     // ----- Closeable -----------------------------------------------------------------------------
 

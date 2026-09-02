@@ -69,7 +69,6 @@ class PhantomGcTest {
                     ctx.alloc(listSize);
                     ctx.watch(list = new ArrayList<C>(), listSize);
 
-
                 default:
                     // allocation mode
                     ctx.alloc(objSize);

@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -12,7 +11,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-
 
 /**
  * IS_EQ rvalue, rvalue, lvalue-return ; T == T -> Boolean

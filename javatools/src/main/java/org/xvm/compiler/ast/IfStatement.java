@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -28,7 +27,6 @@ import org.xvm.compiler.Token;
 
 import static org.xvm.util.Handy.indentLines;
 
-
 /**
  * An "if" statement.
  */
@@ -45,7 +43,6 @@ public class IfStatement
         this.stmtThen = stmtThen;
         this.stmtElse = stmtElse;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -97,7 +94,6 @@ public class IfStatement
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -236,7 +232,6 @@ public class IfStatement
             return fCompletes;
         }
 
-
         // "if (cond) {stmtThen}" is compiled as:
         //
         //   ENTER                  // iff cond specifies that it needs a scope
@@ -352,7 +347,6 @@ public class IfStatement
         return fCompletesThen | fCompletesElse;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -380,7 +374,6 @@ public class IfStatement
 
         return sb.toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

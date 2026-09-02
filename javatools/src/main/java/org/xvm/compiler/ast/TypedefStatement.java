@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Component;
@@ -17,7 +16,6 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
-
 /**
  * A typedef statement specifies a type to alias as a simple name.
  */
@@ -33,7 +31,6 @@ public class TypedefStatement
         this.type     = type;
         this.alias    = alias;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -57,7 +54,6 @@ public class TypedefStatement
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compile phases ------------------------------------------------------------------------
 
@@ -123,7 +119,6 @@ public class TypedefStatement
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

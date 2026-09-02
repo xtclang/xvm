@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import java.math.BigInteger;
 
 import org.xvm.asm.ClassStructure;
@@ -28,7 +27,6 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.text.xString;
 
 import org.xvm.util.PackedInteger;
-
 
 /**
  * Abstract base for Int128 and UInt128.  All operations except "next" and "prev" are "unchecked".
@@ -510,7 +508,6 @@ public abstract class BaseInt128
                 ? ll.toBigInteger().toString()
                 : ll.toUnsignedBigInteger().toString()));
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

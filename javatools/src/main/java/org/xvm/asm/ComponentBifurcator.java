@@ -1,11 +1,9 @@
 package org.xvm.asm;
 
-
 import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.constants.ConditionalConstant;
-
 
 /**
  * A ComponentBifurcator is a condition-aware and sibling-aware helper that splits a component as

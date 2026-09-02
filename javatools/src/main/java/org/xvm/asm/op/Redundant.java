@@ -1,8 +1,6 @@
 package org.xvm.asm.op;
 
-
 import org.xvm.asm.Op;
-
 
 /**
  * A "label" of sorts that allows a previously real op to still know its relative location in the

@@ -1,8 +1,6 @@
 package org.xvm.util;
 
-
 import java.util.ArrayList;
-
 
 /**
  * A recorder of console output.
@@ -156,7 +154,6 @@ public class ConsoleLog {
 
         return sb.toString();
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 

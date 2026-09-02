@@ -5,7 +5,6 @@ import oodb.DBObject.Distributor;
 
 import oodb.DBObjectInfo;
 
-
 /**
  * Persistent metadata information about a particular `DBObject`.
  *

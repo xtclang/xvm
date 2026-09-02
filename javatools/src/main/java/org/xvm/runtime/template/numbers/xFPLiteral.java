@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import java.math.BigDecimal;
 
 import org.xvm.asm.ClassStructure;
@@ -25,7 +24,6 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 import org.xvm.type.Decimal32;
 import org.xvm.type.Decimal64;
 import org.xvm.type.Decimal128;
-
 
 /**
  * Native FPLiteral implementation.
@@ -170,7 +168,6 @@ public class xFPLiteral
     protected FPNHandle makeFPLiteral(BigDecimal decValue, StringHandle hText) {
         return new FPNHandle(getCanonicalClass(), decValue, hText);
     }
-
 
     @Override
     protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {

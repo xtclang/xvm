@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.ConstantPool;
@@ -25,7 +24,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
-
 
 /**
  * A "throw expression" is a commonly non-completing expression that throws an exception.
@@ -53,7 +51,6 @@ public class ThrowExpression
             lEndPos = keyword.getEndPosition();
         }
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -94,7 +91,6 @@ public class ThrowExpression
     public boolean isTodo() {
         return keyword.getId() == Token.Id.TODO;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -386,7 +382,6 @@ public class ThrowExpression
         return keyword.getId() == Token.Id.TODO ? "TODO" : "Assertion failed";
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -421,7 +416,6 @@ public class ThrowExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

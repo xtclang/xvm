@@ -1,6 +1,5 @@
 import ecstasy.collections.Hasher;
 
-
 /**
  * A hash based map which allows for parallel and concurrent access with scalable performance.
  *

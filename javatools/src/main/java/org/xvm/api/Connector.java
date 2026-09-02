@@ -1,6 +1,5 @@
 package org.xvm.api;
 
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +13,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeInfo;
-
 
 /**
  * The API between Java host environment and an XVM runtime.

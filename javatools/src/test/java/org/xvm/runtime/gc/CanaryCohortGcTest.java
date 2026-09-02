@@ -110,7 +110,6 @@ class CanaryCohortGcTest {
         }
     }
 
-
     // let's assume:
     // - all code that allocates is running on an Ecstasy fiber
     // - that Ecstasy fiber is running on a Java virtual thread, which in turn is running (aka
@@ -350,7 +349,6 @@ class CanaryCohortGcTest {
             }
         }
 
-
         /**
          * Called by {@link Collectable#Collectable}.
          *
@@ -411,7 +409,6 @@ class CanaryCohortGcTest {
          */
         CleanablePhantom<?> prev;
 
-
         public CleanablePhantom(V referent, ReferenceQueue<? super V> q) {
             super(referent, q);
         }
@@ -420,7 +417,6 @@ class CanaryCohortGcTest {
          * Called once the referent is unreachable
          */
         abstract void clean(Xvm xvm);
-
 
         /**
          * Unlink this Reclaim from the "keep-alive" linked list of Reclaim objects.
@@ -564,7 +560,6 @@ class CanaryCohortGcTest {
         public long adjustSize(long adjustBytes) {
             return (info += adjustBytes) & 0xFFFFFFFFFFL;
         }
-
 
         @Override
         void clean(Xvm xvm) {

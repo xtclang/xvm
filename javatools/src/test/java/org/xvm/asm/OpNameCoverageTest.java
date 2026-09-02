@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.IOException;
 
 import java.nio.file.Files;
@@ -17,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 
 /**
  * Ratchet: every opcode {@code Op.instantiate} can produce must have a name in {@code Op.toName}.

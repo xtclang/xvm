@@ -75,7 +75,6 @@ const ConstOrdinalList
         construct ConstOrdinalList(out.bytes);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -105,7 +104,6 @@ const ConstOrdinalList
      * The offset of the first node in the [contents] array.
      */
     Int firstOffset;
-
 
     // ----- List methods --------------------------------------------------------------------------
 
@@ -242,7 +240,6 @@ const ConstOrdinalList
         };
     }
 
-
     // ----- packed array --------------------------------------------------------------------------
 
     /**
@@ -330,7 +327,6 @@ const ConstOrdinalList
 
         return val;
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 

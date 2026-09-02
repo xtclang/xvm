@@ -1,6 +1,5 @@
 package org.xvm.util;
 
-
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
@@ -8,7 +7,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
 
 /**
  * A simple implementation of a Map on top of an ArrayList to maintain order of

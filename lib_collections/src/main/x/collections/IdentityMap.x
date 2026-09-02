@@ -8,7 +8,6 @@ import ecstasy.maps.MapValues;
 
 import ecstasy.reflect.Ref.Identity;
 
-
 /**
  * A Map implementation that organizes its keys by [reference identity](Ref.Identity).
  */

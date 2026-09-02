@@ -34,7 +34,6 @@ class ConsoleAppender(Console console, Boolean flushAlways = False)
      */
     protected @Unassigned Array<Char> buf;
 
-
     // ----- Appender methods ----------------------------------------------------------------------
 
     @Override
@@ -105,7 +104,6 @@ class ConsoleAppender(Console console, Boolean flushAlways = False)
 
         return super(chars);
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

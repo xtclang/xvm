@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -19,7 +18,6 @@ import org.xvm.util.Hash;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Implements the logical combination of any number of conditions.
@@ -96,7 +94,6 @@ public abstract class MultiCondition
 
         m_aconstCond = aconstCond;
     }
-
 
     // ----- ConditionalConstant functionality -----------------------------------------------------
 
@@ -217,7 +214,6 @@ public abstract class MultiCondition
      */
     protected abstract MultiCondition instantiate(ConditionalConstant[] aconstCond);
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -251,7 +247,6 @@ public abstract class MultiCondition
                 : Handy.compareArrays(m_aconstCond, ((MultiCondition) that).m_aconstCond);
     }
 
-
     @Override
     public String getValueString() {
         final ConditionalConstant[] aconstCond = m_aconstCond;
@@ -269,7 +264,6 @@ public abstract class MultiCondition
 
         return sb.append(')').toString();
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -291,7 +285,6 @@ public abstract class MultiCondition
             writeMagnitude(out, constCond.getPosition());
         }
     }
-
 
     // ----- Object methods ------------------------------------------------------------------------
 
@@ -357,7 +350,6 @@ public abstract class MultiCondition
 
         return true;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

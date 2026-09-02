@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -34,7 +33,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * A synthetic TypeConstant that represents a custom property; for example:
@@ -135,7 +133,6 @@ public class PropertyClassTypeConstant
     public TypeConstant getRefType() {
         return getPropertyInfo().getBaseRefType();
     }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -265,14 +262,12 @@ public class PropertyClassTypeConstant
         return Usage.NO;
     }
 
-
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
     public TypeConstant getCallableJitType() {
         return getRefType().getCallableJitType();
     }
-
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 
@@ -425,7 +420,6 @@ public class PropertyClassTypeConstant
         return getRefType().getTemplate(container);
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -458,7 +452,6 @@ public class PropertyClassTypeConstant
         return m_typeParent.getValueString() + '.' + m_idProp.getName();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -476,7 +469,6 @@ public class PropertyClassTypeConstant
         writeMagnitude(out, m_idProp.getPosition());
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -484,7 +476,6 @@ public class PropertyClassTypeConstant
         return Hash.of(m_typeParent,
                Hash.of(m_idProp));
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

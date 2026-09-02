@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
 
@@ -15,7 +14,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
-
 
 /**
  * The native RTSlicingDelegate<Object> implementation.
@@ -40,7 +38,6 @@ public class xRTSlicingDelegate
     public ClassTemplate getTemplate(TypeConstant type) {
         return this;
     }
-
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
@@ -126,7 +123,6 @@ public class xRTSlicingDelegate
                 ? hSlice.f_ofStart + hSlice.m_cSize - 1 - lIndex
                 : hSlice.f_ofStart + lIndex;
     }
-
 
     // ----- handle --------------------------------------------------------------------------------
 

@@ -39,7 +39,6 @@ const FloatN
         construct FloatN(new FPLiteral(text).toFloatN().bits);
     }
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -52,7 +51,6 @@ const FloatN
         TODO return 1.0;
     }
 
-
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override
@@ -64,7 +62,6 @@ const FloatN
         }
         return Zero;
     }
-
 
     // ----- Number operations ---------------------------------------------------------------------
 
@@ -108,7 +105,6 @@ const FloatN
         TODO
     }
 
-
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
@@ -127,7 +123,6 @@ const FloatN
     IntN bias.get() {
         return emax;
     }
-
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
@@ -270,7 +265,6 @@ const FloatN
     FloatN nextDown() {
         TODO
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

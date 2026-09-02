@@ -162,7 +162,6 @@ const Path
         this.absolute = parent?.absolute : form == Root;
     }
 
-
     // ----- constants -----------------------------------------------------------------------------
 
     /**
@@ -179,7 +178,6 @@ const Path
      * A "current directory" Path instance.
      */
     static Path CURRENT = new Path(Null, Current);
-
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -235,7 +233,6 @@ const Path
     Int depth.get() {
         return (parent?.depth : 0) + form.depth;
     }
-
 
     // ----- Path operations -----------------------------------------------------------------------
 
@@ -478,7 +475,6 @@ const Path
         return result;
     }
 
-
     // ----- UniformIndexed methods ----------------------------------------------------------------
 
     @Override
@@ -502,7 +498,6 @@ const Path
             case Name   : new Path(Null, Name, path.name);
         };
     }
-
 
     // ----- Sliceable methods ---------------------------------------------------------------------
 
@@ -531,7 +526,6 @@ const Path
         }
         return slice ?: assert;
     }
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 
@@ -564,7 +558,6 @@ const Path
         return name.appendTo(buf);
     }
 
-
     // ----- Iterable methods ----------------------------------------------------------------------
 
     @Override
@@ -595,7 +588,6 @@ const Path
         // finally, return an array of the desired mutability
         return parts.toArray(mutability, inPlace=True);
     }
-
 
     // ----- funky interfaces ----------------------------------------------------------------------
 

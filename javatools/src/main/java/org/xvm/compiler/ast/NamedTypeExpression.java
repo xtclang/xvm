@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -42,7 +41,6 @@ import org.xvm.compiler.Token;
 import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
-
 
 /**
  * A type expression specifies a named type with optional parameters.
@@ -115,7 +113,6 @@ public class NamedTypeExpression
         this.lStartPos  = (module == null ? names : module).get(0).getStartPosition();
         this.lEndPos    = lEndPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -323,7 +320,6 @@ public class NamedTypeExpression
         return CHILD_FIELDS;
     }
 
-
     // ----- NameResolving methods -----------------------------------------------------------------
 
     @Override
@@ -334,7 +330,6 @@ public class NamedTypeExpression
         }
         return resolver;
     }
-
 
     // ----- TypeExpression methods ----------------------------------------------------------------
 
@@ -401,7 +396,6 @@ public class NamedTypeExpression
     public boolean isDynamic() {
         return m_exprDynamic != null;
     }
-
 
     // ----- compile phases ------------------------------------------------------------------------
 
@@ -975,7 +969,6 @@ public class NamedTypeExpression
                 : new ConstantExprAST(getType().resolveAutoNarrowingBase());
     }
 
-
     // ----- AstNode methods -----------------------------------------------------------------------
 
     @Override
@@ -996,7 +989,6 @@ public class NamedTypeExpression
             m_exprDynamic.discard(fRecurse);
         }
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 
@@ -1025,7 +1017,6 @@ public class NamedTypeExpression
         }
         return true;
     }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -1073,7 +1064,6 @@ public class NamedTypeExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

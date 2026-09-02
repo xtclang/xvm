@@ -1,6 +1,5 @@
 package org.xvm.runtime.template;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 
@@ -15,7 +14,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.numbers.xInt64;
-
 
 /**
  * Native Identity implementation.
@@ -82,7 +80,6 @@ public class Identity
     public static IdentityHandle ensureIdentity(ObjectHandle h) {
         return new IdentityHandle(INSTANCE.getCanonicalClass(), h);
     }
-
 
     // ----- handle --------------------------------------------------------------------------------
 

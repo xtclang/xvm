@@ -20,7 +20,6 @@ service RTKeyGenerator(String name)
      */
     private Object factory;
 
-
     // ----- Algorithm API -------------------------------------------------------------------------
 
     @Override
@@ -42,7 +41,6 @@ service RTKeyGenerator(String name)
         return &this.maskAs(KeyGenerator);
     }
 
-
     // ----- KeyGenerator API ----------------------------------------------------------------------
 
     @Override
@@ -58,14 +56,12 @@ service RTKeyGenerator(String name)
         return &key.maskAs(PrivateKey);
     }
 
-
     // ----- Object API ----------------------------------------------------------------------------
 
     @Override
     String toString() {
         return $"{name.quoted()} key generator";
     }
-
 
     // ----- native methods ------------------------------------------------------------------------
 

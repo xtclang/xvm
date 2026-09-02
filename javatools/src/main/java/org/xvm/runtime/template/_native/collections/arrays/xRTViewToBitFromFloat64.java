@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
@@ -26,7 +25,6 @@ import org.xvm.util.Handy;
 // "long" and "double" are both 64-bit; use corresponding helpers
 import static org.xvm.runtime.template._native.collections.arrays.LongBasedDelegate.bitIndex;
 import static org.xvm.runtime.template._native.collections.arrays.LongBasedDelegate.bitMask;
-
 
 /**
  * A base class for native ArrayDelegate<Bit> views that point to delegates holding double arrays.
@@ -72,7 +70,6 @@ public class xRTViewToBitFromFloat64
         return new ViewHandle(clzView, hLong, hSource.m_cSize*64, mutability);
     }
 
-
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
@@ -102,7 +99,6 @@ public class xRTViewToBitFromFloat64
         return Op.R_NEXT;
     }
 
-
     // ----- BitView implementation ----------------------------------------------------------------
 
     @Override
@@ -129,7 +125,6 @@ public class xRTViewToBitFromFloat64
 
         setBit(hView.f_hSource.m_adValue, of, fBit);
     }
-
 
     // ----- converting methods --------------------------------------------------------------------
 
@@ -229,7 +224,6 @@ public class xRTViewToBitFromFloat64
         }
     }
 
-
     // ----- ByteView implementation ---------------------------------------------------------------
 
     @Override
@@ -250,8 +244,6 @@ public class xRTViewToBitFromFloat64
 
         setByte(hView.f_hSource.m_adValue, of, bValue);
     }
-
-
 
     // ----- handle --------------------------------------------------------------------------------
 

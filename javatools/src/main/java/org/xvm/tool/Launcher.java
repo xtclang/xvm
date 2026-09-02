@@ -50,7 +50,6 @@ import static org.xvm.util.Severity.NONE;
 import static org.xvm.util.Severity.WARNING;
 import static org.xvm.util.Severity.worstOf;
 
-
 /**
  * The "launcher" commands:
  *
@@ -375,7 +374,6 @@ public abstract class Launcher<T extends LauncherOptions>
         assert  fAssertsEnabled = true;
         log(INFO, "Java assertions are {}", fAssertsEnabled ? "enabled" : "disabled");
 
-
         if (opts.showHelp()) {
             displayHelp();
             return 0;
@@ -403,7 +401,6 @@ public abstract class Launcher<T extends LauncherOptions>
      * @return the execution status; most commonly 0-success; 1-failure
      */
     protected abstract int process();
-
 
     // ----- text output and error handling --------------------------------------------------------
 
@@ -816,7 +813,6 @@ public abstract class Launcher<T extends LauncherOptions>
         out(version.toString());
     }
 
-
     // ----- file management -----------------------------------------------------------------------
 
     /**
@@ -962,7 +958,6 @@ public abstract class Launcher<T extends LauncherOptions>
         m_cSuspended = 0;
         moduleCache.clear();
     }
-
 
     // ----- LauncherException ---------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -27,7 +26,6 @@ import org.xvm.runtime.Frame;
 
 import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_nException;
-
 
 /**
  * CATCH ; begin an exception handler (implicit ENTER and VAR_IN)

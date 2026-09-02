@@ -6,7 +6,6 @@ import ecstasy.reflect.ClassTemplate.Composition;
 import ecstasy.reflect.PropertyTemplate;
 import ecstasy.reflect.TypeTemplate;
 
-
 /**
  * The native reflected TypeTemplate implementation.
  */

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.crypto;
 
-
 import java.security.MessageDigest;
 
 import org.xvm.asm.ClassStructure;
@@ -20,7 +19,6 @@ import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.Byt
 import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.DigestHandle;
-
 
 /**
  * Native implementation of the xRTHasher.x service.

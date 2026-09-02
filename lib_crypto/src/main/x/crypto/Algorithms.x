@@ -150,7 +150,6 @@ const Algorithms {
                 : supportedSize.contains(actualSize);
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     /**

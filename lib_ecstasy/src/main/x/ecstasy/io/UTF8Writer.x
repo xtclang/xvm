@@ -10,7 +10,6 @@ class UTF8Writer(BinaryOutput out)
      */
     protected/private BinaryOutput out;
 
-
     // ----- Appender methods ----------------------------------------------------------------------
 
     @Override

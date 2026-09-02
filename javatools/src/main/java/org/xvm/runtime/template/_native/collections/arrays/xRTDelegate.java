@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -34,7 +33,6 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt64;
-
 
 /**
  * The native RTDelegate<Object> implementation.
@@ -495,7 +493,6 @@ public class xRTDelegate
         return createCopyImpl(hTarget, mutability, 0, hTarget.m_cSize, false);
     }
 
-
     // ----- IndexSupport methods ------------------------------------------------------------------
 
     @Override
@@ -539,7 +536,6 @@ public class xRTDelegate
     public long size(ObjectHandle hTarget) {
         return ((DelegateHandle) hTarget).m_cSize;
     }
-
 
     // ----- RTDelegate subclassing support --------------------------------------------------------
 
@@ -713,7 +709,6 @@ public class xRTDelegate
         hDelegate.m_cSize -= cDelete;
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     public static xRTDelegate getArrayTemplate(TypeConstant typeParam) {
@@ -807,7 +802,6 @@ public class xRTDelegate
             return frameCaller.assignValue(iReturn, xBoolean.TRUE);
         }
     }
-
 
     // ----- ObjectHandle helpers ------------------------------------------------------------------
 
@@ -941,7 +935,6 @@ public class xRTDelegate
             return getClass().getSimpleName() + ", size=" + m_cSize;
         }
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

@@ -1,11 +1,9 @@
 package org.xvm.runtime.template.numbers;
 
-
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
-
 
 public class xUInt128
         extends BaseInt128 {

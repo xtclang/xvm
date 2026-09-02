@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -10,7 +9,6 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnionTypeConstant;
-
 
 /**
  * Used for parenthesized expressions.
@@ -25,7 +23,6 @@ public class ParenthesizedExpression
         m_lStartPos = lStartPos;
         m_lEndPos   = lEndPos;
     }
-
 
     // ----- Expression compilation ----------------------------------------------------------------
 
@@ -127,7 +124,6 @@ public class ParenthesizedExpression
         return super.validateMulti(ctx, atypeRequired, errs);
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
@@ -155,14 +151,12 @@ public class ParenthesizedExpression
         return expr.isStandalone();
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString() {
         return "(" + expr + ")";
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

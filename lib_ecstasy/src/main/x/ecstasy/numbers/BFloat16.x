@@ -101,7 +101,6 @@ const BFloat16
         construct BFloat16(signBits + expBits + sigBits);
     }
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -119,14 +118,12 @@ const BFloat16
         return 1.0;
     }
 
-
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override
     Signum sign.get() {
         TODO need to think this through carefully because there is a sign bit and both +/-0
     }
-
 
     // ----- Number operations ---------------------------------------------------------------------
 
@@ -169,7 +166,6 @@ const BFloat16
     BFloat16 pow(BFloat16 n) {
         TODO
     }
-
 
     // ----- FPNumber properties -------------------------------------------------------------------
 
@@ -222,7 +218,6 @@ const BFloat16
     Int exponentBitLength.get() {
         return EXP_BITS;
     }
-
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
@@ -365,7 +360,6 @@ const BFloat16
     BFloat16 nextDown() {
         TODO
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

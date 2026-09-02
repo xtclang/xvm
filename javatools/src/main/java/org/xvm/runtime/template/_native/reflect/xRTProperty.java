@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -31,7 +30,6 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
-
 
 /**
  * Native Property implementation.
@@ -164,7 +162,6 @@ public class xRTProperty
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
 
-
     // ----- PropertyHandle support ----------------------------------------------------------------
 
     /**
@@ -225,7 +222,6 @@ public class xRTProperty
             return ((PropertyClassTypeConstant) getImplementationType()).getPropertyInfo();
         }
     }
-
 
     // ----- property implementations --------------------------------------------------------------
 
@@ -311,7 +307,6 @@ public class xRTProperty
         return frame.assignValue(iReturn, xBoolean.makeHandle(!hProp.getPropertyInfo().isVar()));
     }
 
-
     // ----- method implementations ----------------------------------------------------------------
 
     /**
@@ -361,7 +356,6 @@ public class xRTProperty
         return hTarget.getTemplate().setPropertyValue(frame, hTarget, idProp, hValue);
     }
 
-
     // ----- Composition and handle caching --------------------------------------------------------
 
     /**
@@ -390,7 +384,6 @@ public class xRTProperty
                 pool.ensureParameterizedTypeConstant(pool.typeProperty(), typeTarget));
         return frame.f_context.f_container.resolveClass(typePropertyArray);
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

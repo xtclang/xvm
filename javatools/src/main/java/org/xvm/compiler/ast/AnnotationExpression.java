@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.Collections;
@@ -41,7 +40,6 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
-
 /**
  * A type annotation is used for type annotations with an optional argument list.
  */
@@ -62,7 +60,6 @@ public class AnnotationExpression
         this.lStartPos = node.getStartPosition();
         this.lEndPos   = node.getEndPosition();
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -183,7 +180,6 @@ public class AnnotationExpression
         PropertyStructure prop = getAnnotatedProperty();
         return prop != null && !prop.isStatic();
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -432,7 +428,6 @@ public class AnnotationExpression
         return null;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -461,7 +456,6 @@ public class AnnotationExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- inner class: ValidatingContext --------------------------------------------------------
 
@@ -570,7 +564,6 @@ public class AnnotationExpression
 
         private final ClassStructure f_clzContainer;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

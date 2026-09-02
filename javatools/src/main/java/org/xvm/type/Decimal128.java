@@ -1,6 +1,5 @@
 package org.xvm.type;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -8,7 +7,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
-
 
 /**
  * A representation of an IEEE-754-2008 128-bit decimal.
@@ -91,7 +89,6 @@ public class Decimal128
 
         convertBigDecToLongs(dec.round(MathContext.DECIMAL128));
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -189,7 +186,6 @@ public class Decimal128
         return (nExp | nCombo & 0xFFF) - 6176;
     }
 
-
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
@@ -277,7 +273,6 @@ public class Decimal128
         return ab;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -290,7 +285,6 @@ public class Decimal128
         return obj instanceof Decimal128 that &&
             this.m_nHBits == that.m_nHBits & that.m_nLBits == that.m_nLBits;
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -405,7 +399,6 @@ public class Decimal128
         m_nLBits = nLBits;
     }
 
-
     // ----- constants -----------------------------------------------------------------------------
 
     /**
@@ -510,7 +503,6 @@ public class Decimal128
      * The decimal value for negative infinity.
      */
     public static final Decimal128  NEG_INFINITY        = new Decimal128(SIGN_BIT | G0_G4_INF, 0L);
-
 
     // ----- fields --------------------------------------------------------------------------------
 

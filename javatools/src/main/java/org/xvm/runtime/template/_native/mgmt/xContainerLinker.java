@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.mgmt;
 
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
@@ -43,7 +42,6 @@ import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTe
 import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
 import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
-
 
 /**
  * Native Container functionality.
@@ -234,7 +232,6 @@ public class xContainerLinker
             throw new IllegalStateException();
         }
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

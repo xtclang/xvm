@@ -1,13 +1,11 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
-
 
 /**
  * A right-to-left type inference place-holder, either "var" or "val", for a type expression in a
@@ -21,7 +19,6 @@ public class VariableTypeExpression
         assert token.getId() == Id.VAR || token.getId() == Id.VAL;
         this.token = token;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -44,7 +41,6 @@ public class VariableTypeExpression
         return token.getEndPosition();
     }
 
-
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
@@ -52,7 +48,6 @@ public class VariableTypeExpression
         // this will be replaced after the actual type is known
         return pool().typeObject();
     }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -65,7 +60,6 @@ public class VariableTypeExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

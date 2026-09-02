@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
@@ -26,7 +25,6 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
-
 
 /**
  * Native ModuleTemplate implementation.
@@ -170,7 +168,6 @@ public class xRTModuleTemplate
                                 INSTANCE.getCanonicalType(), MODULE_TEMPLATE_TYPE);
         return new ComponentTemplateHandle(clz, module);
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

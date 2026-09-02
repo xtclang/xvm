@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -29,7 +28,6 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
-
 
 /**
  * Native (abstract level) Method and Function implementation.
@@ -101,7 +99,6 @@ public class xRTSignature
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
 
-
     // ----- property implementations --------------------------------------------------------------
 
     /**
@@ -168,7 +165,6 @@ public class xRTSignature
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahType));
     }
 
-
     // ----- method implementations --------------------------------------------------------------
 
     /**
@@ -180,7 +176,6 @@ public class xRTSignature
                 ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
                 : frame.assignValues(aiReturn, xBoolean.TRUE, xRTMethodTemplate.makeHandle(method));
     }
-
 
     // ----- Template and TypeComposition caching and helpers -------------------------------------
 
@@ -319,7 +314,6 @@ public class xRTSignature
 
     private static TypeComposition RETURN_ARRAY;
     private static TypeComposition PARAM_ARRAY;
-
 
     // ----- Object handle -------------------------------------------------------------------------
 
@@ -461,7 +455,6 @@ public class xRTSignature
         protected final CallChain f_chain;
         protected final int       f_nDepth;
     }
-
 
     // ----- inner class: RTArrayConstructor -------------------------------------------------------
 

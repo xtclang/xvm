@@ -92,7 +92,6 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      */
     FieldOutput!<FieldOutput> openObject(String name);
 
-
     // ----- single values -------------------------------------------------------------------------
 
     /**
@@ -180,7 +179,6 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
 
         return this;
     }
-
 
     // ----- array values --------------------------------------------------------------------------
 

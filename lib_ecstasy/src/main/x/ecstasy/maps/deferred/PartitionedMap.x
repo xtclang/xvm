@@ -37,7 +37,6 @@ class PartitionedMap<Key, Value>
         this.buddy   = buddy;
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     /**
@@ -143,7 +142,6 @@ class PartitionedMap<Key, Value>
             super(accumulator);
         }
     }
-
 
     // ----- Map interface ------------------------------------------------------------------
 

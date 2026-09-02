@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.List;
@@ -32,7 +31,6 @@ import org.xvm.util.Handy;
 
 import static org.xvm.asm.Assignment.AssignedOnce;
 
-
 /**
  * A template expression is a string literal expression containing expressions that will be
  * evaluated and concatenated with the literal portions to produce a resulting string.
@@ -48,7 +46,6 @@ public class TemplateExpression
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -70,7 +67,6 @@ public class TemplateExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -256,7 +252,6 @@ public class TemplateExpression
         return new TemplateExprAST(aExpr);
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -287,7 +282,6 @@ public class TemplateExpression
         return toString();
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     boolean isStringConst(Expression expr) {
@@ -301,7 +295,6 @@ public class TemplateExpression
     boolean isStringable(Expression expr) {
         return expr.getTypes().length > 0 && expr.getType().isA(pool().typeStringable());
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

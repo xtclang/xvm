@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.ConstantPool;
@@ -11,7 +10,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.Compiler;
 
 import org.xvm.util.Severity;
-
 
 /**
  * A nullable type expression is a type expression followed by a question mark.
@@ -24,7 +22,6 @@ public class NullableTypeExpression
         this.type    = type;
         this.lEndPos = lEndPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -48,7 +45,6 @@ public class NullableTypeExpression
         return CHILD_FIELDS;
     }
 
-
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
@@ -62,7 +58,6 @@ public class NullableTypeExpression
     protected void collectAnonInnerClassInfo(AnonInnerClass info) {
         log(info.getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_UNION);
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -81,7 +76,6 @@ public class NullableTypeExpression
         return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, typeType, errs);
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -93,7 +87,6 @@ public class NullableTypeExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

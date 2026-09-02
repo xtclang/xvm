@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.lang.management.ManagementFactory;
 
 import java.text.MessageFormat;
@@ -15,7 +14,6 @@ import org.xvm.compiler.ast.AstNode;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.quotedString;
-
 
 /**
  * A listener for errors being reported about source code, compilation, assembly, or verification of
@@ -125,7 +123,6 @@ public interface ErrorListener {
         return false;
     }
 
-
     // ----- inner class: BlackholeErrorListener ---------------------------------------------------
 
     /**
@@ -155,7 +152,6 @@ public interface ErrorListener {
         }
     }
 
-
     // ----- inner class: Runtime ErrorListener ----------------------------------------------------
 
     /**
@@ -180,7 +176,6 @@ public interface ErrorListener {
             return "(Runtime error listener)";
         }
     }
-
 
     // ----- inner class: ErrorInfo ----------------------------------------------------------------
 

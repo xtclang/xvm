@@ -29,7 +29,6 @@ class ArrayDeque<Element>
         this.maxCapacity = maxCapacity;
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     /**
@@ -104,7 +103,6 @@ class ArrayDeque<Element>
         return value;
     }
 
-
     // ----- double-ended queue interface ----------------------------------------------------------
 
     /**
@@ -158,7 +156,6 @@ class ArrayDeque<Element>
         return new LifoQueue();
     }
 
-
     // ----- Appender interface ------------------------------------------------------------------
 
     @Override
@@ -198,7 +195,6 @@ class ArrayDeque<Element>
 
         return this;
     }
-
 
     // ----- Queue interface -----------------------------------------------------------------------
 
@@ -282,7 +278,6 @@ class ArrayDeque<Element>
             }
         };
     }
-
 
     // ----- LIFO Queue inner class ----------------------------------------------------------------
 

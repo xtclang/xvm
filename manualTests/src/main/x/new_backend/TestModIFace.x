@@ -55,7 +55,6 @@ module TestModIFace {
         }
     }
 
-
     const AnyValue(Int key, String value) {
         @Override
         static <CompileType extends AnyValue> Boolean equals(CompileType value1, CompileType value2) {

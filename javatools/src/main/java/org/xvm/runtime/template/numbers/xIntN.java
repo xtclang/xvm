@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 
@@ -11,7 +10,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 
 import org.xvm.util.PackedInteger;
-
 
 /**
  * Native IntN support.

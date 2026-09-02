@@ -1,6 +1,5 @@
 package org.xvm.tool;
 
-
 import java.io.File;
 import java.io.IOException;
 
@@ -14,7 +13,6 @@ import org.xvm.asm.FileRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.VersionTree;
-
 
 /**
  * A ModuleRepository based on the information in ModuleInfo structures.
@@ -40,7 +38,6 @@ public class ModuleInfoRepository
         this.readOnly = readOnly;
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -49,7 +46,6 @@ public class ModuleInfoRepository
     public boolean isReadOnly() {
         return readOnly;
     }
-
 
     // ----- ModuleRepository API ------------------------------------------------------------------
 
@@ -88,7 +84,6 @@ public class ModuleInfoRepository
         }
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     private FileRepository ensureRepo(ModuleInfo info) {
@@ -107,7 +102,6 @@ public class ModuleInfoRepository
         }
         return repo;
     }
-
 
     // ----- Object methods ------------------------------------------------------------------------
 
@@ -130,7 +124,6 @@ public class ModuleInfoRepository
     public String toString() {
         return "ModuleInfoRepository(Infos=" + infos + ", RO=" + readOnly + ")";
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

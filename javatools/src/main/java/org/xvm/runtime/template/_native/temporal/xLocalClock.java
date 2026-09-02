@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.temporal;
 
-
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -24,14 +23,12 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xService;
 
-
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
-
 
 /**
  * Native implementation of a simple wall clock using Java's millisecond-resolution "System" clock.
@@ -171,7 +168,6 @@ public class xLocalClock
         return hClock;
     }
 
-
     // -----  helpers ------------------------------------------------------------------------------
 
     protected JavaLong epochMillis(Frame frame) {
@@ -275,7 +271,6 @@ public class xLocalClock
         private final boolean      f_Registered;
         private       Trigger      m_trigger;
     }
-
 
     // ----- constants and fields ------------------------------------------------------------------
 

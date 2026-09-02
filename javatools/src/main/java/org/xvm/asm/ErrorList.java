@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -8,7 +7,6 @@ import java.util.List;
 import org.xvm.compiler.ast.AstNode;
 
 import org.xvm.util.Severity;
-
 
 /**
  * Represents a list of errors collected from a process such as compilation, assembly, or the
@@ -21,7 +19,6 @@ public class ErrorList
     public ErrorList(int cMaxErrors) {
         f_cMaxErrors = cMaxErrors;
     }
-
 
     // ----- ErrorListener methods -----------------------------------------------------------------
 
@@ -68,7 +65,6 @@ public class ErrorList
     public boolean hasError(String sCode) {
         return f_list.stream().anyMatch(info -> info.getCode().equals(sCode));
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -152,7 +148,6 @@ public class ErrorList
                 + ", Last=" + f_list.get(f_list.size()-1);
     }
 
-
     // ----- inner class: BranchedErrorListener ----------------------------------------------------
 
     /**
@@ -203,7 +198,6 @@ public class ErrorList
         private final ErrorListener f_listener;
         private final AstNode       f_node;
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 

@@ -97,7 +97,6 @@ interface DBProcessor<Message extends immutable Const>
      */
     List<Pending> pending();
 
-
     // ----- message processing: explicitly developer implementable --------------------------------
 
     /**
@@ -240,7 +239,6 @@ interface DBProcessor<Message extends immutable Const>
                 );
     }
 
-
     // ----- runtime management methods ------------------------------------------------------------
 
     /**
@@ -267,7 +265,6 @@ interface DBProcessor<Message extends immutable Const>
      * transaction is successfully committed.
      */
     void resume();
-
 
     // ----- annotations ---------------------------------------------------------------------------
 
@@ -326,7 +323,6 @@ interface DBProcessor<Message extends immutable Const>
     static annotation Isolated
             into DBProcessor {}
 
-
     // ----- pending message representation --------------------------------------------------------
 
     /**
@@ -376,7 +372,6 @@ interface DBProcessor<Message extends immutable Const>
             return schedule?.priority : Normal;
         }
     }
-
 
     // ----- schedule representation ---------------------------------------------------------------
 
@@ -563,14 +558,12 @@ interface DBProcessor<Message extends immutable Const>
         }
     }
 
-
     // ----- DBObject methods ----------------------------------------------------------------------
 
     @Override
     @RO DBCategory dbCategory.get() {
         return DBProcessor;
     }
-
 
     // ----- transactional information -------------------------------------------------------------
 
@@ -610,7 +603,6 @@ interface DBProcessor<Message extends immutable Const>
     @Override
     interface TxChange
             extends DBChange<Message> {}
-
 
     // ----- transaction trigger API ---------------------------------------------------------------
 

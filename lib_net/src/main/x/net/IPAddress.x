@@ -25,7 +25,6 @@ const IPAddress(Byte[] bytes)
      */
     static IPAddress IPv6Loopback = new IPAddress([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1]);
 
-
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -41,7 +40,6 @@ const IPAddress(Byte[] bytes)
     assert() {
         assert bytes.size == 4 || bytes.size == 16;
     }
-
 
     // ----- IPAddress methods and properties ------------------------------------------------------
 
@@ -156,7 +154,6 @@ const IPAddress(Byte[] bytes)
 
         return buf.toString();
     }
-
 
     // ----- String parsing helpers ----------------------------------------------------------------
 

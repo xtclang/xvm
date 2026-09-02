@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +24,6 @@ import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
-
 
 /**
  * Native RTPropertyClassTemplate implementation.
@@ -109,7 +107,6 @@ public class xRTPropertyClassTemplate
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
-
 
     // ----- property implementations --------------------------------------------------------------
 
@@ -240,7 +237,6 @@ public class xRTPropertyClassTemplate
             xRTTypeTemplate.makeHandle(frame.f_context.f_container, prop.getType()));
     }
 
-
     // ----- method implementations ----------------------------------------------------------------
 
     /**
@@ -260,7 +256,6 @@ public class xRTPropertyClassTemplate
             xBoolean.TRUE, xRTPropertyTemplate.makePropertyHandle(prop));
     }
 
-
     // ----- ObjectHandle support ------------------------------------------------------------------
 
     /**
@@ -274,7 +269,6 @@ public class xRTPropertyClassTemplate
         // note: no need to initialize the struct because there are no natural fields
         return new ComponentTemplateHandle(PROPERTY_CLASS_TEMPLATE_COMP, prop);
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

@@ -1,13 +1,11 @@
 package org.xvm.util;
 
-
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Objects;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
-
 
 /**
  * A {@link ThreadLocal} variant optimized for short-lived thread-locals. Essentially, if the

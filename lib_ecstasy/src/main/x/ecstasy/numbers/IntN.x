@@ -43,7 +43,6 @@ const IntN
         construct IntN(new IntLiteral(text).toIntN().bits);
     }
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -55,7 +54,6 @@ const IntN
     static IntN one() {
         return 1;
     }
-
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -72,7 +70,6 @@ const IntN
     UIntN magnitude.get() {
         return abs().toUIntN();
     }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -128,7 +125,6 @@ const IntN
         return result;
     }
 
-
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
@@ -140,7 +136,6 @@ const IntN
     conditional IntN prev() {
         return True, this - 1;
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

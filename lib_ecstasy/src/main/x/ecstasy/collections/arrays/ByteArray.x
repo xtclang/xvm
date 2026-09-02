@@ -150,7 +150,6 @@ mixin ByteArray<Element extends Byte>
         return new String(chars.freeze(inPlace=True)), index + len;
     }
 
-
     // ----- packed integer operations -------------------------------------------------------------
 
     /**
@@ -191,7 +190,6 @@ mixin ByteArray<Element extends Byte>
         }
         return n, nextIndex;
     }
-
 
     // ----- view support --------------------------------------------------------------------------
 
@@ -579,7 +577,6 @@ mixin ByteArray<Element extends Byte>
         return new Array<Dec128>(new Translator<Dec128>(this), mutability);
     }
 
-
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
@@ -886,7 +883,6 @@ mixin ByteArray<Element extends Byte>
 
         return buf.toString();
     }
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 

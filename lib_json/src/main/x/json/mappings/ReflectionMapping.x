@@ -18,7 +18,6 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
      */
     protected PropertyMapping<StructType>[] fields;
 
-
     // ----- Mapping interface ---------------------------------------------------------------------
 
     @Override
@@ -150,7 +149,6 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
             return False;
         }
     }
-
 
     // ----- local types ---------------------------------------------------------------------------
 

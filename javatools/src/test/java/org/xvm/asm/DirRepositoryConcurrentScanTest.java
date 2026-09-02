@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.File;
 
 import java.nio.file.Files;
@@ -20,7 +19,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
 
 /**
  * Regression / red-on-master proof for the DirRepository scan-cache race.

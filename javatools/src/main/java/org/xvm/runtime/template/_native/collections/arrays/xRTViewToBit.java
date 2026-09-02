@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,7 +12,6 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
-
 
 /**
  * The native RTViewToBit base implementation.
@@ -102,7 +100,6 @@ public class xRTViewToBit
         }
         throw new UnsupportedOperationException("RTViewToBitFrom" + typeElement.getValueString());
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

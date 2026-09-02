@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -11,7 +10,6 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Var_T;
-
 
 /**
  * A tuple packing expression. This packs the multiple values from the sub-expression into a tuple.
@@ -33,9 +31,7 @@ public class PackExpression
         finishValidation(null, null, type, expr.getTypeFit().addPack(), val, errs);
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
-
 
     // ----- Expression compilation ----------------------------------------------------------------
 
@@ -70,14 +66,12 @@ public class PackExpression
         return reg;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString() {
         return "Packed:" + getUnderlyingExpression().toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

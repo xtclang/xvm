@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.lang.src;
 
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -57,7 +56,6 @@ import org.xvm.tool.ModuleInfo;
 import org.xvm.tool.ModuleInfo.Node;
 
 import org.xvm.util.Severity;
-
 
 /**
  * Native xRTCompiler implementation.
@@ -288,7 +286,6 @@ public class xRTCompiler
                 f_container.createServiceContext("Compiler"),
                     getCanonicalClass(), getCanonicalType());
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 

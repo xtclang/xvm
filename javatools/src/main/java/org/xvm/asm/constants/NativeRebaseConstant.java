@@ -1,13 +1,11 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataOutput;
 
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.util.Hash;
-
 
 /**
  * NativeRebaseConstant is a transient, pseudo constant that represents a native type that does
@@ -30,7 +28,6 @@ public class NativeRebaseConstant
         m_constIface = constIface;
     }
 
-
     // ----- type specific methods  ----------------------------------------------------------------
 
     /**
@@ -40,7 +37,6 @@ public class NativeRebaseConstant
         return m_constIface;
     }
 
-
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
@@ -48,7 +44,6 @@ public class NativeRebaseConstant
         return new NativeRebaseConstant((ClassConstant)
                 getClassConstant().replaceParentConstant(idParent));
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 

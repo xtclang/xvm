@@ -30,7 +30,6 @@ class CircularArray<Element>
         contents = new Element?[minCapacityFor(initialCapacity)];
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     /**
@@ -109,7 +108,6 @@ class CircularArray<Element>
         return index & contents.size-1;
     }
 
-
     // ----- public interface ----------------------------------------------------------------------
 
     /**
@@ -135,7 +133,6 @@ class CircularArray<Element>
         return this;
     }
 
-
     // ----- UniformIndexed interface --------------------------------------------------------------
 
     @Override
@@ -152,14 +149,12 @@ class CircularArray<Element>
         contents[indexFor(tail+index)] = value;
     }
 
-
     // ----- Sliceable interface -------------------------------------------------------------------
 
     @Override
     @Op("[..]") CircularArray slice(Range<Int> indexes) { // TODO this could just return a ListSlice instance
         TODO
     }
-
 
     // ----- List interface ------------------------------------------------------------------------
 
@@ -335,7 +330,6 @@ class CircularArray<Element>
         return this;
     }
 
-
     // ----- Collection interface ------------------------------------------------------------------
 
     @Override
@@ -416,7 +410,6 @@ class CircularArray<Element>
 
         return this;
     }
-
 
     // ----- Appender interface --------------------------------------------------------------------
 

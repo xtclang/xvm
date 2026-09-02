@@ -19,7 +19,6 @@ const Printer(Boolean showNulls = False, Boolean pretty = False) {
      */
     static Printer DEBUG   = new Printer(showNulls = True, pretty = True);
 
-
     // ----- printer API ---------------------------------------------------------------------------
 
     /**
@@ -54,7 +53,6 @@ const Printer(Boolean showNulls = False, Boolean pretty = False) {
     void print(Doc doc, Appender<Char> buf) {
         printInternal(doc, buf, alreadyIndented=True, showNulls=showNulls, pretty=pretty);
     }
-
 
     // ----- rendering -----------------------------------------------------------------------------
 
@@ -281,7 +279,6 @@ const Printer(Boolean showNulls = False, Boolean pretty = False) {
             buf.add(' ');
         }
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

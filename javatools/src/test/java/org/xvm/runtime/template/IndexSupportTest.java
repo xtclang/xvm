@@ -1,10 +1,8 @@
 package org.xvm.runtime.template;
 
-
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
 
 /**
  * A long-to-int narrowing test.

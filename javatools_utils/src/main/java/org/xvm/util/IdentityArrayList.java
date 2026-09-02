@@ -1,10 +1,8 @@
 package org.xvm.util;
 
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
-
 
 /**
  * An ArrayList using identity for equality comparison.

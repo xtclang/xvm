@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.List;
@@ -29,7 +28,6 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
-
 /**
  * A variable declaration statement specifies a type and a simple name for a variable.
  */
@@ -49,7 +47,6 @@ public class VariableDeclarationStatement
         this.type = type;
         this.term = term;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -105,7 +102,6 @@ public class VariableDeclarationStatement
         return CHILD_FIELDS;
     }
 
-
     // ----- LValue methods ------------------------------------------------------------------------
 
     @Override
@@ -152,7 +148,6 @@ public class VariableDeclarationStatement
     public void resetLValueTypes(Context ctx) {
         getLValueExpression().resetLValueTypes(ctx);
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -302,7 +297,6 @@ public class VariableDeclarationStatement
         return fReachable;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -324,7 +318,6 @@ public class VariableDeclarationStatement
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

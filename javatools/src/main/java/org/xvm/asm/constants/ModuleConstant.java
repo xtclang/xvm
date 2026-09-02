@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -25,7 +24,6 @@ import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Represent a Module constant. A Module constant is composed of a qualified module name, which
@@ -86,7 +84,6 @@ public class ModuleConstant
         m_constVersion = pool.getConstant(m_iVersion, VersionConstant.class);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -142,7 +139,6 @@ public class ModuleConstant
             || sName.equals(TURTLE_MODULE)
             || sName.equals(NATIVE_MODULE);
     }
-
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
@@ -219,7 +215,6 @@ public class ModuleConstant
         return null;
     }
 
-
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
@@ -231,7 +226,6 @@ public class ModuleConstant
     protected StringBuilder buildJitClassName(TypeSystem ts) {
         return new StringBuilder();
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -281,7 +275,6 @@ public class ModuleConstant
         return sb.toString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -303,7 +296,6 @@ public class ModuleConstant
         return "module=" + getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -311,7 +303,6 @@ public class ModuleConstant
         return Hash.of(m_constName,
                Hash.of(m_constVersion));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

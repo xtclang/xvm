@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -34,7 +33,6 @@ import org.xvm.util.Severity;
 import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * A TypeConstant that represents the annotation of another type constant.
@@ -119,7 +117,6 @@ public class AnnotatedTypeConstant
         m_annotation = pool.getConstant(m_iAnno, Annotation.class);
         m_constType  = pool.getConstant(m_iType, TypeConstant.class);
     }
-
 
     // ----- type-specific functionality -----------------------------------------------------------
 
@@ -221,7 +218,6 @@ public class AnnotatedTypeConstant
         return typeUnderlying instanceof AnnotatedTypeConstant typeAnno &&
                 typeAnno.containsRegisterParameters();
     }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -536,7 +532,6 @@ public class AnnotatedTypeConstant
         }
     }
 
-
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
@@ -579,7 +574,6 @@ public class AnnotatedTypeConstant
         return typeAnno.containsSubstitutableMethod(signature, access, fFunction, listParams)
             || typeOrig.containsSubstitutableMethod(signature, access, fFunction, listParams);
     }
-
 
     // ----- run-time support ----------------------------------------------------------------------
 
@@ -627,7 +621,6 @@ public class AnnotatedTypeConstant
                         : null; // ambiguous
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -669,7 +662,6 @@ public class AnnotatedTypeConstant
     public String getValueString() {
         return m_annotation.getValueString() + ' ' + m_constType.getValueString();
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -740,7 +732,6 @@ public class AnnotatedTypeConstant
         return false;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -748,7 +739,6 @@ public class AnnotatedTypeConstant
         return Hash.of(m_annotation,
                Hash.of(m_constType));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

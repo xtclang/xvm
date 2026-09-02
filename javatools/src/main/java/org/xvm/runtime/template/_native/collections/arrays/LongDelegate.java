@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
@@ -10,7 +9,6 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-
 
 /**
  * The abstract base for RTDelegate<Int64> and RTDelegate<UInt64> implementations.
@@ -72,7 +70,6 @@ public abstract class LongDelegate
         return frame.assignValue(iReturn,
                 makeElementHandle(hDelegate.m_alValue[(int) lIndex]--));
     }
-
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
@@ -163,7 +160,6 @@ public abstract class LongDelegate
         hDelegate.m_cSize -= cDelete;
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     @Override
@@ -178,7 +174,6 @@ public abstract class LongDelegate
         }
         return alValueR;
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

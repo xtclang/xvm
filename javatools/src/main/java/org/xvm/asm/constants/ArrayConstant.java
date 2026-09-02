@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.util.function.Consumer;
 
 import java.io.DataInput;
@@ -14,7 +13,6 @@ import org.xvm.util.Hash;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Represent a constant value that contains a number of other constant values. Specifically this
@@ -132,7 +130,6 @@ public class ArrayConstant
         return null;
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     @Override
@@ -148,7 +145,6 @@ public class ArrayConstant
     public Constant[] getValue() {
         return m_aconstVal;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -276,7 +272,6 @@ public class ArrayConstant
         return sb.toString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -302,7 +297,6 @@ public class ArrayConstant
         return "array-length=" + m_aconstVal.length;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -310,7 +304,6 @@ public class ArrayConstant
         return Hash.of(m_constType,
                Hash.of(m_aconstVal));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

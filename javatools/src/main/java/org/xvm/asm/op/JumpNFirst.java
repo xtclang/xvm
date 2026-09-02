@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -9,7 +8,6 @@ import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
 
 import org.xvm.runtime.Frame;
-
 
 /**
  * JMP_NFIRST addr ; jump if this is NOT the first time the op has been executed

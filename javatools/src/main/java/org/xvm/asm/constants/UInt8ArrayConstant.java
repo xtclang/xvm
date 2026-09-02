@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -12,7 +11,6 @@ import org.xvm.util.Hash;
 import static org.xvm.util.Handy.byteArrayToHexString;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Represent an octet string (string of unsigned 8-bit bytes) constant.
@@ -54,7 +52,6 @@ public class UInt8ArrayConstant
         m_abVal = abVal;
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     @Override
@@ -71,7 +68,6 @@ public class UInt8ArrayConstant
     public byte[] getValue() {
         return m_abVal;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -103,7 +99,6 @@ public class UInt8ArrayConstant
         return byteArrayToHexString(m_abVal);
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -120,14 +115,12 @@ public class UInt8ArrayConstant
         return "byte-string=" + getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     protected int computeHashCode() {
         return Hash.of(m_abVal);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

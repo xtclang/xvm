@@ -35,15 +35,15 @@ import xunit.extensions.ExtensionProvider;
      */
     @Override Constructor? constructor;
 
-	/**
-	 * The unique identifier for this model.
-	 */
-	@Override UniqueId uniqueId;
+    /**
+     * The unique identifier for this model.
+     */
+    @Override UniqueId uniqueId;
 
-	/**
-	 * The immutable set of children of this model.
-	 */
-	@Override Iterable<Model> children;
+    /**
+     * The immutable set of children of this model.
+     */
+    @Override Iterable<Model> children;
 
     /**
      * The human readable name for this model
@@ -55,16 +55,16 @@ import xunit.extensions.ExtensionProvider;
      */
     @Override Boolean isContainer;
 
-	@Override
-	conditional Model findByUniqueId(UniqueId uniqueId) {
-	    if (this.uniqueId == uniqueId) {
-	        return True, this;
+    @Override
+    conditional Model findByUniqueId(UniqueId uniqueId) {
+        if (this.uniqueId == uniqueId) {
+            return True, this;
         }
-	    for (Model child : children) {
-	        if (Model found := child.findByUniqueId(uniqueId)) {
-	            return True, found;
+        for (Model child : children) {
+            if (Model found := child.findByUniqueId(uniqueId)) {
+                return True, found;
             }
         }
-	    return False;
+        return False;
     }
 }

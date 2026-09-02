@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -38,7 +37,6 @@ import static org.xvm.javajit.Builder.CD_Ctx;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * I_SET rvalue-target, rvalue-ix, rvalue ; T[ix] = T

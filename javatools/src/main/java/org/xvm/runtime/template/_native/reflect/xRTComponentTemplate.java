@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
@@ -30,7 +29,6 @@ import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.text.xString;
-
 
 /**
  * Native ComponentTemplate (abstract base class) implementation.
@@ -133,7 +131,6 @@ public class xRTComponentTemplate
         return hTemplate1.getComponent() == hTemplate2.getComponent();
     }
 
-
     // ----- property implementations --------------------------------------------------------------
 
     /**
@@ -208,7 +205,6 @@ public class xRTComponentTemplate
         return frame.assignValue(iReturn, xBoolean.makeHandle(component.isSynthetic()));
     }
 
-
     // ----- method implementations ----------------------------------------------------------------
 
     /**
@@ -233,7 +229,6 @@ public class xRTComponentTemplate
 
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahChildren));
     }
-
 
     // ----- Composition caching -------------------------------------------------------------------
 
@@ -264,7 +259,6 @@ public class xRTComponentTemplate
         TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MultiMethodTemplate");
         return templateRT.ensureClass(container, typeTemplate);
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -397,7 +391,6 @@ public class xRTComponentTemplate
 
         private final Component f_struct;
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

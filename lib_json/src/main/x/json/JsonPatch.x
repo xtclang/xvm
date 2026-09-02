@@ -618,7 +618,6 @@ annotation JsonPatch
         Test("test"),
     }
 
-
     // ----- Options inner class -------------------------------------------------------------------
 
     /**

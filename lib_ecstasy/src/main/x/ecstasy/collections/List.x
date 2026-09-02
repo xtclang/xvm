@@ -27,7 +27,6 @@ interface List<Element>
         return True;
     }
 
-
     // ----- read operations -----------------------------------------------------------------------
 
     @Override
@@ -735,7 +734,6 @@ interface List<Element>
         return this;
     }
 
-
     // ----- write operations ----------------------------------------------------------------------
 
     @Override
@@ -927,7 +925,6 @@ interface List<Element>
         return result;
     }
 
-
     // ----- List Cursor ---------------------------------------------------------------------------
 
     /**
@@ -969,7 +966,6 @@ interface List<Element>
             return True;
         }
 
-
         // ----- Iterator methods --------------------------------------------------------------
 
         /**
@@ -988,7 +984,6 @@ interface List<Element>
 
             return False;
         }
-
 
         // ----- Cursor operations -------------------------------------------------------------
 
@@ -1202,7 +1197,6 @@ interface List<Element>
         }
     }
 
-
     // ----- Sliceable interface -------------------------------------------------------------------
 
     @Override
@@ -1281,7 +1275,6 @@ interface List<Element>
         }
     }
 
-
     // ----- Equality ------------------------------------------------------------------------------
 
     /**
@@ -1316,7 +1309,6 @@ interface List<Element>
             return !iter2.next();
         }
     }
-
 
     // ----- sorting algorithms --------------------------------------------------------------------
 

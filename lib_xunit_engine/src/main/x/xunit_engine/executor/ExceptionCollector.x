@@ -106,28 +106,28 @@ class ExceptionCollector(AbortExecutionPredicate? abortExecution = Null) {
         return False;
     }
 
-	/**
-	 * Add the specified `Exception` to this collector.
-	 *
-	 * @param e  the `Exception` to add
-	 */
-	private void add(Exception e) {
-		if (this.exception == Null) {
-			this.exception = e;
-		}
-		else if (hasAbortedExecution(this.exception) && !hasAbortedExecution(e)) {
-			addSuppressed(this.exception);
-			this.exception = e;
-		}
-		else if (this.exception != e) {
-			addSuppressed(e);
+    /**
+     * Add the specified `Exception` to this collector.
+     *
+     * @param e  the `Exception` to add
+     */
+    private void add(Exception e) {
+        if (this.exception == Null) {
+            this.exception = e;
+        }
+        else if (hasAbortedExecution(this.exception) && !hasAbortedExecution(e)) {
+            addSuppressed(this.exception);
+            this.exception = e;
+        }
+        else if (this.exception != e) {
+            addSuppressed(e);
         }
     }
 
     /**
-	 * Add the specified `Exception` to the array of suppressed exceptions.
-	 *
-	 * @param e  the `Exception` to add
+     * Add the specified `Exception` to the array of suppressed exceptions.
+     *
+     * @param e  the `Exception` to add
      */
     private void addSuppressed(Exception? e) {
         if (e.is(Exception)) {

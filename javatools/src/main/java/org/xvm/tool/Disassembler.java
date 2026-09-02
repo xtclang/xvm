@@ -442,7 +442,6 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         });
     }
 
-
     // ----- text output and error handling --------------------------------------------------------
 
     @Override

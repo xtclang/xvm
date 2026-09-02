@@ -1,12 +1,10 @@
 package org.xvm.asm;
 
-
 import java.util.List;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.SingletonConstant;
-
 
 /**
  * An XVM Structure that represents an entire Package.
@@ -113,7 +111,6 @@ public class PackageStructure
         findContribution(Composition.Import).addInjector(constInjector, listInject);
     }
 
-
     // ----- component methods ---------------------------------------------------------------------
 
     @Override
@@ -139,14 +136,12 @@ public class PackageStructure
                 : contrib.getModuleConstant().getComponent().resolveName(sName, access, collector);
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public boolean equals(Object obj) {
         return obj == this || (obj instanceof PackageStructure && super.equals(obj));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 }

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.collections;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -24,7 +23,6 @@ import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt8
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt16;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt64;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToFloat64;
-
 
 /**
  * Native ByteArray implementation.

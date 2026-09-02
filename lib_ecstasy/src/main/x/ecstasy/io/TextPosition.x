@@ -26,7 +26,6 @@ interface TextPosition
      */
     @RO Int lineStartOffset;
 
-
     // ----- Orderable & Hashable funky interface implementations ----------------------------------
 
     @Override

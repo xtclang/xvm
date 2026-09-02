@@ -298,7 +298,6 @@ public class EvalCompiler {
         }
     }
 
-
     /**
      * The current frame.
      */
@@ -393,7 +392,6 @@ public class EvalCompiler {
         protected Field[] getChildFields() {
             return CHILD_FIELDS;
         }
-
 
         // ----- ComponentResolver methods ---------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.annotations;
 
-
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.xvm.asm.ClassStructure;
@@ -18,7 +17,6 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.numbers.xConstrainedInteger;
-
 
 /**
  * Native implementation for AtomicIntNumber<Referent> for any Referent that uses JavaLong handle.
@@ -45,7 +43,6 @@ public class xAtomicIntNumber
     @Override
     public void initNative() {
     }
-
 
     // ----- ClassTemplate API ---------------------------------------------------------------------
 
@@ -138,7 +135,6 @@ public class xAtomicIntNumber
         return Op.R_NEXT;
     }
 
-
     // ----- the handle ----------------------------------------------------------------------------
 
     public static class AtomicJavaLongHandle
@@ -160,7 +156,6 @@ public class xAtomicIntNumber
                     (m_atomicValue == null ? "unassigned" : m_atomicValue.get());
         }
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

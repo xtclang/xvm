@@ -15,20 +15,20 @@ interface Model
 
     typedef function Object() as Constructor;
 
-	/**
-	 * The unique identifier for this model.
-	 */
-	@RO UniqueId uniqueId;
+    /**
+     * The unique identifier for this model.
+     */
+    @RO UniqueId uniqueId;
 
-	/**
-	 * The optional parent uniqueId of this model.
-	 */
-	@RO UniqueId? parentId;
+    /**
+     * The optional parent uniqueId of this model.
+     */
+    @RO UniqueId? parentId;
 
-	/**
-	 * The immutable set of children of this model.
-	 */
-	@RO Iterable<Model> children;
+    /**
+     * The immutable set of children of this model.
+     */
+    @RO Iterable<Model> children;
 
     /**
      * The human readable name for this model.
@@ -55,53 +55,53 @@ interface Model
      */
     @RO Boolean isContainer;
 
-	/**
-	 * Get the immutable set of all descendants of this model.
-	 *
-	 * A descendant is a child of this model or a child of one of its children, recursively.
-	 */
-	Set<Model> getDescendants() {
-		Set<Model> descendants = new ListSet();
-		descendants.addAll(this.children);
-		for (Model child : this.children) {
-			descendants.addAll(child.getDescendants());
+    /**
+     * Get the immutable set of all descendants of this model.
+     *
+     * A descendant is a child of this model or a child of one of its children, recursively.
+     */
+    Set<Model> getDescendants() {
+        Set<Model> descendants = new ListSet();
+        descendants.addAll(this.children);
+        for (Model child : this.children) {
+            descendants.addAll(child.getDescendants());
         }
-		return descendants;
+        return descendants;
     }
 
-	/**
-	 * Determine if this model is a root model.
-	 *
-	 * A root model is a model without a parent.
-	 */
-	Boolean isRoot() = parentId == Null;
+    /**
+     * Determine if this model is a root model.
+     *
+     * A root model is a model without a parent.
+     */
+    Boolean isRoot() = parentId == Null;
 
-	/**
-	 * Determine if this model may register dynamic tests during execution.
-	 */
-	Boolean mayRegisterTests() = False;
+    /**
+     * Determine if this model may register dynamic tests during execution.
+     */
+    Boolean mayRegisterTests() = False;
 
-	/**
-	 * Find the model with the supplied unique ID.
-	 *
-	 * @param uniqueId  the `UniqueId` to search for
-	 */
-	conditional Model findByUniqueId(UniqueId uniqueId);
+    /**
+     * Find the model with the supplied unique ID.
+     *
+     * @param uniqueId  the `UniqueId` to search for
+     */
+    conditional Model findByUniqueId(UniqueId uniqueId);
 
-	/**
-	 * Accept a `Visitor` to the subtree starting with this model.
-	 *
-	 * @param visitor  the `Visitor` to accept
-	 */
-	void accept(ModelVisitor visitor) {
-	    if (visitor.is(VisitorFunction)) {
-	        visitor(this);
+    /**
+     * Accept a `Visitor` to the subtree starting with this model.
+     *
+     * @param visitor  the `Visitor` to accept
+     */
+    void accept(ModelVisitor visitor) {
+        if (visitor.is(VisitorFunction)) {
+            visitor(this);
         } else {
-		    visitor.visit(this);
+            visitor.visit(this);
         }
 
-		for (Model child : children) {
-		    child.accept(visitor);
+        for (Model child : children) {
+            child.accept(visitor);
         }
     }
 
@@ -154,16 +154,16 @@ interface Model
 
     // ----- Visitor interface ---------------------------------------------------------------------
 
-	/**
-	 * A Visitor for the tree-like Model structure.
-	 */
-	interface Visitor {
-		/**
-		 * Visit a `Model`.
-		 *
-		 * @param model  the `Model` to visit
-		 */
-		void visit(Model model);
+    /**
+     * A Visitor for the tree-like Model structure.
+     */
+    interface Visitor {
+        /**
+         * Visit a `Model`.
+         *
+         * @param model  the `Model` to visit
+         */
+        void visit(Model model);
     }
 
     /**

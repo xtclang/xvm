@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.net;
 
-
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -183,7 +182,6 @@ public class xRTNetwork
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
 
-
     // -----  helpers ------------------------------------------------------------------------------
 
     /**
@@ -221,7 +219,6 @@ public class xRTNetwork
             throw new IllegalStateException();
         }
     }
-
 
     // ----- constants and fields ------------------------------------------------------------------
 

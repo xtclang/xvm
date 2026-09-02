@@ -60,7 +60,6 @@ const Float128
         construct Float128(new FPLiteral(text).toFloat128().bits);
     }
 
-
     // ----- Numberic interface --------------------------------------------------------------------
 
     @Override
@@ -78,14 +77,12 @@ const Float128
         TODO return 1.0;
     }
 
-
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override
     Signum sign.get() {
         TODO need to think this through carefully because there is a sign bit and both +/-0
     }
-
 
     // ----- Number operations ---------------------------------------------------------------------
 
@@ -129,7 +126,6 @@ const Float128
         TODO
     }
 
-
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
@@ -156,7 +152,6 @@ const Float128
     Int exponentBitLength.get() {
         return 15;
     }
-
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
@@ -299,7 +294,6 @@ const Float128
     Float128 nextDown() {
         TODO
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

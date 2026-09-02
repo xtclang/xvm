@@ -21,7 +21,6 @@ service JsonNtxLogStore<Element extends immutable Const>
         construct JsonLogStoreBase(catalog, info, elementMapping, expiry, truncateSize, maxFileSize);
     }
 
-
     // ----- storage API exposed to the client -----------------------------------------------------
 
     @Override

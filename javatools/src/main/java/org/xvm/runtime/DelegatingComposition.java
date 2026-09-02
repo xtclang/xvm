@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.util.Map;
 
 import org.xvm.asm.MethodStructure;
@@ -11,7 +10,6 @@ import org.xvm.runtime.ClassComposition.FieldInfo;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
-
 
 /**
  * An abstract base for delegating TypeCompositions.
@@ -24,7 +22,6 @@ public abstract class DelegatingComposition
     protected DelegatingComposition(TypeComposition clzOrigin) {
         f_clzOrigin = clzOrigin;
     }
-
 
     // ----- TypeComposition interface -------------------------------------------------------------
 
@@ -107,7 +104,6 @@ public abstract class DelegatingComposition
     public boolean hasOuter() {
         return f_clzOrigin.hasOuter();
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -38,7 +37,6 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.ListMap;
-
 
 /**
  * TypeComposition represents a fully resolved class (e.g. {@code ArrayList<String>} or
@@ -126,9 +124,7 @@ public class ClassComposition
                 (idProp) -> new PropertyComposition(f_clzInception, infoProp));
     }
 
-
     // ----- TypeComposition interface -------------------------------------------------------------
-
 
     @Override
     public Container getContainer() {
@@ -513,7 +509,6 @@ public class ClassComposition
         return true;
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -857,7 +852,6 @@ public class ClassComposition
         public Constant        constInit;
         public MethodStructure methodInit;
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

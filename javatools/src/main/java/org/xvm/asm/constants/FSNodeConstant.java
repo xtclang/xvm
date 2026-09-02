@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -19,7 +18,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Represent an entire filing system directory stored in the constant pool.
@@ -149,7 +147,6 @@ public class FSNodeConstant
         m_constData     = pool.getConstant(m_iData, Constant.class);
     }
 
-
     // ----- FSNodeConstant methods ----------------------------------------------------------------
 
     public StringConstant getNameConstant() {
@@ -212,7 +209,6 @@ public class FSNodeConstant
         return (FSNodeConstant) m_constData;
     }
 
-
     // ----- run-time support  ---------------------------------------------------------------------
 
     /**
@@ -234,7 +230,6 @@ public class FSNodeConstant
         m_handle = handle;
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     @Override
@@ -251,7 +246,6 @@ public class FSNodeConstant
     public Constant getValue() {
         return m_constData;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -308,7 +302,6 @@ public class FSNodeConstant
         };
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -339,7 +332,6 @@ public class FSNodeConstant
         };
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -349,7 +341,6 @@ public class FSNodeConstant
                Hash.of(m_constModified,
                Hash.of(m_constData))));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

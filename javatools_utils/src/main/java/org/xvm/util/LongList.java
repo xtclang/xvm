@@ -1,6 +1,5 @@
 package org.xvm.util;
 
-
 /**
  * Simple list-like data structure for collecting some longs.
  */

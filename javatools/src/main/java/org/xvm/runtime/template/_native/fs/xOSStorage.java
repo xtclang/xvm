@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.fs;
 
-
 import java.io.IOException;
 
 import java.nio.file.FileSystems;
@@ -246,7 +245,6 @@ public class xOSStorage
         }
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 

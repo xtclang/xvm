@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
@@ -21,7 +20,6 @@ import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Return_1;
 import org.xvm.asm.op.Return_N;
 
-
 /**
  * A ternary expression is the "a ? b : c" expression.
  */
@@ -34,7 +32,6 @@ public class TernaryExpression
         this.exprThen = exprThen;
         this.exprElse = exprElse;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -60,7 +57,6 @@ public class TernaryExpression
         exprThen.markConditional();
         exprElse.markConditional();
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -463,7 +459,6 @@ public class TernaryExpression
                 exprThen.getExprAST(ctx), exprElse.getExprAST(ctx), getTypes());
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -644,14 +639,12 @@ public class TernaryExpression
         return true;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString() {
         return cond + " ? " + exprThen + " : " + exprElse;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

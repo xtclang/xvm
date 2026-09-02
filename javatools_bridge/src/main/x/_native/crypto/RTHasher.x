@@ -24,7 +24,6 @@ service RTHasher(String name, Int signatureSize)
      */
     private Object hasher;
 
-
     // ----- Algorithm API -------------------------------------------------------------------------
 
     @Override
@@ -46,7 +45,6 @@ service RTHasher(String name, Int signatureSize)
         return &this.maskAs(Signer);
     }
 
-
     // ----- Signer API ----------------------------------------------------------------------------
 
     @Override
@@ -64,7 +62,6 @@ service RTHasher(String name, Int signatureSize)
                                     Annotations?  annotations = Null) {
         TODO
     }
-
 
     // ----- Verifier API --------------------------------------------------------------------------
 
@@ -99,7 +96,6 @@ service RTHasher(String name, Int signatureSize)
 
     @Override
     void close(Exception? cause = Null) {}
-
 
     // ----- Object API ----------------------------------------------------------------------------
 

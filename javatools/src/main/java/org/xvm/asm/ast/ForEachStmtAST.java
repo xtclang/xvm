@@ -1,12 +1,10 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.util.Handy;
-
 
 /**
  * A "for(lval : expr){...}" statement.

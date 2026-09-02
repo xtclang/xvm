@@ -65,7 +65,6 @@ const Float16
         construct Float16(new FPLiteral(text).toFloat16().bits);
     }
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -83,7 +82,6 @@ const Float16
         return 1.0;
     }
 
-
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override
@@ -91,7 +89,6 @@ const Float16
         UInt16 n = bits.toUInt16();
         return n & 0x8000 == 0 ? Positive : Negative;
     }
-
 
     // ----- Number operations ---------------------------------------------------------------------
 
@@ -135,7 +132,6 @@ const Float16
         TODO
     }
 
-
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
@@ -162,7 +158,6 @@ const Float16
     Int exponentBitLength.get() {
         return 5;
     }
-
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
@@ -305,7 +300,6 @@ const Float16
     Float16 nextDown() {
         TODO
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.util;
 
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -22,7 +21,6 @@ import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.PackedInteger.packedLength;
 import static org.xvm.util.PackedInteger.unpackInt;
 import static org.xvm.util.PackedInteger.writeLong;
-
 
 /**
  * An immutable List of Integer implementation that stores a compressed form of an {@code int[]} or
@@ -118,7 +116,6 @@ public class ConstOrdinalList
         m_ab = ab;
     }
 
-
     // ----- accessors --------------------------------------------------------------------------
 
     /**
@@ -134,7 +131,6 @@ public class ConstOrdinalList
     public byte[] getBytes() {
         return m_ab.clone();
     }
-
 
     // ----- List API ------------------------------------------------------------------------------
 
@@ -317,7 +313,6 @@ public class ConstOrdinalList
         };
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -475,7 +470,6 @@ public class ConstOrdinalList
             throw new RuntimeException(e);
         }
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -651,7 +645,6 @@ public class ConstOrdinalList
         return aabNode;
     }
 
-
     // ----- inner class: Node ---------------------------------------------------------------------
 
     private static class Node {
@@ -689,7 +682,6 @@ public class ConstOrdinalList
         createSkips(aNode, iFirst + 1, iFirst + ofJmp - 1);
         createSkips(aNode, iFirst + ofJmp, iLast);
     }
-
 
     // ----- inner class: RawNode ------------------------------------------------------------------
 
@@ -821,7 +813,6 @@ public class ConstOrdinalList
         return cb;
     }
 
-
     // ----- packed array --------------------------------------------------------------------------
 
     private static byte[] pack(int[] an, int of, int cn, int cBitsPer) {
@@ -923,7 +914,6 @@ public class ConstOrdinalList
 //            }
 //        }
 //    }
-
 
     // ----- data members --------------------------------------------------------------------------
 

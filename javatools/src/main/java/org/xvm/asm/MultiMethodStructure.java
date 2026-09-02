@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataOutput;
 import java.io.IOException;
 
@@ -21,7 +20,6 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.ListMap;
-
 
 /**
  * An XVM Structure that represents a multi-method, which is a group of methods that share a name.
@@ -46,7 +44,6 @@ public class MultiMethodStructure
         super(xsParent, nFlags, constId, condition);
         assert Format.fromFlags(nFlags) == Format.MULTIMETHOD;
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -73,7 +70,6 @@ public class MultiMethodStructure
             super.assembleChildren(out);
         }
     }
-
 
     // ----- Component methods ---------------------------------------------------------------------
 
@@ -243,7 +239,6 @@ public class MultiMethodStructure
         return that;
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -398,7 +393,6 @@ public class MultiMethodStructure
         }
         return map;
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -27,7 +26,6 @@ import org.xvm.asm.MethodStructure.ConcurrencySafety;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * An XVM Structure that represents a property.
@@ -69,7 +67,6 @@ public class PropertyStructure
             setType(type);
         }
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -569,7 +566,6 @@ public class PropertyStructure
         return true;
     }
 
-
     // ----- component methods ---------------------------------------------------------------------
 
     @Override
@@ -705,7 +701,6 @@ public class PropertyStructure
         m_aRefAnno  = null;
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -795,7 +790,6 @@ public class PropertyStructure
 
         return sb.append(super.getDescription()).toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

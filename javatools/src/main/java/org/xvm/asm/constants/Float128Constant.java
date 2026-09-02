@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -11,7 +10,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.byteArrayToHexString;
-
 
 /**
  * Represent a 128-bit binary floating point constant.
@@ -52,7 +50,6 @@ public class Float128Constant
         m_abVal = abVal;
     }
 
-
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**
@@ -66,7 +63,6 @@ public class Float128Constant
         throw new UnsupportedOperationException("(unsupported)");
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**
@@ -77,7 +73,6 @@ public class Float128Constant
     public byte[] getValue() {
         return m_abVal;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -113,7 +108,6 @@ public class Float128Constant
         return "(unsupported)";
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -128,14 +122,12 @@ public class Float128Constant
         return "bytes=" + byteArrayToHexString(m_abVal);
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_abVal);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

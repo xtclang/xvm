@@ -25,7 +25,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.reflect.xRef;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
-
 /**
  * MOV_REF rvalue-src, lvalue-dest ; move Ref-to-source to destination (read-only)
  */

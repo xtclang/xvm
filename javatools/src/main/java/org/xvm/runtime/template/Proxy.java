@@ -1,6 +1,5 @@
 package org.xvm.runtime.template;
 
-
 import java.util.Arrays;
 import java.util.Map;
 
@@ -25,7 +24,6 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.AsyncHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-
 
 /**
  * Template for proxied objects.
@@ -383,7 +381,6 @@ public class Proxy
             }
         };
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 

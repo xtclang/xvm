@@ -2832,7 +2832,6 @@ public class CommonBuilder
         int               thisSlot        = 0;
         int               resultSlot      = 2;
 
-
         // create the list of properties to be compared so we can sort them
         List<PropertyInfo> props = new ArrayList<>();
         for (PropertyInfo prop : structInfo.getProperties().values()) {

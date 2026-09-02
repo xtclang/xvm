@@ -2,7 +2,6 @@ import ecstasy.collections.OrderedSetSlice;
 
 import ecstasy.Duplicable;
 
-
 /**
  * A SparseIntSet is used to maintain a sparse set of Int values in order. It is implemented using
  * the SkiplistMap, within which each key is the "page" index `(n % 64 == 0)`, and each
@@ -31,14 +30,12 @@ class SparseIntSet
         this.size     = that.size;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The underlying SkiplistMap used to store the sparse bitmap.
      */
     protected SkiplistMap<Int, Int> contents;
-
 
     // ----- read operations -----------------------------------------------------------------------
 
@@ -180,7 +177,6 @@ class SparseIntSet
         return new OrderedSetSlice<Int>(this, indexes);
     }
 
-
     // ----- write operations ----------------------------------------------------------------------
 
     @Override
@@ -285,7 +281,6 @@ class SparseIntSet
         return this;
     }
 
-
     // ----- Freezable interface ---------------------------------------------------------------
 
     @Override
@@ -300,7 +295,6 @@ class SparseIntSet
         }
         return new SparseIntSet(this).freeze(True);
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

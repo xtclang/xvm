@@ -1,7 +1,6 @@
 
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -10,7 +9,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.util.Hash;
-
 
 /**
  * Represent an 8-bit "FP8 E4M3" binary floating point constant.
@@ -45,7 +43,6 @@ public class Float8e4Constant
         m_nBits = toBits(flVal);
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**
@@ -56,7 +53,6 @@ public class Float8e4Constant
     public Float getValue() {
         return Float.valueOf(toFloat(m_nBits));
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -84,7 +80,6 @@ public class Float8e4Constant
         return Float.toString(toFloat(m_nBits));
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -99,14 +94,12 @@ public class Float8e4Constant
         return "value=" + getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of((byte) m_nBits);
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -155,7 +148,6 @@ public class Float8e4Constant
             }
         }
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

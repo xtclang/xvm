@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -18,7 +17,6 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.NewVirtualExpr;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * A "new ..." expression.

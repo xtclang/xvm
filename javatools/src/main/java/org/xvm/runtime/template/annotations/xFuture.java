@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.annotations;
 
-
 import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.Annotation;
@@ -32,7 +31,6 @@ import org.xvm.runtime.template.reflect.xVar;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
-
 
 /**
  * Future native implementation.
@@ -207,7 +205,6 @@ public class xFuture
         return frame.assignValue(iReturn,
                 xBoolean.makeHandle(hVar1.getFuture() == hVar2.getFuture()));
     }
-
 
     // ----- native method implementations ---------------------------------------------------------
 
@@ -745,7 +742,6 @@ public class xFuture
             return frame.raiseException(Utils.translate(e));
         }
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 

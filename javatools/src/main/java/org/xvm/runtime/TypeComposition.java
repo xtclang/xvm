@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.util.Map;
 
 import org.xvm.asm.ConstantPool;
@@ -14,7 +13,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
-
 
 /**
  * TypeComposition represents a fully resolved class (e.g. ArrayList<String> or

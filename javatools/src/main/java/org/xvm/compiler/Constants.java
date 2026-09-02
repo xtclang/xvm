@@ -1,6 +1,5 @@
 package org.xvm.compiler;
 
-
 /**
  * Constants related to compilation.
  */

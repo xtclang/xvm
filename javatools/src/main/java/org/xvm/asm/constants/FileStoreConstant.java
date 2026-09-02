@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -15,7 +14,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Represent a FileStore that was embedded into the constant pool.
@@ -71,7 +69,6 @@ public class FileStoreConstant
         m_constDir  = pool.getConstant(m_iDir, FSNodeConstant.class);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -97,7 +94,6 @@ public class FileStoreConstant
         return m_constDir;
     }
 
-
     // ----- run-time support  ---------------------------------------------------------------------
 
     /**
@@ -118,7 +114,6 @@ public class FileStoreConstant
 
         m_handle = handle;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -161,7 +156,6 @@ public class FileStoreConstant
         return m_constDir.getName();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -183,7 +177,6 @@ public class FileStoreConstant
         return "filestore:" + m_constPath.getValue();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -191,7 +184,6 @@ public class FileStoreConstant
         return Hash.of(m_constPath,
                Hash.of(m_constDir));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.collections;
 
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,7 +53,6 @@ import org.xvm.runtime.template._native.collections.arrays.xRTViewToBit;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 import org.xvm.util.Handy;
-
 
 /**
  * Native generic Array implementation.
@@ -607,7 +605,6 @@ public class xArray
         return frame.assignValue(iReturn, hHash);
     }
 
-
     // ----- IndexSupport methods ------------------------------------------------------------------
 
     @Override
@@ -684,7 +681,6 @@ public class xArray
 
         return ((xRTDelegate) hDelegate.getTemplate()).toArray(frame, hDelegate);
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 
@@ -859,7 +855,6 @@ public class xArray
         }
     }
 
-
     // ----- TypeComposition helpers ---------------------------------------------------------------
 
     /**
@@ -868,7 +863,6 @@ public class xArray
     public static TypeComposition getBooleanArrayComposition() {
         return BOOLEAN_ARRAY_CLZ;
     }
-
 
     // ----- ObjectHandle helpers ------------------------------------------------------------------
 

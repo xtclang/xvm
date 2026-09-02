@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.io;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -17,7 +16,6 @@ import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
-
 
 /**
  * Base class for RawChannel implementations.
@@ -55,7 +53,6 @@ public abstract class xRawChannel
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
     }
 
-
     // ----- method implementations ----------------------------------------------------------------
 
     /**
@@ -76,7 +73,6 @@ public abstract class xRawChannel
         // TODO
         return Op.R_NEXT;
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 

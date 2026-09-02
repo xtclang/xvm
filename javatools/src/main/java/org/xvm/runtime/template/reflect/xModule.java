@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.reflect;
 
-
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
@@ -40,7 +39,6 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
-
 
 /**
  * Native implementation of Module interface.
@@ -123,7 +121,6 @@ public class xModule
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
 
-
     // ----- property implementations --------------------------------------------------------------
 
     /**
@@ -200,7 +197,6 @@ public class xModule
         ObjectHandle hModules = xArray.createImmutableArray(clzArray, ahModules);
         return Utils.constructListMap(frame, clzMap, hPaths, hModules, iReturn);
     }
-
 
     // ----- method implementations ----------------------------------------------------------------
 
@@ -307,7 +303,6 @@ public class xModule
         return null;
     }
 
-
     // ----- TypeComposition, and handle caching ---------------------------------------------------
 
     /**
@@ -342,7 +337,6 @@ public class xModule
         }
         return type;
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 

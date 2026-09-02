@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -16,7 +15,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
-
 
 /**
  * JMP_TYPE rvalue, rvalue-type, addr ; jump if type of the value is "instanceof" specified type

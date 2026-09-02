@@ -16,7 +16,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
-
 /**
  * IS_TYPE  rvalue, rvalue-type, lvalue-return ; T instanceof Type -> Boolean
  */

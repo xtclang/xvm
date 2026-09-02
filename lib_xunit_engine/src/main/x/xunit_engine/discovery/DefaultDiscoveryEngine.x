@@ -10,7 +10,6 @@ import resolvers.MethodResolver;
 import resolvers.PackageResolver;
 import resolvers.TemplateResolver;
 
-
 /**
  * The `DiscoveryEngine` is responsible for discovering all the test `Model`
  * instance that represent test fixtures to be executed.

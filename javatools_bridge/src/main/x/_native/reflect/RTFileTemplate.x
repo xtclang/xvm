@@ -32,7 +32,6 @@ const RTFileTemplate
                 : new Time(createdMillis*TimeOfDay.PicosPerMilli);
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**

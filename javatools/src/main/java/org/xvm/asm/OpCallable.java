@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -57,7 +56,6 @@ import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Common base for CALL_ ops.

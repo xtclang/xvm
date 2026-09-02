@@ -1,10 +1,8 @@
 package org.xvm.asm;
 
-
 import java.util.Objects;
 
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * An InjectionKey is a trivial data structure.
@@ -46,7 +44,6 @@ public class InjectionKey {
     public String toString() {
         return "Key: " + f_sName + ", " + f_type.getValueString();
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

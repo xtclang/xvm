@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.HashSet;
@@ -49,7 +48,6 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
-
 /**
  * Comparison over a chain of expressions.
  *
@@ -70,7 +68,6 @@ public class CmpChainExpression
         this.expressions = expressions;
         this.operators   = operators;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -102,7 +99,6 @@ public class CmpChainExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -432,7 +428,6 @@ public class CmpChainExpression
         return new CmpChainExprAST(aAst, aOp, m_idCmp);
     }
 
-
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
@@ -449,7 +444,6 @@ public class CmpChainExpression
     public boolean isCompletable() {
         return expressions.get(0).isCompletable() && expressions.get(1).isCompletable();
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -547,7 +541,6 @@ public class CmpChainExpression
         return true;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -567,7 +560,6 @@ public class CmpChainExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

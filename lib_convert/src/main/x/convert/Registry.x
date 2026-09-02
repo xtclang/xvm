@@ -136,7 +136,6 @@ service Registry
         new BasicFormat<FloatN  >(),
         ];
 
-
     // ----- Converter support ---------------------------------------------------------------------
 
     /**

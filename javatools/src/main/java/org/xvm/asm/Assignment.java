@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 /**
  * The Assignment enumeration represents the various possible states of a variable's assignment.
  * <p/>
@@ -332,7 +331,6 @@ public enum Assignment {
             BY_FLAGS[n] = assignment;
         }
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template;
 
-
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.constants.PropertyConstant;
@@ -14,7 +13,6 @@ import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.AsyncHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-
 
 /**
  * Native functionality for instance child classes.

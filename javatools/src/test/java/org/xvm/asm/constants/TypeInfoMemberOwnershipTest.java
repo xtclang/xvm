@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.util.Collections;
 import java.util.Map;
 
@@ -23,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 
 /**
  * Tests for {@link PropertyInfo}, {@link PropertyBody}, and {@link ChildInfo} ownership.

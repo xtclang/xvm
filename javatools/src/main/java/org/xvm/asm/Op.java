@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -42,7 +41,6 @@ import static org.xvm.util.Handy.byteToHexString;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Base class for all XVM machine code instructions, each of which is called an "op".
@@ -442,7 +440,6 @@ public abstract class Op {
         return toName(getOpCode());
     }
 
-
     // ----- inner class: Prefix Op ----------------------------------------------------------------
 
     /**
@@ -650,7 +647,6 @@ public abstract class Op {
          */
         private Op m_op;
     }
-
 
     // ----- inner class: ConstantRegistry ---------------------------------------------------------
 
@@ -1018,7 +1014,6 @@ public abstract class Op {
          */
         private final RegisterAST[] m_aregSpecial = new RegisterAST[-Op.CONSTANT_OFFSET];
     }
-
 
     // ----- static helpers ------------------------------------------------------------------------
 
@@ -1827,7 +1822,6 @@ public abstract class Op {
         }
     }
 
-
     // ----- op-codes ------------------------------------------------------------------------------
 
     public static final int OP_NOP          = 0x00;
@@ -2108,7 +2102,6 @@ public abstract class Op {
     public static final int OP_RSVD_FE      = 0xFE;
     public static final int OP_RSVD_FF      = 0xFF;
 
-
     // ----- pre-defined arguments -----------------------------------------------------------------
 
     /**
@@ -2203,7 +2196,6 @@ public abstract class Op {
      */
     public static final int CONSTANT_OFFSET = -16;
 
-
     // ----- return values from the Op.process() method --------------------------------------------
 
     /**
@@ -2260,7 +2252,6 @@ public abstract class Op {
      */
     public static final int R_RESET            = -10;
 
-
     // ----- other constants -----------------------------------------------------------------------
 
     /**
@@ -2281,7 +2272,6 @@ public abstract class Op {
     private static final long GUARD_DEPTH_BITS     = 0x0000_000F_F000_0000L, GUARD_DEPTH_SHIFT     = 28;
     private static final long SCOPE_DEPTH_BITS     = 0x0000_0000_0FF0_0000L, SCOPE_DEPTH_SHIFT     = 20;
     private static final long POSITION_BITS        = 0x0000_0000_000F_FFFFL;
-
 
     // ----- data members --------------------------------------------------------------------------
 

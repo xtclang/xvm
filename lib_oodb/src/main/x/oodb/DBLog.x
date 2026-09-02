@@ -65,7 +65,6 @@ interface DBLog<Element extends immutable Const>
                                    (UInt|Range<UInt>)?     txIds  = Null,
                                    String?                 txName = Null);
 
-
     // ----- transactional information -------------------------------------------------------------
 
     /**
@@ -96,7 +95,6 @@ interface DBLog<Element extends immutable Const>
     @Override
     interface TxChange
             extends DBChange<Element> {}
-
 
     // ----- transaction trigger API ---------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
@@ -17,7 +16,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.Compiler;
 
 import org.xvm.util.Severity;
-
 
 /**
  * Statement expression is conceptually similar to a lambda, except that it does not require an
@@ -69,7 +67,6 @@ public class StatementExpression
         return CHILD_FIELDS;
     }
 
-
     // ----- code container methods ----------------------------------------------------------------
 
     @Override
@@ -92,7 +89,6 @@ public class StatementExpression
         }
         collector.add(atypeRet);
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -297,7 +293,6 @@ public class StatementExpression
         }
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -309,7 +304,6 @@ public class StatementExpression
     public String toDumpString() {
         return body.toDumpString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -17,7 +16,6 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * MOV_THIS #, lvalue-dest          ; # (an inline unsigned byte) specifies the count of this-to-outer-this

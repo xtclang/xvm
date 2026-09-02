@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataOutput;
 import java.io.IOException;
 
@@ -12,7 +11,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.compiler.CompilerException;
 
 import org.xvm.util.Hash;
-
 
 /**
  * Represent a constant that will eventually be replaced with a real identity constant.
@@ -48,9 +46,7 @@ public class UnresolvedNameConstant
         this(pool, new String[] {sName}, false);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
-
 
     @Override
     public Constant resolve() {
@@ -102,7 +98,6 @@ public class UnresolvedNameConstant
         }
     }
 
-
     // ----- ResolvableConstant methods ------------------------------------------------------------
 
     @Override
@@ -121,7 +116,6 @@ public class UnresolvedNameConstant
             m_consumer.accept(constant);
         }
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -233,7 +227,6 @@ public class UnresolvedNameConstant
         return this == that ? 0 : -1;
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -288,7 +281,6 @@ public class UnresolvedNameConstant
     public int computeHashCode() {
         return 0;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

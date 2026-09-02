@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -30,7 +29,6 @@ import org.xvm.type.Decimal64;
 import org.xvm.type.Decimal128;
 
 import org.xvm.util.PackedInteger;
-
 
 /**
  * Base class for native BinaryFPNumber (Float16, 32, 64) support.
@@ -343,7 +341,6 @@ public abstract class BaseBinaryFP
         return frame.assignValue(iReturn, makeHandle(-d));
     }
 
-
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
@@ -388,7 +385,6 @@ public abstract class BaseBinaryFP
 
         return frame.assignValue(iReturn, xString.makeHandle(toString(d)));
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -524,7 +520,6 @@ public abstract class BaseBinaryFP
      */
     protected abstract String toString(double d);
 
-
     // ----- handle --------------------------------------------------------------------------------
 
     @Override
@@ -551,7 +546,6 @@ public abstract class BaseBinaryFP
 
         private final double f_dValue;
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 
@@ -8,7 +7,6 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-
 
 /**
  * Native Int64 support.

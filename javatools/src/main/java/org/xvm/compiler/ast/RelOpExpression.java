@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -47,7 +46,6 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
-
 
 /**
  * Relational operator expression (with @Op support) for something that follows the pattern
@@ -123,7 +121,6 @@ public class RelOpExpression
         f_tokAfter  = tokAfter;
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
@@ -177,7 +174,6 @@ public class RelOpExpression
                 super.toConditionalConstant();
         };
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -1024,7 +1020,6 @@ public class RelOpExpression
         return new InvokeExprAST(m_idOp, getTypes(), ast1, new ExprAST[] {ast2}, false);
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -1063,7 +1058,6 @@ public class RelOpExpression
         };
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -1072,7 +1066,6 @@ public class RelOpExpression
                 ? super.toString()
                 : f_tokBefore.getId().TEXT + super.toString() + f_tokAfter.getId().TEXT;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

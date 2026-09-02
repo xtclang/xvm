@@ -32,7 +32,6 @@ public class TypeSequenceTypeConstant
         super(pool);
     }
 
-
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
@@ -256,7 +255,6 @@ public class TypeSequenceTypeConstant
     protected Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams) {
         return Usage.NO;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.net;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -21,7 +20,6 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
 
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xByteArray;
-
 
 /**
  * Native implementation of a "NetworkInterface" service.
@@ -106,11 +104,9 @@ public class xRTNetworkInterface
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
 
-
     // -----  helpers ------------------------------------------------------------------------------
 
     // TODO
-
 
     // ----- constants and fields ------------------------------------------------------------------
 

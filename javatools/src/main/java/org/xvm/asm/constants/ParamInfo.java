@@ -1,8 +1,6 @@
 package org.xvm.asm.constants;
 
-
 import org.xvm.asm.Constant.Format;
-
 
 /**
  * Represents information about a single, named type parameter.

@@ -60,7 +60,6 @@ const Float32
         construct Float32(new FPLiteral(text).toFloat32().bits);
     }
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -78,7 +77,6 @@ const Float32
         return 1.0;
     }
 
-
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override
@@ -87,7 +85,6 @@ const Float32
         UInt32 n = bits.toUInt32();
         return n & 0x80000000 == 0 ? Positive : Negative;
     }
-
 
     // ----- Number operations ---------------------------------------------------------------------
 
@@ -131,7 +128,6 @@ const Float32
         TODO
     }
 
-
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
@@ -158,7 +154,6 @@ const Float32
     Int exponentBitLength.get() {
         return 8;
     }
-
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
@@ -301,7 +296,6 @@ const Float32
     Float32 nextDown() {
         TODO
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

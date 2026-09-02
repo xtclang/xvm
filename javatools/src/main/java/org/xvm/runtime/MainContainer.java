@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -27,7 +26,6 @@ import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
-
 
 /**
  * The main container (zero) associated with the main module.
@@ -166,7 +164,6 @@ public class MainContainer
         return new DeferredCallHandle(xException.makeHandle(frame,
                 "Injection type is not a shared: \"" + typeResource.getValueString() + '"'));
     }
-
 
     // ----- MainContainer specific functionality --------------------------------------------------
 

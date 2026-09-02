@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -17,7 +16,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * A TypeConstant that represents an inner child class; for example:
@@ -93,7 +91,6 @@ public class InnerChildTypeConstant
         return (ClassStructure) m_idChild.getComponent();
     }
 
-
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
@@ -117,7 +114,6 @@ public class InnerChildTypeConstant
                 ? getGenericParamType(constFormal.getName(), Collections.emptyList())
                 : null;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -151,7 +147,6 @@ public class InnerChildTypeConstant
         return m_typeParent.getValueString() + '.' + m_idChild.getValueString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -169,7 +164,6 @@ public class InnerChildTypeConstant
         writeMagnitude(out, m_idChild.getPosition());
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -177,7 +171,6 @@ public class InnerChildTypeConstant
         return Hash.of(m_typeParent,
                Hash.of(m_idChild));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

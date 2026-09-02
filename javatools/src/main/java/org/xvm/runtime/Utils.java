@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.sql.Timestamp;
 
 import java.util.List;
@@ -69,7 +68,6 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
-
 
 /**
  * Various helpers.
@@ -379,7 +377,6 @@ public abstract class Utils {
             + " " + context + ", fiber " + lFiberId + ": " + sMsg);
     }
 
-
     // ----- "local property or DeferredCallHandle as an argument" support -------------------------
 
     public static class GetArguments
@@ -641,7 +638,6 @@ public abstract class Utils {
         private boolean fAllAssigned = true;
     }
 
-
     // ----- comparison support --------------------------------------------------------------------
 
     /**
@@ -717,7 +713,6 @@ public abstract class Utils {
             ? frame.assignValue(iReturn, hResult)
             : type2.callCompare(frame, hValue1, hValue2, iReturn);
     }
-
 
     // ----- various run-time support --------------------------------------------------------------
 
@@ -1766,7 +1761,6 @@ public abstract class Utils {
             return frameCaller.assignValue(iReturn, hArray);
         }
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

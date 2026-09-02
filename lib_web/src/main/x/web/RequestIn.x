@@ -1,6 +1,5 @@
 import net.UriTemplate;
 
-
 /**
  * A representation of an incoming HTTP request.
  */

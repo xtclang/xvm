@@ -33,7 +33,6 @@ import storage.JsonValueStore;
 import storage.ObjectStore;
 import storage.SchemaStore;
 
-
 /**
  * Metadata catalog for a database. A `Catalog` acts as the "gateway" to a JSON database, allowing a
  * database to be created, opened, examined, recovered, upgraded, and/or deleted.
@@ -211,7 +210,6 @@ service Catalog<Schema extends RootSchema>
     static protected User DefaultUser = new User(0, "sys",
             permissions = [new Permission(AllTargets, AllActions)]);
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     @Concurrent
@@ -348,7 +346,6 @@ service Catalog<Schema extends RootSchema>
      */
     protected Time? idleSince;
 
-
     // ----- visibility ----------------------------------------------------------------------------
 
     @Override
@@ -357,7 +354,6 @@ service Catalog<Schema extends RootSchema>
         return $|{this:class.name}:\{{dir=}, {version=}, {status=}, {readOnly=}, unique-id={timestamp}}
                 ;
     }
-
 
     // ----- support ----------------------------------------------------------------------------
 
@@ -673,7 +669,6 @@ service Catalog<Schema extends RootSchema>
         }
     }
 
-
     // ----- status management ---------------------------------------------------------------------
 
     /**
@@ -868,7 +863,6 @@ service Catalog<Schema extends RootSchema>
             }
         }
     }
-
 
     // ----- directory Glance ----------------------------------------------------------------------
 

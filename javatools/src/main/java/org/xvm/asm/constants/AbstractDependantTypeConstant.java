@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -19,7 +18,6 @@ import org.xvm.runtime.Container;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * A base class for TypeConstants based on the parent's type.
@@ -64,7 +62,6 @@ public abstract class AbstractDependantTypeConstant
     protected void resolveConstants() {
         m_typeParent = getConstantPool().getConstant(m_iTypeParent, TypeConstant.class);
     }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -272,14 +269,12 @@ public abstract class AbstractDependantTypeConstant
         return false;
     }
 
-
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
     public ClassTemplate getTemplate(Container container) {
         return container.getTemplate((ClassConstant) getDefiningConstant());
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -302,7 +297,6 @@ public abstract class AbstractDependantTypeConstant
         return this.m_typeParent.compareTo(that.m_typeParent);
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -316,7 +310,6 @@ public abstract class AbstractDependantTypeConstant
         out.writeByte(getFormat().ordinal());
         writeMagnitude(out, m_typeParent.getPosition());
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

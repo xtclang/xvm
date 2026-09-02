@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 
 import java.lang.classfile.CodeBuilder;
@@ -11,7 +10,6 @@ import org.xvm.asm.OpReturn;
 import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
-
 
 /**
  * RETURN_0 ; (no return value)

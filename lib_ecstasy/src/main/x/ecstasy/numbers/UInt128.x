@@ -13,7 +13,6 @@ const UInt128
      */
     static IntLiteral MaxValue =  0xFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF;
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -35,7 +34,6 @@ const UInt128
     static conditional Range<UInt128> range() {
         return True, MinValue..MaxValue;
     }
-
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -73,14 +71,12 @@ const UInt128
         construct UInt128(new IntLiteral(text).toUInt128().bits);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
     Signum sign.get() {
         return this == 0 ? Zero : Positive;
     }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -125,7 +121,6 @@ const UInt128
         return result;
     }
 
-
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
@@ -145,7 +140,6 @@ const UInt128
 
         return False;
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 
@@ -336,7 +330,6 @@ const UInt128
      */
     @Override
     UInt128 toUInt128(Boolean checkBounds = False) = this;
-
 
     // ----- Stringable implementation -------------------------------------------------------------
 

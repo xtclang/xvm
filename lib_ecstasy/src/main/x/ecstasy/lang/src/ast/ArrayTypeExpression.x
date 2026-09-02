@@ -2,7 +2,6 @@ import io.TextPosition;
 
 import reflect.InvalidType;
 
-
 /**
  * Represents an annotated type, for example:
  *

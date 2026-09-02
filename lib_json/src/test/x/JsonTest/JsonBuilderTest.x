@@ -91,7 +91,6 @@ class JsonBuilderTest {
         }
     }
 
-
     @Test
     void shouldMergeSimpleObjectIntoObject() {
         JsonObject target = ["a"="b"];

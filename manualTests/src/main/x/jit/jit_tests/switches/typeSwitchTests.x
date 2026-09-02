@@ -14,7 +14,6 @@ package typeSwitchTests {
 
     enum Color {Red, Orange, Yellow, Green, Blue, Indigo, Violet}
 
-
     void testSimpleSwitch() {
         assert verifySimpleSwitch(Int:100) == "Int64";
         assert verifySimpleSwitch(Int32:100) == "Int32";

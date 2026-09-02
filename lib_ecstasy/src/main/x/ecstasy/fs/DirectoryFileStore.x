@@ -70,7 +70,6 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
     @Override
     @RO Int bytesFree.get() = origStore.bytesFree;
 
-
     // ----- relative path conversion and file node wrapping ---------------------------------------
 
     /**
@@ -134,7 +133,6 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
         Directory dir = new DirectoryWrapper(origNode);
         return &dir.maskAs(Directory).as(Node);
     }
-
 
     // ----- file node wrappers --------------------------------------------------------------------
 

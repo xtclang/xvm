@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.Constant;
@@ -15,7 +14,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.text.xChar;
-
 
 /**
  * Native Nibble (Byte) support.

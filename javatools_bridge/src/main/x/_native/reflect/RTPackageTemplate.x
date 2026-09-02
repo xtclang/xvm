@@ -1,6 +1,5 @@
 import ecstasy.reflect.PackageTemplate;
 
-
 /**
  * The native reflected PackageTemplate implementation.
  */

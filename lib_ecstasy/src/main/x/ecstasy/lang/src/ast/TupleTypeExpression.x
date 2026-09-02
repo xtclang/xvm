@@ -1,6 +1,5 @@
 import io.TextPosition;
 
-
 /**
  * Represents a type that is itself a tuple of types.
  */

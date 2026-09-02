@@ -26,7 +26,6 @@ service SessionPurger(Duration cycleTime=Duration:1M) {
      */
     Boolean stopping;
 
-
     // ----- session control -----------------------------------------------------------------------
 
     /**
@@ -50,7 +49,6 @@ service SessionPurger(Duration cycleTime=Duration:1M) {
             stopping = True;
         }
     }
-
 
     // ----- internal -----------------------------------------------------------------------
 

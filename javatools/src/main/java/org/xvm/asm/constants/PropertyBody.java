@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
@@ -11,7 +10,6 @@ import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
 
 import org.xvm.util.Handy;
-
 
 /**
  * Represents the information about a single property at a single virtual level.
@@ -477,7 +475,6 @@ public class PropertyBody
         return prop != null && m_impl != Implementation.FromInto && prop.isInjected();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -568,7 +565,6 @@ public class PropertyBody
 
         return sb.append(')').toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

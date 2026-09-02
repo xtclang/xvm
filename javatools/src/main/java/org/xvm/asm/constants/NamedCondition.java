@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -15,7 +14,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Evaluates if a named condition is defined.
@@ -59,7 +57,6 @@ public class NamedCondition
         m_constName = getConstantPool().getConstant(m_iName, StringConstant.class);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -70,7 +67,6 @@ public class NamedCondition
     public String getName() {
         return m_constName.getValue();
     }
-
 
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
@@ -127,7 +123,6 @@ public class NamedCondition
         return "isSpecified(\"" + getName() + "\")";
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -142,14 +137,12 @@ public class NamedCondition
         writeMagnitude(out, m_constName.getPosition());
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_constName);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

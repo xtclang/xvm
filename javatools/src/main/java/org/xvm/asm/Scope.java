@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 /**
  * Represents a variable scope in the op-code stream.
  */
@@ -23,7 +22,6 @@ public class Scope {
         m_scopeParent = scopeParent;
         m_opEnter     = opEnter;
     }
-
 
     // ----- API for managing scopes and variables -------------------------------------------------
 
@@ -147,7 +145,6 @@ public class Scope {
         }
     }
 
-
     // ----- API for querying statistics -----------------------------------------------------------
 
     /**
@@ -210,7 +207,6 @@ public class Scope {
         return m_cGuardAllDepth;
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     private void validate() {
@@ -233,7 +229,6 @@ public class Scope {
             m_cMaxVars = cTotal;
         }
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 

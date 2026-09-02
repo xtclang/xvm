@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,7 +33,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendList;
 import static org.xvm.util.Handy.startList;
-
 
 /**
  * Represents all the information about a method (or function). For methods, this includes a method

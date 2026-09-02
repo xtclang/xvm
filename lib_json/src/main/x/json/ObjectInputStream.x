@@ -3,7 +3,6 @@ import ecstasy.io.ObjectInput;
 
 import Lexer.Token;
 
-
 /**
  * An [ObjectInput] implementation for JSON de-serialization that reads from a [Reader], or from a
  * stream of JSON tokens, or from a JSON parser.
@@ -116,7 +115,6 @@ class ObjectInputStream
         return root ?: new @CloseCap RootInputStream();
     }
 
-
     // ----- ObjectInput implementation ------------------------------------------------------------
 
     @Override
@@ -131,7 +129,6 @@ class ObjectInputStream
         closed  = True;
         &pointers.reset();
     }
-
 
     // ----- DocInputStream ------------------------------------------------------------------------
 
@@ -484,7 +481,6 @@ class ObjectInputStream
         }
     }
 
-
     // ----- ElementInputStream --------------------------------------------------------------------
 
     /**
@@ -544,7 +540,6 @@ class ObjectInputStream
         }
     }
 
-
     // ----- RootInputStream -----------------------------------------------------------------------
 
     /**
@@ -579,7 +574,6 @@ class ObjectInputStream
             return Null;
         }
     }
-
 
     // ----- ArrayInputStream ----------------------------------------------------------------------
 
@@ -659,7 +653,6 @@ class ObjectInputStream
             return True;
         }
     }
-
 
     // ----- FieldInputStream ----------------------------------------------------------------------
 
@@ -962,7 +955,6 @@ class ObjectInputStream
         }
     }
 
-
     // ----- PeekAhead annotation ------------------------------------------------------------------
 
     /**
@@ -1007,7 +999,6 @@ class ObjectInputStream
             return super(attribute);
         }
     }
-
 
     // ----- PointerAware annotation ---------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.reflect;
 
-
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -39,7 +38,6 @@ import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
-
 
 /**
  * Native implementation of Package interface.
@@ -122,7 +120,6 @@ public class xPackage
             xInt64.makeHandle(((PackageHandle) hTarget).getId().hashCode()));
     }
 
-
     // ----- property implementations --------------------------------------------------------------
 
     /**
@@ -175,7 +172,6 @@ public class xPackage
         return Utils.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
     }
 
-
     // ----- method implementations ----------------------------------------------------------------
 
     /**
@@ -198,7 +194,6 @@ public class xPackage
         }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
     }
-
 
     // ----- Helpers -------------------------------------------------------------------------------
 
@@ -247,7 +242,6 @@ public class xPackage
     public static TypeComposition ensureListMapComposition(Container container) {
         return container.ensureClassComposition(LIST_MAP_TYPE, LIST_MAP_TEMPLATE);
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 

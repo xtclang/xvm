@@ -1,6 +1,5 @@
 import reflect.ModuleTemplate;
 
-
 /**
  * A repository that delegates to a chain of repositories. Reads occur from the repositories in the
  * order that they were provided to the constructor. Writes occur to the first repository only.
@@ -13,7 +12,6 @@ service LinkedRepository(List<ModuleRepository> repos)
      * The underlying repositories.
      */
     public/private List<ModuleRepository> repos;
-
 
     // ----- ModuleRepository API ------------------------------------------------------------------
 

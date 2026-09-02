@@ -1,13 +1,11 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Base class for the MOV, REF and CAST op-codes.

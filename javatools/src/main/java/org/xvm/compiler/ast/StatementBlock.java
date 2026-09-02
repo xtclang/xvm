@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -66,7 +65,6 @@ import org.xvm.compiler.ast.NewExpression.AnonInnerClassContext;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
-
 /**
  * A block statement specifies a series of statements.
  * <p/>
@@ -104,7 +102,6 @@ public class StatementBlock
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -278,7 +275,6 @@ public class StatementBlock
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -525,7 +521,6 @@ public class StatementBlock
         return fCompletable;
     }
 
-
     // ----- name resolution -----------------------------------------------------------------------
 
     @Override
@@ -541,7 +536,6 @@ public class StatementBlock
                 ? super.resolveImportBySingleName(sName, errs)
                 : stmtImport;
     }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -588,7 +582,6 @@ public class StatementBlock
 
         return sb.toString();
     }
-
 
     // ----- inner class: RootContext --------------------------------------------------------------
 
@@ -1466,7 +1459,6 @@ public class StatementBlock
         private       Context         m_ctxValidating;
         private       boolean         m_fEmitting;
 
-
         /**
          * A lazily created mapping of captured variables that is collected during the validation
          * on a temporary (throw-away) copy of an inner class.
@@ -1479,7 +1471,6 @@ public class StatementBlock
          */
         private Map<String, Register> m_mapCaptureVars;
     }
-
 
     /**
      * The context for compiling a nested StatementBlock. This context maintains a link with the
@@ -1509,7 +1500,6 @@ public class StatementBlock
             return super.resolveRegularName(ctxFrom, sName, name, errs);
         }
     }
-
 
     // ----- inner class: TargetInfo ---------------------------------------------------------------
 
@@ -1659,7 +1649,6 @@ public class StatementBlock
         private final int              stepsOut;
         private final TypeConstant     type;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

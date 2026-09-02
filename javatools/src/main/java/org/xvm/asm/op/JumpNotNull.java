@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -13,7 +12,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xNullable;
-
 
 /**
  * JMP_NNULL rvalue, addr ; jump if value is NOT null

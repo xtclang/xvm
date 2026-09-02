@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.List;
@@ -29,7 +28,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
-
 /**
  * A map expression is an expression containing some number (0 or more) entries, each of which has
  * a key and a value.
@@ -48,7 +46,6 @@ public class MapExpression
         this.lEndPos = lEndPos;
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
@@ -65,7 +62,6 @@ public class MapExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -400,7 +396,6 @@ public class MapExpression
         return new MapExprAST(getType(), m_aKeyAST, m_aValueAST);
     }
 
-
     // ----- internal helpers ----------------------------------------------------------------------
 
     /**
@@ -417,7 +412,6 @@ public class MapExpression
         }
         return true;
     }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -447,7 +441,6 @@ public class MapExpression
     public String getDumpDesc() {
         return "size=" + keys.size();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

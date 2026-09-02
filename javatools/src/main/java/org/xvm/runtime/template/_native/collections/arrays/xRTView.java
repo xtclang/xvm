@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
 
@@ -17,7 +16,6 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-
 /**
  * The abstract base of RTView* implementations.
  */
@@ -31,7 +29,6 @@ public abstract class xRTView
     public ClassTemplate getTemplate(TypeConstant type) {
         return this;
     }
-
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
@@ -71,7 +68,6 @@ public abstract class xRTView
     public DelegateHandle deleteRange(DelegateHandle hTarget, long ofStart, long cSize) {
         return null;
     }
-
 
     // ----- handle --------------------------------------------------------------------------------
 

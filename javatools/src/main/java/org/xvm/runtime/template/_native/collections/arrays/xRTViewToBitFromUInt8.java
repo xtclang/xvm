@@ -1,13 +1,11 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
-
 
 /**
  * The native RTViewToBit<Byte> implementation.

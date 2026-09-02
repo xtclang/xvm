@@ -1,8 +1,6 @@
 package org.xvm.runtime.template.numbers;
 
-
 import java.math.BigInteger;
-
 
 /**
  * 128 bit long implementation used by both Int128 and UInt128.

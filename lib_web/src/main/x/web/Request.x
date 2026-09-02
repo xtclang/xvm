@@ -3,7 +3,6 @@ import ecstasy.collections.CollectImmutableArray;
 
 import net.UriTemplate;
 
-
 /**
  * A representation of an HTTP request.
  *

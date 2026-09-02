@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -14,7 +13,6 @@ import java.util.TreeSet;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
 import org.xvm.asm.Version;
-
 
 /**
  * Implements the logical "or" of any number of conditions.
@@ -50,7 +48,6 @@ public class AnyCondition
     private AnyCondition(ConditionalConstant[] acond) {
         super(acond[0].getConstantPool(), acond);
     }
-
 
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
@@ -195,14 +192,12 @@ public class AnyCondition
         return new AnyCondition(getConstantPool(), aconstCond);
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
     public Format getFormat() {
         return Format.ConditionAny;
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 

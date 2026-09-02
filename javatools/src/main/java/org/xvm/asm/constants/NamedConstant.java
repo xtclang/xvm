@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -13,7 +12,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * A NamedConstant is a constant whose purpose is to identify a structure of a specified name that
@@ -71,7 +69,6 @@ public abstract class NamedConstant
         m_constName   = pool.getConstant(m_iName, StringConstant.class);
     }
 
-
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
@@ -87,7 +84,6 @@ public abstract class NamedConstant
     public String getName() {
         return m_constName.getValue();
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -159,7 +155,6 @@ public abstract class NamedConstant
         return sParent + chSep + m_constName.getValue();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -179,7 +174,6 @@ public abstract class NamedConstant
     @Override
     public abstract String getDescription();
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -187,7 +181,6 @@ public abstract class NamedConstant
         return Hash.of(m_constParent,
                Hash.of(m_constName));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

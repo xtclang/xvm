@@ -84,7 +84,6 @@ service RawChannel {
      */
     Int submit(Byte[] buffer, Int start, Int end) = TODO("Native");
 
-
     // ----- buffer operations ---------------------------------------------------------------------
 
     /**

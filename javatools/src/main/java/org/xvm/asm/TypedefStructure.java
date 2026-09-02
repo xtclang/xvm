@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -11,7 +10,6 @@ import org.xvm.asm.constants.TypedefConstant;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * An XVM Structure that represents a "typedef" statement, which acts as a way to name an arbitrary
@@ -33,7 +31,6 @@ public class TypedefStructure
             ConditionalConstant condition) {
         super(xsParent, nFlags, constId, condition);
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -61,7 +58,6 @@ public class TypedefStructure
             m_type = type;
         }
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -92,7 +88,6 @@ public class TypedefStructure
     public String getDescription() {
         return "type=" + m_type + ", " + super.getDescription();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

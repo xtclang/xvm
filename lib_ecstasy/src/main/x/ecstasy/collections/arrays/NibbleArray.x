@@ -1,7 +1,6 @@
 import numbers.IntConvertible;
 import numbers.FPConvertible;
 
-
 /**
  * Functionality specific to an array of nibbles.
  */
@@ -191,7 +190,6 @@ mixin NibbleArray<Element extends Nibble>
         return new Array<Byte>(new Translator(this), mutability);
     }
 
-
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
@@ -218,7 +216,6 @@ mixin NibbleArray<Element extends Nibble>
      */
     @Override
     Byte[] toByteArray(Mutability mutability = Constant) = asByteArray().reify(mutability);
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 

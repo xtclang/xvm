@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -9,7 +8,6 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.IfElseStmt;
 import static org.xvm.asm.ast.BinaryAST.NodeType.IfThenStmt;
 
 import static org.xvm.util.Handy.indentLines;
-
 
 /**
  * Supports the "if..then" and "if..then..else" statements.

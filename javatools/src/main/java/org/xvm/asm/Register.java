@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.NarrowedExprAST;
 import org.xvm.asm.ast.RegAllocAST;
@@ -8,7 +7,6 @@ import org.xvm.asm.ast.RegisterAST;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * A Register represents a specific, typed, machine register of the XVM.
@@ -83,7 +81,6 @@ public class Register
         return true;
     }
 
-
     // ----- Argument methods ----------------------------------------------------------------------
 
     /**
@@ -116,7 +113,6 @@ public class Register
         }
         return this;
     }
-
 
     // ----- Register methods ----------------------------------------------------------------------
 
@@ -468,7 +464,6 @@ public class Register
         return sb.toString();
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
@@ -581,7 +576,6 @@ public class Register
                               // get assigned
         }
     }
-
 
     // ----- inner classes -------------------------------------------------------------------------
 
@@ -790,7 +784,6 @@ public class Register
          */
         private ExprAST m_astNarrowed;
     }
-
 
     // ----- constants and fields ------------------------------------------------------------------
 

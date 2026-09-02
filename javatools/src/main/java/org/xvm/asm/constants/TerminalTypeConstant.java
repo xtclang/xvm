@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -32,7 +31,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * A TypeConstant that represents a type that is defined by some other structure within the module.
@@ -92,7 +90,6 @@ public class TerminalTypeConstant
     protected void resolveConstants() {
         m_constId = getConstantPool().getConstant(m_iDef);
     }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -1411,7 +1408,6 @@ public class TerminalTypeConstant
                 : this;
     }
 
-
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
@@ -1490,7 +1486,6 @@ public class TerminalTypeConstant
             throw new IllegalStateException("unexpected defining constant: " + constant);
         }
     }
-
 
     // ----- type comparison support ---------------------------------------------------------------
 
@@ -1960,7 +1955,6 @@ public class TerminalTypeConstant
                 : super.getCallableJitType();
     }
 
-
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
@@ -1982,7 +1976,6 @@ public class TerminalTypeConstant
             default -> throw new IllegalStateException("unexpected defining constant: " + constIdThis);
         };
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -2037,7 +2030,6 @@ public class TerminalTypeConstant
     public String getValueString() {
         return ensureResolvedConstant().getValueString();
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -2095,7 +2087,6 @@ public class TerminalTypeConstant
 
         return false;
     }
-
 
     // ----- Object methods ------------------------------------------------------------------------
 

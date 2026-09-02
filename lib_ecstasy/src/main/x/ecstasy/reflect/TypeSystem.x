@@ -2,7 +2,6 @@ import reflect.ClassTemplate;
 import reflect.InvalidType;
 import reflect.TypeTemplate;
 
-
 /**
  * A TypeSystem is the result of linking a set of one or more modules together.
  *
@@ -302,7 +301,6 @@ const TypeSystem {
      * A set of String values that represent named options used to form this `TypeSystem`.
      */
     ListSet<String> definedNames;
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 

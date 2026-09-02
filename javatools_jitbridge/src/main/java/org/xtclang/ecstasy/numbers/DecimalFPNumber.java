@@ -324,7 +324,6 @@ public abstract class DecimalFPNumber
         return (leftSevenBits & 0b0111110) == 0b0111110;
     }
 
-
     /**
      * @return true iff the value is a signaling NaN value
      */

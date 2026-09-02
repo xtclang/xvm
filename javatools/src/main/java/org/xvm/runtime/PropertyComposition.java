@@ -28,7 +28,6 @@ import org.xvm.runtime.template.reflect.xVar;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-
 /**
  * PropertyComposition represents a "custom" property class.
  */
@@ -68,7 +67,6 @@ public class PropertyComposition
         m_clzInception = clzInception;
         m_clzStruct    = this;
     }
-
 
     // ----- TypeComposition interface -------------------------------------------------------------
 
@@ -315,7 +313,6 @@ public class PropertyComposition
         return f_clzParent + "." + f_infoProp.getName() + (isStruct() ? ":struct" : "");
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -352,7 +349,6 @@ public class PropertyComposition
     private TypeInfo getParentInfo() {
         return f_clzParent.getInceptionType().ensureTypeInfo();
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

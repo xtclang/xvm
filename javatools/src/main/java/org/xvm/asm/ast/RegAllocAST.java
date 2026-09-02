@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -17,7 +16,6 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.RegAlloc;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Allocate a register, i.e. declare a local variable. This AST node is only an "expression" in the

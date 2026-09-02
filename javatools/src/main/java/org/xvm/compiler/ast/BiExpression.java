@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
@@ -12,7 +11,6 @@ import org.xvm.asm.ast.RelOpExprAST;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token;
-
 
 /**
  * Generic expression for something that follows the pattern "expression operator expression".
@@ -57,7 +55,6 @@ public abstract class BiExpression
         this.expr2    = expr2;
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -95,7 +92,6 @@ public abstract class BiExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -187,7 +183,6 @@ public abstract class BiExpression
         return new RelOpExprAST(ast1, op, ast2, typeResult);
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -199,7 +194,6 @@ public abstract class BiExpression
         public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

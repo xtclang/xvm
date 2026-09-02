@@ -1,10 +1,8 @@
 package org.xvm.runtime;
 
-
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * {@link OpSupport} represents a run-time facet of a type.
@@ -18,7 +16,6 @@ public interface OpSupport {
      * @return the corresponding ClassTemplate
      */
     ClassTemplate getTemplate(TypeConstant type);
-
 
     // ----- built-in binary operations ------------------------------------------------------------
 
@@ -213,7 +210,6 @@ public interface OpSupport {
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeERangeE(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
-
 
     // ----- built-in unary operations -------------------------------------------------------------
 

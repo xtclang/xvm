@@ -15,7 +15,6 @@ package enumSwitchTests {
 
     enum Color {Red, Orange, Yellow, Green, Blue, Indigo, Violet}
 
-
     void testSimpleSwitch() {
         assert verifySimpleSwitch(Red) == "one";
         assert verifySimpleSwitch(Blue) == "two";

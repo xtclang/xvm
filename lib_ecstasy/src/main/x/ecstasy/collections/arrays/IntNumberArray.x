@@ -14,7 +14,6 @@ mixin IntNumberArray<Element extends IntNumber>
      */
     function Element (Int) toElement;
 
-
     // ----- vector operations ---------------------------------------------------------------------
 
     /**
@@ -269,7 +268,6 @@ mixin IntNumberArray<Element extends IntNumber>
 
         return new Element[size](i -> ~this[i]).toArray(mutability, inPlace=True);
     }
-
 
     /**
      * Shift bits left. This is both a logical left shift and arithmetic left shift, for

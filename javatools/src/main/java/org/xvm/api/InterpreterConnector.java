@@ -130,7 +130,6 @@ public class InterpreterConnector
         return nResult;
     }
 
-
     // ----- data fields ---------------------------------------------------------------------------
 
     /**

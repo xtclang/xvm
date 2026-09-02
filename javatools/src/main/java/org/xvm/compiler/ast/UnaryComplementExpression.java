@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
@@ -13,7 +12,6 @@ import org.xvm.asm.op.GP_Compl;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
-
 /**
  * The "~" that precedes a value (or "!" for a Boolean).
  */
@@ -24,7 +22,6 @@ public class UnaryComplementExpression
     public UnaryComplementExpression(Token operator, Expression expr) {
         super(operator, expr);
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 

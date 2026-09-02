@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.reflect;
 
-
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -53,7 +52,6 @@ import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTProperty;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
-
 
 /**
  * Native Ref implementation.
@@ -396,7 +394,6 @@ public class xRef
                 : frame.assignValue(iReturn, xBoolean.FALSE);
     }
 
-
     // ----- VarSupport implementation -------------------------------------------------------------
 
     @Override
@@ -556,7 +553,6 @@ public class xRef
     public int invokeVarXor(Frame frame, RefHandle hTarget, ObjectHandle hArg) {
         return readOnly(frame);
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 
@@ -798,7 +794,6 @@ public class xRef
     protected boolean instanceOf(ObjectHandle hTarget, TypeHandle hType) {
         return hTarget.getType().isA(hType.getUnsafeDataType());
     }
-
 
     // ----- handle classes ------------------------------------------------------------------------
 
@@ -1180,7 +1175,6 @@ public class xRef
         private ObjectHandle    hReferent2;
         private int             index = -1;
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

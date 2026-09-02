@@ -522,7 +522,6 @@ module web.xtclang.org {
                          String? format   = Null)
             extends ParameterBinding(bindName, format);
 
-
     /**
      * A annotation to indicate that a [Parameter] is bound to a request header value.
      *

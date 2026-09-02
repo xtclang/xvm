@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Map;
@@ -68,7 +67,6 @@ import org.xvm.runtime.template.reflect.xClass.ClassHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
 import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
-
 
 /**
  * Native RTType implementation.
@@ -457,7 +455,6 @@ public class xRTType
             xInt64.makeHandle(((TypeHandle) hTarget).getUnsafeDataType().hashCode()));
     }
 
-
     // ----- IndexSupport (turtle types only) ------------------------------------------------------
 
     @Override
@@ -487,7 +484,6 @@ public class xRTType
             throws ExceptionHandle.WrapperException {
         throw xException.unsupported(frame).getException();
     }
-
 
     // ----- property implementations --------------------------------------------------------------
 
@@ -1090,7 +1086,6 @@ public class xRTType
         return frame.assignValue(iReturn, ensureEmptyTypeArray(container));
     }
 
-
     // ----- method implementations ----------------------------------------------------------------
 
     /**
@@ -1524,7 +1519,6 @@ public class xRTType
         return frame.assignValues(aiReturn, xBoolean.TRUE, hConstructor);
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -1731,7 +1725,6 @@ public class xRTType
         return frame.assignValue(0, xArray.createImmutableArray(clzArray, ahValue));
     }
 
-
     // ----- Composition and handle caching --------------------------------------------------------
 
     /**
@@ -1919,7 +1912,6 @@ public class xRTType
 
         private final TypeConstant f_typeForeign;
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 

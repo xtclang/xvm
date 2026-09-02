@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -22,7 +21,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
-
 
 /**
  * Represent a constant that specifies the intersection ("+") of two types.
@@ -399,7 +397,6 @@ public class IntersectionTypeConstant
         return type1.isNestMateOf(idClass) && type2.isNestMateOf(idClass);
     }
 
-
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
@@ -618,7 +615,6 @@ public class IntersectionTypeConstant
         return mapMerge;
     }
 
-
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
@@ -794,7 +790,6 @@ public class IntersectionTypeConstant
                info2.containsBody(info1.getIdentity()) ? info2 :
                                                          null; // ambiguous
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 

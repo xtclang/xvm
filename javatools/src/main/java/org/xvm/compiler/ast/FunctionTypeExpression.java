@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.List;
@@ -15,7 +14,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
-
 
 /**
  * A type expression for a function. This corresponds to the "function" keyword.
@@ -32,7 +30,6 @@ public class FunctionTypeExpression
         this.paramTypes   = params;
         this.lEndPos      = lEndPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -62,7 +59,6 @@ public class FunctionTypeExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -135,7 +131,6 @@ public class FunctionTypeExpression
         return aconst;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -171,7 +166,6 @@ public class FunctionTypeExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

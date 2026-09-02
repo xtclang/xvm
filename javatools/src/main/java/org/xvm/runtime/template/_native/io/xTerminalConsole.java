@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.io;
 
-
 import java.io.BufferedReader;
 import java.io.Console;
 import java.io.IOException;
@@ -39,7 +38,6 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.ConsoleLog;
-
 
 /**
  * The injectable "Console" that prints to the screen / terminal.
@@ -220,7 +218,6 @@ public class xTerminalConsole
         private final Path f_path;
         private final int  f_cMaxEntries;
     }
-
 
     // ---- constants and data fields --------------------------------------------------------------
 

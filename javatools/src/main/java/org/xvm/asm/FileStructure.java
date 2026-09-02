@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -43,7 +42,6 @@ import static org.xvm.util.Handy.readUtf8String;
 import static org.xvm.util.Handy.toInputStream;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writeUtf8String;
-
 
 /**
  * A representation of the file structure that contains one or more Ecstasy (XVM) modules. The

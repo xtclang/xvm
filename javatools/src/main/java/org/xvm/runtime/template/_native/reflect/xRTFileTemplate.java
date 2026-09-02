@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -45,7 +44,6 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.GenericArrayDelegate;
 
 import org.xvm.runtime.template._native.mgmt.xCoreRepository;
-
 
 /**
  * Native FileTemplate implementation.
@@ -307,7 +305,6 @@ public class xRTFileTemplate
         FileStructure module = componentTemplateHandle(hTarget).getFileStructure();
         return frame.assignValue(iReturn, xString.makeHandle(module.getModuleId().getName()));
     }
-
 
     // ----- ObjectHandle support ------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -17,7 +16,6 @@ import org.xvm.util.Hash;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Evaluates if a specified VM structure will be available in the container based on the version of
@@ -65,7 +63,6 @@ public class VersionMatchesCondition
         m_constVer    = pool.getConstant(m_iVer, VersionConstant.class);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -86,7 +83,6 @@ public class VersionMatchesCondition
     public VersionConstant getVersionConstant() {
         return m_constVer;
     }
-
 
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
@@ -131,7 +127,6 @@ public class VersionMatchesCondition
         return Relation.INDEP;
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -168,7 +163,6 @@ public class VersionMatchesCondition
         return "versionMatches(" + m_constStruct + ", " + m_constVer.getValueString() + ')';
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -185,7 +179,6 @@ public class VersionMatchesCondition
         writeMagnitude(out, m_constVer.getPosition());
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -193,7 +186,6 @@ public class VersionMatchesCondition
         return Hash.of(m_constStruct,
                Hash.of(m_constVer));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

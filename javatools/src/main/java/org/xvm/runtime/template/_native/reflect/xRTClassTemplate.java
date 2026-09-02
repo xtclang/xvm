@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +41,6 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
-
 
 /**
  * Native RTClassTemplate implementation.
@@ -170,7 +168,6 @@ public class xRTClassTemplate
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
-
 
     // ----- property implementations --------------------------------------------------------------
 
@@ -488,7 +485,6 @@ public class xRTClassTemplate
         return frame.assignValue(iReturn, xBoolean.makeHandle(fVirtual));
     }
 
-
     // ----- method implementations ----------------------------------------------------------------
 
     /**
@@ -505,7 +501,6 @@ public class xRTClassTemplate
         // ClassTemplate annotations are actually contributions
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
     }
-
 
     // ----- ObjectHandle support ------------------------------------------------------------------
 
@@ -572,7 +567,6 @@ public class xRTClassTemplate
         }
         return haEmpty;
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

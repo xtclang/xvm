@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.Arrays;
@@ -66,7 +65,6 @@ import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
-
 
 /**
  * Lambda expression is an inlined function. This version uses parameters that are assumed to be
@@ -192,7 +190,6 @@ public class LambdaExpression
         return CHILD_FIELDS;
     }
 
-
     // ----- code container methods ----------------------------------------------------------------
 
     @Override
@@ -218,7 +215,6 @@ public class LambdaExpression
         }
         collector.add(atypeRet);
     }
-
 
     // ----- compilation (Statement) ---------------------------------------------------------------
 
@@ -295,7 +291,6 @@ public class LambdaExpression
             }
         }
     }
-
 
     // ----- compilation (Expression) --------------------------------------------------------------
 
@@ -879,7 +874,6 @@ public class LambdaExpression
         return SideEffect.DefNo;
     }
 
-
     // ----- compilation helpers -------------------------------------------------------------------
 
     /**
@@ -1252,7 +1246,6 @@ public class LambdaExpression
         return atypeRets;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     public String toSignatureString() {
@@ -1292,7 +1285,6 @@ public class LambdaExpression
     public String toDumpString() {
         return toSignatureString() + " {...}";
     }
-
 
     // ----- CaptureContext ------------------------------------------------------------------------
 
@@ -1484,7 +1476,6 @@ public class LambdaExpression
 
         private final Collection<Register> f_setCapture;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -37,7 +36,6 @@ import org.xvm.compiler.Constants;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
-
 
 /**
  * The fully realized "flattened" information about a type.
@@ -1180,7 +1178,6 @@ public class TypeInfoReal
         return map;
     }
 
-
     @Override
     public IdentityConstant findName(ConstantPool pool, String sName) {
         PropertyInfo prop = findProperty(sName);
@@ -2084,7 +2081,6 @@ public class TypeInfoReal
         return f_type.getConstantPool();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -2223,7 +2219,6 @@ public class TypeInfoReal
         return sb.toString();
     }
 
-
     // ----- deferred TypeInfo creation ------------------------------------------------------------
 
     private void ensureCaches() {
@@ -2277,7 +2272,6 @@ public class TypeInfoReal
     public boolean hasErrors() {
         return m_fHasErrors;
     }
-
 
     // ----- internal helpers ----------------------------------------------------------------------
 

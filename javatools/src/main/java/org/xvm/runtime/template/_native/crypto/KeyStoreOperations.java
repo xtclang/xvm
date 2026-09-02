@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.crypto;
 
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -34,7 +33,6 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
-
 
 /**
  * Pure Java keystore and certificate operations that replace the previous native tool

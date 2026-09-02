@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -11,7 +10,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.TypedefStructure;
-
 
 /**
  * Represent a "typedef" constant, which identifies a specific typedef structure.
@@ -51,7 +49,6 @@ public class TypedefConstant
             throws IOException {
         super(pool, format, in);
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -93,14 +90,12 @@ public class TypedefConstant
         return typeReferred.resolveTypedefs();
     }
 
-
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
     public IdentityConstant replaceParentConstant(IdentityConstant idParent) {
         return new TypedefConstant(getConstantPool(), idParent, getName());
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -137,7 +132,6 @@ public class TypedefConstant
     public IdentityConstant appendTrailingSegmentTo(IdentityConstant that) {
         return that.getConstantPool().ensureTypedefConstant(that, getName());
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

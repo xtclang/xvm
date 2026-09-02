@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -24,7 +23,6 @@ import static java.lang.constant.ConstantDescs.CD_Throwable;
 
 import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_nException;
-
 
 /**
  * FINALLY ; begin a "finally" handler (implicit EXIT/ENTER and VAR_I of type "Exception?")

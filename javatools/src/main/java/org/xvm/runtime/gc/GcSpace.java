@@ -61,7 +61,6 @@ public interface GcSpace {
     void setField(long address, int index, long handle)
         throws SegFault;
 
-
     /**
      * Add a gc root to this space.
      * <p>

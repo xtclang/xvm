@@ -1,11 +1,9 @@
 package org.xvm.asm;
 
-
 import java.util.Map;
 
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * Resolver of a generic type name into an actual type.

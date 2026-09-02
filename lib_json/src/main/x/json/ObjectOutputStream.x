@@ -1,7 +1,6 @@
 import ecstasy.io.Writer;
 import ecstasy.io.ObjectOutput;
 
-
 /**
  * An [ObjectOutput] implementation for JSON serialization that emits the serialized form directly
  * to an underlying [Writer].
@@ -52,7 +51,6 @@ class ObjectOutputStream(Schema schema, Writer writer)
         return new @CloseCap ElementOutputStream<Nullable>(Null) ;
     }
 
-
     // ----- ObjectOutput implementation -----------------------------------------------------------
 
     @Override
@@ -78,7 +76,6 @@ class ObjectOutputStream(Schema schema, Writer writer)
         current = Null;
         closed  = True;
     }
-
 
     // ----- DocOutputStream -----------------------------------------------------------------------
 
@@ -324,7 +321,6 @@ class ObjectOutputStream(Schema schema, Writer writer)
         }
     }
 
-
     // ----- ElementOutputStream -------------------------------------------------------------------
 
     /**
@@ -393,7 +389,6 @@ class ObjectOutputStream(Schema schema, Writer writer)
             return super(cause);
         }
     }
-
 
     // ----- ArrayOutputStream ---------------------------------------------------------------------
 
@@ -475,7 +470,6 @@ class ObjectOutputStream(Schema schema, Writer writer)
         }
     }
 
-
     // ----- FieldOutputStream ---------------------------------------------------------------------
 
     /**
@@ -553,7 +547,6 @@ class ObjectOutputStream(Schema schema, Writer writer)
             return super(cause);
         }
     }
-
 
     // ----- Pointer support -----------------------------------------------------------------------
 

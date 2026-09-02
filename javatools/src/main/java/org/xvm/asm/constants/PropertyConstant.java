@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -20,7 +19,6 @@ import org.xvm.asm.ast.PropertyExprAST;
 import org.xvm.compiler.ast.Context;
 
 import org.xvm.javajit.TypeSystem;
-
 
 /**
  * Represent a property constant, which identifies a particular property structure.

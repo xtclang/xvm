@@ -1,6 +1,5 @@
 package org.xvm.util;
 
-
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -519,7 +518,6 @@ public class SetTest {
 
     static final Random rnd = new Random();
 
-
     // ----- unit tests ----------------------------------------------------------------------------
 
     public static class StringData
@@ -579,16 +577,16 @@ public class SetTest {
     public void repro1() {
         // Exception on set# 0 in step# 49: null
         // java.lang.NullPointerException
-        // 	at org.xvm.util.ListSet.indexSearch(ListSet.java:770)
-        // 	at org.xvm.util.ListSet.verifyIterator(ListSet.java:499)
-        // 	at org.xvm.util.ListSet.access$800(ListSet.java:18)
-        // 	at org.xvm.util.ListSet$SafeIterator.synced(ListSet.java:1000)
-        // 	at org.xvm.util.ListSet$SafeIterator.<init>(ListSet.java:882)
-        // 	at org.xvm.util.ListSet.iterator(ListSet.java:163)
-        // 	at org.xvm.util.SetTest$OpIter.iter(SetTest.java:519)
-        // 	at org.xvm.util.SetTest$OpIter.test(SetTest.java:513)
-        // 	at org.xvm.util.SetTest.randomTest(SetTest.java:147)
-        // 	at org.xvm.util.SetTest.main(SetTest.java:119)
+        //  at org.xvm.util.ListSet.indexSearch(ListSet.java:770)
+        //  at org.xvm.util.ListSet.verifyIterator(ListSet.java:499)
+        //  at org.xvm.util.ListSet.access$800(ListSet.java:18)
+        //  at org.xvm.util.ListSet$SafeIterator.synced(ListSet.java:1000)
+        //  at org.xvm.util.ListSet$SafeIterator.<init>(ListSet.java:882)
+        //  at org.xvm.util.ListSet.iterator(ListSet.java:163)
+        //  at org.xvm.util.SetTest$OpIter.iter(SetTest.java:519)
+        //  at org.xvm.util.SetTest$OpIter.test(SetTest.java:513)
+        //  at org.xvm.util.SetTest.randomTest(SetTest.java:147)
+        //  at org.xvm.util.SetTest.main(SetTest.java:119)
 
         String sb = """
                 [0] remove HTM -> false
@@ -650,14 +648,14 @@ public class SetTest {
 
         // Exception on set# 0 in step# 27: null
         // java.lang.AssertionError
-        // 	at org.xvm.util.ListSet.indexAdjust(ListSet.java:825)
-        // 	at org.xvm.util.ListSet.compact(ListSet.java:377)
-        // 	at org.xvm.util.ListSet.ensureSpace(ListSet.java:311)
-        // 	at org.xvm.util.ListSet.addInternal(ListSet.java:255)
-        // 	at org.xvm.util.ListSet.add(ListSet.java:120)
-        // 	at org.xvm.util.SetTest$OpAdd.test(SetTest.java:485)
-        // 	at org.xvm.util.SetTest.replayTest(SetTest.java:296)
-        // 	at org.xvm.util.SetTest.repro2(SetTest.java:174)
+        //  at org.xvm.util.ListSet.indexAdjust(ListSet.java:825)
+        //  at org.xvm.util.ListSet.compact(ListSet.java:377)
+        //  at org.xvm.util.ListSet.ensureSpace(ListSet.java:311)
+        //  at org.xvm.util.ListSet.addInternal(ListSet.java:255)
+        //  at org.xvm.util.ListSet.add(ListSet.java:120)
+        //  at org.xvm.util.SetTest$OpAdd.test(SetTest.java:485)
+        //  at org.xvm.util.SetTest.replayTest(SetTest.java:296)
+        //  at org.xvm.util.SetTest.repro2(SetTest.java:174)
 
         String sb = """
                 [0] add UAY -> true

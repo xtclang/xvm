@@ -1,11 +1,9 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.InitAst;
-
 
 /**
  * A synthetic AST that represents a "default initialization" for the currently constructed class.

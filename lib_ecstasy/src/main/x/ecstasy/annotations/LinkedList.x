@@ -102,7 +102,6 @@ annotation LinkedList<Element>
      */
     typedef Property<Element, Element?, Var<Element?>> as Link;
 
-
     // ----- constructor ---------------------------------------------------------------------------
 
     /**
@@ -142,7 +141,6 @@ annotation LinkedList<Element>
         // head of the list (by being the Element type), or that a "next" is specified
         assert next != Null || container.is(Element);
     }
-
 
     // ----- metadata ------------------------------------------------------------------------------
 
@@ -241,7 +239,6 @@ annotation LinkedList<Element>
         }
         return head, nextLink, prevLink, headVar;
     }
-
 
     // ----- List operations -----------------------------------------------------------------------
 
@@ -617,7 +614,6 @@ annotation LinkedList<Element>
         return new LinkedListCursor(index);
     }
 
-
     // ----- LinkedListCursor ----------------------------------------------------------------------
 
     /**
@@ -645,7 +641,6 @@ annotation LinkedList<Element>
             // seek to the desired position
             this.index = index;
         }
-
 
         // ----- properties ------------------------------------------------------------------------
 
@@ -705,7 +700,6 @@ annotation LinkedList<Element>
          * True iff the LinkedList does not allow modifications.
          */
         protected Boolean readOnly;
-
 
         // ----- Cursor operations -------------------------------------------------------------
 
@@ -856,7 +850,6 @@ annotation LinkedList<Element>
             nextLink.set(oldNode, Null);
             prevLink?.set(oldNode, Null);
         }
-
 
         // ----- internal operations -----------------------------------------------------------
 

@@ -76,7 +76,7 @@ public class Runner extends Launcher<RunnerOptions> {
         // repository setup
         var opts = options();
         var repo = configureLibraryRepo(opts.getModulePath());
-    	checkErrors("repository setup");
+        checkErrors("repository setup");
 
         if (opts.showVersion()) {
             showSystemVersion(repo);

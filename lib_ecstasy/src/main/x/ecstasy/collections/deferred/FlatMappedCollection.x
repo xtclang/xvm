@@ -19,7 +19,6 @@ class FlatMappedCollection<Element, FromElement>
         this.flatten = flatten;
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     /**
@@ -33,7 +32,6 @@ class FlatMappedCollection<Element, FromElement>
         flatten = Null;
         super();
     }
-
 
     @Override
     protected Iterator<Element> unreifiedIterator() {
@@ -276,7 +274,6 @@ class FlatMappedCollection<Element, FromElement>
             super(accumulator);
         }
     }
-
 
     // ----- Collection interface ------------------------------------------------------------------
 

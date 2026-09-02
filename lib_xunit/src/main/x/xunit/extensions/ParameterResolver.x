@@ -78,7 +78,6 @@ interface ParameterResolver
         return paramValues, unresolved;
     }
 
-
     private static <ParamType> conditional Object resolveParameter(ExecutionContext context, Parameter<ParamType> param, Type<ParamType> type) {
         ParameterResolver[] resolvers = context.registry.getAll(ParameterResolver);
         for (ParameterResolver resolver : resolvers) {

@@ -104,7 +104,6 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
      */
     conditional MethodTemplate hasTemplate();
 
-
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override

@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -13,7 +12,6 @@ import org.xvm.runtime.Frame;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Base class for JUMP, GUARD_E, CATCH_E and GUARDALL op-codes.

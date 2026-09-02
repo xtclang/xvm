@@ -19,7 +19,6 @@ import org.xvm.javajit.TextSupport;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
-
 /**
  * GP_ADD rvalue1, rvalue2, lvalue ; T + T -> T
  */

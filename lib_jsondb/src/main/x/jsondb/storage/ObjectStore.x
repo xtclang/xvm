@@ -270,7 +270,6 @@ service ObjectStore(Catalog catalog, DboInfo info)
      */
     protected Int triggerWriteId = NO_TX;
 
-
     // ----- life cycle ----------------------------------------------------------------------------
 
     /**
@@ -365,7 +364,6 @@ service ObjectStore(Catalog catalog, DboInfo info)
             assert as $"Illegal status: {status}";
         }
     }
-
 
     // ----- transaction handling ------------------------------------------------------------------
 
@@ -633,7 +631,6 @@ service ObjectStore(Catalog catalog, DboInfo info)
         TODO
     }
 
-
     // ----- IO handling ---------------------------------------------------------------------------
 
     /**
@@ -832,7 +829,6 @@ service ObjectStore(Catalog catalog, DboInfo info)
         @Inject Clock clock;
         lastAccessed = clock.now;
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 

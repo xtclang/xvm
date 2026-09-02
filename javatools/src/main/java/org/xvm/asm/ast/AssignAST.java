@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -14,7 +13,6 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.BinOpAssign;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Assign an "L-Value", i.e. store a value in a variable, a property, an array element, etc.

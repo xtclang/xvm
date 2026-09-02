@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -26,7 +25,6 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * VAR_CN rvalue-ref, STRING ; (next register is a named capture (a de-ref) of a Ref/Var)

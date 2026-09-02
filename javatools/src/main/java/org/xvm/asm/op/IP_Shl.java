@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -9,7 +8,6 @@ import java.lang.classfile.CodeBuilder;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInPlaceAssign;
-
 
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -22,7 +20,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
-
 
 /**
  * IP_SHL rvalue-target, rvalue2 ; T <<= T

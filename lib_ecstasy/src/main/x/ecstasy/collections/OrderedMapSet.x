@@ -31,12 +31,10 @@ class OrderedMapSet<Element extends Orderable>
         super(that);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
     protected CopyableOrderedMap contents;
-
 
     // ----- read operations -----------------------------------------------------------------------
 

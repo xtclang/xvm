@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -33,7 +32,6 @@ import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
-
 
 /**
  * Represents the compile time and runtime information (aggregated across all contributions and
@@ -1444,7 +1442,6 @@ public class PropertyInfo
         return m_type.getConstantPool();
     }
 
-
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
@@ -1578,7 +1575,6 @@ public class PropertyInfo
 
         return sb.toString();
     }
-
 
     // ----- constants and fields ------------------------------------------------------------------
 

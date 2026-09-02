@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.reflect;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -21,7 +20,6 @@ import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xException;
-
 
 /**
  * Native Var implementation.

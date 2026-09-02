@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -24,7 +23,6 @@ import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
-
 
 /**
  * Native MethodTemplate implementation.
@@ -91,7 +89,6 @@ public class xRTMethodTemplate
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
 
-
     // ----- property implementations --------------------------------------------------------------
 
     /**
@@ -114,7 +111,6 @@ public class xRTMethodTemplate
         MethodStructure method = (MethodStructure) hMethod.getComponent();
         return frame.assignValue(iReturn, xBoolean.makeHandle(method.hasCode()));
     }
-
 
     // ----- methods implementations ---------------------------------------------------------------
 
@@ -175,7 +171,6 @@ public class xRTMethodTemplate
         return frame.assignValues(aiReturn, ahReturn);
     }
 
-
     // ----- Composition caching -------------------------------------------------------------------
 
     /**
@@ -205,7 +200,6 @@ public class xRTMethodTemplate
     static ComponentTemplateHandle makeHandle(MethodStructure method) {
         return new ComponentTemplateHandle(ensureMethodTemplateComposition(), method);
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

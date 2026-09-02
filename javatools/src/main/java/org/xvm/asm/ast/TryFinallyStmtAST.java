@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -10,7 +9,6 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.TryFinallyStmt;
 import static org.xvm.util.Handy.indentLines;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * A "try..finally" statement (with optional catches).

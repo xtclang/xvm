@@ -5,7 +5,6 @@ import reflect.InvalidType;
 
 import src.Lexer.Token;
 
-
 /**
  * Represents a child of a NamedTypeExpression, for example:
  *

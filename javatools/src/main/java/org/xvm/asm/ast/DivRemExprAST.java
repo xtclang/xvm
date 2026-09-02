@@ -1,12 +1,10 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * A DivRem (/%) expression. It differs from {@link RelOpExprAST} that it has two return types.

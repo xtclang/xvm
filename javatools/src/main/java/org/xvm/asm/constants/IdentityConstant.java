@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataOutput;
 import java.io.IOException;
 
@@ -37,7 +36,6 @@ public abstract class IdentityConstant
     protected IdentityConstant(ConstantPool pool) {
         super(pool);
     }
-
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
@@ -696,7 +694,6 @@ public abstract class IdentityConstant
         m_component = null;
     }
 
-
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
@@ -730,7 +727,6 @@ public abstract class IdentityConstant
         }
         return sb;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -771,7 +767,6 @@ public abstract class IdentityConstant
     @Override
     protected abstract int compareDetails(Constant that);
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -795,7 +790,6 @@ public abstract class IdentityConstant
         // package
         super.assemble(out);
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

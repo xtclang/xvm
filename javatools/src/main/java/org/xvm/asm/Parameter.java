@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -19,7 +18,6 @@ import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * A Parameter is a combination of a type and a name, representing a type parameter, a method
@@ -95,7 +93,6 @@ public class Parameter
         f_iParam       = fReturn ? -1 - index : index;
         f_fOrdinary    = !fSpecial;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -388,7 +385,6 @@ public class Parameter
         return that;
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -483,7 +479,6 @@ public class Parameter
         out.println(this);
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -506,7 +501,6 @@ public class Parameter
                 && Handy.equals(this.m_constName, that.m_constName)
                 && Handy.equals(this.m_constDefault, that.m_constDefault);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

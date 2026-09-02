@@ -142,7 +142,6 @@ interface ComponentTemplate
      */
     ComponentTemplate![] children();
 
-
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override

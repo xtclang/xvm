@@ -1,8 +1,6 @@
 package org.xvm.runtime;
 
-
 import org.xvm.runtime.Fiber.FiberStatus;
-
 
 /**
  * {@link FiberQueue} represents a queue-like data structure holding all pending Fibers and

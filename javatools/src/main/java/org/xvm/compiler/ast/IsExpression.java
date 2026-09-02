@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -26,7 +25,6 @@ import org.xvm.compiler.ast.Context.Branch;
 
 import org.xvm.util.Severity;
 
-
 /**
  * Expression for "expression.is(expression)".
  */
@@ -39,7 +37,6 @@ public class IsExpression
 
         lEndPos = tokClose.getEndPosition();
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -287,14 +284,12 @@ public class IsExpression
                 atypeRet.length == 1 ? null : atypeRet[1]);
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString() {
         return String.valueOf(expr1) + '.' + operator.getId().TEXT + '(' + expr2 + ')';
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

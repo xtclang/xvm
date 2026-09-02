@@ -24,14 +24,12 @@
      */
     enum Rounding {TiesToEven, TiesToAway, TowardPositive, TowardZero, TowardNegative}
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
     static conditional Range<UInt8> range() {
         TODO("implement floating point range()");
     }
-
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -56,7 +54,6 @@
     construct(Byte[] bytes) {
         super(bytes);
     }
-
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -178,7 +175,6 @@
      * referred to as _w_.
      */
     @RO Int exponentBitLength;
-
 
     // ----- floating point operations -------------------------------------------------------------
 
@@ -361,7 +357,6 @@
      * @return the next representable floating point value that precedes this value, if there is one
      */
     FPNumber nextDown();
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

@@ -15,7 +15,6 @@ class StringWriter(Writer writer)
     @Override
     public/private Int lineStartOffset;
 
-
     // ----- Appender methods ----------------------------------------------------------------------
 
     @Override

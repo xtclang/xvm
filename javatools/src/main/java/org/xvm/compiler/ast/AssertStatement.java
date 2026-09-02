@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -46,7 +45,6 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
-
 /**
  * An assert statement.
  */
@@ -77,7 +75,6 @@ public class AssertStatement
         this.message  = exprMsg;
         this.lEndPos  = lEndPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -183,7 +180,6 @@ public class AssertStatement
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -611,7 +607,6 @@ public class AssertStatement
         }
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -643,7 +638,6 @@ public class AssertStatement
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

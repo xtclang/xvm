@@ -201,7 +201,6 @@ service SimpleResourceRegistry
         resources.clear();
     }
 
-
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override

@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -17,7 +16,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
-
 
 /**
  * JMP_FALSE rvalue, addr ; jump if value is Boolean.False

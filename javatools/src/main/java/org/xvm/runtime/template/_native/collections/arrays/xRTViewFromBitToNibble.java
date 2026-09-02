@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
@@ -19,7 +18,6 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 import org.xvm.runtime.template.numbers.xInt16;
 import org.xvm.runtime.template.numbers.xNibble;
-
 
 /**
  * The native RTViewFromBit<Nibble> implementation.
@@ -56,7 +54,6 @@ public class xRTViewFromBitToNibble
         }
         return new ViewHandle(clzView, hSource, hSource.m_cSize/4, mutability);
     }
-
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.compiler;
 
-
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
@@ -13,7 +12,6 @@ import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
 import org.xvm.util.Severity;
-
 
 /**
  * A module compiler for Ecstasy code.
@@ -45,7 +43,6 @@ public class Compiler {
         m_stmtModule = stmtModule;
         m_errs       = errs;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -99,7 +96,6 @@ public class Compiler {
     public boolean isAbortDesired() {
         return m_errs.isAbortDesired();
     }
-
 
     // ----- public API ----------------------------------------------------------------------------
 
@@ -323,14 +319,12 @@ public class Compiler {
         setStage(Stage.Discarded);
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public String toString() {
         return "Compiler (Module=" + m_stmtModule.getName() + ", Stage=" + getStage() + ")";
     }
-
 
     // ----- internal helpers ----------------------------------------------------------------------
 
@@ -371,7 +365,6 @@ public class Compiler {
         }
     }
 
-
     // ----- data members --------------------------------------------------------------------------
 
     /**
@@ -400,7 +393,6 @@ public class Compiler {
      * getting all of the nodes to complete that stage.
      */
     private StageMgr m_mgr;
-
 
     // ----- inner class: Stage enumeration --------------------------------------------------------
 
@@ -533,7 +525,6 @@ public class Compiler {
          */
         private static final Stage[] STAGES = Stage.values();
     }
-
 
     // ----- compiler errors -----------------------------------------------------------------------
 

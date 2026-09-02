@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -22,7 +21,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 
 import org.xvm.runtime.template.collections.xArray;
-
 
 /**
  * Native PropertyTemplate implementation.
@@ -82,7 +80,6 @@ public class xRTPropertyTemplate
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
-
 
     // ----- property implementations --------------------------------------------------------------
 
@@ -152,7 +149,6 @@ public class xRTPropertyTemplate
         return xArray.createAndFill(frame, clzArray, cAnnos, supplier, iReturn);
     }
 
-
     // ----- method implementations ----------------------------------------------------------------
 
     /**
@@ -172,7 +168,6 @@ public class xRTPropertyTemplate
 
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
     }
-
 
     // ----- Composition caching -------------------------------------------------------------------
 
@@ -206,7 +201,6 @@ public class xRTPropertyTemplate
         return clz;
     }
 
-
     // ----- ObjectHandle support ------------------------------------------------------------------
 
     /**
@@ -219,7 +213,6 @@ public class xRTPropertyTemplate
     static ComponentTemplateHandle makePropertyHandle(PropertyStructure prop) {
         return new ComponentTemplateHandle(ensurePropertyTemplateComposition(), prop);
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

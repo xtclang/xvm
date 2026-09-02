@@ -20,7 +20,6 @@ service RTSigner
         this.privateKey = privateKey;
     }
 
-
     // ----- Signer API ----------------------------------------------------------------------------
 
     @Override
@@ -45,7 +44,6 @@ service RTSigner
     String toString() {
         return $"{algorithm.name.quoted()} signer for {privateKey}";
     }
-
 
     // ----- native helpers ------------------------------------------------------------------------
 

@@ -17,7 +17,6 @@ service DirRepository
         this.dir = dir;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     @Inject Clock clock;
@@ -32,7 +31,6 @@ service DirRepository
      */
     private Map<String, ModuleInfo> modulesByName = new HashMap();
     private Time                    lastScan      = Time.EPOCH;
-
 
     // ----- ModuleRepository API ------------------------------------------------------------------
 
@@ -69,7 +67,6 @@ service DirRepository
 
     @Override
     String toString() = $"DirRepository({dir})";
-
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -133,7 +130,6 @@ service DirRepository
         return True;
     }
 
-
     // ----- inner class: ModuleInfo ---------------------------------------------------------------
 
     static const ModuleInfo {
@@ -159,7 +155,6 @@ service DirRepository
             }
         }
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

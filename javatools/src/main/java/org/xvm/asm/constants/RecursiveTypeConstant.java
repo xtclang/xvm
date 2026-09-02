@@ -23,7 +23,6 @@ import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.util.Hash;
 
-
 /**
  * Represent a type for a recursive "typedef" constant.
  */
@@ -55,7 +54,6 @@ public class RecursiveTypeConstant
         super(pool, format, in);
     }
 
-
     // ----- type specific methods -----------------------------------------------------------------
 
     /**
@@ -71,7 +69,6 @@ public class RecursiveTypeConstant
     protected TypeConstant getReferredToType() {
         return ((TypedefConstant) ensureResolvedConstant()).getReferredToType();
     }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -260,14 +257,12 @@ public class RecursiveTypeConstant
         return null;
     }
 
-
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
     public TypeInfo ensureTypeInfoInternal(ErrorListener errs) {
         return getConstantPool().typeObject().ensureTypeInfo(errs);
     }
-
 
     // ----- run-time support ----------------------------------------------------------------------
 
@@ -286,7 +281,6 @@ public class RecursiveTypeConstant
         return getReferredToType().callCompare(frame, hValue1, hValue2, iReturn);
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -303,7 +297,6 @@ public class RecursiveTypeConstant
     public TypeConstant resolveTypedefs() {
         return this;
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

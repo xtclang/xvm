@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.ErrorListener;
@@ -9,7 +8,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
-
 
 /**
  * A decorated type expression is a type expression preceded by a keyword that adjusts the meaning
@@ -23,7 +21,6 @@ public class DecoratedTypeExpression
         this.keyword = keyword;
         this.type    = type;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -46,7 +43,6 @@ public class DecoratedTypeExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- TypeExpression methods ----------------------------------------------------------------
 
@@ -89,7 +85,6 @@ public class DecoratedTypeExpression
         }
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -101,7 +96,6 @@ public class DecoratedTypeExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

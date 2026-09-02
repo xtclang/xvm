@@ -1,6 +1,5 @@
 package org.xvm.compiler;
 
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,7 +17,6 @@ import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.isHexit;
 import static org.xvm.util.Handy.readFileBytes;
 import static org.xvm.util.Handy.readFileChars;
-
 
 /**
  * A representation of an Ecstasy source code file, handling the first two phases of lexical analysis
@@ -105,7 +103,6 @@ public class Source
         m_ach = ach;
         m_cch = ach.length;
     }
-
 
     // ----- public API ----------------------------------------------------------------------------
 
@@ -531,7 +528,6 @@ public class Source
     public String toRawString() {
         return new String(m_ach);
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 

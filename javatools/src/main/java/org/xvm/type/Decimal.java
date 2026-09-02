@@ -1,6 +1,5 @@
 package org.xvm.type;
 
-
 import java.io.DataOutput;
 import java.io.IOException;
 
@@ -8,7 +7,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
-
 
 /**
  * A representation of an IEEE-754-2008 decimal.
@@ -307,7 +305,6 @@ public abstract class Decimal {
 
         return bdecThis.compareTo(bdecThat);
     }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -654,7 +651,6 @@ public abstract class Decimal {
      */
     public abstract byte[] toByteArray();
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -677,7 +673,6 @@ public abstract class Decimal {
 
         return isSignalingNaN() ? "sNaN" : "NaN";
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

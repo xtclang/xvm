@@ -84,7 +84,6 @@ service JsonLogStoreBase<Element extends immutable Const>
      */
     protected File[] rolledFiles = new File[];
 
-
     // ----- transaction API exposed to TxManager --------------------------------------------------
 
     @Override

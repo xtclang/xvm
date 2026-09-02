@@ -34,7 +34,6 @@ const Average<Element extends Number, Quotient extends Number>
         return accumulator.as(ElementSummer<Element>).calculateAverage(Quotient);
     }
 
-
     // ----- child aggregators ---------------------------------------------------------------------
 
     private static const ElementAggregator<Value extends Number>
@@ -78,7 +77,6 @@ const Average<Element extends Number, Quotient extends Number>
             return accumulator.as(ResultSummer<Value>).calculateAverage(Quotient);
         }
     }
-
 
     // ----- private inner classes -----------------------------------------------------------------
 

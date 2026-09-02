@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -11,7 +10,6 @@ import java.util.Objects;
 import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.MultiExpr;
-
 
 /**
  * A expression that represents multiple expressions.

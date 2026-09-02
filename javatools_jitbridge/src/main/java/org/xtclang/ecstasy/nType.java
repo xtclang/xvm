@@ -169,7 +169,6 @@ public class nType
         }
     }
 
-
     /**
      * "Orderable" interface  support.
      */

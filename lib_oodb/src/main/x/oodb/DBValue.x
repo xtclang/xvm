@@ -29,14 +29,12 @@ interface DBValue<Value extends immutable Const>
         throw new ReadOnly($"The value at \"{dbPath}\" cannot be modified");
     }
 
-
     // ----- DBObject methods ----------------------------------------------------------------------
 
     @Override
     @RO DBCategory dbCategory.get() {
         return DBValue;
     }
-
 
     // ----- transactional information -------------------------------------------------------------
 
@@ -64,7 +62,6 @@ interface DBValue<Value extends immutable Const>
     @Override
     interface TxChange
             extends DBChange<Value> {}
-
 
     // ----- transaction trigger API ---------------------------------------------------------------
 

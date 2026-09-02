@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.ErrorListener;
@@ -12,7 +11,6 @@ import org.xvm.asm.constants.UnresolvedTypeConstant;
 import org.xvm.compiler.Compiler;
 
 import org.xvm.util.Severity;
-
 
 /**
  * A type expression that can't figure out how to be a type expression. It pretends to be a type,
@@ -26,7 +24,6 @@ public class BadTypeExpression
         this.nonType = nonType;
     }
 
-
     // ----- TypeExpression methods ----------------------------------------------------------------
 
     @Override
@@ -34,7 +31,6 @@ public class BadTypeExpression
         return new UnresolvedTypeConstant(pool(),
                 new UnresolvedNameConstant(pool(), nonType.toString()));
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -58,7 +54,6 @@ public class BadTypeExpression
         return CHILD_FIELDS;
     }
 
-
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
@@ -71,14 +66,12 @@ public class BadTypeExpression
         return null;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString() {
         return "/* NOT A TYPE!!! */ " + nonType;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

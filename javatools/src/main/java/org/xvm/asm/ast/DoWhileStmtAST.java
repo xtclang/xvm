@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -8,7 +7,6 @@ import java.io.IOException;
 import static org.xvm.asm.ast.BinaryAST.NodeType.DoWhileStmt;
 
 import static org.xvm.util.Handy.indentLines;
-
 
 /**
  * A "do..while" statement.

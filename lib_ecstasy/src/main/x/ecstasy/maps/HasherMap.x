@@ -856,7 +856,6 @@ class HasherMap<Key, Value>
             advanceWithinBucketArray();
         }
 
-
         // ----- properties --------------------------------------------------------------------
 
         /**

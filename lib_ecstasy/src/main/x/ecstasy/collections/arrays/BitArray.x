@@ -1,7 +1,6 @@
 import numbers.IntConvertible;
 import numbers.FPConvertible;
 
-
 /**
  * Functionality specific to an array of bits.
  */
@@ -18,7 +17,6 @@ mixin BitArray<Element extends Bit>
 
     private Element Zero;
     private Element One;
-
 
     // ----- bitwise operations --------------------------------------------------------------------
 
@@ -392,7 +390,6 @@ mixin BitArray<Element extends Bit>
         return count;
     }
 
-
     // ----- view support --------------------------------------------------------------------------
 
     /**
@@ -682,7 +679,6 @@ mixin BitArray<Element extends Bit>
 
         return new Array<Byte>(new Translator(this), mutability);
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 
@@ -1139,7 +1135,6 @@ mixin BitArray<Element extends Bit>
     FloatN toFloatN() {
         return new FloatN(this);
     }
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 

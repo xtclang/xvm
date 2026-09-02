@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -50,7 +49,6 @@ import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
-
 /**
  * An XVM Structure that represents an entire Class. This is also the base class for module and
  * package structures.
@@ -71,7 +69,6 @@ public class ClassStructure
                              ConditionalConstant condition) {
         super(xsParent, nFlags, constId, condition);
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -876,7 +873,6 @@ public class ClassStructure
         return listIncorporates;
     }
 
-
     // ----- Tuple support -------------------------------------------------------------------------
 
     /**
@@ -925,7 +921,6 @@ public class ClassStructure
         }
         return Collections.emptyList();
     }
-
 
     // ----- component methods ---------------------------------------------------------------------
 
@@ -2816,7 +2811,6 @@ public class ClassStructure
                 containsSubstitutableMethod(pool, signature, access, fFunction, Collections.emptyList());
     }
 
-
     // ----- run-time support ----------------------------------------------------------------------
 
     /**
@@ -3328,7 +3322,6 @@ public class ClassStructure
         }
     }
 
-
     // ----- XvmStructure/Component methods --------------------------------------------------------
 
     @Override
@@ -3438,7 +3431,6 @@ public class ClassStructure
 
         return sb.toString();
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -3617,7 +3609,6 @@ public class ClassStructure
         return prop;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -3731,7 +3722,6 @@ public class ClassStructure
         }
     }
 
-
     // ----- inner class: SimpleTypeResolver -------------------------------------------------------
 
     /**
@@ -3813,7 +3803,6 @@ public class ClassStructure
         private final ConstantPool f_pool;
         private List<TypeConstant> m_listActual;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

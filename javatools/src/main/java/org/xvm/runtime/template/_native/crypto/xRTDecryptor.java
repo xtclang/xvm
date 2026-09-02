@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.crypto;
 
-
 import java.security.GeneralSecurityException;
 import java.security.Key;
 
@@ -25,7 +24,6 @@ import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.CipherHandle;
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.KeyForm;
-
 
 /**
  * Native implementation of the xRTDecryptor.x service.

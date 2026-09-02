@@ -37,7 +37,6 @@ service RTServerSocket(SocketAddress localAddress)
         return "ServerSocket";
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     // TODO

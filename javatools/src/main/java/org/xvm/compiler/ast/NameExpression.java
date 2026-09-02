@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -53,7 +52,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
-
 
 /**
  * A name expression specifies a name. This handles a simple name, a qualified name, a dot name
@@ -236,7 +234,6 @@ public class NameExpression
         this.params  = params;
         this.lEndPos = lEndPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -455,7 +452,6 @@ public class NameExpression
         return CHILD_FIELDS;
     }
 
-
     // ----- LValue methods ------------------------------------------------------------------------
 
     @Override
@@ -502,7 +498,6 @@ public class NameExpression
     public void resetLValueTypes(Context ctx) {
         ctx.restoreOriginalType(getName());
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -1790,7 +1785,6 @@ public class NameExpression
                 ? new ConstantExprAST(toConstant())
                 : super.getExprAST(ctx);
     }
-
 
     // ----- name resolution helpers ---------------------------------------------------------------
 
@@ -3262,7 +3256,6 @@ public class NameExpression
         }
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -3297,7 +3290,6 @@ public class NameExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

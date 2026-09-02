@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import java.math.RoundingMode;
 
 import org.xvm.asm.ClassStructure;
@@ -11,7 +10,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xException;
-
 
 /**
  * Base class for native FPNumber (Float* and Dec*) support.
@@ -106,7 +104,6 @@ public abstract class BaseFP
                 xException.illegalArgument(frame, "Invalid bit count: " + cBits));
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -118,7 +115,6 @@ public abstract class BaseFP
      * @return an ObjectHandle based on the specified double value
      */
     protected abstract ObjectHandle makeHandle(double dValue);
-
 
     // ----- constants and fields ------------------------------------------------------------------
 

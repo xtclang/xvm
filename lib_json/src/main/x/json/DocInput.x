@@ -58,7 +58,6 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
      */
     Doc peekMetadata(String attribute);
 
-
     // ----- context -------------------------------------------------------------------------------
 
     /**
@@ -113,7 +112,6 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
      */
     conditional FieldInput<ParentInput> insideObject();
 
-
     // ----- pointers ------------------------------------------------------------------------------
 
     /**
@@ -136,7 +134,6 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
      */
     <Serializable> Serializable dereference(String pointer);
 
-
     // ----- Closeable methods ---------------------------------------------------------------------
 
     /**
@@ -146,7 +143,6 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
      */
     @Override
     ParentInput close(Exception? cause = Null);
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

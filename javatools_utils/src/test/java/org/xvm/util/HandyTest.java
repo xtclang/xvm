@@ -1,6 +1,5 @@
 package org.xvm.util;
 
-
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -475,7 +474,6 @@ public class HandyTest {
             assertEquals(s, readUtf8String(dis(sb.toString())));
         }
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

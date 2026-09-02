@@ -98,7 +98,6 @@ const ConcurrentHasherMap<Key extends immutable, Value extends AutoPassable>
         this.partitions = TODO copy the partitions
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -115,7 +114,6 @@ const ConcurrentHasherMap<Key extends immutable, Value extends AutoPassable>
      * The random number generator.
      */
      @Inject Random rnd;
-
 
     // ----- Map interface -------------------------------------------------------------------------
 

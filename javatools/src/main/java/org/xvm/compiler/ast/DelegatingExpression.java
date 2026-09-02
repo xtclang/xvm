@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -10,7 +9,6 @@ import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Label;
-
 
 /**
  * Delegates to an underlying expression.
@@ -34,7 +32,6 @@ public abstract class DelegatingExpression
     public void markConditional() {
         expr.markConditional();
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -182,14 +179,12 @@ public abstract class DelegatingExpression
         return expr.mightAffect(exprLeft, arg);
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -64,7 +63,6 @@ import org.xvm.util.ListMap;
 import static org.xvm.util.Handy.dup;
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.NO_ARGS;
-
 
 /**
  * Debugger console.
@@ -1389,7 +1387,6 @@ public final class DebugConsole
         return ahArg;
     }
 
-
     // ----- rendering -----------------------------------------------------------------------------
 
     /**
@@ -1975,7 +1972,6 @@ public final class DebugConsole
         prefs.put("history", Base64.getEncoder().encodeToString(abHistory));
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     private static int numlen(int n) {
@@ -2029,7 +2025,6 @@ public final class DebugConsole
             return -1;
         }
     }
-
 
     // ----- inner class: BreakPoint ---------------------------------------------------------------
 
@@ -2224,7 +2219,6 @@ public final class DebugConsole
         private int[]           lambdaArgs;
     }
 
-
     // ----- inner class: DebugStash ---------------------------------------------------------------
 
     /**
@@ -2268,7 +2262,6 @@ public final class DebugConsole
         Map<String, Integer> m_mapExpand;
         ArrayList<Watch>     m_listWatches;
     }
-
 
     // ----- inner class: VarDisplay ---------------------------------------------------------------
 
@@ -2330,7 +2323,6 @@ public final class DebugConsole
         boolean      expanded;
         Watch        watch;
     }
-
 
     // ----- inner class: Watch --------------------------------------------------------------------
 
@@ -2418,7 +2410,6 @@ public final class DebugConsole
         String       sVar;
         int          index;
     }
-
 
     // ----- constants and data fields -------------------------------------------------------------
 

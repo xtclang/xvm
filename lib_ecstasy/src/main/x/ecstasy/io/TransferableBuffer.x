@@ -38,7 +38,6 @@ service TransferableBuffer {
         this.actual = new ActualBuffer(size, recycle, alwaysZero);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -51,7 +50,6 @@ service TransferableBuffer {
      * The configured buffer size.
      */
     Int capacity.get() = actual.capacity;
-
 
     // ----- public API ----------------------------------------------------------------------------
 
@@ -69,7 +67,6 @@ service TransferableBuffer {
      * @param zero  pass True to explicitly zero out the contents of the buffer
      */
     void invalidateCurrent(Boolean zero = False) = actual.invalidateCurrent(zero);
-
 
     // ----- ActualBuffer hidden implementation class ----------------------------------------------
 
@@ -91,7 +88,6 @@ service TransferableBuffer {
             this.recycle    = recycle;
             this.alwaysZero = alwaysZero;
         }
-
 
         // ----- properties --------------------------------------------------------------------
 
@@ -132,7 +128,6 @@ service TransferableBuffer {
          * If True, then always zero the buffer contents when invalidating.
          */
         Boolean alwaysZero;
-
 
         // ----- methods ---------------------------------------------------------------------------
 
@@ -204,7 +199,6 @@ service TransferableBuffer {
                 bytes.fill(0);
             }
         }
-
 
         // ----- backing methods for ReadBuffer and WriteBuffer ------------------------------------
 
@@ -500,7 +494,6 @@ service TransferableBuffer {
             actual.destroyReadBuffer(ticket);
         }
     }
-
 
     // ----- WriteBuffer proxy implementation ------------------------------------------------------
 

@@ -159,8 +159,6 @@ module xunit_demo {
         return [("One", 1, "Another One"), ("Two", 2, "Another Two")];
     }
 
-
-
     class Foo {
 
         Int n = 0;

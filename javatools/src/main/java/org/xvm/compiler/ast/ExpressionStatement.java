@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.ErrorListener;
@@ -9,7 +8,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.compiler.Compiler;
 
 import org.xvm.util.Severity;
-
 
 /**
  * An expression statement is just an expression that someone stuck a semicolon on the end of.
@@ -28,7 +26,6 @@ public class ExpressionStatement
         this.expr = expr;
         this.term = standalone;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -63,7 +60,6 @@ public class ExpressionStatement
     public boolean isTodo() {
         return expr.isTodo();
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -104,7 +100,6 @@ public class ExpressionStatement
         return nodeChild == expr;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -123,7 +118,6 @@ public class ExpressionStatement
         int    of = s.indexOf('\n');
         return (of < 0) ? s : s.substring(0, of) + " ...";
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 /**
  * Represents a function that creates an injectable resource.
  */

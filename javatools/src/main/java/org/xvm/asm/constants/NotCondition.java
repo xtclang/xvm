@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -20,7 +19,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Implements the logical "not" of a condition.
@@ -69,7 +67,6 @@ public class NotCondition
         m_constCond = getConstantPool().getConstant(m_iCond, ConditionalConstant.class);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -78,7 +75,6 @@ public class NotCondition
     public ConditionalConstant getUnderlyingCondition() {
         return m_constCond;
     }
-
 
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
@@ -138,7 +134,6 @@ public class NotCondition
         return m_constCond;
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -169,7 +164,6 @@ public class NotCondition
         return "!" + m_constCond.getValueString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -184,14 +178,12 @@ public class NotCondition
         writeMagnitude(out, m_constCond.getPosition());
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_constCond);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

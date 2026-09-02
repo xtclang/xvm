@@ -51,7 +51,6 @@ public class PureIdentityConstant
         super.resolveConstants();
     }
 
-
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override

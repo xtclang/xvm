@@ -84,7 +84,6 @@ annotation Future<Referent>
      */
     protected NotifyDependent? notify = Null;
 
-
     // ----- Ref interface -------------------------------------------------------------------------
 
     /**
@@ -124,7 +123,6 @@ annotation Future<Referent>
         }
     }
 
-
     // ----- Closeable interface -------------------------------------------------------------------
 
     @Override
@@ -133,7 +131,6 @@ annotation Future<Referent>
             completeExceptionally(cause ?: new Closed());
         }
     }
-
 
     // ----- composing future behavior -------------------------------------------------------------
 
@@ -330,7 +327,6 @@ annotation Future<Referent>
         return chain(new ContinuationStep<NewType, Referent>(async));
     }
 
-
     // ----- completion handling -------------------------------------------------------------------
 
     /**
@@ -451,7 +447,6 @@ annotation Future<Referent>
     String toString() {
         return $"Future<{Referent}>(completion={completion})";
     }
-
 
     // ----- inner classes -------------------------------------------------------------------------
 

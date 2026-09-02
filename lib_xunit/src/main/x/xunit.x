@@ -33,11 +33,11 @@ module xunit.xtclang.org {
    /**
      * A skipped test result.
      */
-	const SkipResult(Boolean skipped, String reason = "unknown") {
-	    /**
-	     * A singleton not skipped `SkipResult`.
-	     */
-	    static SkipResult NotSkipped = new SkipResult(False);
+    const SkipResult(Boolean skipped, String reason = "unknown") {
+        /**
+         * A singleton not skipped `SkipResult`.
+         */
+        static SkipResult NotSkipped = new SkipResult(False);
     }
 
     /**

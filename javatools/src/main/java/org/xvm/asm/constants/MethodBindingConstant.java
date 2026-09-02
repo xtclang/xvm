@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -22,7 +21,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Constant whose purpose is to represent a run-time target binding.
@@ -65,7 +63,6 @@ public class MethodBindingConstant
         m_idMethod = getConstantPool().getConstant(m_iMethod, MethodConstant.class);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -74,7 +71,6 @@ public class MethodBindingConstant
     public MethodConstant getMethodConstant() {
         return m_idMethod;
     }
-
 
     // ----- MethodBindingConstant methods ---------------------------------------------------------
 
@@ -111,7 +107,6 @@ public class MethodBindingConstant
         return xRTFunction.makeHandle(frame, chain, 0).bindTarget(frame, hTarget);
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -141,7 +136,6 @@ public class MethodBindingConstant
         return "BindTarget: " + m_idMethod.getValueString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -162,14 +156,12 @@ public class MethodBindingConstant
         return getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_idMethod);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

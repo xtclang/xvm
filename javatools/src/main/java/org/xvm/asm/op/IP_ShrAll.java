@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 import java.lang.classfile.CodeBuilder;
@@ -20,7 +19,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
-
 
 /**
  * IP_USHR rvalue-target, rvalue2 ; T >>>= T

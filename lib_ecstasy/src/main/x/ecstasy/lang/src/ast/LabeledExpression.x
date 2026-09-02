@@ -2,7 +2,6 @@ import io.TextPosition;
 
 import Lexer.Token;
 
-
 /**
  * Represents a name (label) that is attached to another expressions, such as when an argument is
  * named.

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
@@ -16,7 +15,6 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt8;
-
 
 /**
  * The native RTViewFromByte<Int8> implementation.
@@ -40,7 +38,6 @@ public class xRTViewFromByteToInt8
                 getInceptionClassConstant().getType(),
                 pool.typeInt8());
     }
-
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataOutput;
 
 import java.util.List;
@@ -20,7 +19,6 @@ import org.xvm.compiler.CompilerException;
 
 import org.xvm.util.Hash;
 import org.xvm.util.Severity;
-
 
 /**
  * Represent a type constant that will eventually be replaced with a real type constant.
@@ -47,7 +45,6 @@ public class UnresolvedTypeConstant
 
         m_constId = constUnresolved;
     }
-
 
     // ----- type-specific functionality -----------------------------------------------------------
 
@@ -85,7 +82,6 @@ public class UnresolvedTypeConstant
         return type;
     }
 
-
     // ----- ResolvableConstant methods ------------------------------------------------------------
 
     @Override
@@ -101,7 +97,6 @@ public class UnresolvedTypeConstant
             m_type = (TypeConstant) constant;
         }
     }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -429,7 +424,6 @@ public class UnresolvedTypeConstant
         throw new IllegalStateException();
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -485,7 +479,6 @@ public class UnresolvedTypeConstant
         return this == that ? 0 : -1;
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -515,7 +508,6 @@ public class UnresolvedTypeConstant
                 : m_constId.getDescription();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -540,7 +532,6 @@ public class UnresolvedTypeConstant
     public int computeHashCode() {
         return 0;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

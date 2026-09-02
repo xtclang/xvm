@@ -25,11 +25,11 @@ import xunit.extensions.ExtensionProvider;
 
     ModelType delegate;
 
-	@Override UniqueId uniqueId;
+    @Override UniqueId uniqueId;
 
-	@Override UniqueId? parentId.get() = delegate.parentId;
+    @Override UniqueId? parentId.get() = delegate.parentId;
 
-	@Override Iterable<Model> children.get() = delegate.children;
+    @Override Iterable<Model> children.get() = delegate.children;
 
     @Override String displayName.get() = delegate.displayName;
 
@@ -41,14 +41,13 @@ import xunit.extensions.ExtensionProvider;
 
     @Override Boolean isContainer.get() = delegate.isContainer;
 
-	@Override Set<Model> getDescendants() = delegate.getDescendants();
+    @Override Set<Model> getDescendants() = delegate.getDescendants();
 
-	@Override Boolean isRoot() = delegate.isRoot();
+    @Override Boolean isRoot() = delegate.isRoot();
 
-	@Override Boolean mayRegisterTests() = delegate.mayRegisterTests();
+    @Override Boolean mayRegisterTests() = delegate.mayRegisterTests();
 
-	@Override conditional Model findByUniqueId(UniqueId uniqueId)
-	        = delegate.findByUniqueId(uniqueId);
+    @Override conditional Model findByUniqueId(UniqueId uniqueId) = delegate.findByUniqueId(uniqueId);
 
     @Override ExecutionLifecycle createExecutionLifecycle() = delegate.createExecutionLifecycle();
 

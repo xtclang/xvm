@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.Set;
@@ -24,7 +23,6 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
-
 /**
  * Generic expression for something that follows the pattern "operator expression".
  */
@@ -36,7 +34,6 @@ public abstract class PrefixExpression
         this.operator = operator;
         this.expr     = expr;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -68,7 +65,6 @@ public abstract class PrefixExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -149,7 +145,6 @@ public abstract class PrefixExpression
         return null;
     }
 
-
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
@@ -201,7 +196,6 @@ public abstract class PrefixExpression
         return expr.mightAffect(exprLeft, arg);
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -230,7 +224,6 @@ public abstract class PrefixExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

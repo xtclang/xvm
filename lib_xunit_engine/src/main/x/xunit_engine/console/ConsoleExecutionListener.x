@@ -25,13 +25,13 @@ service ConsoleExecutionListener
     static Result InitialResult = new Result(Successful, count=0);
 
     @Override
-	void onStarted(Model model) {
-	    console.print($"Started:   {model.displayName}");
-	    results.put(model.uniqueId, InitialResult);
-	}
+    void onStarted(Model model) {
+        console.print($"Started:   {model.displayName}");
+        results.put(model.uniqueId, InitialResult);
+    }
 
     @Override
-	void onCompleted(Model model, Result result) {
+    void onCompleted(Model model, Result result) {
         UniqueId   id = model.uniqueId;
         Exception? ex = result.exception;
 
@@ -53,42 +53,42 @@ service ConsoleExecutionListener
             results.put(parentId, r);
         }
 
-	    if (result.status == Skipped) {
-	        if (ex.is(Exception)) {
-	            onSkipped(model, ex.message);
-	        } else {
-	            onSkipped(model, "");
-	        }
-	    } else {
-	        if (model.isContainer) {
+        if (result.status == Skipped) {
+            if (ex.is(Exception)) {
+                onSkipped(model, ex.message);
+            } else {
+                onSkipped(model, "");
+            }
+        } else {
+            if (model.isContainer) {
                 console.print($|Finished:  {model.displayName} {result.status} in {result.duration}\
                                | (passed={result.succeeded} failed={result.failures}\
                                | skipped={result.skipped} errors={result.errors})
                                );
-	        } else {
-	            console.print($"Finished:  {model.displayName} {result.status} in {result.duration}");
-	        }
-	        if (ex.is(Exception)) {
-	            console.print(ex);
-	        }
-	        Exception[]? suppressed = result.suppressed;
-	        if (suppressed.is(Exception[])) {
-	            for (Exception e : suppressed) {
-	                console.print($"Suppressed: {e}");
-	            }
-	        }
-	    }
-	}
+            } else {
+                console.print($"Finished:  {model.displayName} {result.status} in {result.duration}");
+            }
+            if (ex.is(Exception)) {
+                console.print(ex);
+            }
+            Exception[]? suppressed = result.suppressed;
+            if (suppressed.is(Exception[])) {
+                for (Exception e : suppressed) {
+                    console.print($"Suppressed: {e}");
+                }
+            }
+        }
+    }
 
     @Override
-	void onSkipped(Model model, String reason)
-	        = console.print($"Skipped:   {model.displayName} due to \"{reason}\"");
+    void onSkipped(Model model, String reason)
+            = console.print($"Skipped:   {model.displayName} due to \"{reason}\"");
 
     @Override
-	void onPublished(Model model, ReportEntry entry) {
-	    console.print($"Published: {model.displayName} {entry.timestamp}");
-	    for (Map<String,String>.Entry tagEntry : entry.tags.entries) {
-	        console.print($"    {tagEntry.key}: {tagEntry.value}");
-	    }
-	}
+    void onPublished(Model model, ReportEntry entry) {
+        console.print($"Published: {model.displayName} {entry.timestamp}");
+        for (Map<String,String>.Entry tagEntry : entry.tags.entries) {
+            console.print($"    {tagEntry.key}: {tagEntry.value}");
+        }
+    }
 }

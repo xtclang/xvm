@@ -484,7 +484,6 @@ public class Dec64 extends DecimalFPNumber {
         return (nExp | nCombo & 0xFF) - 398;
     }
 
-
     @Override
     public BigDecimal $toBigDecimal() {
         BigDecimal dec = $dec;

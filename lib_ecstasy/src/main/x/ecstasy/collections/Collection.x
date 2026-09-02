@@ -838,7 +838,6 @@ interface Collection<Element>
         return this;
     }
 
-
     // ----- write operations ----------------------------------------------------------------------
 
     /**
@@ -1057,7 +1056,6 @@ interface Collection<Element>
         return removeAll(value -> True);
     }
 
-
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
@@ -1158,7 +1156,6 @@ interface Collection<Element>
             estimateStringLength(sep, pre, post, limit, trunc, render));
         return appendTo(buf, sep, pre, post, limit, trunc, render).toString();
     }
-
 
     // ----- equality ------------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -15,7 +14,6 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.InvokeExpr;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Invocation expression for method or "constant" function calls.

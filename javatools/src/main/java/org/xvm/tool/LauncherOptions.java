@@ -165,7 +165,6 @@ public abstract class LauncherOptions {
         this.commandName = commandName;
     }
 
-
     /**
      * Copy an Options object by adding all its options to a new Options instance.
      */
@@ -463,7 +462,6 @@ public abstract class LauncherOptions {
     protected String buildUsageLine(final String commandName) {
         return commandName + " [options]";
     }
-
 
     // ----- Base Builder --------------------------------------------------------------------------
 
@@ -896,7 +894,6 @@ public abstract class LauncherOptions {
         }
     }
 
-
     // ----- RunnerOptions -------------------------------------------------------------------------
 
     /**
@@ -1213,7 +1210,6 @@ public abstract class LauncherOptions {
         }
     }
 
-
     // ----- TestRunnerOptions ---------------------------------------------------------------------
 
     /**
@@ -1278,7 +1274,6 @@ public abstract class LauncherOptions {
             return Map.copyOf(injections);
         }
 
-
         @Override
         protected String buildUsageLine(final String cmdName) {
             return "xtc test [options] <module_or_file>";
@@ -1308,7 +1303,6 @@ public abstract class LauncherOptions {
             }
         }
     }
-
 
     // ----- InitializerOptions -------------------------------------------------------------------
 
@@ -1492,7 +1486,6 @@ public abstract class LauncherOptions {
         }
     }
 
-
     // ----- DisassemblerOptions -------------------------------------------------------------------
 
     /**
@@ -1659,7 +1652,6 @@ public abstract class LauncherOptions {
             }
         }
     }
-
 
     // ----- BundlerOptions ------------------------------------------------------------------------
 

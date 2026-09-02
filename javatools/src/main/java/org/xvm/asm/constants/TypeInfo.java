@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -20,7 +19,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.TypeConstant.Origin;
 
 import org.xvm.util.ListMap;
-
 
 /**
  * Represents the "flattened" information about a type.

@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -52,7 +51,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
-
 /**
  * An "Iterable"-based "for" statement.
  */
@@ -65,7 +63,6 @@ public class ForEachStatement
         super(keyword, Collections.singletonList(cond));
         this.block = block;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -202,7 +199,6 @@ public class ForEachStatement
         return CHILD_FIELDS;
     }
 
-
     // ----- LabelAble methods ---------------------------------------------------------------------
 
     @Override
@@ -264,7 +260,6 @@ public class ForEachStatement
 
         return reg;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -1328,7 +1323,6 @@ public class ForEachStatement
             indentLines(block.toString(), "    ");
     }
 
-
     // ----- inner class: Plan ---------------------------------------------------------------------
 
     /**
@@ -1353,7 +1347,6 @@ public class ForEachStatement
          */
         private static final Plan[] BY_ORDINAL = Plan.values();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

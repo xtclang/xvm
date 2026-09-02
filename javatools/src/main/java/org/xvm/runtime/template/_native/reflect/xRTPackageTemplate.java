@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.PackageStructure;
@@ -9,7 +8,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.TypeComposition;
-
 
 /**
  * Native PackageTemplate implementation.
@@ -33,7 +31,6 @@ public class xRTPackageTemplate
         PACKAGE_TEMPLATE_TYPE = pool.ensureEcstasyTypeConstant("reflect.PackageTemplate");
     }
 
-
     // ----- ObjectHandle support ------------------------------------------------------------------
 
     /**
@@ -49,7 +46,6 @@ public class xRTPackageTemplate
                                 INSTANCE.getCanonicalType(), PACKAGE_TEMPLATE_TYPE);
         return new ComponentTemplateHandle(clz, pkg);
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

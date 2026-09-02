@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -28,7 +27,6 @@ import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.DataType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
-
 
 /**
  * JMP_ISA rvalue, #:(CONST, addr), addr-default ; if value "isA" a constant, jump to address, otherwise default

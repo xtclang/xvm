@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.fs;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
@@ -19,7 +18,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xConst;
-
 
 /**
  * Native CPFile implementation.
@@ -49,7 +47,6 @@ public class xCPFile
 
         return super.createConstHandle(frame, constant);
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

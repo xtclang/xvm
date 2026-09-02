@@ -1,7 +1,6 @@
 import ecstasy.reflect.TypedefTemplate;
 import ecstasy.reflect.TypeTemplate;
 
-
 /**
  * The native reflected TypedefTemplate implementation.
  */

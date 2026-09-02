@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -17,7 +16,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.stream;
-
 
 /**
  * Represents any of the various XVM structures, which are hierarchical in nature, and include such
@@ -98,7 +96,6 @@ public abstract class XvmStructure
     protected XvmStructure(XvmStructure xsParent) {
         m_xsParent = xsParent;
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -519,7 +516,6 @@ public abstract class XvmStructure
         m_xsParent.setErrorListener(errs);
     }
 
-
     // ----- debugging support ---------------------------------------------------------------------
 
     /**
@@ -652,7 +648,6 @@ public abstract class XvmStructure
         return sIndent + "  ";
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -680,7 +675,6 @@ public abstract class XvmStructure
     public String toString() {
         return getClass().getSimpleName() + '{' + getDescription() + '}';
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

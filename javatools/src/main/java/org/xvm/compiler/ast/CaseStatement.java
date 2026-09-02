@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.Arrays;
 import java.util.List;
 
@@ -18,8 +17,6 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
 
-
-
 /**
  * A case statement. This can only occur within a switch statement. (It's not a "real" statement;
  * it's more like a label.)
@@ -33,7 +30,6 @@ public class CaseStatement
         this.exprs   = exprs;
         this.lEndPos = tokColon.getEndPosition();
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -88,7 +84,6 @@ public class CaseStatement
         return CHILD_FIELDS;
     }
 
-
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
@@ -131,7 +126,6 @@ public class CaseStatement
         return iCase;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -159,7 +153,6 @@ public class CaseStatement
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

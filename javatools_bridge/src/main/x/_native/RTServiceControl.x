@@ -18,7 +18,6 @@ class RTServiceControl
 
     @Override Service.ServiceStats snapshotStats() {TODO("Native");}
 
-
     // ServiceControl
 
     @Override void gc()       {TODO("native");}

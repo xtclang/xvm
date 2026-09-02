@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
@@ -12,7 +11,6 @@ import org.xvm.asm.op.GP_Neg;
 
 import org.xvm.compiler.Token;
 
-
 /**
  * The "-" that precedes a number.
  */
@@ -23,7 +21,6 @@ public class UnaryMinusExpression
     public UnaryMinusExpression(Token operator, Expression expr) {
         super(operator, expr);
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 

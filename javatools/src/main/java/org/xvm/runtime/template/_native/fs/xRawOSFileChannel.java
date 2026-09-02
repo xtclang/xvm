@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.fs;
 
-
 import java.io.IOException;
 
 import java.nio.ByteBuffer;
@@ -40,7 +39,6 @@ import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate;
 import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.ByteArrayHandle;
 
 import org.xvm.runtime.template._native.io.xRawChannel;
-
 
 /**
  * Native RawOSFileChannel implementation.
@@ -139,7 +137,6 @@ public class xRawOSFileChannel
         return super.invokeNativeSet(frame, hTarget, sPropName, hValue);
     }
 
-
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn) {
@@ -171,7 +168,6 @@ public class xRawOSFileChannel
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }
-
 
     // ----- method implementations ----------------------------------------------------------------
 
@@ -234,7 +230,6 @@ public class xRawOSFileChannel
 
         return frame.assignValue(iReturn, xInt64.makeHandle(0)); // OK
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 

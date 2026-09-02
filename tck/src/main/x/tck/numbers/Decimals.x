@@ -21,7 +21,6 @@ class Decimals {
         fromBits();
     }
 
-
     @Test
     void round() {
         for (Int i : 0 ..< numbers.size) {

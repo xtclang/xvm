@@ -30,7 +30,6 @@ service RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
      */
     private Object signer;
 
-
     // ----- Algorithm API -------------------------------------------------------------------------
 
     @Override
