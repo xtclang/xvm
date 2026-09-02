@@ -1,7 +1,6 @@
 import numbers.IntConvertible;
 import numbers.FPConvertible;
 
-
 /**
  * Functionality specific to arrays of numbers.
  */
@@ -382,7 +381,6 @@ mixin NumberArray<Element extends Number>
         return quotients, remainders;
     }
 
-
     // ----- aggregations --------------------------------------------------------------------------
 
     /**
@@ -402,7 +400,6 @@ mixin NumberArray<Element extends Number>
         }
         return True, sum;
     }
-
 
     // ----- view support --------------------------------------------------------------------------
 
@@ -545,7 +542,6 @@ mixin NumberArray<Element extends Number>
     Byte[] asByteArray() {
         return asBitArray().asByteArray();
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

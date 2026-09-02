@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -54,7 +53,6 @@ import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.stream;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * The Component data structure is the base class for the module, package, class, property, method,
@@ -164,7 +162,6 @@ public abstract class Component
         // TODO this constructor is not currently used, but there are fields that need to be copied
         //      in order for it to be correct
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -2128,14 +2125,12 @@ public abstract class Component
     public void collectInjections(Set<InjectionKey> setInjections) {
     }
 
-
     // ----- ComponentResolver methods -------------------------------------------------------------
 
     @Override
     public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector) {
         return resolveContributedName(sName, access, collector, true);
     }
-
 
     // ----- Documentable methods ------------------------------------------------------------------
 
@@ -2152,7 +2147,6 @@ public abstract class Component
             markModified();
         }
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -2409,7 +2403,6 @@ public abstract class Component
         child.dumpChildren(out, nextIndent(sIndent));
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -2435,7 +2428,6 @@ public abstract class Component
     public int hashCode() {
         return getIdentityConstant().hashCode();
     }
-
 
     // ----- inner class: Format -------------------------------------------------------------------
 
@@ -2592,7 +2584,6 @@ public abstract class Component
         private static final Format[] FORMATS = Format.values();
     }
 
-
     // ----- enumeration: Component Composition ----------------------------------------------------
 
     /**
@@ -2673,7 +2664,6 @@ public abstract class Component
          */
         private static final Composition[] COMPOSITIONS = Composition.values();
     }
-
 
     // ----- inner class: Component Contribution ---------------------------------------------------
 
@@ -3452,7 +3442,6 @@ public abstract class Component
         private List<Injection> m_listInject;
     }
 
-
     // ----- inner class: Injection ----------------------------------------------------------------
 
     /**
@@ -3531,7 +3520,6 @@ public abstract class Component
         private final StringConstant name;
     }
 
-
     // ----- interface: ResolutionCollector --------------------------------------------------------
 
     /**
@@ -3567,7 +3555,6 @@ public abstract class Component
             return m_constant;
         }
 
-
         // ----- data fields -----------------------------------------------------------------------
 
         /**
@@ -3580,7 +3567,6 @@ public abstract class Component
          */
         private final ErrorListener m_errs;
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 
@@ -3605,7 +3591,6 @@ public abstract class Component
     public static final int SYNTHETIC_BIT    = 0x1000, SYNTHETIC_SHIFT  = 12;
     public static final int COND_RET_BIT     = 0x2000, COND_RET_SHIFT   = 13;
     public static final int AUXILIARY_BIT    = 0x4000, AUXILIARY_SHIFT  = 14;
-
 
     // ----- fields --------------------------------------------------------------------------------
 

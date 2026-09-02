@@ -1,10 +1,8 @@
 package org.xvm.runtime;
 
-
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
-
 
 /**
  * {@link VarSupport} represents a run-time facet of a Var.
@@ -35,7 +33,6 @@ public interface VarSupport
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int introduceRef(Frame frame, TypeComposition clazz, String sName, int iReturn);
-
 
     // ----- built-in unary operations -------------------------------------------------------------
 
@@ -93,7 +90,6 @@ public interface VarSupport
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarPostDec(Frame frame, RefHandle hTarget, int iReturn);
-
 
     // ----- built-in binary operations ------------------------------------------------------------
 

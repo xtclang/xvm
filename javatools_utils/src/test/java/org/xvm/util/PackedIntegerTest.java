@@ -1,6 +1,5 @@
 package org.xvm.util;
 
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -200,7 +199,6 @@ public class PackedIntegerTest {
 //            }
 //        }
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

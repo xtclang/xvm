@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -17,7 +16,6 @@ import org.xvm.asm.VersionTree;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
-
 /**
  * A composition step. This defines one of the "building blocks" for a type composition.
  */
@@ -30,7 +28,6 @@ public abstract class CompositionNode
         this.keyword   = keyword;
         this.type      = type;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -69,7 +66,6 @@ public abstract class CompositionNode
         this.m_contribution = contribution;
     }
 
-
     // ----- AstNode methods -----------------------------------------------------------------------
 
     @Override
@@ -95,7 +91,6 @@ public abstract class CompositionNode
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -131,7 +126,6 @@ public abstract class CompositionNode
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- inner class: Extends ------------------------------------------------------------------
 
@@ -182,7 +176,6 @@ public abstract class CompositionNode
         private static final Field[] CHILD_FIELDS = fieldsForNames(Extends.class,
                 "condition", "type", "args");
     }
-
 
     // ----- inner class: Annotates ----------------------------------------------------------------
 
@@ -242,7 +235,6 @@ public abstract class CompositionNode
         private static final Field[] CHILD_FIELDS = fieldsForNames(Annotates.class,
                 "annotation");
     }
-
 
     // ----- inner class: Incorporates -------------------------------------------------------------
 
@@ -329,7 +321,6 @@ public abstract class CompositionNode
                 "condition", "type", "args", "constraints");
     }
 
-
     // ----- inner class: Implements ---------------------------------------------------------------
 
     public static class Implements
@@ -338,7 +329,6 @@ public abstract class CompositionNode
             super(condition, keyword, type);
         }
     }
-
 
     // ----- inner class: Delegates ----------------------------------------------------------------
 
@@ -393,7 +383,6 @@ public abstract class CompositionNode
                 fieldsForNames(Delegates.class, "condition", "type", "delegatee");
     }
 
-
     // ----- inner class: Into ---------------------------------------------------------------------
 
     public static class Into
@@ -402,7 +391,6 @@ public abstract class CompositionNode
             super(condition, keyword, type);
         }
     }
-
 
     // ----- inner class: Import -------------------------------------------------------------------
 
@@ -538,7 +526,6 @@ public abstract class CompositionNode
                   .append(')');
             }
 
-
             if (injector != null) {
                 sb.append("\n        ")
                     .append(Token.Id.USING.TEXT)
@@ -574,7 +561,6 @@ public abstract class CompositionNode
         private static final Field[] CHILD_FIELDS =
                 fieldsForNames(Import.class, "condition", "type", "vers", "injects", "injector");
     }
-
 
     // ----- inner class: Default ------------------------------------------------------------------
 
@@ -613,7 +599,6 @@ public abstract class CompositionNode
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Default.class, "condition", "expr");
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

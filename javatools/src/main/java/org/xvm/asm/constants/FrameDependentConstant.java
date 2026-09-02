@@ -1,12 +1,10 @@
 package org.xvm.asm.constants;
 
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-
 
 /**
  * Constant whose purpose is to represent a run-time action based on the current frame.
@@ -23,7 +21,6 @@ public abstract class FrameDependentConstant
     public FrameDependentConstant(ConstantPool pool) {
         super(pool);
     }
-
 
     // ----- type-specific functionality -----------------------------------------------------------
 

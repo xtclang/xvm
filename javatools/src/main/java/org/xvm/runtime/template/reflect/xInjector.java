@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.reflect;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 
@@ -15,7 +14,6 @@ import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
-
 
 /**
  * Native Injector implementation.
@@ -50,7 +48,6 @@ public class xInjector
 
         return hInjector;
     }
-
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,

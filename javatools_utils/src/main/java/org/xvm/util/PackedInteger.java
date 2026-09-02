@@ -1,12 +1,10 @@
 package org.xvm.util;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.math.BigInteger;
-
 
 /**
  * A PackedInteger represents a signed, 2's-complement integer of 1 byte to 64KB (512Kb) in size.
@@ -84,7 +82,6 @@ public class PackedInteger
             throws IOException {
         readObject(in);
     }
-
 
     // ----- public methods ------------------------------------------------------------------------
 
@@ -642,7 +639,6 @@ public class PackedInteger
         }
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -666,7 +662,6 @@ public class PackedInteger
         return isBig() ? m_bigint.toString() : Long.toString(m_lValue);
     }
 
-
     // ----- Comparable methods --------------------------------------------------------------------
 
     @Override
@@ -679,7 +674,6 @@ public class PackedInteger
         long lThat = that.m_lValue;
         return Long.compare(lThis, lThat);
     }
-
 
     // ----- public helpers ------------------------------------------------------------------------
 
@@ -859,7 +853,6 @@ public class PackedInteger
         return ((long) cb) << 32 | n & 0xFFFFFFFFL;
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     private static long readLong(DataInput in, int b, boolean recursion)
@@ -943,7 +936,6 @@ public class PackedInteger
         return (bigint.bitLength() + 7) / 8;
     }
 
-
     // ----- data members --------------------------------------------------------------------------
 
     /**
@@ -973,7 +965,6 @@ public class PackedInteger
      * Cache of PackedInteger instances for small integers.
      */
     private static final PackedInteger[] CACHE = new PackedInteger[0x1000];
-
 
     // ----- constants -----------------------------------------------------------------------------
 

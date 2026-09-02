@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -24,7 +23,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nType;
-
 
 /**
  * MOV_TYPE rvalue-src, lvalue-dest; place the type of the r-value (sans explicit immutability) into the l-value

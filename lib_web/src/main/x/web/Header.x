@@ -204,7 +204,6 @@ interface Header
         entries.add((name, value));
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     protected void checkMutable() {

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template;
 
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -29,7 +28,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
-
 
 /**
  * A template for the base of all Enum classes
@@ -261,7 +259,6 @@ public class xEnum
                 null, ahVar, iReturn);
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
@@ -342,7 +339,6 @@ public class xEnum
         m_listHandles.set(hEnum.m_index, hEnum);
     }
 
-
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     /**
@@ -413,7 +409,6 @@ public class xEnum
 
         protected int m_index;
     }
-
 
     // ----- constants and fields ------------------------------------------------------------------
 

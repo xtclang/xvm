@@ -1,10 +1,8 @@
 package org.xvm.runtime;
 
-
 import java.lang.ref.WeakReference;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-
 
 /**
  * Weak reference for the function that is to be called at some point in the future on the context

@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -15,7 +14,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.ast.BinaryAST;
 
 import org.xvm.asm.op.Label;
-
 
 /**
  * Base class for all Ecstasy statements.
@@ -115,7 +113,6 @@ public abstract class Statement
         // this needs to be overridden by any statement that doesn't short-circuit to the end label
         return ensureBreakLabel(nodeOrigin, ctxOrigin);
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -263,7 +260,6 @@ public abstract class Statement
         private Statement stmt;
         private BinaryAST ast;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

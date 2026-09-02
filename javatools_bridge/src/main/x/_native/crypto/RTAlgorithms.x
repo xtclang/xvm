@@ -59,12 +59,10 @@ service RTAlgorithms {
         return new Algorithms(algorithms.toArray(Constant, inPlace=True));
     }
 
-
     // ----- native methods ------------------------------------------------------------------------
 
     static (Int blockSize, Int formId, Int keySize, Object implementation)
         getAlgorithmInfo(String name, AlgorithmMethod method) {TODO("Native");}
-
 
     // ----- constants -----------------------------------------------------------------------------
 

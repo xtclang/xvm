@@ -16,7 +16,6 @@ class DistinctCollection<Element>
         construct DeferredCollection(original, fromService);
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     @Override

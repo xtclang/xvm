@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -47,7 +46,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
-
 
 /**
  * A property declaration.
@@ -106,7 +104,6 @@ public class PropertyDeclarationStatement
         this.body        = body;
         this.doc         = doc;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -218,7 +215,6 @@ public class PropertyDeclarationStatement
     public void markSynthetic() {
         m_fSynthetic = true;
     }
-
 
     // ----- compile phases ------------------------------------------------------------------------
 
@@ -730,7 +726,6 @@ public class PropertyDeclarationStatement
             return super.canResolveNames() || type.canResolveNames();
         }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -760,7 +755,6 @@ public class PropertyDeclarationStatement
         PropertyStructure prop = (PropertyStructure) getComponent();
         prop.removeChild(methodInit.getParent());
     }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -827,7 +821,6 @@ public class PropertyDeclarationStatement
     public String getDumpDesc() {
         return toSignatureString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

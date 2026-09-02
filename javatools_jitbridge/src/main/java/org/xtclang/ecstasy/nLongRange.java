@@ -31,7 +31,6 @@ public abstract class nLongRange
     public final boolean $upperExclusive;
     public final boolean $descending;
 
-
     // ----- Range / Interval API ------------------------------------------------------------------
 
     /**

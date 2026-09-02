@@ -2,7 +2,6 @@ import ecstasy.collections.CaseInsensitive;
 
 import sec.KeyCredential;
 
-
 /**
  * An implementation of the Authenticator interface that is used for a token based authentication,
  * which can also be utilized by the second phase of the [Open Authorization (OAuth 2.0)]

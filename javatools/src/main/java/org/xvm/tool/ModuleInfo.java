@@ -1,6 +1,5 @@
 package org.xvm.tool;
 
-
 import java.io.File;
 import java.io.IOException;
 
@@ -30,7 +29,6 @@ import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
-
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
 
@@ -47,7 +45,6 @@ import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.readFileChars;
 import static org.xvm.util.Handy.removeExtension;
 import static org.xvm.util.Handy.resolveFile;
-
 
 /**
  * Information gleaned about a module from a single specified file. This is a lazily populated
@@ -323,7 +320,6 @@ public class ModuleInfo {
         }
     }
 
-
     // ----- general -------------------------------------------------------------------------------
 
     /**
@@ -423,7 +419,6 @@ public class ModuleInfo {
         return firstDot >= 0 ? moduleName.substring(0, firstDot) : moduleName;
     }
 
-
     // ----- source --------------------------------------------------------------------------------
 
     /**
@@ -470,7 +465,6 @@ public class ModuleInfo {
         return sourceTimestamp;
     }
 
-
     // ----- resources -----------------------------------------------------------------------------
 
     /**
@@ -498,7 +492,6 @@ public class ModuleInfo {
 
         return resourceTimestamp;
     }
-
 
     // ----- binary --------------------------------------------------------------------------------
 
@@ -583,7 +576,6 @@ public class ModuleInfo {
         return binaryTimestamp;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -607,7 +599,6 @@ public class ModuleInfo {
              + ", binaryContent="     + binaryContent
              + ", binaryTimestamp="   + dateString(binaryTimestamp, "<unknown>");
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -634,7 +625,6 @@ public class ModuleInfo {
                         ? collectFiles(child, ext)
                         : Stream.of(child));
     }
-
 
     // ----- source tree ---------------------------------------------------------------------------
 
@@ -855,7 +845,6 @@ public class ModuleInfo {
                 deferred.clear();
             }
         }
-
 
         // ----- fields ------------------------------------------------------------------------
 
@@ -1425,7 +1414,6 @@ public class ModuleInfo {
         private TypeCompositionStatement m_stmtType;
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -1688,7 +1676,6 @@ public class ModuleInfo {
         // condition after a "clean" build command
         return new File(prjDir, "build");
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

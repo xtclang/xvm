@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.text;
 
-
 import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
@@ -37,7 +36,6 @@ import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateH
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 
 import org.xvm.util.Handy;
-
 
 /**
  * Native String implementation.
@@ -210,7 +208,6 @@ public class xString
         return ((StringHandle) hTarget).getValue().length;
     }
 
-
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
@@ -241,7 +238,6 @@ public class xString
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         return frame.assignValue(iReturn, ((StringHandle) hTarget).getHashCode());
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -320,7 +316,6 @@ public class xString
 
         return frame.call1(METHOD_APPEND_TO, hString, ahArg, iReturn);
     }
-
 
     // ----- handle --------------------------------------------------------------------------------
 
@@ -410,7 +405,6 @@ public class xString
             : new StringHandle(INSTANCE.getCanonicalClass(), achValue);
     }
 
-
     // ----- Composition and handle caching --------------------------------------------------------
 
     /**
@@ -434,7 +428,6 @@ public class xString
         }
         return EMPTY_STRING_ARRAY;
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 

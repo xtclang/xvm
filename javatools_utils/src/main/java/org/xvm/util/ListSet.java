@@ -1,13 +1,11 @@
 package org.xvm.util;
 
-
 import java.util.AbstractSet;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-
 
 /**
  * A simple implementation of a Set that maintains its contents in the order added, and allows
@@ -46,7 +44,6 @@ public class ListSet<E>
         addAll(that);
     }
 
-
     // ----- configuration -------------------------------------------------------------------------
 
     /**
@@ -79,7 +76,6 @@ public class ListSet<E>
         m_fSuppressNull = true;
         return this;
     }
-
 
     // ----- ListSet methods -----------------------------------------------------------------------
 
@@ -137,7 +133,6 @@ public class ListSet<E>
             }
         }
     }
-
 
     // ----- Set interface -------------------------------------------------------------------------
 
@@ -201,7 +196,6 @@ public class ListSet<E>
                 ? Collections.emptyIterator()
                 : new SafeIterator();
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -803,7 +797,6 @@ public class ListSet<E>
         }
     }
 
-
     // ----- inner class: SafeIterator -------------------------------------------------------------
 
     /**
@@ -965,7 +958,6 @@ public class ListSet<E>
          */
         private int    m_nExpect;
     }
-
 
     // ----- inner classes & constants -------------------------------------------------------------
 
@@ -1129,7 +1121,6 @@ public class ListSet<E>
          1499977,  2999999,   5999993,  11999989,  23999999,    // 2^20, ...
         47999969, 95999993, 191999987, 383999983, 767999993,    // 2^25, ...
     };
-
 
     // ----- data members --------------------------------------------------------------------------
 

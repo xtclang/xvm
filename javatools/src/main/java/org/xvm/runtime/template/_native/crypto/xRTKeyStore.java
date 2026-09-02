@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.crypto;
 
-
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
@@ -75,7 +74,6 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SecretHandle;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTBooleanDelegate;
-
 
 /**
  * Native implementation of the xRTKeyStore.x service.
@@ -499,7 +497,6 @@ public class xRTKeyStore
         }
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -520,7 +517,6 @@ public class xRTKeyStore
         // this is basically an assertion; the result is clearly unusable
         return xString.EMPTY_STRING;
     }
-
 
     // ----- handle --------------------------------------------------------------------------------
 
@@ -564,7 +560,6 @@ public class xRTKeyStore
          */
         public final X509TrustManager f_trustManager;
     }
-
 
     // ----- data fields and constants -------------------------------------------------------------
 

@@ -101,7 +101,6 @@ public abstract class OpOptimized
         return regLoaded.type();
     }
 
-
     /**
      * Generate the bytecodes for the corresponding binary op optimized for a XVM primitive type.
      * The values for the target and argument must already be on the top of the Java stack.

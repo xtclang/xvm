@@ -13,7 +13,6 @@ const Int64
      */
     static IntLiteral MaxValue =  0x7FFF_FFFF_FFFF_FFFF;
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -27,7 +26,6 @@ const Int64
 
     @Override
     static conditional Range<Int64> range() = (True, MinValue..MaxValue);
-
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -65,7 +63,6 @@ const Int64
         assert Int64 n := parse(text);
         this.bits = n.bits;
     }
-
 
     // ----- parsing -------------------------------------------------------------------------------
 
@@ -262,7 +259,6 @@ const Int64
                 : (magnitude != MinValue, -magnitude);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
@@ -276,7 +272,6 @@ const Int64
 
     @Override
     UInt64 magnitude.get() = toInt128().abs().toUInt64();
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -318,7 +313,6 @@ const Int64
         return result;
     }
 
-
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
@@ -338,7 +332,6 @@ const Int64
 
         return False;
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

@@ -11,7 +11,6 @@ public class nRangeᐸInt64ᐳ
         super(ctx, first, last, firstExclusive, lastExclusive);
     }
 
-
     // ----- Range / Interval API ------------------------------------------------------------------
 
     public static nRangeᐸInt64ᐳ $new$p(Ctx ctx, TypeConstant type, long first, long last,

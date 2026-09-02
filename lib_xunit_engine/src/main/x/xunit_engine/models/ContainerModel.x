@@ -3,7 +3,6 @@ import executor.ExecutionLifecycle;
 
 import xunit.extensions.ExtensionProvider;
 
-
 /**
  * A test model representing a container of other models.
  *

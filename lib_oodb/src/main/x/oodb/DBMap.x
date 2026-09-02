@@ -43,7 +43,6 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
         defer(map -> map.process(key, adjust));
     }
 
-
     // ----- Map.Entry extensions ------------------------------------------------------------------
 
     @Override
@@ -56,7 +55,6 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
          */
         @RO Entry original;
     }
-
 
     // ----- transactional information -------------------------------------------------------------
 
@@ -110,7 +108,6 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
     @Override
     interface TxChange
             extends DBChange<Key, Value> {}
-
 
     // ----- transaction trigger API ---------------------------------------------------------------
 

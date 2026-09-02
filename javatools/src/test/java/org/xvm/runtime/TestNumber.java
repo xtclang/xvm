@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import org.junit.jupiter.api.Test;
 
 import org.xvm.runtime.template.numbers.LongLong;
@@ -201,7 +200,6 @@ public class TestNumber {
         } catch (ArithmeticException ignore) {}
     }
 
-
     // ----- the algorithms used by native code ----------------------------------------------------
 
     private long longAdd(long l1, long l2, int nShift) {
@@ -223,7 +221,6 @@ public class TestNumber {
 
         return lr;
     }
-
 
     private long longUnsignedAdd(long l1, long l2, int nShift) {
         long lr = l1 + l2;

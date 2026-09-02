@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -34,7 +33,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
-
 /**
  * A "switch" statement.
  */
@@ -46,7 +44,6 @@ public class SwitchStatement
         super(keyword, conds);
         this.block   = block;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -93,7 +90,6 @@ public class SwitchStatement
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -399,7 +395,6 @@ public class SwitchStatement
         return iCase;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -420,7 +415,6 @@ public class SwitchStatement
 
         return sb.toString();
     }
-
 
     // ----- inner classes -------------------------------------------------------------------------
 
@@ -646,7 +640,6 @@ public class SwitchStatement
          */
         Label   labelContinueTo;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

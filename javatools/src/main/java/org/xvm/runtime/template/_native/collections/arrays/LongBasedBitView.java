@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
 
@@ -17,7 +16,6 @@ import org.xvm.runtime.template.numbers.xBit;
 
 import org.xvm.runtime.template._native.collections.arrays.LongBasedDelegate.LongArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
-
 
 /**
  * A base class for native ArrayDelegate<ViewType> views that point to delegates holding long arrays.
@@ -56,7 +54,6 @@ public abstract class LongBasedBitView
         return new ViewHandle(clzView, hLong, hSource.m_cSize*cBits, mutability);
     }
 
-
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
@@ -86,7 +83,6 @@ public abstract class LongBasedBitView
         return Op.R_NEXT;
     }
 
-
     // ----- BitView implementation ----------------------------------------------------------------
 
     @Override
@@ -113,7 +109,6 @@ public abstract class LongBasedBitView
 
         LongBasedDelegate.setBit(hView.f_hSource.m_alValue, of, fBit);
     }
-
 
     // ----- ByteView implementation ---------------------------------------------------------------
 
@@ -143,7 +138,6 @@ public abstract class LongBasedBitView
         return f_nBitsPerValue;
     }
 
-
     // ----- handle --------------------------------------------------------------------------------
 
     /**
@@ -166,7 +160,6 @@ public abstract class LongBasedBitView
             return f_hSource;
         }
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

@@ -61,7 +61,6 @@ class OSFileStore
     @Override
     String toString() = $"FileStore: {root}";
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     OSStorage storage;
@@ -91,7 +90,6 @@ class OSFileStore
     Cancellable watchFile(OSFile file, FileWatcher watcher) = storage.watchFile(file.path, watcher);
 
     Cancellable watchDir(OSDirectory dir, FileWatcher watcher) = storage.watchDir(dir.path, watcher);
-
 
     // ----- native --------------------------------------------------------------------------------
 

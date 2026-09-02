@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.maps;
 
-
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
@@ -22,7 +21,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
-
 
 /**
  * Native ListMap support.
@@ -124,7 +122,6 @@ public class xListMap
 
         return construct(frame, CONSTRUCTOR, clzMap, null, ahArg, iReturn);
     }
-
 
     /**
      * @return structure for "construct(Key[] keys, Value[] vals)"

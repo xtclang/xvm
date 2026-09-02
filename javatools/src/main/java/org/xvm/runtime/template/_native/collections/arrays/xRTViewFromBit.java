@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.runtime.ClassTemplate;
@@ -8,7 +7,6 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
-
 
 /**
  * The native RTViewFromBit base implementation.
@@ -48,7 +46,6 @@ public class xRTViewFromBit
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability) {
         throw new UnsupportedOperationException();
     }
-
 
     // ----- ByteView implementation ---------------------------------------------------------------
 

@@ -1,12 +1,10 @@
 package org.xvm.asm;
 
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import org.xvm.util.Handy;
-
 
 /**
  * A data structure that holds values associated with versions.

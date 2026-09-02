@@ -301,7 +301,6 @@ interface DBObject {
         throw new IllegalArgument($"No DBLog exists for path={path}");
     }
 
-
     // ----- transactionally composable operations -------------------------------------------------
 
     /**
@@ -372,7 +371,6 @@ interface DBObject {
      */
     void defer(function Boolean(DBObject) adjust);
 
-
     // ----- transactional information -------------------------------------------------------------
 
     /**
@@ -416,7 +414,6 @@ interface DBObject {
          */
         @RO DBObject post;
     }
-
 
     // ----- transaction trigger API ---------------------------------------------------------------
 

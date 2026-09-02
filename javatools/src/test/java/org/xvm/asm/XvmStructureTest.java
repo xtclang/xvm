@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 
@@ -35,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 
 /**
  * Tests for read-only XVM structure trees and mutable whole-file copies.

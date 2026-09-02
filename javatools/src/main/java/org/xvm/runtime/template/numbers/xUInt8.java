@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.Constant;
@@ -11,7 +10,6 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-
 
 /**
  * Native UInt8 (Byte) support.

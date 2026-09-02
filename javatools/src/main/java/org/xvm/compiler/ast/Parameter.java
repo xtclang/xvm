@@ -1,10 +1,8 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
-
 
 /**
  * A parameter type and name, with an optional default value.
@@ -26,7 +24,6 @@ public class Parameter
         this.name  = name;
         this.value = value;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -67,7 +64,6 @@ public class Parameter
         return CHILD_FIELDS;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -98,7 +94,6 @@ public class Parameter
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

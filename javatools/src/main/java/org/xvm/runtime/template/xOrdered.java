@@ -1,6 +1,5 @@
 package org.xvm.runtime.template;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
 
@@ -8,7 +7,6 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.text.xString;
-
 
 /**
  * Native Ordered.

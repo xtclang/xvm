@@ -19,7 +19,6 @@ class FilteredCollection<Element>
         this.include = include;
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     /**
@@ -57,7 +56,6 @@ class FilteredCollection<Element>
             super(accumulator);
         }
     }
-
 
     // ----- Collection interface ------------------------------------------------------------------
 

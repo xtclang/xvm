@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 
@@ -12,7 +11,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.Compiler;
 
 import org.xvm.util.Severity;
-
 
 /**
  * A type expression is used to specify an abstract data type. In its compiled form, there are many
@@ -150,7 +148,6 @@ public abstract class TypeExpression
         throw new IllegalStateException();
     }
 
-
     // ----- inner class compilation support -------------------------------------------------------
 
     /**
@@ -172,7 +169,6 @@ public abstract class TypeExpression
         log(info.getErrorListener(true), Severity.ERROR, Compiler.INVALID_ANON_CLASS_TYPE);
     }
 
-
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
@@ -183,7 +179,6 @@ public abstract class TypeExpression
             mgr.requestRevisit();
         }
     }
-
 
     // ----- Expression methods --------------------------------------------------------------------
 
@@ -244,7 +239,6 @@ public abstract class TypeExpression
                 ? type.getParamType(0)
                 : null;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

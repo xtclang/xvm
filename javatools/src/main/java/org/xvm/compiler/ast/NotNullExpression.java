@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
@@ -25,7 +24,6 @@ import org.xvm.compiler.ast.Context.Branch;
 
 import org.xvm.util.Severity;
 
-
 /**
  * A short-circuiting expression for testing if a sub-expression is null, and yielding the non-null
  * value if the sub-expression is not null.
@@ -47,7 +45,6 @@ public class NotNullExpression
         this.expr     = expr;
         this.operator = operator;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -78,7 +75,6 @@ public class NotNullExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -268,7 +264,6 @@ public class NotNullExpression
         return new NotNullExprAST(expr.getExprAST(ctx), getType());
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -280,7 +275,6 @@ public class NotNullExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

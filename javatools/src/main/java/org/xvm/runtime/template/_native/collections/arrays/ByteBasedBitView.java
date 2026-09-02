@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
 
@@ -17,7 +16,6 @@ import org.xvm.runtime.template.numbers.xBit;
 
 import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.ByteArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
-
 
 /**
  * A base class for native ArrayDelegate<Bit> views that point to delegates holding byte arrays.
@@ -56,7 +54,6 @@ public abstract class ByteBasedBitView
                     : xRTViewToBit.INSTANCE.createBitViewDelegate(hSource, mutability);
     }
 
-
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
@@ -86,7 +83,6 @@ public abstract class ByteBasedBitView
         return Op.R_NEXT;
     }
 
-
     // ----- BitView implementation ----------------------------------------------------------------
 
     @Override
@@ -115,7 +111,6 @@ public abstract class ByteBasedBitView
         BitBasedDelegate.setBit(hView.f_hSource.m_abValue, of, fBit);
     }
 
-
     // ----- ByteView implementation ---------------------------------------------------------------
 
     @Override
@@ -136,7 +131,6 @@ public abstract class ByteBasedBitView
 
         hView.f_hSource.m_abValue[(int) of] = bValue;
     }
-
 
     // ----- handle --------------------------------------------------------------------------------
 

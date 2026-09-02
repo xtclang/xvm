@@ -1,6 +1,5 @@
 package org.xvm.util;
 
-
 import java.util.Locale;
 
 /**

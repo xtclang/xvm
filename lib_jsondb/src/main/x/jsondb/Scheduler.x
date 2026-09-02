@@ -20,7 +20,6 @@ import DBProcessor.Schedule;
 
 import TxManager.Status;
 
-
 /**
  * The `Scheduler` service handles pending [DBProcessor] processing, which enables the deferred
  * asynchronous behavior ("asynchronous triggers") and the scheduled processing capabilities of the
@@ -87,7 +86,6 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
                 .map(info -> info.id, new Collect<Int, SparseIntSet>(SparseIntSet));
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -149,7 +147,6 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      * This is the lookup of all of the schedule items, by PID.
      */
     protected/private SkiplistMap<Int, Process> byPid = new SkiplistMap();
-
 
     // ----- lifecycle management ------------------------------------------------------------------
 
@@ -219,7 +216,6 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         clearProcesses();
         status = Closed;
     }
-
 
     // ----- support for the ProcessorStore implementation -----------------------------------------
 
@@ -333,7 +329,6 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
             unregisterPid(dboId, pid);
         }
     }
-
 
     // ----- schedule helpers ----------------------------------------------------------------------
 
@@ -475,7 +470,6 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
     }
 
-
     // ----- Process state -------------------------------------------------------------------------
 
     /**
@@ -583,7 +577,6 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
         byPid.clear();
     }
-
 
     // ----- message-processing --------------------------------------------------------------------
 

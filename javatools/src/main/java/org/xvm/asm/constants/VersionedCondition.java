@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -19,7 +18,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Evaluates if the module is of a specified version. The VersionedCondition applies to (tests for)
@@ -67,7 +65,6 @@ public class VersionedCondition
         m_constVer = getConstantPool().getConstant(m_iVer, VersionConstant.class);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -87,7 +84,6 @@ public class VersionedCondition
     public VersionConstant getVersionConstant() {
         return m_constVer;
     }
-
 
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
@@ -145,7 +141,6 @@ public class VersionedCondition
         return !fInNot && super.isTerminalInfluenceFinessable(fInNot, setSimple, setComplex);
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -171,7 +166,6 @@ public class VersionedCondition
         return "isVersion(" + m_constVer.getValueString() + ')';
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -186,14 +180,12 @@ public class VersionedCondition
         writeMagnitude(out, m_constVer.getPosition());
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_constVer);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

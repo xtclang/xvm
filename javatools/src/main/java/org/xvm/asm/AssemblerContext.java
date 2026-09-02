@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,7 +11,6 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.VersionMatchesCondition;
-
 
 /**
  * The AssemblerContext is used to notify the assembler of changes in the current set of conditions
@@ -35,7 +33,6 @@ public class AssemblerContext {
         assert pool != null;
         m_pool = pool;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -218,7 +215,6 @@ public class AssemblerContext {
         return ctx;
     }
 
-
     // ----- public helpers ------------------------------------------------------------------------
 
     /**
@@ -321,7 +317,6 @@ public class AssemblerContext {
                     + ", " + constVer + "\"); found: " + condRaw);
         }
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

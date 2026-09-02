@@ -21,14 +21,12 @@ const Bit(IntLiteral literal)
      */
     static IntLiteral MaxValue = 1;
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The entire state of a bit is an IntLiteral whose value is either 0 or 1.
      */
     private IntLiteral literal;
-
 
     // ----- conversions ---------------------------------------------------------------------------
 
@@ -165,7 +163,6 @@ const Bit(IntLiteral literal)
         return toBoolean() ? 1 : 0;
     }
 
-
     // ----- operators -----------------------------------------------------------------------------
 
     @Op("&")
@@ -187,7 +184,6 @@ const Bit(IntLiteral literal)
     Bit not() {
         return literal == 1 ? 0 : 1;
     }
-
 
     // ----- Sequential interface ------------------------------------------------------------------
 
@@ -223,7 +219,6 @@ const Bit(IntLiteral literal)
             default: throw new OutOfBounds($"Bit={this}, steps={steps}");
         };
     }
-
 
     // ----- Stringable ----------------------------------------------------------------------------
 

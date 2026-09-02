@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -15,7 +14,6 @@ import org.xvm.util.PackedInteger;
 
 import static org.xvm.util.Handy.byteToHexString;
 import static org.xvm.util.Handy.nibbleToChar;
-
 
 /**
  * Represent any of: a bit (1-bit), nibble (4-bit), and octet (signed or unsigned 8-bit byte)
@@ -89,7 +87,6 @@ public class ByteConstant
         m_format = format;
         m_nVal   = bVal;
     }
-
 
     // ----- type-specific methods -----------------------------------------------------------------
 
@@ -212,7 +209,6 @@ public class ByteConstant
         return format != Format.Int8 && format != Format.UInt8;
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**
@@ -224,7 +220,6 @@ public class ByteConstant
     public Integer getValue() {
         return Integer.valueOf(m_nVal);
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -515,7 +510,6 @@ public class ByteConstant
         return getConstantPool().ensureByteConstant(format, n);
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -530,14 +524,12 @@ public class ByteConstant
         return m_format.name() + '=' + getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_nVal);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

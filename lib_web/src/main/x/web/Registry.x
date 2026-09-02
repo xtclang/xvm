@@ -25,7 +25,6 @@ service Registry
         MediaType.Predefined.forEach(registerMediaType);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -37,7 +36,6 @@ service Registry
      * The internal registry-by-file extension of the `MediaType` objects.
      */
     protected Map<String, MediaType> mediaTypeByExtension = new HashMap();
-
 
     // ----- well-known resources ------------------------------------------------------------------
 
@@ -56,7 +54,6 @@ service Registry
         Text       = Utf8Codec,
         FormURL    = Utf8Codec,
         ];
-
 
     // ----- Codec support -------------------------------------------------------------------------
 
@@ -153,7 +150,6 @@ service Registry
 
         return codec;
     }
-
 
     // ----- MediaType support ---------------------------------------------------------------------
 

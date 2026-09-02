@@ -13,7 +13,6 @@ const Int16
      */
     static IntLiteral MaxValue = 0x7FFF;
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -35,7 +34,6 @@ const Int16
     static conditional Range<Int16> range() {
         return True, MinValue..MaxValue;
     }
-
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -73,7 +71,6 @@ const Int16
         construct Int16(new IntLiteral(text).toInt16().bits);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
@@ -89,7 +86,6 @@ const Int16
     UInt16 magnitude.get() {
         return toInt32().abs().toUInt16();
     }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -145,7 +141,6 @@ const Int16
         return result;
     }
 
-
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
@@ -165,7 +160,6 @@ const Int16
 
         return False;
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

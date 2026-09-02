@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.util.Map;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,7 +17,6 @@ import org.xvm.runtime.ObjectHandle.DeferredPropertyHandle;
 import org.xvm.runtime.ObjectHandle.DeferredSingletonHandle;
 import org.xvm.runtime.ObjectHandle.InitializingHandle;
 import org.xvm.runtime.template.annotations.xLazy;
-
 
 /**
  * The heap of Constant handles.
@@ -221,7 +219,6 @@ public class ConstHeap {
             return hNew;
         });
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

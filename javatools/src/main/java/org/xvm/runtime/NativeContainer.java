@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.io.File;
 import java.io.IOException;
 
@@ -89,7 +88,6 @@ import org.xvm.tool.Launcher.LauncherException;
 
 import org.xvm.util.Handy;
 
-
 /**
  * The main container (zero) associated with the main module.
  */
@@ -105,7 +103,6 @@ public class NativeContainer
             initResources(pool);
         }
     }
-
 
     // ----- initialization ------------------------------------------------------------------------
 
@@ -678,7 +675,6 @@ public class NativeContainer
         return hNetwork;
     }
 
-
     // ----- Container methods ---------------------------------------------------------------------
 
     @Override
@@ -757,7 +753,6 @@ public class NativeContainer
         assert fileApp.validateConstants();
         return fileApp;
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -861,7 +856,6 @@ public class NativeContainer
     public String toString() {
         return "Primordial container";
     }
-
 
     // ----- constants and data fields -------------------------------------------------------------
 

@@ -1,13 +1,11 @@
 package org.xvm.asm.constants;
 
-
 import org.xvm.asm.Constant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.util.Hash;
-
 
 /**
  * Constant whose purpose is to represent an object handle (run-time only).
@@ -27,14 +25,12 @@ public class HandleConstant
         m_hValue = hValue;
     }
 
-
     // ----- FrameDependentConstant methods --------------------------------------------------------
 
     @Override
     public ObjectHandle getHandle(Frame frame) {
         return m_hValue;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -59,14 +55,12 @@ public class HandleConstant
         return m_hValue.toString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     public String getDescription() {
         return getValueString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

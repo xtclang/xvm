@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -17,7 +16,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Evaluates if a specified VM structure will be available in the container.
@@ -65,7 +63,6 @@ public class PresentCondition
                 || m_constStruct instanceof MethodConstant;
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -77,7 +74,6 @@ public class PresentCondition
     public IdentityConstant getPresentConstant() {
         return (IdentityConstant) m_constStruct;
     }
-
 
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
@@ -135,7 +131,6 @@ public class PresentCondition
         return Relation.INDEP;
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -166,7 +161,6 @@ public class PresentCondition
         return "isPresent(" + m_constStruct.getValueString() + ')';
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -181,14 +175,12 @@ public class PresentCondition
         writeMagnitude(out, m_constStruct.getPosition());
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_constStruct);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

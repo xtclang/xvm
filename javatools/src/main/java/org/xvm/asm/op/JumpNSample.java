@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -14,7 +13,6 @@ import org.xvm.asm.OpCondJump;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-
 
 /**
  * OP_JMP_NSAMPLE inverse-sample-rate, addr ; jump if this is NOT a selected sample based on the

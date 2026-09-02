@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.Collections;
@@ -44,7 +43,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
-
 
 /**
  * A method declaration.
@@ -130,7 +128,6 @@ public class MethodDeclarationStatement
         setComponent(struct);
         adopt(body);
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -264,7 +261,6 @@ public class MethodDeclarationStatement
 
         return null;
     }
-
 
     // ----- code container methods ----------------------------------------------------------------
 
@@ -1100,7 +1096,6 @@ public class MethodDeclarationStatement
         return null;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     /**
@@ -1238,7 +1233,6 @@ public class MethodDeclarationStatement
     public String getDumpDesc() {
         return toSignatureString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

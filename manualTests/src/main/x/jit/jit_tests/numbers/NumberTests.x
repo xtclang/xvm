@@ -812,7 +812,6 @@ class NumberTests {
         assert Float16.NegativeNaN.finite == False;
         testFiniteBinaryFPNumber(Float16.NegativeNaN, False);
 
-
         assert Float32.one().finite == True;
         testFiniteBinaryFPNumber(Float32.one(), True);
         assert Float32.zero().finite == True;

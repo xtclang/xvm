@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -24,7 +23,6 @@ import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Constant whose purpose is to represent a run-time formal type calculation based on a target
@@ -84,7 +82,6 @@ public class DynamicFormalConstant
         m_constFormal = pool.getConstant(m_iFormal, FormalConstant.class);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -116,7 +113,6 @@ public class DynamicFormalConstant
     public MethodConstant getMethod() {
         return (MethodConstant) getParentConstant();
     }
-
 
     // ----- FormalConstant methods ----------------------------------------------------------------
 
@@ -167,7 +163,6 @@ public class DynamicFormalConstant
         throw new IllegalStateException("Unsupported formal: " + constFormal);
     }
 
-
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
@@ -180,7 +175,6 @@ public class DynamicFormalConstant
     public IdentityConstant appendTrailingSegmentTo(IdentityConstant that) {
         throw new IllegalStateException();
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -210,7 +204,6 @@ public class DynamicFormalConstant
     public String getDescription() {
         return "Dynamic " + getValueString();
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -272,7 +265,6 @@ public class DynamicFormalConstant
             : this.m_reg == that.m_reg ? 0 : -1;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -281,7 +273,6 @@ public class DynamicFormalConstant
                Hash.of(m_typeReg,
                super.computeHashCode()));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

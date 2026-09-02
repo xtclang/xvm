@@ -122,7 +122,6 @@ const CPFileStore(String path, Object constRoot)
         return path.appendTo(buf);
     }
 
-
     // ----- native support ------------------------------------------------------------------------
 
     /**

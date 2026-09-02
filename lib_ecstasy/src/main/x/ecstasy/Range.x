@@ -316,7 +316,6 @@ const Range<Element extends Orderable>
                 : new Range(lower, upper, firstExclusive=excludeLower, lastExclusive=upperExclusive));
     }
 
-
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override

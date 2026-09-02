@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.List;
@@ -50,7 +49,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
-
 /**
  * A "try" or "using" statement.
  */
@@ -69,7 +67,6 @@ public class TryStatement
         this.catches   = catches == null || catches.isEmpty() ? null : catches;
         this.catchall  = catchall;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -91,7 +88,6 @@ public class TryStatement
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- LabelAble methods ---------------------------------------------------------------------
 
@@ -118,7 +114,6 @@ public class TryStatement
 
         return reg;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -473,7 +468,6 @@ public class TryStatement
         return fTryCompletes;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -512,7 +506,6 @@ public class TryStatement
     public String getDumpDesc() {
         return keyword.getId().TEXT;
     }
-
 
     // ----- inner classes -------------------------------------------------------------------------
 
@@ -554,7 +547,6 @@ public class TryStatement
             }
         }
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

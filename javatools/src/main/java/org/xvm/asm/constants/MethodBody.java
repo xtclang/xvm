@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
@@ -14,7 +13,6 @@ import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 
 import org.xvm.util.Handy;
-
 
 /**
  * Represents a single method (or function) implementation body.

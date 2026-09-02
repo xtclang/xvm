@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -54,7 +53,6 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Context.Branch;
 
 import org.xvm.util.Severity;
-
 
 /**
  * Comparison binary expression.
@@ -121,7 +119,6 @@ public class CmpExpression
         }
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -145,7 +142,6 @@ public class CmpExpression
         Id id = operator.getId();
         return id == Id.COMP_LT | id == Id.COMP_LTEQ;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -693,7 +689,6 @@ public class CmpExpression
         }
         return exprAst;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

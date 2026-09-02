@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.fs;
 
-
 import java.io.File;
 import java.io.IOException;
 
@@ -23,7 +22,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
-
 
 /**
  * Native OSDirectory implementation.
@@ -124,7 +122,6 @@ public class xOSDirectory
 
         return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, iReturn);
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

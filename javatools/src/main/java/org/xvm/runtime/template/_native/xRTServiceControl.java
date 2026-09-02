@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -21,7 +20,6 @@ import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
-
 
 /**
  * Native implementation of _native.RTServiceControl class.
@@ -108,7 +106,6 @@ public class xRTServiceControl
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
     }
 
-
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     public static ObjectHandle makeHandle(ServiceContext context) {
@@ -135,7 +132,6 @@ public class xRTServiceControl
          */
         protected final ServiceContext f_context;
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

@@ -142,7 +142,6 @@ class Basic {
         assert array.mutability == Fixed;
     }
 
-
     // -----------------------------
     // Plus add, delete, create allowing mutation
     @Test
@@ -207,7 +206,6 @@ class Basic {
         String[] slice = array[1 ..< 4];
         assert slice[2] == "four";
     }
-
 
     // -----------------------------
 

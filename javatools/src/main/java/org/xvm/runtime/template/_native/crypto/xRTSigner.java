@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.crypto;
 
-
 import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.MessageDigest;
@@ -31,7 +30,6 @@ import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.KeyForm;
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.MacHandle;
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SignatureHandle;
-
 
 /**
  * Native implementation of the xRTSigner.x service.

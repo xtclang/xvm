@@ -1,6 +1,5 @@
 package org.xvm.runtime.gc;
 
-
 import org.xvm.util.LongMuterator;
 
 import java.util.HashSet;
@@ -274,7 +273,6 @@ public class MarkAndSweepGcSpace<V>
         return state;
     }
 
-
     private int[] handleWeakSweep(V weak, int nWeak, int[] anNotify, int nNotifyTop, boolean fReachableMarker) {
         // clear weak refs as necessary
         long pReferent = f_accessor.getField(weak, WEAK_REFERENT_FIELD);
@@ -326,7 +324,6 @@ public class MarkAndSweepGcSpace<V>
         this.m_anFreeSlots = anFreeSlotsNew;
         this.m_aObjects = aObjectsNew;
     }
-
 
     /**
      * Return the address of a slot.

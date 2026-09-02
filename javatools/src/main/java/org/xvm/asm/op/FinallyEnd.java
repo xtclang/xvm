@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
@@ -23,7 +22,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.template.xNullable;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
-
 
 /**
  * FINALLY_END ; finish a "finally" handler (Implicit EXIT)
@@ -99,7 +97,6 @@ public class FinallyEnd
     public void registerJump(int nFinallyAddr) {
         m_nFinallyAddr = nFinallyAddr;
     }
-
 
     // ----- JIT support ---------------------------------------------------------------------------
 

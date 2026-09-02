@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -60,7 +59,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
-
 /**
  * "New object" expression.
  */
@@ -92,7 +90,6 @@ public class NewExpression
         this.body     = body;
         this.lEndPos  = lEndPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -143,7 +140,6 @@ public class NewExpression
         return CHILD_FIELDS;
     }
 
-
     // ----- AstNode methods -----------------------------------------------------------------------
 
     @Override
@@ -167,7 +163,6 @@ public class NewExpression
         }
     }
 
-
     // ----- Code Container methods ----------------------------------------------------------------
 
     @Override
@@ -183,7 +178,6 @@ public class NewExpression
     public AnonInnerClassContext getCaptureContext() {
         return m_ctxCapture;
     }
-
 
     // ----- compilation (Expression) --------------------------------------------------------------
 
@@ -838,7 +832,6 @@ public class NewExpression
                 ? super.getExprAST(ctx)
                 : m_astNew;
     }
-
 
     // ----- compilation helpers -------------------------------------------------------------------
 
@@ -1567,7 +1560,6 @@ public class NewExpression
                 : s + "{..}";
     }
 
-
     // ----- inner class: CaptureContext -----------------------------------------------------------
 
     /**
@@ -1617,7 +1609,6 @@ public class NewExpression
                     !getMethod().isStatic() && !getMethod().getContainingClass().isSingleton();
         }
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

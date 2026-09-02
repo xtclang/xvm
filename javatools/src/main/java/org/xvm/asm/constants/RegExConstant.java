@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -13,7 +12,6 @@ import org.xvm.util.Hash;
 import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.readUtf8String;
 import static org.xvm.util.Handy.writeUtf8String;
-
 
 /**
  * Represent a regular expression constant.
@@ -50,7 +48,6 @@ public class RegExConstant
         f_nFlags = nFlags;
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -66,7 +63,6 @@ public class RegExConstant
     public int getFlags() {
         return f_nFlags;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -102,7 +98,6 @@ public class RegExConstant
         return quotedString(f_regex);
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -117,7 +112,6 @@ public class RegExConstant
     public String getDescription() {
         return "regEx=" + getValueString() + "; flags=" + f_nFlags;
     }
-
 
     // ----- Object methods ------------------------------------------------------------------------
 

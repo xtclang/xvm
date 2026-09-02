@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
@@ -18,7 +17,6 @@ import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.P_Get;
 
 import org.xvm.util.PackedInteger;
-
 
 /**
  * An expression that converts the result of another expression to an Ecstasy Int, using the rules
@@ -63,7 +61,6 @@ public class ToIntExpression
         m_pintOffset = pintOffset;
         finishValidation(null, null, expr.pool().typeInt64(), expr.getTypeFit().addConversion(), val, errs);
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -166,7 +163,6 @@ public class ToIntExpression
             assert id != null;
             return id;
 
-
         case "numbers.Bit":     // converted by extract
         case "numbers.Nibble":  // converted by extract
         case "text.Char":       // converted by extract
@@ -175,7 +171,6 @@ public class ToIntExpression
             return null;
         }
     }
-
 
     // ----- Expression compilation ----------------------------------------------------------------
 
@@ -249,7 +244,6 @@ public class ToIntExpression
         }
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -291,7 +285,6 @@ public class ToIntExpression
 
         return sb.toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

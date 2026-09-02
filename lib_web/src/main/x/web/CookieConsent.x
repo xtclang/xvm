@@ -79,7 +79,6 @@ const CookieConsent(Boolean necessary       = False,
                                 );
     }
 
-
     // ----- pre-built Consents --------------------------------------------------------------------
 
     /**
@@ -110,7 +109,6 @@ const CookieConsent(Boolean necessary       = False,
                                                  allowFirstParty = True,
                                                  blockThirdParty = False,
                                                 );
-
 
     // ----- category-based access -----------------------------------------------------------------
 
@@ -224,7 +222,6 @@ const CookieConsent(Boolean necessary       = False,
                     socialMedia   = socialMedia   && category != SocialMedia,
                     );
     }
-
 
     // ----- compact persistent form ---------------------------------------------------------------
 

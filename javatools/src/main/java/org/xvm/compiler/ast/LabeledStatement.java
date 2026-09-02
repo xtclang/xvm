@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.ErrorListener;
@@ -12,7 +11,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
-
 
 /**
  * A labeled statement represents a statement that has a label.
@@ -26,7 +24,6 @@ public class LabeledStatement
         this.label = label;
         this.stmt  = stmt;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -52,7 +49,6 @@ public class LabeledStatement
         return CHILD_FIELDS;
     }
 
-
     // ----- LabelAble implementation --------------------------------------------------------------
 
     @Override
@@ -64,7 +60,6 @@ public class LabeledStatement
     public Register getLabelVar(Context ctx, String sName) {
         return ((LabelAble) stmt).getLabelVar(ctx, sName);
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -96,7 +91,6 @@ public class LabeledStatement
         return stmt.completes(ctx, fReachable, code, errs);
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -108,7 +102,6 @@ public class LabeledStatement
     public String getDumpDesc() {
         return label.getValue() + ":";
     }
-
 
     // ----- inner class: LabelVar -----------------------------------------------------------------
 
@@ -158,7 +151,6 @@ public class LabeledStatement
             return LabeledStatement.this.getName() + ':';
         }
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
@@ -61,7 +60,6 @@ import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
-
 
 /**
  * Common base class for all statements and expressions.
@@ -656,7 +654,6 @@ public abstract class AstNode
                 source == null ? 0L : getEndPosition());
     }
 
-
     // ----- compile phases ------------------------------------------------------------------------
 
     /**
@@ -836,7 +833,6 @@ public abstract class AstNode
         // then they don't know how to resolve names
         return alreadyReached(Stage.Resolving);
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -1665,7 +1661,6 @@ public abstract class AstNode
         return info;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -1839,7 +1834,6 @@ public abstract class AstNode
         return map;
     }
 
-
     // ----- internal -------------------------------------------------------------------
 
     /**
@@ -1912,7 +1906,6 @@ public abstract class AstNode
 
         return fields;
     }
-
 
     // ----- inner class: ChildIterator ------------------------------------------------------------
 
@@ -2079,7 +2072,6 @@ public abstract class AstNode
         private Object value;
         private int state = NOT_PREP;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

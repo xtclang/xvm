@@ -162,7 +162,6 @@ service EngineExecutionContext
                 return True, displayName;
         }
 
-
         Type requiredType = type;
         if ((Type left, Type right) := type.relational()) {
             requiredType = left.is(Type<Nullable>) ? right : left;

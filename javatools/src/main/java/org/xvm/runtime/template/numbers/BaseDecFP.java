@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import java.math.BigInteger;
 
 import org.xvm.asm.ClassStructure;
@@ -34,7 +33,6 @@ import org.xvm.type.Decimal64;
 import org.xvm.type.Decimal128;
 
 import org.xvm.util.PackedInteger;
-
 
 /**
  * Base class for native DecimalFPNumber (Dec*) support.
@@ -373,7 +371,6 @@ public abstract class BaseDecFP
         return frame.assignValue(iReturn, makeHandle(dec.neg()));
     }
 
-
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
@@ -421,7 +418,6 @@ public abstract class BaseDecFP
 
         return frame.assignValue(iReturn, xString.makeHandle(dec.toString()));
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -509,7 +505,6 @@ public abstract class BaseDecFP
      * @return a decimal value for the specified double
      */
     protected abstract Decimal fromDouble(double d);
-
 
     // ----- handle --------------------------------------------------------------------------------
 

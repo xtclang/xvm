@@ -179,7 +179,6 @@ const TimeOfDay(Int picos)
      */
     Int picoseconds.get() = (picos % PicosPerSecond).toInt();
 
-
     // ----- operators -----------------------------------------------------------------------------
 
     @Op("+") TimeOfDay add(Duration duration) {
@@ -229,14 +228,12 @@ const TimeOfDay(Int picos)
         return new Duration(picosStop - picosStart);
     }
 
-
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
      * @return the [Duration] of time since midnight represented by this `TimeOfDay` object
      */
     Duration toDuration() = new Duration(picos);
-
 
     // ----- Stringable interface ------------------------------------------------------------------
 

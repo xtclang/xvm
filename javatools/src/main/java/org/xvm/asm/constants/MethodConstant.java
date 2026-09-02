@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -25,7 +24,6 @@ import org.xvm.util.Hash;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Represent a Method constant. A method constant uniquely identifies a method structure within a
@@ -125,7 +123,6 @@ public class MethodConstant
         m_constParent = pool.getConstant(m_iParent, MultiMethodConstant.class);
         m_constSig    = pool.getConstant(m_iSig, SignatureConstant.class);
     }
-
 
     // ----- type-specific functionality -----------------------------------------------------------
 
@@ -274,7 +271,6 @@ public class MethodConstant
         return m_constSig.asBjarneLambdaType(getConstantPool(), getNamespace().getType());
     }
 
-
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
@@ -351,9 +347,7 @@ public class MethodConstant
         }
     }
 
-
     // ----- GenericTypeResolver interface ---------------------------------------------------------
-
 
     @Override
     public TypeConstant resolveFormalType(FormalConstant constFormal) {
@@ -379,7 +373,6 @@ public class MethodConstant
         }
         return null;
     }
-
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
@@ -543,7 +536,6 @@ public class MethodConstant
                 : sig.asMethodType(pool, typeTarget);
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -619,7 +611,6 @@ public class MethodConstant
                 : getPathString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -679,7 +670,6 @@ public class MethodConstant
         return sb.toString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -688,7 +678,6 @@ public class MethodConstant
                Hash.of(m_iLambda,
                Hash.of(m_constSig)));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

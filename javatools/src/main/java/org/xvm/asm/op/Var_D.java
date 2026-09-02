@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -15,7 +14,6 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.VarSupport;
-
 
 /**
  * VAR_D TYPE ; next register is an anonymous "dynamic reference" variable

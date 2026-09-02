@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -18,7 +17,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Consider a scenario from Map.x:
@@ -117,7 +115,6 @@ public class AnonymousClassTypeConstant
         return (ClassStructure) m_idAnon.getComponent();
     }
 
-
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
@@ -190,7 +187,6 @@ public class AnonymousClassTypeConstant
         return super.resolveFormalType(constFormal);
     }
 
-
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
@@ -208,7 +204,6 @@ public class AnonymousClassTypeConstant
     public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams) {
         return Usage.NO;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -242,7 +237,6 @@ public class AnonymousClassTypeConstant
         return m_typeParent.getValueString() + '.' + m_idAnon.getValueString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -260,7 +254,6 @@ public class AnonymousClassTypeConstant
         writeMagnitude(out, m_idAnon.getPosition());
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -268,7 +261,6 @@ public class AnonymousClassTypeConstant
         return Hash.of(m_typeParent,
                Hash.of(m_idAnon));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

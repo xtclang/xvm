@@ -1417,7 +1417,6 @@ public class BuildContext {
         return new SingleSlot(type, Specific, CD_nType, "");
     }
 
-
     /**
      * Load the {@link nType} represented by the specified formal constant.
      *

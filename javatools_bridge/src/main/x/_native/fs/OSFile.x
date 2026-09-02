@@ -88,7 +88,6 @@ const OSFile
         return &fileChannel.maskAs(FileChannel);
     }
 
-
     // ----- native --------------------------------------------------------------------------------
 
     immutable Byte[] readImpl(Range<Int> range)                     = TODO("native");

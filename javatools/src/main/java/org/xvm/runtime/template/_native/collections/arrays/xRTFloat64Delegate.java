@@ -22,7 +22,6 @@ import org.xvm.runtime.template.numbers.BaseBinaryFP.FloatHandle;
 import org.xvm.runtime.template.numbers.xFloat64;
 import org.xvm.runtime.template.numbers.xInt64;
 
-
 /**
  * Native RTDelegate<Float64> implementation.
  */
@@ -61,7 +60,6 @@ public class xRTFloat64Delegate
         }
         return makeHandle(adValue, cSize, mutability);
     }
-
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
@@ -200,7 +198,6 @@ public class xRTFloat64Delegate
         hDelegate.m_cSize -= cDelete;
     }
 
-
     // ----- ClassTemplate API ---------------------------------------------------------------------
 
     @Override
@@ -237,7 +234,6 @@ public class xRTFloat64Delegate
             && Arrays.equals(h1.m_adValue, h2.m_adValue);
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
@@ -261,7 +257,6 @@ public class xRTFloat64Delegate
         System.arraycopy(adValue, 0, alNew, 0, adValue.length);
         return alNew;
     }
-
 
     // ----- handle --------------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -13,7 +12,6 @@ import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.PropertyExprAST;
 
 import org.xvm.compiler.ast.Context;
-
 
 /**
  * Represent a formal child of a generic property, type parameter or formal child constant.
@@ -66,7 +64,6 @@ public class FormalTypeChildConstant
         }
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -80,7 +77,6 @@ public class FormalTypeChildConstant
         return idParent;
     }
 
-
     // ----- PropertyConstant methods --------------------------------------------------------------
 
     @Override
@@ -92,7 +88,6 @@ public class FormalTypeChildConstant
     public boolean isTypeSequenceTypeParameter() {
         return false;
     }
-
 
     // ----- FormalConstant methods ----------------------------------------------------------------
 
@@ -147,7 +142,6 @@ public class FormalTypeChildConstant
         return new PropertyExprAST(getParentConstant().toExprAst(ctx), getNameConstant());
     }
 
-
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
@@ -180,7 +174,6 @@ public class FormalTypeChildConstant
         return that.getConstantPool().ensureFormalTypeChildConstant((FormalConstant) that, getName());
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -192,7 +185,6 @@ public class FormalTypeChildConstant
     public boolean containsUnresolved() {
         return false;
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

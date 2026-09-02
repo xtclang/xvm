@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.numbers;
 
-
 import java.util.Random;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -41,7 +40,6 @@ import org.xvm.runtime.template.numbers.xUInt8;
 import org.xvm.runtime.template.numbers.xUInt16;
 import org.xvm.runtime.template.numbers.xUInt32;
 import org.xvm.runtime.template.numbers.xUInt64;
-
 
 /**
  * An injectable "Random" number generator.
@@ -264,7 +262,6 @@ public class xRTRandom
         }
     }
 
-
     // ----- handle --------------------------------------------------------------------------------
 
     public ServiceHandle createRandomHandle(ServiceContext context,
@@ -285,7 +282,6 @@ public class xRTRandom
             f_random = random;
         }
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 

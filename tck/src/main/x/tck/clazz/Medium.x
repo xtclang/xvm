@@ -10,7 +10,6 @@ class Medium {
         //annot();
     }
 
-
     void xincorp() {
       String baseint1 = new XBase1   < Int  >().add( 123 );
       String basestr1 = new XBase1   <String>().add("abc");

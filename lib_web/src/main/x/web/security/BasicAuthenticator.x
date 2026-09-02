@@ -7,7 +7,6 @@ import ecstasy.collections.CaseInsensitive;
 
 import sec.PlainTextCredential;
 
-
 /**
  * An implementation of the Authenticator interface for
  * [The 'Basic' HTTP Authentication Scheme](https://datatracker.ietf.org/doc/html/rfc7617).
@@ -34,7 +33,6 @@ service BasicAuthenticator(Realm realm)
      */
     @Override
     public/protected Realm realm;
-
 
     // ----- Authenticator API ---------------------------------------------------------------------
 

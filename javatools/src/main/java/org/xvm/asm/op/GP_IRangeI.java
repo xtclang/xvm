@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -9,7 +8,6 @@ import org.xvm.asm.Constant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-
 
 /**
  * GP_IRANGEI rvalue1, rvalue2, lvalue ; T .. T -> Range<T>

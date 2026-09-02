@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 
@@ -11,7 +10,6 @@ import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.xUInt128;
-
 
 /**
  * Native RTDelegate<UInt128> implementation.

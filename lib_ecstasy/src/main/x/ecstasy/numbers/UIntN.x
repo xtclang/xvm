@@ -43,7 +43,6 @@ const UIntN
         construct UIntN(new IntLiteral(text).toUIntN().bits);
     }
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -56,14 +55,12 @@ const UIntN
         return 1;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
     Signum sign.get() {
         return this == 0 ? Zero : Positive;
     }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -108,7 +105,6 @@ const UIntN
         return result;
     }
 
-
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
@@ -124,7 +120,6 @@ const UIntN
 
         return False;
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 
@@ -218,7 +213,6 @@ const UIntN
 
     @Override
     UIntN toUIntN() = this;
-
 
     // ----- Stringable implementation -------------------------------------------------------------
 

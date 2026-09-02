@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -13,7 +12,6 @@ import org.xvm.asm.Register;
 import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
-
 
 /**
  * VAR TYPE ; (next register is an uninitialized anonymous variable)

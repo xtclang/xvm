@@ -1,6 +1,5 @@
 package org.xvm.type;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -8,7 +7,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
-
 
 /**
  * A representation of an IEEE-754-2008 32-bit decimal.
@@ -71,7 +69,6 @@ public class Decimal32
 
         m_nBits = toIntBits(dec);
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -140,7 +137,6 @@ public class Decimal32
         return (nExp | nCombo & 0b111111) - 101;
     }
 
-
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
@@ -199,7 +195,6 @@ public class Decimal32
         return ab;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -211,7 +206,6 @@ public class Decimal32
     public boolean equals(Object obj) {
         return obj instanceof Decimal32 that && this.m_nBits == that.m_nBits;
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -321,7 +315,6 @@ public class Decimal32
         return new BigDecimal(BigInteger.valueOf(nSig), -nExp, MathContext.DECIMAL32);
     }
 
-
     // ----- constants -----------------------------------------------------------------------------
 
     /**
@@ -406,7 +399,6 @@ public class Decimal32
      * The decimal value for negative infinity.
      */
     public static final Decimal32 NEG_INFINITY = new Decimal32(SIGN_BIT | G0_G4_INF);
-
 
     // ----- fields --------------------------------------------------------------------------------
 

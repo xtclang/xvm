@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.xvm.asm.Argument;
@@ -23,7 +22,6 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
-
 /**
  * The "Elvis" expression, which is used to optionally substitute the value of the second expression
  * iff the value of the first expression is null.
@@ -44,7 +42,6 @@ public class ElvisExpression
     public ElvisExpression(Expression expr1, Token operator, Expression expr2) {
         super(expr1, operator, expr2);
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -167,7 +164,6 @@ public class ElvisExpression
                 type2Req = typeRequired;
             }
         }
-
 
         ctx = ctx.enterFork(true);
         ctx = ctx.exit();
@@ -311,7 +307,6 @@ public class ElvisExpression
         }
         return labelEnd;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

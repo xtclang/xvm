@@ -19,7 +19,6 @@ class MappedMap<Key, Value, FromValue>
         this.transform = transform;
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     typedef Map.Entry<Key, Value>     as ToEntry;
@@ -93,7 +92,6 @@ class MappedMap<Key, Value, FromValue>
             super(accumulator);
         }
     }
-
 
     // ----- Map interface ------------------------------------------------------------------
 

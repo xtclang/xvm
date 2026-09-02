@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -21,7 +20,6 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
-
 /**
  * The trailing "else" expression for any short-circuited expressions that precede it:
  *
@@ -36,7 +34,6 @@ public class ElseExpression
     public ElseExpression(Expression expr1, Token operator, Expression expr2) {
         super(expr1, operator, expr2);
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -214,7 +211,6 @@ public class ElseExpression
             code.add(labelEnd);
         }
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

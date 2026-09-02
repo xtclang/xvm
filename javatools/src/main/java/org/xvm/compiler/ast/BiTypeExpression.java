@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.ConstantPool;
@@ -12,7 +11,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
-
 
 /**
  * A BiType expression is a type expression composed of two type expressions. For example, union
@@ -27,7 +25,6 @@ public class BiTypeExpression
         this.operator = operator;
         this.type2    = type2;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -51,7 +48,6 @@ public class BiTypeExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -115,7 +111,6 @@ public class BiTypeExpression
         return fValid ? super.validate(ctx, typeRequired, errs) : null;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -127,7 +122,6 @@ public class BiTypeExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

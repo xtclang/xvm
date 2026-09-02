@@ -1,7 +1,6 @@
 
 package org.xvm.util;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
@@ -38,7 +37,6 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static java.util.Arrays.sort;
-
 
 /**
  * Handy static methods.
@@ -412,7 +410,6 @@ public final class Handy {
         return appendLongAsHex(sb, n, 16);
     }
 
-
     /**
      * Format the passed <tt>int</tt> into a String of the form "0x12345678".
      *
@@ -550,7 +547,6 @@ public final class Handy {
                 // ABCDEFGHIJKLMNOPQRSTUVWXYZ[/]^_`abcdefghijklmnopqrstuvwxyz
                 0b01111111111111111111111111100000011111111111111111111111111L) != 0;
     }
-
 
     // ----- String manipulation -------------------------------------------------------------------
 
@@ -1055,7 +1051,6 @@ public final class Handy {
 
         return (int) n;
     }
-
 
     // ----- unicode -------------------------------------------------------------------------------
 
@@ -1714,7 +1709,6 @@ public final class Handy {
         charbuf.get(ach);
         return ach;
     }
-
 
     // ----- array and collection helpers ----------------------------------------------------------
 
@@ -2411,7 +2405,6 @@ public final class Handy {
     public static <T> Stream<T> stream(final Iterable<T> iterable) {
         return StreamSupport.stream(iterable.spliterator(), false);
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

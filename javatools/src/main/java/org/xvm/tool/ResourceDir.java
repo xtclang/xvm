@@ -1,6 +1,5 @@
 package org.xvm.tool;
 
-
 import java.io.File;
 
 import java.nio.file.attribute.FileTime;
@@ -16,7 +15,6 @@ import java.util.stream.Collectors;
 import org.xvm.compiler.ast.FileExpression;
 
 import static org.xvm.util.Handy.listFiles;
-
 
 /**
  * Represents a directory that contains resources, based on the contents of one or more directories

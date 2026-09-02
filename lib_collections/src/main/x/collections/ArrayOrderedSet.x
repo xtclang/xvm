@@ -2,7 +2,6 @@ import ecstasy.collections.OrderedSetSlice;
 
 import ecstasy.Duplicable;
 
-
 /**
  * An ArrayOrderedSet allows a sorted array of data to be used as a set with O(log n) performance
  * (i.e. using binary search).
@@ -48,7 +47,6 @@ class ArrayOrderedSet<Element extends Orderable>
         this.compare = that.compare;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -60,7 +58,6 @@ class ArrayOrderedSet<Element extends Orderable>
      * The Orderer for the set.
      */
     protected/private Orderer compare;
-
 
     // ----- read operations -----------------------------------------------------------------------
 
@@ -152,7 +149,6 @@ class ArrayOrderedSet<Element extends Orderable>
         return new OrderedSetSlice<Element>(this, indexes);
     }
 
-
     // ----- Freezable interface -------------------------------------------------------------------
 
     private static mixin ArrayOrderedSetFreezer<Element extends Shareable+Orderable>
@@ -172,7 +168,6 @@ class ArrayOrderedSet<Element extends Orderable>
             return new ArrayOrderedSet<Element>(this).freeze(True);
         }
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 

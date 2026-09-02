@@ -1,13 +1,11 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
-
 
 /**
  * Represent a category of keyword classes and/or types: "const", "enum", "module", "package",
@@ -67,14 +65,12 @@ public class KeywordConstant
         };
     }
 
-
     // ----- Pseudo-constant methods --------------------------------------------------------------
 
     @Override
     public boolean isCongruentWith(PseudoConstant that) {
         return that instanceof KeywordConstant && this.getFormat() == that.getFormat();
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -112,7 +108,6 @@ public class KeywordConstant
         return getDescription();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -127,14 +122,12 @@ public class KeywordConstant
         };
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(f_format);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

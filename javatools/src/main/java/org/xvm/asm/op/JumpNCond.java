@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -12,7 +11,6 @@ import org.xvm.asm.OpCondJump;
 import org.xvm.asm.constants.ConditionalConstant;
 
 import org.xvm.runtime.Frame;
-
 
 /**
  * JMP_NCOND COND, addr

@@ -109,13 +109,11 @@ service OSStorage {
     @Override
     String toString() = "Storage";
 
-
     // ----- used by the native injection logic ----------------------------------------------------
 
     FileStore store.get() = fileStore;
 
     Directory rootDir.get() = fileStore.root;
-
 
     // ----- native --------------------------------------------------------------------------------
 

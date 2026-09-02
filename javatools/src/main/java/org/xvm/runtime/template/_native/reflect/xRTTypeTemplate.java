@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -43,7 +42,6 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.GenericArrayDelegate;
 
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
-
 
 /**
  * Native TypeTemplate implementation.
@@ -184,7 +182,6 @@ public class xRTTypeTemplate
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
 
-
     // ----- TypeTemplateHandle support ------------------------------------------------------------
 
     /**
@@ -225,7 +222,6 @@ public class xRTTypeTemplate
 
         private final TypeConstant f_type;
     }
-
 
     // ----- property implementations --------------------------------------------------------------
 
@@ -303,7 +299,6 @@ public class xRTTypeTemplate
                                 ensureArrayClassComposition(frame.f_context.f_container), ahTypes);
         return frame.assignValue(iReturn, hArray);
     }
-
 
     // ----- method implementations ----------------------------------------------------------------
 
@@ -574,7 +569,6 @@ public class xRTTypeTemplate
                     makeHandle(frame.f_context.f_container, typeR));
     }
 
-
     // ----- TypeComposition caching ---------------------------------------------------------------
 
     /**
@@ -585,7 +579,6 @@ public class xRTTypeTemplate
     }
 
     private static TypeConstant TEMPLATE_ARRAY_TYPE;
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

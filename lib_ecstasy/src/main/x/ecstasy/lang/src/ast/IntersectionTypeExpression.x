@@ -2,7 +2,6 @@ import reflect.InvalidType;
 
 import src.Lexer.Token;
 
-
 /**
  * Represents an intersection type expressions, such as:
  *

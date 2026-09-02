@@ -38,7 +38,6 @@ class MarkedIterator<Element>(Iterator<Element> that)
         return position < 0;
     }
 
-
     // ----- Iterator ------------------------------------------------------------------------------
 
     @Override
@@ -69,7 +68,6 @@ class MarkedIterator<Element>(Iterator<Element> that)
             return False;
         }
     }
-
 
     // ----- Markable ------------------------------------------------------------------------------
 
@@ -104,7 +102,6 @@ class MarkedIterator<Element>(Iterator<Element> that)
         }
     }
 
-
     // ----- metadata ------------------------------------------------------------------------------
 
     @Override
@@ -130,7 +127,6 @@ class MarkedIterator<Element>(Iterator<Element> that)
 
         return False;
     }
-
 
     // ----- delegations ---------------------------------------------------------------------------
 

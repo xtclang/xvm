@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -55,7 +54,6 @@ import org.xvm.runtime.template._native.collections.arrays.xRTDelegate;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
-
 
 /**
  * A call stack frame.
@@ -939,7 +937,6 @@ public class Frame
             }
         }
     }
-
 
     /**
      * Specialization of assignValue() that takes any number of return values.
@@ -1891,7 +1888,6 @@ public class Frame
         return true;
     }
 
-
     // ----- GenericTypeResolver interface ---------------------------------------------------------
 
     public GenericTypeResolver getGenericsResolver(boolean fDynamic) {
@@ -1986,7 +1982,6 @@ public class Frame
         }
         return m_debug;
     }
-
 
     // ----- StackTrace support --------------------------------------------------------------------
 
@@ -2244,7 +2239,6 @@ public class Frame
         return formatFrameDetails(f_context, f_function, m_iPC, f_aOp, f_framePrev);
     }
 
-
     // ----- try-catch support ---------------------------------------------------------------------
 
     public abstract static class Guard {
@@ -2376,7 +2370,6 @@ public class Frame
         private       int m_ixGuard;     // the index of the next AllGuard to proceed to
         private final int m_ixGuardBase; // the index of the AllGuard to stop at
     }
-
 
     // ----- inner classes -------------------------------------------------------------------------
 
@@ -2735,7 +2728,6 @@ public class Frame
             }
         }
     };
-
 
     // ----- TEMPORARY -----------------------------------------------------------------------------
 

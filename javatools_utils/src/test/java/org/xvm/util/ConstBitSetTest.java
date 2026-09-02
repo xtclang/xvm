@@ -1,9 +1,7 @@
 package org.xvm.util;
 
-
 import java.util.BitSet;
 import java.util.Random;
-
 
 /**
  * A test for ConstBitSet.

@@ -65,7 +65,6 @@ interface DBCounter
     @Override
     void set(Int value);
 
-
     // ----- key counter support -------------------------------------------------------------------
 
     /**
@@ -84,7 +83,6 @@ interface DBCounter
         set(newValue);
         return oldValue;
     }
-
 
     // ----- blind updates -------------------------------------------------------------------------
 
@@ -112,7 +110,6 @@ interface DBCounter
     void decrement() {
         adjustBy(-1);
     }
-
 
     // ----- read plus update operations -----------------------------------------------------------
 
@@ -166,14 +163,12 @@ interface DBCounter
         return result;
     }
 
-
     // ----- DBObject methods ----------------------------------------------------------------------
 
     @Override
     @RO DBCategory dbCategory.get() {
         return DBCounter;
     }
-
 
     // ----- transactional information -------------------------------------------------------------
 
@@ -215,7 +210,6 @@ interface DBCounter
     @Override
     interface TxChange
             extends DBChange {}
-
 
     // ----- transaction trigger API ---------------------------------------------------------------
 

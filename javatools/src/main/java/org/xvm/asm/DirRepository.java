@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -20,7 +19,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-
 
 /**
  * A simple ModuleRepository that manages its contents in a directory.
@@ -58,7 +56,6 @@ public class DirRepository
         m_fRO = fReadOnly;
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -74,7 +71,6 @@ public class DirRepository
     public boolean isReadOnly() {
         return m_fRO;
     }
-
 
     // ----- ModuleRepository API ------------------------------------------------------------------
 
@@ -122,7 +118,6 @@ public class DirRepository
         writeCache();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -144,7 +139,6 @@ public class DirRepository
     public String toString() {
         return "DirRepository(Path=" + m_dir.toString() + ", RO=" + m_fRO + ")";
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -433,7 +427,6 @@ public class DirRepository
         private transient ModuleStructure module;
     }
 
-
     // ----- constants -----------------------------------------------------------------------------
 
     public static final FileFilter ModulesOnly = file ->
@@ -446,7 +439,6 @@ public class DirRepository
     private static final int    MIN_CACHE_ENTRY_SIZE  = Long.BYTES * 2 + Short.BYTES + Byte.BYTES;
     private static final String CACHE_DIRECTORY       = "xvm-dir-repository";
     private static final String CACHE_SUFFIX          = ".cache";
-
 
     // ----- fields --------------------------------------------------------------------------------
 

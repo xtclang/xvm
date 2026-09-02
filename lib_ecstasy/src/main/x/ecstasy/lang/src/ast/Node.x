@@ -2,7 +2,6 @@ import src.Lexer.Token;
 
 import io.TextPosition;
 
-
 /**
  * This is the abstract representation for every node in an Ecstasy "abstract syntax tree".
  */

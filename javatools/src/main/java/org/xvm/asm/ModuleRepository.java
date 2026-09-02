@@ -1,11 +1,9 @@
 package org.xvm.asm;
 
-
 import java.io.IOException;
 
 import java.util.Set;
 import java.util.TreeSet;
-
 
 /**
  * An interface representing the ability to find Modules by identity.

@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -49,7 +48,6 @@ import static org.xvm.javajit.Builder.CD_Ctx;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * JMP_VAL rvalue, #:(CONST, addr), addr-default ; if value equals a constant, jump to address, otherwise default
@@ -380,7 +378,6 @@ public class JumpVal
         sb.append(Argument.toIdString(m_argCond, m_nArgCond))
           .append(", ");
     }
-
 
     // ----- JIT support ---------------------------------------------------------------------------
 

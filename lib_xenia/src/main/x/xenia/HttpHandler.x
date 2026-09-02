@@ -10,7 +10,6 @@ import web.security.Authenticator;
 import HttpServer.Handler;
 import HttpServer.RequestInfo;
 
-
 /**
  * A low-level HTTP request entry point.
  */
@@ -99,7 +98,6 @@ service HttpHandler
         return dispatchers.map(Dispatcher.pendingRequests).reduce(new aggregate.Sum<Int>());
     }
 
-
     // ----- Handler API ---------------------------------------------------------------------------
 
     @Override
@@ -133,7 +131,6 @@ service HttpHandler
         return $"HttpHandler@{route}";
     }
 
-
     // ----- HttpHandler specific methods ----------------------------------------------------------
 
     /**
@@ -157,7 +154,6 @@ service HttpHandler
         sessionManager.close();
         return pendingRequests == 0;
     }
-
 
     // ----- internal helpers ----------------------------------------------------------------------
 

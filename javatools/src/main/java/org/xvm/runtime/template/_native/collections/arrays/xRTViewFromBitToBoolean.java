@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
@@ -18,7 +17,6 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
-
 
 /**
  * The native RTViewFromBit<Boolean> implementation.
@@ -59,7 +57,6 @@ public class xRTViewFromBitToBoolean
 
         return new ViewHandle(clzView, hSource, hSource.m_cSize, mutability);
     }
-
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 

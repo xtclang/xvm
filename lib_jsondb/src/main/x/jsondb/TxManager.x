@@ -30,7 +30,6 @@ import Catalog.BuiltIn;
 import ObjectStore.MergeResult;
 import ObjectStore.PrepareResult;
 
-
 /**
  * The transaction manager is the clearinghouse for transactions. As a service, it naturally orders
  * the actions of concurrent transactions. When a transaction is instructed to commit, this service
@@ -175,7 +174,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     }
 
     typedef Client<Schema>.DBObjectImpl as DBObjectImpl;
-
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -560,7 +558,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected/private CircularArray<TxRecord> pendingPrepare = new CircularArray();
 
-
     // ----- lifecycle management ------------------------------------------------------------------
 
     /**
@@ -780,7 +777,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
         status = Closed;
     }
-
 
     // ----- transactional API ---------------------------------------------------------------------
 
@@ -1214,7 +1210,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         return rec.rollback();
     }
 
-
     // ----- transactional ID helpers --------------------------------------------------------------
 
     /**
@@ -1327,7 +1322,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected Int genWriteId() {
         return generateWriteId(++txCount);
     }
-
 
     // ----- internal: TxRecord --------------------------------------------------------------------
 
@@ -2331,7 +2325,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
     }
 
-
     // ----- API for ObjectStore instances ---------------------------------------------------------
 
     /**
@@ -2403,7 +2396,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         assert TxRecord tx := byWriteId.get(txId);
         return tx.worker;
     }
-
 
     // ----- file management  ----------------------------------------------------------------------
 
@@ -3024,7 +3016,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             logInfos.clear();
         }
     }
-
 
     // ----- background maintenance ----------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.compiler;
 
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -26,7 +25,6 @@ import static org.xvm.util.Handy.isDigit;
 import static org.xvm.util.Handy.isHexit;
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.quotedChar;
-
 
 /**
  * An Ecstasy source code parser supporting both demand-based and stream-based
@@ -63,7 +61,6 @@ public class Lexer
         m_errorListener = parent.m_errorListener;
         m_fWhitespace   = parent.m_fWhitespace;
     }
-
 
     // ----- Iterator methods ----------------------------------------------------------------------
 
@@ -102,7 +99,6 @@ public class Lexer
         // check if it is a reserved word
         return Id.valueByText(sName) == null;
     }
-
 
     // ----- public API ----------------------------------------------------------------------------
 
@@ -152,7 +148,6 @@ public class Lexer
             }
         };
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -2514,7 +2509,6 @@ public class Lexer
         }
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
@@ -2708,7 +2702,6 @@ public class Lexer
         return '}';
     }
 
-
     // ----- constants -----------------------------------------------------------------------------
 
     /**
@@ -2840,7 +2833,6 @@ public class Lexer
      * Unexpected character: {0}
      */
     public static final String UNEXPECTED_CHAR      = "LEXER-18";
-
 
     // ----- data members --------------------------------------------------------------------------
 

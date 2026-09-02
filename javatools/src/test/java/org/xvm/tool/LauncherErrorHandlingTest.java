@@ -396,7 +396,6 @@ class LauncherErrorHandlingTest {
         assertThrows(LauncherException.class, compiler::testCheckErrors);
     }
 
-
     @Test
     void testMultipleCheckErrorsCalls() {
         final var console = new TestConsole();

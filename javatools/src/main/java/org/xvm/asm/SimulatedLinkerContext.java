@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,7 +18,6 @@ import org.xvm.asm.constants.VersionMatchesCondition;
 import org.xvm.asm.constants.VersionedCondition;
 
 import org.xvm.util.Handy;
-
 
 /**
  * This is a compile-time LinkerContext emulator, that is driven off of the information managed by
@@ -106,7 +104,6 @@ public class SimulatedLinkerContext
         }
     }
 
-
     // ----- LinkerContext methods -----------------------------------------------------------------
 
     @Override
@@ -165,7 +162,6 @@ public class SimulatedLinkerContext
         return version != null && version.equals(constVer.getVersion());
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -183,7 +179,6 @@ public class SimulatedLinkerContext
     public String toString() {
         return "SimulatedLinkerContext{" + cond + "}";
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -3,7 +3,6 @@ import src.Lexer.Token;
 import reflect.Access;
 import reflect.InvalidType;
 
-
 /**
  * Represents an access type, such as:
  *

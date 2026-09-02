@@ -1,6 +1,5 @@
 package org.xvm.util.concurrent;
 
-
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Objects;
@@ -20,7 +19,6 @@ import java.util.function.IntFunction;
 import java.util.function.Predicate;
 
 import java.util.stream.Stream;
-
 
 /**
  * A lock-free {@link BlockingQueue} implementation which delegates to another thread-safe
@@ -143,7 +141,6 @@ public class BlockingQueueAdapter<E> implements BlockingQueue<E> {
     public <T> T[] toArray(IntFunction<T[]> generator) {
         return delegate.toArray(generator);
     }
-
 
     // ----- BlockingQueue methods -----------------------------------------------------------------
 
@@ -316,7 +313,6 @@ public class BlockingQueueAdapter<E> implements BlockingQueue<E> {
             // else; it concurrently gave up; try the next parker
         }
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

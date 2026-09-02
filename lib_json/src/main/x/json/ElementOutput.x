@@ -27,7 +27,6 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      */
     FieldOutput<ElementOutput> openObject();
 
-
     // ----- single values -------------------------------------------------------------------------
 
     /**
@@ -105,7 +104,6 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
         mapping.write(this, value);
         return this;
     }
-
 
     // ----- array values --------------------------------------------------------------------------
 

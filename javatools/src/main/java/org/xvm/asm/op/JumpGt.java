@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -15,7 +14,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xOrdered;
-
 
 /**
  * JMP_GT rvalue1, rvalue2, addr ; jump if value1 is greater than value2

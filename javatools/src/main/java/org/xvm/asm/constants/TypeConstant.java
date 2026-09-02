@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -110,7 +109,6 @@ import static org.xvm.javajit.TypeSystem.HASH;
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyAddAll;
 
-
 /**
  * A base class for the various forms of Constants that will represent data types.
  * <p/>
@@ -154,7 +152,6 @@ public abstract class TypeConstant
         super(pool);
     }
 
-
     // ----- GenericTypeResolver -------------------------------------------------------------------
 
     @Override
@@ -163,7 +160,6 @@ public abstract class TypeConstant
                 ? getUnderlyingType().resolveFormalType(constFormal)
                 : null;
     }
-
 
     // ----- type-specific functionality -----------------------------------------------------------
 
@@ -1645,7 +1641,6 @@ public abstract class TypeConstant
                 ? cloneSingle(getConstantPool(), getUnderlyingType().widenEnumValueTypes())
                 : this;
     }
-
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 
@@ -5620,7 +5615,6 @@ public abstract class TypeConstant
         }
     }
 
-
     // ----- type info for mixins ---------------------------------------------------------------
 
     /**
@@ -5821,7 +5815,6 @@ public abstract class TypeConstant
         mapProps.put(idResult, propResult);
         mapVirtProps.put(nidContrib, propResult);
     }
-
 
     // ----- type comparison support ---------------------------------------------------------------
 
@@ -7912,7 +7905,6 @@ public abstract class TypeConstant
         return ensureTypeInfo().getMethodBySignature(sig);
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -7936,7 +7928,6 @@ public abstract class TypeConstant
 
     @Override
     protected abstract int compareDetails(Constant that);
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -7986,7 +7977,6 @@ public abstract class TypeConstant
         return "type=" + getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -8013,7 +8003,6 @@ public abstract class TypeConstant
                 && typeThis.getFormat() == typeThat.getFormat()
                 && typeThis.compareDetails(typeThat) == 0;
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -8146,7 +8135,6 @@ public abstract class TypeConstant
         return atype;
     }
 
-
     // ----- inner class: Origin -------------------------------------------------------------------
 
     /**
@@ -8176,7 +8164,6 @@ public abstract class TypeConstant
 
         private final boolean m_fAnchored;
     }
-
 
     // ----- enums ---------------------------------------------------------------------------------
 
@@ -8233,7 +8220,6 @@ public abstract class TypeConstant
 
         public final boolean OnTop;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

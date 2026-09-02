@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,7 +26,6 @@ import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Var;
-
 
 /**
  * A type conversion expression. This converts values from the sub-expression into values of
@@ -102,7 +100,6 @@ public class ConvertExpression
             finishValidations(null, null, aType, expr.getTypeFit().addConversion(), aVal, errs);
         }
     }
-
 
     // ----- Expression compilation ----------------------------------------------------------------
 
@@ -306,7 +303,6 @@ public class ConvertExpression
         return new StmtExprAST(new MultiExprAST(listAst.toArray(ExprAST.NO_EXPRS)), atypeTo);
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -351,7 +347,6 @@ public class ConvertExpression
             return sb.append(')').toString();
         }
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

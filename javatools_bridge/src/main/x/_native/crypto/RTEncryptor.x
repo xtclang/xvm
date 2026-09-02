@@ -3,7 +3,6 @@ import libcrypto.Annotations;
 import libcrypto.CryptoKey;
 import libcrypto.Encryptor;
 
-
 /**
  * The native [Encryptor] implementation.
  */
@@ -67,7 +66,6 @@ service RTEncryptor(String algorithm, Int blockSize)
     String toString() {
         return $"{algorithm.quoted()} encryptor";
     }
-
 
     // ----- native helpers ------------------------------------------------------------------------
 

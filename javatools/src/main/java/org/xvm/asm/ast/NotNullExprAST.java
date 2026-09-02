@@ -1,8 +1,6 @@
 package org.xvm.asm.ast;
 
-
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * A short-circuiting expression for testing if a sub-expression is null.

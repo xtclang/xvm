@@ -45,7 +45,6 @@ const RestrictedClient(Client underlying)
      */
     Protocol|Protocol[] protocols;
 
-
     // ----- Client interface ----------------------------------------------------------------------
 
     @Override

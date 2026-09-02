@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.net;
 
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -44,7 +43,6 @@ import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xUInt16;
-
 
 /**
  * Native implementation of a {@code Socket} service ({@code RTSocket}).
@@ -155,7 +153,6 @@ public class xRTSocket
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }
 
-
     // ----- connect -------------------------------------------------------------------------------
 
     /**
@@ -261,7 +258,6 @@ public class xRTSocket
         hSocket.socket = socket;
         return frame.assignValues(aiReturn, xBoolean.TRUE, hSocket);
     }
-
 
     // ----- I/O -----------------------------------------------------------------------------------
 
@@ -419,7 +415,6 @@ public class xRTSocket
                h      instanceof SocketHandle hSocket ? hSocket : null;
     }
 
-
     // ----- handle --------------------------------------------------------------------------------
 
     public static class SocketHandle
@@ -430,7 +425,6 @@ public class xRTSocket
             super(clazz, context);
         }
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

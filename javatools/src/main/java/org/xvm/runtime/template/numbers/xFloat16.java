@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 
@@ -8,7 +7,6 @@ import org.xvm.asm.constants.Float16Constant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
-
 
 /**
  * Native Float16 support.

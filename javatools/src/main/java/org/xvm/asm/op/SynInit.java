@@ -1,13 +1,11 @@
 package org.xvm.asm.op;
 
-
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
-
 
 /**
  * A synthetic op used to call a default initializer for a struct.

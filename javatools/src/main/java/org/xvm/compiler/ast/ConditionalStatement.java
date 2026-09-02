@@ -1,12 +1,10 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.xvm.compiler.Token;
-
 
 /**
  * A conditional statement, including "if", "while", etc.
@@ -19,7 +17,6 @@ public abstract class ConditionalStatement
         this.keyword = keyword;
         this.conds   = conds  == null ? Collections.emptyList() : conds;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -71,7 +68,6 @@ public abstract class ConditionalStatement
         }
         return n;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

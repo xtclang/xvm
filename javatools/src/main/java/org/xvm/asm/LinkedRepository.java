@@ -1,12 +1,10 @@
 package org.xvm.asm;
 
-
 import java.io.IOException;
 
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-
 
 /**
  * A repository that delegates to a chain of repositories. Reads occur from the repositories in the
@@ -49,7 +47,6 @@ public class LinkedRepository
     public List<ModuleRepository> asList() {
         return List.of(repos);
     }
-
 
     // ----- ModuleRepository API ------------------------------------------------------------------
 
@@ -143,7 +140,6 @@ public class LinkedRepository
             throws IOException {
         repos[0].storeModule(module);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

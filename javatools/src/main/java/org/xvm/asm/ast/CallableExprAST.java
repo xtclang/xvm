@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -9,7 +8,6 @@ import java.util.Arrays;
 import java.util.Objects;
 
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * Base class for Invoke, Call and Construct nodes.

@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.Arrays;
 
 import java.util.HashMap;
@@ -37,7 +36,6 @@ import org.xvm.compiler.Token;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
-
 
 /**
  * Base class for all Ecstasy expressions.
@@ -153,7 +151,6 @@ public abstract class Expression
      */
     public void markConditional() {
     }
-
 
     // ----- Expression compilation ----------------------------------------------------------------
 
@@ -1707,7 +1704,6 @@ public abstract class Expression
                 : new IllegalStateException();
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -2022,7 +2018,6 @@ public abstract class Expression
                 typeRequired.getValueString(), typeActual.getValueString());
         }
     }
-
 
     // ----- inner class: Assignable ---------------------------------------------------------------
 
@@ -2856,7 +2851,6 @@ public abstract class Expression
         }
     }
 
-
     // ----- TypeFit enumeration -------------------------------------------------------------------
 
     /**
@@ -3092,7 +3086,6 @@ public abstract class Expression
         public final int FLAGS;
     }
 
-
     /**
      * Return values for the {@link #mightAffect} method.
      */
@@ -3105,7 +3098,6 @@ public abstract class Expression
                     // sequential operation on the same register "on the right"
         DefYes      // side effects are likely
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

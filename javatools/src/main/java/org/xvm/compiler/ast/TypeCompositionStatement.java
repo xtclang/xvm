@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.io.File;
 
 import java.lang.reflect.Field;
@@ -106,7 +105,6 @@ import static org.xvm.compiler.Lexer.isWhitespace;
 
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
-
 
 /**
  * A type declaration.
@@ -222,7 +220,6 @@ public class TypeCompositionStatement
         setStage(Stage.Emitted);
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
@@ -306,7 +303,6 @@ public class TypeCompositionStatement
         return CHILD_FIELDS;
     }
 
-
     // ---- AstNode methods ------------------------------------------------------------------------
 
     @Override
@@ -333,7 +329,6 @@ public class TypeCompositionStatement
     protected AstNode getCodeContainer() {
         return null;
     }
-
 
     // ----- compile phases ------------------------------------------------------------------------
 
@@ -2978,7 +2973,6 @@ public class TypeCompositionStatement
         return sb.toString();
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     public String toSignatureString() {
@@ -3096,7 +3090,6 @@ public class TypeCompositionStatement
         return toSignatureString();
     }
 
-
     // ----- inner class: Zone ---------------------------------------------------------------------
 
     /**
@@ -3128,7 +3121,6 @@ public class TypeCompositionStatement
          */
         private static final Zone[] ZONES = Zone.values();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

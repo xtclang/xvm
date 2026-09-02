@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -31,7 +30,6 @@ import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
-
 
 /**
  * Native Method implementation.
@@ -175,7 +173,6 @@ public class xRTMethod
             xOrdered.makeHandle(hMethod1.getMethodId().compareTo(hMethod2.getMethodId())));
     }
 
-
     // ----- property implementations --------------------------------------------------------------
 
     /**
@@ -186,7 +183,6 @@ public class xRTMethod
         ObjectHandle hAccess = xRTType.makeAccessHandle(frame, access);
         return frame.assignValue(iReturn, hAccess);
     }
-
 
     // ----- method implementations ----------------------------------------------------------------
 
@@ -224,7 +220,6 @@ public class xRTMethod
         // TODO
         throw new UnsupportedOperationException("TODO");
     }
-
 
     // ----- Object handle -------------------------------------------------------------------------
 
@@ -338,7 +333,6 @@ public class xRTMethod
         private final TypeConstant f_typeTarget;
     }
 
-
     // ----- Template, Composition, and handle caching ---------------------------------------------
 
     /**
@@ -379,7 +373,6 @@ public class xRTMethod
             pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget));
         return frame.f_context.f_container.resolveClass(typeMethodArray);
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 

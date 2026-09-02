@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -21,7 +20,6 @@ import org.xvm.util.Hash;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Represent a constant value that contains a single map entry or an entire map of keys and values.
@@ -152,7 +150,6 @@ public class MapConstant
         m_aconstVal = aconstVal;
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     @Override
@@ -169,7 +166,6 @@ public class MapConstant
     public Map<Constant, Constant> getValue() {
         return new ROMap<>(m_aconstKey, m_aconstVal);
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -305,7 +301,6 @@ public class MapConstant
         return sb.toString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -336,7 +331,6 @@ public class MapConstant
         return "map-length=" + m_aconstKey.length;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -345,7 +339,6 @@ public class MapConstant
                Hash.of(m_aconstKey,
                Hash.of(m_aconstVal)));
     }
-
 
     // ----- inner class: ROEntry ------------------------------------------------------------------
 
@@ -362,7 +355,6 @@ public class MapConstant
             throw new UnsupportedOperationException();
         }
     }
-
 
     // ----- inner class: ROMap --------------------------------------------------------------------
 
@@ -487,7 +479,6 @@ public class MapConstant
         public K[] ak;
         public V[] av;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

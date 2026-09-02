@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -19,7 +18,6 @@ import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.ast.AstNode.ChildIterator;
 
 import org.xvm.util.Severity;
-
 
 /**
  * A Stage Manager is used to shepherd the AST nodes through their various stages.
@@ -421,7 +419,6 @@ public class StageMgr {
                 ? Collections.emptyList()
                 : listPrevious;
     }
-
 
     // ------ data members -------------------------------------------------------------------------
 

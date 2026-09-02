@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -12,7 +11,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Represent a Class constant, but one that may be decorated with additional annotations, type
@@ -58,7 +56,6 @@ public class DecoratedClassConstant
         super.resolveConstants();
     }
 
-
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
@@ -101,7 +98,6 @@ public class DecoratedClassConstant
     public TypeConstant getFormalType() {
         return getType();
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -150,7 +146,6 @@ public class DecoratedClassConstant
         return getType().getValueString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -177,14 +172,12 @@ public class DecoratedClassConstant
             : "class=" + getValueString() + ", " + constParent.getDescription();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_type);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -29,7 +28,6 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * VAR_SN TYPE, STRING, #values:(rvalue-src) ; next register is an initialized named Array variable

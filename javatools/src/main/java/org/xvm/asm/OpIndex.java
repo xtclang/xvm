@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -47,7 +46,6 @@ import static org.xvm.javajit.Builder.MD_xvmVoid;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Base class for I_ (index based) and IIP_ (index based in-place) op codes.
@@ -405,7 +403,6 @@ public abstract class OpIndex
         return setMethods.iterator().next().getSignature().getRawReturns()[0];
     }
 
-
     /**
      * @return the id of the argument value for corresponding ops
      */
@@ -475,7 +472,6 @@ public abstract class OpIndex
             RegisterInfo regArray) {
         return loadArrayElement(bctx, code, regArray, false);
     }
-
 
     /**
      * Load the primitive array element this operation refers to, either onto the stack if the

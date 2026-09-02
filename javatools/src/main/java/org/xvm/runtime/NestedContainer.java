@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -23,7 +22,6 @@ import org.xvm.runtime.template.xService.ServiceHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
-
 /**
  * A nested container ( > 0).
  */
@@ -44,7 +42,6 @@ public class NestedContainer
         f_hProvider  = hProvider;
         f_listShared = listShared;
     }
-
 
     // ----- NestedContainer API -------------------------------------------------------------------
 
@@ -120,7 +117,6 @@ public class NestedContainer
         return hResource;
     }
 
-
     // ----- Container API -------------------------------------------------------------------------
 
     @Override
@@ -135,7 +131,6 @@ public class NestedContainer
     public boolean isShared(ModuleConstant idModule) {
         return super.isShared(idModule) || f_listShared.contains(idModule);
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

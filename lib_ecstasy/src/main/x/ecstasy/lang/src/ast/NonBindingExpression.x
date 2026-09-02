@@ -1,6 +1,5 @@
 import io.TextPosition;
 
-
 /**
  * Represents a return value whose value is not required.
  */

@@ -1,13 +1,11 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Version;
-
 
 /**
  * Represent a version number.
@@ -49,7 +47,6 @@ public class VersionConstant
         m_ver = new Version(getValue());
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**
@@ -58,7 +55,6 @@ public class VersionConstant
     public Version getVersion() {
         return m_ver;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -80,14 +76,12 @@ public class VersionConstant
         return "v:" + getValue();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     public String getDescription() {
         return "version=" + getValue();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

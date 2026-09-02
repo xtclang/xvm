@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -11,7 +10,6 @@ import java.util.Objects;
 import static org.xvm.asm.ast.BinaryAST.NodeType.TryCatchStmt;
 
 import static org.xvm.util.Handy.indentLines;
-
 
 /**
  * A "try..catch" or "using" (with optional catches) statement.

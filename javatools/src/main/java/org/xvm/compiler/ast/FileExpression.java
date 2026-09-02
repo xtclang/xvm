@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.io.File;
 import java.io.IOException;
 
@@ -30,7 +29,6 @@ import org.xvm.tool.ResourceDir;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
-
 /**
  * A file expression is an expression that causes an entire file or directory to be "vacuumed" into
  * a module as a resource, which will be exposed as a FileStore, Directory, or File object to the
@@ -58,7 +56,6 @@ public class FileExpression
             m_dir = dir;
         }
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -93,7 +90,6 @@ public class FileExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -296,7 +292,6 @@ public class FileExpression
         return toExprAst(toConstant());
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -313,7 +308,6 @@ public class FileExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -444,7 +438,6 @@ public class FileExpression
             return null;
         }
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

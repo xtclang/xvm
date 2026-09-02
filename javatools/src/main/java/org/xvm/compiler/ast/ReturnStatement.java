@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.Arrays;
@@ -39,7 +38,6 @@ import org.xvm.compiler.ast.Expression.Assignable;
 
 import org.xvm.util.Severity;
 
-
 /**
  * A return statement specifies a return with optional values.
  */
@@ -59,7 +57,6 @@ public class ReturnStatement
         this.keyword = keyword;
         this.exprs   = exprs;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -85,7 +82,6 @@ public class ReturnStatement
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -466,7 +462,6 @@ public class ReturnStatement
         return exprs != null && exprs.stream().anyMatch(Expression::isShortCircuiting);
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -499,7 +494,6 @@ public class ReturnStatement
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -20,7 +20,6 @@ const BasicFormat<Value extends Destringable>
         return value.toString();
     }
 
-
     // ----- StringableFormat mixin ----------------------------------------------------------------
 
     /**

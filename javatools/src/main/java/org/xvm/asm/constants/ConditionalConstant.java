@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -14,7 +13,6 @@ import org.xvm.asm.Version;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.LongList;
-
 
 /**
  * Represents a condition that can be evaluated at link-time. Conditional constants are used to
@@ -72,7 +70,6 @@ public abstract class ConditionalConstant
     protected ConditionalConstant(ConstantPool pool) {
         super(pool);
     }
-
 
     // ----- type-specific functionality -----------------------------------------------------------
 
@@ -602,9 +599,7 @@ public abstract class ConditionalConstant
                                influenceFalse != Influence.ALWAYS_F, condThat);
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -612,7 +607,6 @@ public abstract class ConditionalConstant
     public String getDescription() {
         return "condition=" + getValueString();
     }
-
 
     // ----- Relation enum -------------------------------------------------------------------------
 
@@ -725,7 +719,6 @@ public abstract class ConditionalConstant
 
     }
 
-
     // ----- Influence enum ------------------------------------------------------------------------
 
     /**
@@ -830,7 +823,6 @@ public abstract class ConditionalConstant
         }
     }
 
-
     // ----- inner class: Bifurcation --------------------------------------------------------------
 
     /**
@@ -866,7 +858,6 @@ public abstract class ConditionalConstant
         private final boolean             fFalsePossible;
         private final ConditionalConstant condFalse;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

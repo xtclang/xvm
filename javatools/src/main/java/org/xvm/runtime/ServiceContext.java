@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.lang.invoke.VarHandle;
 
 import java.lang.ref.WeakReference;
@@ -64,7 +63,6 @@ import org.xvm.runtime.template._native.temporal.xLocalClock;
 
 import org.xvm.util.concurrent.VarHandles;
 
-
 /**
  * The service context.
  */
@@ -75,7 +73,6 @@ public class ServiceContext {
         f_sName     = sName;
         f_lId       = lId;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -211,7 +208,6 @@ public class ServiceContext {
         return DebugConsole.INSTANCE;
     }
 
-
     // ----- Op support ----------------------------------------------------------------------------
 
     /**
@@ -290,7 +286,6 @@ public class ServiceContext {
     protected Map<Long, WeakCallback.Callback> getCallbackMap() {
         return m_mapCallbacks;
     }
-
 
     // ----- scheduling  ---------------------------------------------------------------------------
 
@@ -868,7 +863,6 @@ public class ServiceContext {
         return Op.R_NEXT;
     }
 
-
     // ----- x:Service methods ---------------------------------------------------------------------
 
     /**
@@ -927,7 +921,6 @@ public class ServiceContext {
     public boolean isTerminated() {
         return m_hService == null && m_iFrameCounter > 0;
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -1248,7 +1241,6 @@ public class ServiceContext {
             }
         };
 
-
         TypeSupplier supplier = resolveFormalReturnTypes(hFunction, ahArg);
         OpRequest    request  = new OpRequest(frame, opCall, cReturns, fAsync, supplier);
 
@@ -1560,7 +1552,6 @@ public class ServiceContext {
         }
         return sb.toString();
     }
-
 
     // --- inner classes ---------------------------------------------------------------------------
 

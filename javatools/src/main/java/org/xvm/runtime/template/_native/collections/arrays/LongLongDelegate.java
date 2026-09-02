@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
@@ -23,7 +22,6 @@ import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template._native.collections.arrays.LongBasedDelegate.LongArrayHandle;
-
 
 /**
  * The abstract base for RTDelegate<Int128> and RTDelegate<UInt128> implementations.
@@ -52,7 +50,6 @@ public abstract class LongLongDelegate
         }
         return new LongArrayHandle(getCanonicalClass(), alValue, cSize, mutability);
     }
-
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
@@ -206,9 +203,7 @@ public abstract class LongLongDelegate
         hDelegate.m_cSize -= cDelete;
     }
 
-
     protected abstract ObjectHandle makeElementHandle(LongLong ll);
-
 
     // ----- ClassTemplate API ---------------------------------------------------------------------
 
@@ -245,7 +240,6 @@ public abstract class LongLongDelegate
             && Arrays.equals(h1.m_alValue, h2.m_alValue);
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     public static long[] reverseLong2(long[] alValue, int cSize) {
@@ -256,8 +250,6 @@ public abstract class LongLongDelegate
         }
         return alValueR;
     }
-
-
 
     // ----- constants -----------------------------------------------------------------------------
 

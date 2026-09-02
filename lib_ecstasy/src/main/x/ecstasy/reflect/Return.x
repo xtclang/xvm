@@ -16,7 +16,6 @@ interface Return<ReturnType>
      */
     conditional String hasName();
 
-
     // ----- Stringable methods ----------------------------------------------------------------
 
     @Override

@@ -325,7 +325,6 @@ const Duration(Int128 picoseconds)
      */
     Int128 picoseconds;
 
-
     // ----- partial measures ----------------------------------------------------------------------
 
     /**
@@ -451,7 +450,6 @@ const Duration(Int128 picoseconds)
      * Division: return the ratio of two durations.
      */
     @Op("/") Int128 div(Duration divisor) = this.picoseconds / divisor.picoseconds;
-
 
     // ----- Stringable ----------------------------------------------------------------------------
 
@@ -584,7 +582,6 @@ const Duration(Int128 picoseconds)
 
         return Duration.appendPicosFractional(buf, picosecondsPart);
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

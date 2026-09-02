@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -8,7 +7,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * An expression that holds a copy of the result of another expression in order to provide optional
@@ -32,7 +30,6 @@ public class TraceExpression
                 ErrorListener.BLACKHOLE);
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -43,7 +40,6 @@ public class TraceExpression
         assert m_aArgs != null;
         return m_aArgs;
     }
-
 
     // ----- Expression compilation ----------------------------------------------------------------
 
@@ -129,14 +125,12 @@ public class TraceExpression
         }
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString() {
         return expr.toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

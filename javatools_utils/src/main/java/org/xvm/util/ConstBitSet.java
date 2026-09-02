@@ -1,6 +1,5 @@
 package org.xvm.util;
 
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -13,7 +12,6 @@ import java.util.BitSet;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.PackedInteger.unpackInt;
 import static org.xvm.util.PackedInteger.writeLong;
-
 
 /**
  * An immutable BitSet implementation that stores a compressed form of the BitSet in a byte array.
@@ -93,7 +91,6 @@ public class ConstBitSet {
         m_ab = ab;
     }
 
-
     // ----- accessors --------------------------------------------------------------------------
 
     /**
@@ -109,7 +106,6 @@ public class ConstBitSet {
     public byte[] getBytes() {
         return m_ab.clone();
     }
-
 
     // ----- BitSet API ----------------------------------------------------------------------------
 
@@ -264,7 +260,6 @@ public class ConstBitSet {
         }
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -390,7 +385,6 @@ public class ConstBitSet {
         return bs;
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     private static void writeCompressedNodes(DataOutputStream out, BitSet bs)
@@ -465,7 +459,6 @@ public class ConstBitSet {
         }
     }
 
-
     // ----- inner class: Node ---------------------------------------------------------------------
 
     private static class Node {
@@ -510,7 +503,6 @@ public class ConstBitSet {
         createSkips(aNode, iFirst + 1, iFirst + ofJmp - 1);
         createSkips(aNode, iFirst + ofJmp, iLast);
     }
-
 
     // ----- inner class: RawNode ------------------------------------------------------------------
 
@@ -578,7 +570,6 @@ public class ConstBitSet {
 
         return cb;
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 

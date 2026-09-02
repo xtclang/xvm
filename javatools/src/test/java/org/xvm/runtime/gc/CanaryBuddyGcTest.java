@@ -110,7 +110,6 @@ class CanaryBuddyGcTest {
         }
     }
 
-
     // let's assume:
     // - all code that allocates is running on an Ecstasy fiber
     // - that Ecstasy fiber is running on a Java virtual thread, which in turn is running (aka
@@ -354,7 +353,6 @@ class CanaryBuddyGcTest {
                 container.xvm.drainQueue();
             }
         }
-
 
         /**
          * Called by {@link Collectable#Collectable}.

@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -14,7 +13,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Represent a constant that specifies that the underlying type is a service.
@@ -60,7 +58,6 @@ public class ServiceTypeConstant
         m_constType = getConstantPool().getConstant(m_iType, TypeConstant.class);
     }
 
-
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
@@ -83,7 +80,6 @@ public class ServiceTypeConstant
         return pool.ensureServiceTypeConstant(type);
     }
 
-
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
@@ -92,7 +88,6 @@ public class ServiceTypeConstant
         // slightly different
         return m_constType.ensureTypeInfoInternal(errs);
     }
-
 
     // ----- type comparison support ---------------------------------------------------------------
 
@@ -120,7 +115,6 @@ public class ServiceTypeConstant
     protected boolean isDuckTypeAbleFrom(TypeConstant typeRight) {
         return typeRight.isService() && super.isDuckTypeAbleFrom(typeRight);
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -156,7 +150,6 @@ public class ServiceTypeConstant
         return "service " + m_constType.getValueString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -171,14 +164,12 @@ public class ServiceTypeConstant
         writePackedLong(out, indexOf(m_constType));
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_constType);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

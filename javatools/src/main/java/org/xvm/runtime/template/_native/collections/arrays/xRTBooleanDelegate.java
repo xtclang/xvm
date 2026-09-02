@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 
@@ -13,7 +12,6 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
-
 
 /**
  * Native RTDelegate<Boolean> implementation.

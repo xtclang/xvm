@@ -3,7 +3,6 @@ import libcrypto.Annotations;
 import libcrypto.CryptoKey;
 import libcrypto.Decryptor;
 
-
 /**
  * The native [Encryptor] implementation.
  */
@@ -43,7 +42,6 @@ service RTDecryptor
     String toString() {
         return $"{algorithm.quoted()} decryptor";
     }
-
 
     // ----- native helpers ------------------------------------------------------------------------
 

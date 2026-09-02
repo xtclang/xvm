@@ -59,7 +59,6 @@ const Dec64
         construct Dec64(new FPLiteral(text).toDec64().bits);
     }
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -76,7 +75,6 @@ const Dec64
     static Dec64 one() {
         return 1.0;
     }
-
 
     // ----- Number operations ---------------------------------------------------------------------
 
@@ -120,7 +118,6 @@ const Dec64
         TODO
     }
 
-
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
@@ -137,7 +134,6 @@ const Dec64
     Int bias.get() {
         return 398;
     }
-
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
@@ -280,7 +276,6 @@ const Dec64
     Dec64 nextDown() {
         TODO
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

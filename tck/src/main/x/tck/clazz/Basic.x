@@ -53,7 +53,6 @@ class Basic {
     //    MyMap bar = new MyMap<Int64,Float64,String>(17,3.14,"abc");
     //}
 
-
     // Interfaces
     void basic3() {
         interface IfaceBase<Hasher> { }

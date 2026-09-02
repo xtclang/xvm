@@ -34,7 +34,6 @@ const Sum<Element extends Number>
         return accumulator.as(WorkingSum).sum;
     }
 
-
     // ----- private inner classes -----------------------------------------------------------------
 
     /**

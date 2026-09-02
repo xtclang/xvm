@@ -13,7 +13,6 @@ const Int128
      */
     static IntLiteral MaxValue =  0x7FFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF;
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -35,7 +34,6 @@ const Int128
     static conditional Range<Int128> range() {
         return True, MinValue..MaxValue;
     }
-
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -73,7 +71,6 @@ const Int128
         construct Int128(new IntLiteral(text).toInt128().bits);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
@@ -89,7 +86,6 @@ const Int128
     UInt128 magnitude.get() {
         return toIntN().abs().toUInt128();
     }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -145,7 +141,6 @@ const Int128
         return result;
     }
 
-
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
@@ -165,7 +160,6 @@ const Int128
 
         return False;
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

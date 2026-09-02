@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.IOException;
 
 import java.nio.file.Files;
@@ -23,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 
 /**
  * Ratchet for the literal-format plumbing: every {@link Format} the compiler can produce for a

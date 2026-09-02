@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,7 +45,6 @@ import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
-
 
 /**
  * Compiler context for compiling a method body.
@@ -211,7 +209,6 @@ public class Context {
     public ConstantPool pool() {
         return getOuterContext().pool();
     }
-
 
     // ----- nested context creation ---------------------------------------------------------------
 
@@ -1511,7 +1508,6 @@ public class Context {
         };
     }
 
-
     /**
      * Resolve the specified register's type on the specified branch.
      *
@@ -1719,7 +1715,6 @@ public class Context {
 
         return sb.toString();
     }
-
 
     // ----- inner class: IfContext ----------------------------------------------------------------
 
@@ -2042,7 +2037,6 @@ public class Context {
         private       boolean m_fExclusive;
     }
 
-
     // ----- inner class: AndContext ---------------------------------------------------------------
 
     /**
@@ -2145,7 +2139,6 @@ public class Context {
         }
     }
 
-
     // ----- inner class: OrContext ----------------------------------------------------------------
 
     /**
@@ -2237,7 +2230,6 @@ public class Context {
         }
     }
 
-
     // ----- inner class: NotContext ---------------------------------------------------------------
 
     /**
@@ -2287,7 +2279,6 @@ public class Context {
         }
     }
 
-
     // ----- inner class: AndIfContext -------------------------------------------------------------
 
     /**
@@ -2336,7 +2327,6 @@ public class Context {
         }
     }
 
-
     // ----- inner class: LoopingContext -----------------------------------------------------------
 
     /**
@@ -2354,7 +2344,6 @@ public class Context {
             return asnJoin;
         }
     }
-
 
     // ----- inner class: InferringContext ---------------------------------------------------------
 
@@ -2472,7 +2461,6 @@ public class Context {
 
         private final TypeConstant f_typeLeft;
     }
-
 
     // ----- inner class: CaptureContext -----------------------------------------------------------
 
@@ -2685,7 +2673,6 @@ public class Context {
          */
         private boolean m_fCaptureThis;
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
@@ -31,7 +30,6 @@ import org.xvm.runtime.template.numbers.xUInt128;
 import org.xvm.runtime.template.numbers.xUInt64;
 
 import org.xvm.util.Handy;
-
 
 /**
  * A base class for native ArrayDelegate implementations based on long arrays.
@@ -66,7 +64,6 @@ public abstract class LongBasedDelegate
         }
         return makeHandle(alValue, cSize, mutability);
     }
-
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
@@ -241,7 +238,6 @@ public abstract class LongBasedDelegate
      */
     protected abstract ObjectHandle makeElementHandle(long lValue);
 
-
     // ----- BitView implementation ----------------------------------------------------------------
 
     @Override
@@ -269,7 +265,6 @@ public abstract class LongBasedDelegate
         setBit(hLongs.m_alValue, of, fBit);
     }
 
-
     // ----- ByteView implementation ---------------------------------------------------------------
 
     @Override
@@ -290,7 +285,6 @@ public abstract class LongBasedDelegate
 
         setByte(hLongs.m_alValue, of, bValue);
     }
-
 
     // ----- ClassTemplate API ---------------------------------------------------------------------
 
@@ -327,7 +321,6 @@ public abstract class LongBasedDelegate
             && h1.m_cSize == h2.m_cSize
             && Arrays.equals(h1.m_alValue, h2.m_alValue);
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 
@@ -532,7 +525,6 @@ public abstract class LongBasedDelegate
     protected static long bitMask(long lBit) {
         return 0x8000_0000_0000_0000L >>> (lBit & 0x3F);
     }
-
 
     // ----- handle --------------------------------------------------------------------------------
 

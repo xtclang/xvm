@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.List;
@@ -28,7 +27,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
-
 /**
  * A "switch" expression.
  */
@@ -42,7 +40,6 @@ public class SwitchExpression
         this.contents = contents;
         this.lEndPos  = lEndPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -60,7 +57,6 @@ public class SwitchExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -328,7 +324,6 @@ public class SwitchExpression
                         m_aconstCases, m_abastBody, getTypes());
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -364,7 +359,6 @@ public class SwitchExpression
 
         return sb.toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

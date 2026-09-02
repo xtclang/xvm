@@ -14,7 +14,6 @@ interface DBList<Element extends immutable Const>
         return DBList;
     }
 
-
     // ----- transactional information -------------------------------------------------------------
 
     /**
@@ -72,7 +71,6 @@ interface DBList<Element extends immutable Const>
     @Override
     interface TxChange
             extends DBChange<Element> {}
-
 
     // ----- transaction trigger API ---------------------------------------------------------------
 

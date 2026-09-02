@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.text;
 
-
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,7 +34,6 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xNullable;
-
 
 /**
  * Native implementation of RegEx.

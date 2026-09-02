@@ -8,7 +8,6 @@ import reflect.MultiMethod;
 import reflect.Parameter;
 import reflect.Property;
 
-
 /**
  * The TypeTemplate interface represents information about an Ecstasy data type. Unlike [Type],
  * TypeTemplate can be used both with "live" runtime types (for reflection purposes) **and** with
@@ -94,7 +93,6 @@ interface TypeTemplate
          */
         Sequence
     }
-
 
     // ----- state representation ------------------------------------------------------------------
 
@@ -242,7 +240,6 @@ interface TypeTemplate
      */
     TypeTemplate! purify();
 
-
     // ----- type operations -----------------------------------------------------------------------
 
     /**
@@ -291,7 +288,6 @@ interface TypeTemplate
      */
      conditional TypeTemplate resolveFormalType(String typeName);
 
-
     // ----- reification ---------------------------------------------------------------------------
 
     /**
@@ -304,7 +300,6 @@ interface TypeTemplate
      * @return (conditional) the Type within the TypeSystem corresponding to this TypeTemplate
      */
     conditional Type reifyWithin(TypeSystem typeSystem);
-
 
     // ----- Stringable ----------------------------------------------------------------------------
 
@@ -407,7 +402,6 @@ interface TypeTemplate
 
         return buf;
     }
-
 
     // ----- Comparable, Hashable, and Orderable ---------------------------------------------------
 

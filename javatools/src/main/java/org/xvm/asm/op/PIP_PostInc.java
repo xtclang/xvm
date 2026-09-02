@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -12,7 +11,6 @@ import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-
 
 /**
  * PIP_INCA PROPERTY, rvalue-target, lvalue ; same as IP_INCA for a register

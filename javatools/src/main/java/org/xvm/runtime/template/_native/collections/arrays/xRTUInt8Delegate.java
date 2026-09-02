@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 
@@ -10,7 +9,6 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.numbers.xUInt8;
-
 
 /**
  * Native RTDelegate<Byte> implementation.

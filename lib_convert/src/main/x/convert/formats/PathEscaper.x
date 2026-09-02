@@ -10,7 +10,6 @@ const PathEscaper(Boolean singleSegment)
      */
     Boolean singleSegment;
 
-
     // ----- Format interface ----------------------------------------------------------------------
 
     @Override
@@ -98,7 +97,6 @@ const PathEscaper(Boolean singleSegment)
                 ? value
                 : super(value);
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

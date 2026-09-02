@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -13,7 +12,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Represent the auto-narrowing class of <i>this</i>.
@@ -54,7 +52,6 @@ public class ThisClassConstant
         m_constClass = getConstantPool().getConstant(m_iClass, IdentityConstant.class);
     }
 
-
     // ----- Pseudo-constant methods --------------------------------------------------------------
 
     @Override
@@ -62,7 +59,6 @@ public class ThisClassConstant
         // ThisClassConstants are congruent regardless of the declaration level
         return that instanceof ThisClassConstant;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -119,7 +115,6 @@ public class ThisClassConstant
         return THIS_CLASS + '(' + m_constClass.getValueString() + ')';
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -140,14 +135,12 @@ public class ThisClassConstant
                 + ", decl-level=" + m_constClass;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_constClass);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

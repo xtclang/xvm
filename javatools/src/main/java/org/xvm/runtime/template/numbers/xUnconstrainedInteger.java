@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import java.math.BigInteger;
 
 import java.util.Arrays;
@@ -28,7 +27,6 @@ import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 import org.xvm.runtime.template.text.xString;
 
 import org.xvm.util.PackedInteger;
-
 
 /**
  * Base class for IntN/UIntN integer types.
@@ -467,7 +465,6 @@ public abstract class xUnconstrainedInteger
         return frame.assignValue(iReturn, xString.makeHandle(pi.toString()));
     }
 
-
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
@@ -491,7 +488,6 @@ public abstract class xUnconstrainedInteger
         return frame.assignValue(iReturn, xInt64.makeHandle(pi.hashCode()));
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     /**
@@ -500,7 +496,6 @@ public abstract class xUnconstrainedInteger
     protected IntNHandle makeInt(PackedInteger pi) {
         return new IntNHandle(getCanonicalClass(), pi, null);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

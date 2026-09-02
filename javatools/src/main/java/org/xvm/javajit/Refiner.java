@@ -1,6 +1,5 @@
 package org.xvm.javajit;
 
-
 import java.util.Iterator;
 import java.util.List;
 
@@ -10,7 +9,6 @@ import org.xvm.asm.VersionTree;
 import org.xvm.asm.constants.ModuleConstant;
 
 import static org.xvm.util.Handy.require;
-
 
 /**
  * A Module Refiner is the "decision maker" for selecting among various version, dependency, and

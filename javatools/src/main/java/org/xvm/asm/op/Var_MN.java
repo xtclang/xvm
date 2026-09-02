@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -22,7 +21,6 @@ import org.xvm.runtime.template.maps.xListMap;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * VAR_MN TYPE, STRING, #entries:(rvalue, rvalue) ; next register is an initialized named Map variable

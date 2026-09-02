@@ -249,7 +249,6 @@ class Dec32ConvertTests {
 
     }
 
-
     void testDec32ToDec32(Dec32 a, Dec32 expected){
         Dec32 b = a.toDec32();
         assert b == expected;

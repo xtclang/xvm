@@ -87,7 +87,6 @@ class IntNumberTests {
         assert i128Neg.leftmostBit == -0x8000_0000_0000_0000_0000_0000_0000_0000;
         testLeftmostBitIntNumber(i128Neg, -0x8000_0000_0000_0000_0000_0000_0000_0000);
 
-
         Nibble n = 0x3;
         assert n.leftmostBit == 0x2;
         testLeftmostBitUIntNumber(n, 0x2);
@@ -97,7 +96,6 @@ class IntNumberTests {
         Nibble nMax = Nibble.MaxValue;
         assert nMax.leftmostBit == 0x8;
         testLeftmostBitUIntNumber(nMax, 0x8);
-
 
         UInt8 u8 = 0x34;
         assert u8.leftmostBit == 0x20;
@@ -171,7 +169,6 @@ class IntNumberTests {
         assert u.leftmostBit.toIntN() == expected.toIntN();
         testLeftmostBitIntNumber(u, expected);
     }
-
 
     void testRightmostBit() {
         Int8 i8 = 0x36;
@@ -250,7 +247,6 @@ class IntNumberTests {
         Int128 i128Min = Int128.MinValue;
         assert i128Min.rightmostBit == Int128.MinValue;
         testRightmostBitIntNumber(i128Min, Int128.MinValue);
-
 
         Nibble n = 0xC;
         assert n.rightmostBit == 0x4;
@@ -334,7 +330,6 @@ class IntNumberTests {
         assert u.rightmostBit.toIntN() == expected.toIntN();
         testRightmostBitIntNumber(u, expected);
     }
-
 
     void testLeadingZeroCount() {
         Int8 i8 = 0x35;
@@ -423,7 +418,6 @@ class IntNumberTests {
         assert i128Neg.leadingZeroCount == 0;
         testLeadingZeroCountIntNumber(i128Neg, 0);
 
-
         Nibble u8 = 0x3;
         assert u8.leadingZeroCount == 2;
         testLeadingZeroCountUIntNumber(u8, 2);
@@ -433,7 +427,6 @@ class IntNumberTests {
         Nibble u8Max = Nibble.MaxValue;
         assert u8Max.leadingZeroCount == 0;
         testLeadingZeroCountUIntNumber(u8Max, 0);
-
 
         UInt8 n = 0x35;
         assert n.leadingZeroCount == 2;
@@ -516,7 +509,6 @@ class IntNumberTests {
         testLeadingZeroCountIntNumber(u, expected);
     }
 
-
     void testTrailingZeroCount() {
         Int8 i8 = 0x74;
         assert i8.trailingZeroCount == 2;
@@ -589,7 +581,6 @@ class IntNumberTests {
         assert i128Max.trailingZeroCount == 0;
         testTrailingZeroCountIntNumber(i128Max, 0);
 
-
         Nibble u8 = 0x4;
         assert u8.trailingZeroCount == 2;
         testTrailingZeroCountUIntNumber(u8, 2);
@@ -599,7 +590,6 @@ class IntNumberTests {
         Nibble u8Max = Nibble.MaxValue;
         assert u8Max.trailingZeroCount == 0;
         testTrailingZeroCountUIntNumber(u8Max, 0);
-
 
         UInt8 n = 0x74;
         assert n.trailingZeroCount == 2;

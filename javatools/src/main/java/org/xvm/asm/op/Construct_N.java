@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -20,7 +19,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
-
 
 /**
  * CONSTR_N CONSTRUCT, #params:(rvalue)
@@ -118,7 +116,6 @@ public class Construct_N
     protected String getParamsString() {
         return getParamsString(m_anArgValue, m_aArgValue);
     }
-
 
     // ----- JIT support ---------------------------------------------------------------------------
 

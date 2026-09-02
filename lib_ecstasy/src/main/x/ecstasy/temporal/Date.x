@@ -62,7 +62,6 @@ const Date(Int32 epochDay)
         construct Date(year, month, day);
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -134,7 +133,6 @@ const Date(Int32 epochDay)
         return MonthOfYear.values[month-1];
     }
 
-
     // ----- operators -----------------------------------------------------------------------------
 
     @Op("+") Date add(Duration duration) {
@@ -148,7 +146,6 @@ const Date(Int32 epochDay)
     @Op("-") Duration sub(Date date) {
         return Duration.ofDays(this.epochDay - date.epochDay);
     }
-
 
     // ----- Sequential ----------------------------------------------------------------------------
 
@@ -173,7 +170,6 @@ const Date(Int32 epochDay)
         return new Date(epochDay + steps.toInt32());
     }
 
-
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
@@ -182,7 +178,6 @@ const Date(Int32 epochDay)
     Time toTime() {
         return new Time(this, TimeOfDay.MIDNIGHT, TimeZone.NoTZ);
     }
-
 
     // ----- Stringable ----------------------------------------------------------------------------
 
@@ -209,7 +204,6 @@ const Date(Int32 epochDay)
         }
         return day.appendTo(buf);
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

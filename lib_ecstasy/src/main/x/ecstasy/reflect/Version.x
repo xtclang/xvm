@@ -150,7 +150,6 @@ const Version
         };
     }
 
-
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -296,7 +295,6 @@ const Version
         this.size   = 1 + (parent?.size : 0);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -340,7 +338,6 @@ const Version
     Boolean GA.get() {
         return form == Number && (parent?.form == Number : True);
     }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -504,7 +501,6 @@ const Version
         }
     }
 
-
     // ----- Sequential methods --------------------------------------------------------------------
 
     @Override
@@ -564,7 +560,6 @@ const Version
         }
     }
 
-
     // ----- UniformIndexed methods ----------------------------------------------------------------
 
     @Override
@@ -581,7 +576,6 @@ const Version
                 ? version
                 : new Version(Null, version.form, version.number, version.build);
     }
-
 
     // ----- Sliceable methods ---------------------------------------------------------------------
 
@@ -614,7 +608,6 @@ const Version
         }
         return slice ?: assert;
     }
-
 
     // ----- Hashable and Comparable ---------------------------------------------------------------
 
@@ -669,7 +662,6 @@ const Version
                     : parentOrder;
         }
     }
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 

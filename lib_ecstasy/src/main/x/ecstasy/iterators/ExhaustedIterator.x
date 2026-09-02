@@ -25,7 +25,6 @@ const ExhaustedIterator<Element>
         return True, 0;
     }
 
-
     // ----- Markable ------------------------------------------------------------------------------
 
     @Override

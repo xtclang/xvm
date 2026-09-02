@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -26,7 +25,6 @@ import org.xvm.util.PackedInteger;
 import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Represent a constant that stores its value as a StringConstant.
@@ -163,9 +161,7 @@ public class LiteralConstant
         m_constStr = getConstantPool().getConstant(m_iStr, StringConstant.class);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
-
 
     @Override
     public TypeConstant getType() {
@@ -713,7 +709,6 @@ public class LiteralConstant
 
         throw new UnsupportedOperationException();
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -1619,7 +1614,6 @@ public class LiteralConstant
         return '\"' + getValue() + '\"';
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -1639,14 +1633,12 @@ public class LiteralConstant
         return "value=" + getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(getValue());
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

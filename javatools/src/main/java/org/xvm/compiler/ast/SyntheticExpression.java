@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
@@ -11,7 +10,6 @@ import org.xvm.asm.ast.UnaryOpExprAST;
 import org.xvm.asm.ast.UnaryOpExprAST.Operator;
 
 import org.xvm.compiler.Compiler.Stage;
-
 
 /**
  * A synthetic expression is one created as necessary by the compilation process to add
@@ -27,7 +25,6 @@ public abstract class SyntheticExpression
         expr.getParent().adopt(this);
         this.adopt(expr);
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -61,7 +58,6 @@ public abstract class SyntheticExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- Expression compilation ----------------------------------------------------------------
 
@@ -111,7 +107,6 @@ public abstract class SyntheticExpression
         return expr.mightAffect(exprLeft, arg);
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -121,7 +116,6 @@ public abstract class SyntheticExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

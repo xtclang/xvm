@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.util.Set;
 
 import org.xvm.asm.Constants.Access;
@@ -9,7 +8,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-
 
 /**
  * TypeComposition for classes that could be fully computed based on their canonical class.
@@ -36,7 +34,6 @@ public class CanonicalizedTypeComposition
     protected ClassComposition getCanonicalComposition() {
         return (ClassComposition) f_clzOrigin;
     }
-
 
     // ----- TypeComposition interface -------------------------------------------------------------
 
@@ -106,7 +103,6 @@ public class CanonicalizedTypeComposition
         }
         return chain;
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

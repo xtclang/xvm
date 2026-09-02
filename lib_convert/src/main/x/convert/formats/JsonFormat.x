@@ -45,7 +45,6 @@ const JsonFormat(Printer printer = Printer.DEFAULT)
         printer.print(value, stream);
     }
 
-
     // ----- SerializationFormat -------------------------------------------------------------------
 
     /**

@@ -1,6 +1,5 @@
 package org.xvm.runtime.gc;
 
-
 import org.xvm.util.LongMuterator;
 import org.xvm.util.ShallowSizeOf;
 

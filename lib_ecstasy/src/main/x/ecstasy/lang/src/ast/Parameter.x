@@ -2,7 +2,6 @@ import io.TextPosition;
 
 import Lexer.Token;
 
-
 /**
  * A `Parameter` represents an in (argument) or out (return value) parameter, including a type,
  * an optional name, and an optional default value.

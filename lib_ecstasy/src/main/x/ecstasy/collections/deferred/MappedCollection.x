@@ -19,7 +19,6 @@ class MappedCollection<Element, FromElement>
         this.transform = transform;
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     /**
@@ -61,7 +60,6 @@ class MappedCollection<Element, FromElement>
             super(accumulator);
         }
     }
-
 
     // ----- Collection interface ------------------------------------------------------------------
 

@@ -19,7 +19,6 @@ const LambdaFormat<Value>(Decoder decoder, Encoder? encoder=Null)
      */
     typedef function Value(String) as Decoder;
 
-
     // ----- Format interface ----------------------------------------------------------------------
 
     @Override
@@ -34,7 +33,6 @@ const LambdaFormat<Value>(Decoder decoder, Encoder? encoder=Null)
     String encode(Value value) {
         return encoder?(value) : value.toString();
     }
-
 
     // ----- StringableFormat mixin ----------------------------------------------------------------
 

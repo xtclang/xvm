@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -14,7 +13,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Represent an auto-narrowing class constant for the parent class of a nested non-static
@@ -65,7 +63,6 @@ public class ParentClassConstant
     protected void resolveConstants() {
         m_constChild = getConstantPool().getConstant(m_iChild, PseudoConstant.class);
     }
-
 
     // ----- type-specific functionality -----------------------------------------------------------
 
@@ -169,7 +166,6 @@ public class ParentClassConstant
         return m_constChild.getValueString() + ":parent";
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -189,14 +185,12 @@ public class ParentClassConstant
         return "child=" + m_constChild;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_constChild);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

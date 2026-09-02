@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.temporal;
 
-
 import java.util.TimerTask;
 
 import org.xvm.asm.ClassStructure;
@@ -31,7 +30,6 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
 import org.xvm.util.ListSet;
-
 
 /**
  * Native implementation of a simple timer (stop-watch) using Java's nanosecond-resolution "System"
@@ -148,7 +146,6 @@ public class xNanosTimer
         return frame.assignValue(iReturn,
                 hTimer.addAlarm(cNanos, new WeakCallback(frame, hAlarm), hKeepAlive.get()));
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
@@ -488,7 +485,6 @@ public class xNanosTimer
 
         // ----- data fields ---------------------------------------------------------------------
 
-
         /**
          * We use an array rather than individual long values to avoid "splitting state" during
          * handle cloning. All access to those values is always synchronized. Values are:
@@ -506,7 +502,6 @@ public class xNanosTimer
          */
         private final ListSet<Alarm> f_setAlarms = new ListSet<>();
     }
-
 
     // ----- constants and fields ------------------------------------------------------------------
 

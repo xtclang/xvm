@@ -4,7 +4,6 @@ import json.Parser;
 
 import TxManager.NO_TX;
 
-
 /**
  * Provides the low-level I/O for a non-transactional (i.e. extra-transactional) counter.
  */

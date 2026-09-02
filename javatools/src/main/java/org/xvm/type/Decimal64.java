@@ -1,6 +1,5 @@
 package org.xvm.type;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -8,7 +7,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
-
 
 /**
  * A representation of an IEEE-754-2008 64-bit decimal.
@@ -78,7 +76,6 @@ public class Decimal64
 
         m_nBits = toLongBits(dec);
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -150,7 +147,6 @@ public class Decimal64
         return (nExp | nCombo & 0xFF) - 398;
     }
 
-
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
@@ -215,7 +211,6 @@ public class Decimal64
         return ab;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -227,7 +222,6 @@ public class Decimal64
     public boolean equals(Object obj) {
         return obj instanceof Decimal64 that && this.m_nBits == that.m_nBits;
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -353,7 +347,6 @@ public class Decimal64
         return new BigDecimal(BigInteger.valueOf(nSig), -nExp, MathContext.DECIMAL64);
     }
 
-
     // ----- constants -----------------------------------------------------------------------------
 
     /**
@@ -438,7 +431,6 @@ public class Decimal64
      * The decimal value for negative infinity.
      */
     public static final Decimal64   NEG_INFINITY    = new Decimal64(SIGN_BIT | G0_G4_INF);
-
 
     // ----- fields --------------------------------------------------------------------------------
 

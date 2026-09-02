@@ -93,7 +93,6 @@ class SimpleCanaryGcTest {
         public final int n;
     }
 
-
     // let's assume:
     // - all code that allocates is running on an Ecstasy fiber
     // - that Ecstasy fiber is running on a Java virtual thread, which in turn is running (aka
@@ -324,7 +323,6 @@ class SimpleCanaryGcTest {
             }
         }
 
-
         /**
          * Called by {@link Collectable#Collectable}.
          *
@@ -402,7 +400,6 @@ class SimpleCanaryGcTest {
         }
     }
 
-
     /**
      * A {@link Reclaim} is used to account for memory reclaimed by the Java garbage collector (GC).
      * Each allocation of memory within Ecstasy also creates a Reclaim instance.
@@ -474,7 +471,6 @@ class SimpleCanaryGcTest {
         public void adjustSize(long adjustBytes) {
             info += adjustBytes;
         }
-
 
         /**
          * Unlink this Reclaim from the "keep-alive" linked list of Reclaim objects.

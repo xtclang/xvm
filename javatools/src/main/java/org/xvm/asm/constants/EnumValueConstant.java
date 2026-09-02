@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -12,7 +11,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.PackedInteger;
-
 
 /**
  * Represent a singleton instance of an enum value class.
@@ -49,7 +47,6 @@ public class EnumValueConstant
         super(pool, format, in);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -80,7 +77,6 @@ public class EnumValueConstant
                 ? null
                 : getConstantPool().ensureIntConstant(iOrdinal);
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -207,7 +203,6 @@ public class EnumValueConstant
 
         return super.apply(op, that);
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

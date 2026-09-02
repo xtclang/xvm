@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.reflect;
 
-
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -39,7 +38,6 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
-
 
 /**
  * Native Function implementation.
@@ -184,7 +182,6 @@ public class xRTFunction
         return frame.assignValue(iReturn,
             xOrdered.makeHandle(hValue1.hashCode() - hValue2.hashCode()));
     }
-
 
     // ----- method implementations --------------------------------------------------------------
 
@@ -356,7 +353,6 @@ public class xRTFunction
         return new Utils.CreateParameters(method.getParamArray(), ahParam, stepNext).doNext(frame);
     }
 
-
     // ----- Object handle -------------------------------------------------------------------------
 
     /**
@@ -426,7 +422,6 @@ public class xRTFunction
         protected boolean checkArgumentsPassThrough(Container container) {
             return true;
         }
-
 
         // ----- FunctionHandle interface ----------------------------------------------------------
 
@@ -1008,7 +1003,6 @@ public class xRTFunction
             return hService;
         }
 
-
         // ----- FunctionHandle interface ----------------------------------------------------------
 
         @Override
@@ -1148,7 +1142,6 @@ public class xRTFunction
             return true;
         }
 
-
         // ----- FunctionHandle interface ----------------------------------------------------------
 
         @Override
@@ -1220,7 +1213,6 @@ public class xRTFunction
             }
         }
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -1456,7 +1448,6 @@ public class xRTFunction
         private final boolean         f_fParent;
     }
 
-
     // ----- Composition and handle caching --------------------------------------------------------
 
     /**
@@ -1511,7 +1502,6 @@ public class xRTFunction
         TypeConstant typeArray = pool.ensureArrayType(typeCtor);
         return frame.f_context.f_container.resolveClass(typeArray);
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 

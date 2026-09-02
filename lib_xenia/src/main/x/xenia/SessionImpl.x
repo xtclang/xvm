@@ -18,7 +18,6 @@ import web.security.Authenticator.Attempt;
 
 import SessionCookie.CookieId;
 
-
 /**
  * An implementation of the `Session` interface.
  *
@@ -75,7 +74,6 @@ service SessionImpl
         structure.sessionId       = idToString_(sessionId);
         structure.prevTLS_        = request.tls;
     }
-
 
     // ----- session implementation properties -----------------------------------------------------
 
@@ -191,7 +189,6 @@ service SessionImpl
      */
     private InFlight_? currentInFlight_;
 
-
     // ----- inner types ---------------------------------------------------------------------------
 
     /**
@@ -278,7 +275,6 @@ service SessionImpl
         Boolean reached;
     }
 
-
     // ----- session implementation API ------------------------------------------------------------
 
     void requestBegin_(RequestIn request) {
@@ -288,7 +284,6 @@ service SessionImpl
     void requestEnd_(RequestIn request) {
         assert requests_.removeIfPresent(request);
     }
-
 
     // ----- session interface ---------------------------------------------------------------------
 
@@ -500,7 +495,6 @@ service SessionImpl
     @Override
     Boolean anyEventsSince(Time time) = time < versionChanged_;
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -547,7 +541,6 @@ service SessionImpl
             info.verified = clock.now;
         }
     }
-
 
     /**
      * Determine if the provided session cookie matches the one stored in this session.

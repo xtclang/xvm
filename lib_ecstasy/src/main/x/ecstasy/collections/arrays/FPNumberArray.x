@@ -525,7 +525,6 @@ mixin FPNumberArray<Element extends FPNumber>
         return new Element[size](i -> this[i].rad2deg()).toArray(mutability, inPlace=True);
     }
 
-
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
@@ -758,7 +757,6 @@ mixin FPNumberArray<Element extends FPNumber>
                         : new Array(mutability, this))
                 : new Float128[size](i -> this[i].toFloat128()).toArray(mutability, True);
     }
-
 
     // ----- aggregations --------------------------------------------------------------------------
 

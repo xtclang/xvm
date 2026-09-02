@@ -39,7 +39,6 @@ const DecN
         construct DecN(new FPLiteral(text).toDecN().bits);
     }
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -51,7 +50,6 @@ const DecN
     static DecN one() {
         TODO return 1.0;
     }
-
 
     // ----- Number operations ---------------------------------------------------------------------
 
@@ -95,7 +93,6 @@ const DecN
         TODO
     }
 
-
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
@@ -117,7 +114,6 @@ const DecN
         //   emax+p−2
         return emax + precision - 2;
     }
-
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
@@ -260,7 +256,6 @@ const DecN
     DecN nextDown() {
         TODO
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

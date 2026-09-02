@@ -19,7 +19,6 @@ class FilteredMap<Key, Value>
         this.include = include;
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     /**
@@ -72,7 +71,6 @@ class FilteredMap<Key, Value>
             super(accumulator);
         }
     }
-
 
     // ----- Map interface ------------------------------------------------------------------
 

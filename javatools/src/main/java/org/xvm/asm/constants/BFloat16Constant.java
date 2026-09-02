@@ -1,7 +1,6 @@
 
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -9,7 +8,6 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
-
 
 /**
  * Represent a 16-bit "brain" binary floating point constant.
@@ -47,7 +45,6 @@ public class BFloat16Constant
         m_flVal = flVal;
     }
 
-
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**
@@ -61,7 +58,6 @@ public class BFloat16Constant
         return getConstantPool().ensureBFloat16Constant(this.m_flVal + that.m_flVal);
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**
@@ -72,7 +68,6 @@ public class BFloat16Constant
     public Float getValue() {
         return Float.valueOf(m_flVal);
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -99,7 +94,6 @@ public class BFloat16Constant
         return Float.toString(m_flVal);
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -114,14 +108,12 @@ public class BFloat16Constant
         return "value=" + getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_flVal);
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -152,7 +144,6 @@ public class BFloat16Constant
         int fbits = Float.floatToIntBits(flVal);
         return fbits >>> 16;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

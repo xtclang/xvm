@@ -24,7 +24,6 @@ service RTVerifier
      */
     protected Object signer;
 
-
     // ----- Verifier API --------------------------------------------------------------------------
 
     @Override
@@ -70,7 +69,6 @@ service RTVerifier
     String toString() {
         return $"{algorithm.name.quoted()} verifier for {publicKey}";
     }
-
 
     // ----- native helpers ------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -46,7 +45,6 @@ import org.xvm.compiler.ast.Expression.TypeFit;
 
 import org.xvm.util.Severity;
 
-
 /**
  * An assignment statement specifies an l-value, an assignment operator, and an r-value.
  *
@@ -68,7 +66,6 @@ public class AssignmentStatement
         this.rvalue = rvalue;
         this.term   = standalone;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -335,7 +332,6 @@ public class AssignmentStatement
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -987,7 +983,6 @@ public class AssignmentStatement
                 : astLVal;
     }
 
-
     // ----- compiling helpers ---------------------------------------------------------------------
 
     /**
@@ -1097,7 +1092,6 @@ public class AssignmentStatement
         private boolean m_fInLValue;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -1129,7 +1123,6 @@ public class AssignmentStatement
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

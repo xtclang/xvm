@@ -10,7 +10,6 @@ import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.compiler.ast.Context;
 
-
 /**
  * FormalConstant is a Constant that represents a formal type, which could be generic class level
  * type parameter, such as Map.Key, a method type parameter (such as Object.equals.CompileType)

@@ -2,7 +2,6 @@ import io.TextPosition;
 
 import Lexer.Token;
 
-
 /**
  * Represents the type of a function, including the parameter types and the return types.
  */

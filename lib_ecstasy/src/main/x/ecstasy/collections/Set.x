@@ -70,7 +70,6 @@ interface Set<Element>
         return new ComplementSet<Element>(this, universalSet);
     }
 
-
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override

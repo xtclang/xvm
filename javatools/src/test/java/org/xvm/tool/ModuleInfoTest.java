@@ -20,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-
 /**
  * Unit tests for {@link ModuleInfo}, focusing on the deduce flag behavior,
  * project structure layouts, source tree generation, and resource/binary handling.

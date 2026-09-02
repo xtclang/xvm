@@ -1,10 +1,8 @@
 package org.xvm.asm;
 
-
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.VersionConstant;
-
 
 /**
  * Represents the context that a linker has when linking a module into a runtime Container. The

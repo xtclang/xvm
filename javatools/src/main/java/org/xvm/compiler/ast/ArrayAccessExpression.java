@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.Arrays;
@@ -43,7 +42,6 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
-
 /**
  * An array access expression is an expression followed by an array index expression.
  *
@@ -59,7 +57,6 @@ public class ArrayAccessExpression
         this.indexes  = indexes;
         this.tokClose = tokClose;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -662,7 +659,6 @@ public class ArrayAccessExpression
             return new InvokeExprAST(m_idGet, getTypes(), expr.getExprAST(ctx), astArgs, false);
         }
     }
-
 
     // ----- compilation helpers -------------------------------------------------------------------
 
@@ -1271,7 +1267,6 @@ public class ArrayAccessExpression
         }
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -1287,7 +1282,6 @@ public class ArrayAccessExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

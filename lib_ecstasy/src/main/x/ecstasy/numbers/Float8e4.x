@@ -69,7 +69,6 @@ const Float8e4
         construct Float8e4(new FPLiteral(text).toFloat8e4().bits);
     }
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -87,7 +86,6 @@ const Float8e4
         return 1.0;
     }
 
-
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override
@@ -98,7 +96,6 @@ const Float8e4
 
         return bits[0] == 1 ? Negative : Positive;
     }
-
 
     // ----- Number operations ---------------------------------------------------------------------
 
@@ -142,7 +139,6 @@ const Float8e4
         TODO
     }
 
-
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
@@ -169,7 +165,6 @@ const Float8e4
     Int exponentBitLength.get() {
         return 4;
     }
-
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
@@ -312,7 +307,6 @@ const Float8e4
     Float8e4 nextDown() {
         TODO
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

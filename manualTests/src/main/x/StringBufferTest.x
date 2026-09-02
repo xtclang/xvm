@@ -75,7 +75,6 @@ module StringBufferTest {
         verify(buf, control);
     }
 
-
     // ----- random testing -----
 
     static void randomize(Int seed) {
@@ -271,7 +270,6 @@ module StringBufferTest {
         }
         @Override String toString() = $".truncate({size})";
     }
-
 
     // ----- internal helpers -----
 

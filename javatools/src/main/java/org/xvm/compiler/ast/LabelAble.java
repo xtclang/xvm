@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.Register;
-
 
 /**
  * An interface implemented by statements that can expose variables via a label.

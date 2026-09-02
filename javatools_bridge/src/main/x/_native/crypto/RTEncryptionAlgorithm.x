@@ -36,7 +36,6 @@ service RTEncryptionAlgorithm(String name, Int blockSize)
      */
     private Object cipher;
 
-
     // ----- Algorithm API -------------------------------------------------------------------------
 
     @Override

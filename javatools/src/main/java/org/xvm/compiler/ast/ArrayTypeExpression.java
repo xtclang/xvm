@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.List;
@@ -12,7 +11,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * An array type expression is a type expression followed by an array indicator. Because an array
@@ -37,7 +35,6 @@ public class ArrayTypeExpression
         this.indexes = indexes;
         this.lEndPos = lEndPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -67,7 +64,6 @@ public class ArrayTypeExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compile phases ------------------------------------------------------------------------
 
@@ -102,7 +98,6 @@ public class ArrayTypeExpression
         return clzArray.findMethod("construct", 2, pool().typeInt64()).getIdentityConstant();
     }
 
-
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
@@ -115,7 +110,6 @@ public class ArrayTypeExpression
     protected void collectAnonInnerClassInfo(AnonInnerClass info) {
         info.addContribution(this);
     }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -147,7 +141,6 @@ public class ArrayTypeExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

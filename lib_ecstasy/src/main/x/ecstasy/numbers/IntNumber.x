@@ -28,7 +28,6 @@
         super(bytes);
     }
 
-
     // ----- IntNumber properties ------------------------------------------------------------------
 
     @Override
@@ -125,7 +124,6 @@
         return count;
     }
 
-
     // ----- Bitwise operations --------------------------------------------------------------------
 
     /**
@@ -203,7 +201,6 @@
      * integer, and vice versa.
      */
     IntNumber reverseBytes() = this.new(toByteArray().reversed());
-
 
     // ----- Sequential interface ------------------------------------------------------------------
 
@@ -339,7 +336,6 @@
      */
     Boolean[] toBooleanArray() = toBitArray().toBooleanArray();
 
-
     // ----- Orderable -----------------------------------------------------------------------------
 
     @Override
@@ -355,7 +351,6 @@
     static <CompileType extends IntNumber> Boolean equals(CompileType value1, CompileType value2) {
         return (value1 <=> value2) == Equal;
     }
-
 
     // ----- Stringable ----------------------------------------------------------------------------
 

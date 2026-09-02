@@ -11,7 +11,6 @@ import net.Uri;
 
 import Header.Entry;
 
-
 /**
  * An implementation of the `Client` API.
  *
@@ -279,7 +278,6 @@ const HttpClient
         }
         return False;
     }
-
 
     // ----- helper classes ------------------------------------------------------------------------
 

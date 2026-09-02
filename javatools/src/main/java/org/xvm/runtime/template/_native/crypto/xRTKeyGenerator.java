@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.crypto;
 
-
 import javax.crypto.SecretKey;
 
 import org.xvm.asm.ClassStructure;
@@ -16,7 +15,6 @@ import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.KeyGenHandle;
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SecretHandle;
-
 
 /**
  * Native implementation of the xRTKeyGenerator.x service.

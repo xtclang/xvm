@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -23,7 +22,6 @@ import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-
 
 /**
  * Represents a chain of invocation.
@@ -526,7 +524,6 @@ public class CallChain {
                 "\" on \"" + frame.getThis().getType().removeAccess().getValueString() + '"'));
     }
 
-
     // ----- CallChain subclasses ------------------------------------------------------------------
 
     /**
@@ -741,7 +738,6 @@ public class CallChain {
         private final ExceptionHandle f_hException;
     }
 
-
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override
@@ -753,7 +749,6 @@ public class CallChain {
                     ? "; native"
                     : "; depth=" + getDepth());
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

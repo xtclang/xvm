@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -33,7 +32,6 @@ import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * A TypeConstant that represents a parameterized type.
@@ -123,7 +121,6 @@ public class ParameterizedTypeConstant
             m_aiTypeParams = null;
         }
     }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -713,7 +710,6 @@ public class ParameterizedTypeConstant
                 ? this
                 : getConstantPool().ensureParameterizedTypeConstant(m_constType, aconstResolved);
     }
-
 
     // ----- type comparison support --------------------------------------------------------------
 

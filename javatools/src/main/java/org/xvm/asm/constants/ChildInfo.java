@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
@@ -10,7 +9,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.TypedefStructure;
-
 
 /**
  * Represents a child class or typedef contained within a class.
@@ -72,7 +70,6 @@ public class ChildInfo {
                 : new ChildInfo(infoType, f_child, f_access, new HashSet<>(f_setIds));
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -125,7 +122,6 @@ public class ChildInfo {
                 ((ClassStructure) f_child).isVirtualChildClass();
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -177,9 +173,7 @@ public class ChildInfo {
         }
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
-
 
     @Override
     public boolean equals(Object obj) {
@@ -194,7 +188,6 @@ public class ChildInfo {
     public String toString() {
         return "ChildInfo: " + getAccess() + ' ' + getName();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

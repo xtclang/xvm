@@ -8,7 +8,6 @@ import oodb.DBUser;
 import oodb.RootSchema;
 import oodb.Transaction;
 
-
 /**
  * This mixin provides metadata about the catalog of a specific database to the `jsonDB` database
  * engine. The various methods and properties of the mixin are almost always implemented by a code

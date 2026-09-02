@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import java.util.Arrays;
 
 import java.util.stream.Stream;
@@ -24,7 +23,6 @@ import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
-
 
 /**
  * A native ArrayDelegate implementations based on String arrays.
@@ -193,7 +191,6 @@ public class xRTStringDelegate
         hDelegate.m_cSize -= cDelete;
     }
 
-
     // ----- ClassTemplate API ---------------------------------------------------------------------
 
     @Override
@@ -221,7 +218,6 @@ public class xRTStringDelegate
             && Arrays.equals(h1.m_asValue, h2.m_asValue);
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
@@ -245,7 +241,6 @@ public class xRTStringDelegate
         System.arraycopy(abValue, 0, abNew, 0, abValue.length);
         return abNew;
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 

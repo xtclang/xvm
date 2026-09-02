@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -43,7 +42,6 @@ import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.CD_nUtil;
 import static org.xvm.javajit.Builder.MD_StringOf;
-
 
 /**
  * ASSERT_V rvalue, STRING, #vals(rvalue)

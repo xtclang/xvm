@@ -1,13 +1,11 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-
 
 /**
  * Represent a Class constant, which identifies a specific class structure.
@@ -52,7 +50,6 @@ public class ClassConstant
             throw new IllegalArgumentException("invalid parent format: " + constParent);
         }
     }
-
 
     // ----- ClassConstant methods -----------------------------------------------------------------
 
@@ -282,14 +279,12 @@ public class ClassConstant
                 : null;
     }
 
-
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
     public IdentityConstant replaceParentConstant(IdentityConstant idParent) {
         return new ClassConstant(getConstantPool(), idParent, getName());
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -328,7 +323,6 @@ public class ClassConstant
                 ? super.getValueString()
                 : sImport;
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

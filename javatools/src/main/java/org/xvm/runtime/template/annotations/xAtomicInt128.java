@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.annotations;
 
-
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.xvm.asm.Constants.Access;
@@ -18,7 +17,6 @@ import org.xvm.runtime.template.numbers.BaseInt128;
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 import org.xvm.runtime.template.numbers.LongLong;
 
-
 /**
  * Native implementation for @Atomic Int128 and UInt128.
  */
@@ -29,7 +27,6 @@ public class xAtomicInt128
 
         f_templateReferent = templateIntBase;
     }
-
 
     // ----- ClassTemplate API ---------------------------------------------------------------------
 
@@ -123,7 +120,6 @@ public class xAtomicInt128
         return Op.R_NEXT;
     }
 
-
     // ----- the handle ----------------------------------------------------------------------------
 
     public static class AtomicLongLongHandle
@@ -145,7 +141,6 @@ public class xAtomicInt128
                     (m_atomicValue == null ? "unassigned" : m_atomicValue.get());
         }
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

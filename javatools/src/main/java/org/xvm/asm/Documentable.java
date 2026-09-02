@@ -1,7 +1,5 @@
 package org.xvm.asm;
 
-
-
 /**
  * Represents XVM structures that can contain their own documentation.
  */

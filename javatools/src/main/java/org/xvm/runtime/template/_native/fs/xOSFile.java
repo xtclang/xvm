@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.fs;
 
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -46,7 +45,6 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.util.Handy;
-
 
 /**
  * Native OSFile implementation.
@@ -180,7 +178,6 @@ public class xOSFile
 
         return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, iReturn);
     }
-
 
     // ----- method implementations ----------------------------------------------------------------
 
@@ -492,7 +489,6 @@ public class xOSFile
             return raisePathException(frame, e, path);
         }
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

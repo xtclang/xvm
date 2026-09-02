@@ -1,6 +1,5 @@
 package org.xvm.runtime.template;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
 

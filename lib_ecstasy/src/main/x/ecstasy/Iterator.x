@@ -255,7 +255,6 @@ interface Iterator<Element> {
                 : elements.toArray(mutability, True);
     }
 
-
     // ----- metadata ------------------------------------------------------------------------------
 
     /**
@@ -293,7 +292,6 @@ interface Iterator<Element> {
      * @return (conditional) the number of elements remaining in the `Iterator`
      */
     conditional Int knownSize() = False;
-
 
     // ----- intermediate operations ---------------------------------------------------------------
 
@@ -549,7 +547,6 @@ interface Iterator<Element> {
         return snapshot.iterator(), snapshot.iterator();
     }
 
-
     // ----- advanced terminal operations ----------------------------------------------------------
 
     /**
@@ -604,7 +601,6 @@ interface Iterator<Element> {
             return False;
         }
     }
-
 
     // ----- Markable ------------------------------------------------------------------------------
 

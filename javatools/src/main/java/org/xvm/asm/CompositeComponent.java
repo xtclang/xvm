@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.PrintWriter;
@@ -12,7 +11,6 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.util.IdentityArrayList;
-
 
 /**
  * A Component representing more than one sibling by the same name or identity constant.
@@ -31,7 +29,6 @@ public class CompositeComponent
         super(parent);
         f_siblings = List.copyOf(siblings);
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -385,7 +382,6 @@ public class CompositeComponent
         throw new UnsupportedOperationException();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -474,7 +470,6 @@ public class CompositeComponent
         }
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -514,7 +509,6 @@ public class CompositeComponent
         sb.append('}');
         return sb.toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

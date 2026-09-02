@@ -79,7 +79,6 @@ class MapValues<Key, Value>(Map<Key, Value> contents)
         return True;
     }
 
-
     // ----- Collection interface ------------------------------------------------------------------
 
     @Override

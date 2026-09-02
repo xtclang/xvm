@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.text;
 
-
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -33,7 +32,6 @@ import org.xvm.runtime.template.numbers.xUInt32;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.Handy;
-
 
 /**
  * Native Char implementation.
@@ -150,7 +148,6 @@ public class xChar
         return frame.assignValue(iReturn, makeHandle(l + 1));
     }
 
-
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
@@ -180,7 +177,6 @@ public class xChar
 
         return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getValue()));
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

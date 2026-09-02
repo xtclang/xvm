@@ -4,7 +4,6 @@ import reflect.InvalidType;
 
 import src.Lexer.Token;
 
-
 /**
  * Represents a named type, including optional access, non-narrowing designation, and
  * parameters. For example:

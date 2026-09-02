@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -15,7 +14,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver.ResolutionCollector;
 import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.ConstantPool;
-
 
 /**
  * A base class for TypeConstants based on the parent's type and a child class structure.
@@ -52,7 +50,6 @@ public abstract class AbstractDependantChildTypeConstant
      * @return the child ClassStructure associated with this type
      */
     protected abstract ClassStructure getChildStructure();
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -192,9 +189,7 @@ public abstract class AbstractDependantChildTypeConstant
         return getChildStructure().resolveName(sName, access, collector);
     }
 
-
     // ----- type comparison support ---------------------------------------------------------------
-
 
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,

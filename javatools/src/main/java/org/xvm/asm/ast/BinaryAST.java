@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -18,7 +17,6 @@ import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.readPackedLong;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * A serializable AST-like node to be used for an AST interpreter or back end compiler.
@@ -71,7 +69,6 @@ public abstract class BinaryAST {
         reportUnimplemented("TODO implement toString() for " + this.getClass().getSimpleName());
         return nodeType().name();
     }
-
 
     // ----- NodeType enumeration ------------------------------------------------------------------
 
@@ -265,7 +262,6 @@ public abstract class BinaryAST {
     public static final RegAllocAST[]  NO_ALLOCS = new RegAllocAST[0];
     public static final ExprAST        POISON    = PoisonAST.INSTANCE;
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     private static final Set<String> ALREADY_DISPLAYED = new HashSet();
@@ -275,7 +271,6 @@ public abstract class BinaryAST {
             System.err.println(msg);
         }
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -525,7 +520,6 @@ public abstract class BinaryAST {
             nodes[i].writeExpr(out, res);
         }
     }
-
 
     // ----- ConstantResolver interface ------------------------------------------------------------
 

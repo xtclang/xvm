@@ -2,7 +2,6 @@ import io.TextPosition;
 
 import Lexer.Token;
 
-
 /**
  * Represents a child of a NamedTypeExpression, for example:
  *

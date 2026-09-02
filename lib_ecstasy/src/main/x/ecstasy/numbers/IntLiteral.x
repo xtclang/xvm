@@ -299,7 +299,6 @@ const IntLiteral(String text)
         TODO
     }
 
-
     // ----- IntNumber API -------------------------------------------------------------------------
 
     /**
@@ -358,7 +357,6 @@ const IntLiteral(String text)
         return this >>> count;
     }
 
-
     // ----- Number API ----------------------------------------------------------------------------
 
     /**
@@ -410,7 +408,6 @@ const IntLiteral(String text)
         return new IntLiteral((this.toIntN() % n.toIntN()).toString());
     }
 
-
     // ----- Sequential ----------------------------------------------------------------------------
 
     @Override
@@ -432,7 +429,6 @@ const IntLiteral(String text)
     IntLiteral skip(Int steps) {
         return this + steps.toIntLiteral();
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 
@@ -580,7 +576,6 @@ const IntLiteral(String text)
 
     @Override
     String toString() = text;
-
 
     // ----- Stringable implementation -------------------------------------------------------------
 

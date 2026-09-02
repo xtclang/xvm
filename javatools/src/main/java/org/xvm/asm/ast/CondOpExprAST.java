@@ -1,11 +1,9 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * An expressions that follow the pattern "expression operator expression" and produces a "Boolean"

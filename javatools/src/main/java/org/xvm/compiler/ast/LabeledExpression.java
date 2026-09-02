@@ -1,10 +1,8 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
-
 
 /**
  * Used for named arguments.
@@ -18,7 +16,6 @@ public class LabeledExpression
 
         this.name = name;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -51,14 +48,12 @@ public class LabeledExpression
         return CHILD_FIELDS;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString() {
         return name + " = " + expr;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

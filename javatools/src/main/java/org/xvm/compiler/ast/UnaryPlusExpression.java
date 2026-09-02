@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -9,7 +8,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
-
 
 /**
  * The "+" that precedes a number.
@@ -21,7 +19,6 @@ public class UnaryPlusExpression
     public UnaryPlusExpression(Token operator, Expression expr) {
         super(operator, expr);
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 

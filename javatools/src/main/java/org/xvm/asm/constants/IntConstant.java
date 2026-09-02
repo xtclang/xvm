@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -19,7 +18,6 @@ import org.xvm.type.Decimal64;
 
 import org.xvm.util.Hash;
 import org.xvm.util.PackedInteger;
-
 
 /**
  * Represent an up to 128-bit signed integer constant, and a bunch of lesser-known formats of
@@ -137,7 +135,6 @@ public class IntConstant
         m_fmt  = format;
         m_pint = pint;
     }
-
 
     // ----- type-specific functionality -----------------------------------------------------------
 
@@ -307,7 +304,6 @@ public class IntConstant
 
         return getConstantPool().ensureIntConstant(n, getFormat());
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -1142,7 +1138,6 @@ public class IntConstant
         return m_pint.toString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -1157,14 +1152,12 @@ public class IntConstant
         return "value=" + getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_pint);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

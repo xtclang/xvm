@@ -30,7 +30,6 @@ import ast.TypeExpression;
 import ast.UnaryExpression;
 import ast.UnionTypeExpression;
 
-
 class Parser
         implements Markable {
     // ----- constructors --------------------------------------------------------------------------
@@ -67,7 +66,6 @@ class Parser
         advance();
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -90,7 +88,6 @@ class Parser
      * explicit module names.
      */
     public/private Boolean allowModuleNames;
-
 
     // ----- API -----------------------------------------------------------------------------------
 
@@ -138,7 +135,6 @@ class Parser
         return parseIntersectingTypeExpression();
     }
 
-
     // ----- statement parsing ---------------------------------------------------------------------
 
     /**
@@ -162,7 +158,6 @@ class Parser
         expect(Semicolon);
         return new ImportStatement(keyword, names, alias);
     }
-
 
     // ----- expression parsing --------------------------------------------------------------------
 
@@ -308,7 +303,6 @@ class Parser
         expect(RightParen);
         return returns;
     }
-
 
     // ----- type expression parsing ---------------------------------------------------------------
 
@@ -536,7 +530,6 @@ class Parser
         return new AnnotationExpression(type, args, start, endAnno);
     }
 
-
     /**
      * Parse a function type expression.
      *
@@ -731,7 +724,6 @@ class Parser
         return types;
     }
 
-
     // ----- miscellaneous parsing -----------------------------------------------------------------
 
     /**
@@ -815,7 +807,6 @@ class Parser
 
         return moduleNames, localNames;
     }
-
 
     // ----- token handling ------------------------------------------------------------------------
 
@@ -1063,7 +1054,6 @@ class Parser
         }
     }
 
-
     // ----- Markable methods ----------------------------------------------------------------------
 
     /**
@@ -1099,7 +1089,6 @@ class Parser
 
         lexer.unmark(mark.lexerMark);
     }
-
 
     // ----- error handling ------------------------------------------------------------------------
 

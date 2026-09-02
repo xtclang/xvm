@@ -75,7 +75,6 @@ class MapEntries<Key, Value>(Map<Key, Value> contents)
         return True;
     }
 
-
     // ----- Collection interface ------------------------------------------------------------------
 
     @Override

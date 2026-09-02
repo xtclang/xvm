@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.fs;
 
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -28,7 +27,6 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
-
 
 /**
  * Native OSFileStore implementation.
@@ -173,7 +171,6 @@ public class xOSFileStore
         }
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

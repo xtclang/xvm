@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -25,7 +24,6 @@ import org.xvm.compiler.Constants;
 
 import org.xvm.util.Severity;
 
-
 /**
  * An annotated type expression is a type expression preceded with an annotation.
  */
@@ -37,7 +35,6 @@ public class AnnotatedTypeExpression
         this.annotation = annotation;
         this.type       = type;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -148,7 +145,6 @@ public class AnnotatedTypeExpression
         type.setParent(this);
     }
 
-
     // ----- TypeExpression methods ----------------------------------------------------------------
 
     @Override
@@ -174,7 +170,6 @@ public class AnnotatedTypeExpression
 
         super.setTypeConstant(constType);
     }
-
 
     // ----- Expression methods --------------------------------------------------------------------
 
@@ -378,7 +373,6 @@ public class AnnotatedTypeExpression
         return parent instanceof Parameter;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -390,7 +384,6 @@ public class AnnotatedTypeExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

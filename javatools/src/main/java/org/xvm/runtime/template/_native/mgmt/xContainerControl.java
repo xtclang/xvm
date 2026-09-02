@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.mgmt;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -31,7 +30,6 @@ import org.xvm.runtime.template._native.xRTServiceControl;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-
 
 /**
  * Native implementation of _native.mgmt.ContainerControl class.
@@ -197,7 +195,6 @@ public class xContainerControl
 
         return container.ensureServiceContext().sendOp1Request(frame, opCall, iReturn);
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 

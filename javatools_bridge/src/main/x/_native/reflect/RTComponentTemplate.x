@@ -1,7 +1,6 @@
 import ecstasy.reflect.Access;
 import ecstasy.reflect.ComponentTemplate;
 
-
 /**
  * The native reflected ComponentTemplate implementation.
  */

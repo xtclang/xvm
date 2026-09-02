@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.fs;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
@@ -30,7 +29,6 @@ import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
-
 
 /**
  * Native OSFileStore implementation.
@@ -130,7 +128,6 @@ public class xCPFileStore
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     static long calcSize(FSNodeConstant node) {
@@ -152,7 +149,6 @@ public class xCPFileStore
             throw new IllegalStateException();
         }
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

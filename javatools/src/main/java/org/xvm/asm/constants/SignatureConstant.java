@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -29,7 +28,6 @@ import org.xvm.util.Hash;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Represent a method signature constant. A signature constant identifies a method's call signature
@@ -148,7 +146,6 @@ public class SignatureConstant
         m_aiParams  = null;
         m_aiReturns = null;
     }
-
 
     // ----- type-specific functionality -----------------------------------------------------------
 
@@ -588,7 +585,6 @@ public class SignatureConstant
                 Arrays.copyOfRange(m_aconstParams, ofStart, ofStart + cParams), m_aconstReturns);
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -721,7 +717,6 @@ public class SignatureConstant
         return sb.toString();
     }
 
-
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
@@ -744,7 +739,6 @@ public class SignatureConstant
         }
         return sJitName;
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -781,7 +775,6 @@ public class SignatureConstant
                 + ", returns=" + formatTypes(m_aconstReturns);
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -790,7 +783,6 @@ public class SignatureConstant
                Hash.of(m_aconstReturns,
                Hash.of(m_constName)));
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -909,7 +901,6 @@ public class SignatureConstant
         sb.append(')');
         return sb.toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

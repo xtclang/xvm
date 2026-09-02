@@ -82,7 +82,6 @@ interface OrderedSet<Element extends Orderable>
         return prev(element);
     }
 
-
     // ----- equality ------------------------------------------------------------------------------
 
     /**

@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -47,7 +46,6 @@ import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
-
 
 /**
  * Represent a constant that specifies the union ("|") of two types.
@@ -165,7 +163,6 @@ public class UnionTypeConstant
             setTypes.add(type2);
         }
     }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -500,7 +497,6 @@ public class UnionTypeConstant
                m_constType2.isNestMateOf(idClass);
     }
 
-
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
@@ -762,7 +758,6 @@ public class UnionTypeConstant
         return mapMerge;
     }
 
-
     // ----- type comparison support ---------------------------------------------------------------
 
     /**
@@ -1012,7 +1007,6 @@ public class UnionTypeConstant
         code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
     }
 
-
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
@@ -1080,7 +1074,6 @@ public class UnionTypeConstant
                 ? null
                 : info1;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 

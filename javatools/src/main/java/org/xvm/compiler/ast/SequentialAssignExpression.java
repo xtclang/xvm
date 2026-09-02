@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.Map;
 
 import org.xvm.asm.Argument;
@@ -41,7 +40,6 @@ public class SequentialAssignExpression
         m_fPre = false;
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -66,7 +64,6 @@ public class SequentialAssignExpression
                 ? isPre() ? Sequential.PreInc : Sequential.PostInc
                 : isPre() ? Sequential.PreDec : Sequential.PostDec;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -188,7 +185,6 @@ public class SequentialAssignExpression
         }
         return new UnaryOpExprAST(expr.getExprAST(ctx), op, getType());
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

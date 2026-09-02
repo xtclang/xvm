@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -29,7 +28,6 @@ import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * A Constant that represents the annotation of another type constant.
@@ -106,7 +104,6 @@ public class Annotation
             m_aParams = aParams;
         }
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -203,7 +200,6 @@ public class Annotation
         return infoGet != null && !infoGet.getHead().isAbstract();
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -282,7 +278,6 @@ public class Annotation
         return sb.toString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -348,7 +343,6 @@ public class Annotation
         return sb.toString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -356,7 +350,6 @@ public class Annotation
         return Hash.of(m_aParams,
                Hash.of(getAnnotationClass()));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

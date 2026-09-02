@@ -115,7 +115,6 @@ const Class<PublicType, ProtectedType extends PublicType,
         this.allocateDefault = allocateDefault;
     }
 
-
     // ----- attributes ----------------------------------------------------------------------------
 
     /**

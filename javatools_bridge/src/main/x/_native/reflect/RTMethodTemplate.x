@@ -5,7 +5,6 @@ import ecstasy.reflect.ParameterTemplate;
 import ecstasy.reflect.ParameterTemplate.Category;
 import ecstasy.reflect.TypeTemplate;
 
-
 /**
  * The native reflected MethodTemplate implementation.
  */

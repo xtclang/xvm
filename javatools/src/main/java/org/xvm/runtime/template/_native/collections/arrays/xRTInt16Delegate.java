@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 
@@ -12,7 +11,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt16;
-
 
 /**
  * Native RTDelegate<Int16> implementation.

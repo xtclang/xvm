@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ClassStructure;
@@ -14,7 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 
 /**
  * Tests for {@link SignatureConstant}.

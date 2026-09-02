@@ -1,8 +1,6 @@
 package org.xvm.asm.constants;
 
-
 import org.xvm.asm.ConstantPool;
-
 
 /**
  * Represent a binary floating point constant.
@@ -19,7 +17,6 @@ public abstract class FloatConstant
     protected FloatConstant(ConstantPool pool) {
         super(pool);
     }
-
 
     // ----- ValueConstant methods -----------------------------------------------------------------
 

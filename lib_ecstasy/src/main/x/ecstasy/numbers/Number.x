@@ -46,7 +46,6 @@
         construct Number(bytes.toBitArray());
     }
 
-
     // ----- related types -------------------------------------------------------------------------
 
     /**
@@ -71,7 +70,6 @@
      */
     static const DivisionByZero(String? text = Null, Exception? cause = Null)
             extends IllegalMath(text, cause);
-
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -135,7 +133,6 @@
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      */
     @RO Number! magnitude.get() = abs();
-
 
     // ----- operators -----------------------------------------------------------------------------
 
@@ -228,7 +225,6 @@
         return quotient, remainder;
     }
 
-
     // ----- other operations ----------------------------------------------------------------------
 
     /**
@@ -278,7 +274,6 @@
      *                      bounds of this type
      */
     Number pow(Number n);
-
 
     // ----- conversions ---------------------------------------------------------------------------
 
@@ -486,7 +481,6 @@
     static <From extends Number!, To extends Number!> function To(From)
             converterFor(Type<From> from, Type<To> to) = From.converterTo(to);
 
-
     // ----- Numeric interface ---------------------------------------------------------------------
 
     @Override
@@ -529,7 +523,6 @@
             default: assert as $"unsupported convert-to type: {to}";
         };
     }
-
 
     // ----- Orderable interface -------------------------------------------------------------------
 
@@ -588,7 +581,6 @@
 
     @Override
     static <CompileType extends Number> Int hashCode(CompileType value) = value.toInt64();
-
 
     // ----- Stringable support --------------------------------------------------------------------
 

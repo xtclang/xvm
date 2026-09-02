@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -52,7 +51,6 @@ import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
-
 /**
  * A shared pool of all Constant objects used in a particular FileStructure.
  */
@@ -68,7 +66,6 @@ public class ConstantPool
     public ConstantPool(FileStructure fileStructure) {
         super(fileStructure);
     }
-
 
     // ----- public API ----------------------------------------------------------------------------
 
@@ -492,7 +489,6 @@ public class ConstantPool
     public IntConstant ensureIntConstant(PackedInteger pint) {
         return ensureIntConstant(pint, Format.Int64);
     }
-
 
     /**
      * Given the specified PackedInteger value and a format, obtain a IntConstant that represents it.
@@ -982,7 +978,6 @@ public class ConstantPool
         }
         return condNot;
     }
-
 
     /**
      * Given the multiple conditions, obtain an AnyCondition that represents them.
@@ -2348,7 +2343,6 @@ public class ConstantPool
     public SignatureConstant sigClose()          {SignatureConstant c = m_sigClose;          if (c == null) {m_sigClose          = c = getSignature("Closeable", "close",     1)                        ;} return c;}
     public SignatureConstant sigValidator()      {SignatureConstant c = m_sigValidator;      if (c == null) {m_sigValidator      = c = ensureSignatureConstant("assert", NO_TYPES, NO_TYPES)            ;} return c;}
 
-
     // ---- internal class helpers -----------------------------------------------------------------
 
     protected ClassConstant  clzParameter()     {return (ClassConstant) getImplicitlyImportedIdentity("Parameter"                );}
@@ -2486,7 +2480,6 @@ public class ConstantPool
             }
         }
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -2955,7 +2948,6 @@ public class ConstantPool
         }
     }
 
-
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override
@@ -2982,7 +2974,6 @@ public class ConstantPool
         dumpStructureCollection(out, sIndent, "Constants", f_listConst);
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -2998,7 +2989,6 @@ public class ConstantPool
         // compare each constant in the pool for equality
         return this.f_listConst.equals(that.f_listConst);
     }
-
 
     // ----- methods exposed to FileStructure ------------------------------------------------------
 
@@ -3031,7 +3021,6 @@ public class ConstantPool
             optimize();
         }
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -3123,7 +3112,6 @@ public class ConstantPool
 
         return map;
     }
-
 
     // ----- TypeInfo helpers ----------------------------------------------------------------------
 
@@ -3223,7 +3211,6 @@ public class ConstantPool
         return set;
     }
 
-
     // ----- TypeConstant helpers  -----------------------------------------------------------------
 
     /**
@@ -3270,7 +3257,6 @@ public class ConstantPool
             return clzTuple.calculateAssignability(this, tupleLeft.getParamTypes(), Access.PUBLIC,
                     listRight);
         }
-
 
         // should never happen; soft assert
         System.err.println("Unsupported tuple type: " + idLeft.getValueString());
@@ -3643,7 +3629,6 @@ public class ConstantPool
         return ensureParameterizedTypeConstant(typeFunction(), typeP, typeR);
     }
 
-
     // ----- out-of-context helpers  ---------------------------------------------------------------
 
     public TypeConstant getNakedRefType() {
@@ -3957,7 +3942,6 @@ public class ConstantPool
             throw e instanceof RuntimeException ex ? ex : new RuntimeException(e);
         }
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

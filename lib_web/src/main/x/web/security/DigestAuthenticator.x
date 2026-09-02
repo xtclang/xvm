@@ -13,7 +13,6 @@ import DigestCredential.sha256;
 import DigestCredential.sha512_256;
 import DigestCredential.UserId;
 
-
 /**
  * An implementation of the Authenticator interface for
  * [The 'Digest' HTTP Authentication Scheme](https://datatracker.ietf.org/doc/html/rfc7616).

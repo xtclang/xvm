@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.annotations;
 
-
 import java.util.HashSet;
 import java.util.Set;
 
@@ -19,7 +18,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.reflect.xVar;
 
 import org.xvm.runtime.template.xException;
-
 
 /**
  * Native implementation of Lazy.
@@ -99,7 +97,6 @@ public class xLazy
             }
         }
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 

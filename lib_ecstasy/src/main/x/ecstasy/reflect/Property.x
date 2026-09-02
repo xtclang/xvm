@@ -75,7 +75,6 @@ interface Property<Target, Referent, Implementation extends Ref<Referent>>
      */
     @RO Boolean present.get() = True;
 
-
     // ----- dynamic behavior ----------------------------------------------------------------------
 
     /**
@@ -122,7 +121,6 @@ interface Property<Target, Referent, Implementation extends Ref<Referent>>
 
         this.of(target).as(Var<Referent>).set(value);
     }
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 

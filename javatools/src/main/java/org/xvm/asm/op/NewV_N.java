@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -27,7 +26,6 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * NEWV_N CONSTRUCT, rvalue-type, #:(rvalue), lvalue; virtual "new"

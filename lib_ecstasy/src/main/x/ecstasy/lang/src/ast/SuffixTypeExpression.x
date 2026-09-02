@@ -2,7 +2,6 @@ import io.TextPosition;
 
 import Lexer.Token;
 
-
 /**
  * Represents any type composed of a suffix on another type.
  */

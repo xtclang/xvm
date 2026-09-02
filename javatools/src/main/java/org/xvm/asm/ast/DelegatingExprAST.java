@@ -1,12 +1,10 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * A base class for expressions that delegate to an underlying expression.

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.collections;
 
-
 import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -490,7 +489,6 @@ public class xTuple
         }
     }
 
-
     // ----- IndexSupport methods ------------------------------------------------------------------
 
     @Override
@@ -637,7 +635,6 @@ public class xTuple
             return frameCaller.assignValue(iReturn, xBoolean.TRUE);
         }
     }
-
 
     // ----- ObjectHandle helpers ------------------------------------------------------------------
 

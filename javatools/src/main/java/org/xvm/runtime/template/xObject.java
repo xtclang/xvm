@@ -1,12 +1,10 @@
 package org.xvm.runtime.template;
 
-
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
-
 
 /**
  * Native Object functionality implementation.

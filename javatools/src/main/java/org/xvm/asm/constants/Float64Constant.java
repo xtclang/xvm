@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -9,7 +8,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.util.Hash;
-
 
 /**
  * Represent a 64-bit binary floating point constant.
@@ -44,7 +42,6 @@ public class Float64Constant
         m_dflVal = dflVal;
     }
 
-
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**
@@ -58,7 +55,6 @@ public class Float64Constant
         return getConstantPool().ensureFloat64Constant(this.m_dflVal + that.m_dflVal);
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**
@@ -69,7 +65,6 @@ public class Float64Constant
     public Double getValue() {
         return Double.valueOf(m_dflVal);
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -96,7 +91,6 @@ public class Float64Constant
         return Double.toString(m_dflVal);
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -111,14 +105,12 @@ public class Float64Constant
         return "value=" + getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_dflVal);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

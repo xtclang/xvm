@@ -5,7 +5,6 @@ import ecstasy.reflect.ClassTemplate.Composition;
 import security.Authenticator;
 import security.NeverAuthenticator;
 
-
 /**
  * The `@WebApp` annotation is used to mark a module as being a web-application module. It can
  * contain any number of discoverable HTTP endpoints.

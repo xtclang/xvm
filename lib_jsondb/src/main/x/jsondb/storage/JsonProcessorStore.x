@@ -197,7 +197,6 @@ service JsonProcessorStore<Message extends immutable Const>
      */
     public/protected Boolean cleanupPending = False;
 
-
     // ----- storage API exposed to the client -----------------------------------------------------
 
     @Override

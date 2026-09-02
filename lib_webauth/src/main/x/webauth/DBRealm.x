@@ -298,7 +298,6 @@ const DBRealm
         return db.entitlements.filter(e -> match(e.value)).values.toArray(Constant).freeze(True);
     }
 
-
     @Override
     conditional Entitlement findEntitlement(String scheme, String locator) {
         if (Int id := db.entitlementLocators.get(munge(scheme, locator))) {

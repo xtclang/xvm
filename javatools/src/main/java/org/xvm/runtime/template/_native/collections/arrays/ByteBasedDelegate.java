@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import java.nio.ByteBuffer;
 
 import java.util.Arrays;
@@ -27,7 +26,6 @@ import org.xvm.runtime.template.numbers.xInt8;
 import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xUInt8;
 
-
 /**
  * A base class for native ArrayDelegate implementations based on byte arrays.
  */
@@ -53,7 +51,6 @@ public abstract class ByteBasedDelegate
         }
         return makeHandle(ab, cSize, mutability);
     }
-
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
@@ -219,7 +216,6 @@ public abstract class ByteBasedDelegate
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
 }
 
-
     // ----- ByteView implementation ---------------------------------------------------------------
 
     @Override
@@ -250,7 +246,6 @@ public abstract class ByteBasedDelegate
 
         hBytes.m_abValue[(int) of] = bValue;
     }
-
 
     // ----- ClassTemplate API ---------------------------------------------------------------------
 
@@ -345,7 +340,6 @@ public abstract class ByteBasedDelegate
             && Arrays.equals(h1.m_abValue, h2.m_abValue);
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
@@ -376,7 +370,6 @@ public abstract class ByteBasedDelegate
         System.arraycopy(abValue, 0, abNew, 0, abValue.length);
         return abNew;
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 

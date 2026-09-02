@@ -1,7 +1,6 @@
 
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -10,7 +9,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.util.Hash;
-
 
 /**
  * Represent a 16-bit binary floating point constant.
@@ -51,7 +49,6 @@ public class Float16Constant
         m_flVal = flVal16;
     }
 
-
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**
@@ -65,7 +62,6 @@ public class Float16Constant
         return getConstantPool().ensureFloat16Constant(this.m_flVal + that.m_flVal);
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**
@@ -76,7 +72,6 @@ public class Float16Constant
     public Float getValue() {
         return Float.valueOf(m_flVal);
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -103,7 +98,6 @@ public class Float16Constant
         return Float.toString(m_flVal);
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -118,14 +112,12 @@ public class Float16Constant
         return "value=" + getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_flVal);
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -251,7 +243,6 @@ public class Float16Constant
                 + (0x800000 >>> val - 102)              // round depending on cut off
                 >>> 126 - val );                        // div by 2^(1-(exp-127+15)) and >> 13 | exp=0
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

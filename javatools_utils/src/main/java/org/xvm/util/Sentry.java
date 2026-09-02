@@ -1,8 +1,6 @@
 package org.xvm.util;
 
-
 import java.util.function.Consumer;
-
 
 /**
  * A {@link java.lang.ref.Reference Reference} like object which is also {@link AutoCloseable}.

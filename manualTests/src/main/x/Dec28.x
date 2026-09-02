@@ -178,7 +178,6 @@ const Dec28(Bit[] bits) {
         construct Dec28(bits);
         }
 
-
     // ----- internal -----
 
     static Dec28 PosZero     = new Dec28([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]);

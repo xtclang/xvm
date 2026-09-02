@@ -1,6 +1,5 @@
 package org.xvm.compiler;
 
-
 import java.io.File;
 
 import org.junit.jupiter.api.Test;

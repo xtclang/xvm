@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -67,7 +66,6 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 import org.xvm.util.Handy;
-
 
 /**
  * ClassTemplate represents a run-time class.
@@ -295,7 +293,6 @@ public abstract class ClassTemplate
         return f_struct.toString();
     }
 
-
     // ----- constructions  ------------------------------------------------------------------------
 
     /**
@@ -405,7 +402,6 @@ public abstract class ClassTemplate
         return Op.R_NEXT;
     }
 
-
     // ----- mutability ----------------------------------------------------------------------------
 
     /**
@@ -472,7 +468,6 @@ public abstract class ClassTemplate
 
         return frame.raiseException(xException.mutableObject(frame, typeTarget, fResponse));
     }
-
 
     // ----- invocations ---------------------------------------------------------------------------
 
@@ -675,7 +670,6 @@ public abstract class ClassTemplate
                               ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn) {
         return frame.raiseException("Unknown native(NN) method: \"" + method + "\" on " + this);
     }
-
 
     // ----- property operations -------------------------------------------------------------------
 
@@ -1425,7 +1419,6 @@ public abstract class ClassTemplate
                 BinaryAction.XOR, this, hTarget, idProp, hArg).doNext(frame);
     }
 
-
     // ----- Ref operations ------------------------------------------------------------------------
 
     /**
@@ -1493,7 +1486,6 @@ public abstract class ClassTemplate
 
         return frame.assignValue(iReturn, hRef);
     }
-
 
     // ----- support for equality and comparison ---------------------------------------------------
 
@@ -1614,7 +1606,6 @@ public abstract class ClassTemplate
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
         return hValue1 == hValue2;
     }
-
 
     // ---- OpSupport implementation ---------------------------------------------------------------
 
@@ -1945,7 +1936,6 @@ public abstract class ClassTemplate
         }
     }
 
-
     // ----- numeric support -----------------------------------------------------------------------
 
     /**
@@ -1956,7 +1946,6 @@ public abstract class ClassTemplate
     public int overflow(Frame frame) {
         return frame.raiseException(xException.outOfBounds(frame, f_sName + " overflow"));
     }
-
 
     // ----- toString() support --------------------------------------------------------------------
 
@@ -1973,7 +1962,6 @@ public abstract class ClassTemplate
         return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -1989,7 +1977,6 @@ public abstract class ClassTemplate
     public ConstantPool pool() {
         return f_container.getConstantPool();
     }
-
 
     // =========== TEMPORARY =======================================================================
 
@@ -2434,7 +2421,6 @@ public abstract class ClassTemplate
             listFinalizable.add(frame);
         }
     }
-
 
     // ----- constants and fields ------------------------------------------------------------------
 

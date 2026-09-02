@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.collections;
 
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 
@@ -23,7 +22,6 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToBoolean;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToByte;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToNibble;
-
 
 /**
  * Native BitArray<Bit> implementation.

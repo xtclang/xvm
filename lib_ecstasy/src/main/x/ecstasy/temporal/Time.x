@@ -77,7 +77,6 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
 
     static Time EPOCH = new Time(0, UTC);
 
-
     // ----- withers -------------------------------------------------------------------------------
 
     /**
@@ -97,7 +96,6 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
                         timeOfDay ?: this.timeOfDay,
                         timezone  ?: this.timezone);
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -139,7 +137,6 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
     Time utc() {
         return TimeZone.UTC.adopt(this);
     }
-
 
     // ----- operators -----------------------------------------------------------------------------
 
@@ -186,7 +183,6 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
         assert value1.timezone.isNoTZ == value2.timezone.isNoTZ;
         return value1.epochPicos == value2.epochPicos;
     }
-
 
     // ----- Stringable ----------------------------------------------------------------------------
 

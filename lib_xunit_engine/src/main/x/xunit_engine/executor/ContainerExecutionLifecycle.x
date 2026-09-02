@@ -12,7 +12,6 @@ import xunit.extensions.Extension;
 import xunit.extensions.ExtensionProvider;
 import xunit.extensions.TestExecutionPredicate;
 
-
 /**
  * An `ExecutionLifecycle` implementation for a `ContainerModel`.
  *

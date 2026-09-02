@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -14,7 +13,6 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.TypeMatrix;
 
 import org.xvm.runtime.Frame;
-
 
 /**
  * JMP addr ; unconditional relative jump

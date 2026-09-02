@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -19,7 +18,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Represent a constant that specifies an explicitly immutable form of an underlying type.
@@ -69,7 +67,6 @@ public class ImmutableTypeConstant
     protected void resolveConstants() {
         m_constType = getConstantPool().getConstant(m_iType, TypeConstant.class);
     }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -156,7 +153,6 @@ public class ImmutableTypeConstant
         return getUnderlyingType().calculateRelationToRight(typeRight);
     }
 
-
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
@@ -166,7 +162,6 @@ public class ImmutableTypeConstant
         return m_constType.ensureTypeInfoInternal(errs);
     }
 
-
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
@@ -174,14 +169,12 @@ public class ImmutableTypeConstant
         return typeRight.isImmutable() && super.isDuckTypeAbleFrom(typeRight);
     }
 
-
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
     public String ensureJitClassName(TypeSystem ts) {
         return m_constType.ensureJitClassName(ts);
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -216,7 +209,6 @@ public class ImmutableTypeConstant
     public String getValueString() {
         return "immutable " + m_constType.getValueString();
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -261,14 +253,12 @@ public class ImmutableTypeConstant
         return false;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_constType);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

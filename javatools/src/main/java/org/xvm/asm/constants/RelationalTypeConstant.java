@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -30,7 +29,6 @@ import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * A common base for relational types.
@@ -121,7 +119,6 @@ public abstract class RelationalTypeConstant
      *         simplified
      */
     protected abstract TypeConstant simplifyInternal(TypeConstant type1, TypeConstant type2);
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -466,7 +463,6 @@ public abstract class RelationalTypeConstant
                 : simplifyOrClone(getConstantPool(), constResolved1, constResolved2);
     }
 
-
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
@@ -529,7 +525,6 @@ public abstract class RelationalTypeConstant
                         : info1.getProgress().worstOf(info2.getProgress())
                 );
     }
-
 
     /**
      * Produce a map of TypeParams for a merge of the specified TypeInfos.
@@ -595,7 +590,6 @@ public abstract class RelationalTypeConstant
         return setDepends;
     }
 
-
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
@@ -618,14 +612,12 @@ public abstract class RelationalTypeConstant
                           || m_constType2.consumesFormalType(sTypeName, access));
     }
 
-
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
     public TypeConstant getCallableJitType() {
         return getConstantPool().typeObject();
     }
-
 
     // ----- run-time support ----------------------------------------------------------------------
 
@@ -653,7 +645,6 @@ public abstract class RelationalTypeConstant
     public MethodInfo findFunctionInfo(SignatureConstant sig) {
         throw new UnsupportedOperationException();
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -683,7 +674,6 @@ public abstract class RelationalTypeConstant
         return n;
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -707,7 +697,6 @@ public abstract class RelationalTypeConstant
             && super.validate(errs);
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -715,7 +704,6 @@ public abstract class RelationalTypeConstant
         return Hash.of(m_constType1,
                Hash.of(m_constType2));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

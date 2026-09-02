@@ -1,13 +1,11 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataOutput;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token;
-
 
 /**
  * Represent a constant that will eventually be replaced with a value constant.
@@ -26,7 +24,6 @@ public class DeferredValueConstant
     public DeferredValueConstant(ConstantPool pool) {
         super(pool);
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -74,7 +71,6 @@ public class DeferredValueConstant
     public int computeHashCode() {
         return 0;
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

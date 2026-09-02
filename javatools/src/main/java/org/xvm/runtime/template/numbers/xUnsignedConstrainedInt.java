@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.runtime.Container;
@@ -10,7 +9,6 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xOrdered;
-
 
 /**
  * Base class for unsigned integer classes.

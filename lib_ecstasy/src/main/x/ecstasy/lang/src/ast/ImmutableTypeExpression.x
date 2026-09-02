@@ -1,6 +1,5 @@
 import Lexer.Token;
 
-
 /**
  * Represents an immutable type, such as:
  *

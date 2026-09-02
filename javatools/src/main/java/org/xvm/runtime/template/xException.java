@@ -1,6 +1,5 @@
 package org.xvm.runtime.template;
 
-
 import java.util.List;
 
 import org.xvm.asm.ClassStructure;
@@ -20,7 +19,6 @@ import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
-
 
 /**
  * Native Exception implementation.
@@ -262,7 +260,6 @@ public class xException
         return makeHandle(frame, "Unknown injectable resource \"" + type.getValueString() +
                 ' ' + sName + '"');
     }
-
 
     // ---- ObjectHandle helpers -------------------------------------------------------------------
 

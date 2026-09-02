@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import java.math.BigDecimal;
 import java.math.MathContext;
 
@@ -13,7 +12,6 @@ import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.type.Decimal;
 import org.xvm.type.Decimal128;
-
 
 /**
  * Native Dec128 support.

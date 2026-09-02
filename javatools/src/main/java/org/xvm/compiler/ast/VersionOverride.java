@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.Collections;
@@ -10,7 +9,6 @@ import org.xvm.asm.Version;
 
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
-
 
 /**
  * A version override specifies allowable, avoided, and preferred version information.
@@ -39,7 +37,6 @@ public class VersionOverride
         this.verb    = verb;
         this.exprVer = exprVer;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -81,7 +78,6 @@ public class VersionOverride
         return CHILD_FIELDS;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -98,7 +94,6 @@ public class VersionOverride
     public Map<String, Object> getDumpChildren() {
         return Collections.emptyMap();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

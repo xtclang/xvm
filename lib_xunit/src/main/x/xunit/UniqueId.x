@@ -258,7 +258,6 @@ const UniqueId
 
     // ----- inner const: Segment ------------------------------------------------------------------
 
-
     /**
      * A segment in a unique identifier.
      */

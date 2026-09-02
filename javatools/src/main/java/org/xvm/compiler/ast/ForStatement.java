@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -43,7 +42,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
-
 /**
  * The traditional "for" statement.
  */
@@ -63,7 +61,6 @@ public class ForStatement
         this.update  = update == null ? Collections.emptyList() : update;
         this.block   = block;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -222,7 +219,6 @@ public class ForStatement
         return CHILD_FIELDS;
     }
 
-
     // ----- LabelAble methods ---------------------------------------------------------------------
 
     @Override
@@ -256,7 +252,6 @@ public class ForStatement
 
         return reg;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -685,7 +680,6 @@ public class ForStatement
         return !fAlwaysTrue && fCompletes;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -715,7 +709,6 @@ public class ForStatement
 
         return sb.toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.reflect;
 
-
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.runtime.ClassTemplate;
@@ -13,7 +12,6 @@ import org.xvm.runtime.template.xBoolean;
 
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate;
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
-
 
 /**
  * Native ClassTemplate implementation.

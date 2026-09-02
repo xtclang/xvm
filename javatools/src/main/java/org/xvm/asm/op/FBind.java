@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -51,7 +50,6 @@ import static org.xvm.javajit.Builder.CD_nObject;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * FBIND rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result

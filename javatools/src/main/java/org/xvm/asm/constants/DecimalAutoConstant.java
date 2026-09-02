@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataOutput;
 import java.io.IOException;
 
@@ -14,7 +13,6 @@ import org.xvm.type.Decimal;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Represent a decimal value constant that simply delegates to an actual DecimalConstant of 32-bit,
@@ -45,7 +43,6 @@ public class DecimalAutoConstant
         m_dec = dec;
     }
 
-
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**
@@ -59,7 +56,6 @@ public class DecimalAutoConstant
         return getConstantPool().ensureDecAConstant(this.getValue().add(that.getValue()));
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**                                       .
@@ -70,7 +66,6 @@ public class DecimalAutoConstant
     public Decimal getValue() {
         return m_dec.getValue();
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -142,7 +137,6 @@ public class DecimalAutoConstant
         return m_dec.getValueString();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -162,14 +156,12 @@ public class DecimalAutoConstant
         return "value=" + getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_dec);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

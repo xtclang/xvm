@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.Collections;
@@ -32,7 +31,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.util.ListSet;
 import org.xvm.util.Severity;
 
-
 /**
  * A list expression is an expression containing some number (0 or more) expressions of some common
  * type.
@@ -57,7 +55,6 @@ public class ListExpression
         this.lEndPos   = lEndPos;
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     public List<Expression> getExpressions() {
@@ -78,7 +75,6 @@ public class ListExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -396,8 +392,6 @@ public class ListExpression
         return new ListExprAST(getType(), aAstArg);
     }
 
-
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -411,7 +405,6 @@ public class ListExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

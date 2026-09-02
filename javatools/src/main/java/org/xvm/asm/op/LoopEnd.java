@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.lang.classfile.CodeBuilder;
 
 import java.util.List;
@@ -11,7 +10,6 @@ import org.xvm.asm.OpJump;
 import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
-
 
 /**
  * LOOP_END rel_addr        ; rel_addr must be negative, and must point to a corresponding LOOP

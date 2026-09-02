@@ -2240,7 +2240,6 @@ class Lexer
         }
     }
 
-
     // ----- error handling ------------------------------------------------------------------------
 
     /**
@@ -2532,7 +2531,6 @@ class Lexer
                 case LitBinStr:
                     value.as(Byte[]).appendTo(new StringBuffer(40), pre="#", limit=17).toString();
 
-
                 case Identifier:
                     Id.allKeywords.contains(value.as(String))
                             ? $"${value.toString()}"
@@ -2784,7 +2782,6 @@ class Lexer
             }
             return map.makeImmutable();
         };
-
 
         /**
          * String representations of tokens that have both "normal" and "suffixed" representations.

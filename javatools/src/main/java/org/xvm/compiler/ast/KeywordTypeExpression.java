@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -11,7 +10,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
-
 
 /**
  * A keyword type expression is a type expression that is composed of a keyword that identifies an
@@ -24,7 +22,6 @@ public class KeywordTypeExpression
     public KeywordTypeExpression(Token keyword) {
         this.keyword  = keyword;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -44,7 +41,6 @@ public class KeywordTypeExpression
     public long getEndPosition() {
         return keyword.getEndPosition();
     }
-
 
     // ----- TypeExpression methods ----------------------------------------------------------------
 
@@ -69,7 +65,6 @@ public class KeywordTypeExpression
         };
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -81,7 +76,6 @@ public class KeywordTypeExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

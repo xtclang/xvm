@@ -1,8 +1,6 @@
 package org.xvm.asm.constants;
 
-
 import org.xvm.asm.Constant;
-
 
 /**
  * A constant that starts as an unresolved constant, but is eventually resolved.

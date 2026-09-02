@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -8,7 +7,6 @@ import java.io.IOException;
 import org.xvm.util.Handy;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.ForStmt;
-
 
 /**
  * A "for(init;cond;update){...}" statement.

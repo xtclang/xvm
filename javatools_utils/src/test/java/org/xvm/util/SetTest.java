@@ -1,6 +1,5 @@
 package org.xvm.util;
 
-
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -518,7 +517,6 @@ public class SetTest {
     }
 
     static final Random rnd = new Random();
-
 
     // ----- unit tests ----------------------------------------------------------------------------
 

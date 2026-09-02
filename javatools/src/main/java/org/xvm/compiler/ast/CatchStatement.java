@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Assignment;
@@ -20,7 +19,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
-
 /**
  * A "catch" statement. (Not actually a statement. It only occurs within a try.)
  */
@@ -33,7 +31,6 @@ public class CatchStatement
         this.block     = block;
         this.lStartPos = lStartPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -85,7 +82,6 @@ public class CatchStatement
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -139,14 +135,12 @@ public class CatchStatement
         return fCompletes;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString() {
         return "catch (" + target + ")\n" + indentLines(block.toString(), "    ");
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

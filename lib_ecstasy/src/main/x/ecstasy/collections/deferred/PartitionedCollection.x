@@ -40,7 +40,6 @@ class PartitionedCollection<Element>
         this.buddy   = buddy;
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     /**
@@ -159,7 +158,6 @@ class PartitionedCollection<Element>
             super(accumulator);
         }
     }
-
 
     // ----- Collection interface ------------------------------------------------------------------
 

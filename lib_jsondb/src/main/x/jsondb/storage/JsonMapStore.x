@@ -8,7 +8,6 @@ import model.DboInfo;
 
 import TxManager.NO_TX;
 
-
 /**
  * Provides a key/value storage service for JSON formatted data on disk.
  *
@@ -964,7 +963,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             model          = modelNow;
         }
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 

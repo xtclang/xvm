@@ -1,12 +1,10 @@
 package org.xvm.asm;
 
-
 import java.util.ArrayList;
 
 import static org.xvm.util.Handy.isDigit;
 import static org.xvm.util.Handy.quotedChar;
 import static org.xvm.util.Handy.quotedString;
-
 
 /**
  * Represents an Ecstasy module version.

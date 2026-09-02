@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -15,7 +14,6 @@ import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
-
 
 /**
  * IS_GTE rvalue, rvalue, lvalue-return ; T >= T -> Boolean

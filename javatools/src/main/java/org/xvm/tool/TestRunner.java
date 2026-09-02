@@ -13,7 +13,6 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 import org.xvm.tool.LauncherOptions.TestRunnerOptions;
 
-
 /**
  * The "xtc test" command - runs tests in an Ecstasy module using the xunit engine.
  * <p>

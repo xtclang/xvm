@@ -1,8 +1,6 @@
 package org.xvm.asm.ast;
 
-
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * The Narrowed expression refers to an underlying expression with a narrowed type.

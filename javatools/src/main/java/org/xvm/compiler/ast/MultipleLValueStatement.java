@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -23,7 +22,6 @@ import org.xvm.compiler.Compiler.Stage;
 
 import org.xvm.compiler.ast.Context.Branch;
 
-
 /**
  * This represents multiple variable declarations in a list.
  */
@@ -41,7 +39,6 @@ public class MultipleLValueStatement
 
         this.LVals = LVals;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -75,7 +72,6 @@ public class MultipleLValueStatement
         }
         return aTypes;
     }
-
 
     // ----- LValue methods ------------------------------------------------------------------------
 
@@ -176,7 +172,6 @@ public class MultipleLValueStatement
         return label;
     }
 
-
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
@@ -221,7 +216,6 @@ public class MultipleLValueStatement
         return fCompletes;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -235,7 +229,6 @@ public class MultipleLValueStatement
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- inner class: MultipleLValueExpression -------------------------------------------------
 
@@ -531,7 +524,6 @@ public class MultipleLValueStatement
 
         protected List<Expression> exprs;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

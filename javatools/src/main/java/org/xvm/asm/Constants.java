@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 /**
  * Constant values used by the XVM for its various VM structures.
  */
@@ -55,7 +54,6 @@ public interface Constants {
      */
     int VERSION_MINOR_CUR = BuildInfo.getXvmVersionMinor();
 
-
     // ----- names ---------------------------------------------------------------------------------
 
     /**
@@ -79,7 +77,6 @@ public interface Constants {
      * The qualified name of the Java-based prototype runtime module.
      */
     String NATIVE_MODULE = "_native.xtclang.org";
-
 
     // ----- accessibility levels ------------------------------------------------------------------
 
@@ -206,7 +203,6 @@ public interface Constants {
          */
         public final int FLAGS;
     }
-
 
     // ----- error codes ---------------------------------------------------------------------------
 
@@ -594,7 +590,6 @@ public interface Constants {
      * "mixin {0} into {1}" extends "mixin {2} into {3}", but type {1} does not narrow type {3}.
      */
     String VE_INCOMPATIBLE_INTO                   = "VERIFY-93";
-
 
     // ----- miscellaneous -------------------------------------------------------------------------
 

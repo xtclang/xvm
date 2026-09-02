@@ -1,12 +1,10 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-
 
 /**
  * Represent a constant whose purpose is to represent a level of indirection.
@@ -23,7 +21,6 @@ public abstract class PseudoConstant
     protected PseudoConstant(ConstantPool pool) {
         super(pool);
     }
-
 
     // ----- constant-specific functionality -------------------------------------------------------
 
@@ -50,7 +47,6 @@ public abstract class PseudoConstant
         throw new UnsupportedOperationException();
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -59,7 +55,6 @@ public abstract class PseudoConstant
         // package
         return super.getLocator();
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

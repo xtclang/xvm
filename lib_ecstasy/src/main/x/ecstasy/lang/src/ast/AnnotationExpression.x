@@ -4,7 +4,6 @@ import reflect.Annotation;
 import reflect.Argument;
 import reflect.InvalidType;
 
-
 /**
  * Represents an annotation, including its arguments if any.
  */

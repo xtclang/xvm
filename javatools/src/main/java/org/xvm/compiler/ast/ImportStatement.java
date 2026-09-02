@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.Iterator;
@@ -20,7 +19,6 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.ast.NameResolver.Result;
 
 import org.xvm.util.Severity;
-
 
 /**
  * An import statement specifies a qualified name to alias as a simple name.
@@ -63,7 +61,6 @@ public class ImportStatement
         this.qualifiedName = qualifiedName;
         this.star          = star;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -133,7 +130,6 @@ public class ImportStatement
         return CHILD_FIELDS;
     }
 
-
     // ----- NameResolving interface ---------------------------------------------------------------
 
     @Override
@@ -152,7 +148,6 @@ public class ImportStatement
         }
         return resolver;
     }
-
 
     // ----- compile phases ------------------------------------------------------------------------
 
@@ -189,7 +184,6 @@ public class ImportStatement
         }
     }
 
-
     // ----- compilation (Statement) --------------------------------------------------------------
 
     @Override
@@ -216,7 +210,6 @@ public class ImportStatement
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         return fReachable;
     }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -253,7 +246,6 @@ public class ImportStatement
 
         return sb.toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

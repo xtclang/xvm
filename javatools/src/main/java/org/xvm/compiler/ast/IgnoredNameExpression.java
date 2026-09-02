@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.Collections;
 import java.util.Map;
 
@@ -15,7 +14,6 @@ import org.xvm.asm.ast.RegisterAST;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token;
-
 
 /**
  * A name expression specifies a name; this is a special kind of name that no one cares about. The
@@ -34,7 +32,6 @@ public class IgnoredNameExpression
     public IgnoredNameExpression(Token name) {
         super(name);
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -85,7 +82,6 @@ public class IgnoredNameExpression
     protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
         return SideEffect.DefNo;
     }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 

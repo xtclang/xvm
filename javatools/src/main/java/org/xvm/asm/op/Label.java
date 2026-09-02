@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.lang.classfile.CodeBuilder;
 
 import java.util.HashMap;
@@ -14,7 +13,6 @@ import org.xvm.compiler.ast.Context;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.ActionChain;
 import org.xvm.javajit.BuildContext.OpAction;
-
 
 /**
  * A label is an op that can be created as a forward reference for a branching construct. It does

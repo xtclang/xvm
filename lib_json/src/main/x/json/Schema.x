@@ -4,7 +4,6 @@ import ecstasy.io.ObjectInput;
 import ecstasy.io.ObjectOutput;
 import ecstasy.io.TextFormat;
 
-
 /**
  * A JSON Schema represents the ability to read and write Ecstasy objects (of a particular group of
  * Ecstasy types) from and to JSON textual data, or conversely, the ability to transform JSON
@@ -107,7 +106,6 @@ const Schema
             enablePointers   = True,
             randomAccess     = True);
 
-
     // ----- TextFormat interface ------------------------------------------------------------------
 
     @Override
@@ -124,7 +122,6 @@ const Schema
     ObjectOutput createObjectOutput(Writer writer) {
         return new ObjectOutputStream(this, writer);
     }
-
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -233,7 +230,6 @@ const Schema
     MappingService mapper.calc() {
         return new MappingService();
     }
-
 
     // ----- Mapping look-up -----------------------------------------------------------------------
 
@@ -367,7 +363,6 @@ const Schema
             return False;
         }
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 

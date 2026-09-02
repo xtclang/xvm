@@ -13,7 +13,6 @@ const Int8
      */
     static IntLiteral MaxValue = 127;
 
-
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
@@ -35,7 +34,6 @@ const Int8
     static conditional Range<Int8> range() {
         return True, MinValue..MaxValue;
     }
-
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -73,7 +71,6 @@ const Int8
         construct Int8(new IntLiteral(text).toInt8().bits);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
@@ -89,7 +86,6 @@ const Int8
     UInt8 magnitude.get() {
         return toInt16().abs().toUInt8();
     }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -145,7 +141,6 @@ const Int8
         return result;
     }
 
-
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
@@ -165,7 +160,6 @@ const Int8
 
         return False;
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 

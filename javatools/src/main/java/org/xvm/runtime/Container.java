@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -48,7 +47,6 @@ import org.xvm.runtime.template.reflect.xPackage;
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
 import org.xvm.util.concurrent.ConcurrentWeakHasherMap;
 
-
 /**
  * The base Container functionality.
  */
@@ -88,7 +86,6 @@ public abstract class Container
     public ConstantPool getConstantPool() {
         return f_idModule.getConstantPool();
     }
-
 
     // ----- Container API -------------------------------------------------------------------------
 
@@ -519,7 +516,6 @@ public abstract class Container
         return cFrozen;
     }
 
-
     // ----- x:Container API helpers ---------------------------------------------------------------
 
     /**
@@ -623,7 +619,6 @@ public abstract class Container
         return idModule.getName().equals(ModuleStructure.ECSTASY_MODULE);
     }
 
-
     // ----- LinkerContext interface ---------------------------------------------------------------
 
     @Override
@@ -653,7 +648,6 @@ public abstract class Container
         return true;
     }
 
-
     // ----- support for native notifications (e.g. timers, file listeners, etc.) ------------------
 
     /**
@@ -672,7 +666,6 @@ public abstract class Container
         assert c > 0;
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     public NativeContainer getNativeContainer() {
@@ -685,14 +678,12 @@ public abstract class Container
         }
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public String toString() {
         return "Container: " + f_idModule.getName();
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

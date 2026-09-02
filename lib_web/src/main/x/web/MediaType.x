@@ -2,7 +2,6 @@ import collections.LRUCache;
 
 import convert.Format;
 
-
 /**
  * A representation of a media type, such as is used in the `Content-Type` header of an HTTP request
  * or response.
@@ -73,7 +72,6 @@ const MediaType {
             Word, WordX, Excel, ExcelX, PowerPoint, PowerPointX, OpenOffice, FormURL, XML, XHTML,
             Binary, Zip, ZStd, CDAudio, AACAudio, MpegAudio, OGG, Opus, WAV, WEBMAudio, MIDI,
             AVIF, JPEG, ICO, PNG, SVG, WebP, FormData, CSS, CSV, HTML, Text, Woff, Woff2, ];
-
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -248,14 +246,12 @@ const MediaType {
      */
     private static LRUCache<String, Marker|MediaType> cache = new LRUCache(1K);
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     String toString() {
         return text;
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

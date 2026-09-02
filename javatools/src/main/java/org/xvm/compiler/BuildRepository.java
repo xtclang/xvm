@@ -1,6 +1,5 @@
 package org.xvm.compiler;
 
-
 import java.util.stream.Collectors;
 
 import java.util.Map;
@@ -12,7 +11,6 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.ModuleConstant;
-
 
 /**
  * An in-memory repository for the modules being built by the compiler.
@@ -70,7 +68,6 @@ public class BuildRepository
         modulesById.put(idModule, module);
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -79,7 +76,6 @@ public class BuildRepository
     public void storeAll(BuildRepository repoThat) {
         modulesById.putAll(repoThat.modulesById);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

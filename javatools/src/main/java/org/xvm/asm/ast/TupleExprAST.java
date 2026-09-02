@@ -1,10 +1,8 @@
 package org.xvm.asm.ast;
 
-
 import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.TupleExpr;
-
 
 /**
  * A Tuple expression that is not a constant is structurally identical to the List expression.

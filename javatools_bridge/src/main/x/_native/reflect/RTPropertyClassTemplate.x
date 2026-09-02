@@ -8,7 +8,6 @@ import ecstasy.reflect.SourceCodeInfo;
 import ecstasy.reflect.TypeParameter;
 import ecstasy.reflect.TypeTemplate;
 
-
 /**
  * The native reflected ClassTemplate implementation for property classes.
  */
@@ -46,7 +45,6 @@ const RTPropertyClassTemplate
     //   Boolean derivesFrom(Composition composition)
     //   conditional ClassTemplate hasSuper()
     //   Composition! annotate(AnnotationTemplate annotation)
-
 
     // ----- ClassTemplate API ---------------------------------------------------------------------
 

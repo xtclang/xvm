@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -73,7 +72,6 @@ import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * An XVM Structure that represents a method or a function.
@@ -153,7 +151,6 @@ public class MethodStructure
             parameter.setContaining(this);
         }
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -785,7 +782,6 @@ public class MethodStructure
                 ? null
                 : m_source.renderLines(iFirst, cLines, fTrim);
     }
-
 
     // ----- compiler support ----------------------------------------------------------------------
 
@@ -1652,7 +1648,6 @@ public class MethodStructure
         return m_nNextUnassignedIndex++;
     }
 
-
     // ----- Component methods ---------------------------------------------------------------------
 
     @Override
@@ -1899,7 +1894,6 @@ public class MethodStructure
             }
         }
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -2247,7 +2241,6 @@ public class MethodStructure
             out.println(indentLines(ensureCode().toString(), nextIndent(sIndent)));
         }
     }
-
 
     // ----- inner class: Code ---------------------------------------------------------------------
 
@@ -2877,7 +2870,6 @@ public class MethodStructure
         private int m_nCurLine;
     }
 
-
     // ----- inner class: Source -------------------------------------------------------------------
 
     /**
@@ -3151,7 +3143,6 @@ public class MethodStructure
          */
         private int[] m_anIndents;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

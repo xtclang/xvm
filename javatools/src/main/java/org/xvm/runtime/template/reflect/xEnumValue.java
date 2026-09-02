@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.reflect;
 
-
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -12,7 +11,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xEnum;
-
 
 /**
  * Native EnumValue implementation.

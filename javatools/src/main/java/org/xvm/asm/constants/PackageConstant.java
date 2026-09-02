@@ -1,12 +1,10 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-
 
 /**
  * Represent a Package constant. A Package constant is composed of a constant identifying the Module
@@ -46,14 +44,12 @@ public class PackageConstant
         }
     }
 
-
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
     public IdentityConstant replaceParentConstant(IdentityConstant idParent) {
         return new PackageConstant(getConstantPool(), idParent, getName());
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -71,7 +67,6 @@ public class PackageConstant
     public IdentityConstant appendTrailingSegmentTo(IdentityConstant that) {
         return that.getConstantPool().ensurePackageConstant(that, getName());
     }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

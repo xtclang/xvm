@@ -109,7 +109,6 @@ service Container
         this.control = control;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -124,7 +123,6 @@ service Container
      *       stub.
      */
     @Atomic private Control control;
-
 
     // ----- inner types ---------------------------------------------------------------------------
 
@@ -543,7 +541,6 @@ service Container
          */
         @Override
         void kill();
-
 
         // ----- resource utilization --------------------------------------------------------------
 

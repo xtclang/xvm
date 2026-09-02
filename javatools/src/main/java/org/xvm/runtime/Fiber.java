@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.lang.ref.WeakReference;
 
 import java.util.ArrayList;
@@ -23,7 +22,6 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-
 
 /**
  * The Fiber represents a single execution thread for a give ServiceContext.
@@ -469,7 +467,6 @@ public class Fiber
         m_frameBlocker = frameBlocker;
     }
 
-
     // ----- Debugging support ---------------------------------------------------------------------
 
     /**
@@ -505,7 +502,6 @@ public class Fiber
         return sb.toString();
     }
 
-
     // ----- Comparable & Object methods -----------------------------------------------------------
 
     @Override
@@ -527,7 +523,6 @@ public class Fiber
     public String toString() {
         return "Fiber " + f_lId + " (" + m_status.name() + ')';
     }
-
 
     // ----- inner classes -------------------------------------------------------------------------
 
@@ -565,7 +560,6 @@ public class Fiber
             return Op.R_NEXT;
         }
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

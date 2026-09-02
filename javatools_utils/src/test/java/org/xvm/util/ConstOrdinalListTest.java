@@ -1,10 +1,8 @@
 package org.xvm.util;
 
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-
 
 /**
  * A test for ConstOrdinalList.
@@ -57,7 +55,6 @@ public final class ConstOrdinalListTest {
         for (int i = 0; i < 10; ++i) {
             try {
                 validate(list, iTest*10+i, false);
-
 
                 if (s_rnd.nextBoolean()) {
                     for (int iAdd = 0, cAdd = 1+s_rnd.nextInt(1+s_rnd.nextInt(12)); iAdd < cAdd; ++iAdd) {

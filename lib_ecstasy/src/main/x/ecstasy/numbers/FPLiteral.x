@@ -94,7 +94,6 @@ const FPLiteral(String text)
         return text;
     }
 
-
     // ----- Stringable implementation -------------------------------------------------------------
 
     @Override

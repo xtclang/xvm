@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.List;
 
 import org.xvm.asm.Annotation;
@@ -9,7 +8,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.compiler.Token;
-
 
 /**
  * Represents a statement that corresponds to a Component in an Ecstasy FileStructure.
@@ -22,7 +20,6 @@ public abstract class ComponentStatement
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -62,9 +59,7 @@ public abstract class ComponentStatement
         return lEndPos;
     }
 
-
     // ----- compile phases ------------------------------------------------------------------------
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -88,7 +83,6 @@ public abstract class ComponentStatement
         }
         return listAnno.getFirst();
     }
-
 
     public static boolean isStatic(List<Token> modifiers) {
         if (modifiers != null && !modifiers.isEmpty()) {
@@ -116,7 +110,6 @@ public abstract class ComponentStatement
         }
         return null;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -58,7 +58,6 @@ const DigestCredential
 
     // ----- construction --------------------------------------------------------------------------
 
-
     /**
      * Create a copy of this `DigestCredential`, but with specific attributes modified.
      *

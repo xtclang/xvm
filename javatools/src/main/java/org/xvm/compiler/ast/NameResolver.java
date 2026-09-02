@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -34,7 +33,6 @@ import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.compiler.Compiler;
 
 import org.xvm.util.Severity;
-
 
 /**
  * This represents the progress toward resolution of a name for a particular AstNode.
@@ -603,7 +601,6 @@ public class NameResolver
         return m_node.pool();
     }
 
-
     // ----- ResolutionCollector -------------------------------------------------------------------
 
     @Override
@@ -738,7 +735,6 @@ public class NameResolver
         return m_errs;
     }
 
-
     // ----- inner classes -------------------------------------------------------------------------
 
     /**
@@ -763,7 +759,6 @@ public class NameResolver
      * The possible internal type resolution modes for the resolver.
      */
     private enum TypeMode {TYPE, FORMAL_TYPE}
-
 
     // ----- fields --------------------------------------------------------------------------------
 

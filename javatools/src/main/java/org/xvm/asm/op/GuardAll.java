@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -26,7 +25,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.Frame.AllGuard;
 
 import static org.xvm.javajit.Builder.EXT;
-
 
 /**
  * GUARDALL addr ; (implicit ENTER)

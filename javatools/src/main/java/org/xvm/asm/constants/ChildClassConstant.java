@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -14,7 +13,6 @@ import  org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Represent an auto-narrowing named child class.
@@ -79,7 +77,6 @@ public class ChildClassConstant
         m_constName   = pool.getConstant(m_iName, StringConstant.class);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -119,7 +116,6 @@ public class ChildClassConstant
         }
         return false;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -177,7 +173,6 @@ public class ChildClassConstant
         return m_constParent.getValueString() + '.' + getName();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -198,7 +193,6 @@ public class ChildClassConstant
     public String getDescription() {
         return "parent=" + m_constParent + ", child=" + getName();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

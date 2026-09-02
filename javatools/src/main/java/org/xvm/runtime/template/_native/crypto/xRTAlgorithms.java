@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.crypto;
 
-
 import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.KeyFactory;
@@ -47,7 +46,6 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.ByteArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
-
 
 /**
  * Native implementation of the xRTAlgorithms.x service.
@@ -194,7 +192,6 @@ public class xRTAlgorithms
         }
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
@@ -279,7 +276,6 @@ public class xRTAlgorithms
     }
 
     public enum KeyForm {Public, Private, PublicOrSecret, PrivateOrSecret}
-
 
     // ----- handles -------------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.mgmt;
 
-
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
@@ -26,7 +25,6 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
-
 
 /**
  * Native ModuleRepository functionality for the core repository.
@@ -114,7 +112,6 @@ public class xCoreRepository
 
         return hRepository;
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 

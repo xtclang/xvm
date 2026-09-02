@@ -89,7 +89,6 @@ interface Type<DataType, OuterType>
      */
     typedef function Ordered(DataType, DataType) as Orderer;
 
-
     // ----- state representation ------------------------------------------------------------------
 
     /**
@@ -289,7 +288,6 @@ interface Type<DataType, OuterType>
      */
     @RO TypeTemplate template;
 
-
     // ----- type operations -----------------------------------------------------------------------
 
     /**
@@ -474,7 +472,6 @@ interface Type<DataType, OuterType>
         return createEmptyIterator();
     }
 
-
     // ----- operators -----------------------------------------------------------------------------
 
     /**
@@ -604,7 +601,6 @@ interface Type<DataType, OuterType>
     @Op("-")
     Type!<> sub(Property[] properties = []);
 
-
     // ----- constructor helpers -------------------------------------------------------------------
 
     /**
@@ -656,7 +652,6 @@ interface Type<DataType, OuterType>
      * @throws IllegalArgument if this is a virtual child type, but a parent is not specified
      */
     conditional function DataType(Struct) structConstructor(OuterType? outer = Null);
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 
@@ -901,7 +896,6 @@ interface Type<DataType, OuterType>
         }
     }
 
-
     // ----- Comparable, Hashable, and Orderable ---------------------------------------------------
 
     @Override
@@ -925,7 +919,6 @@ interface Type<DataType, OuterType>
 
         TODO <=>
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 

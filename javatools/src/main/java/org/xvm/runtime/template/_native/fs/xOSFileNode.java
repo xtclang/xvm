@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.fs;
 
-
 import java.io.IOException;
 
 import java.nio.file.Files;
@@ -26,7 +25,6 @@ import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
-
 
 /**
  * Native base for OSFile and OSDirectory implementations.
@@ -125,7 +123,6 @@ public class xOSFileNode
             : xOSFile     .INSTANCE.createHandle(frame, hOSStore, path, iReturn);
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     public static int raisePathException(Frame frame, Throwable e, Path path) {
@@ -151,7 +148,6 @@ public class xOSFileNode
         return frame.raiseException(
             xException.pathException(frame, sException + e.getMessage(), xNullable.NULL));
     }
-
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 

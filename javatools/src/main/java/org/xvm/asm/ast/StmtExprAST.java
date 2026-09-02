@@ -1,6 +1,5 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -13,7 +12,6 @@ import org.xvm.asm.constants.TypeConstant;
 import static org.xvm.asm.ast.BinaryAST.NodeType.StmtExpr;
 
 import static org.xvm.util.Handy.indentLines;
-
 
 /**
  * A statement expression.

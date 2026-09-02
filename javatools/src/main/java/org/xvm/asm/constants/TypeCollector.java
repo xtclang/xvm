@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -10,7 +9,6 @@ import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Op;
-
 
 /**
  * A TypeCollector is used to collect a number of types, such as would occur from return statements
@@ -448,7 +446,6 @@ public class TypeCollector {
 
         return fImmutable ? typeCommon.freeze() : typeCommon;
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 

@@ -1,11 +1,9 @@
 package org.xvm.asm.ast;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * An expressions that produces a Boolean based on Ecstasy "Ordered" enum value and a specified
@@ -75,7 +73,6 @@ public class OrderedExprAST
 
         booleanType = res.typeForName("Boolean");
     }
-
 
     @Override
     public String toString() {

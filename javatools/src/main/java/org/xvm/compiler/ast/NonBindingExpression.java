@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
@@ -12,7 +11,6 @@ import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.RegisterAST;
 
 import org.xvm.asm.constants.TypeConstant;
-
 
 /**
  * This is used to specify an argument ("?") for a function that indicates that the corresponding
@@ -27,7 +25,6 @@ public class NonBindingExpression
         this.lEndPos   = lEndPos;
         this.type      = type;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -52,7 +49,6 @@ public class NonBindingExpression
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -119,7 +115,6 @@ public class NonBindingExpression
         return SideEffect.DefNo;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -133,7 +128,6 @@ public class NonBindingExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

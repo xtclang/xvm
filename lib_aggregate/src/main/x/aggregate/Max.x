@@ -29,7 +29,6 @@ const Max<Element extends Orderable>
         return accumulator.as(WorkingMax<Element>).max;
     }
 
-
     // ----- child aggregators ---------------------------------------------------------------------
 
     private static const ElementAggregator<Value extends Orderable>
@@ -73,7 +72,6 @@ const Max<Element extends Orderable>
             return accumulator.as(WorkingMax<Value>).max;
         }
     }
-
 
     // ----- private inner classes -----------------------------------------------------------------
 

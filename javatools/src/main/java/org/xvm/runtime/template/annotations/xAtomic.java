@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.annotations;
 
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,7 +25,6 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.numbers.*;
 
 import org.xvm.runtime.template.reflect.xVar;
-
 
 /**
  * Native implementation of Atomic.
@@ -156,7 +154,6 @@ public class xAtomic
         return Op.R_NEXT;
     }
 
-
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     public static class AtomicHandle
@@ -246,7 +243,6 @@ public class xAtomic
             }
         }
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

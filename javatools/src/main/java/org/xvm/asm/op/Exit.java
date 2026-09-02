@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.lang.classfile.CodeBuilder;
 
 import org.xvm.asm.Op;
@@ -9,7 +8,6 @@ import org.xvm.asm.Scope;
 import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
-
 
 /**
  * EXIT ; (variable scope end)

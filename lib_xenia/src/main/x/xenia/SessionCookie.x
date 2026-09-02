@@ -10,7 +10,6 @@ import HttpServer.RequestInfo;
 
 import TimeOfDay.PicosPerSecond;
 
-
 /**
  * A representation of a session cookie. There are three session cookies used:
  *
@@ -228,7 +227,6 @@ const SessionCookie {
                                 );
     }
 
-
     // ----- CookieId enumeration ------------------------------------------------------------------
 
     /**
@@ -298,7 +296,6 @@ const SessionCookie {
          */
         static Byte All = 0b111;
     }
-
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -389,7 +386,6 @@ const SessionCookie {
      */
     static Char ConsentSeparator = ':';
 
-
     // ----- internal helpers ----------------------------------------------------------------------
 
     /**
@@ -466,7 +462,6 @@ const SessionCookie {
         } while (salt == 0 || salt == oldSalt);
         return salt;
     }
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 

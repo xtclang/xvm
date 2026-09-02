@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -45,7 +44,6 @@ import org.xvm.util.ListSet;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
-
 /**
  * The CaseManager is shared compilation logic used by both the "switch" statement and  expression.
  */
@@ -55,7 +53,6 @@ public class CaseManager<CookieType> {
     public CaseManager(AstNode nodeSwitch) {
         m_nodeSwitch = nodeSwitch;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -213,7 +210,6 @@ public class CaseManager<CookieType> {
     public long getConditionIsA() {
         return m_afIsSwitch;
     }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -1246,7 +1242,6 @@ public class CaseManager<CookieType> {
         assert labelDefault != null;
         code.add(new Jump(labelDefault));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

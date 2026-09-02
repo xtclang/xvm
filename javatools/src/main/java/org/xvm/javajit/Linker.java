@@ -1,6 +1,5 @@
 package org.xvm.javajit;
 
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -17,7 +16,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.javajit.Refiner.DefaultRefiner;
 import static org.xvm.util.Handy.require;
-
 
 /**
  * A TypeSystem Linker is the "builder" for new TypeSystems.

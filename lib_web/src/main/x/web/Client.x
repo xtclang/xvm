@@ -1,6 +1,5 @@
 import requests.SimpleRequest;
 
-
 /**
  * A representation of a web client.
  */

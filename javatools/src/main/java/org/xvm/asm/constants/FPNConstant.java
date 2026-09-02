@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -10,7 +9,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.byteArrayToHexString;
-
 
 /**
  * Represent a variable-length floating point constant.
@@ -82,7 +80,6 @@ public class FPNConstant
         return ab;
     }
 
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**
@@ -93,7 +90,6 @@ public class FPNConstant
     public byte[] getValue() {
         return m_abVal;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -134,7 +130,6 @@ public class FPNConstant
         return "(unsupported)";
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -150,14 +145,12 @@ public class FPNConstant
         return "bytes=" + byteArrayToHexString(m_abVal);
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_abVal);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

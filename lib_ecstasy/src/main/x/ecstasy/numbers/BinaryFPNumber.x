@@ -29,7 +29,6 @@
         super(bytes);
     }
 
-
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
@@ -65,7 +64,6 @@
         Int k = bitLength;
         return 4 * k.trailingZeroCount - 13;
     }
-
 
     // ----- FPNumber properties -------------------------------------------------------------------
 

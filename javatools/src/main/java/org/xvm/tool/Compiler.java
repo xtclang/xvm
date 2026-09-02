@@ -1,6 +1,5 @@
 package org.xvm.tool;
 
-
 import java.io.File;
 import java.io.IOException;
 
@@ -37,7 +36,6 @@ import static org.xvm.util.Severity.ERROR;
 import static org.xvm.util.Severity.FATAL;
 import static org.xvm.util.Severity.INFO;
 import static org.xvm.util.Severity.WARNING;
-
 
 /**
  * This is the command-line Ecstasy compiler.
@@ -559,7 +557,6 @@ public class Compiler extends Launcher<CompilerOptions> {
         return 0;
     }
 
-
     // ----- text output and error handling --------------------------------------------------------
 
     @Override
@@ -593,7 +590,6 @@ public class Compiler extends Launcher<CompilerOptions> {
 
                 Converts ".x" files into a compiled ".xtc" Ecstasy module.""";
     }
-
 
     @Override
     protected boolean isBadEnoughToPrint(Severity sev) {

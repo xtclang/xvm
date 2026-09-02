@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -22,7 +21,6 @@ import org.xvm.compiler.ast.CompositionNode.Incorporates;
 
 import org.xvm.util.Severity;
 
-
 /**
  * The AnonInnerClass represents the suggested shape for an anonymous inner class.
  */
@@ -40,7 +38,6 @@ public class AnonInnerClass {
         m_exprType = expr;
         f_errs     = errs;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -98,7 +95,6 @@ public class AnonInnerClass {
     public List<AnnotationExpression> getAnnotations() {
         return m_listAnnos == null ? Collections.emptyList() : m_listAnnos;
     }
-
 
     // ----- data collection -----------------------------------------------------------------------
 
@@ -276,7 +272,6 @@ public class AnonInnerClass {
         ensureCompositions().add(new Implements(null, genKeyword(exprType, Id.IMPLEMENTS), exprType));
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     /**
@@ -339,7 +334,6 @@ public class AnonInnerClass {
         return list;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -366,7 +360,6 @@ public class AnonInnerClass {
 
         return sb.toString();
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 

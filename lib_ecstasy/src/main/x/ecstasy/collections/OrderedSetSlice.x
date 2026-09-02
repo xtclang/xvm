@@ -123,7 +123,6 @@ class OrderedSetSlice<Element extends Orderable>
      */
     function conditional Element(Element) findPrev;
 
-
     // ----- Set interface -------------------------------------------------------------------------
 
     @Override

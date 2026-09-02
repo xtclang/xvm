@@ -50,7 +50,6 @@ service RTNetwork(Boolean secure)
         return "Network";
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     NameService instantiateNameService() {TODO("Native");}

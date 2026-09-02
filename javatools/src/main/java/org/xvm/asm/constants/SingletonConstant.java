@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -19,7 +18,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
-
 
 /**
  * Represent a singleton instance of a const (including enum, package, module) or service class as a
@@ -79,7 +77,6 @@ public class SingletonConstant
         m_constClass = getConstantPool().getConstant(m_iClass, IdentityConstant.class);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     @Override
@@ -102,7 +99,6 @@ public class SingletonConstant
     public Constant getValue() {
         return m_constClass;
     }
-
 
     // ----- run-time support  ---------------------------------------------------------------------
 
@@ -195,7 +191,6 @@ public class SingletonConstant
         }
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -240,7 +235,6 @@ public class SingletonConstant
         return m_constClass.getName();
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -261,14 +255,12 @@ public class SingletonConstant
                 m_constClass.getName();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(m_constClass);
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

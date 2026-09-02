@@ -159,7 +159,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return cliModuleArgs;
     }
 
-
     @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
     @Internal
     @Override

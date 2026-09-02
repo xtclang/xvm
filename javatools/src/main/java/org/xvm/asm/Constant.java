@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -28,7 +27,6 @@ import org.xvm.type.Decimal64;
 
 import org.xvm.util.Hash;
 import org.xvm.util.PackedInteger;
-
 
 /**
  * A Constant value stored in the ConstantPool of an XVM FileStructure.
@@ -90,7 +88,6 @@ public abstract class Constant
      */
     protected void resolveConstants() {
     }
-
 
     // ----- Constant operations -------------------------------------------------------------------
 
@@ -447,7 +444,6 @@ public abstract class Constant
         return m_cRefs > 0;
     }
 
-
     // ----- XvmStructure operations ---------------------------------------------------------------
 
     @Override
@@ -524,7 +520,6 @@ public abstract class Constant
         out.writeByte(getFormat().ordinal());
     }
 
-
     // ----- Argument interface --------------------------------------------------------------------
 
     /**
@@ -547,7 +542,6 @@ public abstract class Constant
         return registry.register(this);
     }
 
-
     // ----- debugging support ---------------------------------------------------------------------
 
     /**
@@ -561,7 +555,6 @@ public abstract class Constant
         out.print(sIndent);
         out.println(this);
     }
-
 
     // ----- Object operations ---------------------------------------------------------------------
 
@@ -620,7 +613,6 @@ public abstract class Constant
         return getFormat().name() + '{' + getDescription() + '}';
     }
 
-
     // ----- Comparable interface ------------------------------------------------------------------
 
     @Override
@@ -644,7 +636,6 @@ public abstract class Constant
         // two constants of the same format can be compared by their contents
         return constThis.compareDetails(constThat);
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -729,7 +720,6 @@ public abstract class Constant
         }
         return aconstNew == null ? aconst : aconstNew;
     }
-
 
     // ----- constant pool format identifiers ------------------------------------------------------
 
@@ -956,7 +946,6 @@ public abstract class Constant
         private final String f_sPackage;
     }
 
-
     // ----- Constant Comparators for ordering ConstantPool ----------------------------------------
 
     /**
@@ -976,7 +965,6 @@ public abstract class Constant
         // most used comes first (i.e. _reverse_ sort on most used)
         return -cDif;
     };
-
 
     // ----- fields --------------------------------------------------------------------------------
 

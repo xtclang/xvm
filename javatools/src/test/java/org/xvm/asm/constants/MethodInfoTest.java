@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.util.Collections;
 import java.util.Map;
 
@@ -20,7 +19,6 @@ import org.xvm.util.ListMap;
 
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
-
 
 /**
  * Tests for {@link MethodInfo} and {@link MethodBody} ownership.

@@ -1,6 +1,5 @@
 package org.xvm.runtime.template;
 
-
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -39,7 +38,6 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
-
 
 /**
  * Native Service implementation.
@@ -492,7 +490,6 @@ public class xService
         return Op.R_NEXT;
     }
 
-
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     /**
@@ -560,7 +557,6 @@ public class xService
     public interface NativeOperation {
         int invoke(Frame frame, ObjectHandle[] ahArg, int iReturn);
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

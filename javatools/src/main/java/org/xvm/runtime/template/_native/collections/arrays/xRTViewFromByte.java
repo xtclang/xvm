@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
-
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.runtime.ClassComposition;
@@ -10,7 +9,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
-
 
 /**
  * The native RTViewFromByte base implementation.
@@ -60,7 +58,6 @@ public class xRTViewFromByte
         }
         return new ViewHandle(clzView, hSource, hSource.m_cSize/nBytes, mutability);
     }
-
 
     // ----- handle --------------------------------------------------------------------------------
 

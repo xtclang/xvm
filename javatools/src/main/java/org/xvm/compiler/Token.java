@@ -1,6 +1,5 @@
 package org.xvm.compiler;
 
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,7 +9,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendChar;
 import static org.xvm.util.Handy.appendString;
-
 
 /**
  * Representation of a language token.
@@ -62,7 +60,6 @@ public class Token
         m_fLeadingWhitespace  = fWhitespaceBefore;
         m_fTrailingWhitespace = fWhitespaceAfter;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -332,7 +329,6 @@ public class Token
                 source == null ? 0L : getStartPosition(), source == null ? 0L : getEndPosition());
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     public String toDebugString() {
@@ -438,7 +434,6 @@ public class Token
             throw new IllegalStateException(e);
         }
     }
-
 
     // ----- Token identities ----------------------------------------------------------------------
 
@@ -771,7 +766,6 @@ public class Token
          */
         final boolean Special;
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 

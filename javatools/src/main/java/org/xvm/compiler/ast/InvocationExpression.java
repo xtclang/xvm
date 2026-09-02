@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -65,7 +64,6 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.util.Severity;
-
 
 /**
  * Invocation expression represents calling a method or function. An oversimplification of the
@@ -223,7 +221,6 @@ public class InvocationExpression
         this.lEndPos = lEndPos;
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -294,9 +291,7 @@ public class InvocationExpression
         return CHILD_FIELDS;
     }
 
-
     // ----- compilation ---------------------------------------------------------------------------
-
 
     @Override
     protected boolean hasSingleValueImpl() {
@@ -1819,7 +1814,6 @@ public class InvocationExpression
         return m_astInvoke == null ? super.getExprAST(ctx) : m_astInvoke;
     }
 
-
     // ----- method resolution helpers -------------------------------------------------------------
 
     /**
@@ -2992,7 +2986,6 @@ public class InvocationExpression
         return idMethod;
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -3016,7 +3009,6 @@ public class InvocationExpression
         return toString();
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -3038,7 +3030,6 @@ public class InvocationExpression
     static final int _N0 = ('N' << 8) | '0';
     static final int _N1 = ('N' << 8) | '1';
     static final int _NN = ('N' << 8) | 'N';
-
 
     // ----- fields --------------------------------------------------------------------------------
 

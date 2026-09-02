@@ -85,7 +85,6 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 import org.xvm.util.Handy;
 
-
 /**
  * Native implementation of the RTServer.x service that uses native Java {@link HttpServer}.
  */
@@ -233,7 +232,6 @@ public class xRTServer
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
-
 
     // ----- native implementations ----------------------------------------------------------------
 
@@ -614,7 +612,6 @@ public class xRTServer
         return Op.R_NEXT;
     }
 
-
     // ----- helper methods ------------------------------------------------------------------------
 
     protected static String extractHostName(String sHost) {
@@ -637,7 +634,6 @@ public class xRTServer
             ? Integer.valueOf(sHost.substring(ofPort + 1))
             : exchange instanceof HttpsExchange ? 443 : 80;
     }
-
 
     // ----- helper classes ------------------------------------------------------------------------
 
@@ -799,7 +795,6 @@ public class xRTServer
         private final ThreadLocal<KeyStoreHandle> f_tloKeyStore = new ThreadLocal<>();
     }
 
-
     // ---- Router ---------------------------------------------------------------------------------
 
     protected static class Router
@@ -847,7 +842,6 @@ public class xRTServer
 
     protected record RouteInfo(RequestHandler handler, int nHttpPort, int nHttpsPort,
                                KeyStoreHandle hKeyStore, String sTlsKey) {}
-
 
     // ----- ObjectHandles -------------------------------------------------------------------------
 
@@ -964,7 +958,6 @@ public class xRTServer
          */
         public final HttpExchange f_exchange;
     }
-
 
     // ----- data fields and constants -------------------------------------------------------------
 

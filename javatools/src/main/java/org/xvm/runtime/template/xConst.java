@@ -1,6 +1,5 @@
 package org.xvm.runtime.template;
 
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -49,7 +48,6 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
-
 
 /**
  * While this template represents a native interface, it never serves as an inception type
@@ -474,7 +472,6 @@ public class xConst
 
         return frame.call1(FN_APPEND_TO, null, ahVars, iReturn);
     }
-
 
     // ----- helper classes ------------------------------------------------------------------------
 

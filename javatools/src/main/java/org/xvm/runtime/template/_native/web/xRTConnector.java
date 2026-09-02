@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.web;
 
-
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
@@ -62,7 +61,6 @@ import org.xvm.runtime.template._native.collections.arrays.xRTStringDelegate.Str
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 
-
 /**
  * Native implementation of the RTConnector.x service.
  */
@@ -88,7 +86,6 @@ public class xRTConnector
 
         invalidateTypeInfo();
     }
-
 
     // ----- native implementations ----------------------------------------------------------------
 
@@ -296,7 +293,6 @@ public class xRTConnector
         return context;
     }
 
-
     // ----- ObjectHandles -------------------------------------------------------------------------
 
     /**
@@ -377,7 +373,6 @@ public class xRTConnector
          */
         private final HttpClient[] f_clientPool = new HttpClient[5];
     }
-
 
     // ----- data fields ---------------------------------------------------------------------------
 

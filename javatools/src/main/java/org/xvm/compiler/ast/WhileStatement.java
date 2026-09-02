@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -45,7 +44,6 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
-
 /**
  * A "while" or "do while" statement.
  */
@@ -63,7 +61,6 @@ public class WhileStatement
         this.block   = block;
         this.lEndPos = lEndPos;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -121,7 +118,6 @@ public class WhileStatement
         return CHILD_FIELDS;
     }
 
-
     // ----- LabelAble methods ---------------------------------------------------------------------
 
     @Override
@@ -156,7 +152,6 @@ public class WhileStatement
 
         return reg;
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -750,7 +745,6 @@ public class WhileStatement
     public String getDumpDesc() {
         return keyword.getId().TEXT;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

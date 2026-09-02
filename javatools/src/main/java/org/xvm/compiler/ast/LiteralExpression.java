@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.math.BigDecimal;
 
 import org.xvm.asm.Constant;
@@ -22,7 +21,6 @@ import org.xvm.util.Handy;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
-
 /**
  * A literal expression specifies a literal value.
  */
@@ -33,7 +31,6 @@ public class LiteralExpression
     public LiteralExpression(Token literal) {
         this.literal = literal;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -61,7 +58,6 @@ public class LiteralExpression
     public long getEndPosition() {
         return literal.getEndPosition();
     }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -210,7 +206,6 @@ public class LiteralExpression
     public ExprAST getExprAST(Context ctx) {
         return new ConstantExprAST(toConstant());
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -380,7 +375,6 @@ public class LiteralExpression
         return pool.ensureLiteralConstant(format, literal.getString(getSource()), literal.getValue());
     }
 
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -436,7 +430,6 @@ public class LiteralExpression
     public String getDumpDesc() {
         return toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

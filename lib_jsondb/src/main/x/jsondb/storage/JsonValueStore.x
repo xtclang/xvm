@@ -38,7 +38,6 @@ service JsonValueStore<Value extends immutable Const>
         this.initial      = initial;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -116,7 +115,6 @@ service JsonValueStore<Value extends immutable Const>
      * True iff there are transactions on disk that could now be safely deleted.
      */
     public/protected Boolean cleanupPending = False;
-
 
     // ----- storage API exposed to the client -----------------------------------------------------
 
@@ -374,7 +372,6 @@ service JsonValueStore<Value extends immutable Const>
             }
         }
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 

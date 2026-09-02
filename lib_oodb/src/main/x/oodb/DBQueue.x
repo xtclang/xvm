@@ -27,14 +27,12 @@ interface DBQueue<Element extends immutable Const>
      */
     List<Element> takeAll();
 
-
     // ----- DBObject methods ----------------------------------------------------------------------
 
     @Override
     @RO DBCategory dbCategory.get() {
         return DBQueue;
     }
-
 
     // ----- transactional information -------------------------------------------------------------
 
@@ -75,7 +73,6 @@ interface DBQueue<Element extends immutable Const>
     @Override
     interface TxChange
             extends DBChange<Element> {}
-
 
     // ----- transaction trigger API ---------------------------------------------------------------
 

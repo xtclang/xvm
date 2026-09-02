@@ -1,6 +1,5 @@
 package org.xvm.runtime.template.numbers;
 
-
 import java.math.BigInteger;
 
 import org.xvm.asm.ClassStructure;
@@ -33,7 +32,6 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.PackedInteger;
-
 
 /**
  * Native IntLiteral implementation.
@@ -351,7 +349,6 @@ public class xIntLiteral
         IntNHandle hLiteral = (IntNHandle) hTarget;
         return frame.assignValue(iReturn, hLiteral.getText());
     }
-
 
     // ----- comparison support --------------------------------------------------------------------
 

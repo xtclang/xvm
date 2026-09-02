@@ -1,6 +1,5 @@
 package org.xvm.compiler.ast;
 
-
 import java.util.List;
 
 import org.xvm.asm.Argument;
@@ -21,7 +20,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.I_Get;
 
-
 /**
  * A tuple un-packing expression. This unpacks the values from the sub-expression tuple.
  */
@@ -36,7 +34,6 @@ public class UnpackExpression
             adoptValidation(null, exprTuple, errs);
         }
     }
-
 
     // ----- Expression compilation ----------------------------------------------------------------
 
@@ -76,7 +73,6 @@ public class UnpackExpression
                 ? null
                 : adoptValidation(ctx, expr = exprNew, errs);
     }
-
 
     @Override
     public void generateVoid(Context ctx, Code code, ErrorListener errs) {
@@ -134,7 +130,6 @@ public class UnpackExpression
         return new UnpackExprAST(expr.getExprAST(ctx), getTypes());
     }
 
-
     // ----- helpers ------------------------------------------------------------------
 
     /**
@@ -159,7 +154,6 @@ public class UnpackExpression
 
         return finishValidations(ctx, null, atypeField, expr.getTypeFit().addUnpack(), aconstVal, errs);
     }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 

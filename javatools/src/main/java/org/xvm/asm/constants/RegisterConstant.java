@@ -1,6 +1,5 @@
 package org.xvm.asm.constants;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -19,7 +18,6 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Constant whose purpose is to represent a run-time register.
@@ -56,7 +54,6 @@ public class RegisterConstant
         f_nReg = readPackedInt(in);
     }
 
-
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -75,7 +72,6 @@ public class RegisterConstant
                 : m_reg.getIndex();
     }
 
-
     // ----- FrameDependentConstant methods --------------------------------------------------------
 
     @Override
@@ -87,7 +83,6 @@ public class RegisterConstant
             return new DeferredCallHandle(e.getExceptionHandle());
         }
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -122,7 +117,6 @@ public class RegisterConstant
         return "Register " + (nReg >= Register.UNKNOWN ? "?" : String.valueOf(nReg));
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -144,14 +138,12 @@ public class RegisterConstant
         return getValueString();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode() {
         return Hash.of(getRegisterIndex());
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

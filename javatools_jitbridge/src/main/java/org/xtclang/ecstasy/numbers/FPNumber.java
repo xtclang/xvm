@@ -443,7 +443,6 @@ public abstract class FPNumber extends Number {
         return UIntN.$box(bi);
     }
 
-
     // ----- inner class Rounding ------------------------------------------------------------------
 
     /**

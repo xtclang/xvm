@@ -2,7 +2,6 @@ import io.TextPosition;
 
 import Lexer.Token;
 
-
 /**
  * Represents all expressions that represents the combination, using an operator, of two types.
  */

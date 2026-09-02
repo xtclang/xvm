@@ -162,7 +162,6 @@ service RTKeyStore
      */
     private Map<String, CryptoKey> keyCache;
 
-
     // ----- native methods ------------------------------------------------------------------------
 
     private String[] aliases.get() {TODO("Native");}
@@ -222,7 +221,6 @@ service RTKeyStore
                          )
         getCertificateInfo(String name, Int index) {TODO("Native");}
 
-
     // ----- natural helper methods  ---------------------------------------------------------------
 
     /**
@@ -240,7 +238,6 @@ service RTKeyStore
         }
         return False;
     }
-
 
     // ----- natural helper classes  ---------------------------------------------------------------
 
