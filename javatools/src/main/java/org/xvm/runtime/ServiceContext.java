@@ -1992,27 +1992,47 @@ public class ServiceContext {
      * The wake-up scheduler.
      */
     protected class WakeUpScheduler {
-        protected void schedule(long ldtWakeUp) {
+        protected synchronized void schedule(long ldtWakeUp) {
             long ldtNow = f_container.currentTimeMillis();
             if (f_ldtScheduled > 0) {
-                if (ldtNow <= f_ldtScheduled && f_ldtScheduled <= ldtWakeUp) {
-                    // the current wake up covers the new one; nothing to do
-                    return;
-                }
-
                 if (ldtNow < f_ldtScheduled) {
+                    if (f_ldtScheduled <= ldtWakeUp) {
+                        // the current wake up covers the new one; nothing to do
+                        return;
+                    }
                     m_taskCurrent.cancel();
                 }
             }
 
-            f_ldtScheduled = ldtWakeUp;
-            m_taskCurrent  = new TimerTask() {
+            TimerTask task = new TimerTask() {
+                @Override
                 public void run() {
-                    ensureScheduled(true); // don't use this thread - schedule async
+                    if (clearIfCurrent(this)) {
+                        ensureScheduled(true); // don't use this thread - schedule async
+                    }
                 }
             };
 
-            xLocalClock.TIMER.schedule(m_taskCurrent, Math.max(1, ldtWakeUp - ldtNow));
+            f_ldtScheduled = ldtWakeUp;
+            m_taskCurrent  = task;
+
+            xLocalClock.TIMER.schedule(task, Math.max(1, ldtWakeUp - ldtNow));
+        }
+
+        /**
+         * Clear the scheduled wake-up if the specified task is the active task. This covers races
+         * between a due task and its replacement, including when timer execution has been delayed.
+         *
+         * @return true iff the task was active and its scheduled state was cleared
+         */
+        private synchronized boolean clearIfCurrent(TimerTask task) {
+            if (m_taskCurrent != task) {
+                return false;
+            }
+
+            f_ldtScheduled = 0;
+            m_taskCurrent  = null;
+            return true;
         }
 
         private long      f_ldtScheduled; // when
