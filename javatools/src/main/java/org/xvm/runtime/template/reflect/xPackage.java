@@ -322,7 +322,7 @@ public class xPackage
      * what a container has derived and one place to instrument it.</p>
      */
     private static final NativeTemplates.CacheKey<TypeComposition> LIST_MAP_COMPOSITION =
-            NativeTemplates.CacheKey.of("ListMap<String,Class> composition", container -> {
+            NativeTemplates.CacheKey.ofContainer("ListMap<String,Class> composition", container -> {
                 // The type and the template are plane-wide: initNative() derived both on the native
                 // container, guarded by isNativeInstance(), and only ever there. Taking them from
                 // the asking container instead would move metadata that belongs to the plane onto

@@ -839,21 +839,49 @@ public final class NativeTemplates {
     public static final class CacheKey<T> {
         private final String f_sName;
         private final Function<Container, T> f_resolve;
+        private final boolean f_fPlaneWide;
 
-        private CacheKey(String sName, Function<Container, T> resolve) {
-            f_sName   = requireNonNull(sName,   "sName");
-            f_resolve = requireNonNull(resolve, "resolve");
+        private CacheKey(String sName, Function<Container, T> resolve, boolean fPlaneWide) {
+            f_sName      = requireNonNull(sName,   "sName");
+            f_resolve    = requireNonNull(resolve, "resolve");
+            f_fPlaneWide = fPlaneWide;
         }
 
         /**
-         * Declare a key. Keys are constants: one per cached value, compared by identity, so a key
-         * built per call would defeat the cache rather than corrupt it.
+         * Declare a value that belongs to the container plane: metadata every container in the
+         * plane shares, of the kind {@code initNative()} derived once on the native container.
+         *
+         * <p>The resolver is handed the <b>native</b> container, and the value is cached there, so
+         * a plane-wide value cannot come to be derived from - or owned by - whichever container
+         * happened to ask for it first. That was a live mistake, not a hypothetical one: an earlier
+         * pass at this took the pool from the asking container and would have moved plane metadata
+         * onto the first asker.</p>
          *
          * @param sName    what the value is, for diagnostics
-         * @param resolve  how to derive it for a container
+         * @param resolve  how to derive it, given the native container
          */
-        public static <T> CacheKey<T> of(String sName, Function<Container, T> resolve) {
-            return new CacheKey<>(sName, resolve);
+        public static <T> CacheKey<T> ofPlane(String sName, Function<Container, T> resolve) {
+            return new CacheKey<>(sName, resolve, true);
+        }
+
+        /**
+         * Declare a value that belongs to the container that asks for it - a composition or a
+         * handle, which {@code ensureClassComposition} and friends deliberately do not share
+         * upward.
+         *
+         * <p>The resolver is handed the asking container. Where such a value is derived from
+         * plane-wide inputs, the resolver reaches the plane explicitly through
+         * {@link Container#getNativeContainer()}, so the mixture is visible at the key.</p>
+         *
+         * @param sName    what the value is, for diagnostics
+         * @param resolve  how to derive it, given the asking container
+         */
+        public static <T> CacheKey<T> ofContainer(String sName, Function<Container, T> resolve) {
+            return new CacheKey<>(sName, resolve, false);
+        }
+
+        boolean isPlaneWide() {
+            return f_fPlaneWide;
         }
 
         @Override
@@ -871,6 +899,16 @@ public final class NativeTemplates {
      */
     public <T> T get(CacheKey<T> key) {
         requireNonNull(key, "key");
+
+        // A plane-wide value is resolved and cached on the plane, not here. Delegating rather than
+        // trusting each key's resolver to reach for the right container is what makes the ownership
+        // structural: a resolver is only ever handed the container its key declared.
+        if (key.isPlaneWide()) {
+            Container containerNative = f_container.getNativeContainer();
+            if (containerNative != null && containerNative != f_container) {
+                return NativeTemplates.get(containerNative).get(key);
+            }
+        }
 
         // Resolve outside the map's update path: deriving one value can ask for another, and
         // computeIfAbsent() forbids a recursive update to the same map.

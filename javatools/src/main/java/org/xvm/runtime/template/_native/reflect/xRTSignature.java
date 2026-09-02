@@ -31,7 +31,6 @@ import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 
-import org.xvm.util.Lazy;
 
 
 /**
@@ -186,48 +185,42 @@ public class xRTSignature
      * @return the TypeConstant for a Return
      */
     public static TypeConstant ensureReturnType(Container container) {
-        xRTSignature template = getInstance(container);
-        return template.f_typeReturn.get(template);
+        return NativeTemplates.get(container).get(RETURN_TYPE);
     }
 
     /**
      * @return the TypeConstant for an RTReturn
      */
     public static TypeConstant ensureRTReturnType(Container container) {
-        xRTSignature template = getInstance(container);
-        return template.f_typeRTReturn.get(template);
+        return NativeTemplates.get(container).get(RT_RETURN_TYPE);
     }
 
     /**
      * @return the TypeConstant for a Parameter
      */
     public static TypeConstant ensureParamType(Container container) {
-        xRTSignature template = getInstance(container);
-        return template.f_typeParam.get(template);
+        return NativeTemplates.get(container).get(PARAM_TYPE);
     }
 
     /**
      * @return the TypeConstant for an RTParameter
      */
     public static TypeConstant ensureRTParamType(Container container) {
-        xRTSignature template = getInstance(container);
-        return template.f_typeRTParam.get(template);
+        return NativeTemplates.get(container).get(RT_PARAM_TYPE);
     }
 
     /**
      * @return the ClassTemplate for an RTReturn
      */
     public static xConst ensureRTReturnTemplate(Container container) {
-        xRTSignature template = getInstance(container);
-        return template.f_templateRTReturn.get(template);
+        return NativeTemplates.get(container).get(RT_RETURN_TEMPLATE);
     }
 
     /**
      * @return the ClassTemplate for an RTParameter
      */
     public static xConst ensureRTParamTemplate(Container container) {
-        xRTSignature template = getInstance(container);
-        return template.f_templateRTParam.get(template);
+        return NativeTemplates.get(container).get(RT_PARAM_TEMPLATE);
     }
 
     /**
@@ -272,16 +265,14 @@ public class xRTSignature
      * @return the TypeComposition for an Array of Return
      */
     public static TypeComposition ensureReturnArray(Container container) {
-        xRTSignature template = getInstance(container);
-        return template.f_clzReturnArray.get(template);
+        return NativeTemplates.get(container).get(RETURN_ARRAY_COMPOSITION);
     }
 
     /**
      * @return the TypeComposition for an Array of Parameter
      */
     public static TypeComposition ensureParamArray(Container container) {
-        xRTSignature template = getInstance(container);
-        return template.f_clzParamArray.get(template);
+        return NativeTemplates.get(container).get(PARAM_ARRAY_COMPOSITION);
     }
 
     /**
@@ -544,29 +535,54 @@ public class xRTSignature
      * Signature metadata belongs to a ConstantPool/Container pair. Keeping these as final lazy
      * fields preserves the old one-time caching behavior without sharing metadata across owners.
      */
-    private final Lazy.Bound<xRTSignature, TypeConstant> f_typeReturn = Lazy.ofBound(owner ->
-            owner.pool().ensureEcstasyTypeConstant("reflect.Return"));
+    // ----- owner-local values, by key ------------------------------------------------------------
 
-    private final Lazy.Bound<xRTSignature, TypeConstant> f_typeParam = Lazy.ofBound(owner ->
-            owner.pool().typeParameter());
+    /**
+     * Plane-wide metadata: the types and templates every container in the plane shares. The
+     * resolver is handed the native container by the key's own declaration, so none of these can
+     * come to be derived from whichever container asked first.
+     */
+    private static final NativeTemplates.CacheKey<TypeConstant> RETURN_TYPE =
+            NativeTemplates.CacheKey.ofPlane("reflect.Return type",
+                    container -> container.getConstantPool()
+                            .ensureEcstasyTypeConstant("reflect.Return"));
 
-    private final Lazy.Bound<xRTSignature, TypeConstant> f_typeRTReturn = Lazy.ofBound(owner ->
-            owner.container().getClassStructure("_native.reflect.RTReturn")
-                    .getIdentityConstant().getType());
+    private static final NativeTemplates.CacheKey<TypeConstant> PARAM_TYPE =
+            NativeTemplates.CacheKey.ofPlane("reflect.Parameter type",
+                    container -> container.getConstantPool().typeParameter());
 
-    private final Lazy.Bound<xRTSignature, TypeConstant> f_typeRTParam = Lazy.ofBound(owner ->
-            owner.container().getClassStructure("_native.reflect.RTParameter")
-                    .getIdentityConstant().getType());
+    private static final NativeTemplates.CacheKey<TypeConstant> RT_RETURN_TYPE =
+            NativeTemplates.CacheKey.ofPlane("_native.reflect.RTReturn type",
+                    container -> container.getClassStructure("_native.reflect.RTReturn")
+                            .getIdentityConstant().getType());
 
-    private final Lazy.Bound<xRTSignature, xConst> f_templateRTReturn = Lazy.ofBound(owner ->
-            owner.container().getTemplate(owner.f_typeRTReturn.get(owner), xConst.class));
+    private static final NativeTemplates.CacheKey<TypeConstant> RT_PARAM_TYPE =
+            NativeTemplates.CacheKey.ofPlane("_native.reflect.RTParameter type",
+                    container -> container.getClassStructure("_native.reflect.RTParameter")
+                            .getIdentityConstant().getType());
 
-    private final Lazy.Bound<xRTSignature, xConst> f_templateRTParam = Lazy.ofBound(owner ->
-            owner.container().getTemplate(owner.f_typeRTParam.get(owner), xConst.class));
+    private static final NativeTemplates.CacheKey<xConst> RT_RETURN_TEMPLATE =
+            NativeTemplates.CacheKey.ofPlane("_native.reflect.RTReturn template",
+                    container -> container.getTemplate(
+                            NativeTemplates.get(container).get(RT_RETURN_TYPE), xConst.class));
 
-    private final Lazy.Bound<xRTSignature, TypeComposition> f_clzReturnArray = Lazy.ofBound(owner ->
-            owner.container().resolveClass(owner.pool().ensureArrayType(owner.f_typeReturn.get(owner))));
+    private static final NativeTemplates.CacheKey<xConst> RT_PARAM_TEMPLATE =
+            NativeTemplates.CacheKey.ofPlane("_native.reflect.RTParameter template",
+                    container -> container.getTemplate(
+                            NativeTemplates.get(container).get(RT_PARAM_TYPE), xConst.class));
 
-    private final Lazy.Bound<xRTSignature, TypeComposition> f_clzParamArray = Lazy.ofBound(owner ->
-            owner.container().resolveClass(owner.pool().ensureArrayType(owner.f_typeParam.get(owner))));
+    /**
+     * Compositions, by contrast, belong to the container that asks: resolveClass() does not share
+     * upward. Their plane-wide inputs are reached through keys of their own, so the mixture is
+     * visible here rather than implied.
+     */
+    private static final NativeTemplates.CacheKey<TypeComposition> RETURN_ARRAY_COMPOSITION =
+            NativeTemplates.CacheKey.ofContainer("Return[] composition",
+                    container -> container.resolveClass(container.getConstantPool().ensureArrayType(
+                            NativeTemplates.get(container).get(RETURN_TYPE))));
+
+    private static final NativeTemplates.CacheKey<TypeComposition> PARAM_ARRAY_COMPOSITION =
+            NativeTemplates.CacheKey.ofContainer("Parameter[] composition",
+                    container -> container.resolveClass(container.getConstantPool().ensureArrayType(
+                            NativeTemplates.get(container).get(PARAM_TYPE))));
 }

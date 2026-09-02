@@ -332,7 +332,7 @@ public class xRTFileTemplate
      * happened to own the field.</p>
      */
     private static final NativeTemplates.CacheKey<TypeConstant> FILE_TEMPLATE_TYPE =
-            NativeTemplates.CacheKey.of("reflect.FileTemplate type", container ->
+            NativeTemplates.CacheKey.ofPlane("reflect.FileTemplate type", container ->
                     container.getNativeContainer().getConstantPool()
                             .ensureEcstasyTypeConstant("reflect.FileTemplate"));
 
