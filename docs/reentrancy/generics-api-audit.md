@@ -1027,6 +1027,18 @@ Must fix:
 - broad `Object` state machines where the wrong state can escape across
   fibers, callbacks, or same-JVM repeated executions.
 
+Status of the six Must Fix rows, each re-checked against the source 2026-09-02 rather than taken
+from this file's own history:
+
+| Row | Status |
+| --- | --- |
+| Service responses erase future payload shape | **open** - `ServiceContext.java:1698` still declares a raw `CompletableFuture f_future`; 11 raw sites in that file |
+| Op-info cache uses Object values and raw enum keys | **open** - `Map<Op, EnumMap>` field, raw `new EnumMap(...)` at the write site |
+| Fiber pending requests encode a union as Object | **appears done** - now `Map<CompletableFuture<ObjectHandle>, ObjectHandle>` |
+| ConstantPool locator tables erase Format/key/value | **open** - still `Map<Object, Constant>` |
+| Native template loading uses raw `Class` | **done in this branch** - the container-owned table replaced it |
+| TypeConstant updaters lose generic detail | **open** - raw `AtomicReferenceFieldUpdater<TypeConstant, TransientThreadLocal>` |
+
 Should fix soon:
 
 - repeated casts where a typed accessor already exists;
@@ -1087,10 +1099,16 @@ Measured, not estimated. Numbers from `javac -Xlint:all` with the warning cap li
 
 ### Must audit
 
-- **The 6 remaining `@SuppressWarnings`.** Two in `MarkAndSweepGcSpace` are the `ArrayList` idiom
-  and correct; `ConstantPool.register` keeps method scope deliberately for four casts of one
-  invariant. The other three are one-line declarations. None is known-wrong; all should be
-  re-checked if the surrounding code changes.
+- **The remaining `@SuppressWarnings("unchecked")` - 9, re-counted 2026-09-02** (this row said 6,
+  and the status table above said 8; both were stale). Two in `MarkAndSweepGcSpace` are the
+  `ArrayList` idiom and correct; `ConstantPool.register` keeps method scope deliberately for four
+  casts of one invariant; one is the `CacheKey` value cast in `NativeTemplates.get`, where the key
+  carries the type and the map cannot. The rest are one-line declarations. None is known-wrong;
+  all should be re-checked if the surrounding code changes.
+
+  Counted with `grep -rhoE '@SuppressWarnings\([^)]*\)' --include='*.java'` over `javatools`, which
+  also reports the categories this row has never tracked: 54 `fallthrough`, 31 `unused`, 1
+  `rawtypes`, and 5 assorted IDE-specific ones. Only `unchecked` and `rawtypes` bear on this audit.
 
 ### Should fix
 

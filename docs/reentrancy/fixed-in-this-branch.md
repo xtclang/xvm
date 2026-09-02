@@ -1953,6 +1953,44 @@ for synthetic AST nodes. The forced lint run at
 `/tmp/xvm-compiler-this-escape.log` reports zero `Lexer.java`, `Parser.java`,
 or `compiler/ast` `this-escape` diagnostics.
 
+### Injected Filesystem Resources Belong To The Container That Asked
+
+`NativeContainer` cached `curDir`, `tmpDir`, `homeDir`, `rootDir` and
+`fileStore` in single instance fields, filled by whichever container asked
+first and then served to every later container on that native plane. Those
+values are `GenericHandle`s carrying a `TypeComposition`, and a composition
+belongs to exactly one container, so two containers that are *siblings* under
+one plane ended up sharing a composition owned by neither's ancestor.
+
+The fix derives the value for the container that asks and caches it there
+(`Container.ensureNativeResourceCache()`), collapsing the five near-identical
+`ensure*` methods into one `ensureStorageProperty`.
+
+Two constraints shaped it, both learned the hard way:
+
+- **The `OSStorage` service stays plane-wide.** A service handle is legitimate
+  cross-container currency, and giving each container its own starts a second
+  storage service - which is what made an earlier attempt fail `runner.x` with
+  `Service terminated: OSStorage`. Only the values read *off* `OSStorage`
+  become per-asker.
+- **Deriving beats masking.** `GenericHandle.maskAs` rebuilds the outer handle
+  but leaves the handles in its *fields* pointing at the original owner's
+  compositions. Narrowing its `owner == ownerOrig || typeAs.isShared(...)`
+  condition took the sweep from 14 foreign references to 6, not to 0.
+
+Reproduced on unmodified `origin/master` before fixing: two sibling
+`MainContainer`s on one `NativeContainer`, the second served a `curDir` whose
+composition belongs to the first. Master's own CLI never builds that topology -
+`InterpreterConnector` gives each connector its own `Runtime` and
+`NativeContainer`, and `NestedContainer.getInjectable` has no parent fallback,
+so guests get only what their provider granted - but the public `MainContainer`
+constructor permits it. Latent for the CLI, live for a Java embedder, which is
+what same-JVM reuse makes routine. Filed as issue 576.
+
+`InjectedResourceOwnershipTest` pins the fix; `RepeatedRunSweepTest` pins the
+whole-graph result, two runs of `TestFiles` sweeping 14 foreign references
+before and 0 after.
+
 ## Manual Lazy Cache Hardening
 
 This branch also removes two concrete lazy-null cache hazards found by the
