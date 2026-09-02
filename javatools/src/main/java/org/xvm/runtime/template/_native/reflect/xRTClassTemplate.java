@@ -527,7 +527,7 @@ public class xRTClassTemplate
         // note: no need to initialize the struct because there are no natural fields
         xRTClassTemplate template = NativeTemplates.get(container).classTemplate();
         TypeComposition  clz      = template.ensureClass(container,
-                template.getCanonicalType(), template.f_typeClassTemplate.get(template));
+                template.getCanonicalType(), NativeTemplates.get(container).get(CLASS_TEMPLATE_TYPE));
         return new ComponentTemplateHandle<>(clz, struct);
     }
 
@@ -537,7 +537,7 @@ public class xRTClassTemplate
     public static TypeComposition ensureContribArrayComposition(Container container) {
         xRTClassTemplate template = NativeTemplates.get(container).classTemplate();
         return container.ensureClassComposition(
-                template.f_typeContributionArray.get(template), xArray.getInstance(container));
+                NativeTemplates.get(container).get(CONTRIBUTION_ARRAY_TYPE), xArray.getInstance(container));
     }
 
     /**
@@ -546,7 +546,7 @@ public class xRTClassTemplate
     public static TypeComposition ensureClassTemplateArrayComposition(Container container) {
         xRTClassTemplate template = NativeTemplates.get(container).classTemplate();
         return container.ensureClassComposition(
-                template.f_typeClassTemplateArray.get(template), xArray.getInstance(container));
+                NativeTemplates.get(container).get(CLASS_TEMPLATE_ARRAY_TYPE), xArray.getInstance(container));
     }
 
     /**
@@ -555,7 +555,7 @@ public class xRTClassTemplate
     public static TypeComposition ensureMultiMethodTemplateArrayComposition(Container container) {
         xRTClassTemplate template = NativeTemplates.get(container).classTemplate();
         return container.ensureClassComposition(
-                template.f_typeMultiMethodArray.get(template), xArray.getInstance(container));
+                NativeTemplates.get(container).get(MULTI_METHOD_ARRAY_TYPE), xArray.getInstance(container));
     }
 
     /**
@@ -564,7 +564,7 @@ public class xRTClassTemplate
     public static TypeComposition ensureMethodTemplateArrayComposition(Container container) {
         xRTClassTemplate template = NativeTemplates.get(container).classTemplate();
         return container.ensureClassComposition(
-                template.f_typeMethodArray.get(template), xArray.getInstance(container));
+                NativeTemplates.get(container).get(METHOD_ARRAY_TYPE), xArray.getInstance(container));
     }
 
     /**
@@ -573,7 +573,7 @@ public class xRTClassTemplate
     public static TypeComposition ensureAnnotationTemplateArrayComposition(Container container) {
         xRTClassTemplate template = NativeTemplates.get(container).classTemplate();
         return container.ensureClassComposition(
-                template.f_typeAnnotationArray.get(template), xArray.getInstance(container));
+                NativeTemplates.get(container).get(ANNOTATION_ARRAY_TYPE), xArray.getInstance(container));
     }
 
     /**
@@ -602,27 +602,45 @@ public class xRTClassTemplate
      * Reflective class-template metadata is cached per owner template. These final lazy cells preserve
      * the old one-time lookup behavior without constructor-time owner capture or global sharing.
      */
-    private final Lazy.Bound<xRTClassTemplate, TypeConstant> f_typeClassTemplate = Lazy.ofBound(owner ->
-            owner.pool().ensureEcstasyTypeConstant("reflect.ClassTemplate"));
+    /**
+     * The reflective template types. All plane-wide: each is derived from the pool, and the fields
+     * these replaced hung off the native container's template, so the key declares that scope and
+     * the resolver is handed the native container rather than trusting each site to reach for it.
+     */
+    private static final NativeTemplates.CacheKey<TypeConstant> CLASS_TEMPLATE_TYPE =
+            NativeTemplates.CacheKey.ofPlane("reflect.ClassTemplate type",
+                    container -> container.getConstantPool()
+                            .ensureEcstasyTypeConstant("reflect.ClassTemplate"));
 
-    private final Lazy.Bound<xRTClassTemplate, TypeConstant> f_typeClassTemplateArray =
-            Lazy.ofBound(owner -> owner.pool().ensureArrayType(owner.f_typeClassTemplate.get(owner)));
+    private static final NativeTemplates.CacheKey<TypeConstant> CLASS_TEMPLATE_ARRAY_TYPE =
+            NativeTemplates.CacheKey.ofPlane("reflect.ClassTemplate[] type",
+                    container -> container.getConstantPool().ensureArrayType(
+                            NativeTemplates.get(container).get(CLASS_TEMPLATE_TYPE)));
 
-    private final Lazy.Bound<xRTClassTemplate, TypeConstant> f_typeMultiMethodArray =
-            Lazy.ofBound(owner -> owner.pool().ensureArrayType(
-                    owner.pool().ensureEcstasyTypeConstant("reflect.MultiMethodTemplate")));
+    private static final NativeTemplates.CacheKey<TypeConstant> MULTI_METHOD_ARRAY_TYPE =
+            NativeTemplates.CacheKey.ofPlane("reflect.MultiMethodTemplate[] type",
+                    container -> arrayOf(container, "reflect.MultiMethodTemplate"));
 
-    private final Lazy.Bound<xRTClassTemplate, TypeConstant> f_typeMethodArray =
-            Lazy.ofBound(owner -> owner.pool().ensureArrayType(
-                    owner.pool().ensureEcstasyTypeConstant("reflect.MethodTemplate")));
+    private static final NativeTemplates.CacheKey<TypeConstant> METHOD_ARRAY_TYPE =
+            NativeTemplates.CacheKey.ofPlane("reflect.MethodTemplate[] type",
+                    container -> arrayOf(container, "reflect.MethodTemplate"));
 
-    private final Lazy.Bound<xRTClassTemplate, TypeConstant> f_typeAnnotationArray =
-            Lazy.ofBound(owner -> owner.pool().ensureArrayType(
-                    owner.pool().ensureEcstasyTypeConstant("reflect.AnnotationTemplate")));
+    private static final NativeTemplates.CacheKey<TypeConstant> ANNOTATION_ARRAY_TYPE =
+            NativeTemplates.CacheKey.ofPlane("reflect.AnnotationTemplate[] type",
+                    container -> arrayOf(container, "reflect.AnnotationTemplate"));
 
-    private final Lazy.Bound<xRTClassTemplate, TypeConstant> f_typeContributionArray =
-            Lazy.ofBound(owner -> owner.pool().ensureArrayType(owner.pool().ensureEcstasyTypeConstant(
-                    "reflect.ClassTemplate.Composition.Contribution")));
+    private static final NativeTemplates.CacheKey<TypeConstant> CONTRIBUTION_ARRAY_TYPE =
+            NativeTemplates.CacheKey.ofPlane("reflect.Contribution[] type",
+                    container -> arrayOf(container,
+                            "reflect.ClassTemplate.Composition.Contribution"));
+
+    /**
+     * @return the array type for the named ecstasy type
+     */
+    private static TypeConstant arrayOf(Container container, String sType) {
+        ConstantPool pool = container.getConstantPool();
+        return pool.ensureArrayType(pool.ensureEcstasyTypeConstant(sType));
+    }
 
     private final Lazy.Bound<xRTClassTemplate, ArrayConstant> f_constEmptyParameterArray =
             Lazy.ofBound(owner -> owner.pool().ensureArrayConstant(
