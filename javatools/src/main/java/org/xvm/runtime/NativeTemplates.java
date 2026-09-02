@@ -1,6 +1,8 @@
 package org.xvm.runtime;
 
 
+import java.util.List;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -114,6 +116,26 @@ public final class NativeTemplates {
      *
      * @return the template of that class belonging to this container
      */
+    /**
+     * The component names of the templates this container has actually resolved, in order.
+     *
+     * <p>This is the reason the table exists rather than 139 static fields: what a container has
+     * pulled in is now a question with one place to ask it. Footprinting a long-lived host - which
+     * templates a session actually touched, and how that grows - was not expressible when the answer
+     * was spread across a static per template class.</p>
+     *
+     * @return the resolved template names, sorted; never null
+     */
+    public List<String> resolvedNames() {
+        // Named from the template's own structure, not derived from its Java class: the table also
+        // holds templates whose class name maps to no component (Proxy, Identity), and an
+        // instrumentation view must not throw on the very entries it exists to report.
+        return f_mapByClass.values().stream()
+                .map(template -> template.getStructure().getIdentityConstant().getPathString())
+                .sorted()
+                .toList();
+    }
+
     public <T extends ClassTemplate> T get(Class<T> clzTemplate) {
         ClassTemplate template = f_mapByClass.get(requireNonNull(clzTemplate, "clzTemplate"));
         if (template == null) {
