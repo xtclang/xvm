@@ -273,7 +273,17 @@ public class xRTSocket
             return frame.assignValue(iReturn, xArray.makeByteArrayHandle(new byte[0], Mutability.Constant));
         }
 
+        long             ldtTimeout = frame.f_fiber.getTimeoutStamp();
+        Container        container  = frame.f_context.f_container;
         Callable<byte[]> task = () -> {
+            // SO_TIMEOUT is only a backstop for the native I/O fibers; allow the Ecstasy timeout
+            // to be observed first
+            int cTimeoutMillis = ldtTimeout <= 0
+                    ? 0
+                    : Math.clamp(ldtTimeout - container.currentTimeMillis() + 1_000,
+                            1, Integer.MAX_VALUE);
+            socket.setSoTimeout(cTimeoutMillis);
+
             InputStream in  = socket.getInputStream();
             byte[]      buf = new byte[cBytes];
             int         off = 0;
