@@ -163,6 +163,11 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
                     name ?= param.bindName;
                 }
                 if (!template.vars.contains(name)) {
+                    // allow an unannotated parameter with a default value; endpoint dispatch
+                    // always uses the default, while direct calls can provide a value
+                    if (!param.is(UriParam) && param.defaultValue()) {
+                        continue;
+                    }
                     throw new IllegalState($|The template for method "{method}" is missing \
                                             |a variable name "{name}": "{templateString}"
                                           );
