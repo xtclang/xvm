@@ -246,9 +246,7 @@ public class xPackage
      * @return the TypeComposition for {@code ListMap<String, Class>}
      */
     public static TypeComposition ensureListMapComposition(Container container) {
-        xPackage template = NativeTemplates.get(container).packageTemplate();
-        return container.ensureClassComposition(
-                template.f_typeListMap.get(template), template.f_templateListMap.get(template));
+        return NativeTemplates.get(container).get(LIST_MAP_COMPOSITION);
     }
 
 
@@ -316,13 +314,27 @@ public class xPackage
 
     // ----- data members --------------------------------------------------------------------------
 
-    // ListMap metadata is owned by this template's container. Keeping it as final lazy state
-    // preserves the old per-template cache without racing through process-global statics.
-    private final Lazy.Bound<xPackage, TypeConstant> f_typeListMap = Lazy.ofBound(owner ->
-            owner.pool().ensureParameterizedTypeConstant(
-                    owner.pool().ensureEcstasyTypeConstant("maps.ListMap"),
-                    owner.pool().typeString(), owner.pool().typeClass()));
+    /**
+     * The {@code ListMap<String, Class>} composition, derived once per container.
+     *
+     * <p>Held by key rather than as a field on this template: a caller asks the container's table
+     * for the value instead of naming a field on some other object, so there is one place to ask
+     * what a container has derived and one place to instrument it.</p>
+     */
+    private static final NativeTemplates.CacheKey<TypeComposition> LIST_MAP_COMPOSITION =
+            NativeTemplates.CacheKey.of("ListMap<String,Class> composition", container -> {
+                // The type and the template are plane-wide: initNative() derived both on the native
+                // container, guarded by isNativeInstance(), and only ever there. Taking them from
+                // the asking container instead would move metadata that belongs to the plane onto
+                // whichever container happened to ask.
+                Container    containerNative = container.getNativeContainer();
+                ConstantPool pool            = containerNative.getConstantPool();
+                TypeConstant type            = pool.ensureParameterizedTypeConstant(
+                        pool.typeListMap(), pool.typeString(), pool.typeClass());
 
-    private final Lazy.Bound<xPackage, ClassTemplate> f_templateListMap = Lazy.ofBound(owner ->
-            owner.container().getTemplate(owner.f_typeListMap.get(owner)));
+                // The composition, by contrast, has always been per asking container:
+                // ensureClassComposition() never delegates upward, and registers the type into the
+                // asking container's own pool.
+                return container.ensureClassComposition(type, containerNative.getTemplate(type));
+            });
 }

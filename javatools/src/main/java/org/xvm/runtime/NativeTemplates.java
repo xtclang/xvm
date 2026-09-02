@@ -1,6 +1,10 @@
 package org.xvm.runtime;
 
 
+import java.util.List;
+
+import java.util.function.Function;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -819,8 +823,82 @@ public final class NativeTemplates {
     private final Lazy.Bound<NativeTemplates, Proxy> f_templateProxy;
 
     /**
+     * A named, typed key for an owner-local value this container derives once.
+     *
+     * <p>The point is that a call site asks for a key and gets a value, instead of reaching into
+     * some template's field. State that used to live in a mutable static became a {@code Lazy.Bound}
+     * field on the owning template, which fixed the ownership but left the value reachable only by
+     * naming another object's field from outside it - and so still not instrumentable in one place,
+     * which was the whole reason for moving it.</p>
+     *
+     * <p>The key carries the value's type, so one heterogeneous map serves every kind of cached
+     * value without a cast at the call site.</p>
+     *
+     * @param <T> the type of value this key resolves to
+     */
+    public static final class CacheKey<T> {
+        private final String f_sName;
+        private final Function<Container, T> f_resolve;
+
+        private CacheKey(String sName, Function<Container, T> resolve) {
+            f_sName   = requireNonNull(sName,   "sName");
+            f_resolve = requireNonNull(resolve, "resolve");
+        }
+
+        /**
+         * Declare a key. Keys are constants: one per cached value, compared by identity, so a key
+         * built per call would defeat the cache rather than corrupt it.
+         *
+         * @param sName    what the value is, for diagnostics
+         * @param resolve  how to derive it for a container
+         */
+        public static <T> CacheKey<T> of(String sName, Function<Container, T> resolve) {
+            return new CacheKey<>(sName, resolve);
+        }
+
+        @Override
+        public String toString() {
+            return f_sName;
+        }
+    }
+
+    /**
+     * Obtain a value this container derives once and keeps.
+     *
+     * @param key  the key naming the value
+     *
+     * @return the value for this container
+     */
+    public <T> T get(CacheKey<T> key) {
+        requireNonNull(key, "key");
+
+        // Resolve outside the map's update path: deriving one value can ask for another, and
+        // computeIfAbsent() forbids a recursive update to the same map.
+        Lazy.Bound<NativeTemplates, ?> lazy = f_mapCached.computeIfAbsent(key,
+                k -> Lazy.ofBound(owner -> ((CacheKey<?>) k).f_resolve.apply(owner.container())));
+
+        @SuppressWarnings("unchecked")   // the key's resolver produces T, by construction
+        T value = (T) lazy.get(this);
+        return value;
+    }
+
+    /**
+     * The keys this container has actually resolved. Owner-local cached state is now one map, so
+     * what a container has derived is a question with one place to ask it.
+     */
+    public List<String> resolvedKeys() {
+        return f_mapCached.keySet().stream().map(CacheKey::toString).sorted().toList();
+    }
+
+    /**
      * Lazily resolved templates by immutable native-template key.
      */
     private final ConcurrentMap<NativeTemplateRef<?>, Lazy.Bound<NativeTemplates, ?>> f_mapTemplates =
+            new ConcurrentHashMap<>();
+
+    /**
+     * Owner-local values derived once per container, by key.
+     */
+    private final ConcurrentMap<CacheKey<?>, Lazy.Bound<NativeTemplates, ?>> f_mapCached =
             new ConcurrentHashMap<>();
 }
