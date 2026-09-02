@@ -23,6 +23,7 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
@@ -305,7 +306,7 @@ public class xRTFileTemplate
         xRTFileTemplate template = container.getTemplate("_native.reflect.RTFileTemplate",
                 xRTFileTemplate.class);
         TypeComposition clzFile = template.ensureClass(container,
-                template.getCanonicalType(), template.f_typeFileTemplate.get(template));
+                template.getCanonicalType(), ensureFileTemplateType(container));
         return new ComponentTemplateHandle<>(clzFile, fileStruct);
     }
 
@@ -313,9 +314,7 @@ public class xRTFileTemplate
      * @return the container-owned FileTemplate type
      */
     public static TypeConstant ensureFileTemplateType(Container container) {
-        xRTFileTemplate template = container.getTemplate("_native.reflect.RTFileTemplate",
-                xRTFileTemplate.class);
-        return template.f_typeFileTemplate.get(template);
+        return NativeTemplates.get(container).get(FILE_TEMPLATE_TYPE);
     }
 
     // ----- data members --------------------------------------------------------------------------
@@ -324,8 +323,18 @@ public class xRTFileTemplate
      * FileTemplate metadata used to be mutable static state. Both values come from this template's
      * structure and constant pool, so cache them on the owning template.
      */
-    private final Lazy.Bound<xRTFileTemplate, TypeConstant> f_typeFileTemplate =
-            Lazy.ofBound(owner -> owner.pool().ensureEcstasyTypeConstant("reflect.FileTemplate"));
+    /**
+     * The {@code reflect.FileTemplate} type.
+     *
+     * <p>Plane-wide: the template this used to hang off is the native container's, so the type came
+     * from the native pool. The resolver starts there explicitly rather than from whichever
+     * container asked, so the ownership is visible at the key instead of implied by which object
+     * happened to own the field.</p>
+     */
+    private static final NativeTemplates.CacheKey<TypeConstant> FILE_TEMPLATE_TYPE =
+            NativeTemplates.CacheKey.of("reflect.FileTemplate type", container ->
+                    container.getNativeContainer().getConstantPool()
+                            .ensureEcstasyTypeConstant("reflect.FileTemplate"));
 
     private final Lazy.Bound<xRTFileTemplate, MethodStructure> f_methodLinkModules =
             Lazy.ofBound(owner -> owner.f_struct.findMethod("linkModules", 1));
