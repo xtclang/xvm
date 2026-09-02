@@ -362,7 +362,7 @@ public class xRTProperty
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
         xRTProperty   template   = getInstance(container);
-        ArrayConstant constEmpty = template.f_constEmptyPropertyArray.get(template);
+        ArrayConstant constEmpty = NativeTemplates.get(container).get(EMPTY_PROPERTY_ARRAY);
         var           heap       = container.getConstHeap();
         ArrayHandle   haEmpty    = heap.getConstHandle(container, constEmpty, ArrayHandle.class);
         if (haEmpty == null) {
@@ -398,13 +398,17 @@ public class xRTProperty
     // ----- data members --------------------------------------------------------------------------
 
     /**
-     * Empty Property array constants are pool-owned. Caching the key on this container's template
-     * preserves the old ConstHeap handle cache without crossing container ConstantPools.
+     * The empty {@code Property[]} constant.
+     *
+     * <p>Plane-wide, for the same reason as the empty Method[]: it is interned in the native
+     * container's pool, and the pool a constant belongs to must not depend on which container
+     * happened to ask for it first.</p>
      */
-    private final Lazy.Bound<xRTProperty, ArrayConstant> f_constEmptyPropertyArray = Lazy.ofBound(owner -> {
-        ConstantPool pool = owner.pool();
-        return pool.ensureArrayConstant(
-                pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Property")),
-                Constant.NO_CONSTS);
-    });
+    private static final NativeTemplates.CacheKey<ArrayConstant> EMPTY_PROPERTY_ARRAY =
+            NativeTemplates.CacheKey.ofPlane("empty Property[] constant", container -> {
+                ConstantPool pool = container.getConstantPool();
+                return pool.ensureArrayConstant(
+                        pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Property")),
+                        Constant.NO_CONSTS);
+            });
 }

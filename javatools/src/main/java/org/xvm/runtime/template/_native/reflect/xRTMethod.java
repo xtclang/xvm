@@ -365,7 +365,7 @@ public class xRTMethod
      */
     public static ArrayConstant ensureEmptyArrayConstant(Container container) {
         xRTMethod template = NativeTemplates.get(container).method();
-        return template.f_constEmptyArray.get(template);
+        return NativeTemplates.get(container).get(EMPTY_METHOD_ARRAY);
     }
 
     /**
@@ -399,10 +399,17 @@ public class xRTMethod
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * Empty Method[] constant derived from this template's constant pool.
+     * The empty {@code Method[]} constant.
+     *
+     * <p>Plane-wide. The cell this replaces derived it from {@code owner.pool()}, and a template's
+     * pool is the native container's, so one constant served every container. A constant is not
+     * owner-bearing in the way a handle or a composition is, but it belongs to a pool, and which
+     * pool is exactly what must not vary with who asked first.</p>
      */
-    private final Lazy.Bound<xRTMethod, ArrayConstant> f_constEmptyArray = Lazy.ofBound(owner -> {
-        ConstantPool pool = owner.pool();
-        return new ArrayConstant(pool, Constant.Format.Array, pool.ensureArrayType(pool.typeMethod()));
-    });
+    private static final NativeTemplates.CacheKey<ArrayConstant> EMPTY_METHOD_ARRAY =
+            NativeTemplates.CacheKey.ofPlane("empty Method[] constant", container -> {
+                ConstantPool pool = container.getConstantPool();
+                return new ArrayConstant(pool, Constant.Format.Array,
+                        pool.ensureArrayType(pool.typeMethod()));
+            });
 }

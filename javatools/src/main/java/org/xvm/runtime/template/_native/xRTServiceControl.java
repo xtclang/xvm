@@ -50,7 +50,8 @@ public class xRTServiceControl
 
     @Override
     public void initNative() {
-        f_clzControl.get(this);
+        // f_clzControl was warmed here so it existed before execution; the plane-wide key it became
+        // is warmed for every template at once, at the end of the native container's boot
         f_templateServiceStatus.get(this);
 
         markNativeProperty("statusIndicator");
@@ -113,8 +114,8 @@ public class xRTServiceControl
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     public static ObjectHandle makeHandle(ServiceContext context) {
-        xRTServiceControl template = NativeTemplates.get(context.f_container).serviceControl();
-        return new ControlHandle(template.f_clzControl.get(template), context);
+        return new ControlHandle(
+                NativeTemplates.get(context.f_container).get(SERVICE_CONTROL_COMPOSITION), context);
     }
 
     protected static class ControlHandle
@@ -142,12 +143,19 @@ public class xRTServiceControl
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * Lazily resolved ServiceControl composition owned by this template's container.
+     * The ServiceControl composition.
+     *
+     * <p>Plane-wide: the cell this replaces called {@code ensureClass(owner.container(), ...)}, and
+     * a template's container is the native one. Being a composition does not by itself make a value
+     * per-asker - that depends on which container was passed, and here it was never the caller's.</p>
      */
-    private final Lazy.Bound<xRTServiceControl, TypeComposition> f_clzControl = Lazy.ofBound(owner -> {
-        TypeConstant typeMask = owner.pool().ensureEcstasyTypeConstant("Service.ServiceControl");
-        return owner.ensureClass(owner.container(), owner.getCanonicalType(), typeMask);
-    });
+    private static final NativeTemplates.CacheKey<TypeComposition> SERVICE_CONTROL_COMPOSITION =
+            NativeTemplates.CacheKey.ofPlane("Service.ServiceControl composition", container -> {
+                xRTServiceControl template = NativeTemplates.get(container).serviceControl();
+                TypeConstant typeMask = container.getConstantPool()
+                        .ensureEcstasyTypeConstant("Service.ServiceControl");
+                return template.ensureClass(container, template.getCanonicalType(), typeMask);
+            });
 
     /**
      * Lazily resolved Service.ServiceStatus enum template owned by this template's container.
