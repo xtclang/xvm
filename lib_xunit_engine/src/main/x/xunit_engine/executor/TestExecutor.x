@@ -68,7 +68,7 @@ const TestExecutor {
 
         FixtureExecutionCallback[] modelCallbacks = registry.get(FixtureExecutionCallback);
 
-		if (context := collector.execute(() -> lifecycle.prepare(parentContext, registry))) {
+        if (context := collector.execute(() -> lifecycle.prepare(parentContext, registry))) {
             for (FixtureExecutionCallback callback : modelCallbacks) {
                 callback.beforeFixtureExecution(context);
             }
@@ -87,9 +87,9 @@ const TestExecutor {
             }
         }
         updateResourceProvider(context, registry);
-	    for (FixtureExecutionCallback callback : modelCallbacks) {
+        for (FixtureExecutionCallback callback : modelCallbacks) {
             callback.afterFixtureExecution(context);
-	    }
+        }
         reportCompletion(collector, parentContext, registry, skipResult, started, duration);
     }
 

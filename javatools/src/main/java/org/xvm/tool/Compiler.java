@@ -191,7 +191,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             if (srcFile == null || !srcFile.exists()) {
                 log(ERROR, "Could not locate the source for the module {}", info.getFileSpec());
             }
-	        // TODO: Consider log(ERROR, ...) -> error(...)
+            // TODO: Consider log(ERROR, ...) -> error(...)
             if (sModule == null) {
                 log(ERROR, "Could not determine the module name for {}", info.getFileSpec());
             } else {

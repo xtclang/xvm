@@ -102,17 +102,17 @@ const TemplateModel
         return new TemplateIterable(uniqueId, templateContexts, models);
     }
 
-	@Override
-	conditional Model findByUniqueId(UniqueId uniqueId) {
-	    if (this.uniqueId == uniqueId) {
-	        return True, this;
+    @Override
+    conditional Model findByUniqueId(UniqueId uniqueId) {
+        if (this.uniqueId == uniqueId) {
+            return True, this;
         }
-	    for (Model child : children) {
-	        if (Model found := child.findByUniqueId(uniqueId)) {
-	            return True, found;
+        for (Model child : children) {
+            if (Model found := child.findByUniqueId(uniqueId)) {
+                return True, found;
             }
         }
-	    return False;
+        return False;
     }
 
     // ----- inner service: Builder ----------------------------------------------------------------

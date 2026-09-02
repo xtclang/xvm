@@ -16,7 +16,7 @@ const TemplateMethodExecutionLifecycle<ModelType extends TemplatedMethodModel>
         construct BaseExecutionLifecycle(model);
     }
 
-	@Override
+    @Override
     Iterable<Model> getChildren(EngineExecutionContext context) {
         assert context.registry.register(Model, model.templatedModel, "TemplateModel", Replace);
         // we should always have a single TemplateModel as a child

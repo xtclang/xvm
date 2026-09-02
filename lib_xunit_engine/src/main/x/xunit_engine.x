@@ -142,7 +142,7 @@ module xunit_engine.xtclang.org {
             Tuple t = new Container(template, Lightweight, repo, injector).invoke("run");
             // The temporary test module can now be deleted
             if (File moduleFile := buildDir.findFile(template.parent.name)) {
-            	moduleFile.delete();
+                moduleFile.delete();
             }
             // the run method in the test module returns True if the tests pass, otherwise false.
             // we then turn this into an exit code, 0 for success, or 1 for failure.

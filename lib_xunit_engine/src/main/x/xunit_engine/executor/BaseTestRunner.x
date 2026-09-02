@@ -113,7 +113,7 @@ import xunit.extensions.Extension;
         Boolean success = True;
 
         @Override
-    	void onCompleted(Model model, Result result) {
+        void onCompleted(Model model, Result result) {
             success = success && result.status.success;
         }
     }

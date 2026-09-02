@@ -28,14 +28,14 @@ const MethodExecutionLifecycle<ModelType extends MethodModel>(ModelType model)
     // ----- ExecutionLifecycle methods ------------------------------------------------------------
 
     @Override
-	EngineExecutionContext prepare(EngineExecutionContext context, ExtensionRegistry extensions) {
-	    for (ExtensionProvider ep : model.extensionProviders) {
-	        for (Extension extension : ep.getExtensions(context)) {
-    	        extensions.add(extension, ep);
+    EngineExecutionContext prepare(EngineExecutionContext context, ExtensionRegistry extensions) {
+        for (ExtensionProvider ep : model.extensionProviders) {
+            for (Extension extension : ep.getExtensions(context)) {
+                extensions.add(extension, ep);
             }
         }
 
-	    EngineExecutionContext.Builder builder = context.asBuilder(model)
+        EngineExecutionContext.Builder builder = context.asBuilder(model)
                 .withTestClass(model.testClass)
                 .withTestMethod(model.testMethod);
 
@@ -43,38 +43,37 @@ const MethodExecutionLifecycle<ModelType extends MethodModel>(ModelType model)
             Object fixture = ensureFixture(context, extensions, model.testClass);
             builder.withTestFixture(fixture);
         }
-	    return super(builder.build(), extensions);
+        return super(builder.build(), extensions);
     }
 
     @Override
-	SkipResult shouldBeSkipped(EngineExecutionContext context, ExtensionRegistry extensions) {
-	    if (model.skipResult.skipped) {
-	        return model.skipResult;
-	    }
-	    for (TestExecutionPredicate predicate : context.registry.getAll(TestExecutionPredicate)) {
-	        if (String reason := predicate.shouldSkip(context)) {
-	            return new SkipResult(True, reason);
-	        }
-	    }
-		return SkipResult.NotSkipped;
-	}
+    SkipResult shouldBeSkipped(EngineExecutionContext context, ExtensionRegistry extensions) {
+        if (model.skipResult.skipped) {
+            return model.skipResult;
+        }
+        for (TestExecutionPredicate predicate : context.registry.getAll(TestExecutionPredicate)) {
+            if (String reason := predicate.shouldSkip(context)) {
+                return new SkipResult(True, reason);
+            }
+        }
+        return SkipResult.NotSkipped;
+    }
 
     @Override
-	EngineExecutionContext before(ExceptionCollector     collector,
+    EngineExecutionContext before(ExceptionCollector     collector,
                                   EngineExecutionContext context,
                                   ExtensionRegistry      extensions) {
         return context;
-	}
+    }
 
     @Override
-	EngineExecutionContext execute(ExceptionCollector     collector,
+    EngineExecutionContext execute(ExceptionCollector     collector,
                                    EngineExecutionContext context,
                                    ExtensionRegistry      extensions) {
-
-	    assert context.testFixture != Null;
+        assert context.testFixture != Null;
 
         // Execute any ResourceRegistrationCallback extensions before any other "before" extensions
-	    ResourceRegistrationCallback[] registrars = extensions.get(ResourceRegistrationCallback, True);
+        ResourceRegistrationCallback[] registrars = extensions.get(ResourceRegistrationCallback, True);
         for (ResourceRegistrationCallback registrar : registrars) {
             if (!collector.executeVoid(() -> registrar.registerResources(context.registry))) {
                 break;
@@ -82,14 +81,14 @@ const MethodExecutionLifecycle<ModelType extends MethodModel>(ModelType model)
         }
 
         // Execute any AroundTestCallback extensions before any other "before" extensions
-	    AroundTestCallback[] aroundTest = extensions.get(AroundTestCallback, False);
+        AroundTestCallback[] aroundTest = extensions.get(AroundTestCallback, False);
         for (AroundTestCallback around : aroundTest) {
             if (!collector.executeVoid(() -> around.beforeTest(context))) {
                 break;
             }
         }
 
-	    BeforeEachCallback[] beforeEach = extensions.get(BeforeEachCallback);
+        BeforeEachCallback[] beforeEach = extensions.get(BeforeEachCallback);
 
         // Execute extensions first
         for (BeforeEachCallback before : beforeEach) {
@@ -148,6 +147,6 @@ const MethodExecutionLifecycle<ModelType extends MethodModel>(ModelType model)
         for (AroundTestCallback around : aroundTest) {
             collector.executeVoid(() -> around.afterTest(context));
         }
-		return context;
-	}
+        return context;
+    }
 }

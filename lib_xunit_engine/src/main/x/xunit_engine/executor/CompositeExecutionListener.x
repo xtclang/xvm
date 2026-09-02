@@ -5,30 +5,30 @@ service CompositeExecutionListener(ExecutionListener[] listeners)
         implements ExecutionListener {
 
     @Override
-	void onStarted(Model model) {
-	    for (ExecutionListener listener : listeners) {
-	        listener.onStarted(model);
-	    }
-	}
+    void onStarted(Model model) {
+        for (ExecutionListener listener : listeners) {
+            listener.onStarted(model);
+        }
+    }
 
     @Override
-	void onCompleted(Model model, Result result) {
-	    for (ExecutionListener listener : listeners) {
-	        listener.onCompleted(model, result);
-	    }
-	}
+    void onCompleted(Model model, Result result) {
+        for (ExecutionListener listener : listeners) {
+            listener.onCompleted(model, result);
+        }
+    }
 
     @Override
-	void onSkipped(Model model, String reason) {
-	    for (ExecutionListener listener : listeners) {
-	        listener.onSkipped(model, reason);
-	    }
-	}
+    void onSkipped(Model model, String reason) {
+        for (ExecutionListener listener : listeners) {
+            listener.onSkipped(model, reason);
+        }
+    }
 
     @Override
-	void onPublished(Model model, ReportEntry entry) {
-	    for (ExecutionListener listener : listeners) {
-	        listener.onPublished(model, entry);
-	    }
-	}
+    void onPublished(Model model, ReportEntry entry) {
+        for (ExecutionListener listener : listeners) {
+            listener.onPublished(model, entry);
+        }
+    }
 }

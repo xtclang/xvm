@@ -24,10 +24,10 @@ const ContainerExecutionLifecycle<ModelType extends ContainerModel>(ModelType mo
     // ----- ExecutionLifecycle methods ------------------------------------------------------------
 
     @Override
-	EngineExecutionContext prepare(EngineExecutionContext context, ExtensionRegistry extensions) {
-	    for (ExtensionProvider ep : model.extensionProviders) {
-	        for (Extension extension : ep.getExtensions(context)) {
-    	        extensions.add(extension, ep);
+    EngineExecutionContext prepare(EngineExecutionContext context, ExtensionRegistry extensions) {
+        for (ExtensionProvider ep : model.extensionProviders) {
+            for (Extension extension : ep.getExtensions(context)) {
+                extensions.add(extension, ep);
             }
         }
 
@@ -35,26 +35,26 @@ const ContainerExecutionLifecycle<ModelType extends ContainerModel>(ModelType mo
                 .withTestClass(model.testClass)
                 .withTestMethod(Null);
 
-	    return super(builder.build(), extensions);
-	    }
+        return super(builder.build(), extensions);
+        }
 
     @Override
-	SkipResult shouldBeSkipped(EngineExecutionContext context, ExtensionRegistry extensions) {
-	    for (TestExecutionPredicate predicate : context.registry.getAll(TestExecutionPredicate)) {
-	        if (String reason := predicate.shouldSkip(context)) {
-	            return new SkipResult(True, reason);
+    SkipResult shouldBeSkipped(EngineExecutionContext context, ExtensionRegistry extensions) {
+        for (TestExecutionPredicate predicate : context.registry.getAll(TestExecutionPredicate)) {
+            if (String reason := predicate.shouldSkip(context)) {
+                return new SkipResult(True, reason);
             }
         }
-		return SkipResult.NotSkipped;
+        return SkipResult.NotSkipped;
     }
 
     @Override
-	EngineExecutionContext before(ExceptionCollector     collector,
-	                              EngineExecutionContext context,
-	                              ExtensionRegistry      extensions) {
-
+    EngineExecutionContext before(
+            ExceptionCollector     collector,
+            EngineExecutionContext context,
+            ExtensionRegistry      extensions) {
         EngineExecutionContext beforeContext;
-	    if (Class testClass := model.testClass.is(TestFixture), testClass.lifecycle == Singleton) {
+        if (Class testClass := model.testClass.is(TestFixture), testClass.lifecycle == Singleton) {
             Object fixture = ensureFixture(context, extensions, testClass);
             beforeContext = context.asBuilder(model).withTestFixture(fixture).build();
         } else {
@@ -66,14 +66,14 @@ const ContainerExecutionLifecycle<ModelType extends ContainerModel>(ModelType mo
                 break;
             }
         }
-		return beforeContext;
+        return beforeContext;
     }
 
     @Override
-	void after(ExceptionCollector     collector,
-               EngineExecutionContext context,
-               ExtensionRegistry      extensions) {
-
+        void after(
+                ExceptionCollector     collector,
+                EngineExecutionContext context,
+                ExtensionRegistry      extensions) {
         for (AfterAllCallback after : extensions.get(AfterAllCallback,
                                                      fromParent=False,
                                                      parentFirst=False)) {
