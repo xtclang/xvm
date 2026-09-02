@@ -310,8 +310,7 @@ public class xString
      */
     public static int callAppendTo(Frame frame, StringHandle hString,
                                    ObjectHandle hAppender, int iReturn) {
-        xString         template       = getInstance(frame);
-        MethodStructure methodAppendTo = template.f_methodAppendTo.get(template);
+        MethodStructure methodAppendTo = NativeTemplates.get(frame.container()).get(APPEND_TO);
         ObjectHandle[]  ahArg          = new ObjectHandle[methodAppendTo.getMaxVars()];
         ahArg[0] = hAppender;
 
@@ -451,17 +450,15 @@ public class xString
 
     public static StringHandle emptyString(Container container) {
         xString template = getInstance(container);
-        return template.f_emptyString.get(template);
+        return NativeTemplates.get(container).get(EMPTY_STRING);
     }
 
     public static StringHandle zero(Frame frame) {
-        xString template = getInstance(frame);
-        return template.f_zero.get(template);
+        return NativeTemplates.get(frame.container()).get(ZERO);
     }
 
     public static StringHandle one(Frame frame) {
-        xString template = getInstance(frame);
-        return template.f_one.get(template);
+        return NativeTemplates.get(frame.container()).get(ONE);
     }
 
     private static StringHandle makeHandle(StringHandle owner, char[] achValue) {
@@ -473,8 +470,10 @@ public class xString
     }
 
     private StringHandle makeHandle(char[] achValue) {
+        // the empty handle is the plane's, reached through the table rather than a field; a
+        // non-empty handle is built against this template's canonical class as before
         return achValue.length == 0
-            ? f_emptyString.get(this)
+            ? NativeTemplates.get(container()).get(EMPTY_STRING)
             : new StringHandle(getCanonicalClass(), achValue);
     }
 
@@ -498,33 +497,49 @@ public class xString
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
         xString template = getInstance(container);
-        return template.f_emptyStringArray.get(template);
+        return NativeTemplates.get(container).get(EMPTY_STRING_ARRAY);
     }
 
     // ----- data members --------------------------------------------------------------------------
 
     /**
-     * Owner-local cached empty string handle. String handles carry a TypeComposition, so even the
-     * common empty string must be cached by the owning container/template, not in a JVM global.
+     * The shared string handles and the appendTo method.
+     *
+     * <p>All plane-wide. Each is built from the template's canonical class or its pool, and a
+     * template's are the native container's, so every container already shared them - which is the
+     * whole hazard on master, where {@code makeHandle(char[])} builds every string against
+     * {@code INSTANCE.getCanonicalClass()} and so takes its composition, and through it its owner,
+     * from whichever template won the assignment.</p>
+     *
+     * <p>A string handle carries a TypeComposition and is therefore owner-bearing, so being shared
+     * has to be a decision rather than a side effect. These are shared because they are derived on
+     * the plane and the plane is every container's ancestor, not because a static happened to hold
+     * them.</p>
      */
-    private final Lazy.Bound<xString, StringHandle> f_emptyString =
-            Lazy.ofBound(owner -> new StringHandle(owner.getCanonicalClass(), new char[0]));
+    private static final NativeTemplates.CacheKey<StringHandle> EMPTY_STRING =
+            NativeTemplates.CacheKey.ofPlane("empty String handle", container -> {
+                xString template = NativeTemplates.get(container).string();
+                return new StringHandle(template.getCanonicalClass(), new char[0]);
+            });
 
-    private final Lazy.Bound<xString, StringHandle> f_zero =
-            Lazy.ofBound(owner -> owner.makeHandle("0"));
+    private static final NativeTemplates.CacheKey<StringHandle> ZERO =
+            NativeTemplates.CacheKey.ofPlane("String \"0\" handle",
+                    container -> NativeTemplates.get(container).string().makeHandle("0"));
 
-    private final Lazy.Bound<xString, StringHandle> f_one =
-            Lazy.ofBound(owner -> owner.makeHandle("1"));
+    private static final NativeTemplates.CacheKey<StringHandle> ONE =
+            NativeTemplates.CacheKey.ofPlane("String \"1\" handle",
+                    container -> NativeTemplates.get(container).string().makeHandle("1"));
 
-    private final Lazy.Bound<xString, MethodStructure> f_methodAppendTo = Lazy.ofBound(owner -> {
-        ConstantPool pool    = owner.pool();
-        TypeConstant typeArg = pool.ensureClassTypeConstant(
-                pool.ensureEcstasyClassConstant("Appender"), null,
-                pool.typeChar());
+    private static final NativeTemplates.CacheKey<MethodStructure> APPEND_TO =
+            NativeTemplates.CacheKey.ofPlane("String.appendTo method", container -> {
+                ConstantPool pool    = container.getConstantPool();
+                TypeConstant typeArg = pool.ensureClassTypeConstant(
+                        pool.ensureEcstasyClassConstant("Appender"), null, pool.typeChar());
+                return NativeTemplates.get(container).string()
+                        .getStructure().findMethod("appendTo", 1, typeArg);
+            });
 
-        return owner.getStructure().findMethod("appendTo", 1, typeArg);
-    });
-
-    private final Lazy.Bound<xString, ArrayHandle> f_emptyStringArray =
-            Lazy.ofBound(owner -> xArray.makeStringArrayHandle(owner.container(), Utils.STRINGS_NONE));
+    private static final NativeTemplates.CacheKey<ArrayHandle> EMPTY_STRING_ARRAY =
+            NativeTemplates.CacheKey.ofPlane("empty String[] handle",
+                    container -> xArray.makeStringArrayHandle(container, Utils.STRINGS_NONE));
 }
