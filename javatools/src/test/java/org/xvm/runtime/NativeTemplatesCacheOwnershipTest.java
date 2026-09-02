@@ -32,8 +32,10 @@ public class NativeTemplatesCacheOwnershipTest {
                     ErrorListener.RUNTIME);
             var templates = container.nativeTemplates();
 
-            assertEquals(0, templates.resolvedKeys().size(),
-                    "a fresh container has resolved no keys");
+            // plane-wide values are resolved during boot, before the pool is published, so that a
+            // constant is never first registered into a pool the runtime can already see
+            assertTrue(templates.resolvedKeys().size() > 0,
+                    "the native container must warm its plane-wide values at boot");
 
             var reportBefore = OwnershipDiagnostics.sweepForeignReferences(container);
             assertTrue(reportBefore.isClean(), "baseline sweep: " + reportBefore.render());
@@ -41,7 +43,7 @@ public class NativeTemplatesCacheOwnershipTest {
             TypeComposition clz = xPackage.ensureListMapComposition(container);
             assertEquals(container, clz.getContainer(),
                     "a value cached by key must be owned by the container that cached it");
-            assertEquals(1, templates.resolvedKeys().size(),
+            assertTrue(templates.resolvedKeys().contains("ListMap<String,Class> composition"),
                     "the resolved key must be reported: " + templates.resolvedKeys());
 
             // the cache is reachable from the container, so the sweep walks it: resolving a key

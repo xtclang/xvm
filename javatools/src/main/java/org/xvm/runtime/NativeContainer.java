@@ -239,6 +239,12 @@ public class NativeContainer
             template.initNative();
         }
 
+        // Every template class is now loaded, so every plane-wide key has registered itself.
+        // Resolve them here, while the pool is still unpublished, rather than leaving each to
+        // whichever container first asks - which would be after publication for anything not
+        // already interned, and is what the registration guard exists to reject.
+        nativeTemplates().warmPlaneWideValues();
+
         ensureServiceContext();
     }
 

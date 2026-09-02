@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.function.Function;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentMap;
 
 import static java.util.Objects.requireNonNull;
@@ -861,7 +862,9 @@ public final class NativeTemplates {
          * @param resolve  how to derive it, given the native container
          */
         public static <T> CacheKey<T> ofPlane(String sName, Function<Container, T> resolve) {
-            return new CacheKey<>(sName, resolve, true);
+            CacheKey<T> key = new CacheKey<>(sName, resolve, true);
+            PLANE_KEYS.add(key);
+            return key;
         }
 
         /**
@@ -887,6 +890,26 @@ public final class NativeTemplates {
         @Override
         public String toString() {
             return f_sName;
+        }
+    }
+
+    /**
+     * Resolve every plane-wide value now, while the native container is still booting.
+     *
+     * <p>These used to be assigned in {@code initNative()}, which runs before anything can execute.
+     * Converting them to lazy cells moved the work to first use, which can fall after the pool is
+     * marked runtime-published - and registering a NEW constant then is exactly what
+     * {@code assertRegisterBeforeRuntimePublished} rejects. It happens to pass today because these
+     * ecstasy types are already interned when the XDK modules load, which is luck rather than a
+     * property anyone arranged.</p>
+     *
+     * <p>Resolving them at boot restores the timing {@code initNative()} had, without giving up the
+     * guard. Only a keyed registry makes this possible: lazy cells scattered across template classes
+     * had nothing to enumerate.</p>
+     */
+    void warmPlaneWideValues() {
+        for (CacheKey<?> key : PLANE_KEYS) {
+            get(key);
         }
     }
 
@@ -933,6 +956,14 @@ public final class NativeTemplates {
      */
     private final ConcurrentMap<NativeTemplateRef<?>, Lazy.Bound<NativeTemplates, ?>> f_mapTemplates =
             new ConcurrentHashMap<>();
+
+    /**
+     * Every plane-wide key declared anywhere, so the native container can resolve them at boot
+     * rather than leaving each to its first caller. A key registers itself when its declaring class
+     * initialises, and every native template class is instantiated during boot, so the set is
+     * complete by the time the boot walks it.
+     */
+    private static final List<CacheKey<?>> PLANE_KEYS = new CopyOnWriteArrayList<>();
 
     /**
      * Owner-local values derived once per container, by key.
