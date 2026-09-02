@@ -1,7 +1,9 @@
 package org.xvm.runtime;
 
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.OutputStream;
 import java.io.PrintStream;
 
 import java.lang.reflect.Field;
@@ -39,11 +41,11 @@ public class LspTest {
     private static Path dirOut;
 
     /** Tee of System.out, installed before any xvm class loads so the native console is captured. */
-    private static final java.io.ByteArrayOutputStream TEE = new java.io.ByteArrayOutputStream();
+    private static final ByteArrayOutputStream TEE = new ByteArrayOutputStream();
 
     static void main(String[] asArg) throws Exception {
         PrintStream realOut = System.out;
-        System.setOut(new java.io.PrintStream(new java.io.OutputStream() {
+        System.setOut(new PrintStream(new OutputStream() {
             @Override public void write(int b) { realOut.write(b); TEE.write(b); }
             @Override public void write(byte[] b, int off, int len) {
                 realOut.write(b, off, len); TEE.write(b, off, len);
@@ -57,6 +59,7 @@ public class LspTest {
         LspSupport.instance().configure(repo(), null);
 
         testCompile();
+        testRun();
 //        reproA1_failureIsNotAttributable();
 //        reproA4_joinLatencyFloor();
 //        reproB1_sharedPoolGrowsUnbounded();
@@ -74,6 +77,33 @@ public class LspTest {
         if (module != null || !errs.hasSeriousErrors()) {
             throw new IllegalStateException(
                     "invalid source did not report an error: " + errs.getErrors());
+        }
+    }
+
+    private static void testRun() throws Exception {
+        ErrorList       errs   = new ErrorList(25);
+        ModuleStructure module = LspSupport.instance().compile(helloModule("Hello"), repo(), errs);
+        if (module == null || errs.hasSeriousErrors()) {
+            throw new IllegalStateException("compile of Hello failed: " + errs.getErrors());
+        }
+
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        Control control = LspSupport.instance().run(
+                module, new PrintStream(bytes, true), null, null, errs);
+        if (control == null || errs.hasSeriousErrors()) {
+            throw new IllegalStateException("run of Hello failed to start: " + errs.getErrors());
+        }
+
+        long timeout = System.currentTimeMillis() + 10_000;
+        while (control.running() && System.currentTimeMillis() < timeout) {
+            Thread.sleep(10);
+        }
+        if (control.running()) {
+            control.kill();
+            throw new IllegalStateException("run of Hello did not finish");
+        }
+        if (!bytes.toString().contains("hello from Hello")) {
+            throw new IllegalStateException("run of Hello produced unexpected output: " + bytes);
         }
     }
 

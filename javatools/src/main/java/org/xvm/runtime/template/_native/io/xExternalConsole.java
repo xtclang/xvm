@@ -3,13 +3,17 @@ package org.xvm.runtime.template._native.io;
 
 import java.io.PrintStream;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.InjectionKey;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
@@ -34,6 +38,31 @@ public class xExternalConsole
         if (fInstance) {
             INSTANCE = this;
         }
+    }
+
+    /**
+     * Register an external console as a named native resource.
+     *
+     * @return the ID contained in the registered resource name
+     */
+    public static long register(NativeContainer container, PrintStream out) {
+        long id = NEXT_ID.incrementAndGet();
+        container.addResourceSupplier(
+                new InjectionKey(resourceName(id), xTerminalConsole.INSTANCE.getCanonicalType()),
+                (frame, opts) -> INSTANCE.ensureConsole(frame, out));
+        return id;
+    }
+
+    /**
+     * Remove a named external console resource.
+     */
+    public static void unregister(NativeContainer container, long id) {
+        container.removeResourceSupplier(
+                new InjectionKey(resourceName(id), xTerminalConsole.INSTANCE.getCanonicalType()));
+    }
+
+    private static String resourceName(long id) {
+        return "console_" + id;
     }
 
     /**
@@ -91,7 +120,8 @@ public class xExternalConsole
                             out.flush();
                             return Op.R_NEXT;
                         };
-                return stepNext.proceed(frame);
+                frame.m_frameNext.addContinuation(stepNext);
+                return Op.R_CALL;
 
             case Op.R_EXCEPTION:
                 return iResult;
@@ -117,4 +147,6 @@ public class xExternalConsole
             f_out = out;
         }
     }
+
+    private static final AtomicLong NEXT_ID = new AtomicLong();
 }

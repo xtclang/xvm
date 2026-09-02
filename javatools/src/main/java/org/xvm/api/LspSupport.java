@@ -33,8 +33,6 @@ import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
-import org.xvm.javajit.JitConnector;
-
 import org.xvm.tool.Console;
 import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
@@ -126,11 +124,8 @@ public class LspSupport {
         synchronized (LOCK) {
             if (connector == null) {
                 Connector connector = useJit()
-                        ? new JitConnector(cfgRepo)
-                        : new InterpreterConnector(cfgRepo);
-                connector.loadModule("runner.xtclang.org");
-                connector.start(null);
-                // TODO GG
+                        ? JitControl.createConnector(cfgRepo)
+                        : InterpreterControl.createConnector(cfgRepo);
                 this.connector = connector;
             }
             return connector;
@@ -200,6 +195,8 @@ public class LspSupport {
         verifyConfigured();
         return ensureConnector().getConstantPool();
     }
+
+    // ----- compiler support ----------------------------------------------------------------------
 
     /**
      * Compile a module that is in a String.
@@ -397,6 +394,8 @@ public class LspSupport {
         File console();
     }
 
+    // ----- run support ---------------------------------------------------------------------------
+
     /**
      * Create a runtime container and execute the provided module.
      *
@@ -458,9 +457,42 @@ public class LspSupport {
             String                    customInjector,
             ErrorListener             errs) {
         verifyConfigured();
-        // TODO GG
-        return null;
+
+        ModuleRepository repository = input == null || input == cfgRepo
+                ? cfgRepo
+                : new LinkedRepository(input, cfgRepo);
+        ModuleStructure module = version == null
+                ? repository.loadModule(moduleName)
+                : repository.loadModule(moduleName, version, true);
+        if (module == null) {
+            if (errs != null) {
+                errs.log(ERROR, version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
+                        new Object[] {moduleName, version}, null);
+            }
+            return null;
+        }
+
+        if (rootDir != null || injections != null && !injections.isEmpty()
+                || customInjector != null || cfgInjector != null) {
+            throw new UnsupportedOperationException(
+                    "Custom file systems and injectors are not implemented yet");
+        }
+
+        try {
+            Connector connector = ensureConnector();
+            return useJit()
+                    ? JitControl.create(connector, module, repository, console, errs)
+                    : InterpreterControl.create(connector, module, repository, console, errs);
+        } catch (RuntimeException e) {
+            if (errs != null) {
+                errs.log(ERROR, ERR_CREATE_APP_CONTAINER,
+                        new Object[] {e, "Unable to start " + moduleName}, module);
+            }
+            return null;
+        }
     }
+
+    // ----- constants -----------------------------------------------------------------------------
 
     /**
      * Informational only: App starting.

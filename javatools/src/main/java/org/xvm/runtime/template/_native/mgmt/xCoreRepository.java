@@ -63,7 +63,7 @@ public class xCoreRepository
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         switch (sPropName) {
         case "moduleNames": {
-            ModuleRepository repo     = f_container.getModuleRepository();
+            ModuleRepository repo     = ((CoreRepoHandle) hTarget).f_repository;
             Set<String>      setNames = repo.getModuleNames();
 
             ArrayHandle hArray = xString.makeArrayHandle(setNames.toArray(Utils.NO_NAMES));
@@ -79,7 +79,7 @@ public class xCoreRepository
         switch (method.getName()) {
         case "getModule": { // conditional ModuleTemplate getModule(String name, Version? version = Null)
             String           sName  = ((StringHandle) ahArg[0]).getStringValue();
-            ModuleRepository repo   = f_container.getModuleRepository();
+            ModuleRepository repo   = ((CoreRepoHandle) hTarget).f_repository;
             ModuleStructure  module = repo.loadModule(sName);
 
             if (module != null && !module.isMainModule()
@@ -116,14 +116,29 @@ public class xCoreRepository
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     public ObjectHandle makeHandle() {
-        return new CoreRepoHandle(m_clzRepo);
+        return makeHandle(f_container.getModuleRepository());
+    }
+
+    /**
+     * Create a handle for the specified native repository.
+     *
+     * @param repository  the repository represented by the handle
+     *
+     * @return the repository handle
+     */
+    public ObjectHandle makeHandle(ModuleRepository repository) {
+        return new CoreRepoHandle(m_clzRepo, repository);
     }
 
     public static class CoreRepoHandle
             extends ObjectHandle {
-        protected CoreRepoHandle(TypeComposition clazz) {
+        protected CoreRepoHandle(TypeComposition clazz, ModuleRepository repository) {
             super(clazz);
+
+            f_repository = repository;
         }
+
+        protected final ModuleRepository f_repository;
     }
 
     private TypeComposition m_clzRepo;
