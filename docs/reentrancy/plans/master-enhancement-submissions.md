@@ -88,6 +88,7 @@ surface graduate into individual rows on the bug list.
 | E33 | Census of every `Object` in the tree: 61 are `equals` and untouchable, ~132 are real | reference row; feeds E27/E28/E30/E32 | independent | 393 array initializers noted separately |
 | E34 | `ResolutionCollector.getErrorListener()` smuggles the error sink; pass it explicitly | 1 PR, ~60 mechanical sites | complements E32 | removes `NameResolver`'s un-cleaned stash |
 | E35 | Finish the listener: parallel gap, last 3 mutable fields, `withListener` | A-C one PR; D incremental; E one line | after E32/E34 | the parallel gap and the ambient default are one problem |
+| E36 | The debugger reads another thread's fiber state; the monitor meant to stop that is only entered at breakpoints | 1 record + 1 volatile + 3 reads | independent | analysis only - no reproduction; publish a snapshot instead |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -3212,3 +3213,105 @@ So: parameters as the rule, `withListener` as a named exception for a class whos
 field and where threading a parameter through thousands of call sites is disproportionate. If it is
 added, its javadoc should say that explicitly, so the next person does not read it as an
 endorsement.
+
+---
+
+## E36 — The debugger reads another thread's fiber state directly, and the monitor that was meant to prevent it does not
+
+**Status: analysis, not a reproduction.** The race is argued from the code and the reachability is
+established, but no torn read has been observed. It is written up so the decision to file or not is
+an informed one, and so the design point survives even if nobody files it. It only bites when a
+debugger is attached, which is a developer-only path - severity is low, and the interest is the
+design, not the incident.
+
+Master carries every part of this identically; the line numbers below are `origin/master`.
+
+### The confinement, as the code states it
+
+`Fiber` documents its own rule - *"Can be mutated only on the fiber's service thread"*,
+*"Can be accessed only on the fiber's service thread"* - and backs it by making only two of its
+~14 fields `volatile`:
+
+```java
+private volatile FiberStatus m_status;      // Fiber.java:594
+public  volatile boolean     m_fResponded;  // Fiber.java:608
+```
+
+Everything else - `m_frame`, `m_frameBlocker`, the pending-request slot, the token map, the op
+counter - is a plain field, which is only sound if nothing outside the owning service thread ever
+reads it.
+
+### Who violates it
+
+`DebugConsole` walks **other** service contexts' fibers and reads exactly those plain fields:
+
+```java
+for (Fiber fiber : ctx.getFibers()) {          // DebugConsole.java:1909
+    Frame frame = fiber.getFrame();            // plain m_frame
+    sb.append(fiber.reportWaiting());          // plain pending-request state
+    Frame frameBlocker = fiber.getBlocker();   // plain m_frameBlocker
+```
+
+### Why the guard that was supposed to make this safe does not
+
+`DebugConsole` says so in a comment (`DebugConsole.java:112`):
+
+> *"For now, by making this method synchronized we stop all services while debugger is active."*
+
+That is true only of a service thread that **executes a breakpoint check**. The monitor is entered
+from `Nop.process` (gated on `isDebuggerActive()`), the synthetic breakpoint op
+(`ServiceContext:770`), and the exception/assert paths. A service running ordinary code with no
+breakpoint planted in it never acquires the monitor at all.
+
+So while the debugger is stopped at a breakpoint in service A, service B keeps running, never
+touches the monitor, and the debugger thread - inside `synchronized`, which buys nothing against a
+thread that never synchronizes on the same object - reads B's fiber fields while B mutates them.
+There is no happens-before edge in either direction.
+
+The sharpest edge is the pending-request map, a plain `HashMap`: iterating its `values()` while the
+owning thread does `put`/`remove` can throw `ConcurrentModificationException` or observe a
+partially built map. Note that `f_setFibers` next to it **is** a `ConcurrentSkipListSet`, so the
+collection-safety question was asked once and answered for one collection and not the other, which
+reads more like an oversight than a decision.
+
+### What NOT to do
+
+Making the fields `final` is the wrong instinct and worth naming, because it is the obvious one. A
+`Fiber` is a state machine - status, current frame, op count and timeout all change as it runs -
+so `final` fights the design rather than fixing it. Marking them all `volatile` is equally wrong:
+it would buy per-field visibility and still hand the debugger a torn view assembled from fields
+read at different instants, while taxing the hot path that the confinement exists to keep cheap.
+
+### The change
+
+Separate the thread-confined working state from what a cross-thread reader is allowed to see. The
+service thread publishes an immutable snapshot - status, frame, blocker, a pending summary - through
+a single `volatile` reference, and `DebugConsole` reads only that:
+
+```java
+record FiberSnapshot(FiberStatus status, Frame frame, Frame blocker, String pending) {}
+
+private volatile FiberSnapshot m_snapshot;   // published by the service thread
+public  FiberSnapshot snapshot() { return m_snapshot; }
+```
+
+Three things follow at once: the reader gets a coherent view instead of one assembled from fields
+that moved underneath it; the `volatile` write/read is a real happens-before edge; and the working
+fields stay plain and private, so the confinement becomes true rather than aspirational.
+
+This is a design change, not a typing change - the same shape as [E30](#e30), and the same lesson as
+the retrospective in [generics-api-audit.md](../generics-api-audit.md): fix where the state lives
+rather than decorating the declaration.
+
+### Width
+
+One record, one volatile field, one publish point on the service thread, and the three
+`DebugConsole` reads. `getFibers()` returning the live set (`ServiceContext:161-163` on master;
+wrapped in `unmodifiableSet` on this branch, which changes nothing about the race) should be
+returned as a copy in the same change.
+
+### If it is filed
+
+File as an enhancement, not a bug: there is no reproduction, and the honest headline is *"the
+debugger's stop-the-world is not stop-the-world"*, which is a design claim. Bundling it with E30
+under "state belongs where it is owned" would tell one story rather than two.
