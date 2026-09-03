@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import java.util.concurrent.CompletableFuture;
+
+import java.util.stream.Collectors;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -351,31 +353,23 @@ public class Fiber
         });
     }
 
-    /**
-     * The pending-request field holds either a single Message or a map of them; the map's own type
-     * cannot be expressed on an Object field, so the cast lives here once rather than at each use.
-     * Keys are futures used purely as identities, so their payload type is irrelevant.
-     */
-    @SuppressWarnings("unchecked")
-    private static Map<CompletableFuture<?>, Message<?>> pendingMap(Object oPending) {
-        return (Map<CompletableFuture<?>, Message<?>>) oPending;
-    }
-
     protected void addDependee(Message<?> request) {
         if (request.m_fiber == this) {
             return;
         }
 
-        Object oPending = m_oPendingRequests;
-        if (oPending == null) {
-            m_oPendingRequests = request;
-        } else if (oPending instanceof Message<?> requestPrev) {
+        Message<?> requestPrev = m_requestPending;
+        if (requestPrev != null) {
+            // a second request arrived: promote the single slot to a map
             Map<CompletableFuture<?>, Message<?>> mapPending = new HashMap<>();
             mapPending.put(requestPrev.f_future, requestPrev);
             mapPending.put(request.f_future, request);
-            m_oPendingRequests = mapPending;
+            m_requestPending = null;
+            m_mapPending     = mapPending;
+        } else if (m_mapPending != null) {
+            m_mapPending.put(request.f_future, request);
         } else {
-            pendingMap(oPending).put(request.f_future, request);
+            m_requestPending = request;
         }
     }
 
@@ -384,11 +378,10 @@ public class Fiber
             return;
         }
 
-        Object oPending = m_oPendingRequests;
-        if (oPending instanceof Message<?>) {
-            m_oPendingRequests = null;
-        } else {
-            pendingMap(oPending).remove(request.f_future);
+        if (m_requestPending != null) {
+            m_requestPending = null;
+        } else if (m_mapPending != null) {
+            m_mapPending.remove(request.f_future);
         }
     }
 
@@ -514,30 +507,20 @@ public class Fiber
         assert m_status == FiberStatus.Waiting
             || m_status == FiberStatus.Terminating;
 
-        Object oPending = m_oPendingRequests;
-        if (oPending == null) {
-            return " for closure";
-        }
-
         // TODO: check for the deadlock
-        if (oPending instanceof Message<?> msg) {
-            Fiber fiber = msg.m_fiber;
+        Message<?> requestOne = m_requestPending;
+        if (requestOne != null) {
+            Fiber fiber = requestOne.m_fiber;
             return " for " + (fiber == null ? "initial" : fiber);
         }
 
-        StringBuilder sb     = new StringBuilder(" for [");
-        boolean       fFirst = true;
-        for (Message<?> request : pendingMap(oPending).values()) {
-            if (fFirst) {
-                fFirst = false;
-            } else {
-                sb.append(", ");
-            }
-            Fiber fiber = request.m_fiber;
-            sb.append(fiber);
+        if (m_mapPending == null) {
+            return " for closure";
         }
-        sb.append(']');
-        return sb.toString();
+
+        return m_mapPending.values().stream()
+                .map(request -> String.valueOf(request.m_fiber))
+                .collect(Collectors.joining(", ", " for [", "]"));
     }
 
 
@@ -703,9 +686,18 @@ public class Fiber
     private int m_cPending;
 
     /**
-     * Pending requests: Message | Map<CompletableFuture<?>, Message<?>>.
+     * Pending requests originated by this fiber, in two fields rather than one erased slot.
+     *
+     * <p>At most one is ever non-null. A fiber almost always has a single request outstanding, and
+     * allocating a map for it would be waste, so the single case lives in {@link #m_requestPending}
+     * and the map is created only when a second request arrives. Both were previously one
+     * {@code Object} field holding {@code Message | Map}, with the union written down in a comment
+     * and recovered by {@code instanceof} plus an unchecked cast at each of the three uses.</p>
      */
-    private Object m_oPendingRequests;
+    private Message<?> m_requestPending;
+
+    /** @see #m_requestPending */
+    private Map<CompletableFuture<?>, Message<?>> m_mapPending;
 
     /**
      * Pending uncaptured futures; values are AsyncSection? handlers. Can be accessed only on the

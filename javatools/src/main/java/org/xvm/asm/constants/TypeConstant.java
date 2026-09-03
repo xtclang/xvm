@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
+import java.lang.invoke.VarHandle;
+
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
@@ -91,6 +93,8 @@ import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
+
+import org.xvm.util.concurrent.VarHandles;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
@@ -8196,7 +8200,7 @@ public abstract sealed class TypeConstant
     private Map<RelationKey, Relation> ensureRelationMap() {
         Map<RelationKey, Relation> mapRelations = m_mapRelations;
         if (mapRelations == null) {
-            s_tloInProgress.compareAndSet(this, null, new TransientThreadLocal<>());
+            s_tloInProgress.compareAndSet(this, null, new TransientThreadLocal<Set<RelationKey>>());
             mapRelations = m_mapRelations = new ConcurrentHashMap<>();
         }
         return mapRelations;
@@ -8544,8 +8548,15 @@ public abstract sealed class TypeConstant
      * The set of "isA() in progress" types.
      */
     private transient volatile TransientThreadLocal<Set<RelationKey>> m_tloInProgress;
-    private static final AtomicReferenceFieldUpdater<TypeConstant, TransientThreadLocal> s_tloInProgress =
-            AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TransientThreadLocal.class, "m_tloInProgress");
+    /**
+     * A VarHandle rather than an AtomicReferenceFieldUpdater, because the updater cannot be
+     * written down without a raw type: it needs a class literal for the field's type, and
+     * {@code TransientThreadLocal<Set<RelationKey>>.class} is not expressible in Java - a class
+     * literal is always raw in its own type arguments. A VarHandle names the field instead of its
+     * type, so nothing is erased to make the declaration compile.
+     */
+    private static final VarHandle s_tloInProgress =
+            VarHandles.of(TypeConstant.class, "m_tloInProgress");
 
     /**
      * A cache of "consumes" responses.

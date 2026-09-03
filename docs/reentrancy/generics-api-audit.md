@@ -1120,11 +1120,36 @@ Measured, not estimated. Numbers from `javac -Xlint:all` with the warning cap li
   `@SuppressWarnings("unchecked")` costs no runtime safety - each override gets a synthetic bridge
   that checkcasts to the concrete handle, verified in the bytecode, so threading a `Class<H>`
   through 27 constructors to call `Class::cast` would add a redundant second check and nothing else.
+  **E25 is closed as done-as-far-as-it-pays (2026-09-03).** The remaining buckets were attempted
+  and measured, not estimated, and the row below is kept only to record what was tried. The
+  successor is **E30** - move the storage operations onto the handle - which supersedes the type
+  parameter rather than extending it.
+
   What is left, in decreasing tractability:
-  - **`BitView` / `ByteView` (~35 casts).** Both interfaces declare `getBits`/`extractBit`/
-    `assignBit` and `getBytes`/`extractByte`/`assignByte` over `DelegateHandle`. Generifying them
-    as `BitView<H extends DelegateHandle>` is the same mechanical change and the natural next
-    increment.
+  - **`BitView` / `ByteView` - ATTEMPTED AND REVERTED, do not retry as generification.** The row
+    used to claim ~35 casts and "the same mechanical change and the natural next increment". Both
+    claims are wrong, measured by doing it: `ByteView<H>` plus `BitView<H> extends ByteView<H>`,
+    pushed through the hierarchy until it compiled clean, removed **6** casts (134 -> 128) and
+    turned **4 call sites into raw types**.
+
+    The reason is structural. A caller discovers the view by `instanceof` on the *template* while
+    the handle arrives separately:
+
+    ```java
+    ClassTemplate tDelegate = hDelegate.getTemplate();
+    if (tDelegate instanceof BitView tView) {
+        return tView.getBits(hDelegate, ofStart, cSize, fReverse);
+    }
+    ```
+
+    The handle-to-template pairing is established at run time and no type parameter can express
+    it, so generifying only moves a *checked* cast out of the implementation and leaves a raw call
+    site behind. This is exactly what the retrospective below predicts: "added ahead of that
+    decision it relocates casts into wildcards and buys nothing."
+
+    Two traps worth recording, because both produce a green build that proves nothing: leaving
+    `implements ByteView` un-parameterized makes it raw and silently erases every signature; and
+    the resulting raw call sites raise no `rawtypes` warning in this build's lint configuration.
   - **`callEquals` / `compareIdentity` (~28 casts).** These take two handles, not a target, and
     either may be foreign, so `narrow()` does not apply - they want `instanceof` guards, the shape
     already used in `xRTSlicingDelegate.compareIdentity` for master bug 37.
