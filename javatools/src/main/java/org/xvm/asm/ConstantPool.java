@@ -1282,7 +1282,7 @@ public class ConstantPool
      * @return a NamedCondition
      */
     public NamedCondition ensureNamedCondition(String sName) {
-        NamedCondition cond = (NamedCondition) ensureLocatorLookup(Format.ConditionNamed).get(sName);
+        NamedCondition cond = findLocated(NamedCondition.class, Format.ConditionNamed, sName);
         if (cond == null) {
             cond = register(new NamedCondition(this, ensureStringConstant(sName)));
         }
@@ -1298,7 +1298,7 @@ public class ConstantPool
      * @return a PresentCondition
      */
     public PresentCondition ensurePresentCondition(Constant constId) {
-        PresentCondition cond = (PresentCondition) ensureLocatorLookup(Format.ConditionPresent).get(constId);
+        PresentCondition cond = findLocated(PresentCondition.class, Format.ConditionPresent, constId);
         if (cond == null) {
             cond = register(new PresentCondition(this, constId));
         }
@@ -1339,7 +1339,7 @@ public class ConstantPool
      * @return a VersionedCondition
      */
     public VersionedCondition ensureVersionedCondition(VersionConstant constVer) {
-        VersionedCondition cond = (VersionedCondition) ensureLocatorLookup(Format.ConditionVersioned).get(constVer);
+        VersionedCondition cond = findLocated(VersionedCondition.class, Format.ConditionVersioned, constVer);
         if (cond == null) {
             cond = register(new VersionedCondition(this, constVer));
         }
@@ -1359,7 +1359,7 @@ public class ConstantPool
             return condNot.getUnderlyingCondition();
         }
 
-        NotCondition condNot = (NotCondition) ensureLocatorLookup(Format.ConditionNot).get(cond);
+        NotCondition condNot = findLocated(NotCondition.class, Format.ConditionNot, cond);
         if (condNot == null) {
             condNot = register(new NotCondition(this, cond));
         }
@@ -1491,8 +1491,7 @@ public class ConstantPool
      */
     public IdentityConstant ensureClassConstant(TypeConstant type) {
         // check the pre-existing constants first
-        Map<Object, Constant> mapLocator = ensureLocatorLookup(Format.DecoratedClass);
-        IdentityConstant      constant   = (IdentityConstant) mapLocator.get(type);
+        IdentityConstant constant = findLocated(IdentityConstant.class, Format.DecoratedClass, type);
         if (constant != null) {
             return constant;
         }
@@ -1504,7 +1503,7 @@ public class ConstantPool
         // drop the immutability and access
         if (type.isImmutabilitySpecified() || type.isAccessSpecified()) {
             type     = type.removeImmutable().removeAccess();
-            constant = (IdentityConstant) mapLocator.get(type);
+            constant = findLocated(IdentityConstant.class, Format.DecoratedClass, type);
             if (constant != null) {
                 return constant;
             }
@@ -2203,8 +2202,7 @@ public class ConstantPool
         }
 
         // the ParentClassConstant's locator is the underlying constClass
-        ParentClassConstant constant = (ParentClassConstant)
-                ensureLocatorLookup(Format.ParentClass).get(constClass);
+        ParentClassConstant constant = findLocated(ParentClassConstant.class, Format.ParentClass, constClass);
         if (constant != null) {
             return constant;
         }
@@ -2374,8 +2372,7 @@ public class ConstantPool
         assert constId != null && !(constId instanceof TypeConstant);
 
         // the TerminalClassConstant's locator is the underlying constId
-        TypeConstant constType = (TerminalTypeConstant)
-                ensureLocatorLookup(Format.TerminalType).get(constId);
+        TypeConstant constType = findLocated(TerminalTypeConstant.class, Format.TerminalType, constId);
         if (constType == null) {
             constType = register(new TerminalTypeConstant(this, constId));
         }
