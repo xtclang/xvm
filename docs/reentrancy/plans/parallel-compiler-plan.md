@@ -128,6 +128,46 @@ point at which the read path has to actually be safe:
 module matches its sequential result - the shape `EngineParallelCompileTest` already has. A single
 green run is not evidence; iterate.
 
+### T4 progress - two approaches tried, neither shipped
+
+**The failure, precisely.** With T1 applied, the FIRST exception under concurrency is not the
+NullPointerException that dominates the output - that is downstream. It is:
+
+```
+IllegalStateException: Failure to make progress on a TypeInfo for private ConstOrdinalListTest;
+deferred types=[private Module, TerminalType{type=Module}, private Native(Module), ...]
+    at TypeConstant.ensureTypeInfoInWindow
+```
+
+Two threads building the TypeInfo of the SAME shared library `TypeConstant` interfere. The
+deferred-TypeInfo machinery is built for one thread recursing into a type it is already building -
+that is what the placeholder is for - and has no answer for two threads doing it at once.
+
+**Approach A - lock per TypeConstant during the build. Not attempted, and deliberately.** The
+recursion is a graph: two threads entering it at different points can each hold what the other
+needs. A deadlock here would be worse than the current failure, which at least reports itself.
+
+**Approach B - warm the library's TypeInfo once, single-threaded, during preparation. Tried,
+reverted.** The idea is sound: library types are the only shared ones, so if they are complete
+before any compile starts, concurrent compiles only read them. Measured:
+
+| | sequential | parallel |
+| --- | --- | --- |
+| T1 alone | 42 ok, 0 threw | **0/42** |
+| T1 + warming | **33 ok, 9 threw** | 30/42 |
+
+Parallel improved from 0 to 30 of 42, which says the direction is right. Sequential got *worse*,
+and the cause was in the warm-up itself: it wrapped each type in `catch (RuntimeException ignore)`
+so that a library type which cannot build a TypeInfo standalone would not fail preparation. That
+left a **half-built TypeInfo cached on a shared TypeConstant**, which then poisoned every later
+compile. The swallow did not paper over a failure; it manufactured one.
+
+**What that tells the next attempt.** Warming is still the promising direction, but it needs the
+opposite of a swallow: a type whose TypeInfo cannot be completed during warm-up must leave **no**
+cached entry behind, and the failure has to be recorded rather than discarded. `setTypeInfo` is a
+"one way" setter that keeps whatever is better than what is there, with no notion of "this attempt
+failed, remove it" - that gap is the thing to close first.
+
 ## T5 - Prove diagnostics stay per request
 
 Each compile already collects into its own `ErrorList`, but that has not been tested under
