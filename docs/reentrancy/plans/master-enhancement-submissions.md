@@ -380,6 +380,60 @@ inability to run repeated/nested workloads follow directly.
 
 **Ordering.** Independent; land after E5. Gives E1 a clean owner.
 
+### Reconciled against the LSP branch (`cpurdy/LSPAPI`, PR #545) - 2026-09-03
+
+That branch is the other half of this row: where E4 has a Java host creating nested containers
+directly, it has `LspSupport` driving a resident Ecstasy app in container zero (`lib_runner`) as
+the container factory, reached through `MainContainer.postRequest(...)`. Both are reasonable and
+the PR body says so; what follows is what was taken from it, what was not, and why.
+
+**Taken.**
+
+- **Per-run injections.** `LspSupport.run(module, console, rootDir, injections, errs)` grants
+  values to one run. `XtcEngine.run` now takes the same `Map<String, List<String>>` and registers
+  it through `NestedContainer.registerHostResource` - a hook that already existed, documented for
+  exactly this, with no callers. Values land on the run's own container, so they outrank the
+  native plane, die with it, and one run cannot see another's. `PerRunInjectionTest` runs one
+  module twice on one engine and each run sees its own value.
+- **The value semantics**, unchanged from `MainContainer`'s existing custom-injection contract: a
+  single value satisfies a `String` injection, the whole list satisfies a `String[]` one. Both
+  shapes are registered per name because an injection is keyed by name AND type.
+
+**Already present, and kept as-is.**
+
+- **`RunControl`** was written before this comparison and is a superset of their `Control`: it
+  adds `error()`, and returns `Optional` rather than null so "still running", "failed" and
+  "returned null" cannot be confused. `kill()` documents its own limitation rather than pretending
+  to unwind a running fiber.
+- **`ErrorListener` threaded through the compiler.** Their branch changes
+  `Compiler(TypeCompositionStatement, ErrorList)` to take an `ErrorListener` - the same move this
+  branch made independently. Worth noting as convergence: two designs reached it separately.
+
+**Deliberately NOT taken.**
+
+- **The singleton.** `LspSupport.instance()` plus a one-shot `configure(coreRepo, injector)` is
+  process-global, first-configuration-wins state - the shape this branch has spent its time
+  removing (the ambient pool, `getCurrentContext()`, the `INSTANCE` statics, and the injected
+  filesystem resources fixed as issue 576, which is the same failure mode exactly). It also
+  forecloses the isolated parallel compiles their own ToolConnector proposal asks for in §3.5.
+- **The ambient pool.** Their `MainContainer.postRequest` and `Compiler` still use
+  `ConstantPool.withPool(...)`; `Compiler` here has none.
+- **`ConcurrentHashMap` for the injection maps, and the supplier null-guard.** Checked and
+  rejected as not applicable: here `addResourceSupplier` is private and runs only during
+  `initNative()`, so the maps are write-once-then-read, and nothing can leave a name whose key has
+  no supplier. Both are prerequisites for their public add/remove, not fixes for a race we have.
+  If dynamic injection is adopted, both come with it.
+- **A capturing console.** They built `xExternalConsole` (152 lines) plus an Ecstasy-side type for
+  this, which is what `Control.console()` returns. Building a second one here would be waste; take
+  theirs. This is the one real gap remaining in the engine's run API.
+
+**The ownership consequence, which is easy to misread.** Under the container-zero model injections
+resolve in the *runner's* frame, so the owner is an ancestor of every run container - the shape
+measured on `runner.x`, which sweeps clean. **Their topology therefore never hits issue 576's
+sibling leak.** That does not make the fix redundant: it is what makes the Java-side
+direct-nested-container path safe, and that path is the one master does not have. Anyone reading
+576 in the light of the runner model should not conclude the work was unnecessary.
+
 **Gate.** `XtcEngineTest` (in-memory compile + nested run) + the sequential/nested
 stress harness. Full runbook:
 [instructions-port-run-compile-api-to-master.md](../instructions-port-run-compile-api-to-master.md).
