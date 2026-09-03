@@ -1046,7 +1046,14 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      * @return True iff the value can be loaded from off-heap storage
      * @return the value associated with the specified transaction id and key (conditional)
      */
+@Inject Console console;
     protected conditional Value loadValueFromOffHeap(Int txId, Key key) {
+        if (Map<Key, MapValue> uncommitted := modsByTx.get(txId),
+            MapValue value := uncommitted.get(key)) {
+
+            assert value.is(Value);
+            return True, value;
+        }
         if (FileLayout fileLayout := storageLayout.get(txId)) {
             String fileName = nameForKey(key);
             if (EntryLayout entryLayout := fileLayout.get(fileName)) {
