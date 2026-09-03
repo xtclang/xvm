@@ -126,8 +126,11 @@ public class ComponentBodyCopyTest {
     public void bodyCopyFieldRatchet() {
         assertFields(XvmStructure.class, "m_xsParent");
         assertFields(Component.class,
+                // m_FVisited is gone: it was a recursion marker for resolveContributedName kept
+                // on the shared component, so a peer's descent looked like a cycle. It moved to
+                // TypeSystemThread, where the thread that is recursing owns it.
                 "m_sibling", "m_constId", "m_cond", "m_nFlags", "m_listContribs", "m_sDoc",
-                "m_abChildren", "m_childByName", "m_fModified", "m_FVisited");
+                "m_abChildren", "m_childByName", "m_fModified");
         assertFields(ClassStructure.class,
                 "m_mapParams", "m_constPath", "m_typeFormal", "m_typeCanonical", "m_safety",
                 "m_aAnnoClass", "m_aAnnoMixin");

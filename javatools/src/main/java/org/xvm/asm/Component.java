@@ -2090,17 +2090,27 @@ public abstract sealed class Component
                 if (clzContrib == null) {
                     return ResolutionResult.UNKNOWN;
                 }
-                if (m_FVisited != null && m_FVisited.booleanValue() == fAllowInto) {
+                // Ask THIS thread whether it is already inside this component. The marker used
+                // to be a field here, which meant a shared library component could be "being
+                // visited" by a peer and this thread would call that a cycle.
+                TypeSystemThread work     = TypeSystemThread.current();
+                Boolean          fVisited = work.visitedWith(this);
+                if (fVisited != null && fVisited.booleanValue() == fAllowInto) {
                     // recursive contribution
                     errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
                             new Object[] {getName(), contrib.getComposition().toString().toLowerCase()}, this);
                     return ResolutionResult.ERROR;
                 }
 
-                m_FVisited = fAllowInto;
-                ResolutionResult result =
-                        clzContrib.resolveContributedName(sName, access, collector, fAllowInto, errs);
-                m_FVisited = null;
+                ResolutionResult result;
+                work.beginVisit(this, fAllowInto);
+                try {
+                    result = clzContrib.resolveContributedName(sName, access, collector, fAllowInto, errs);
+                } finally {
+                    // in a finally because the old assignment was not: a throw left the marker set
+                    // forever, and on a shared component that poisoned every later resolution
+                    work.endVisit(this);
+                }
 
                 if (result != ResolutionResult.UNKNOWN) {
                     return result;
@@ -2132,15 +2142,13 @@ public abstract sealed class Component
         m_nFlags    = that.m_nFlags;
         m_sDoc      = that.m_sDoc;
         m_fModified = that.m_fModified;
-        m_FVisited  = that.m_FVisited;
 
-        List<Contribution> listContribs = that.m_listContribs;
-        if (listContribs != null) {
-            List<Contribution> listClone = new ArrayList<>(listContribs.size());
-            for (Contribution contrib : listContribs) {
-                listClone.add(new Contribution(contrib));
-            }
-            m_listContribs = listClone;
+        if (that.m_listContribs != null) {
+            // toCollection(ArrayList::new) rather than toList(): contributions are added after
+            // construction, so the copy has to stay mutable.
+            m_listContribs = that.m_listContribs.stream()
+                    .map(Contribution::new)
+                    .collect(Collectors.toCollection(ArrayList::new));
         }
         // m_sibling, m_childByName, and m_abChildren stay null: a body copy carries no
         // siblings and no children
@@ -3698,8 +3706,4 @@ public abstract sealed class Component
      */
     private boolean m_fModified;
 
-    /**
-     * Recursion check for {@link #resolveContributedName}. Not thread-safe.
-     */
-    private transient Boolean m_FVisited;
 }

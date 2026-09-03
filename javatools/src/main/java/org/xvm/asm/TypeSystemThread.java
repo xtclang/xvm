@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -60,6 +61,52 @@ public final class TypeSystemThread {
 
     /** The types this thread still owes TypeInfo work for. */
     private final List<TypeConstant> deferred = new ArrayList<>();
+
+    /**
+     * The components this thread is currently descending through while resolving a contributed
+     * name, and the {@code fAllowInto} it entered each with.
+     *
+     * <p>Same story as {@link #building}, on a different mechanism. This was a
+     * {@code Boolean m_FVisited} field on {@link Component} - its own javadoc said "Not
+     * thread-safe" - used to notice that resolution had come back round to a component it was
+     * already inside. On a SHARED library that marker is visible to every thread, so one thread
+     * descending through {@code Array} makes another thread report {@code VERIFY-11}, "contribution
+     * forms a cycle", against a declaration that has no cycle at all. The same field also produced
+     * "Cannot invoke Boolean.booleanValue() because m_FVisited is null" when one thread cleared it
+     * between another's null-check and read.
+     *
+     * <p>Recursion is a property of the descent, so the marker belongs to the descent.
+     */
+    private final Map<Component, Boolean> visiting = new IdentityHashMap<>();
+
+    /**
+     * @param component  the component about to be descended into
+     *
+     * @return the {@code fAllowInto} this thread already entered the component with, or null if
+     *         this thread is not currently inside it
+     */
+    public Boolean visitedWith(Component component) {
+        return visiting.get(component);
+    }
+
+    /**
+     * Declare that this thread is descending into the component.
+     *
+     * @param component   the component
+     * @param fAllowInto  the mode it is being entered with
+     */
+    public void beginVisit(Component component, boolean fAllowInto) {
+        visiting.put(component, fAllowInto);
+    }
+
+    /**
+     * Declare that this thread has left the component; always call from a {@code finally}.
+     *
+     * @param component  the component
+     */
+    public void endVisit(Component component) {
+        visiting.remove(component);
+    }
 
     /**
      * @param type  the type to test
@@ -136,9 +183,9 @@ public final class TypeSystemThread {
      * and unrelated request, which is what makes it expensive to diagnose.
      */
     public String describeLeak() {
-        return building.isEmpty() && deferred.isEmpty()
+        return building.isEmpty() && deferred.isEmpty() && visiting.isEmpty()
                 ? null
-                : "building=" + building + " deferred=" + deferred;
+                : "building=" + building + " deferred=" + deferred + " visiting=" + visiting.size();
     }
 
     @Override

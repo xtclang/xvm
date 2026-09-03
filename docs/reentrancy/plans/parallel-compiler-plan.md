@@ -460,6 +460,76 @@ being re-registered twice at once, and detects the pool growing during its own p
 iterating live and surfacing a bare CME. The two remaining occurrences did NOT come from there, so
 there is a second site still to find.
 
+## T11 - The contribution-visit marker, and registration that was not a fixed point
+
+Two more, and the first is the same defect as T4 on a different mechanism.
+
+### T11.1 - `m_FVisited`: a recursion marker on shared state
+
+`Component.resolveContributedName` noticed it had come back round to a component it was already
+inside by way of a field on the component:
+
+```java
+if (m_FVisited != null && m_FVisited.booleanValue() == fAllowInto) {
+    errs.log(Severity.FATAL, VE_CYCLICAL_CONTRIBUTION, ...);   // "forms a cycle"
+}
+m_FVisited = fAllowInto;
+... clzContrib.resolveContributedName(...) ...
+m_FVisited = null;
+```
+
+Its own javadoc said **"Not thread-safe."** Once the library is shared, one thread descending
+through `Array` is visible to every other, so a peer reports `VERIFY-11`, *"contribution forms a
+cycle"*, against a declaration with no cycle in it. The same field produced the other residual
+too - `Cannot invoke Boolean.booleanValue() because m_FVisited is null` is one thread clearing it
+between another's null-check and read. **One defect, both failure classes.**
+
+Recursion is a property of the descent, so the marker moved to `TypeSystemThread` alongside the
+TypeInfo ownership record. The reset also moved into a `finally`: it was a bare assignment after
+the recursive call, so a throw left the marker set permanently, poisoning every later resolution of
+that component. On a per-compile clone that died with the clone; shared, it would not have.
+
+Measured over 15 iterations: `VERIFY-11` **6 -> 0**, and the `m_FVisited` NPE with it.
+
+### T11.2 - `writeTo` assumed one registration pass was a fixed point
+
+The remaining failures were `ConcurrentModificationException` inside `ConstantPool.assemble`, which
+says nothing useful. Replacing the for-each with an indexed loop that reports growth turned it into
+a fact:
+
+```
+the pool of TestMisc@3d24b03b grew from 1830 to 1837 while being written;
+the constant being assembled was MethodConstant Method{host=OrderLine, name=toString, ...}
+```
+
+Not a race at all, and not a library pool - the module's OWN pool, growing during its own write.
+`assemble` writes the constant count first and then writes each constant by the POSITION of
+everything it references, so a reference registration did not reach gets interned mid-write, the
+pool passes the count already written, and the file is malformed. Registration can itself intern,
+because resolving a reference is lazy; whether it needs to depends on shared library cache state,
+which is why this shows up under concurrency and not sequentially, where the same types are warm by
+the time anything is written.
+
+`writeTo` now registers to a fixed point before assembling, bounded at eight passes with a
+diagnostic rather than an unbounded loop.
+
+| | before T11 | after T11 |
+| --- | --- | --- |
+| fully clean iterations | 8 of 12 | **13 of 15** |
+| `VERIFY-11` | 6 | **0** |
+| pool growth during write | 5 | 1 |
+
+### What is left
+
+| count / 15 | failure |
+| --- | --- |
+| 1 | `NullPointerException: UnresolvedNameConstant.compareDetails ... m_constId is null` |
+| 1 | `TestGenerics` pool still grew during write, assembling a `ThisClassConstant` |
+
+The second says the fixed point is not always reached in eight passes for one shape, which is worth
+understanding rather than raising the bound. Sequential compilation is unchanged throughout at 42
+ok, 0 crashes; full suite 668 tests, 0 failures.
+
 ## T5 - Prove diagnostics stay per request
 
 Each compile already collects into its own `ErrorList`, but that has not been tested under

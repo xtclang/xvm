@@ -330,7 +330,29 @@ public final class FileStructure
      */
     public void writeTo(DataOutput out)
             throws IOException {
-        reregisterConstants(true);
+        // Registration to a FIXED POINT, because one pass is not guaranteed to be one.
+        //
+        // assemble() writes the constant count first and then each constant, and a constant is
+        // written by the POSITION of everything it references - so a reference that registration
+        // did not reach gets interned during the write, the pool grows past the count already
+        // written, and the file is malformed. Registration can itself intern, because resolving a
+        // reference is lazy, and what is already resolved depends on shared library cache state -
+        // which is why this appears under concurrent compiles and not sequential ones, where the
+        // same types happen to be warm by the time anything is written.
+        //
+        // Bounded: a fixed point is normally reached on the second pass, and failing to converge is
+        // a defect worth reporting rather than looping on.
+        ConstantPool pool = m_pool;
+        int cPrev = -1;
+        for (int cTries = 0; pool.size() != cPrev; ++cTries) {
+            if (cTries > 8) {
+                throw new IllegalStateException("constant registration did not reach a fixed point"
+                        + " for " + pool.describeOwner() + "; size still moving at " + pool.size());
+            }
+            cPrev = pool.size();
+            reregisterConstants(true);
+        }
+
         assemble(out);
         resetModified();
     }

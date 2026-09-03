@@ -335,6 +335,34 @@ public final class XtcEngine
         return sb.toString();
     }
 
+    /**
+     * Drop every prepared library, so the next compile links, injects and warms afresh.
+     *
+     * <p>For a host that has observed the XDK on disk change. The prepared library is deliberately
+     * held STRONGLY and never invalidated on its own, and it is worth being explicit about why,
+     * because the obvious alternatives are both wrong:
+     *
+     * <ul>
+     * <li><b>Weak or soft references.</b> Collecting a prepared module does not produce a cache
+     *     miss - it produces a DIFFERENT, unprepared module, because re-reading the file cannot
+     *     restore the NakedRef injection, the linked modules or the built TypeInfos. That is the
+     *     defect T10 fixed, and holding it weakly would reintroduce it as something that only
+     *     happens under memory pressure.</li>
+     * <li><b>Re-reading when the structure is dirty.</b> That is what
+     *     {@code DirRepository.ensureModule} does, and it is correct THERE: a repository is a view
+     *     of what is on disk, so a modified structure is stale by definition. It is exactly wrong
+     *     for a working set, where "modified" is the point.</li>
+     * </ul>
+     *
+     * <p>So staleness is the caller's to detect - it is the one watching the filesystem - and this
+     * is coarse on purpose: the unit is the whole library, because a partially re-prepared library
+     * is the state that produced the original bug. It is safe to call between requests and not
+     * during one.
+     */
+    public void discardPreparedLibraries() {
+        f_mapPreparedLibraries.clear();
+    }
+
     private NativeContainer containerNative() {
         return f_plane.get(this).containerNative();
     }

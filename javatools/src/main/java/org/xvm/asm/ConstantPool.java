@@ -3366,9 +3366,21 @@ public class ConstantPool
     @Override
     protected void assemble(DataOutput out)
             throws IOException {
-        writePackedLong(out, f_listConst.size());
-        for (Constant constant : f_listConst) {
+        // The count is written FIRST, so the list must not change afterwards or the file is
+        // malformed. Indexed rather than for-each so that a change is reported as what it is -
+        // something interned into the pool while the pool was being written - instead of a bare
+        // ConcurrentModificationException that names neither the pool nor the constant.
+        int cConst = f_listConst.size();
+        writePackedLong(out, cConst);
+        for (int i = 0; i < cConst; ++i) {
+            Constant constant = f_listConst.get(i);
             constant.assemble(out);
+            if (f_listConst.size() != cConst) {
+                throw new IllegalStateException("the pool of " + describeOwner()
+                        + " grew from " + cConst + " to " + f_listConst.size()
+                        + " while being written; the constant being assembled was "
+                        + constant.getClass().getSimpleName() + " " + constant);
+            }
         }
     }
 
