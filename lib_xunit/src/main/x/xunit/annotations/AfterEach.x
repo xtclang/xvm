@@ -42,6 +42,6 @@ annotation AfterEach
         Boolean requiresTarget.get() = after.is(Method);
 
         @Override
-        void afterEach(ExecutionContext context) = context.invoke(after);
+        void afterEach(ExecutionContext context) = executor.invoke(after, context);
     }
 }

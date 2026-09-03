@@ -7,6 +7,8 @@ import xunit.SkipResult;
 import xunit.annotations.AfterEach.AfterEachFunction;
 import xunit.annotations.BeforeEach.BeforeEachFunction;
 
+import xunit.executor;
+
 import xunit.extensions.AfterEachCallback;
 import xunit.extensions.AfterTestInvocationCallback;
 import xunit.extensions.AroundTestCallback;
@@ -41,7 +43,7 @@ const MethodExecutionLifecycle<ModelType extends MethodModel>(ModelType model)
 
         if (context.testFixture == Null) {
             Object fixture = ensureFixture(context, extensions, model.testClass);
-            builder.withTestFixture(fixture);
+            builder.withTestFixture(&fixture);
         }
         return super(builder.build(), extensions);
     }
@@ -117,7 +119,7 @@ const MethodExecutionLifecycle<ModelType extends MethodModel>(ModelType model)
 
             if (collector.empty) {
                 // only run the test if there have been no errors
-                collector.executeVoid(() -> context.invoke(model.testMethod));
+                collector.executeVoid(() -> executor.invoke(model.testMethod, context));
             }
         }
 

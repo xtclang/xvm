@@ -8,6 +8,7 @@ import xunit.extensions.ExecutionContext;
  * Information about the current phase of execution of a test fixture.
  * A test fixture could be a test method, or a test container.
  */
+@Concurrent
 service EngineExecutionContext
         implements ExecutionContext {
     /**
@@ -24,73 +25,65 @@ service EngineExecutionContext
         this.testFixture    = builder.testFixture;
         this.exception      = builder.exception;
         this.registry       = builder.registry;
-        this.methodExecutor = builder.methodExecutor;
         this.listener       = builder.listener;
     }
 
     /**
      * The `Model` to execute.
      */
-    Model model;
+    public/private Model model;
 
     /**
      * The `UniqueId` of the current test fixture.
      */
     @Override
-    UniqueId uniqueId.get() {
-        return model.uniqueId;
-     }
+    UniqueId uniqueId.get() = model.uniqueId;
 
     /**
      * The human readable name for the test.
      */
     @Override
-    String displayName;
+    public/private String displayName;
 
     /**
      * The `Class` associated to the current test fixture.
      */
     @Override
-    Class? testClass;
+    public/private Class? testClass;
 
     /**
      * The current test method.
      */
     @Override
-    MethodOrFunction? testMethod;
+    public/private MethodOrFunction? testMethod;
 
     /**
      * The current test fixture the test method will execute against.
      */
     @Override
-    Object? testFixture;
+    public/private Ref<Object>? testFixture;
 
     /**
      * Any `Exception thrown during execution of the test lifecycle.
      */
     @Override
-    Exception? exception;
+    public/private Exception? exception;
 
     /**
      * The `ResourceRegistry` containing resources registered for this execution.
      */
     @Override
-    ResourceRegistry registry;
-
-    /**
-     * The `MethodExecutor` to use to execute tests.
-     */
-    MethodExecutor methodExecutor;
+    public/private ResourceRegistry registry;
 
     /**
      * The test `ExecutionListener`.
      */
-    ExecutionListener listener;
+    public/private ExecutionListener listener;
 
     /**
      * The current execution results.
      */
-    Result results = new Result(Successful, count=0);
+    public/private Result results = new Result(Successful, count=0);
 
     /**
      * Create a `Builder` from the specified `Model`.
@@ -112,42 +105,6 @@ service EngineExecutionContext
      * @param model  the `Model` to execute
      */
     Builder asBuilder(Model model) = new Builder(this, model);
-
-    /**
-     * Invoke a `MethodOrFunction` using any registered `ParameterResolver` resources
-     * to resolve parameters for the function.
-     *
-     * @param method the `MethodOrFunction` to invoke
-     *
-     * @return the result of invoking the function
-     */
-    @Override
-    Tuple invoke(MethodOrFunction method) {
-        if (method.is(Method)) {
-            assert testFixture != Null;
-            return methodExecutor.invoke(method.as(Method), testFixture, this);
-         }
-        return methodExecutor.invoke(method.as(Function), this);
-     }
-
-    /**
-     * Invoke a `MethodOrFunction` using any registered `ParameterResolver` resources
-     * to resolve parameters for the function and return the single result returned by the
-     * invocation.
-     *
-     * @param method the `MethodOrFunction` to invoke
-     *
-     * @return `True` iff the invocation returned a result
-     * @return the single result of invoking the function
-     */
-    @Override
-    conditional Object invokeSingleResult(MethodOrFunction method) {
-        Tuple tuple = invoke(method);
-        if (tuple.size > 0) {
-            return True, tuple[0];
-         }
-        return False;
-    }
 
     @Override
     conditional Object lookup(Type type, String name, Options opts = Null) {
@@ -196,7 +153,6 @@ service EngineExecutionContext
             this.displayName    = model.displayName;
             this.listener       = ExecutionListener.NoOp;
             this.registry       = new SimpleResourceRegistry();
-            this.methodExecutor = new MethodExecutor();
          }
 
         /**
@@ -212,7 +168,6 @@ service EngineExecutionContext
             this.testMethod     = ctx.testMethod;
             this.testFixture    = ctx.testFixture;
             this.exception      = ctx.exception;
-            this.methodExecutor = ctx.methodExecutor;
             this.listener       = ctx.listener;
             this.registry       = ctx.registry.copy();
          }
@@ -250,7 +205,7 @@ service EngineExecutionContext
         /**
          * The current test fixture the test method will execute against.
          */
-        private Object? testFixture = Null;
+        private Ref<Object>? testFixture = Null;
 
         /**
          * Any `Exception`s thrown during execution of the test lifecycle.
@@ -261,11 +216,6 @@ service EngineExecutionContext
          * The `ResourceRegistry` containing resources registered for this execution.
          */
         public/private ResourceRegistry registry;
-
-        /**
-         * The `MethodExecutor` to use to execute tests.
-         */
-        private MethodExecutor methodExecutor;
 
         /**
          * The `ExecutionListener`.
@@ -292,7 +242,7 @@ service EngineExecutionContext
             return this;
         }
 
-        Builder withTestFixture(Object? testFixture) {
+        Builder withTestFixture(Ref<Object> testFixture) {
             this.testFixture = testFixture;
             return this;
         }

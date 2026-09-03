@@ -2,6 +2,8 @@ import extensions.ExtensionRegistry;
 
 import xunit.MethodOrFunction;
 
+import xunit.executor;
+
 /**
  * A base class for `ExecutionLifecycle` implementations.
  */
@@ -35,7 +37,7 @@ import xunit.MethodOrFunction;
 
         if (MethodOrFunction constructor := model.constructor.is(MethodOrFunction)) {
             // ToDo: call pre/post fixture constructor extensions
-            if (Object fixture := context.invokeSingleResult(constructor)) {
+            if (Object fixture := executor.invokeSingleResult(constructor, context)) {
                 return fixture;
             }
         }
