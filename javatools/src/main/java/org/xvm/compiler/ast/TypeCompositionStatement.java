@@ -1750,7 +1750,7 @@ public final class TypeCompositionStatement
                         // copy this constructor's arguments
                         List<Parameter> listParams = constructorParams;
                         if (listParams != null) {
-                            List<Expression> listArgs = new ArrayList(listParams.size());
+                            List<Expression> listArgs = new ArrayList<>(listParams.size());
                             for (Parameter listParam : listParams) {
                                 listArgs.add(new NameExpression(this, listParam.name, null));
                             }

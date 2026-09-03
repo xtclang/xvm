@@ -678,9 +678,16 @@ public final class NativeTemplates {
 
     // ----- immutable lookup keys ----------------------------------------------------------------
 
+    // xRTDelegate and xRTViewToBit are generic, and a NativeTemplateRef is keyed by a class
+    // literal. A class literal is always RAW in its own type argument - xRTDelegate.class has type
+    // Class<xRTDelegate>, never Class<xRTDelegate<?>> - so the parameterized ref simply cannot be
+    // constructed. This is the one shape in the tree that -Xlint:rawtypes cannot be satisfied for,
+    // and it is why the delegate type parameter is a symptom rather than a fix (see E30).
+
     private static final NativeTemplateRef<xArray> ARRAY =
             NativeTemplateRef.of("collections.Array", xArray.class);
 
+    @SuppressWarnings("rawtypes")
     private static final NativeTemplateRef<xRTDelegate> RT_DELEGATE =
             NativeTemplateRef.of("_native.collections.arrays.RTDelegate", xRTDelegate.class);
 
@@ -690,6 +697,7 @@ public final class NativeTemplates {
     private static final NativeTemplateRef<xRTViewFromByte> RT_VIEW_FROM_BYTE =
             NativeTemplateRef.of("_native.collections.arrays.RTViewFromByte", xRTViewFromByte.class);
 
+    @SuppressWarnings("rawtypes")
     private static final NativeTemplateRef<xRTViewToBit> RT_VIEW_TO_BIT =
             NativeTemplateRef.of("_native.collections.arrays.RTViewToBit", xRTViewToBit.class);
 

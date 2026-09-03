@@ -33,7 +33,7 @@ public class Refiner {
      *
      * @return the Version of the Module to use
      */
-    public Version whichVersion(ModuleConstant module, VersionTree versions, List<Version> prefs) {
+    public Version whichVersion(ModuleConstant module, VersionTree<Boolean> versions, List<Version> prefs) {
         require("module", module);
         require("versions", versions);
         require("prefs", prefs);

@@ -327,11 +327,10 @@ public class Parser {
         List<Token>                modifiers   = null;
         List<AnnotationExpression> annotations = null;
 
-        List[] twoLists = parseModifiers();
-        if (twoLists != null) {
-            // note to self: this language needs multiple return values
-            modifiers   = twoLists[0];
-            annotations = twoLists[1];
+        Modifiers mods = parseModifiers();
+        if (mods != null) {
+            modifiers   = mods.modifiers();
+            annotations = mods.annotations();
         }
 
         return parseTypeDeclarationStatementAfterModifiers(lStartPos, null, doc, modifiers, annotations);
@@ -716,11 +715,10 @@ public class Parser {
         List<Token>                modifiers   = null;
         List<AnnotationExpression> annotations = null;
 
-        List[] twoLists = parseModifiers(true);
-        if (twoLists != null) {
-            // note to self: this language needs multiple return values
-            modifiers   = twoLists[0];
-            annotations = twoLists[1];
+        Modifiers mods = parseModifiers(true);
+        if (mods != null) {
+            modifiers   = mods.modifiers();
+            annotations = mods.annotations();
         }
 
         // both constant and property have a TypeExpression next
@@ -4601,9 +4599,19 @@ public class Parser {
      *
      * @return a List&lt;Token | Annotation&gt;
      */
-    List[] parseModifiers() {
+    Modifiers parseModifiers() {
         return parseModifiers(false);
     }
+
+    /**
+     * The two lists {@link #parseModifiers(boolean)} produces. Previously returned as a raw
+     * {@code List[]} of length two, with a comment at each of the two call sites noting that "this
+     * language needs multiple return values" - which is what this is.
+     *
+     * @param modifiers    the modifier tokens, or null if there were none
+     * @param annotations  the annotations, or null if there were none
+     */
+    record Modifiers(List<Token> modifiers, List<AnnotationExpression> annotations) {}
 
     /**
      * Mostly a continuation of the above, but also supporting the following parsing:
@@ -4621,7 +4629,7 @@ public class Parser {
      * @return a List&lt;Token | Annotation | '/'&gt; (in the case of a property, there could be
      *         something like "static, public, '/', private")
      */
-    List[] parseModifiers(boolean couldBeProperty) {
+    Modifiers parseModifiers(boolean couldBeProperty) {
         List<Token>                modifiers   = null;
         List<AnnotationExpression> annotations = null;
         boolean                    err         = false;
@@ -4679,7 +4687,7 @@ public class Parser {
 
             default:
                 return (modifiers != null || annotations != null)
-                        ? new List[] {modifiers, annotations}
+                        ? new Modifiers(modifiers, annotations)
                         : null;
             }
         }

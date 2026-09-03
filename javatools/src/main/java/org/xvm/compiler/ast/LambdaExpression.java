@@ -85,13 +85,20 @@ public final class LambdaExpression
      * @param body       the StatementBlock of the lambda
      * @param lStartPos  the expression's start position in the source code
      */
-    public LambdaExpression(List params, Token operator, StatementBlock body, long lStartPos) {
+    public LambdaExpression(List<?> params, Token operator, StatementBlock body, long lStartPos) {
+        // params is one list or the other, never mixed, and which one is decided by inspecting the
+        // first element; the asserts below are the check, so each cast is narrowing a list this
+        // method has just proved homogeneous
         if (!params.isEmpty() && params.get(0) instanceof Expression) {
             assert params.stream().allMatch(Expression.class::isInstance);
-            this.paramNames = params;
+            @SuppressWarnings("unchecked")
+            List<Expression> listNames = (List<Expression>) params;
+            this.paramNames = listNames;
         } else {
             assert params.stream().allMatch(Parameter.class::isInstance);
-            this.params = params;
+            @SuppressWarnings("unchecked")
+            List<Parameter> listParams = (List<Parameter>) params;
+            this.params = listParams;
         }
 
         this.operator  = operator;

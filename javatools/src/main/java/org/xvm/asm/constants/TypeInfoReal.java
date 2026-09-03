@@ -1068,7 +1068,12 @@ public final class TypeInfoReal
 
     @Override
     public Entry<PropertyConstant, PropertyInfo>[] sortedProperties() {
-        Entry<PropertyConstant, PropertyInfo>[] aEntry = f_mapProps.entrySet().toArray(new Entry[0]);
+        // new Entry<K, V>[0] is not expressible - generic array creation - so the array
+        // type is raw at the creation and named on the variable
+        @SuppressWarnings("rawtypes")
+        Entry[] aEntryRaw = f_mapProps.entrySet().toArray(new Entry[0]);
+        @SuppressWarnings("unchecked")
+        Entry<PropertyConstant, PropertyInfo>[] aEntry = aEntryRaw;
         if (aEntry.length > 1) {
             Arrays.sort(aEntry, PropertyInfo.RANKER);
         }
@@ -1360,7 +1365,12 @@ public final class TypeInfoReal
 
     @Override
     public Entry<MethodConstant, MethodInfo>[] sortedMethods() {
-        Entry<MethodConstant, MethodInfo>[] aEntry = f_mapMethods.entrySet().toArray(new Entry[0]);
+        // new Entry<K, V>[0] is not expressible - generic array creation - so the array
+        // type is raw at the creation and named on the variable
+        @SuppressWarnings("rawtypes")
+        Entry[] aEntryRaw = f_mapMethods.entrySet().toArray(new Entry[0]);
+        @SuppressWarnings("unchecked")
+        Entry<MethodConstant, MethodInfo>[] aEntry = aEntryRaw;
         if (aEntry.length > 1) {
             Arrays.sort(aEntry, MethodInfo.RANKER);
         }
@@ -2372,7 +2382,7 @@ public final class TypeInfoReal
     /**
      * Sorts various keys of a map.
      */
-    private static final Comparator<Map.Entry> KeySorter = (e1, e2) -> {
+    private static final Comparator<Map.Entry<?, ?>> KeySorter = (e1, e2) -> {
         Object k1 = e1.getKey();
         Object k2 = e2.getKey();
         if (k1 == null || k2 == null) {

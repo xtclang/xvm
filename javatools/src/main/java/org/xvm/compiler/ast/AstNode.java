@@ -246,7 +246,7 @@ public abstract sealed class AstNode
 
                     that.adopt(nodeNew);
                     oVal = nodeNew;
-                } else if (oVal instanceof List list) {
+                } else if (oVal instanceof List<?> list) {
                     ArrayList<AstNode> listNew = new ArrayList<>();
                     for (AstNode node : (List<AstNode>) list) {
                         listNew.add(node.deepCopy());
@@ -1776,12 +1776,12 @@ public abstract sealed class AstNode
             Object value = entry.getValue();
             switch (value) {
             case null -> iter.remove();
-            case Map map -> {
+            case Map<?, ?> map -> {
                 if (map.isEmpty()) {
                     iter.remove();
                 }
             }
-            case Collection coll -> {
+            case Collection<?> coll -> {
                 if (coll.isEmpty()) {
                     iter.remove();
                 }
@@ -1831,11 +1831,11 @@ public abstract sealed class AstNode
             int      cKids;
             Iterator<?> iterK;
             switch (value) {
-            case Map kids -> {
+            case Map<?, ?> kids -> {
                 cKids = kids.size();
                 iterK = kids.entrySet().iterator();
             }
-            case Collection kids -> {
+            case Collection<?> kids -> {
                 cKids = kids.size();
                 iterK = kids.iterator();
             }
@@ -1946,7 +1946,7 @@ public abstract sealed class AstNode
      * @return an ArrayList
      */
     protected static <T> ArrayList<T> ensureArrayList(List<T> list) {
-        return list instanceof ArrayList alist
+        return list instanceof ArrayList<T> alist
                 ? alist
                 : new ArrayList<>(list);
     }
@@ -2068,7 +2068,7 @@ public abstract sealed class AstNode
         }
 
         private boolean prepareNextElement() {
-            if (value instanceof Iterator iter && iter.hasNext()) {
+            if (value instanceof Iterator<?> iter && iter.hasNext()) {
                 state = HAS_NEXT;
                 return true;
             }
@@ -2092,12 +2092,12 @@ public abstract sealed class AstNode
                 }
 
                 if (next != null) {
-                    if (next instanceof List list) {
+                    if (next instanceof List<?> list) {
                         if (!list.isEmpty()) {
                             value = list.listIterator();
                             return true;
                         }
-                    } else if (next instanceof Collection coll) {
+                    } else if (next instanceof Collection<?> coll) {
                         if (!coll.isEmpty()) {
                             value = coll.iterator();
                             return true;
@@ -2127,7 +2127,7 @@ public abstract sealed class AstNode
                     return;
                 }
 
-                if (value instanceof Iterator iter) {
+                if (value instanceof Iterator<?> iter) {
                     // tell the underlying iterator to remove the value
                     iter.remove();
                     state = NOT_PREP;
@@ -2150,8 +2150,12 @@ public abstract sealed class AstNode
                     return;
                 }
 
-                if (value instanceof ListIterator iter) {
-                    iter.set(newChild);
+                if (value instanceof ListIterator<?> iter) {
+                    // the child collections this walker iterates hold AstNodes by construction;
+                    // instanceof cannot check a type argument, so the narrowing is stated here
+                    @SuppressWarnings("unchecked")
+                    ListIterator<AstNode> iterNodes = (ListIterator<AstNode>) iter;
+                    iterNodes.set(newChild);
                     return;
                 }
             }

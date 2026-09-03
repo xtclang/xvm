@@ -56,8 +56,14 @@ private class JavaCompilerArgsProvider(
         // comment proving why the escape/fallthrough is safe; see
         // docs/reentrancy/must-audit-backlog.md (build-gate and fallthrough rows).
         //
-        // -Xlint:rawtypes is NOT yet here: see static-typing-campaign.md T7. Turning it on is the
-        // goal, but ~40 sites remain and a half-enabled fatal lint just blocks the build.
+        // rawtypes reached zero on 2026-09-03 and is now fatal. The estimate that used to sit
+        // here was "~40 sites remain"; the real count was 54, cleared as: omitted diamonds, a
+        // record replacing Parser's raw List[] pair (its own comment asked for one), wildcards
+        // where nothing mutates through the pattern, and Utils.any() replacing a raw ANY constant.
+        // Four sites keep a documented suppression because Java cannot express them: the two
+        // NativeTemplateRef keys whose class literal is raw in its own type argument, and the two
+        // Entry[] creations in TypeInfoReal, since generic array creation is illegal.
+        add("-Xlint:rawtypes")
         add("-Xlint:this-escape")
         add("-Xlint:fallthrough")
         // Categories below are at ZERO across the Java sources today, verified by compiling with

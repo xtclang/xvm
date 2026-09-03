@@ -332,7 +332,7 @@ public class Frame
         Frame frameNext = createNativeFrame(WAIT_FOR_FUTURE, ahFuture, Op.A_MULTI, aiReturn);
         int   cReturns  = ahFuture.length;
 
-        List<CompletableFuture> listFutures = new ArrayList<>(cReturns);
+        List<CompletableFuture<?>> listFutures = new ArrayList<>(cReturns);
         for (ObjectHandle handle : ahFuture) {
             if (handle instanceof FutureHandle hFuture) {
                 listFutures.add(hFuture.getFuture());
@@ -340,7 +340,7 @@ public class Frame
         }
 
         CompletableFuture<Void> cfResult = CompletableFuture.allOf(
-                                            listFutures.toArray(new CompletableFuture[0]));
+                                            listFutures.toArray(new CompletableFuture<?>[0]));
         cfResult.whenComplete((r, x) -> f_fiber.onResponse());
 
         return frameNext;
@@ -356,7 +356,7 @@ public class Frame
      *
      * @return a new frame
      */
-    public Frame createWaitIOFrame(CompletableFuture<Object> cfResult, Continuation continuation) {
+    public Frame createWaitIOFrame(CompletableFuture<?> cfResult, Continuation continuation) {
         ObjectHandle[] ahFuture = new ObjectHandle[]{new NativeFutureHandle(cfResult)};
 
         Frame frameNext = createNativeFrame(WAIT_FOR_IO, ahFuture, Op.A_IGNORE, null);
@@ -549,7 +549,7 @@ public class Frame
     }
 
     // a convenience method for futures that complete on the IO thread
-    public int waitForIO(CompletableFuture cf, Continuation continuation) {
+    public int waitForIO(CompletableFuture<?> cf, Continuation continuation) {
         return call(createWaitIOFrame(cf, continuation));
     }
 
@@ -2789,7 +2789,7 @@ public class Frame
             public int process(Frame frame, int iPC) {
                 assert frame.f_ahVar.length == 1 && frame.f_iReturn == A_IGNORE;
 
-                CompletableFuture cf = ((NativeFutureHandle) frame.f_ahVar[0]).f_future;
+                CompletableFuture<?> cf = ((NativeFutureHandle) frame.f_ahVar[0]).f_future;
 
                 return cf.isDone() ? R_RETURN : R_REPEAT;
             }

@@ -1909,7 +1909,12 @@ public abstract class Utils {
     public static final String[]       NO_NAMES     = new String[0];
 
     public static final Frame.Continuation NEXT = frame -> Op.R_NEXT;
-    public static final Predicate          ANY  = t -> true;
+    /**
+     * @return a predicate that accepts every {@code T}
+     */
+    public static <T> Predicate<T> any() {
+        return t -> true;
+    }
 
      /**
      * Wait until the main context is no longer overwhelmed.

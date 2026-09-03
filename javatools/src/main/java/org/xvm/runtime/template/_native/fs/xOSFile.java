@@ -216,7 +216,7 @@ public class xOSFile
             }
         };
 
-        CompletableFuture cfWrite = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture<?> cfWrite = frame.f_context.f_container.scheduleIO(task);
 
         Frame.Continuation continuation = frameCaller -> {
             try {
@@ -299,7 +299,7 @@ public class xOSFile
             }
         };
 
-        CompletableFuture cfTruncate = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture<?> cfTruncate = frame.f_context.f_container.scheduleIO(task);
 
         Frame.Continuation continuation = frameCaller -> {
             try {
@@ -327,7 +327,7 @@ public class xOSFile
             }
         };
 
-        CompletableFuture cfAppend = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture<?> cfAppend = frame.f_context.f_container.scheduleIO(task);
 
         Frame.Continuation continuation = frameCaller -> {
             try {
@@ -360,7 +360,7 @@ public class xOSFile
             }
         };
 
-        CompletableFuture cfAppend = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture<?> cfAppend = frame.f_context.f_container.scheduleIO(task);
 
         Frame.Continuation continuation = frameCaller -> {
             try {

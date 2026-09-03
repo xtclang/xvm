@@ -1209,7 +1209,8 @@ public class Lexer
         Source source = m_source;
 
         StringBuilder sb        = new StringBuilder();
-        ArrayList     list      = fTemplate ? new ArrayList<>() : null;
+        // holds both Tokens and Token[] runs, and is consumed as Object[] by toArray()
+        ArrayList<Object> list  = fTemplate ? new ArrayList<>() : null;
         long          lPosStart = lInitPos;
         Appending: while (true) {
             if (source.hasNext()) {

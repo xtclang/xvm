@@ -123,7 +123,7 @@ class BundlerTest {
         var metadata = FileStructure.readFileInfo(fileOut);
         assertEquals(FileStructure.FileKind.Library, metadata.kind());
         assertEquals(Set.of("ModB", "ModA"), metadata.modules().keySet());
-        assertEquals(new VersionTree(verA, true), metadata.modules().get("ModA"));
+        assertEquals(new VersionTree<Boolean>(verA, true), metadata.modules().get("ModA"));
 
         // the container round-trips with both modules and their types intact
         var reread = new FileStructure(fileOut);
@@ -175,7 +175,7 @@ class BundlerTest {
         var metadata = FileStructure.readFileInfo(fileOut);
         assertEquals(FileStructure.FileKind.Single, metadata.kind());
         assertEquals(Set.of("Solo"), metadata.modules().keySet());
-        assertEquals(new VersionTree(version, true), metadata.modules().get("Solo"));
+        assertEquals(new VersionTree<Boolean>(version, true), metadata.modules().get("Solo"));
 
         var repo = new FileRepository(fileOut, true);
         assertEquals(Set.of("Solo"), repo.getModuleNames());

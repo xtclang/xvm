@@ -108,7 +108,7 @@ public class JitConnector
                 Object      stringArray = newMethod.invoke(null, ctx, stringArrayType, (long) args.length, false);
                 Class<?>    stringClass = loader.loadClass(Builder.N_String);
                 Class<?>    objectClass = loader.loadClass(Builder.N_Object);
-                Constructor stringCtor  = stringClass.getDeclaredConstructor(Ctx.class, String.class);
+                Constructor<?> stringCtor  = stringClass.getDeclaredConstructor(Ctx.class, String.class);
                 Method      addMethod   = arrayClass.getDeclaredMethod("add", Ctx.class, objectClass);
                 for (String arg : args) {
                     // stringArray.add(arg);

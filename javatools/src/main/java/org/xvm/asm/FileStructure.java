@@ -476,11 +476,11 @@ public final class FileStructure
             in.skipBytes(cb);
         } else {
             int cModules = readMagnitude(in);
-            modules = new LinkedHashMap(cModules);
+            modules = new LinkedHashMap<>(cModules);
             for (int iModule = 0; iModule < cModules; ++iModule) {
                 String sName = readUtf8String(in);
                 int cVersions = readMagnitude(in);
-                VersionTree<Boolean> versions = new VersionTree();
+                VersionTree<Boolean> versions = new VersionTree<>();
                 for (int iVersion = 0; iVersion < cVersions; ++iVersion) {
                     versions.put(new Version(readUtf8String(in)), true);
                 }
@@ -542,13 +542,13 @@ public final class FileStructure
         // ModuleByIdMap, since the ModuleConstants for each may have a different Version number;
         // alternatively, a single unversioned ModuleConstant may correspond to any number of
         // ModuleStructure siblings that each has its own Version
-        LinkedHashMap<String, VersionTree<Boolean>> moduleVersByName = new LinkedHashMap();
+        LinkedHashMap<String, VersionTree<Boolean>> moduleVersByName = new LinkedHashMap<>();
         for (Entry<ModuleConstant, ModuleStructure> entry : getModuleByIdMap().entrySet()) {
             ModuleConstant  moduleId = entry.getKey();
             ModuleStructure module   = entry.getValue();
             if (!module.isFingerprint()) {
                 String               name = moduleId.getName();
-                VersionTree<Boolean> vers = new VersionTree();
+                VersionTree<Boolean> vers = new VersionTree<>();
                 VersionTree<Boolean> prev = moduleVersByName.get(name);
                 if (prev != null) {
                     vers.putAll(prev);

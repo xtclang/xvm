@@ -939,8 +939,8 @@ public class CaseManager<CookieType> {
             oThisLo = oThisHi = ((ValueConstant<?>) constThis).getValue();
         }
 
-        if (!(oThisLo instanceof Comparable cmpThisLo &&
-              oThisHi instanceof Comparable cmpThisHi)) {
+        if (!(oThisLo instanceof Comparable<?> cmpThisLo &&
+              oThisHi instanceof Comparable<?> cmpThisHi)) {
             return false;
         }
 
@@ -962,8 +962,8 @@ public class CaseManager<CookieType> {
         } else {
             oThatLo = oThatHi = ((ValueConstant<?>) constThat).getValue();
         }
-        if (!(oThatLo instanceof Comparable cmpThatLo &&
-              oThatHi instanceof Comparable cmpThatHi)) {
+        if (!(oThatLo instanceof Comparable<?> cmpThatLo &&
+              oThatHi instanceof Comparable<?> cmpThatHi)) {
             return false;
         }
 
@@ -972,7 +972,13 @@ public class CaseManager<CookieType> {
 
             // this automatically works for ValueConstant types that have a corresponding Java type,
             // like Int, String, etc., while enums use their ordinal values (see EnumValueConstant).
-            return cmpThisLo.compareTo(cmpThatLo) <= 0 && cmpThisHi.compareTo(cmpThatHi) >= 0;
+            // instanceof cannot check a type argument, so the comparison is stated here; a
+            // mismatched pair throws ClassCastException, which the catch below already handles
+            @SuppressWarnings("unchecked")
+            Comparable<Object> lo = (Comparable<Object>) cmpThisLo;
+            @SuppressWarnings("unchecked")
+            Comparable<Object> hi = (Comparable<Object>) cmpThisHi;
+            return lo.compareTo(cmpThatLo) <= 0 && hi.compareTo(cmpThatHi) >= 0;
         } catch (Exception e) {
             return false;
         }

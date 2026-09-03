@@ -119,7 +119,7 @@ class SimpleCanaryGcTest {
 
         // TODO this is ONLY for a single-threaded test; in the XVM runtime, each carrier thread has its
         //      own ReferenceQueue
-        ReferenceQueue<?> refQueue = new ReferenceQueue<>();
+        ReferenceQueue<Object> refQueue = new ReferenceQueue<>();
         Reclaim<?> keepalive;
 
         int containerCount = 0;
@@ -194,7 +194,7 @@ class SimpleCanaryGcTest {
         }
 
         public void drainQueue() {
-            ReferenceQueue queue = refQueue; // TODO
+            ReferenceQueue<Object> queue = refQueue; // TODO
 
             long startMillis = currentTimeMillis();
             int count = 0;
@@ -206,7 +206,7 @@ class SimpleCanaryGcTest {
 
             boolean restoreInterrupt = Thread.interrupted();
             try {
-                while (queue.poll() instanceof Reclaim reclaim) {
+                while (queue.poll() instanceof Reclaim<?> reclaim) {
                     if (first) {
                         ++drains;
                     }
@@ -290,7 +290,7 @@ class SimpleCanaryGcTest {
         public Ctx(Container container) {
             this.container = container;
             this.canary = new Canary();
-            this.canaryReclaim = new Reclaim(canary, container.xvm.refQueue, container.id, 0);
+            this.canaryReclaim = new Reclaim<Canary>(canary, container.xvm.refQueue, container.id, 0);
         }
 
         public final Container container;
@@ -340,7 +340,7 @@ class SimpleCanaryGcTest {
                 if (canaryReclaim.size() >= CANARY_SIZE) {
                     container.xvm.keepalive = canaryReclaim.link(container.xvm.keepalive);
                     canary = new Canary();
-                    canaryReclaim = new Reclaim(canary, container.xvm.refQueue, container.id, 0);
+                    canaryReclaim = new Reclaim<Canary>(canary, container.xvm.refQueue, container.id, 0);
                 }
 
                 // record next as the new orphan
@@ -422,7 +422,7 @@ class SimpleCanaryGcTest {
          * @param cid
          * @param size
          */
-        public Reclaim(V v, ReferenceQueue<V> q, int cid, long size) {
+        public Reclaim(V v, ReferenceQueue<? super V> q, int cid, long size) {
             super(v, q);
             assert (cid >= 0) & (cid <= 0xFFFFFF) & (size >= 0) & (size <= 0xFFFFFFFFFFL);
             info = (((long) cid) << 40) | size;
@@ -441,7 +441,7 @@ class SimpleCanaryGcTest {
          * Each Reclaim is part of a doubly linked list to hold a strong reference to each Reclaim
          * until after it has been processed.
          */
-        private Reclaim next;
+        private Reclaim<?> next;
 
         /**
          * A reference to the previous Reclaim that was created by the current carrier (Java/OS)
@@ -450,7 +450,7 @@ class SimpleCanaryGcTest {
          * Each Reclaim is part of a doubly linked list to hold a strong reference to each Reclaim
          * until after it has been processed.
          */
-        private Reclaim prev;
+        private Reclaim<?> prev;
 
         // ----- methods
 
@@ -495,7 +495,7 @@ class SimpleCanaryGcTest {
             prev = null;
         }
 
-        public Reclaim link(Reclaim that) {
+        public Reclaim<?> link(Reclaim<?> that) {
             if (that != null) {
                 this.next = that.next;
                 that.next = this;

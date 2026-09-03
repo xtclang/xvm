@@ -63,7 +63,7 @@ public class xRTModuleTemplate
             ModuleStructure module   = (ModuleStructure) hTemplate.getComponent();
             String          sVersion;
             if (module.isFingerprint()) {
-                VersionTree vtree = module.getFingerprintVersions();
+                VersionTree<Boolean> vtree = module.getFingerprintVersions();
                 sVersion = vtree.isEmpty()
                         ? null
                         : vtree.findLowestVersion().toString();
