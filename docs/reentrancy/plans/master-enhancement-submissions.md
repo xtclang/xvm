@@ -2568,6 +2568,16 @@ at all. Classified by what actually blocks making each one `final`:
 | | count |
 | --- | --- |
 | **CLEAN - single lazy assignment, convertible to `Lazy` today** | **7** |
+
+**Checked again 2026-09-03, and the resettable row does not survive inspection.** Matching fields
+that are both lazily filled (`if (m_x == null) { m_x = ... }`) and nulled elsewhere finds 5
+candidates: `Label.m_action`, `CaseManager.m_labelCurrent`, `WhileStatement.m_listContinues`,
+`ForStatement.m_listContinues`, `ForStatement.m_listShorts`. All five are **accumulators, not
+caches** - `m_listContinues` is collected by `.add()` and nulled when consumed; `m_action` is a
+chain built by `m_action = new ActionChain(m_action, action)`. Nothing is *computed* and therefore
+nothing can be deferred, so a resettable `Lazy` has no user. Do not build the primitive before
+naming a site it would actually serve - this is the same over-match the re-classification above
+already corrected once.
 | copy-assigned from another instance (`this.f = that.f`) | 12 |
 | reset to `null` somewhere (needs a resettable `Lazy`) | 7 |
 | `null` used as an "absent" sentinel (`if (f != null)`) | 7 |
