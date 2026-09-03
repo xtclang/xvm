@@ -342,7 +342,14 @@ public final class FileStructure
         //
         // Bounded: a fixed point is normally reached on the second pass, and failing to converge is
         // a defect worth reporting rather than looping on.
+        // The WHOLE write sequence holds the pool's monitor - the same one register() takes.
+        // Registration is synchronized but the reads are not: f_listConst is a plain ArrayList, so
+        // preRegisterAll's indexed walk and assemble's can observe a null element while another
+        // thread is appending, which surfaces as "Cannot invoke Constant.resetRefs() because
+        // ArrayList.get(int) is null". Writing a module is rare and already the slow path, so
+        // holding the monitor across it costs little and removes the whole class.
         ConstantPool pool = m_pool;
+        synchronized (pool) {
         int cPrev = -1;
         for (int cTries = 0; pool.size() != cPrev; ++cTries) {
             if (cTries > 8) {
@@ -354,6 +361,7 @@ public final class FileStructure
         }
 
         assemble(out);
+        }
         resetModified();
     }
 

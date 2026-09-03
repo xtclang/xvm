@@ -42,6 +42,7 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.TypeSystemThread;
 import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.ModuleConstant;
@@ -713,6 +714,20 @@ public final class XtcEngine
                 }
             }
         }
+        // A request must leave the thread as it found it. This thread is going straight back into a
+        // pool to serve the NEXT request, and anything left behind - a type still marked as being
+        // built, work still owed - belongs to a compile that has finished, referring to a pool that
+        // is now somebody else's. Draining it later is how one request ends up building a TypeInfo
+        // for another request's type and interning into a pool that request is assembling (T12).
+        //
+        // Reported rather than thrown: the compile itself succeeded or failed on its own merits and
+        // the caller should get that answer, but the leak is a defect and must not be silent.
+        String sLeak = TypeSystemThread.current().describeLeak();
+        if (sLeak != null) {
+            errs.warn("TRACE-TI",
+                    "compile finished leaving thread-local type-system work behind: " + sLeak);
+        }
+
         var result = new CompileResult(List.copyOf(modules), diagnostics(errsCollect), repoResult);
         event.compiled    = result.modules().size();
         event.diagnostics = result.diagnostics().size();

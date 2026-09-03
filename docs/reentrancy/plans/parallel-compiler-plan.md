@@ -640,6 +640,62 @@ it is worth having even after 2 lands.
 cross-request corruption into a loud, attributable failure at the moment it happens - which is the
 difference between this taking an afternoon and taking a week.
 
+## T13 - The write path takes the pool's lock, and parallel compilation goes green
+
+Two facts closed the remaining failures, and neither of them fixes T12 - they remove the ways T12
+was destructive.
+
+**T13.1 - the intrusion was only fatal because assembly held no lock.** `register` is
+`synchronized (this)`; `assemble` was not. So a cross-pool intrusion could append to a pool AFTER
+that pool's constant count had been written, which corrupts the file. Assembly now takes the same
+monitor, so an intruding registration BLOCKS until the write finishes instead of racing it. The
+intrusion is still a design defect - T12 stands - but its consequence is now a late registration
+rather than a malformed `.xtc`.
+
+**T13.2 - `f_listConst` is a plain `ArrayList` whose reads were unsynchronized.** With assembly
+fixed, longer runs surfaced a new class:
+
+```
+NullPointerException: Cannot invoke "Constant.resetRefs()"
+  because the return value of "java.util.ArrayList.get(int)" is null
+NullPointerException: Cannot invoke "Constant.getFormat()" because "constant" is null
+```
+
+Writes were under the monitor, reads were not, so an indexed walk could observe a null element while
+another thread appended. `preRegisterAll`, the registration pass and `assemble` are all such walks.
+The whole write sequence in `FileStructure.writeTo` now holds the pool's monitor. Writing a module
+is rare and already the slow path, so the cost is negligible and the class disappears.
+
+### Result
+
+| | |
+| --- | --- |
+| iterations | **40 of 40 fully clean** |
+| compiles | 1,680 concurrent (42 modules, 8 threads, 40 iterations) |
+| wall per iteration | min 315 ms, **median 362 ms**, max 1081 ms |
+| sequential | 42 ok, 3 expected fails, **0 crashes** - unchanged throughout |
+| thread-state leaks at request boundary | **0** |
+
+`EngineParallelCompileTest` asserts strictly again: any failure is a regression, and the printed
+distribution names the class.
+
+### What this does and does not mean
+
+It means the mechanisms are now sound enough that 1,680 concurrent compiles agree with the
+sequential result. It does **not** mean T12 is fixed: one request can still reach into another
+request's pool through the shared library's caches, and the locking makes that harmless rather than
+impossible. The `m_threadAssembling` detector stays precisely so it stays visible, and T12's overlay
+design is still the right endpoint.
+
+### The leak check, and a hypothesis it killed
+
+`TypeSystemThread.describeLeak()` is now asserted at the end of every compile: a request must leave
+the thread as it found it, because that thread goes straight back into a pool to serve the next one.
+It was added to test the theory that T12's cross-pool reach came from a deferred entry leaking
+across requests on a pooled thread. **It reported zero leaks**, so the theory was wrong and the
+shared-cache explanation is the surviving one. The check stays - it is cheap, and it rules out a
+whole class of future confusion in one line.
+
 ## T5 - Prove diagnostics stay per request
 
 Each compile already collects into its own `ErrorList`, but that has not been tested under

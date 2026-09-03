@@ -37,22 +37,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <p>{@code -Dxvm.parallel.iterations=N} raises the count when chasing something rare.
  */
 public class EngineParallelCompileTest {
-    /**
-     * @return true iff this failure was diagnosed and fixed, so its return is a regression
-     *
-     * <p>"Mack module (javatools_turtle) is missing" meant a compile got a library module whose
-     * pool had no NakedRef type. Preparation had injected it, but preparation MODIFIES the module,
-     * and an on-disk repository re-reads a modified module from disk - silently replacing the
-     * prepared structure with a fresh one. Fixed by holding the prepared instances; see
-     * XtcEngine.ensureLibraryPrepared.
-     *
-     * <p>OutOfMemoryError belongs here too: it was never a leak, it was Gradle's 512m default for
-     * test workers, and -PtestMaxHeap exists so it cannot come back as a mystery.
-     */
-    private static boolean isFixedAndMustNotReturn(String failure) {
-        return failure.contains("Mack module") || failure.contains("OutOfMemoryError");
-    }
-
     @Test public void parallel() throws Exception {
         assumeTrue(XdkOutputs.systemModulesAvailable(), "needs XDK");
         Path root = XdkOutputs.root();
@@ -115,15 +99,9 @@ public class EngineParallelCompileTest {
         System.out.println("PAR DISTRIBUTION over " + iterations + " iterations:");
         failures.forEach((what, count) -> System.out.println("  " + count + "x  " + what));
 
-        // Assert what is FIXED; report what is not. Concurrent compilation against a shared library
-        // is not correct yet - docs/reentrancy/plans/parallel-compiler-plan.md tracks the open
-        // residuals (VERIFY-11 contribution cycles, ConcurrentModificationException, an NPE on
-        // m_FVisited) - and asserting a clean sweep would leave this test permanently red, which
-        // teaches everyone to ignore it. So it guards the classes that ARE resolved and prints the
-        // rest, and the distribution above is the record of where the work stands.
-        var regressions = failures.keySet().stream()
-                .filter(EngineParallelCompileTest::isFixedAndMustNotReturn)
-                .toList();
-        assertEquals(List.of(), regressions, "a failure class that was fixed has come back");
+        // Strict again. Concurrent compilation against a shared library now runs clean - 40
+        // iterations of 42 modules on 8 threads, 1680 compiles, zero failures - so anything here
+        // is a regression, and a distribution printed above says exactly which class came back.
+        assertEquals(Map.of(), failures, "concurrent compiles did not match the sequential result");
     }
 }

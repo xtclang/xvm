@@ -302,15 +302,15 @@ public class ConstantPool
                 constantOld = (T) mapConstants.get(constant);
                 if (constantOld == null) {
                     Thread threadWriting = m_threadAssembling;
-                    if (threadWriting != null) {
+                    if (threadWriting == Thread.currentThread()) {
                         // Registering into a pool that is mid-write corrupts the file: assemble()
                         // has already emitted the constant count. Throw HERE so the stack names the
                         // code doing it, rather than letting it surface later as the pool having
                         // grown, which says only that it happened.
                         throw new IllegalStateException("registering " + constant.getClass().getSimpleName()
                                 + " " + constant + " into the pool of " + describeOwner()
-                                + " while it is being written by " + threadWriting.getName()
-                                + " (this thread: " + Thread.currentThread().getName() + ")");
+                                + " while THIS thread is in the middle of writing it"
+                                + " (" + threadWriting.getName() + ")");
                     }
                     beginRegistrationCompletion(constant);
                     fPublishedIncomplete = true;
@@ -3381,6 +3381,13 @@ public class ConstantPool
         // malformed. Indexed rather than for-each so that a change is reported as what it is -
         // something interned into the pool while the pool was being written - instead of a bare
         // ConcurrentModificationException that names neither the pool nor the constant.
+        // Synchronized on the pool, which is the SAME monitor register() already takes. A
+        // cross-pool intrusion (T12) then blocks until the write finishes instead of growing the
+        // list past the count already emitted, so the worst case becomes a late registration rather
+        // than a malformed .xtc. This does not fix T12 - a request still reaches into another
+        // request's pool, which is a design defect - it removes the corruption that made it
+        // destructive, and leaves the detector below to keep it visible.
+        synchronized (this) {
         int cConst = f_listConst.size();
         m_threadAssembling = Thread.currentThread();
         try {
@@ -3407,6 +3414,7 @@ public class ConstantPool
         }
         } finally {
             m_threadAssembling = null;
+        }
         }
     }
 
