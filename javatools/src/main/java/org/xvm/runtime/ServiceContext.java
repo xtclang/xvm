@@ -231,13 +231,15 @@ public class ServiceContext {
      *
      * @return the op info for the specified category
      */
-    public Object getOpInfo(Op op, Enum<?> category) {
-        EnumMap<?, ?> mapByCategory = f_mapOpInfo.get(op);
+    public <T> T getOpInfo(Op op, OpInfoKey<T> key) {
+        Map<Enum<?>, WeakReference<?>> mapByCategory = f_mapOpInfo.get(op);
         if (mapByCategory == null) {
             return null;
         }
-        WeakReference<?> ref = (WeakReference<?>) mapByCategory.get(category);
-        return ref == null ? null : ref.get();
+        WeakReference<?> ref = mapByCategory.get(key.category());
+        // the key carries the type the category was declared with, so this is a real check at the
+        // cache boundary - the call sites no longer each cast on trust
+        return ref == null ? null : key.type().cast(ref.get());
     }
 
     /**
@@ -247,9 +249,21 @@ public class ServiceContext {
      * @param category the category of the cached info (op specific)
      * @param info     the info
      */
-    public void setOpInfo(Op op, Enum<?> category, Object info) {
-        f_mapOpInfo.computeIfAbsent(op, (op_) -> new EnumMap(category.getClass()))
-                   .put(category, new WeakReference(info));
+    public <T> void setOpInfo(Op op, OpInfoKey<T> key, T info) {
+        Enum<?> category = key.category();
+        f_mapOpInfo.computeIfAbsent(op, op_ -> newCategoryMap(category))
+                   .put(category, new WeakReference<>(info));
+    }
+
+    /**
+     * An EnumMap needs a concrete enum class, and the category enum differs per op, so there is no
+     * type argument to write here. The raw construction is confined to this one line; the map is
+     * handed back as a typed Map, and EnumMap itself rejects a key from a different enum class at
+     * insertion, so the key side stays enforced at run time.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Map<Enum<?>, WeakReference<?>> newCategoryMap(Enum<?> category) {
+        return new EnumMap(category.getClass());
     }
 
     /**
@@ -2195,7 +2209,7 @@ public class ServiceContext {
      * Since only one fiber can access the service context at any time, a simple HashMap is used.
      * To prevent leaks, the values in the EnumMap are WekRef objects.
      */
-    private final Map<Op, EnumMap> f_mapOpInfo = new WeakHashMap<>();
+    private final Map<Op, Map<Enum<?>, WeakReference<?>>> f_mapOpInfo = new WeakHashMap<>();
 
     /**
      * A "service-local" cache for transient field values.

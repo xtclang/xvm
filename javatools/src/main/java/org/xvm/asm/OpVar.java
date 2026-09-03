@@ -14,6 +14,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.BuildContext;
 
 import org.xvm.javajit.RegisterInfo;
+import org.xvm.runtime.OpInfoKey;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
@@ -164,8 +165,8 @@ public abstract class OpVar
      */
     protected TypeComposition getArrayClass(Frame frame, TypeConstant typeList) {
         ServiceContext  context  = frame.f_context;
-        TypeComposition clzArray = (TypeComposition) context.getOpInfo(this, Category.Composition);
-        TypeConstant    typePrev = (TypeConstant)    context.getOpInfo(this, Category.Type);
+        TypeComposition clzArray = context.getOpInfo(this, INFO_COMPOSITION);
+        TypeConstant    typePrev = context.getOpInfo(this, INFO_TYPE);
 
         if (clzArray == null || !typeList.equals(typePrev)) {
             TypeConstant typeEl = typeList.resolveGenericType("Element");
@@ -173,8 +174,8 @@ public abstract class OpVar
             clzArray = xArray.getInstance(context.f_container).
                     ensureParameterizedClass(context.f_container, typeEl);
 
-            context.setOpInfo(this, Category.Composition, clzArray);
-            context.setOpInfo(this, Category.Type, typeList);
+            context.setOpInfo(this, INFO_COMPOSITION, clzArray);
+            context.setOpInfo(this, INFO_TYPE, typeList);
         }
 
         return clzArray;
@@ -314,4 +315,10 @@ public abstract class OpVar
 
     // categories for cached info
     enum Category {Composition, Type}
+
+    /** The value each {@link Category} caches, declared once so the pairing cannot drift. */
+    static final OpInfoKey<TypeComposition> INFO_COMPOSITION =
+            OpInfoKey.of(Category.Composition, TypeComposition.class);
+    static final OpInfoKey<TypeConstant> INFO_TYPE =
+            OpInfoKey.of(Category.Type, TypeConstant.class);
 }

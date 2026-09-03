@@ -31,6 +31,7 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
 
+import org.xvm.runtime.OpInfoKey;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.CallChain.VirtualConstructorChain;
 import org.xvm.runtime.Frame;
@@ -129,15 +130,15 @@ public abstract class OpInvocable extends Op {
     // helper methods
     protected CallChain getCallChain(Frame frame, ObjectHandle hTarget) {
         ServiceContext  context   = frame.f_context;
-        CallChain       chain     = (CallChain) context.getOpInfo(this, Category.Chain);
-        TypeComposition clazzPrev = (TypeComposition) context.getOpInfo(this, Category.Composition);
+        CallChain       chain     = context.getOpInfo(this, INFO_CHAIN);
+        TypeComposition clazzPrev = context.getOpInfo(this, INFO_COMPOSITION);
         TypeComposition clazz     = hTarget.getComposition();
 
         if (chain != null && clazz == clazzPrev) {
             return chain;
         }
 
-        context.setOpInfo(this, Category.Composition, clazz);
+        context.setOpInfo(this, INFO_COMPOSITION, clazz);
 
         MethodConstant  idMethod = frame.getConstant(m_nMethodId, MethodConstant.class);
         MethodStructure method   = idMethod.getComponent();
@@ -149,13 +150,13 @@ public abstract class OpInvocable extends Op {
         if (method != null && method.getAccess() == Access.PRIVATE) {
             chain = new CallChain(method);
 
-            context.setOpInfo(this, Category.Chain, chain);
+            context.setOpInfo(this, INFO_CHAIN, chain);
             return chain;
         }
 
         if (idMethod.getName().equals("construct")) {
             chain = new VirtualConstructorChain(frame.poolContext(), idMethod, hTarget);
-            context.setOpInfo(this, Category.Chain, chain);
+            context.setOpInfo(this, INFO_CHAIN, chain);
             return chain;
         }
 
@@ -190,7 +191,7 @@ public abstract class OpInvocable extends Op {
                 "\" on " + hTarget.getType().getValueString()));
         }
 
-        context.setOpInfo(this, Category.Chain, chain);
+        context.setOpInfo(this, INFO_CHAIN, chain);
         return chain;
     }
 
@@ -531,4 +532,10 @@ public abstract class OpInvocable extends Op {
 
     // categories for cached info
     protected enum Category {Chain, Composition}
+
+    /** The value each {@link Category} caches, declared once so the pairing cannot drift. */
+    protected static final OpInfoKey<CallChain> INFO_CHAIN =
+            OpInfoKey.of(Category.Chain, CallChain.class);
+    protected static final OpInfoKey<TypeComposition> INFO_COMPOSITION =
+            OpInfoKey.of(Category.Composition, TypeComposition.class);
 }

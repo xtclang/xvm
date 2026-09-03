@@ -32,6 +32,7 @@ import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
 import org.xvm.javajit.TypeSystem;
 
+import org.xvm.runtime.OpInfoKey;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -196,9 +197,9 @@ public abstract class OpCallable extends Op {
         // suffix "C" indicates the compile-time constants; "R" - the run-time
         IdentityConstant idParentR   = hParent.getTemplate().getClassConstant();
         ServiceContext   context     = frame.f_context;
-        MethodStructure  constructor = (MethodStructure) context.getOpInfo(this, Category.Constructor);
+        MethodStructure  constructor = context.getOpInfo(this, INFO_CONSTRUCTOR);
         if (constructor != null) {
-            IdentityConstant idParent = (IdentityConstant) context.getOpInfo(this, Category.TargetClass);
+            IdentityConstant idParent = context.getOpInfo(this, INFO_TARGET_CLASS);
             if (idParent.equals(idParentR)) {
                 // cached constructor fits the parent's class
                 return constructor;
@@ -235,8 +236,8 @@ public abstract class OpCallable extends Op {
             }
         }
 
-        context.setOpInfo(this, Category.TargetClass, idParentR);
-        context.setOpInfo(this, Category.Constructor, constructor);
+        context.setOpInfo(this, INFO_TARGET_CLASS, idParentR);
+        context.setOpInfo(this, INFO_CONSTRUCTOR, constructor);
         return constructor;
     }
 
@@ -251,9 +252,9 @@ public abstract class OpCallable extends Op {
         TypeConstant     typeR       = hType.getDataType();
         IdentityConstant idTargetR   = typeR.getSingleUnderlyingClass(false);
         ServiceContext   context     = frame.f_context;
-        MethodStructure  constructor = (MethodStructure) context.getOpInfo(this, Category.Constructor);
+        MethodStructure  constructor = context.getOpInfo(this, INFO_CONSTRUCTOR);
         if (constructor != null) {
-            IdentityConstant idTarget = (IdentityConstant) context.getOpInfo(this, Category.TargetClass);
+            IdentityConstant idTarget = context.getOpInfo(this, INFO_TARGET_CLASS);
             if (idTarget.equals(idTargetR)) {
                 // cached constructor fits the parent's class
                 return constructor;
@@ -279,8 +280,8 @@ public abstract class OpCallable extends Op {
             constructor = info.getTopmostMethodStructure(infoTarget);
         }
 
-        context.setOpInfo(this, Category.TargetClass, idTargetR);
-        context.setOpInfo(this, Category.Constructor, constructor);
+        context.setOpInfo(this, INFO_TARGET_CLASS, idTargetR);
+        context.setOpInfo(this, INFO_CONSTRUCTOR, constructor);
         return constructor;
     }
 
@@ -322,8 +323,8 @@ public abstract class OpCallable extends Op {
         assert frame.f_function.isConstructor();
 
         ServiceContext   context     = frame.f_context;
-        MethodStructure  constructor = (MethodStructure) context.getOpInfo(this, Category.Function);
-        IdentityConstant idPrev      = (IdentityConstant) context.getOpInfo(this, Category.TargetClass);
+        MethodStructure  constructor = context.getOpInfo(this, INFO_FUNCTION);
+        IdentityConstant idPrev      = context.getOpInfo(this, INFO_TARGET_CLASS);
         IdentityConstant idThis      = frame.getThis().getTemplate().getClassConstant();
 
         if (constructor != null && idPrev.equals(idThis)) {
@@ -374,8 +375,8 @@ public abstract class OpCallable extends Op {
             }
         }
 
-        context.setOpInfo(this, Category.Function, constructor);
-        context.setOpInfo(this, Category.TargetClass, idThis);
+        context.setOpInfo(this, INFO_FUNCTION, constructor);
+        context.setOpInfo(this, INFO_TARGET_CLASS, idThis);
 
         return constructor;
     }
@@ -390,7 +391,7 @@ public abstract class OpCallable extends Op {
     protected MethodStructure getMethodStructure(Frame frame) {
         ServiceContext   context    = frame.f_context;
         MethodConstant   idFunction = frame.getConstant(m_nFunctionId, MethodConstant.class);
-        MethodStructure  function   = (MethodStructure) context.getOpInfo(this, Category.Function);
+        MethodStructure  function   = context.getOpInfo(this, INFO_FUNCTION);
         IdentityConstant idTarget   = idFunction.getNamespace();
 
         switch (idTarget.getFormat()) {
@@ -415,8 +416,8 @@ public abstract class OpCallable extends Op {
                     return null;
                 }
 
-                context.setOpInfo(this, Category.Function, function);
-                context.setOpInfo(this, Category.Template,
+                context.setOpInfo(this, INFO_FUNCTION, function);
+                context.setOpInfo(this, INFO_TEMPLATE,
                         context.f_container.getTemplate(typeTarget));
             }
             break;
@@ -428,7 +429,7 @@ public abstract class OpCallable extends Op {
         case DynamicFormal: {
             GenericTypeResolver resolver   = frame.getGenericsResolver(true);
             TypeConstant        typeTarget = ((FormalConstant) idTarget).resolve(resolver);
-            TypeConstant        typePrev   = (TypeConstant) context.getOpInfo(this, Category.TargetType);
+            TypeConstant        typePrev   = context.getOpInfo(this, INFO_TARGET_TYPE);
             if (function == null || !typeTarget.equals(typePrev)) {
                 function = typeTarget.findCallable(idFunction.getSignature());
                 if (function == null) {
@@ -437,9 +438,9 @@ public abstract class OpCallable extends Op {
                     return null;
                 }
 
-                context.setOpInfo(this, Category.Function, function);
-                context.setOpInfo(this, Category.TargetType, typeTarget);
-                context.setOpInfo(this, Category.Template,
+                context.setOpInfo(this, INFO_FUNCTION, function);
+                context.setOpInfo(this, INFO_TARGET_TYPE, typeTarget);
+                context.setOpInfo(this, INFO_TEMPLATE,
                     typeTarget.isSingleDefiningConstant()
                         ? context.f_container.getTemplate(typeTarget)
                         : context.f_container.getTemplate(
@@ -454,7 +455,7 @@ public abstract class OpCallable extends Op {
                 assert !function.isNative();
 
                 // since the function is never native, no need to save the template
-                context.setOpInfo(this, Category.Function, function);
+                context.setOpInfo(this, INFO_FUNCTION, function);
             }
             break;
         }
@@ -471,8 +472,8 @@ public abstract class OpCallable extends Op {
      *         using the information collected by {@link #getMethodStructure}
      */
     protected ClassTemplate getNativeTemplate(Frame frame, MethodStructure function) {
-        assert function == frame.f_context.getOpInfo(this, Category.Function);
-        return (ClassTemplate) frame.f_context.getOpInfo(this, Category.Template);
+        assert function == frame.f_context.getOpInfo(this, INFO_FUNCTION);
+        return frame.f_context.getOpInfo(this, INFO_TEMPLATE);
     }
 
     /**
@@ -1002,4 +1003,16 @@ public abstract class OpCallable extends Op {
 
     // categories for cached info
     protected enum Category {Function, Template, TargetClass, TargetType, Constructor}
+
+    /** The value each {@link Category} caches, declared once so the pairing cannot drift. */
+    protected static final OpInfoKey<MethodStructure> INFO_FUNCTION =
+            OpInfoKey.of(Category.Function, MethodStructure.class);
+    protected static final OpInfoKey<ClassTemplate> INFO_TEMPLATE =
+            OpInfoKey.of(Category.Template, ClassTemplate.class);
+    protected static final OpInfoKey<IdentityConstant> INFO_TARGET_CLASS =
+            OpInfoKey.of(Category.TargetClass, IdentityConstant.class);
+    protected static final OpInfoKey<TypeConstant> INFO_TARGET_TYPE =
+            OpInfoKey.of(Category.TargetType, TypeConstant.class);
+    protected static final OpInfoKey<MethodStructure> INFO_CONSTRUCTOR =
+            OpInfoKey.of(Category.Constructor, MethodStructure.class);
 }

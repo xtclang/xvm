@@ -31,6 +31,7 @@ import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.MultiSlot;
 import org.xvm.javajit.SingleSlot;
 
+import org.xvm.runtime.OpInfoKey;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -170,9 +171,9 @@ public abstract class OpIndex
      */
     protected CallChain getOpChain(Frame frame, TypeConstant typeTarget) {
         ServiceContext ctx   = frame.f_context;
-        CallChain      chain = (CallChain) ctx.getOpInfo(this, Category.Chain);
+        CallChain      chain = ctx.getOpInfo(this, INFO_CHAIN);
         if (chain != null) {
-            TypeConstant typePrevTarget = (TypeConstant) ctx.getOpInfo(this, Category.Type);
+            TypeConstant typePrevTarget = ctx.getOpInfo(this, INFO_TYPE);
             if (typeTarget.equals(typePrevTarget)) {
                 return chain;
             }
@@ -185,8 +186,8 @@ public abstract class OpIndex
      */
     protected void saveOpChain(Frame frame, TypeConstant typeTarget, CallChain chain) {
         ServiceContext ctx = frame.f_context;
-        ctx.setOpInfo(this, Category.Chain, chain);
-        ctx.setOpInfo(this, Category.Type, typeTarget);
+        ctx.setOpInfo(this, INFO_CHAIN, chain);
+        ctx.setOpInfo(this, INFO_TYPE, typeTarget);
     }
 
     @Override
@@ -598,4 +599,10 @@ public abstract class OpIndex
 
     // categories for cached info
     enum Category {Chain, Type}
+
+    /** The value each {@link Category} caches, declared once so the pairing cannot drift. */
+    static final OpInfoKey<CallChain> INFO_CHAIN =
+            OpInfoKey.of(Category.Chain, CallChain.class);
+    static final OpInfoKey<TypeConstant> INFO_TYPE =
+            OpInfoKey.of(Category.Type, TypeConstant.class);
 }
