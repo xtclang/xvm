@@ -463,7 +463,7 @@ public final class UnresolvedTypeConstant
     public String getValueString() {
         return isTypeResolved()
                 ? getResolvedType().getValueString()
-                : m_constId.getValueString();
+                : m_constId == null ? "<unresolved forward reference>" : m_constId.getValueString();
     }
 
     @Override
@@ -475,7 +475,21 @@ public final class UnresolvedTypeConstant
         }
 
         if (that instanceof UnresolvedTypeConstant thatUnresolved) {
-            return m_constId.compareDetails(thatUnresolved.m_constId);
+            UnresolvedNameConstant idThis = m_constId;
+            UnresolvedNameConstant idThat = thatUnresolved.m_constId;
+            if (idThis == null || idThat == null) {
+                // A FORWARD-REFERENCE placeholder has no name to compare. UnionTypeConstant's
+                // native-method synthesis builds one with `new UnresolvedTypeConstant(pool, null)`
+                // because the signature it belongs to cannot be built without it, interns that
+                // signature, and only then resolves the placeholder - so between those two steps a
+                // nameless, unresolved constant is reachable in the pool, and anything comparing
+                // against it used to fail with a NullPointerException on m_constId. Identity is the
+                // only stable answer, and null must order consistently for sorting to terminate.
+                return idThis == idThat
+                        ? (this == that ? 0 : -1)
+                        : idThis == null ? -1 : 1;
+            }
+            return idThis.compareDetails(idThat);
         }
 
         // need to return a value that allows for stable sorts, but unless this==that, the
@@ -518,7 +532,7 @@ public final class UnresolvedTypeConstant
     public String getDescription() {
         return isTypeResolved()
                 ? "(resolved) " + getResolvedType().getDescription()
-                : m_constId.getDescription();
+                : m_constId == null ? "unresolved forward reference" : m_constId.getDescription();
     }
 
 

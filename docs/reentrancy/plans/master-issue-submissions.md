@@ -89,6 +89,9 @@ Status is as of this file's last update; check the PR before re-filing.
 | 40 | `TestFiles.testListing` shares a fixed temp dir across concurrent runs | **fixed, not filed** - `51efcbfb7` on a master branch | independent | `manualTests/files.x` |
 | 41 | An in-progress `TypeInfo` build has no declared owner, so a peer's place-holder is misread as recursion | **latent, NOT filed** - no red-on-master repro; fixed on `lagergren/master-typeinfo-build-owner` (`ca2aa7434`, local) | independent | `TypeConstant`, `ConstantPool` |
 | 42 | Deferred-`TypeInfo` list is per-pool but drained per-window, so cross-pool entries leak | **latent, NOT filed** - no red-on-master repro; fixed on `lagergren/master-typeinfo-build-owner` (`ca2aa7434`, local) | 41 (same commit) | `ConstantPool` |
+| 43 | `Component.m_FVisited` is a recursion marker on shared state, so a peer's descent is reported as a contribution cycle | 1 field move + a `finally` | independent | its own javadoc says "Not thread-safe" |
+| 44 | `UnresolvedTypeConstant.compareDetails` dereferences an `m_constId` the codebase itself sets to null | 3-line guard | independent | plain unguarded NPE, not only a concurrency issue |
+| 45 | `FileStructure.writeTo` assumes one registration pass is a fixed point; the pool can grow mid-write | loop to a fixed point | independent | a malformed `.xtc` is the worst case |
 
 ### Filing a row as an issue or PR
 
@@ -3290,4 +3293,169 @@ remaining crash-shaped parallel failures). Full `javatools` +
 
 **Dependencies/order:** Ships with row 41 in `ca2aa7434`; on its own it is
 invisible, because row 41's failure mode fires first.
+
+## 43. `Component.m_FVisited` is a recursion marker kept on shared state
+
+**Issue title:** `Component.resolveContributedName` tracks "am I already inside this component" in
+a field on the component, so two threads resolving against one component report a contribution
+cycle that does not exist.
+
+**Status/category:** Real defect in current master source; no red-on-master reproduction, found and
+fixed on an experiment branch that serves one prepared library to concurrent compiles.
+
+**Explanation:** `origin/master:Component.java:2012-2022`:
+
+```java
+if (m_FVisited != null && m_FVisited.booleanValue() == fAllowInto) {
+    errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION, ...);
+    return ResolutionResult.ERROR;
+}
+
+m_FVisited = fAllowInto;
+ResolutionResult result = clzContrib.resolveContributedName(sName, access, collector, fAllowInto, errs);
+m_FVisited = null;
+```
+
+The field's own javadoc is `Recursion check for resolveContributedName. Not thread-safe.`
+(`origin/master:Component.java:3664`). Recursion is a property of one descent; the marker is stored
+where every descent can see it. Two consequences, both observed:
+
+- one thread inside `Array` makes another report **`VERIFY-11`, "contribution forms a cycle"**, at
+  `Severity.FATAL`, against a declaration that contains no cycle;
+- `m_FVisited = null` racing another thread's `m_FVisited.booleanValue()` gives
+  **`NullPointerException: Cannot invoke "java.lang.Boolean.booleanValue()" because
+  "this.m_FVisited" is null`**.
+
+There is a second, thread-independent defect in the same lines: the reset is a bare assignment
+AFTER the recursive call rather than a `finally`, so any throw out of
+`clzContrib.resolveContributedName` leaves the marker set permanently, and every later resolution
+of that component reports a cycle. Per-compile cloning hides that too, because the poisoned
+component dies with the clone.
+
+**Master evidence:** `origin/master:Component.java:2012` (the check), `:2019-2022` (set, call,
+un-`finally`d reset), `:3664` (the field and its "Not thread-safe" javadoc).
+
+**Failure mode:** `VERIFY-11` FATAL on a valid declaration, or an NPE on `m_FVisited`; after a throw,
+a permanently poisoned component.
+
+**Reachability on master:** needs two threads resolving contributed names against one shared
+component. The runtime resolves names against shared library components from service threads, so
+the window is the same one [row 26](#26-typeinfo-placeholder-identity-race-strands-types-as-being-built)
+and [row 41](#41-an-in-progress-typeinfo-build-has-no-declared-owner-so-a-peers-place-holder-is-misread-as-recursion)
+already argue is routine. The `finally` half needs no concurrency at all.
+
+**Minimal master-portable fix strategy:** move the marker to per-thread state keyed by component
+(identity map), exactly as row 41 does for the TypeInfo place-holder, and put the reset in a
+`finally`. On the branch both live on one `TypeSystemThread` object.
+
+**Tests to add/run on master:** none yet. On the branch, over 15 concurrent iterations of the
+manualTests suite, `VERIFY-11` went **6 -> 0** and the NPE with it.
+
+**Dependencies/order:** Independent. Shares a home with row 41 if both are taken.
+
+## 44. `UnresolvedTypeConstant.compareDetails` dereferences a null the codebase creates on purpose
+
+**Issue title:** `UnresolvedTypeConstant.compareDetails` NPEs on the forward-reference placeholder
+that `UnionTypeConstant` constructs with a null name.
+
+**Status/category:** Real defect in current master source. **Not only a concurrency issue** - the
+null is deliberate and reachable on one thread.
+
+**Explanation:** `UnionTypeConstant` synthesizes a native method signature that cannot be built
+without the very type it is defining, so it makes a nameless placeholder, interns the signature,
+and only then resolves it (`origin/master:UnionTypeConstant.java:728-739`):
+
+```java
+UnresolvedTypeConstant typeValue = new UnresolvedTypeConstant(pool, null);   // no name
+SignatureConstant      sigFn     = pool.ensureSignatureConstant(sName, ..., typeValue, ...);
+MethodConstant         idFn      = pool.ensureMethodConstant(idThis, sigFn);
+typeValue.resolve(new TypeParameterConstant(pool, idFn, "CompileType", 0).getType());
+```
+
+Between the `ensureSignatureConstant` and the `resolve`, a nameless, unresolved constant is
+reachable in the pool. Interning is a de-duplicating operation, so it COMPARES the new signature
+against existing ones, and `UnresolvedTypeConstant.compareDetails`
+(`origin/master:UnresolvedTypeConstant.java:474`) does:
+
+```java
+if (that instanceof UnresolvedTypeConstant thatUnresolved) {
+    return m_constId.compareDetails(thatUnresolved.m_constId);   // m_constId may be null
+}
+```
+
+`getValueString` and `getDescription` dereference the same field unguarded, so printing one - which
+a debugger does implicitly - fails the same way.
+
+**Master evidence:** `origin/master:UnionTypeConstant.java:728` (the deliberate null),
+`origin/master:UnresolvedTypeConstant.java:474` (unguarded compare), and the same file's
+`getValueString` / `getDescription`.
+
+**Failure mode:** `NullPointerException: Cannot invoke
+"org.xvm.asm.constants.UnresolvedNameConstant.compareDetails(org.xvm.asm.Constant)" because
+"this.m_constId" is null`.
+
+**Reachability on master:** whether the comparison happens depends on what the pool already holds,
+which is why it is intermittent rather than absent. Concurrency changes the ordering and therefore
+the odds; it is not required.
+
+**Minimal master-portable fix strategy:** treat a nameless placeholder as comparable by identity and
+order null consistently so sorting terminates, and give the two string methods a placeholder
+rendering. Three lines plus two ternaries; no change to how the placeholder is created.
+
+**Tests to add/run on master:** none yet; on the branch this removed the last NPE from a 20-iteration
+concurrent run.
+
+**Dependencies/order:** Independent.
+
+## 45. `FileStructure.writeTo` assumes one registration pass is a fixed point
+
+**Issue title:** `writeTo` writes the constant count and then interns more constants while writing,
+so the pool can outgrow the count already written.
+
+**Status/category:** Real defect in current master source; worst case is a malformed `.xtc`.
+
+**Explanation:** `origin/master:FileStructure.java:347-352`:
+
+```java
+reregisterConstants(true);
+assemble(out);
+resetModified();
+```
+
+`ConstantPool.assemble` writes `f_listConst.size()` FIRST and then writes each constant by the
+POSITION of everything it references. A reference that registration did not reach is therefore
+interned during the write: the list grows past the count already emitted, and the for-each over it
+throws `ConcurrentModificationException` - on ONE thread, with no second thread involved.
+
+Registration can itself intern, because resolving a reference is lazy, so a single pass is not
+guaranteed to be a fixed point. Whether it happens to be one depends on what is already resolved.
+
+Observed on the branch, with the loop instrumented to report growth rather than throw a bare CME:
+
+```
+the pool of TestMisc@3d24b03b grew from 1830 to 1837 while being written;
+the constant being assembled was MethodConstant Method{host=OrderLine, name=toString, ...}
+```
+
+**Master evidence:** `origin/master:FileStructure.java:349-350`;
+`origin/master:ConstantPool.assemble` (count first, then a for-each over the live list).
+
+**Failure mode:** `ConcurrentModificationException` out of `ConstantPool.assemble`, or - if the
+iteration happened not to notice - a `.xtc` whose declared constant count disagrees with its
+contents.
+
+**Reachability on master:** needs a reference that registration did not reach. The CLI compiles and
+writes with everything warm and single-threaded, which is why it is not seen there; anything that
+writes a module with colder metadata can hit it.
+
+**Minimal master-portable fix strategy:** register to a fixed point before assembling - repeat
+`reregisterConstants` until the pool size stops changing - bounded, with a diagnostic if it does not
+converge rather than an unbounded loop. Separately, `assemble` and `preRegisterAll` should iterate
+by index and report growth, so this class of defect names the pool and the constant instead of
+surfacing as a bare CME.
+
+**Tests to add/run on master:** none yet. On the branch this took "pool grew during write" from 5
+occurrences in 12 iterations to 1 in 20.
+
+**Dependencies/order:** Independent.
 
