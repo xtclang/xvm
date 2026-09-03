@@ -85,6 +85,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 36 | `deleteAll(range)` wrong elements / crash | **merged** (#563, 2026-08-31) | - | - |
 | 37 | `&slice1 == &slice2` / `&view1 == &view2` crash with a Java `ClassCastException` | **merged** (#564, 2026-08-31) | - | - |
 | 38 | `&a == &slice_of_a` crashes for every non-generic element type | **merged** (#564, 2026-08-31) | - | - |
+| 39 | One-return service call completes a bare handle, reads it as an array | **latent, NOT filed** - no reproduction; see the section below | independent | `ServiceContext` |
 
 ### Filing a row as an issue or PR
 
@@ -2989,3 +2990,54 @@ the code and asserts the outcome, not one that checks the method is written a pa
 **The tuple-argument copy** (was `MethodInvokeArgumentAliasingTest`, two tests) is already pinned
 properly on the tuple-alias branch by a class-file scan for `getfield m_ahValue`, plus an Ecstasy
 reproducer. This branch does not carry that migration, so neither applies here yet.
+
+## 39. A one-return service call completes a bare handle and reads it as an array
+
+**Classification: latent defect, no known reproduction.** Two sites get the shape wrong, so this
+is not an E13-style "shape that permits a defect nobody commits" - the defect is committed in the
+source. What is missing is a caller that reaches it, and until there is one this should not be
+filed as a bug. Recorded here so the analysis is not lost, and so the enhancement that removes it
+can cite what it removes.
+
+### The defect, with exact sites on `origin/master`
+
+`ServiceContext.Message.f_future` is a raw `CompletableFuture`, completed with either a single
+`ObjectHandle` or an `ObjectHandle[]` depending on a `cReturns` count each consumer must re-read.
+`Message.sendResponse` produces an array **only** in the `default:` arm, guarded by
+`assert cReturns > 1`; cases `0`, `1` and `-1` all complete with a bare `ObjectHandle`.
+
+Two consumers read the future as an array without establishing that:
+
+- `ServiceContext.sendInvokeNRequest`, at `cReturns == 1`:
+  ```java
+  CompletableFuture<ObjectHandle> cfReturn = future.thenApply(ahResult -> ahResult[0]);
+  ```
+  The responder completed that future with `frame.f_ahVar[0]` - a bare handle - so `ahResult[0]`
+  applies an array subscript to an `ObjectHandle`. `ClassCastException`, raised inside a
+  `thenApply` on the completing fiber, far from the call that set it up.
+- `ServiceContext.sendOpNRequest`, at `cRets <= 1`: hands `request.f_future` to
+  `Frame.createWaitFrame(CompletableFuture<ObjectHandle[]>, int[])`. Same mismatch, same cause.
+
+### Why there is no reproduction
+
+Probed on this branch by instrumenting both arms and running the full `javatools` suite plus
+`services.x`, `misc.x`, `queues.x` and `timeouts.x`: **zero hits on either.** The callers explain
+it - `sendOpNRequest` has one caller (`xRTType:1221`) which passes a 2-element array, and
+`sendInvokeNRequest` is reached through `xRTFunction.callN`, the N-ary path, where the compiler
+emits `Call_N1` rather than `Call_NN` for a single return. So the arms look unreachable through
+today's code generation. "Looks unreachable" is not "is unreachable", which is why the fix is
+worth having and the bug report is not.
+
+### The fix, and why it is an enhancement rather than a patch
+
+Patching the two arms would leave the erased future that allowed them. `Message<T>` carrying its
+own payload type removes the class: `OpRequest` splits into the two shapes it always had - single
+for no return, one return and a tuple return; multi for more than one - each completing its own
+future through a typed helper, so a single-valued response cannot be handed an array. Both
+array-consuming sites then have to branch on `cReturns` instead of assuming, which is what makes
+the two arms above correct rather than merely unvisited. The raw `(CompletableFuture)` cast in
+`sendInvokeNRequest` disappears, and `Frame`'s already-typed overloads match without it.
+
+Landed on `lagergren/lazy-instance` as `91a9727e0`. Verified on the Ecstasy side, where these
+paths actually execute: `services.x` covers void calls, single returns, and an async two-value
+return at `:106`; `tuple.x` covers the tuple shape; seven modules through `runner.x`, exit 0.

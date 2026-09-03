@@ -815,6 +815,55 @@ an erased map. The walk also stops reassigning its own `sibling` parameter.
 
 **Width.** One method, one override, three callers. Source- and binary-compatible.
 
+### E13.2 — `ServiceContext.getOpInfo/setOpInfo(Op, Enum<?>, Object)`
+
+**What it is.** The per-op info cache stores several unrelated kinds of value against one op and
+returns `Object`:
+
+```java
+public Object getOpInfo(Op op, Enum<?> category)
+public void   setOpInfo(Op op, Enum<?> category, Object info)
+```
+
+The `Category` enum names the intended payload - `Chain`, `Composition`, `TargetClass`,
+`Constructor`, `TargetType`, `Function`, `Template`, `Type` - but nothing checks that the name
+matches what was stored. Every one of the 36 call sites casts on the strength of that name:
+
+```java
+MethodStructure constructor = (MethodStructure) context.getOpInfo(this, Category.Constructor);
+```
+
+**Why it matters.** `setOpInfo(op, Category.TargetClass, constructor)` followed by a read of the
+same category as an `IdentityConstant` compiles. The failure is a `ClassCastException` on a hot
+runtime path, in whichever service happens to reuse the cached entry - far from the write that
+caused it. The cache is service-local but holds owner-bearing runtime metadata.
+
+**Why it is NOT a bug.** All 36 pairings are correct on master. That is not an audit claim: the
+conversion below binds each category to a type at its declaration, and every existing call site
+compiled unchanged against it. A mispaired site could not have type-checked, so the compiler
+proved the absence rather than a reader asserting it.
+
+**The change.** `OpInfoKey<T>(Enum<?> category, Class<T> type)`, declared once beside the enum it
+belongs to, so the association is written down in one place:
+
+```java
+protected static final OpInfoKey<MethodStructure> INFO_CONSTRUCTOR =
+        OpInfoKey.of(Category.Constructor, MethodStructure.class);
+
+MethodStructure constructor = context.getOpInfo(this, INFO_CONSTRUCTOR);
+```
+
+Reads go through `Class.cast` - one real check at the cache boundary instead of 36 unchecked casts
+at the call sites - and a wrong pairing is now a compile error. The map's value type goes from raw
+to `WeakReference<?>`. One raw `EnumMap` construction stays, confined to a single method: an
+`EnumMap` needs a concrete enum class and the category enum differs per op, so there is no type
+argument to write; `EnumMap` rejects a key from another enum class at insertion, so the key side
+stays enforced at run time.
+
+**Width.** One new record, two methods on `ServiceContext`, key declarations in four `Op` classes,
+36 call sites de-cast. Landed on `lagergren/lazy-instance` as `4c5e8dfe5`, with
+`OpInfoKeyTest` verified red without the boundary cast and green with it.
+
 ---
 
 ## E14 — Static typing campaign: replace `Object`-rooted dispatch with real types
