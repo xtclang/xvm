@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.io;
 
-
 import java.io.PrintStream;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -21,7 +20,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
@@ -29,7 +27,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * The injectable "Console" that prints to the specified PrintStream.
  */
 public class xExternalConsole
-        extends xService {
+        extends xTerminalConsole {
     public static xExternalConsole INSTANCE;
 
     public xExternalConsole(Container container, ClassStructure structure, boolean fInstance) {
@@ -46,9 +44,9 @@ public class xExternalConsole
      * @return the ID contained in the registered resource name
      */
     public static long register(NativeContainer container, PrintStream out) {
-        long id = NEXT_ID.incrementAndGet();
+        long id = CONSOLE_ID.incrementAndGet();
         container.addResourceSupplier(
-                new InjectionKey(resourceName(id), xTerminalConsole.INSTANCE.getCanonicalType()),
+                new InjectionKey(consoleName(id), INSTANCE.getCanonicalType()),
                 (frame, opts) -> INSTANCE.ensureConsole(frame, out));
         return id;
     }
@@ -58,10 +56,10 @@ public class xExternalConsole
      */
     public static void unregister(NativeContainer container, long id) {
         container.removeResourceSupplier(
-                new InjectionKey(resourceName(id), xTerminalConsole.INSTANCE.getCanonicalType()));
+                new InjectionKey(consoleName(id), INSTANCE.getCanonicalType()));
     }
 
-    private static String resourceName(long id) {
+    private static String consoleName(long id) {
         return "console_" + id;
     }
 
@@ -148,5 +146,8 @@ public class xExternalConsole
         }
     }
 
-    private static final AtomicLong NEXT_ID = new AtomicLong();
+    /**
+     * Atomic counter for injected Console objects.
+     */
+    private static final AtomicLong CONSOLE_ID = new AtomicLong();
 }
