@@ -221,7 +221,32 @@ engine's `generateCode` finishes in one pass because no node deferred itself, an
 unconverged result. The CLI takes two to three passes because nodes there *do* defer and get
 revisited.
 
-**Next:** find why nodes do not defer in the engine. A node that cannot resolve yet is supposed to
+### Measured: nodes defer during name resolution, and not at all afterwards
+
+Instrumented `StageMgr.requestRevisit()` with a cumulative counter and printed it at every
+`processComplete()` during an engine compile of `lib_json` (2804 calls):
+
+```
+Resolved   complete=true  revisitLeft=0  revisitRequests=477
+Validated  complete=true  revisitLeft=0  revisitRequests=477   <- no new deferrals
+Emitted    complete=true  revisitLeft=0  revisitRequests=477   <- none here either
+```
+
+The counter is cumulative, so it flat-lining across `Validated` and `Emitted` means **no node
+deferred itself during validation or code generation**. One pass sufficed because nothing asked to
+be revisited - the loop is not stopping early, it has nothing to do.
+
+Deferral clearly works in this engine: 477 requests during name resolution, all satisfied. So the
+mechanism is intact and the question is narrower again - what would have made a node defer during
+validation, and why is that condition never met here?
+
+**Next:** the `buf` narrowing is not obviously a deferral problem at all. `StringBuffer? buf = Null`
+followed by a `while` loop that assigns a real buffer in one branch requires the loop's back-edge
+to feed the loop head - a fixed point over the loop body, computed inside a single validation of
+that method, not across StageMgr passes. Look at how `WhileStatement` merges its body's exit state
+back into the loop head, and whether the engine reaches that merge at all.
+
+**Next (superseded):** find why nodes do not defer in the engine. A node that cannot resolve yet is supposed to
 put itself on the revisit list rather than log; something about the engine's setup makes them
 resolve-and-log on the first attempt instead. `StageMgr.markLastAttempt()` is only called when
 `fLastAttempt` is true, and on a first pass `runPhase` passes `false`, so the nodes should have
