@@ -42,6 +42,6 @@ annotation BeforeEach
         Boolean requiresTarget.get() = before.is(Method);
 
         @Override
-        void beforeEach(ExecutionContext context) = context.invoke(before);
+        void beforeEach(ExecutionContext context) = context.methodExecutor.invoke(before, context);
     }
 }

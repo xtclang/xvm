@@ -40,6 +40,6 @@ annotation BeforeAll
             implements BeforeAllCallback {
 
         @Override
-        void beforeAll(ExecutionContext context) = context.invoke(before);
+        void beforeAll(ExecutionContext context) = context.methodExecutor.invoke(before, context);
     }
 }

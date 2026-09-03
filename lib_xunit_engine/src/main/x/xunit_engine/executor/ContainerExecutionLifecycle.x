@@ -55,7 +55,7 @@ const ContainerExecutionLifecycle<ModelType extends ContainerModel>(ModelType mo
         EngineExecutionContext beforeContext;
         if (Class testClass := model.testClass.is(TestFixture), testClass.lifecycle == Singleton) {
             Object fixture = ensureFixture(context, extensions, testClass);
-            beforeContext = context.asBuilder(model).withTestFixture(fixture).build();
+            beforeContext = context.asBuilder(model).withTestFixture(&fixture).build();
         } else {
             beforeContext = context;
         }

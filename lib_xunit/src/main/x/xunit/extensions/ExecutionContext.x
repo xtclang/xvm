@@ -30,9 +30,9 @@ interface ExecutionContext {
     @RO ResourceRegistry registry;
 
     /**
-     * The current test fixture the test method will execute against.
+     * A reference to the current test fixture the test method will execute against.
      */
-    @RO Object? testFixture;
+    @RO Ref<Object>? testFixture;
 
     /**
      * Any `Exception thrown during execution of the test lifecycle.
@@ -40,26 +40,9 @@ interface ExecutionContext {
     @RO Exception? exception;
 
     /**
-     * Invoke a `MethodOrFunction` using any registered `ParameterResolver` resources to resolve
-     * parameters for the function.
-     *
-     * @param method the `MethodOrFunction` to invoke
-     *
-     * @return the result of invoking the function
+     * The `MethodExecutor` to use to execute methods and functions.
      */
-    Tuple invoke(MethodOrFunction method);
-
-    /**
-     * Invoke a `MethodOrFunction` using any registered `ParameterResolver` resources
-     * to resolve parameters for the function and return the single result returned by the
-     * invocation.
-     *
-     * @param method the `MethodOrFunction` to invoke
-     *
-     * @return `True` iff the invocation returned a result
-     * @return the single result of invoking the function
-     */
-    conditional Object invokeSingleResult(MethodOrFunction method);
+    @RO MethodExecutor methodExecutor;
 
     /**
      * Lookup a resource stored in this context.
@@ -72,5 +55,4 @@ interface ExecutionContext {
      * @return the requested resource
      */
     conditional Object lookup(Type type, String name, Options opts = Null);
-
 }

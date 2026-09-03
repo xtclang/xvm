@@ -4,10 +4,13 @@ import xunit.MethodOrFunction;
 
 import xunit.extensions.ExecutionContext;
 
+import xunit.extensions.MethodExecutor;
+
 /**
  * Information about the current phase of execution of a test fixture.
  * A test fixture could be a test method, or a test container.
  */
+@Concurrent
 service EngineExecutionContext
         implements ExecutionContext {
     /**
@@ -31,66 +34,65 @@ service EngineExecutionContext
     /**
      * The `Model` to execute.
      */
-    Model model;
+    public/private Model model;
 
     /**
      * The `UniqueId` of the current test fixture.
      */
     @Override
-    UniqueId uniqueId.get() {
-        return model.uniqueId;
-     }
+    UniqueId uniqueId.get() = model.uniqueId;
 
     /**
      * The human readable name for the test.
      */
     @Override
-    String displayName;
+    public/private String displayName;
 
     /**
      * The `Class` associated to the current test fixture.
      */
     @Override
-    Class? testClass;
+    public/private Class? testClass;
 
     /**
      * The current test method.
      */
     @Override
-    MethodOrFunction? testMethod;
+    public/private MethodOrFunction? testMethod;
 
     /**
      * The current test fixture the test method will execute against.
      */
     @Override
-    Object? testFixture;
+    public/private Ref<Object>? testFixture;
 
     /**
      * Any `Exception thrown during execution of the test lifecycle.
      */
     @Override
-    Exception? exception;
+    public/private Exception? exception;
 
     /**
      * The `ResourceRegistry` containing resources registered for this execution.
      */
     @Override
-    ResourceRegistry registry;
+    public/private ResourceRegistry registry;
 
     /**
      * The `MethodExecutor` to use to execute tests.
      */
-    MethodExecutor methodExecutor;
+    @Override
+    public/private MethodExecutor methodExecutor;
 
     /**
      * The test `ExecutionListener`.
      */
-    ExecutionListener listener;
+    public/private ExecutionListener listener;
 
     /**
      * The current execution results.
      */
-    Result results = new Result(Successful, count=0);
+    public/private Result results = new Result(Successful, count=0);
 
     /**
      * Create a `Builder` from the specified `Model`.
@@ -112,42 +114,6 @@ service EngineExecutionContext
      * @param model  the `Model` to execute
      */
     Builder asBuilder(Model model) = new Builder(this, model);
-
-    /**
-     * Invoke a `MethodOrFunction` using any registered `ParameterResolver` resources
-     * to resolve parameters for the function.
-     *
-     * @param method the `MethodOrFunction` to invoke
-     *
-     * @return the result of invoking the function
-     */
-    @Override
-    Tuple invoke(MethodOrFunction method) {
-        if (method.is(Method)) {
-            assert testFixture != Null;
-            return methodExecutor.invoke(method.as(Method), testFixture, this);
-         }
-        return methodExecutor.invoke(method.as(Function), this);
-     }
-
-    /**
-     * Invoke a `MethodOrFunction` using any registered `ParameterResolver` resources
-     * to resolve parameters for the function and return the single result returned by the
-     * invocation.
-     *
-     * @param method the `MethodOrFunction` to invoke
-     *
-     * @return `True` iff the invocation returned a result
-     * @return the single result of invoking the function
-     */
-    @Override
-    conditional Object invokeSingleResult(MethodOrFunction method) {
-        Tuple tuple = invoke(method);
-        if (tuple.size > 0) {
-            return True, tuple[0];
-         }
-        return False;
-    }
 
     @Override
     conditional Object lookup(Type type, String name, Options opts = Null) {
@@ -250,7 +216,7 @@ service EngineExecutionContext
         /**
          * The current test fixture the test method will execute against.
          */
-        private Object? testFixture = Null;
+        private Ref<Object>? testFixture = Null;
 
         /**
          * Any `Exception`s thrown during execution of the test lifecycle.
@@ -292,7 +258,7 @@ service EngineExecutionContext
             return this;
         }
 
-        Builder withTestFixture(Object? testFixture) {
+        Builder withTestFixture(Ref<Object> testFixture) {
             this.testFixture = testFixture;
             return this;
         }

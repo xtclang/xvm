@@ -43,7 +43,7 @@ annotation ParameterizedTest(Function<Tuple, Tuple> parameters, String group=Tes
         @Override
         Iterable<TestTemplateContext> getContexts(ExecutionContext context) {
             List<ParameterizedTestTemplateContext> templateContexts = new Array();
-            if (var o := context.invokeSingleResult(parameters)) {
+            if (var o := context.methodExecutor.invokeSingleResult(parameters, context)) {
                 if (o.is(Collection)) {
                     for (var arg : o) {
                         Argument[] args = createArguments(arg);

@@ -35,7 +35,7 @@ import xunit.MethodOrFunction;
 
         if (MethodOrFunction constructor := model.constructor.is(MethodOrFunction)) {
             // ToDo: call pre/post fixture constructor extensions
-            if (Object fixture := context.invokeSingleResult(constructor)) {
+            if (Object fixture := context.methodExecutor.invokeSingleResult(constructor, context)) {
                 return fixture;
             }
         }

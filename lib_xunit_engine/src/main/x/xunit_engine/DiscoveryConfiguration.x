@@ -148,10 +148,18 @@ const DiscoveryConfiguration {
 
             if (tests.is(List<String>)) {
                 for (String test : tests) {
-// ToDo JK: Fix why specifying a method seems to hang somewhere
-//                    assert:arg Selector[] testSelectors := discovery.selectors.forMethod(clz, test)
-//                            as $"Invalid test method specified {testClass}.{test}";
-//                    selectors.add(selector);
+                    if (Int idx := test.lastIndexOf('.')) {
+                        String testClass  = test[0..<idx];
+                        String testMethod = test[idx>..<test.size];
+                        if (Class clz := findClass(testModule, testClass)) {
+                            selectors.addAll(discovery.selectors.forMethod(clz, testMethod));
+                        } else {
+                            throw new IllegalArgument($"Invalid test class specified {test}");
+                        }
+                    } else {
+                        // method must be on the module
+                        selectors.addAll(discovery.selectors.forMethod(&testModule.class, test));
+                    }
                 }
             }
 
