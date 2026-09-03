@@ -3458,6 +3458,29 @@ together, which is exactly why it is a row here and not a hunk in PR #585: that
 PR is 3 files and +47/-7, and the delegation fix in it is verifiable at a
 glance. Burying it under a 38-site signature change would make it not.
 
+### Would B have caught A? No - and that is the point
+
+Worth stating plainly, because it is the obvious hope: turning `Assignable[]`
+into `List<Assignable>` would NOT have produced a compile-time error for the
+recursion. The bug is between two method BODIES, and
+`List.of(generateAssignable(...))` recurses exactly as
+`new Assignable[] { generateAssignable(...) }` does. The container type is
+irrelevant to it. B buys immutability and readability; it buys no safety here.
+
+What WOULD have made it a compile error is making assignability a TYPE instead
+of a boolean. `isAssignable(ctx)` is a runtime predicate standing in for a
+capability: an expression asserts it is an L-value by returning true, and
+nothing connects that claim to implementing the methods an L-value needs. If
+assignable expressions instead implemented an interface carrying the required
+method, "claims assignable, implements neither" stops being representable - the
+compiler rejects it at the class, not the stack at runtime.
+
+Making one of the existing pair `abstract` is the cheap version of the same
+idea, but it forces every `Expression` subclass to implement it including the
+ones that are not assignable, which is the reason the bridge exists at all. The
+interface is the version that keeps the bridge's benefit and still fails at
+compile time.
+
 **Order:** A before B. A is small, fixes a real footgun, and does not touch the
 signature; B is mechanical once A has settled which methods are even required.
 
