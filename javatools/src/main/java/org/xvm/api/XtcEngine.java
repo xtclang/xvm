@@ -16,6 +16,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 import java.util.stream.Collectors;
 
@@ -155,6 +156,134 @@ public final class XtcEngine
         runtimeNew.start();
         return new RuntimePlane(runtimeNew,
                 NativeContainer.create(runtimeNew, repoLibrary, diagnosticSink));
+    }
+
+    /**
+     * Libraries this engine has already linked and NakedRef-injected, so it does not redo either
+     * per compile. Keyed by the repository, because a compile may name its own
+     * (see {@link #compile(ModuleRepository, ModuleSource...)}).
+     *
+     * <p>T1 of the parallel-compile plan. Before this, every compile cloned the whole ecstasy
+     * module - 60-72ms warm, about a fifth of a warm compile - purely so it had a private copy to
+     * link and inject into. Doing that work once against the shared library makes the copy
+     * unnecessary.</p>
+     */
+    private final Map<ModuleRepository, TypeConstant> f_mapPreparedLibraries =
+            new ConcurrentHashMap<>();
+
+    /**
+     * Link and NakedRef-inject a library once, however many compiles use it.
+     */
+    private TypeConstant ensureLibraryPrepared(@NotNull ModuleRepository repoLib) {
+        return f_mapPreparedLibraries.computeIfAbsent(repoLib, repo -> {
+            prelinkSystemLibraries(repo);
+            TypeConstant typeNakedRef = injectNakedRefIntoLibrary(repo);
+            warmRootObject(repo);
+            return typeNakedRef;
+        });
+    }
+
+    /**
+     * Set the NakedRef type on the library's own modules. The per-compile
+     * {@link #injectNakedRefType} still covers the modules being compiled; this covers the ones
+     * they compile against, which used to be reached only because a clone of each had been dropped
+     * into the compile's build repository.
+     */
+    private static TypeConstant injectNakedRefIntoLibrary(ModuleRepository repoLib) {
+        ModuleStructure moduleTurtle = repoLib.loadModule(Constants.TURTLE_MODULE);
+        if (moduleTurtle == null) {
+            return null;
+        }
+        TypeConstant typeNakedRef =
+                ((ClassStructure) moduleTurtle.getChild("NakedRef")).getFormalType();
+        for (var sModule : repoLib.getModuleNames()) {
+            ModuleStructure module = repoLib.loadModule(sModule);
+            if (module != null) {
+                module.getConstantPool().setNakedRefType(typeNakedRef);
+            }
+        }
+        return typeNakedRef;
+    }
+
+    /**
+     * Build the root Object's TypeInfo once, here, while preparation is still single-threaded.
+     *
+     * <p>Building it is a one-time DESTRUCTIVE step: on success {@code ensureObjectTypeInfo}
+     * discards EVERY other TypeInfo in the pool, because anything built while Object itself was
+     * incomplete may have been flattened against a partial Object. That is correct and harmless
+     * when one thread owns the pool. It is ruinous when several share one, which is exactly what
+     * serving a single prepared library to concurrent compiles creates: the sweep clears types
+     * other threads are in the middle of using, and a type flattened across that moment can be
+     * marked Complete while missing the members it should have inherited. It surfaces far away, as
+     * "Could not find a matching method or function" against a perfectly good library type.
+     *
+     * <p>Doing it during preparation means the sweep happens exactly once, with nobody else in the
+     * pool. This is NOT the blanket "warm every type" that was tried and rejected earlier - that
+     * one swallowed failures and cached half-built TypeInfos. This warms one type, the one whose
+     * construction is documented as special, and lets any failure propagate.
+     */
+    private static void warmRootObject(ModuleRepository repoLib) {
+        ModuleStructure moduleEcstasy = repoLib.loadModule(Constants.ECSTASY_MODULE);
+        if (moduleEcstasy != null) {
+            // BLACKHOLE per the ensureTypeInfo convention: this is the COMPUTE half - a question,
+            // not an assertion - and the types it validates are owned by no particular request.
+            moduleEcstasy.getConstantPool().typeObject().ensureTypeInfo(ErrorListener.BLACKHOLE);
+        }
+    }
+
+    /**
+     * A snapshot of every cache that a resident host can grow without bound, plus the heap.
+     *
+     * <p>Sharing one prepared library instead of cloning it per compile means the library's caches
+     * now live for the lifetime of the ENGINE rather than the request. Any of them that is keyed by
+     * something a request brought with it will therefore accumulate, and the first symptom is not a
+     * wrong answer - it is an {@code OutOfMemoryError} several hundred compiles later, by which
+     * point the cause is invisible. This exists so growth is a number you can watch instead of a
+     * crash you discover.
+     *
+     * <p>Read it as a TREND, not a value: what matters is whether a column moves between requests
+     * while the workload is constant. A pool count that climbs while the caches stay flat means
+     * per-request structures are being retained by something; caches that climb mean the library
+     * itself is accumulating.
+     *
+     * <p>Requests a garbage collection before sampling the heap, so the figure reflects retained
+     * memory rather than allocation churn. That makes this a diagnostic to call between requests,
+     * never inside one.
+     *
+     * @return one line per shared library module, plus a summary line
+     */
+    public @NotNull String cacheReport() {
+        var sb = new StringBuilder(512);
+        // java.lang.Runtime spelled out: "Runtime" in this file is org.xvm.runtime.Runtime, which
+        // is imported, so this is the one case where the qualified name is the only option.
+        java.lang.Runtime jvm = java.lang.Runtime.getRuntime();
+
+        // Collect first. Sampling totalMemory-freeMemory without it measures "allocated since the
+        // last collection", which for a compiler - an allocation-heavy, mostly-garbage workload -
+        // says nothing about what is RETAINED, and retention is the only thing this report is for.
+        // A hint, not a guarantee, so the figure is still approximate; it is a trend line.
+        jvm.gc();
+        long cHeap = jvm.totalMemory() - jvm.freeMemory();
+        int  cInfoTotal = 0;
+        int  cRelTotal  = 0;
+
+        for (var sModule : repoLibrary.getModuleNames()) {
+            ModuleStructure module = repoLibrary.loadModule(sModule);
+            if (module == null) {
+                continue;
+            }
+            ConstantPool pool       = module.getConstantPool();
+            int          cRelations = pool.types().mapToInt(TypeConstant::getRelationCacheSize).sum();
+            int          cInfos     = pool.getCachedTypeInfoCount();
+            cInfoTotal += cInfos;
+            cRelTotal  += cRelations;
+            sb.append(String.format("  %-28s constants=%-7d typeInfos=%-6d relations=%-6d sweeps=%d%n",
+                    sModule, pool.size(), cInfos, cRelations, pool.getObjectSweepCount()));
+        }
+
+        sb.append(String.format("  TOTAL typeInfos=%d relations=%d | poolsCreated=%d | heap=%dMB%n",
+                cInfoTotal, cRelTotal, ConstantPool.getPoolsCreated(), cHeap / (1024 * 1024)));
+        return sb.toString();
     }
 
     private NativeContainer containerNative() {
@@ -441,12 +570,13 @@ public final class XtcEngine
         // compiled so its NakedRef type can be injected across them all (see below). The caller never
         // has to name the turtle/native-bridge modules per request the way the CLI does with -L flags;
         // the engine already resolved them when it booted its native container from this same path.
-        var repoCompile = new LinkedRepository(true, repoBuild, repoInput);
+        // The library is linked and injected once per engine, so a compile no longer needs a
+        // private clone of it: read-through is off, and repoBuild holds only what is being
+        // compiled. See ensureLibraryPrepared.
+        TypeConstant typeNakedRef = ensureLibraryPrepared(repoInput);
+        var repoCompile = new LinkedRepository(false, repoBuild, repoInput);
         var compilers   = new ArrayList<Compiler>();
 
-        // pre-load and link the system libraries (ecstasy + turtle prototype) so they are cached into
-        // repoBuild before anything is compiled against them - the Launcher's prelinkSystemLibraries step
-        prelinkSystemLibraries(repoCompile);
 
         // stage 1: parse each source and create its initial module structure in the build repo
         for (var stmtModule : fnParse.apply(errs)) {
@@ -480,7 +610,7 @@ public final class XtcEngine
             runPhase(compilers, Compiler::resolveNames);
         }
         if (!errsCollect.hasSeriousErrors()) {
-            injectNakedRefType(repoBuild);
+            injectNakedRefType(repoBuild, typeNakedRef);
             runPhase(compilers, Compiler::validateExpressions);
         }
         if (!errsCollect.hasSeriousErrors()) {
@@ -577,12 +707,10 @@ public final class XtcEngine
      * This mirrors {@code org.xvm.tool.Compiler.injectNativeTurtle} exactly: the compiler needs the
      * NakedRef type available to each ConstantPool that participates in building Ref TypeInfo.
      */
-    private static void injectNakedRefType(BuildRepository repoBuild) {
-        ModuleStructure moduleTurtle = repoBuild.loadModule(Constants.TURTLE_MODULE);
-        if (moduleTurtle == null) {
+    private static void injectNakedRefType(BuildRepository repoBuild, TypeConstant typeNakedRef) {
+        if (typeNakedRef == null) {
             return;
         }
-        TypeConstant typeNakedRef = ((ClassStructure) moduleTurtle.getChild("NakedRef")).getFormalType();
         for (var sModule : repoBuild.getModuleNames()) {
             repoBuild.loadModule(sModule).getConstantPool().setNakedRefType(typeNakedRef);
         }

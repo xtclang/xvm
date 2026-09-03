@@ -715,21 +715,21 @@ public abstract class Constant
      * @param type  the TypeConstant to defer the building of a TypeInfo for
      */
     protected void addDeferredTypeInfo(TypeConstant type) {
-        getConstantPool().addDeferredTypeInfo(type);
+        TypeSystemThread.current().defer(type);
     }
 
     /**
      * @return true iff there are any TypeConstants that have deferred the building of a TypeInfo
      */
     protected boolean hasDeferredTypeInfo() {
-        return getConstantPool().hasDeferredTypeInfo();
+        return TypeSystemThread.current().hasDeferred();
     }
 
     /**
      * @return the List of TypeConstants to build (or rebuild) TypeInfo objects for
      */
     protected List<TypeConstant> takeDeferredTypeInfo() {
-        return getConstantPool().takeDeferredTypeInfo();
+        return TypeSystemThread.current().takeDeferred();
     }
 
     /**
@@ -738,7 +738,7 @@ public abstract class Constant
      * @param type  the TypeConstant whose TypeInfo this thread is about to build
      */
     protected void markBuildingTypeInfo(TypeConstant type) {
-        getConstantPool().markBuildingTypeInfo(type);
+        TypeSystemThread.current().beginBuilding(type);
     }
 
     /**
@@ -748,7 +748,7 @@ public abstract class Constant
      * @param type  the TypeConstant this thread is no longer building
      */
     protected void unmarkBuildingTypeInfo(TypeConstant type) {
-        getConstantPool().unmarkBuildingTypeInfo(type);
+        TypeSystemThread.current().endBuilding(type);
     }
 
     /**
@@ -757,7 +757,7 @@ public abstract class Constant
      * @return true iff THIS thread is currently building a TypeInfo for the specified type
      */
     protected boolean isBuildingTypeInfo(TypeConstant type) {
-        return getConstantPool().isBuildingTypeInfo(type);
+        return TypeSystemThread.current().isBuilding(type);
     }
 
     /**

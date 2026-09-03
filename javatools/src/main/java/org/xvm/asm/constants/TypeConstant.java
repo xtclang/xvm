@@ -2148,6 +2148,7 @@ public abstract sealed class TypeConstant
                 }
             } else {
                 // discard any partial TypeInfos created as part of creating the Object TypeInfo
+                int cCleared = 0;
                 for (int i = 0, c = pool.size(); i < c; ++i) {
                     if (pool.getConstant(i) instanceof TypeConstant type
                             && type.getTypeInfo() != null && !type.isRootObject()) {
@@ -2156,8 +2157,11 @@ public abstract sealed class TypeConstant
                                     TypeInfoTrace.progress(type.getTypeInfo()));
                         }
                         type.clearTypeInfo();
+                        ++cCleared;
                     }
                 }
+                pool.recordObjectSweep(cCleared);
+
                 // discard the list of any "must retry building these TypeInfos" (since we're also
                 // discarding all built TypeInfos other than Object)
                 var ignoreDeferred = takeDeferredTypeInfo();
@@ -8258,6 +8262,29 @@ public abstract sealed class TypeConstant
             mapRelations = m_mapRelations = new ConcurrentHashMap<>();
         }
         return mapRelations;
+    }
+
+    /**
+     * @return true iff this type is currently holding a built TypeInfo
+     *
+     * <p>Public where {@link #getTypeInfo} is protected, because "is anything cached here" is a
+     * diagnostic question that does not hand out the cache itself.
+     */
+    public boolean hasCachedTypeInfo() {
+        return getTypeInfo() != null;
+    }
+
+    /**
+     * @return how many cached relations this type holds
+     *
+     * <p>Each entry is keyed by a {@code RelationKey} holding STRONG references to other
+     * TypeConstants, so a shared library type that caches a relation against a per-compile type
+     * pins that type, its pool, and its whole FileStructure for as long as the library lives. When
+     * the library was cloned per compile this died with the clone; shared, it cannot.
+     */
+    public int getRelationCacheSize() {
+        Map<RelationKey, Relation> map = m_mapRelations;
+        return map == null ? 0 : map.size();
     }
 
     void clearRelationMap() {

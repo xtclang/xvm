@@ -25,9 +25,12 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Vector;
+import java.util.stream.Stream;
+import java.util.stream.IntStream;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ExecutionException;
 
 import org.xvm.asm.Constant.Format;
@@ -46,7 +49,6 @@ import org.xvm.util.FrozenArray;
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
-import org.xvm.util.TransientThreadLocal;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
@@ -106,6 +108,7 @@ public class ConstantPool
      */
     public ConstantPool(FileStructure fileStructure) {
         super(fileStructure);
+        POOLS_CREATED.incrementAndGet();
     }
 
 
@@ -3549,100 +3552,72 @@ public class ConstantPool
     // ----- TypeInfo helpers ----------------------------------------------------------------------
 
     /**
-     * Add a TypeConstant that needs its TypeInfo to be built or rebuilt.
+     * @return how many ConstantPool instances this JVM has created
      *
-     * @param type  the TypeConstant to defer the building of a TypeInfo for
+     * <p>A resident host creates pools per compile and is supposed to drop them when the request
+     * ends. Comparing this against retained heap distinguishes "we compiled a lot" from "we are
+     * still holding everything we ever compiled".
      */
-    void addDeferredTypeInfo(TypeConstant type) {
-        assert type != null;
-
-        List<TypeConstant> list = f_tlolistDeferred.computeIfAbsent(ArrayList::new);
-        if (!list.contains(type)) {
-            list.add(type);
-        }
+    public static int getPoolsCreated() {
+        return POOLS_CREATED.get();
     }
 
     /**
-     * @return true iff there are any TypeConstants that have deferred the building of a TypeInfo
+     * @return a stream of every {@link TypeConstant} in this pool
+     *
+     * <p>The pool is an indexed array of mixed constants, so "do something with every type" kept
+     * being written as an index loop with an {@code instanceof} at each call site. This is that
+     * loop, once.
      */
-    boolean hasDeferredTypeInfo() {
-        return f_tlolistDeferred.get() != null;
+    public Stream<TypeConstant> types() {
+        return IntStream.range(0, size())
+                .mapToObj(this::getConstant)
+                .filter(TypeConstant.class::isInstance)
+                .map(TypeConstant.class::cast);
     }
 
     /**
-     * @return the List of TypeConstants to build (or rebuild) TypeInfo objects for
+     * @return how many TypeConstants in this pool are holding a built TypeInfo
+     *
+     * <p>The most expensive cache in the compiler: a TypeInfo is the fully flattened view of a type
+     * - every method, property, child and contribution - so a few thousand is real memory, and on
+     * a SHARED pool they are never dropped between requests.
      */
-    List<TypeConstant> takeDeferredTypeInfo() {
-        List<TypeConstant> list = f_tlolistDeferred.get();
-        if (list == null) {
-            list = Collections.emptyList();
-        } else {
-            f_tlolistDeferred.remove();
-        }
-
-        return list;
+    public int getCachedTypeInfoCount() {
+        return (int) types().filter(TypeConstant::hasCachedTypeInfo).count();
     }
 
     /**
-     * Record that THIS thread has begun building the TypeInfo for the specified type.
+     * Record that root Object's TypeInfo was built and the pool-wide discard that follows it ran.
+     * That discard is meant to happen ONCE per pool. A count above one means something nulled
+     * Object's TypeInfo afterwards and the entire cache was thrown away again - which on a shared
+     * pool destroys work other requests are relying on.
      *
-     * <p>This is the declared owner of an in-progress build, and it exists because the
-     * "being built" place-holder cannot be one. The place-holder lives in a single slot on the
-     * TypeConstant ({@code m_typeinfo}) and is a per-pool singleton by necessity - see
-     * {@link #infoPlaceholder} - so it can answer "is somebody building this?" but never "is it
-     * ME?". Those two questions require OPPOSITE actions:
-     *
-     * <ul>
-     * <li><b>Mine</b> - this is the genuine catch-22 the place-holder was invented for: to build X
-     *     we need Y, and to build Y we need X. The only correct move is to defer and let the
-     *     outer frame complete it.</li>
-     * <li><b>Another thread's</b> - not recursion at all. Deferring to it is a bet that the other
-     *     thread will publish before we run out of retries, and nothing makes that true; the
-     *     deferred list is thread-local, so our list can never be drained by their progress.</li>
-     * </ul>
-     *
-     * Conflating them is what made concurrent compiles against a SHARED library fail with
-     * "Failure to make progress on a TypeInfo": every cross-thread encounter took the defer path,
-     * so the deferred list never shrank and {@code ensureTypeInfoInWindow} gave up after three
-     * passes. Ownership is per-thread state precisely because the question is per-thread.
-     *
-     * <p>Identity, not equality: the place-holder it replaces was a field on one TypeConstant
-     * instance, so an identity set is exactly the old semantics and costs no hashing of types.
-     *
-     * @param type  the type whose TypeInfo this thread is about to build
+     * @param cCleared  how many TypeInfos this sweep discarded
      */
-    void markBuildingTypeInfo(TypeConstant type) {
-        assert type != null;
-
-        f_tlosetBuilding.computeIfAbsent(
-                () -> Collections.newSetFromMap(new IdentityHashMap<>())).add(type);
+    public void recordObjectSweep(int cCleared) {
+        f_cObjectSweeps.incrementAndGet();
+        f_cSweptTypes.addAndGet(cCleared);
     }
 
     /**
-     * Record that this thread has finished (or abandoned) building the TypeInfo for the type.
-     * Always call this from a {@code finally}: a leaked mark would convince this thread, on a
-     * later and unrelated compile, that it is already building a type it is not, and it would
-     * defer forever.
-     *
-     * @param type  the type this thread is no longer building
+     * @return how many times this pool has run the root-Object discard; should be at most 1
      */
-    void unmarkBuildingTypeInfo(TypeConstant type) {
-        Set<TypeConstant> set = f_tlosetBuilding.get();
-        if (set != null && set.remove(type) && set.isEmpty()) {
-            f_tlosetBuilding.remove();
-        }
+    public int getObjectSweepCount() {
+        return f_cObjectSweeps.get();
     }
 
     /**
-     * @param type  the type to test
-     *
-     * @return true iff THIS thread is currently building a TypeInfo for the specified type, i.e.
-     *         iff encountering its place-holder means real recursion rather than a peer at work
+     * @return how many TypeInfos those discards have thrown away in total
      */
-    boolean isBuildingTypeInfo(TypeConstant type) {
-        Set<TypeConstant> set = f_tlosetBuilding.get();
-        return set != null && set.contains(type);
+    public int getSweptTypeCount() {
+        return f_cSweptTypes.get();
     }
+
+    // The per-thread record of what a thread is in the middle of used to live here, as
+    // thread-locals hung off the pool. It moved to TypeSystemThread: it is not pool state, and
+    // hanging a thread-local off a pool silently means "per pool per thread", which is how deferred
+    // entries recorded against a shared library's pool survived a drain run against a compile's.
 
     /**
      * Cause all TypeInfos that are built from the specified class to re-build. This is necessary
@@ -4514,36 +4489,16 @@ public class ConstantPool
     /**
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.
      */
-    /**
-     * The types this THREAD still owes TypeInfo work for.
-     *
-     * <p>STATIC, i.e. per-thread and not per-thread-per-pool, because that is what every consumer
-     * already assumes. A deferred entry is recorded against the DEFERRED TYPE's pool
-     * ({@code Constant.addDeferredTypeInfo} -> {@code getConstantPool()} of that type), while the
-     * drain in {@code TypeConstant.ensureTypeInfoInWindow} runs against the WINDOW TYPE's pool. Those
-     * are different pools as soon as one compile's types depend on a shared library's types, so a
-     * per-pool list lets an entry recorded on the library pool survive a window that drained only
-     * the compile pool - and the next window entered on the library pool then finds a stale entry
-     * and throws "Infinite loop while producing a TypeInfo".
-     *
-     * <p>That the queue was always meant to be per-thread is visible in the drain loop itself, which
-     * already handles an entry belonging to another pool by re-registering it
-     * ({@code if (typeDeferred.getConstantPool() != pool)}). It could only ever have seen such an
-     * entry if the list spanned pools.
-     *
-     * <p>This is latent whenever one pool outlives a single compile - which is the whole point of
-     * sharing a prebuilt library rather than cloning it per compile.
-     */
-    private static final TransientThreadLocal<List<TypeConstant>> f_tlolistDeferred =
-            new TransientThreadLocal<>();
 
-    /**
-     * The types whose TypeInfo the current thread is building; see {@link #markBuildingTypeInfo}.
-     * Thread-local for the same reason {@code f_tlolistDeferred} is: it is the record of what THIS
-     * thread is in the middle of, and it is meaningless to any other thread.
-     */
-    private final TransientThreadLocal<Set<TypeConstant>> f_tlosetBuilding =
-            new TransientThreadLocal<>();
+
+    /** How many ConstantPool instances this JVM has created; see getPoolsCreated. */
+    private static final AtomicInteger POOLS_CREATED = new AtomicInteger();
+
+    /** How many times the root-Object pool-wide TypeInfo discard has run; see recordObjectSweep. */
+    private final AtomicInteger f_cObjectSweeps = new AtomicInteger();
+
+    /** How many TypeInfos those discards have thrown away in total. */
+    private final AtomicInteger f_cSweptTypes = new AtomicInteger();
 
     /**
      * A list of classes that cause any derived TypeInfos to be invalidated.
