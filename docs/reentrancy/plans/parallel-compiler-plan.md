@@ -28,6 +28,37 @@ Two things are already true and should not be re-litigated:
   returns the clone (`LinkedRepository:119`). That is why the parallel runs are correct - and it is
   also what costs the 18%.
 
+## What this branch fixes, and what it only records
+
+Not everything found on the way belongs here, and mixing the two is how a branch stops being
+reviewable.
+
+**In scope - these block parallel compilation:** T1-T5, T8. Concretely the TypeInfo ownership
+record (shipped), the deferred-list scoping (shipped), the root-`Object` sweep (T8.1, prototyped),
+the setter that demotes a complete answer (T8.2), and the lock on the wrong object (T8.3).
+
+**In scope but only as far as a host needs:** diagnostic attribution (T5). The measurement and the
+isolation test belong here; the 665-parameter repair does not.
+
+**Recorded, NOT fixed here** - they are real and they are master enhancement rows, and none of them
+blocks a parallel compiler:
+
+| finding | where |
+| --- | --- |
+| The L-value bridge fails open; `isAssignable` is a boolean standing in for a type | [E37](master-enhancement-submissions.md) |
+| `Assignable[]` as a raw-array API (38 usages) | E37 |
+| `Launcher implements ErrorListener` and overloads `log` with incompatible semantics | E37 note / `ErrorListener.java` |
+| An unknown error code throws `MissingResourceException` - a typo'd diagnostic takes the process down | (this file, below) |
+| Thread one `ErrorListener` everywhere | E32, E34, E35 |
+
+### A note on the last one
+
+`ErrorInfo.getMessageText` does `MessageFormat.format(RESOURCES.getString(getCode()), getParams())`.
+`ResourceBundle.getString` throws `MissingResourceException` on an unknown key, so a diagnostic with
+a code that is not in `errors.properties` **crashes the compiler instead of reporting the
+diagnostic** - the failure path fails. It is one `containsKey` check away from degrading to the raw
+code, and it is not parallel-compiler work, but anything that adds diagnostic codes trips over it.
+
 ## T1 - Share the library instead of cloning it
 
 The one change that matters. Link and inject the system libraries **once per engine**, publish
@@ -219,6 +250,76 @@ that is what is committed.
 It is worth ~38% sequentially on its own and now reaches 41/42 in parallel rather than 0/42. It
 lands when the two residuals above are closed.
 
+## T8 - The three TypeInfo-cache defects that T4 uncovered
+
+T4 removed the reason concurrent builds *interfered*. These are the reasons the cache is still
+not safe to share, all found by tracing rather than reasoning, and all of them are what now
+stands between 41/42 and 42/42.
+
+### T8.1 - Building root `Object` wipes the whole pool
+
+The one that is genuinely surprising. On the FIRST successful build of root `Object`,
+`ensureObjectTypeInfo` discards **every other TypeInfo in the pool**:
+
+```java
+// discard any partial TypeInfos created as part of creating the Object TypeInfo
+for (int i = 0, c = pool.size(); i < c; ++i) {
+    if (pool.getConstant(i) instanceof TypeConstant type
+            && type.getTypeInfo() != null && !type.isRootObject()) {
+        type.clearTypeInfo();
+    }
+}
+```
+
+The reasoning is sound single-threaded: anything built while `Object` was itself incomplete may
+have been flattened against a partial `Object`, so it is thrown away and rebuilt. It is a lazy
+getter with a **global destructive side effect** - a cache warm-up that wipes the cache - and on a
+shared pool it clears types other threads are in the middle of using. A type flattened across that
+moment can be marked `Complete` while missing members it should have inherited, which surfaces far
+away and much later as `COMPILER-56: Could not find a matching method or function "toString" for
+type "Directory"` - a miscompile, not a crash.
+
+**Fix, and it is already prototyped:** build root `Object` once during library preparation, while
+that is still single-threaded, so the sweep happens with nobody else in the pool. Measured: it took
+one full parallel iteration to 42/42. This is NOT the blanket warm-up rejected in T4 approach B -
+that swallowed failures and cached half-built TypeInfos. This warms ONE type, the one whose
+construction is documented as special, and lets failures propagate.
+
+**Verification.** The sweep must not run during any compile: assert the root `Object` TypeInfo is
+already present when a compile starts, so a regression is loud rather than a rare miscompile.
+
+### T8.2 - `setTypeInfo` is a one-way setter with a clause that goes backwards
+
+It keeps whatever is "better than" what is there - except:
+
+```java
+while (rankTypeInfo(info) > rankTypeInfo(infoOld = s_typeinfo.get(this))
+        || info.isPlaceHolder()) {
+```
+
+`|| info.isPlaceHolder()` lets a place-holder **overwrite a COMPLETE TypeInfo**. Intentional
+single-threaded, where installing a place-holder means "I have decided this needs rebuilding". On a
+shared pool it means one thread can demote another thread's finished answer to "being built", and
+`clearTypeInfoPlaceholder` can then CAS it to null - so a completed type becomes absent. There is
+also no way to say "this attempt failed, remove what I put there", which is the gap T4 approach B
+fell into.
+
+**Fix direction:** separate "invalidate, I am rebuilding" from "publish a place-holder" so the
+demotion is an explicit operation rather than a side effect of the setter, and give the cache a way
+to retract a failed attempt.
+
+### T8.3 - The lock is on the wrong object
+
+`ensureTypeInfo(TypeInfo, ErrorListener)` is `private synchronized` (`TypeConstant:1849`), so it
+locks the type being ASKED for. Two threads asking for the same type serialize; two threads asking
+for different types that share a dependency do not, and the dependency is reached through the
+unsynchronized internal path. It therefore serializes the one case that was never the problem.
+
+A half-lock is worse than none, because it reads as handled. Either drop it - T4's ownership record
+makes the recursion safe without it - or state in the javadoc exactly which race it does and does
+not cover. Removing it should be measured, not assumed: it may also be load-bearing for something
+else.
+
 ## T5 - Prove diagnostics stay per request
 
 Each compile already collects into its own `ErrorList`, but that has not been tested under
@@ -227,6 +328,42 @@ slow compile.
 
 **Verification.** N concurrent compiles of modules with *distinct, known* errors; each result must
 contain exactly its own and none of its neighbours'.
+
+### T5 progress - the listener is NOT threaded through, and now there is a number
+
+`TypeInfoTrace` reports through the `ErrorListener` precisely so that *where an event lands*
+measures the plumbing. First run, one concurrent compile of the suite traced for `Directory`:
+
+| | |
+| --- | --- |
+| events emitted | 57 |
+| events that arrived in the caller's diagnostics | **16** |
+
+Two thirds are dropped, and every event for that type was reported through a blackhole-backed
+listener. That is not a bug in the trace - it is the documented state of `ensureTypeInfo`, whose
+own javadoc says **"the listener parameter is a mode flag in disguise"**: the method fuses COMPUTE
+(idempotent, cacheable, must never report) with VALIDATE (diagnostics owned by a source position),
+so every caller has to pick a mode, and speculative probes - `testFit`, `getImplicitType`,
+`getConverterTo` - pass `BLACKHOLE`. Whichever caller asks FIRST owns the diagnostics; the one that
+actually cared gets the memoized answer and hears nothing.
+
+**Why this matters more for a host than for the CLI.** The CLI compiles one module and exits, so
+"the diagnostics went to the wrong listener" is invisible. A resident host serving concurrent
+requests has to attribute every diagnostic to the request that caused it, and today a library
+type's build reports to whatever listener happened to be threaded down that call chain - which per
+the measurement is usually nobody.
+
+**Unresolved, and recorded rather than guessed:** those 16 arrivals were all marked `SILENT` by
+`ErrorListener.isSilent()`. Either the flag is wrong for a Tee-rooted chain, or silence does not
+imply dropping. The contradiction is real and is not yet explained.
+
+**Scope.** The full repair is [E32](master-enhancement-submissions.md) (thread one listener; 665
+parameters, 87 `BLACKHOLE` sites) plus E34 and E35, and it is far larger than this branch. What
+belongs HERE is the part a parallel host cannot ship without: the isolation test above, and a
+decision on whether `ensureTypeInfo` gets split into `typeInfo()` (never reports, always caches)
+and `validate(errs)` (reports once, called by the stage that owns the source position). That split
+is described in `TypeConstant.ensureTypeInfo`'s own javadoc as "a project rather than a rename",
+with the staged migration in `docs/errorlistener/README.md` section 8.4.
 
 ## T6 - Finish aligning the API with `LspSupport`
 
