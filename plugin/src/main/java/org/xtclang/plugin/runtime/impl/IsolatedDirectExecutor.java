@@ -113,6 +113,14 @@ public final class IsolatedDirectExecutor {
         if (request.strict()) {
             return "strict mode is not modelled by the engine";
         }
+        if (request.modulePath().stream().noneMatch(File::isDirectory)) {
+            // The bootstrap case: lib_ecstasy compiles against nothing, so its module path is
+            // legitimately empty. An engine cannot serve it at all - constructing one boots a
+            // NativeContainer, which needs the very system modules this compile is producing - so
+            // this is a permanent exclusion rather than a gap to close. Without it the engine
+            // throws "no valid module-path directories were provided" and fails the build.
+            return "no module path: the bootstrap module cannot boot an engine";
+        }
         return null;
     }
 

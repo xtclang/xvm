@@ -271,7 +271,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
             return this;
         }
         try {
-            nLongBasedArray that = (nLongBasedArray) clone();
+            nLongBasedArray<?> that = (nLongBasedArray<?>) clone();
             if ($delegate != null) {
                 return that.$delegate.freeze$p(ctx, inPlace, inPlace$dflt);
             }
