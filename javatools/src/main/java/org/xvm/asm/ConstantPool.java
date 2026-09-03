@@ -2998,7 +2998,7 @@ public class ConstantPool
 
         f_listConst.clear();
         m_mapConstants.clear();
-        m_mapLocators.clear();
+        f_mapLocators.clear();
 
         // read the number of constants in the pool
         int cConst = readMagnitude(in);
@@ -3538,27 +3538,11 @@ public class ConstantPool
     }
 
     private Map<Object, Constant> ensureLocatorLookup(Format format) {
-        Map<Object, Constant> map = m_mapLocators.get(format);
-        return map == null ? ensureLocatorLookupComplex(format) : map;
-    }
-
-    /**
-     * Double check locking portion of {@link #ensureLocatorLookup(Format)}, extracted for hot-spotting.
-     *
-     * @param format the Constant format
-     *
-     * @return the map from locator to Constant
-     */
-    private synchronized Map<Object, Constant> ensureLocatorLookupComplex(Format format) {
-        // m_mapLocators is an EnumMap, which is not thread-safe; use copy-on-write
-        Map<Object, Constant> map = m_mapLocators.get(format);
-        if (map == null) {
-            var mapLocNew = new EnumMap<>(m_mapLocators);
-            mapLocNew.put(format, map = new ConcurrentHashMap<>());
-            m_mapLocators = mapLocNew;
-        }
-
-        return map;
+        // the same fast-path/slow-path split as before, so a present format is still a plain read
+        Map<Object, Constant> map = f_mapLocators.get(format);
+        return map == null
+                ? f_mapLocators.computeIfAbsent(format, _ -> new ConcurrentHashMap<>())
+                : map;
     }
 
 
@@ -4326,7 +4310,7 @@ public class ConstantPool
 
         // discard any previous lookup structures, since contents may have changed
         m_mapConstants.clear();
-        m_mapLocators.clear();
+        f_mapLocators.clear();
         f_implicits.clear();
     }
 
@@ -4437,7 +4421,18 @@ public class ConstantPool
      * <p>
      * This map is not thread-safe and safety is provided via copy-on-write
      */
-    private volatile EnumMap<Format, Map<Object, Constant>> m_mapLocators = new EnumMap<>(Format.class);
+    /**
+     * Locator lookups, one map per {@link Format}, filled as each format is first seen.
+     *
+     * <p>Final, and grown in place. It used to be a volatile {@code EnumMap} rebuilt by
+     * copy-on-write inside a synchronized method, because an {@code EnumMap} is not thread-safe:
+     * every newly encountered format copied the whole outer map, up to 109 times as a pool warmed
+     * up, and the field could not be final because each copy replaced it. Growth here is
+     * per-format and independent, so a concurrent map expresses it directly - unlike
+     * {@link #m_mapConstants}, which is built in one shot and must stay copy-on-write so that a
+     * reader sees either the empty map or the finished one, never a half-built one.</p>
+     */
+    private final Map<Format, Map<Object, Constant>> f_mapLocators = new ConcurrentHashMap<>();
 
     /**
      * Set of references to ConstantPool instances, defining the only ConstantPool references that
