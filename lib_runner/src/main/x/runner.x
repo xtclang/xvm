@@ -63,24 +63,24 @@ module runner.xtclang.org {
             TaskRegistry.runTask(template, repository, consoleId);
 
     /**
-     * @return True iff the identified task has not completed
-     */
-    Boolean taskRunning(Int id) = TaskRegistry.taskRunning(id);
-
-    /**
+     * Wait for the identified task to finish and remove it from the task registry.
+     *
      * @return the task's integer result, if it completed with one
-     */
-    Int? taskResult(Int id) = TaskRegistry.taskResult(id);
-
-    /**
      * @return the task failure text, if it completed exceptionally
+     * @return the task start time as milliseconds since the epoch
+     * @return the task stop time as milliseconds since the epoch
      */
-    String? taskFailure(Int id) = TaskRegistry.taskFailure(id);
+    Tuple<Int?, String?, Int, Int> awaitTask(Int id) = TaskRegistry.awaitTask(id);
 
     /**
-     * Stop the identified task's container.
+     * @return the identified task's start time as milliseconds since the epoch
      */
-    void killTask(Int id) = TaskRegistry.killTask(id);
+    Int taskStarted(Int id) = TaskRegistry.taskStarted(id);
+
+    /**
+     * @return a list of all running tasks and their processing times
+     */
+    String runningTasks() = TaskRegistry.runningTasks();
 
     /**
      * @return a human-readable task status
@@ -88,43 +88,60 @@ module runner.xtclang.org {
     String taskStatus(Int id) = TaskRegistry.taskStatus(id);
 
     /**
-     * Mutable task registry.
+     * Stop the identified task's container.
+     */
+    void killTask(Int id) = TaskRegistry.killTask(id);
+
+    /**
+     * Task registry singleton service.
      */
     static service TaskRegistry {
         private Map<Int, Task> tasks = new HashMap();
 
-        private Int nextTaskId;
+        private Int nextTaskId = 1;
 
         Int runTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId) {
-            Int  id   = allocateTaskId();
+            Int  id   = nextTaskId++;
             Task task = new Task(id, template, repository, consoleId);
             tasks[id] = task;
             task.start();
             return id;
         }
 
-        Boolean taskRunning(Int id) = taskFor(id).running;
-
-        Int? taskResult(Int id) = taskFor(id).result;
-
-        String? taskFailure(Int id) = taskFor(id).failure;
-
-        void killTask(Int id) {
-            taskFor(id).kill();
+        Tuple<Int?, String?, Int, Int> awaitTask(Int id) {
+            Task task = taskFor(id);
+            Tuple<Int?, String?, Int, Int> outcome = task.awaitCompletion();
+            tasks.remove(id);
+            return outcome;
         }
 
-        Int submitTask(String moduleName, ModuleRepository repository) {
-            return runTask(repository.getResolvedModule(moduleName), repository, Null);
+        Int taskStarted(Int id) = taskFor(id).startedMillis;
+
+        String runningTasks() {
+            StringBuffer listing = new StringBuffer();
+            for (Task task : tasks.values) {
+                if (String description := task.runningDescription()) {
+                    if (listing.empty) {
+                        listing.addAll("ID\tMODULE\tPROCESSING TIME");
+                    }
+                    listing.add('\n').addAll(description);
+                }
+            }
+            return listing.empty ? "No running tasks" : listing.toString();
         }
 
-        String taskStatus(Int id) = taskFor(id).status;
-
-        private Int allocateTaskId() {
-            do {
-                ++nextTaskId;
-            } while (tasks.contains(nextTaskId));
-            return nextTaskId;
+        String taskStatus(Int id) {
+            if (Task task := tasks.get(id)) {
+                return task.status;
+            }
+            assert 0 < id < nextTaskId as $"Unknown task {id}";
+            return "terminated";
         }
+
+        void killTask(Int id) = taskFor(id).kill();
+
+        Int submitTask(String moduleName, ModuleRepository repository) =
+                runTask(repository.getResolvedModule(moduleName), repository, Null);
 
         private Task taskFor(Int id) {
             assert Task task := tasks.get(id) as $"Unknown task {id}";
@@ -136,6 +153,12 @@ module runner.xtclang.org {
      * State and control for one application container.
      */
     service Task(Int id, ModuleTemplate template, ModuleRepository repository, Int? consoleId) {
+        private Container? container;
+
+        private Time? started;
+
+        @Future Tuple<Int?, String?, Int, Int> completion;
+
         Boolean running;
 
         Int? result;
@@ -148,10 +171,28 @@ module runner.xtclang.org {
                     ? result == Null ? "stopped" : $"stopped: {result}"
                     : $"failed: {failure}";
 
-        private Container? container;
+        Int startedMillis.get() {
+            assert Time started ?= this.started;
+            return epochMillis(started);
+        }
+
+        conditional String runningDescription() {
+            if (!running) {
+                return False;
+            }
+
+            assert Time started ?= this.started;
+            @Inject Clock clock;
+            return True, $"{id}\t{template.qualifiedName}\t{clock.now - started}";
+        }
+
+        Tuple<Int?, String?, Int, Int> awaitCompletion() = completion;
 
         void start() {
             assert container == Null;
+
+            @Inject Clock clock;
+            started = clock.now;
 
             ResourceProvider injector;
             if (Int consoleId ?= this.consoleId) {
@@ -161,21 +202,26 @@ module runner.xtclang.org {
                 injector = new BasicResourceProvider();
             }
 
-            Container        container = new Container(
-                    template, Container.Model.Lightweight, repository, injector);
-            this.container = container;
-            running        = True;
+            container = new Container(template, Lightweight, repository, injector);
+            running   = True;
 
             @Future Tuple outcome = container.invoke("run", ());
             &outcome.whenComplete((tuple, exception) -> {
                 if (exception == Null) {
                     if (tuple != Null && !tuple.empty && tuple[0].is(Int)) {
                         result = tuple[0].as(Int);
+                    } else {
+                        result = 0;
                     }
                 } else {
                     failure = exception.toString();
                 }
-                running = False;
+
+                Time stopped = clock.now;
+                assert Time started ?= this.started;
+                running   = False;
+                container = null;
+                completion = (result, failure, epochMillis(started), epochMillis(stopped));
             });
         }
 
@@ -185,6 +231,9 @@ module runner.xtclang.org {
                 running = False;
             }
         }
+
+        private static Int epochMillis(Time time) =
+                (time.epochPicos / Duration.PicosPerMilli).toInt64();
     }
 
     /**
@@ -196,8 +245,13 @@ module runner.xtclang.org {
         Int runModule(String moduleName) {
             @Inject("repository") ModuleRepository repository;
 
-            return TaskRegistry.submitTask(moduleName, repository);
+            Int id = TaskRegistry.submitTask(moduleName, repository);
+            @Future Tuple<Int?, String?, Int, Int> ignored = TaskRegistry.awaitTask(id);
+            return id;
         }
+
+        @Get("tasks")
+        String tasks() = TaskRegistry.runningTasks();
 
         @Get("task{/id}")
         String status(Int id) = TaskRegistry.taskStatus(id);
