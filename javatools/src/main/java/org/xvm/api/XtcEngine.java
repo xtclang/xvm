@@ -282,6 +282,41 @@ public final class XtcEngine
      *
      * @return the compile result
      */
+    /**
+     * Compile against a caller-supplied library, rather than the one this engine was built with.
+     *
+     * <p>The upstream {@code LspSupport.compile} takes its input repository per call for the same
+     * reason: a resident host serves many requests, and which library a request compiles against
+     * is a property of the request, not of the host. Binding it to the engine forces one engine
+     * per module path - which is exactly why the Gradle plugin keeps a
+     * {@code Map<List<File>, XtcEngine>}.</p>
+     *
+     * <p>Concurrency is unaffected either way: a read-through {@link LinkedRepository} clones each
+     * library module it serves into that compile's own {@link BuildRepository}, so the structures
+     * the compiler mutates are per-compile whichever repository they came from.</p>
+     *
+     * @param repoInput  the library to resolve dependencies against
+     * @param sources    the modules to compile
+     *
+     * @return the compile result
+     */
+    public @NotNull CompileResult compile(@NotNull ModuleRepository repoInput,
+                                          @NotNull ModuleSource @NotNull... sources) {
+        Objects.requireNonNull(repoInput, "repoInput");
+        Objects.requireNonNull(sources, "sources");
+
+        var event     = new CompileEvent();
+        event.modules = Arrays.stream(sources)
+                .map(source -> source.source().toString()).collect(Collectors.joining(","));
+        event.begin();
+        try {
+            return compileInternal(ErrorListener.BLACKHOLE, event,
+                    errs -> parseModuleSources(errs, sources), repoInput);
+        } finally {
+            event.commit();
+        }
+    }
+
     public @NotNull CompileResult compile(@NotNull ModuleSource @NotNull... sources) {
         return compile(ErrorListener.BLACKHOLE, sources);
     }
@@ -385,6 +420,14 @@ public final class XtcEngine
             @NotNull ErrorListener errsCaller,
             @NotNull CompileEvent event,
             @NotNull Function<ErrorListener, List<TypeCompositionStatement>> fnParse) {
+        return compileInternal(errsCaller, event, fnParse, repoLibrary);
+    }
+
+    private @NotNull CompileResult compileInternal(
+            @NotNull ErrorListener errsCaller,
+            @NotNull CompileEvent event,
+            @NotNull Function<ErrorListener, List<TypeCompositionStatement>> fnParse,
+            @NotNull ModuleRepository repoInput) {
         var errsCollect = ErrorList.unlimited();
         // Always tee - never a null listener to test for. The ErrorList stays the PRIMARY so its
         // abort/serious-error semantics keep driving the compiler stages; the caller's sink (possibly
@@ -398,7 +441,7 @@ public final class XtcEngine
         // compiled so its NakedRef type can be injected across them all (see below). The caller never
         // has to name the turtle/native-bridge modules per request the way the CLI does with -L flags;
         // the engine already resolved them when it booted its native container from this same path.
-        var repoCompile = new LinkedRepository(true, repoBuild, repoLibrary);
+        var repoCompile = new LinkedRepository(true, repoBuild, repoInput);
         var compilers   = new ArrayList<Compiler>();
 
         // pre-load and link the system libraries (ecstasy + turtle prototype) so they are cached into
