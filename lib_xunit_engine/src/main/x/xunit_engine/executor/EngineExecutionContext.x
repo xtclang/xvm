@@ -4,8 +4,6 @@ import xunit.MethodOrFunction;
 
 import xunit.extensions.ExecutionContext;
 
-import xunit.extensions.MethodExecutor;
-
 /**
  * Information about the current phase of execution of a test fixture.
  * A test fixture could be a test method, or a test container.
@@ -27,7 +25,6 @@ service EngineExecutionContext
         this.testFixture    = builder.testFixture;
         this.exception      = builder.exception;
         this.registry       = builder.registry;
-        this.methodExecutor = builder.methodExecutor;
         this.listener       = builder.listener;
     }
 
@@ -77,12 +74,6 @@ service EngineExecutionContext
      */
     @Override
     public/private ResourceRegistry registry;
-
-    /**
-     * The `MethodExecutor` to use to execute tests.
-     */
-    @Override
-    public/private MethodExecutor methodExecutor;
 
     /**
      * The test `ExecutionListener`.
@@ -162,7 +153,6 @@ service EngineExecutionContext
             this.displayName    = model.displayName;
             this.listener       = ExecutionListener.NoOp;
             this.registry       = new SimpleResourceRegistry();
-            this.methodExecutor = new MethodExecutor();
          }
 
         /**
@@ -178,7 +168,6 @@ service EngineExecutionContext
             this.testMethod     = ctx.testMethod;
             this.testFixture    = ctx.testFixture;
             this.exception      = ctx.exception;
-            this.methodExecutor = ctx.methodExecutor;
             this.listener       = ctx.listener;
             this.registry       = ctx.registry.copy();
          }
@@ -227,11 +216,6 @@ service EngineExecutionContext
          * The `ResourceRegistry` containing resources registered for this execution.
          */
         public/private ResourceRegistry registry;
-
-        /**
-         * The `MethodExecutor` to use to execute tests.
-         */
-        private MethodExecutor methodExecutor;
 
         /**
          * The `ExecutionListener`.

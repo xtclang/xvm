@@ -7,6 +7,8 @@ import xunit.SkipResult;
 import xunit.annotations.AfterEach.AfterEachFunction;
 import xunit.annotations.BeforeEach.BeforeEachFunction;
 
+import xunit.executor;
+
 import xunit.extensions.AfterEachCallback;
 import xunit.extensions.AfterTestInvocationCallback;
 import xunit.extensions.AroundTestCallback;
@@ -117,7 +119,7 @@ const MethodExecutionLifecycle<ModelType extends MethodModel>(ModelType model)
 
             if (collector.empty) {
                 // only run the test if there have been no errors
-                collector.executeVoid(() -> context.methodExecutor.invoke(model.testMethod, context));
+                collector.executeVoid(() -> executor.invoke(model.testMethod, context));
             }
         }
 

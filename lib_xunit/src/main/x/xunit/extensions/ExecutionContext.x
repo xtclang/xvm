@@ -40,11 +40,6 @@ interface ExecutionContext {
     @RO Exception? exception;
 
     /**
-     * The `MethodExecutor` to use to execute methods and functions.
-     */
-    @RO MethodExecutor methodExecutor;
-
-    /**
      * Lookup a resource stored in this context.
      *
      * @param type  the type of the resource to lookup

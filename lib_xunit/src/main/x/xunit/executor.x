@@ -1,10 +1,10 @@
-import xunit.extensions.ParameterResolver;
+import extensions.ExecutionContext;
+import extensions.ParameterResolver;
 
 /**
- * A `MethodExecutor` can invoke methods and functions, using supplied `ParameterResolver`s
- * to bind any invocation parameters.
+ * The `executor` package contains classes and functions related to executing tests.
  */
-const MethodExecutor {
+package executor {
     /**
      * Invoke a `MethodOrFunction` using any registered `ParameterResolver` resources
      * to resolve parameters for the function.

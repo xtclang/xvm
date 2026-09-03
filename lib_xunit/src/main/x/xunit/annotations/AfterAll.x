@@ -43,6 +43,6 @@ annotation AfterAll
             implements AfterAllCallback {
 
         @Override
-        void afterAll(ExecutionContext context) = context.methodExecutor.invoke(after, context);
+        void afterAll(ExecutionContext context) = executor.invoke(after, context);
     }
 }
