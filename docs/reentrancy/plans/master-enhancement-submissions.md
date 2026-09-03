@@ -89,6 +89,7 @@ surface graduate into individual rows on the bug list.
 | E34 | `ResolutionCollector.getErrorListener()` smuggles the error sink; pass it explicitly | 1 PR, ~60 mechanical sites | complements E32 | removes `NameResolver`'s un-cleaned stash |
 | E35 | Finish the listener: parallel gap, last 3 mutable fields, `withListener` | A-C one PR; D incremental; E one line | after E32/E34 | the parallel gap and the ambient default are one problem |
 | E36 | The debugger reads another thread's fiber state; the monitor meant to stop that is only entered at breakpoints | 1 record + 1 volatile + 3 reads | independent | analysis only - no reproduction; publish a snapshot instead |
+| E37 | `Assignable[]` as an API, and the mutual-recursion bridge that let a subclass overriding neither method loop forever | 38 usages, 11 override points; the bridge fix is separate and small | independent; do NOT ride it on PR #585 | the bridge cost a `StackOverflowError` in the compiler |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -3379,3 +3380,84 @@ returned as a copy in the same change.
 File as an enhancement, not a bug: there is no reproduction, and the honest headline is *"the
 debugger's stop-the-world is not stop-the-world"*, which is a design claim. Bundling it with E30
 under "state belongs where it is owned" would tell one story rather than two.
+
+## E37 - `Assignable[]` as an API, and the bridge pattern that turns a missing override into infinite recursion
+
+Two problems in the same few lines of `Expression`, found while fixing the
+`StackOverflowError` that made `Dec28.x` uncompilable (PR #585). The fix that
+shipped is four lines of delegation; neither problem below is fixed, and
+deliberately so.
+
+### A. The bridge pattern fails open
+
+`Expression` offers the two L-value generation methods as a mutually recursive
+pair, so a subclass only has to write one of them:
+
+```java
+public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs) {
+    if (hasMultiValueImpl()) {
+        return generateAssignables(ctx, code, errs)[0];          // -> plural
+    }
+    throw notImplemented();
+}
+
+public Assignable[] generateAssignables(Context ctx, Code code, ErrorListener errs) {
+    if (hasSingleValueImpl() && isSingle()) {
+        return new Assignable[] { generateAssignable(ctx, code, errs) };  // -> singular
+    }
+    ...
+}
+```
+
+Both javadocs say the method "must be overridden by any expression that is
+assignable". Nothing enforces it. A class that reports BOTH implementations, is
+single, is assignable, and overrides NEITHER gets the two bridges calling each
+other until the stack is exhausted.
+
+That is not a hypothetical: `SyntheticExpression` is a delegating wrapper that
+forwarded every assignability QUESTION - `isAssignable`, `requireAssignable`,
+`markAssignment` - and neither of the two methods that do the assigning.
+Overriding `isAssignable` is precisely what moved it into the position where
+the recursion is reachable. The result was a `StackOverflowError` out of the
+compiler rather than a diagnostic, and it stayed hidden because
+`SyntheticExpression` is synthesized, never written by hand (`ConvertExpression`
+from `Expression.convertTo`, `UnpackExpression` from tuple unpacking), and one
+has to be the TARGET of an assignment to reach it. `Dec28.x` was the only file
+in the repository that produced it - and it was on the exclude list, so nothing
+exercised the path.
+
+**The failure mode is the problem, not the missing override.** A contract that
+"must" be satisfied and produces infinite recursion when it is not should be
+expressed so the compiler says so: make one of the pair abstract, or collapse
+the pair into a single method with an arity-adapting wrapper. Either turns a
+stack overflow at compile time into a build error at edit time.
+
+### B. `Assignable[]` is a raw array in a modern API
+
+The same line shows the second problem: `new Assignable[] { ... }`. Java has no
+array literals - Java 21/25 added records, sealed types and pattern matching,
+nothing for array creation - so every singleton has to be written that way.
+
+Measured: **38 `Assignable[]` usages**, **11 `generateAssignables` sites**, and a
+`public static final Assignable[] NO_LVALUES = new Assignable[0]` sentinel that
+exists only because there is no `List.of()`. The array is mutable and handed out
+directly; nothing copies it.
+
+**A varargs helper is NOT the fix, and it is worth writing down why**, because
+it is the obvious first idea. Of the ~10 `new Assignable[...]` sites, only four
+are brace literals; the rest are SIZED allocations - `new Assignable[cTypes]`,
+`new Assignable[cAll]`, `new Assignable[getValueCount()]` - which varargs cannot
+express at all. A helper would clean up four sites and leave the file with two
+idioms instead of one.
+
+The real change is `Assignable[]` -> `List<Assignable>`: `NO_LVALUES` becomes
+`List.of()`, singletons become `List.of(x)`, the sized allocations become
+builders or streams, and the result is immutable so handing it out is safe. It
+touches all 38 usages and every override in the expression hierarchy has to move
+together, which is exactly why it is a row here and not a hunk in PR #585: that
+PR is 3 files and +47/-7, and the delegation fix in it is verifiable at a
+glance. Burying it under a 38-site signature change would make it not.
+
+**Order:** A before B. A is small, fixes a real footgun, and does not touch the
+signature; B is mechanical once A has settled which methods are even required.
+
