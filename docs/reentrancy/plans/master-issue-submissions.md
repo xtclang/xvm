@@ -86,6 +86,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 37 | `&slice1 == &slice2` / `&view1 == &view2` crash with a Java `ClassCastException` | **merged** (#564, 2026-08-31) | - | - |
 | 38 | `&a == &slice_of_a` crashes for every non-generic element type | **merged** (#564, 2026-08-31) | - | - |
 | 39 | One-return service call completes a bare handle, reads it as an array | **latent, NOT filed** - no reproduction; see the section below | independent | `ServiceContext` |
+| 40 | `TestFiles.testListing` shares a fixed temp dir across concurrent runs | **fixed, not filed** - `51efcbfb7` on a master branch | independent | `manualTests/files.x` |
 
 ### Filing a row as an issue or PR
 
@@ -3041,3 +3042,36 @@ the two arms above correct rather than merely unvisited. The raw `(CompletableFu
 Landed on `lagergren/lazy-instance` as `91a9727e0`. Verified on the Ecstasy side, where these
 paths actually execute: `services.x` covers void calls, single returns, and an async two-value
 return at `:106`; `tuple.x` covers the tuple shape; seven modules through `runner.x`, exit 0.
+
+## 40. `TestFiles.testListing` shares one fixed temp directory across concurrent runs
+
+**A master test defect, not a runtime one - and it has impersonated a runtime one twice.**
+
+`manualTests/src/main/x/files.x:157` (master) builds its scratch area at a constant path:
+
+```java
+Directory probe = tmpDir.dirFor("xvm_listing_probe");
+if (probe.exists) { probe.deleteRecursively(); }
+probe.ensure();
+for (String name : ["a.txt", ...]) { assert probe.fileFor(name).create(); }
+```
+
+`runner.x` starts every module it is handed **concurrently** (`new Array(modules.size, i ->
+loadAndRun(modules[i]))`), so `xec runner.xtc TestFiles TestFiles` runs two instances against that
+one directory: one calls `ensure()` while the other calls `deleteRecursively()`, and the following
+`create()` fails for whichever loses.
+
+**Why it misleads.** The failure is reported against whichever run loses the race, so it can appear
+on run #1 - which is what finally ruled out the "stale state from the previous run" reading. It was
+diagnosed twice as a runtime defect in running one module twice in a process, once specifically as
+stale directory-node caching in `OSFileStore`. Both were wrong. The tell is that it reproduces from
+a clean slate with no leftover directory on disk, and that a single run always passes.
+
+**Fix.** A directory per run: `tmpDir.dirFor($"xvm_listing_probe_{rnd.int(0x7FFF_FFFF)}")`.
+Verified on `lagergren/master-testfiles-listing-collision` (`51efcbfb7`, off `origin/master`):
+TestFiles once, twice and three times all exit 0 with no exceptions and nothing left in the temp
+directory.
+
+**Worth filing** on its own terms: it costs nothing to fix and it actively wastes investigation
+time, which is exactly what it did here. It also blocks using `runner.x` to exercise repeated
+module runs, which is the workload the same-JVM reuse work needs.
