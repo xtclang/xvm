@@ -301,6 +301,17 @@ public class ConstantPool
             synchronized (this) {
                 constantOld = (T) mapConstants.get(constant);
                 if (constantOld == null) {
+                    Thread threadWriting = m_threadAssembling;
+                    if (threadWriting != null) {
+                        // Registering into a pool that is mid-write corrupts the file: assemble()
+                        // has already emitted the constant count. Throw HERE so the stack names the
+                        // code doing it, rather than letting it surface later as the pool having
+                        // grown, which says only that it happened.
+                        throw new IllegalStateException("registering " + constant.getClass().getSimpleName()
+                                + " " + constant + " into the pool of " + describeOwner()
+                                + " while it is being written by " + threadWriting.getName()
+                                + " (this thread: " + Thread.currentThread().getName() + ")");
+                    }
                     beginRegistrationCompletion(constant);
                     fPublishedIncomplete = true;
                     try {
@@ -3371,16 +3382,31 @@ public class ConstantPool
         // something interned into the pool while the pool was being written - instead of a bare
         // ConcurrentModificationException that names neither the pool nor the constant.
         int cConst = f_listConst.size();
+        m_threadAssembling = Thread.currentThread();
+        try {
         writePackedLong(out, cConst);
         for (int i = 0; i < cConst; ++i) {
             Constant constant = f_listConst.get(i);
             constant.assemble(out);
             if (f_listConst.size() != cConst) {
+                // What was ADDED is the diagnosis; what was being written when it appeared is only
+                // the moment it was noticed, and under concurrency those are different questions.
+                var sbNew = new StringBuilder();
+                for (int j = cConst, cNow = f_listConst.size(); j < cNow; ++j) {
+                    Constant added = f_listConst.get(j);
+                    sbNew.append("\n    + ").append(added.getClass().getSimpleName())
+                         .append(' ').append(added);
+                }
                 throw new IllegalStateException("the pool of " + describeOwner()
                         + " grew from " + cConst + " to " + f_listConst.size()
-                        + " while being written; the constant being assembled was "
-                        + constant.getClass().getSimpleName() + " " + constant);
+                        + " while being written on " + Thread.currentThread().getName()
+                        + "; noticed while assembling "
+                        + constant.getClass().getSimpleName() + " " + constant
+                        + "; added:" + sbNew);
             }
+        }
+        } finally {
+            m_threadAssembling = null;
         }
     }
 
@@ -4537,6 +4563,9 @@ public class ConstantPool
 
     /** How many ConstantPool instances this JVM has created; see getPoolsCreated. */
     private static final AtomicInteger POOLS_CREATED = new AtomicInteger();
+
+    /** Non-null while this pool is being written; see assemble. */
+    private transient volatile Thread m_threadAssembling;
 
     /** How many times the root-Object pool-wide TypeInfo discard has run; see recordObjectSweep. */
     private final AtomicInteger f_cObjectSweeps = new AtomicInteger();

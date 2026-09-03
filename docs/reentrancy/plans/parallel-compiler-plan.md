@@ -578,6 +578,68 @@ The second says the fixed point is not always reached in eight passes for one sh
 understanding rather than raising the bound. Sequential compilation is unchanged throughout at 42
 ok, 0 crashes; full suite 668 tests, 0 failures.
 
+## T12 - The shared library's caches capture per-compile types. This is T1's real limit.
+
+The last residual class was "the pool grew while being written". Reporting WHAT was added, and then
+catching the registration in the act, turned it from a symptom into a root cause - and the root
+cause is bigger than the symptom.
+
+**What the diagnostic said.** The pool is marked while it is being written, and `register` throws if
+anything interns into a pool in that state, so the stack names the culprit instead of the damage:
+
+```
+numbers.x -> registering StringConstant "Function"
+             into the pool of TestOperators@4c49b06b
+             while it is being written by [the operators.x thread]
+
+  at ConstantPool.register
+  at ConstantPool.ensureStringConstant / ensureClassConstant
+  at ConstantPool.getImplicitlyImportedIdentity
+  at ConstantPool.clzFunction                      <- the pool being intruded upon
+  at TypeConstant.checkReservedCompatibility
+  at TypeConstant.calculateRelation / isA
+  at SignatureConstant.isSubstitutableFor
+  at TypeConstant.collectPotentialSuperMethods / layerOnMethods / collectMemberInfo
+  at TypeConstant.buildTypeInfo
+```
+
+**One compile is building a TypeInfo and reaching into ANOTHER compile's pool.** Not the shared
+library's pool - `TestOperators`, a private per-compile pool belonging to a different request.
+
+**How it gets there.** The library is shared, so its `TypeInfo` and relation caches are shared. Those
+caches hold `TypeConstant`s, and a compile that parameterizes a library generic puts ITS OWN types
+into them. A later compile reading the same cached `TypeInfo` therefore walks types that belong to a
+foreign pool, and the first `clzXxx()` accessor it touches interns into that foreign pool - which,
+if the owner happens to be assembling, corrupts the file it is writing.
+
+**Why this is the real limit of T1, not another bug to swat.** The plan's own risk note said sharing
+"moves the burden to the shared read path" and expected the publication guard to catch writes into
+the library. This is the mirror image and was not anticipated: the danger is not writes INTO the
+shared library, it is the shared library holding references OUT to per-request data. The per-compile
+clone prevented it structurally - a compile could only pollute its own copy.
+
+**Three ways out, and the choice is a design decision rather than a patch:**
+
+1. **Do not cache across the boundary.** A library type refuses to memoize a `TypeInfo` or a
+   relation whose participants belong to another pool. Cheapest and preserves most of T1's win,
+   since the common case - library types related to library types - still caches. Needs a reliable
+   "is this mine" test on every cached value, and the un-cached cases pay full price every time.
+2. **Give each compile its own overlay for parameterized types**, so the shared library stays purely
+   read-only and anything mentioning a request's types lives in the request. This is the clone's
+   guarantee without the clone's cost, and it is the most honest fit for a resident host.
+3. **Share only what is provably request-independent** - the linked structures and NakedRef
+   injection, which is what T10 already holds - and let each compile keep its own `TypeInfo` cache.
+   That gives up T3 and most of the parallel win, but it is correct and it is a small step from
+   where the branch is now.
+
+**Recommendation: 2, with 1 as the guard that proves it.** Rule 1 is cheap to add and would turn
+this class of defect into an immediate, attributable error rather than a corrupted output file, and
+it is worth having even after 2 lands.
+
+**Status.** Not fixed. The diagnostic that found it IS committed, because it converts a silent
+cross-request corruption into a loud, attributable failure at the moment it happens - which is the
+difference between this taking an afternoon and taking a week.
+
 ## T5 - Prove diagnostics stay per request
 
 Each compile already collects into its own `ErrorList`, but that has not been tested under
