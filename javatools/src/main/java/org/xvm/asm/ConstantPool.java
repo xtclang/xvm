@@ -3983,7 +3983,7 @@ public class ConstantPool
     /**
      * Cache of implicitly imported identities.
      */
-    private final Map<String, IdentityConstant> f_implicits = new HashMap<>();
+    private final Map<String, IdentityConstant> f_implicits = new ConcurrentHashMap<>();
 
     /**
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.
