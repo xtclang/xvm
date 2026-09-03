@@ -378,6 +378,40 @@ Deliberately last. Every earlier task assumes a stable prebuilt library; here th
 output. It needs dependency ordering between module compiles and a story for what "the library" is
 while it is still being produced. Worth doing, but not before T1-T5 make the simple case solid.
 
+## The execution model this depends on, and why it is not a parallel stream
+
+The obvious wish is to make a compile an element and write `sources.parallelStream()`. That is not
+available here, and the reason is worth stating because it also explains what the per-thread state
+in `TypeSystemThread` really is.
+
+**The state is CALL-STACK state, not thread state.** `building` is which types this recursive
+descent is currently inside; `deferred` is what that descent still owes. Both belong to the call.
+The thread-local is a shortcut for not threading a context parameter through every method on the
+TypeInfo build path - exactly the way `ErrorListener` IS threaded. So the correct end state is a
+parameter, `ensureTypeInfo(work, errs)`, after which the execution model stops mattering at all.
+That is not done because it is wide, the same shape as [E32](master-enhancement-submissions.md).
+
+**Why `parallelStream` specifically is wrong, not merely unnecessary:**
+
+1. It runs on the **common ForkJoinPool**, which steals work and also executes tasks on the
+   CALLING thread. One carrier thread therefore runs many tasks in sequence, so anything left in
+   per-thread state bleeds from one task into the next - precisely the leak
+   `TypeSystemThread.endBuilding` warns about, and precisely the bug class T4 removed.
+2. The common pool is process-wide and shared with every other parallel stream in the JVM, so a
+   request can be neither isolated nor bounded.
+3. Streams assume independent elements. Here the entire difficulty IS the shared library state;
+   that is what is contended, not the elements.
+
+**What the current design actually requires is `1 task = 1 thread`,** which a fixed pool satisfies
+and work-stealing does not. The cheap way to keep that guarantee while scaling is a **virtual
+thread per compile** - one task, one thread, per-task state per-thread by construction - and the
+machinery is already in the tree: `Runtime.java:44` builds its IO executor with
+`Thread.ofVirtual()`.
+
+**Order:** thread-locals (today; correct only while 1 task = 1 thread) -> virtual thread per
+compile (cheap, safe, available now) -> explicit context parameter (correct under any model,
+wide). Do NOT skip to a work-stealing pool before the last step.
+
 ## What not to do
 
 - **Do not route through `Launcher`.** It is a CLI entry point that does whole-process setup per
