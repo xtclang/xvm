@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.xvm.asm.Annotation;
@@ -6306,7 +6307,7 @@ public abstract sealed class TypeConstant
             }
 
             // then check various "reserved" scenarios
-            relation = checkReservedCompatibility(typeLeft, typeRight);
+            relation = checkReservedCompatibility(getConstantPool(), typeLeft, typeRight);
             if (relation != null) {
                 mapRelations.put(keyRelation, relation);
                 return relation;
@@ -6709,13 +6710,27 @@ public abstract sealed class TypeConstant
      *
      * @return the calculated relation or null if no judgment can be made
      */
-    protected static Relation checkReservedCompatibility(TypeConstant typeLeft, TypeConstant typeRight) {
+    /**
+     * @param pool       the OWNER pool - the pool that may be interned into, passed explicitly
+     * @param typeLeft   the left type
+     * @param typeRight  the right type
+     *
+     * <p>The owner is a parameter rather than {@code typeLeft.getConstantPool()}, which is what this
+     * used to do. Scavenging the pool out of an argument means the helper interns into whichever
+     * pool the caller's LEFT type happened to belong to - and when that is another request's pool,
+     * this quietly writes into it. The sibling checks {@code isCovariantReturn} and
+     * {@code isContravariantParameter} already take the owner explicitly, with the note that "the
+     * owner pool is part of the API contract"; this is the same rule applied to the same problem.
+     * The caller passes the pool whose relation map is being populated, so the structure doing the
+     * caching and the pool being interned into are the same one.
+     */
+    protected static Relation checkReservedCompatibility(
+            ConstantPool pool, TypeConstant typeLeft, TypeConstant typeRight) {
         if (!typeLeft.isSingleUnderlyingClass(true) || !typeRight.isSingleUnderlyingClass(true) ||
             !typeLeft.isExplicitClassIdentity(true) || !typeRight.isExplicitClassIdentity(true)) {
             return null;
         }
 
-        ConstantPool     pool   = typeLeft.getConstantPool();
         IdentityConstant idLeft = typeLeft.getSingleUnderlyingClass(true);
 
         if (idLeft.getFormat() == Format.NativeClass) {
@@ -8282,6 +8297,75 @@ public abstract sealed class TypeConstant
      */
     public boolean hasCachedTypeInfo() {
         return getTypeInfo() != null;
+    }
+
+    /**
+     * @return how many of this type's cached relations are keyed by a constant belonging to a
+     *         DIFFERENT pool
+     *
+     * <p>The invariant a shared library has to satisfy is that no structure in it refers to a
+     * per-request constant. A relation cached on a library type but keyed by a compile's type
+     * breaks it: the entry outlives the request, and the next request that reads it walks into a
+     * pool that is no longer its own - which is how one compile ends up interning into another
+     * compile's pool while that pool is being written (T12).
+     *
+     * <p>Counting rather than asserting, because the point is first to learn whether this vector is
+     * real and how big it is.
+     */
+    public int countForeignRelationKeys() {
+        Map<RelationKey, Relation> map = m_mapRelations;
+        if (map == null) {
+            return 0;
+        }
+
+        ConstantPool poolThis = getConstantPool();
+        int cForeign = 0;
+        for (RelationKey key : map.keySet()) {
+            if (isForeign(key.typeLeft(), poolThis) || isForeign(key.typeContext(), poolThis)) {
+                ++cForeign;
+            }
+        }
+        return cForeign;
+    }
+
+    /**
+     * @param isLibrary  answers whether a pool is part of the shared library
+     *
+     * @return how many members of this type's cached TypeInfo are keyed by a constant belonging to
+     *         a pool OUTSIDE the library, or -1 if no TypeInfo is cached
+     *
+     * <p>The invariant a shared library has to satisfy is that nothing in it refers to a
+     * PER-REQUEST constant. Cross-MODULE references inside the library are not violations and are
+     * the normal case: a flattened TypeInfo contains everything the type inherits, most of which is
+     * declared in {@code ecstasy}. Counting those was the first version of this check and it
+     * reported hundreds of false positives, stable across iterations, which is what gave it away -
+     * real pollution would grow with the number of requests served.
+     *
+     * <p>A non-zero count here is the T12 defect made countable: a request's constant reachable
+     * from the shared library, outliving the request that made it.
+     */
+    public int countTypeInfoMembersOutside(Predicate<ConstantPool> isLibrary) {
+        TypeInfo info = getTypeInfo();
+        if (info == null || info.isPlaceHolder()) {
+            return -1;
+        }
+
+        int cOutside = 0;
+        for (MethodConstant id : info.getMethods().keySet()) {
+            if (!isLibrary.test(id.getConstantPool())) {
+                ++cOutside;
+            }
+        }
+        for (PropertyConstant id : info.getProperties().keySet()) {
+            if (!isLibrary.test(id.getConstantPool())) {
+                ++cOutside;
+            }
+        }
+        return cOutside;
+    }
+
+    private static boolean isForeign(TypeConstant type, ConstantPool poolThis) {
+        return type != null && type.getConstantPool() != poolThis;
     }
 
     /**

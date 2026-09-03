@@ -35,6 +35,8 @@ import org.xvm.asm.FileRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.asm.ErrorListener;
+import java.util.function.Predicate;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.InjectionKey;
 import org.xvm.asm.ErrorListener.ErrorInfo;
@@ -311,6 +313,18 @@ public final class XtcEngine
         // compile was actively building against it.
         ModuleRepository repoReport = f_mapPreparedLibraries.values().stream().findFirst()
                 .map(PreparedLibrary::repo).orElse(repoLibrary);
+        // The library's own pools, so "outside the library" can be distinguished from the normal
+        // cross-module references inside it.
+        var setLibraryPools = java.util.Collections.newSetFromMap(
+                new java.util.IdentityHashMap<ConstantPool, Boolean>());
+        for (var sModule : repoReport.getModuleNames()) {
+            ModuleStructure moduleLib = repoReport.loadModule(sModule);
+            if (moduleLib != null) {
+                setLibraryPools.add(moduleLib.getConstantPool());
+            }
+        }
+        Predicate<ConstantPool> isLibrary = setLibraryPools::contains;
+
         for (var sModule : repoReport.getModuleNames()) {
             ModuleStructure module = repoReport.loadModule(sModule);
             if (module == null) {
@@ -318,11 +332,19 @@ public final class XtcEngine
             }
             ConstantPool pool       = module.getConstantPool();
             int          cRelations = pool.types().mapToInt(TypeConstant::getRelationCacheSize).sum();
+            int          cForeign   = pool.types().mapToInt(TypeConstant::countForeignRelationKeys).sum();
+            int          cRefOut    = pool.countRefTypeKeysOutside(isLibrary);
+            int          cOutside   = pool.types()
+                                          .mapToInt(type -> type.countTypeInfoMembersOutside(isLibrary))
+                                          .filter(n -> n > 0).sum();
             int          cInfos     = pool.getCachedTypeInfoCount();
             cInfoTotal += cInfos;
             cRelTotal  += cRelations;
-            sb.append(String.format("  %-28s constants=%-7d typeInfos=%-6d relations=%-6d sweeps=%d%n",
-                    sModule, pool.size(), cInfos, cRelations, pool.getObjectSweepCount()));
+            sb.append(String.format(
+                    "  %-28s constants=%-7d typeInfos=%-6d relations=%-6d"
+                            + " foreignRel=%-5d outsideLib=%-6d refsOut=%-5d sweeps=%d%n",
+                    sModule, pool.size(), cInfos, cRelations, cForeign, cOutside, cRefOut,
+                    pool.getObjectSweepCount()));
         }
 
         // Report the CEILING alongside the usage. Without it "heap=505MB" is unreadable: it is

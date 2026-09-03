@@ -578,178 +578,74 @@ The second says the fixed point is not always reached in eight passes for one sh
 understanding rather than raising the bound. Sequential compilation is unchanged throughout at 42
 ok, 0 crashes; full suite 668 tests, 0 failures.
 
-## T12 - The shared library's caches capture per-compile types. This is T1's real limit.
+## T12 - CORRECTED: the shared library does NOT capture per-compile types
 
-The last residual class was "the pool grew while being written". Reporting WHAT was added, and then
-catching the registration in the act, turned it from a symptom into a root cause - and the root
-cause is bigger than the symptom.
+T12 originally claimed that the shared library's `TypeInfo` and relation caches capture per-compile
+types, and that this was T1's real limit. **That claim is wrong, and it was disproved by measuring
+it rather than by reasoning about it.** The section is kept, corrected, because the wrong version
+was acted on and the correction is the useful part.
 
-**What the diagnostic said.** The pool is marked while it is being written, and `register` throws if
-anything interns into a pool in that state, so the stack names the culprit instead of the damage:
+**The invariant, stated properly.** A shared library is sound only if **nothing in it refers to a
+per-request constant**. Cross-MODULE references inside the library are not violations - a flattened
+`TypeInfo` contains everything the type inherits, most of it declared in `ecstasy`.
 
-```
-numbers.x -> registering StringConstant "Function"
-             into the pool of TestOperators@4c49b06b
-             while it is being written by [the operators.x thread]
+**Getting that distinction wrong is what made the first measurement useless.** The first detector
+counted any member whose pool differed from the type's own, and reported hundreds: `xunit` 456,
+`net` 166, `crypto` 80. They looked damning. They were **stable across iterations** - and real
+pollution would GROW with the number of requests served. That stability is what exposed the
+detector, not the code.
 
-  at ConstantPool.register
-  at ConstantPool.ensureStringConstant / ensureClassConstant
-  at ConstantPool.getImplicitlyImportedIdentity
-  at ConstantPool.clzFunction                      <- the pool being intruded upon
-  at TypeConstant.checkReservedCompatibility
-  at TypeConstant.calculateRelation / isA
-  at SignatureConstant.isSubstitutableFor
-  at TypeConstant.collectPotentialSuperMethods / layerOnMethods / collectMemberInfo
-  at TypeConstant.buildTypeInfo
-```
+**Measured with the right definition**, over repeated concurrent runs of the suite:
 
-**One compile is building a TypeInfo and reaching into ANOTHER compile's pool.** Not the shared
-library's pool - `TestOperators`, a private per-compile pool belonging to a different request.
-
-**How it gets there.** The library is shared, so its `TypeInfo` and relation caches are shared. Those
-caches hold `TypeConstant`s, and a compile that parameterizes a library generic puts ITS OWN types
-into them. A later compile reading the same cached `TypeInfo` therefore walks types that belong to a
-foreign pool, and the first `clzXxx()` accessor it touches interns into that foreign pool - which,
-if the owner happens to be assembling, corrupts the file it is writing.
-
-**Why this is the real limit of T1, not another bug to swat.** The plan's own risk note said sharing
-"moves the burden to the shared read path" and expected the publication guard to catch writes into
-the library. This is the mirror image and was not anticipated: the danger is not writes INTO the
-shared library, it is the shared library holding references OUT to per-request data. The per-compile
-clone prevented it structurally - a compile could only pollute its own copy.
-
-**Three ways out, and the choice is a design decision rather than a patch:**
-
-1. **Do not cache across the boundary.** A library type refuses to memoize a `TypeInfo` or a
-   relation whose participants belong to another pool. Cheapest and preserves most of T1's win,
-   since the common case - library types related to library types - still caches. Needs a reliable
-   "is this mine" test on every cached value, and the un-cached cases pay full price every time.
-2. **Give each compile its own overlay for parameterized types**, so the shared library stays purely
-   read-only and anything mentioning a request's types lives in the request. This is the clone's
-   guarantee without the clone's cost, and it is the most honest fit for a resident host.
-3. **Share only what is provably request-independent** - the linked structures and NakedRef
-   injection, which is what T10 already holds - and let each compile keep its own `TypeInfo` cache.
-   That gives up T3 and most of the parallel win, but it is correct and it is a small step from
-   where the branch is now.
-
-**Recommendation: 2, with 1 as the guard that proves it.** Rule 1 is cheap to add and would turn
-this class of defect into an immediate, attributable error rather than a corrupted output file, and
-it is worth having even after 2 lands.
-
-**Status.** Not fixed. The diagnostic that found it IS committed, because it converts a silent
-cross-request corruption into a loud, attributable failure at the moment it happens - which is the
-difference between this taking an afternoon and taking a week.
-
-## T13 - The write path takes the pool's lock, and parallel compilation goes green
-
-Two facts closed the remaining failures, and neither of them fixes T12 - they remove the ways T12
-was destructive.
-
-**T13.1 - the intrusion was only fatal because assembly held no lock.** `register` is
-`synchronized (this)`; `assemble` was not. So a cross-pool intrusion could append to a pool AFTER
-that pool's constant count had been written, which corrupts the file. Assembly now takes the same
-monitor, so an intruding registration BLOCKS until the write finishes instead of racing it. The
-intrusion is still a design defect - T12 stands - but its consequence is now a late registration
-rather than a malformed `.xtc`.
-
-**T13.2 - `f_listConst` is a plain `ArrayList` whose reads were unsynchronized.** With assembly
-fixed, longer runs surfaced a new class:
-
-```
-NullPointerException: Cannot invoke "Constant.resetRefs()"
-  because the return value of "java.util.ArrayList.get(int)" is null
-NullPointerException: Cannot invoke "Constant.getFormat()" because "constant" is null
-```
-
-Writes were under the monitor, reads were not, so an indexed walk could observe a null element while
-another thread appended. `preRegisterAll`, the registration pass and `assemble` are all such walks.
-The whole write sequence in `FileStructure.writeTo` now holds the pool's monitor. Writing a module
-is rare and already the slow path, so the cost is negligible and the class disappears.
-
-### Result
-
-| | |
+| library cache | entries from outside the library |
 | --- | --- |
-| iterations | **40 of 40 fully clean** |
-| compiles | 1,680 concurrent (42 modules, 8 threads, 40 iterations) |
-| wall per iteration | min 315 ms, **median 362 ms**, max 1081 ms |
-| sequential | 42 ok, 3 expected fails, **0 crashes** - unchanged throughout |
-| thread-state leaks at request boundary | **0** |
+| `TypeInfo` members (methods + properties) | **0** |
+| relation-map keys | **0** |
+| `f_mapRefTypes` (NakedRef, keyed by caller-supplied referent) | **0** |
 
-`EngineParallelCompileTest` asserts strictly again: any failure is a regression, and the printed
-distribution names the class.
+The library holds nothing from any request. `SharedLibraryIsolationTest` now asserts this directly
+instead of inferring it from whether compiles pass, because the failure it guards against is silent
+for a long time and then surfaces as a malformed module far from its cause.
 
-### What this does and does not mean
+### What was real, and got fixed
 
-It means the mechanisms are now sound enough that 1,680 concurrent compiles agree with the
-sequential result. It does **not** mean T12 is fixed: one request can still reach into another
-request's pool through the shared library's caches, and the locking makes that harmless rather than
-impossible. The `m_threadAssembling` detector stays precisely so it stays visible, and T12's overlay
-design is still the right endpoint.
+`checkReservedCompatibility` took its pool from an ARGUMENT:
 
-### The leak check, and a hypothesis it killed
+```java
+ConstantPool pool = typeLeft.getConstantPool();   // whoever typeLeft belongs to
+...
+idLeft.equals(pool.clzFunction())                 // interns into THAT pool
+```
 
-`TypeSystemThread.describeLeak()` is now asserted at the end of every compile: a request must leave
-the thread as it found it, because that thread goes straight back into a pool to serve the next one.
-It was added to test the theory that T12's cross-pool reach came from a deferred entry leaking
-across requests on a pooled thread. **It reported zero leaks**, so the theory was wrong and the
-shared-cache explanation is the surviving one. The check stays - it is cheap, and it rules out a
-whole class of future confusion in one line.
+so it interned into whichever pool the caller's left type happened to belong to. Its siblings
+`isCovariantReturn` and `isContravariantParameter` already take the owner explicitly, with the note
+that *"the owner pool is part of the API contract"* - the same rule, not applied here. The owner is
+now a parameter, and the caller passes the pool whose relation map is being populated, so the
+structure doing the caching and the pool being interned into are the same one.
 
-## T14 - Randomizing the submission order found what 40 green iterations had not
+This is the reentrancy principle again in its ownership form: **scavenging an owner out of an
+argument is ambient state with extra steps.**
 
-**A green run at a fixed order is one interleaving sampled many times.** The suite submitted its 42
-modules in sorted order every iteration, so 40 of 40 clean meant "this one schedule works", not
-"concurrent compilation works". Shuffling the submission order per iteration - seeded off the
-iteration, so a failure is reproducible from the printed seed - immediately produced three failure
-classes that 40 sorted iterations never showed:
+### What is actually left
+
+One residual in roughly 60 iterations, and it is now legible rather than mysterious:
 
 ```
-ClassCastException: MethodConstant cannot be cast to ModuleConstant
 IndexOutOfBoundsException: Index 5503 out of bounds for length 396
-ConcurrentModificationException at ConstantPool.optimize
+  at ConstantPool.readConstant / getConstant
+  at Component.disassembleChildren / FileStructure.disassemble
+  at FileStructure.<init>            <- reading back what was just written
 ```
 
-The middle one is the most legible thing found all session: an index valid in a pool of 5503
-constants, used against a pool of 396. That is not corruption in the abstract - it is one pool's
-index resolved against another pool's list, which is exactly the cross-pool contamination of
-[T12](#t12---the-shared-library-s-caches-capture-per-compile-types-this-is-t1-s-real-limit) arriving
-in the read path.
+The module's CHILDREN were written with a position from a larger, foreign pool: a constant that
+registration never re-interned locally kept its original owner, so `getPosition()` returned an index
+valid somewhere else. That is [master row 45](master-issue-submissions.md) - registration and
+assembly disagreeing about the reachable set - in its sharper form: not merely a pool that grows
+during its own write, but a foreign index written into the file.
 
-### T14.1 - the lock was in the wrong place
-
-T13 put `synchronized (pool)` around `FileStructure.writeTo`. The CME above shows why that was too
-narrow: `reregisterConstants` has ANOTHER caller, `Compiler.generateCode`, and that one was still
-racing - the trace runs `generateCode -> reregisterConstants -> postRegisterAll -> optimize`.
-
-The lock now lives in `reregisterConstants` itself, which is the operation that walks and rewrites
-the pool wholesale: `preRegisterAll` resets every constant's refs and `optimize` reorders and
-discards. Guarding the operation rather than one of its callers is what makes it hold for the next
-caller too. It is reentrant, so `writeTo` keeping the outer monitor across its fixed-point loop
-costs nothing.
-
-Result: **59 of 60 iterations clean at 10 threads with randomized order**, and the
-`ConcurrentModificationException` class is gone.
-
-### What is left, and what it means
-
-One residual, roughly 1 in 60: a `ClassCastException` or `IndexOutOfBoundsException` while
-**reading back** the module just written. The bytes are malformed - a constant index does not match
-the pool written beside it. Both are the read-path face of T12: a foreign pool's constant reachable
-through the shared library's caches.
-
-**This is the honest state of T1.** Locking made the intrusion non-destructive in the common case
-and the failure rate fell from every iteration to about one in sixty, but a design defect throttled
-to 1.6% is still a design defect, and the next step is T12's overlay rather than another lock. The
-fixed-point pass count was tested as a suspect and cleared: 60 iterations at one pass and at nine
-both fail at about the same rate, so registration convergence is not the cause.
-
-### Two knobs, deliberately
-
-`-Dxvm.parallel.threads` and `-Dxvm.parallel.seed` alongside `-Dxvm.parallel.iterations`. Raising
-contention and varying the schedule are the only two things that reliably find these, and both were
-added after a green run turned out to mean less than it looked. 16 threads on a 10-core machine is
-also a useful setting for that reason.
+**The design answer is an assertion, not a lock:** assembly must never write a position belonging to
+another pool, and that is checkable at the moment it happens. Locks made this class rare; only
+enforcing ownership at the write will make it impossible.
 
 ## T5 - Prove diagnostics stay per request
 

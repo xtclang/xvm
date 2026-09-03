@@ -3615,6 +3615,28 @@ public class ConstantPool
     // ----- TypeInfo helpers ----------------------------------------------------------------------
 
     /**
+     * @param isLibrary  answers whether a pool is part of the shared library
+     *
+     * @return how many entries of this pool's NakedRef cache are keyed by a type from OUTSIDE the
+     *         library
+     *
+     * <p>{@code getNakedRefInfo} memoizes per REFERENT, and the referent is supplied by the caller
+     * - so a library pool asked about a request's type keeps that type for the life of the engine.
+     * Unlike the TypeInfo and relation caches, whose keys are the library's own types, this one is
+     * keyed by whatever was asked about, which makes it the shape most likely to hold a request's
+     * data.
+     */
+    public int countRefTypeKeysOutside(java.util.function.Predicate<ConstantPool> isLibrary) {
+        int cOutside = 0;
+        for (TypeConstant type : f_mapRefTypes.keySet()) {
+            if (!isLibrary.test(type.getConstantPool())) {
+                ++cOutside;
+            }
+        }
+        return cOutside;
+    }
+
+    /**
      * @return how many ConstantPool instances this JVM has created
      *
      * <p>A resident host creates pools per compile and is supposed to drop them when the request
