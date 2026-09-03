@@ -202,9 +202,30 @@ itself done after one pass and logs the not-yet-converged state as errors. `buf`
 during that pass, twice as `AssignedOnce` and twice as `Assigned`, which is the shape of an
 analysis still in motion.
 
-**Next:** find why the engine's `generateCode` returns `done=true` on its first pass where the
-CLI's does not. Both call the same `Compiler.generateCode(isLastAttempt)`; the difference is in
-what that returns, or in what deferred work is outstanding when it is asked.
+**The abort path is eliminated.** `Compiler.generateCode` returns
+`m_mgr.processComplete()`, and `StageMgr` short-circuits to "complete" whenever
+`getErrorListener().isAbortDesired()` - so an over-eager listener would produce exactly this
+symptom. It is not what happens here:
+
+- the engine's primary is `ErrorList.unlimited()`, i.e. `new ErrorList(Integer.MAX_VALUE)`, whose
+  `isAbortDesired()` needs `m_cErrors >= Integer.MAX_VALUE` (or FATAL) - effectively never;
+- its secondary for `compile(Path...)` is `BLACKHOLE`, which does not override `isAbortDesired()`
+  and so takes the interface default, `false`;
+- `TeeErrorListener` ORs the two, so the answer is `false`.
+
+Note the engine's list is *less* eager to abort than the CLI's, which uses
+`new ErrorList(MAX_NODE_ERRORS)` per node - the opposite direction from the symptom.
+
+**So `processComplete()` returned true honestly: the StageMgr had nothing left to revisit.** The
+engine's `generateCode` finishes in one pass because no node deferred itself, and it logs the
+unconverged result. The CLI takes two to three passes because nodes there *do* defer and get
+revisited.
+
+**Next:** find why nodes do not defer in the engine. A node that cannot resolve yet is supposed to
+put itself on the revisit list rather than log; something about the engine's setup makes them
+resolve-and-log on the first attempt instead. `StageMgr.markLastAttempt()` is only called when
+`fLastAttempt` is true, and on a first pass `runPhase` passes `false`, so the nodes should have
+been in deferring mode.
 
 ## Also established
 
