@@ -281,8 +281,14 @@ public final class XtcEngine
                     sModule, pool.size(), cInfos, cRelations, pool.getObjectSweepCount()));
         }
 
-        sb.append(String.format("  TOTAL typeInfos=%d relations=%d | poolsCreated=%d | heap=%dMB%n",
-                cInfoTotal, cRelTotal, ConstantPool.getPoolsCreated(), cHeap / (1024 * 1024)));
+        // Report the CEILING alongside the usage. Without it "heap=505MB" is unreadable: it is
+        // healthy against a 8GB ceiling and terminal against Gradle's 512m default for test
+        // workers, and the difference between those two readings was several hours.
+        long cMax = jvm.maxMemory();
+        sb.append(String.format("  TOTAL typeInfos=%d relations=%d | poolsCreated=%d "
+                        + "| heap=%dMB of %dMB (%d%%)%n",
+                cInfoTotal, cRelTotal, ConstantPool.getPoolsCreated(),
+                cHeap / (1024 * 1024), cMax / (1024 * 1024), cHeap * 100 / cMax));
         return sb.toString();
     }
 

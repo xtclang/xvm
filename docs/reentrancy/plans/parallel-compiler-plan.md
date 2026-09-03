@@ -320,6 +320,73 @@ makes the recursion safe without it - or state in the javadoc exactly which race
 not cover. Removing it should be measured, not assumed: it may also be load-bearing for something
 else.
 
+## T9 - It was never a leak: a 512m ceiling, and the residuals it was hiding
+
+Recorded because the wrong conclusion cost hours, and because the shape of the mistake is worth
+keeping.
+
+**What it looked like.** Running the parallel suite for more iterations degraded monotonically -
+42/42, then 36, then 29, eventually 15 - while wall time went from 1s to 172s and ended in
+`OutOfMemoryError`. Monotonic degradation plus OOM reads as a leak, and sharing the library instead
+of cloning it is exactly the kind of change that would cause one.
+
+**Four hypotheses, all measured, all wrong.** Constants accumulating in the shared pool (flat at
+76641); TypeInfo invalidation churn (invalidation count 0 throughout); repeated root-Object sweeps
+(exactly 1, thanks to T8.1); relation caches growing on library types (flat at 12828). Each was a
+plausible mechanism, each was measured, each was dead - and measuring one suspect at a time was the
+wrong method.
+
+**What a heap histogram said in one shot.** `jcmd GC.class_histogram` on the live worker, sampled
+six times:
+
+| class | first | last |
+| --- | --- | --- |
+| `ConstantPool` | 102 | **103** |
+| `FileStructure` | 102 | **103** |
+| `TypeInfoReal` | 18,899 | 19,181 |
+| `MethodBody` | 1,304,112 | 1,329,073 |
+| `TypeSystemThread` | 8 | 8 |
+
+Nothing was leaking. `poolsCreated` had passed 400 while only **103 pools were live** - they were
+being collected exactly as they should. The working set is simply large: ~19,000 live TypeInfos and
+1.3M `MethodBody`, of which the shared library accounts for 952 TypeInfos and the other ~18,000 are
+per-compile re-flattenings that die with their pools.
+
+**The actual ceiling was 512MB, and the JVM did not set it.** The JVM's own default is
+`MaxRAMPercentage=25%`, which on the test machine is 16GB. Gradle's `Test` task overrides that with
+its own **512m** default for forked workers. The heap topping out at 505-508MB was hitting 512m
+exactly. `cacheReport` now prints usage AGAINST the ceiling for this reason: "heap=505MB" is
+healthy against 8GB and terminal against 512m, and that difference was the whole confusion.
+`-PtestMaxHeap=<size>` sets it explicitly.
+
+**With headroom the degradation vanishes** - 14 iterations, wall time flat at 1.2-1.5s, no OOM -
+and the real residuals become a clean distribution instead of noise:
+
+| count / 14 | failure |
+| --- | --- |
+| **13** | `xunit-demo.x` - `IllegalStateException: Mack module (javatools_turtle) is missing` |
+| 4 | `VERIFY-11` "contribution forms a cycle" (Dec28, reflect, timeouts) |
+| 3 | `ConcurrentModificationException` (NumericConversions, array, services) |
+| 2 | NPE - `UnresolvedNameConstant.compareDetails`, and `m_FVisited` null |
+
+That turtle failure is near-deterministic and is therefore the next thing to fix, not the rarest
+one. **Lesson for the method:** get a histogram before proposing a mechanism. A leak hypothesis is
+cheap to state and expensive to disprove one cache at a time.
+
+### Footprint, if it is ever worth attacking
+
+Not yet - correctness first - but the numbers are recorded so the ranking is not guesswork:
+
+1. **T3 is the real win.** ~18,000 of 19,000 TypeInfos are per-compile re-flattenings of LIBRARY
+   types; that is where the 1.3M `MethodBody` plus 911k `MethodInfo` (roughly 80MB) sits. Sharing
+   the library's TypeInfo removes it structurally rather than shaving it.
+2. **Stripe the per-constant locks.** `ParameterizedTypeConstant` (74,708 instances) and
+   `SignatureConstant` (105,544) each hold a `final StampedLock`, which is exactly the 180,252
+   `StampedLock` objects in the histogram - about 8.6MB guarding memo fields that are almost never
+   contended. A small static striped array indexed on identity takes that to ~64 objects.
+3. **Do not micro-optimize `MethodBody`.** It is 68 objects per TypeInfo because a TypeInfo is a
+   flattened view; the fix is to build fewer of them, which is item 1.
+
 ## T5 - Prove diagnostics stay per request
 
 Each compile already collects into its own `ErrorList`, but that has not been tested under

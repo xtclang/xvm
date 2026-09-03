@@ -246,6 +246,12 @@ tasks.withType<Test>().configureEach {
     inputs.property("defaultJvmArgs", defaultJvmArgs)
     inputs.property("showTestStdout", showTestStdout)
     inputs.property("failFastTests", failFastTests)
+    // Test JVM heap. Left unset, the fork inherits the JVM default of a quarter of physical RAM,
+    // which is a MACHINE-DEPENDENT ceiling: a concurrent-compile test holds tens of thousands of
+    // TypeInfos at once, so the same test passes on one box and dies of GC thrash on another, and
+    // the failure looks like flakiness rather than capacity. -PtestMaxHeap=4g makes it explicit.
+    providers.gradleProperty("testMaxHeap").orNull?.let { maxHeapSize = it }
+
     // Forward -Dxvm.* from the Gradle invocation into the forked test JVM, so opt-in diagnostics
     // (e.g. -Dxvm.typeinfo.trace) can be switched on for one run without editing the build.
     systemProperties(providers.systemPropertiesPrefixedBy("xvm.").get())
