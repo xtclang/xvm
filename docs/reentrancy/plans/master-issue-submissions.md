@@ -3063,8 +3063,17 @@ is handed concurrently (`new Array(modules.size, i -> loadAndRun(modules[i]))`) 
 directory and nothing else. Measured on unmodified master: two separate `xec` processes running
 `TestFiles`, no runner involved, failed **2 of 3 attempts**.
 
-That matters because it is reachable by ordinary developer and CI behaviour - a parallel test run,
-or simply running the suite while someone else on the same machine is.
+**The trigger that matters is in the build, and needs only one JVM.**
+`:manualTests:runParallelStress` (`manualTests/build.gradle.kts:515-545`) asks `Runner` for
+`List(iterations) { selectedModules }.flatten()` - by default every module **ten times**, in
+parallel containers inside a single process - and `TestFiles` is in that list (`:468`). So that task
+starts ten concurrent `TestFiles` instances against one fixed directory, every time it runs.
+
+That task is the ownership stress harness: it sets
+`-Dxvm.runtime.validateOwnership=true` and exists to find same-JVM container races. So this defect
+sits directly in the path of the tool used to validate the container work, and fires there wearing
+a disguise. The separate-process measurement above is only how the cause was isolated - multiple
+JVMs are not a realistic workload and are not the argument.
 
 There are two failure modes, and the second is worse:
 
