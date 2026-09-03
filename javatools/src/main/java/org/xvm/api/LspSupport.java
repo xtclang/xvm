@@ -1,6 +1,5 @@
 package org.xvm.api;
 
-
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -41,7 +40,6 @@ import org.xvm.tool.ModuleInfo.Node;
 import static org.xvm.util.Handy.readFileChars;
 
 import static org.xvm.util.Severity.ERROR;
-
 
 /**
  * A class used to support LSP and other tool uses. This implementation uses the Connector API to

@@ -29,8 +29,6 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
-import org.xvm.util.Auto;
-
 /**
  * The main container (zero) associated with the main module.
  */
@@ -188,56 +186,11 @@ public class MainContainer
     }
 
     /**
-     * Post an asynchronous request to a method on the main module.
-     *
-     * @param sMethodName  the method name
-     * @param ahArg        the method arguments
-     *
-     * @return the future result of the invocation
+     * Invoke the specified entry point. An optional return value from the invocation can be
+     * later retrieved by the {@link #getResult} method.
      */
-    public CompletableFuture<ObjectHandle> postRequest(
-            String sMethodName, ObjectHandle... ahArg) {
-        try (Auto ignore = ConstantPool.withPool(f_idModule.getConstantPool())) {
-            MethodConstant idMethod = findModuleMethod(sMethodName, ahArg);
-            if (idMethod == null) {
-                throw new IllegalArgumentException(
-                        "Missing: " + sMethodName + " method for " + f_idModule.getValueString());
-            }
-
-            TypeConstant      typeModule = f_idModule.getType();
-            TypeComposition   clzModule  = resolveClass(typeModule);
-            SignatureConstant sigMethod  = idMethod.getSignature();
-            CallChain         chain      = clzModule.getMethodCallChain(sigMethod);
-            int               cReturns   = sigMethod.getReturnCount();
-            if (cReturns > 1) {
-                throw new IllegalArgumentException(
-                        "Method returns more than one value: " + idMethod.getValueString());
-            }
-
-            FunctionHandle function = new NativeFunctionHandle((frame, args, iReturn) -> {
-                SingletonConstant idModule =
-                        frame.poolContext().ensureSingletonConstConstant(f_idModule);
-                ObjectHandle hModule = frame.getConstHandle(idModule);
-                return Op.isDeferred(hModule)
-                        ? hModule.proceed(frame, frameCaller ->
-                            chain.invoke(frameCaller, frameCaller.popStack(), args, iReturn))
-                        : chain.invoke(frame, hModule, args, iReturn);
-            });
-
-            CompletableFuture<ObjectHandle> future =
-                    m_contextMain.postRequest(null, function, ahArg, cReturns);
-            if (future == null) {
-                throw new IllegalStateException("Main service has terminated");
-            }
-            return future;
-        }
-    }
-
-    /**
-     * Invoke the specified entry point.
-     */
-    public void invoke0(String sMethodName, ObjectHandle... ahArg) {
-        try (var ignore = ConstantPool.withPool(f_idModule.getConstantPool())) {
+    public void invoke(String sMethodName, ObjectHandle... ahArg) {
+        try (var _ = ConstantPool.withPool(f_idModule.getConstantPool())) {
             MethodConstant idMethod = findModuleMethod(sMethodName, ahArg);
             if (idMethod == null) {
                 System.err.println("Missing: " +  sMethodName + " method for " + f_idModule.getValueString());
@@ -283,6 +236,51 @@ public class MainContainer
             m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE);
         } catch (Exception e) {
             throw new RuntimeException("failed to run: " + f_idModule + ". Cause: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Post an asynchronous request to a method on the main module.
+     *
+     * @param sMethodName  the method name
+     * @param ahArg        the method arguments
+     *
+     * @return the future result of the invocation
+     */
+    public CompletableFuture<ObjectHandle> invokeAsync(String sMethodName, ObjectHandle... ahArg) {
+        try (var _ = ConstantPool.withPool(f_idModule.getConstantPool())) {
+            MethodConstant idMethod = findModuleMethod(sMethodName, ahArg);
+            if (idMethod == null) {
+                throw new IllegalArgumentException(
+                        "Missing: " + sMethodName + " method for " + f_idModule.getValueString());
+            }
+
+            TypeConstant      typeModule = f_idModule.getType();
+            TypeComposition   clzModule  = resolveClass(typeModule);
+            SignatureConstant sigMethod  = idMethod.getSignature();
+            CallChain         chain      = clzModule.getMethodCallChain(sigMethod);
+            int               cReturns   = sigMethod.getReturnCount();
+            if (cReturns > 1) {
+                throw new IllegalArgumentException(
+                        "Method returns more than one value: " + idMethod.getValueString());
+            }
+
+            FunctionHandle function = new NativeFunctionHandle((frame, args, iReturn) -> {
+                SingletonConstant idModule =
+                        frame.poolContext().ensureSingletonConstConstant(f_idModule);
+                ObjectHandle hModule = frame.getConstHandle(idModule);
+                return Op.isDeferred(hModule)
+                        ? hModule.proceed(frame, frameCaller ->
+                        chain.invoke(frameCaller, frameCaller.popStack(), args, iReturn))
+                        : chain.invoke(frame, hModule, args, iReturn);
+            });
+
+            CompletableFuture<ObjectHandle> future =
+                    m_contextMain.postRequest(null, function, ahArg, cReturns);
+            if (future == null) {
+                throw new IllegalStateException("Main service has terminated");
+            }
+            return future;
         }
     }
 

@@ -108,7 +108,7 @@ public class InterpreterConnector
         }
         }
 
-        m_containerMain.invoke0(method.getName(), ahArg);
+        m_containerMain.invoke(method.getName(), ahArg);
     }
 
     /**

@@ -20,6 +20,7 @@ import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.runtime.MainContainer;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
@@ -36,7 +37,6 @@ import static org.xvm.api.LspSupport.ERR_UNHANDLED_EXCEPTION;
 
 import static org.xvm.util.Severity.ERROR;
 
-
 /**
  * Interpreter-backed management and monitoring for one runner task.
  */
@@ -49,7 +49,7 @@ class InterpreterControl
         InterpreterConnector connector = new InterpreterConnector(repository);
         connector.loadModule("runner.xtclang.org");
         connector.start(null);
-        connector.getMainContainer().postRequest("run").join();
+        connector.getMainContainer().invokeAsync("run").join();
         return connector;
     }
 
@@ -92,9 +92,8 @@ class InterpreterControl
             ObjectHandle hConsoleId  = consoleId == null
                     ? xNullable.NULL
                     : xInt64.makeHandle(consoleId);
-            ObjectHandle hTaskId = postRequest(
-                    "runTask", hModule, hRepository, hConsoleId).join();
-            taskId = ((ObjectHandle.JavaLong) hTaskId).getValue();
+            ObjectHandle hTaskId = postRequest("runTask", hModule, hRepository, hConsoleId).join();
+            taskId = ((JavaLong) hTaskId).getValue();
         } catch (RuntimeException e) {
             stopped = Instant.now();
             running = false;
@@ -127,7 +126,7 @@ class InterpreterControl
 
     private CompletableFuture<ObjectHandle> postRequest(
             String methodName, ObjectHandle... arguments) {
-        return connector.getMainContainer().postRequest(methodName, arguments);
+        return connector.getMainContainer().invokeAsync(methodName, arguments);
     }
 
     private void watch() {
@@ -166,7 +165,7 @@ class InterpreterControl
         return postRequest("taskResult", xInt64.makeHandle(taskId))
                 .thenApply(result -> result == xNullable.NULL
                         ? null
-                        : ((ObjectHandle.JavaLong) result).getValue());
+                        : ((JavaLong) result).getValue());
     }
 
     private CompletableFuture<String> taskFailure() {
@@ -183,11 +182,18 @@ class InterpreterControl
 
         this.result  = result;
         this.stopped = Instant.now();
-        this.running = false;
-        unregisterConsole();
-
-        if (failure != null && errs != null) {
-            errs.log(ERROR, ERR_UNHANDLED_EXCEPTION, new Object[] {failure}, module);
+        try {
+            if (failure != null) {
+                if (console != null) {
+                    console.println("Unhandled exception: " + failure);
+                }
+                if (errs != null) {
+                    errs.log(ERROR, ERR_UNHANDLED_EXCEPTION, new Object[] {failure}, module);
+                }
+            }
+        } finally {
+            unregisterConsole();
+            this.running = false;
         }
     }
 
