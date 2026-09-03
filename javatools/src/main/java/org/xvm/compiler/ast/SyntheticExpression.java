@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.UnaryOpExprAST;
@@ -69,6 +70,16 @@ public abstract class SyntheticExpression
     @Override
     public void requireAssignable(Context ctx, ErrorListener errs) {
         expr.requireAssignable(ctx, errs);
+    }
+
+    @Override
+    public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs) {
+        return expr.generateAssignable(ctx, code, errs);
+    }
+
+    @Override
+    public Assignable[] generateAssignables(Context ctx, Code code, ErrorListener errs) {
+        return expr.generateAssignables(ctx, code, errs);
     }
 
     @Override
