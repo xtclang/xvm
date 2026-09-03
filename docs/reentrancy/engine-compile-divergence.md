@@ -252,6 +252,65 @@ resolve-and-log on the first attempt instead. `StageMgr.markLastAttempt()` is on
 `fLastAttempt` is true, and on a first pass `runPhase` passes `false`, so the nodes should have
 been in deferring mode.
 
+## ROOT CAUSE LOCALIZED: narrowing state survives into the engine's second validation pass
+
+### A 14-line reproducer
+
+`javatools/src/test/resources/engine/NullableInLoopSwitch.x`. The CLI compiles it (exit 0); the
+engine reports three diagnostics - the same COMPILER-137 / COMPILER-56 / COMPILER-117 as
+`lib_json`.
+
+```
+module NullableInLoopSwitch {
+    void run() {}
+    String eatString() {
+        StringBuffer? buf = Null;
+        while (True) {
+            Char ch = 'x';
+            switch (ch) {
+            default:
+                if (buf == Null) { buf = new StringBuffer(); }
+                buf.add(ch);
+                break;
+            }
+        }
+    }
+}
+```
+
+Bisected from `lib_json`, checking at every step that **the CLI still succeeds** - the rule the
+earlier rejected reduction violated. Both ingredients are load-bearing: removing the `switch`
+(leaving loop + `if` + assign + use) compiles on the engine, and removing the `while` makes the
+CLI fail too, so neither alone is the trigger.
+
+### The divergence, instrumented on both
+
+`Context.narrowLocalRegister` traced for `buf`, same source, same build:
+
+| pass 2, at `if (buf == Null)` | `WhenTrue` | `WhenFalse` |
+| --- | --- | --- |
+| CLI | `from=StringBuffer? -> Null` | `from=StringBuffer? -> StringBuffer` |
+| Engine | `from=Null -> Null` | `from=Null -> Null` |
+
+The **first** pass is identical in both: the declaration narrows `buf` from `StringBuffer?` to
+`Null`, the `if` splits it, and the body assigns `StringBuffer`.
+
+The difference is the state at the **start of the second pass**. The CLI re-enters the loop with
+`buf` at its declared `StringBuffer?`; the engine re-enters still carrying the `Null` left by pass
+one. `from=` is `reg.getType()`, so the engine is being handed the *narrowed* register from the
+previous pass rather than the declared one.
+
+That is the bug: **the engine's narrowing state survives from one validation pass into the next,
+where the CLI's is rebuilt.** With `buf` pinned at `Null` at the loop head, the back-edge can never
+widen it, `WhenFalse` narrows `Null` to `Null` instead of to `StringBuffer`, and every diagnostic
+downstream - including the COMPILER-117 about the `switch` arm - follows from that one wrong
+premise. It also explains the 668-vs-88 failed-lookup ratio: a whole module validated against
+types that never converged.
+
+**Next:** find what the CLI resets between passes that the engine does not. The candidates are the
+AST's own stage/validation state and the `Context` chain built for the method body - one of them is
+rebuilt per pass in the CLI's driver and reused in the engine's.
+
 ## Also established
 
 - Both paths build the module node tree through the same `ModuleInfo.getSourceTree(errs)` walk.
