@@ -168,18 +168,45 @@ public final class XtcEngine
      * link and inject into. Doing that work once against the shared library makes the copy
      * unnecessary.</p>
      */
-    private final Map<ModuleRepository, TypeConstant> f_mapPreparedLibraries =
+    private final Map<ModuleRepository, PreparedLibrary> f_mapPreparedLibraries =
             new ConcurrentHashMap<>();
 
     /**
-     * Link and NakedRef-inject a library once, however many compiles use it.
+     * A library that has been linked, NakedRef-injected and warmed once, and is now HELD.
+     *
+     * @param repo          the retained module instances; compiles resolve library modules from
+     *                      here, never from the originating repository
+     * @param typeNakedRef  the NakedRef type taken from the turtle prototype in that library
      */
-    private TypeConstant ensureLibraryPrepared(@NotNull ModuleRepository repoLib) {
+    private record PreparedLibrary(@NotNull ModuleRepository repo, @NotNull TypeConstant typeNakedRef) {}
+
+    /**
+     * Link, NakedRef-inject and warm a library once, then HOLD the module instances for the life of
+     * the engine.
+     *
+     * <p>Holding them is the whole point, and it is not an optimization. Preparation mutates the
+     * library - it links modules and sets the NakedRef type on each pool - and an on-disk
+     * repository treats a mutated module as stale: {@code DirRepository.ensureModule} does
+     *
+     * <pre>if (module == null || module.isModified()) { module = tryLoad(); }</pre>
+     *
+     * so the next {@code loadModule} DISCARDS the prepared structure and re-reads it from disk.
+     * The replacement has a fresh {@code ConstantPool} with no NakedRef type, and the compile that
+     * gets it dies much later, in an unrelated phase, with "Mack module (javatools_turtle) is
+     * missing". Preparation silently undone by the act of using it.
+     *
+     * <p>That is also the deeper reason the per-compile clone existed at all: its comment says
+     * "create a copy, allowing the compiler to mutate the repos[0] contents". The compiler mutates
+     * what it compiles against. Serving ONE library to many compiles therefore requires owning the
+     * instances, not asking for them again.
+     */
+    private @NotNull PreparedLibrary ensureLibraryPrepared(@NotNull ModuleRepository repoLib) {
         return f_mapPreparedLibraries.computeIfAbsent(repoLib, repo -> {
             prelinkSystemLibraries(repo);
-            TypeConstant typeNakedRef = injectNakedRefIntoLibrary(repo);
-            warmRootObject(repo);
-            return typeNakedRef;
+            var repoHeld = new BuildRepository();
+            TypeConstant typeNakedRef = injectNakedRefIntoLibrary(repo, repoHeld);
+            warmRootObject(repoHeld);
+            return new PreparedLibrary(repoHeld, typeNakedRef);
         });
     }
 
@@ -189,17 +216,27 @@ public final class XtcEngine
      * they compile against, which used to be reached only because a clone of each had been dropped
      * into the compile's build repository.
      */
-    private static TypeConstant injectNakedRefIntoLibrary(ModuleRepository repoLib) {
+    private static TypeConstant injectNakedRefIntoLibrary(
+            ModuleRepository repoLib, BuildRepository repoHeld) {
         ModuleStructure moduleTurtle = repoLib.loadModule(Constants.TURTLE_MODULE);
         if (moduleTurtle == null) {
-            return null;
+            // Not survivable, and not something to discover later. Returning null here used to
+            // leave every pool without a NakedRef type, and the failure surfaced deep in a
+            // validation phase as "Mack module is missing" - describing the symptom, in the wrong
+            // place, with nothing pointing back to preparation.
+            throw new IllegalStateException("cannot prepare a library without the turtle module ("
+                    + Constants.TURTLE_MODULE + "); module path=" + repoLib);
         }
+
         TypeConstant typeNakedRef =
                 ((ClassStructure) moduleTurtle.getChild("NakedRef")).getFormalType();
         for (var sModule : repoLib.getModuleNames()) {
             ModuleStructure module = repoLib.loadModule(sModule);
             if (module != null) {
                 module.getConstantPool().setNakedRefType(typeNakedRef);
+                // Retain THIS instance. See ensureLibraryPrepared: preparation modifies the module,
+                // and an on-disk repository re-reads a modified module from scratch.
+                repoHeld.storeModule(module);
             }
         }
         return typeNakedRef;
@@ -267,8 +304,14 @@ public final class XtcEngine
         int  cInfoTotal = 0;
         int  cRelTotal  = 0;
 
-        for (var sModule : repoLibrary.getModuleNames()) {
-            ModuleStructure module = repoLibrary.loadModule(sModule);
+        // Report the HELD instances. Asking repoLibrary again would re-read any module a compile
+        // had modified, so every figure would describe a structure nothing is using - which is
+        // exactly how this report once showed a library module with zero cached TypeInfos while a
+        // compile was actively building against it.
+        ModuleRepository repoReport = f_mapPreparedLibraries.values().stream().findFirst()
+                .map(PreparedLibrary::repo).orElse(repoLibrary);
+        for (var sModule : repoReport.getModuleNames()) {
+            ModuleStructure module = repoReport.loadModule(sModule);
             if (module == null) {
                 continue;
             }
@@ -579,8 +622,9 @@ public final class XtcEngine
         // The library is linked and injected once per engine, so a compile no longer needs a
         // private clone of it: read-through is off, and repoBuild holds only what is being
         // compiled. See ensureLibraryPrepared.
-        TypeConstant typeNakedRef = ensureLibraryPrepared(repoInput);
-        var repoCompile = new LinkedRepository(false, repoBuild, repoInput);
+        PreparedLibrary library = ensureLibraryPrepared(repoInput);
+        TypeConstant typeNakedRef = library.typeNakedRef();
+        var repoCompile = new LinkedRepository(false, repoBuild, library.repo());
         var compilers   = new ArrayList<Compiler>();
 
 

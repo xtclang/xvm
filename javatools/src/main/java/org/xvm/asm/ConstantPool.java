@@ -3430,10 +3430,27 @@ public class ConstantPool
     protected void preRegisterAll() {
         assertMutableBeforeRuntimePublished("recursive registration pre-pass");
 
-        assert !m_fRecurseReg;
+        if (m_fRecurseReg) {
+            // Not an assert: this is the shape of a concurrency defect, and it has to say WHOSE
+            // pool is being re-registered twice at once, because the answer is the whole diagnosis.
+            throw new IllegalStateException("re-registration already in progress on the pool of "
+                    + describeOwner() + "; a second thread is assembling against the same pool");
+        }
         m_fRecurseReg = true;
 
-        f_listConst.forEach(Constant::resetRefs);
+        // Indexed rather than forEach so that concurrent growth is REPORTED rather than surfacing
+        // as a bare ConcurrentModificationException with no indication of which pool grew. Snapshot
+        // -and-continue would hide it, and a pool growing during its own re-registration pass means
+        // somebody is still interning into it.
+        int cStart = f_listConst.size();
+        for (int i = 0; i < cStart; ++i) {
+            f_listConst.get(i).resetRefs();
+        }
+        int cEnd = f_listConst.size();
+        if (cEnd != cStart) {
+            throw new IllegalStateException("the pool of " + describeOwner() + " grew from "
+                    + cStart + " to " + cEnd + " constants during its own re-registration pass");
+        }
     }
 
     /**
@@ -4117,6 +4134,16 @@ public class ConstantPool
 
     // ----- out-of-context helpers  ---------------------------------------------------------------
 
+    /**
+     * @return a short description of whose pool this is, for diagnostics
+     */
+    public String describeOwner() {
+        var struct  = getFileStructure();
+        var module  = struct == null ? null : struct.getModule();
+        String sName = module == null ? "<no module>" : String.valueOf(module.getName());
+        return sName + "@" + Integer.toHexString(System.identityHashCode(this));
+    }
+
     public TypeConstant getNakedRefType() {
         return m_typeNakedRef;
     }
@@ -4134,7 +4161,12 @@ public class ConstantPool
                 constFormal -> "Referent".equals(constFormal.getName()) ? typeReferent : null;
 
         if (m_typeNakedRef == null) {
-            throw new IllegalStateException("Mack module (javatools_turtle) is missing");
+            // Name the pool that lacks the type, not just the module that would have supplied it.
+            // Without this the message says what is missing but not WHERE, and every pool in a
+            // multi-module compile is a candidate - which is most of the cost of diagnosing it.
+            throw new IllegalStateException("Mack module (javatools_turtle) is missing:"
+                    + " no NakedRef type has been injected into the pool of "
+                    + describeOwner() + "; referent=" + typeReferent);
         }
 
         TypeInfo info = m_typeNakedRef.ensureTypeInfo();

@@ -387,6 +387,79 @@ Not yet - correctness first - but the numbers are recorded so the ranking is not
 3. **Do not micro-optimize `MethodBody`.** It is 68 objects per TypeInfo because a TypeInfo is a
    flattened view; the fix is to build fewer of them, which is item 1.
 
+## T10 - Preparation was being silently undone: hold the library, do not re-fetch it
+
+The dominant residual after T9 - 13 of 14 iterations - was
+`IllegalStateException: Mack module (javatools_turtle) is missing`, always on `xunit-demo.x`.
+
+**The wrong answers first**, because both were plausible and both cost time. I first blamed
+`ensureLibraryPrepared` being check-then-act; it is a `ConcurrentHashMap.computeIfAbsent`, which is
+atomic, so that was wrong. I then blamed `DirRepository`'s one-second scan window handing out fresh
+instances - and wrote `LibraryInstanceStabilityTest` to check, which PASSED: `rebuildCache` reuses
+its `ModuleInfo` when timestamp and size match, so an unchanged directory keeps the same instance.
+Wrong again, and the test is kept as a guard.
+
+**What actually found it** was making the error name the pool that lacked the type rather than only
+the module that would have supplied it. One run then said:
+
+```
+no NakedRef type has been injected into the pool of xunit.xtclang.org@4541a1e6
+```
+
+while preparation had injected `xunit.xtclang.org@384dfef5`. Two instances of the same module - so
+the question stopped being "why is the type missing" and became "who replaced the module".
+
+**The answer is in `DirRepository.ensureModule`:**
+
+```java
+if (module == null || module.isModified()) {
+    module = tryLoad();          // discard and re-read from disk
+}
+```
+
+Preparation MODIFIES the library - it links modules and sets the NakedRef type on every pool - so
+the repository treats the prepared structure as stale and re-reads it. The replacement has a fresh
+`ConstantPool` with no NakedRef type, and the compile that receives it dies much later, in an
+unrelated phase. **Preparation was silently undone by the act of using it.**
+
+This is the same fact the clone was hiding, stated from the other side. `LinkedRepository`'s comment
+is "create a copy, allowing the compiler to mutate the repos[0] contents": the compiler mutates what
+it compiles against. Serving ONE library to many compiles therefore requires OWNING the instances,
+not asking a repository for them again.
+
+**The fix** is that `ensureLibraryPrepared` materializes the prepared modules into a
+`BuildRepository` and holds it for the engine's lifetime; compiles resolve library modules from that
+held repository. `injectNakedRefIntoLibrary` also stops returning null when the turtle is absent -
+that silent null was what turned a preparation failure into a "Mack module is missing" in a
+validation phase - and `cacheReport` now reports the held instances, because asking the repository
+again described structures nothing was using. That is why the report once showed a library module
+with zero cached TypeInfos while a compile was actively building against it.
+
+| | before T10 | after T10 |
+| --- | --- | --- |
+| turtle failure | 13 of 14 iterations | **0 of 15** |
+| fully clean iterations | 0 | **11 of 15** |
+| wall per iteration | 1.2-1.5 s | **0.42-0.55 s** |
+
+The speedup is a side effect worth naming: compiles had been re-reading library modules from disk
+on every request.
+
+### What is left, measured over 15 iterations
+
+| count | failure |
+| --- | --- |
+| 6 | `VERIFY-11` "contribution forms a cycle" - always on a LIBRARY type (IntNumber, Sequential, Array, Const, String, Int64) |
+| 2 | `ConcurrentModificationException` |
+
+`VERIFY-11` is now the dominant class and the next target. That it always names a library type, and
+that a cycle is reported where none exists, points at contribution resolution reading a partially
+built state on a shared type rather than at anything in the compiled module.
+
+For the `ConcurrentModificationException`: `ConstantPool.preRegisterAll` now reports which POOL is
+being re-registered twice at once, and detects the pool growing during its own pass, rather than
+iterating live and surfacing a bare CME. The two remaining occurrences did NOT come from there, so
+there is a second site still to find.
+
 ## T5 - Prove diagnostics stay per request
 
 Each compile already collects into its own `ErrorList`, but that has not been tested under
