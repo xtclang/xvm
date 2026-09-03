@@ -19,20 +19,14 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  */
 public class ConstantPoolDiagnosticsTest {
     /**
-     * The implicit-identity cache is lazily written from concurrent service threads at runtime
-     * (e.g. {@code xService} resolving "Timeout" through the owner pool while sibling services run
-     * on the shared executor; TypeInfo builds resolving "Object"/"String"). All ServiceContexts of
-     * one container share one pool, so no parallel containers are needed to reach this.
+     * {@code f_implicits} backs the pool's memoized {@code clzXxx()} accessors, each of whose
+     * first call does a {@code get} then a {@code put}. That is reachable from service threads -
+     * {@code clzObject()} via {@code TypeConstant.isRootObject()} on the lazy TypeInfo path - and
+     * all ServiceContexts of a container share one pool. The values converge, so the map itself is
+     * the whole defect: a resizing {@code put} racing a {@code get} can lose unrelated keys.
      *
-     * <p>Master's shape was a plain {@code HashMap}, so a {@code put} resize racing another
-     * thread's {@code get} could structurally corrupt the map - lost unrelated entries, broken
-     * bins - not merely duplicate work. The cached values themselves converge (identities are
-     * interned), so the map implementation is the entire defect.</p>
-     *
-     * <p><b>Proven red on master</b> {@code fd7eb58f7}: the instance-type pin below fails
-     * deterministically against the {@code new HashMap<>()} field initializer. The parallel
-     * exercise is the behavioral companion - it cannot be relied on to fail deterministically,
-     * because {@code HashMap} corruption under a race is scheduling-dependent.</p>
+     * <p>The type pin is the assertion and is deterministic. The parallel exercise is a companion
+     * and cannot be relied on to fail, as {@code HashMap} corruption is scheduling-dependent.</p>
      */
     @Test
     public void implicitIdentityCacheIsConcurrentSafe() throws Exception {
