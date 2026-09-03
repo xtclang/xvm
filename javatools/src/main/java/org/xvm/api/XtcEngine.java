@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -32,6 +33,8 @@ import org.xvm.asm.DirRepository;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.InjectionKey;
 import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
@@ -63,6 +66,7 @@ import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.NestedContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Runtime;
+import org.xvm.runtime.template.text.xString;
 
 import org.xvm.util.Lazy;
 
@@ -579,7 +583,24 @@ public final class XtcEngine
             throw new IllegalArgumentException("module not in compile result: " + sModuleName);
         }
 
-        return runFrom(new LinkedRepository(result.buildRepository(), repoLibrary), sModuleName, "run");
+        return run(result, sModuleName, Map.of());
+    }
+
+    /**
+     * Run a just-compiled module with its own {@code String}/{@code String[]} injections.
+     *
+     * @param result        a successful {@link #compile} result containing the module
+     * @param sModuleName   the module to run
+     * @param mapInjections values granted to THIS run only; see
+     *                      {@link #run(String, String, Map)}
+     *
+     * @return the run-completion future
+     */
+    public @NotNull CompletableFuture<ObjectHandle> run(@NotNull CompileResult result,
+                                                        @NotNull String sModuleName,
+                                                        @NotNull Map<String, List<String>> mapInjections) {
+        return runFrom(new LinkedRepository(result.buildRepository(), repoLibrary), sModuleName,
+                "run", Objects.requireNonNull(mapInjections, "mapInjections"));
     }
 
     /**
@@ -596,9 +617,27 @@ public final class XtcEngine
      *
      * @return the run-completion future
      */
+    /**
+     * Run a module with its own {@code String}/{@code String[]} injections.
+     *
+     * @param sModuleName   the module to run, resolved against the engine's module path
+     * @param sMethodName   the module method to invoke (the CLI default is {@code "run"})
+     * @param mapInjections values granted to THIS run only, keyed by injection name; a single
+     *                      value satisfies a {@code String} injection and the whole list satisfies
+     *                      a {@code String[]} one
+     *
+     * @return the run-completion future
+     */
+    public @NotNull CompletableFuture<ObjectHandle> run(@NotNull String sModuleName,
+                                                        @NotNull String sMethodName,
+                                                        @NotNull Map<String, List<String>> mapInjections) {
+        return runFrom(repoLibrary, sModuleName, sMethodName,
+                Objects.requireNonNull(mapInjections, "mapInjections"));
+    }
+
     public @NotNull CompletableFuture<ObjectHandle> run(@NotNull String sModuleName,
                                                         @NotNull String sMethodName) {
-        return runFrom(repoLibrary, sModuleName, sMethodName);
+        return runFrom(repoLibrary, sModuleName, sMethodName, Map.of());
     }
 
     /**
@@ -611,7 +650,8 @@ public final class XtcEngine
      */
     private @NotNull CompletableFuture<ObjectHandle> runFrom(@NotNull ModuleRepository repoRun,
                                                              @NotNull String sModuleName,
-                                                             @NotNull String sMethodName) {
+                                                             @NotNull String sMethodName,
+                                                             @NotNull Map<String, List<String>> mapInjections) {
         ModuleStructure moduleApp = repoRun.loadModule(sModuleName);
         if (moduleApp == null) {
             return CompletableFuture.failedFuture(new IllegalArgumentException(
@@ -627,8 +667,45 @@ public final class XtcEngine
                     new IllegalStateException("missing dependency: " + idMissing.getName()));
         }
 
-        Container containerRun = NestedContainer.createForHost(containerNative, struct.getModuleId(), List.of());
+        NestedContainer containerRun =
+                NestedContainer.createForHost(containerNative, struct.getModuleId(), List.of());
+        registerInjections(containerRun, mapInjections);
         return containerRun.runModule(sMethodName);
+    }
+
+    /**
+     * Grant this run its own {@code String} and {@code String[]} injections.
+     *
+     * <p>Registered on the run's own container through
+     * {@link NestedContainer#registerHostResource}, so they take precedence over the native plane
+     * and die with the container - a run cannot see another run's injections, and nothing is left
+     * behind on the shared plane afterwards. That is the difference from configuring a process-wide
+     * host once: two runs of the same module can be given different values.</p>
+     *
+     * <p>Both shapes are registered for every name because an injection is keyed by name AND type:
+     * the module decides which it declares, and asking for the one that was not registered is
+     * indistinguishable from asking for a name nobody supplied.</p>
+     */
+    private void registerInjections(@NotNull NestedContainer containerRun,
+                                    @NotNull Map<String, List<String>> mapInjections) {
+        if (mapInjections.isEmpty()) {
+            return;
+        }
+
+        ConstantPool pool        = containerRun.getConstantPool();
+        TypeConstant typeString  = pool.typeString();
+        TypeConstant typeStrings = pool.ensureArrayType(typeString);
+
+        mapInjections.forEach((sName, listValues) -> {
+            if (listValues == null || listValues.isEmpty()) {
+                return;
+            }
+            containerRun.registerHostResource(new InjectionKey(sName, typeString),
+                    (frame, hOpts) -> xString.makeHandle(frame, listValues.getLast()));
+            containerRun.registerHostResource(new InjectionKey(sName, typeStrings),
+                    (frame, hOpts) -> xString.makeArrayHandle(
+                            containerRun, listValues.toArray(String[]::new)));
+        });
     }
 
     /**
