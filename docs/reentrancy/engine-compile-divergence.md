@@ -99,6 +99,47 @@ Next step from here: find where `buf`'s declared type is lost. Validation had it
 passes); generation sees `Null`. The question is what the engine's generation reads that the CLI's
 does not.
 
+### In-process is NOT the problem — the fault is the engine's driver
+
+The CLI compiler was driven **in the same JVM** as the engine, via
+`Launcher.launch("build", …)`, so one instrumentation build covered both and no installed jar was
+involved:
+
+```
+=== CLI in-process ===      CLI rc=0        <- succeeds
+=== ENGINE in-process ===   success=false, 5 diagnostics
+```
+
+That settles the question the whole comparison existed to answer. A warm JVM compiles `lib_json`
+correctly through the CLI's driver; only `XtcEngine`'s driver fails. **The divergence is in the
+engine's compile driver, not in compiling in-process, not in the environment, and not in the
+module.** No further CLI comparison is needed - from here the work is engine-only.
+
+Two harness notes, both of which produced a false signal first:
+
+- `Launcher.launch` takes the command **`build`**, not `xcc`; `xcc` is a shell alias. Passing
+  `xcc` returns 1 with a usage banner, which looks exactly like a compile failure.
+- The CLI needs `xdk/.../javatools` on its module path as well as `.../lib`, or it fails with
+  "Unable to load module: mack.xtclang.org" - the turtle. That also returns 1 and also looks like
+  a compile failure.
+
+### What is NOT wrong
+
+`buf`'s register is created with the correct declared type. Instrumenting `Context.createRegister`
+during an engine compile of `lib_json`:
+
+```
+REG buf type=StringBuffer?  host=Lexer            <- correct
+REG buf type=StringBuffer   host=DocInputStream, DocOutputStream, Printer, TupleMapping
+```
+
+So the declared type survives into the register. The `Null` appears later, between there and the
+method lookup in `generateCode`.
+
+An earlier claim that "the engine is also compiling the ecstasy library" was **wrong** and is
+retracted: it came from grepping a Gradle log that interleaved several compile tasks. The
+in-process probe shows the engine compiling exactly the five `lib_json` classes, as it should.
+
 ## Also established
 
 - Both paths build the module node tree through the same `ModuleInfo.getSourceTree(errs)` walk.
