@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.compiler.Compiler.Stage;
 
@@ -77,6 +78,26 @@ public abstract sealed class SyntheticExpression
     @Override
     public void requireAssignable(Context ctx, ErrorListener errs) {
         expr.requireAssignable(ctx, errs);
+    }
+
+    /**
+     * Delegate the L-value generation, as this class delegates every other assignability question.
+     *
+     * <p>Without these two, an assignable SyntheticExpression fell into the base class, where
+     * {@code generateAssignable} forwards to {@code generateAssignables} when the expression has a
+     * multi-value implementation and {@code generateAssignables} forwards back when it has a
+     * single-value one. An expression that reports both and overrides neither ping-pongs between
+     * them until the stack is exhausted - a StackOverflowError from the compiler rather than a
+     * diagnostic. Overriding {@code isAssignable} alone is what put this class in that position.</p>
+     */
+    @Override
+    public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs) {
+        return expr.generateAssignable(ctx, code, errs);
+    }
+
+    @Override
+    public Assignable[] generateAssignables(Context ctx, Code code, ErrorListener errs) {
+        return expr.generateAssignables(ctx, code, errs);
     }
 
     @Override

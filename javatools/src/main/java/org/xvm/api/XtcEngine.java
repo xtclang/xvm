@@ -426,11 +426,23 @@ public final class XtcEngine
         // links against (ecstasy, cached into repoBuild by the read-through load) needs the type set on
         // its own pool before validation builds Ref TypeInfo - otherwise it fails "Mack module is
         // missing". On-disk modules carry this baked in at build time; in-memory ones inject it here.
+        // Between phases, stop if the previous one produced a serious error - the CLI's
+        // flushAndCheckErrors. Without this the engine ran every phase unconditionally, so an
+        // ordinary user error could leave a compiler short of the stage the NEXT phase asserts:
+        // "Cannot find a module" left it at Resolving, and generateCode's ensureReached(Validated)
+        // then threw IllegalStateException. A missing dependency has to be a diagnostic, not a
+        // crash.
         compilers.forEach(compiler -> compiler.linkModules(repoCompile));
-        runPhase(compilers, Compiler::resolveNames);
-        injectNakedRefType(repoBuild);
-        runPhase(compilers, Compiler::validateExpressions);
-        runPhase(compilers, Compiler::generateCode);
+        if (!errsCollect.hasSeriousErrors()) {
+            runPhase(compilers, Compiler::resolveNames);
+        }
+        if (!errsCollect.hasSeriousErrors()) {
+            injectNakedRefType(repoBuild);
+            runPhase(compilers, Compiler::validateExpressions);
+        }
+        if (!errsCollect.hasSeriousErrors()) {
+            runPhase(compilers, Compiler::generateCode);
+        }
 
         // On success, ASSEMBLE each compiled module (round-trip it through serialization) into a fresh
         // result repository. A freshly-compiled in-memory FileStructure still holds ops whose arguments
