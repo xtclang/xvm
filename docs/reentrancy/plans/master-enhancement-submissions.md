@@ -3481,6 +3481,38 @@ ones that are not assignable, which is the reason the bridge exists at all. The
 interface is the version that keeps the bridge's benefit and still fails at
 compile time.
 
+### What would have stopped this reaching master
+
+Four things, each sufficient on its own, and none of them exotic.
+
+1. **Spend the sealing.** `SyntheticExpression` is
+   `sealed ... permits ConvertExpression, UnaryOpExpression, UnpackExpression`, so the complete set
+   of subclasses is known at compile time. One exhaustiveness test - every permitted subclass must
+   handle being an L-value - finds this mechanically. The guarantee was bought and never spent.
+
+2. **Make the bridge fail closed.** The two defaults are asymmetric: `generateAssignable` throws
+   `notImplemented()` when it cannot delegate, `generateAssignables` recurses back. One reports,
+   the other loops. Had both reported, this was a clear exception naming the class on day one.
+   Mutual recursion as a DEFAULT IMPLEMENTATION is the design error - a default should degrade to a
+   diagnostic, never to a cycle.
+
+3. **A compiler should never let `StackOverflowError` escape.** It is a recursive machine over
+   untrusted input, so unbounded recursion is foreseeable, not exceptional: bound the depth and
+   report an internal diagnostic naming the node. The codebase already does exactly this a few
+   hundred lines away, with `m_cRecursiveDepth` guarding the TypeInfo cycle. The pattern existed
+   and was not applied here.
+
+4. **Give the exclude list an expiry.** `Dec28.x` sat in `sourceSets { exclude }` with no ticket,
+   no date, no owner, and nothing asserting it STILL fails. A quarantine nobody revisits guarantees
+   the bug outlives everyone who remembers it - and in this case the compiler had to be fixed for
+   an unrelated reason before anyone looked. If exclusions were expected-failure tests, CI would
+   have reported the day it started passing. `manualTests/build.gradle.kts` already carries the
+   TODO admitting this: *"Integrate these manual modules with xUnit so expected-failure (negative)
+   tests are first-class"*.
+
+The common thread with A above, and with E32/E34/E35: **the contract was a comment**, and comments
+do not fail builds.
+
 **Order:** A before B. A is small, fixes a real footgun, and does not touch the
 signature; B is mechanical once A has settled which methods are even required.
 
