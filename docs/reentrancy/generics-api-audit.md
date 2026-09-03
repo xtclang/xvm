@@ -1165,11 +1165,22 @@ Measured, not estimated. Numbers from `javac -Xlint:all` with the warning cap li
   being handed a raw future. The payload types that actually flow are `ObjectHandle` (60 uses),
   `ObjectHandle[]` (2) and `Void` (2).
 
-  This is the single highest-value item left, because three separate rows converge on it. Of the 154
-  `unchecked`+`rawtypes` warnings in the tree, **39 are in `ServiceContext` and `Fiber` alone**, and
-  they resolve to three known causes: the raw `EnumMap` op-info cache (E27, designed),
-  `CompletableFuture`/`Response` (this row, Must Fix 1) and the raw `Map.put` for pending requests
-  (Must Fix 3). Generifying `Message<T>` clears most of it.
+  ~~This is the single highest-value item left, because three separate rows converge on it. Of the
+  154 `unchecked`+`rawtypes` warnings in the tree, **39 are in `ServiceContext` and `Fiber`
+  alone**...~~ **DONE 2026-09-03**, and the measurement that justified the whole Should Fix tier no
+  longer holds.
+
+  Re-measured with lint actually enabled (`-Porg.xtclang.java.lint=true`; it is off by default
+  because the build also sets `-Werror`): the tree has **9** `unchecked` warnings, all of them in
+  `javatools_utils` (`TransientThreadLocal`, `ListMap`, `ListSet`). `ServiceContext` and `Fiber`
+  have **zero**. The 39-warning concentration those three rows pointed at is gone, cleared by
+  `Message<T>` (Must Fix 1), `OpInfoKey<T>` (Must Fix 2) and the Fiber pending-request split
+  (Must Fix 3).
+
+  `rawtypes` is still not measurable from the build - it is deliberately not enabled
+  (`org.xtclang.build.java.gradle.kts:59-60`, "~40 sites remain and a half-enabled fatal lint just
+  blocks the build"). Enabling it is the honest next measurement, and should happen before any
+  further row in this tier is funded on the strength of a warning count.
 
   Note `f_future` is a public field. Pre-existing, but worth making private behind an accessor while
   the class is being changed anyway.
