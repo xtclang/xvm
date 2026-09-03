@@ -367,7 +367,10 @@ public final class XtcEngine
         var listModules = new ArrayList<TypeCompositionStatement>(sources.length);
         for (ModuleSource source : sources) {
             List<File> listResource = source.resourceDirs();
-            var        info         = new ModuleInfo(source.source().toFile(), true,
+            // deduce=false, deliberately. The engine is handed exact paths by its caller - a build
+            // tool knows precisely which sources and resource roots it means - so inferring
+            // locations from filesystem convention can only turn a known input into a guessed one.
+            var        info         = new ModuleInfo(source.source().toFile(), false,
                                           listResource.isEmpty() ? null : listResource, null);
             ModuleInfo.Node node = info.getSourceTree(errs);
             if (node != null) {
