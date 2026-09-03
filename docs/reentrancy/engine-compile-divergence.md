@@ -71,8 +71,33 @@ paths differ": the AST validated, so the types were resolvable a phase earlier, 
 generation's own resolution that fails. `COMPILER-56 "could not find a matching method add for
 type StringBuffer?"` has no business arriving in `generateCode` at all.
 
-Next step from here: instrument inside `Compiler.generateCode` to see what type it resolves for
-`buf`, and compare against what `validateExpressions` had.
+### Localized further: the engine never resolves the target type at all
+
+Instrumented both `MISSING_METHOD` log sites to print the target type, its pool, and the phase,
+then ran the engine and the CLI on the same source with the same lean module path:
+
+| | `MISSING_METHOD` lookups | what it sees for `buf.add(...)` |
+| --- | --- | --- |
+| CLI (succeeds) | 88 | `type=Null` **and** `type=StringBuffer? nullable=true` |
+| Engine (fails) | 668 | `type=Null` **only** |
+
+Both compilers do a speculative lookup that sees `Null` - that one is normal and discarded. The
+CLI *also* resolves the target as `StringBuffer?`, which is the lookup that succeeds. **The engine
+never produces that resolution at all.**
+
+The 668-vs-88 ratio says this is not one expression going wrong. Type resolution is broadly
+degraded during the engine's `generateCode`, and `lib_json` is simply the first module whose code
+depends on it enough to fail.
+
+**A methodology note that nearly cost a false conclusion.** The first run of this comparison showed
+the CLI with ZERO such lookups, which would have meant it never reaches the code path. That was
+wrong: `xcc` runs the *installed* javatools jar, which did not yet contain the instrumentation.
+The numbers above are from a rebuilt `installDist`. Any engine-vs-CLI comparison that instruments
+javatools must rebuild the distribution first, or the CLI side measures unmodified code.
+
+Next step from here: find where `buf`'s declared type is lost. Validation had it (validation
+passes); generation sees `Null`. The question is what the engine's generation reads that the CLI's
+does not.
 
 ## Also established
 
