@@ -696,6 +696,61 @@ across requests on a pooled thread. **It reported zero leaks**, so the theory wa
 shared-cache explanation is the surviving one. The check stays - it is cheap, and it rules out a
 whole class of future confusion in one line.
 
+## T14 - Randomizing the submission order found what 40 green iterations had not
+
+**A green run at a fixed order is one interleaving sampled many times.** The suite submitted its 42
+modules in sorted order every iteration, so 40 of 40 clean meant "this one schedule works", not
+"concurrent compilation works". Shuffling the submission order per iteration - seeded off the
+iteration, so a failure is reproducible from the printed seed - immediately produced three failure
+classes that 40 sorted iterations never showed:
+
+```
+ClassCastException: MethodConstant cannot be cast to ModuleConstant
+IndexOutOfBoundsException: Index 5503 out of bounds for length 396
+ConcurrentModificationException at ConstantPool.optimize
+```
+
+The middle one is the most legible thing found all session: an index valid in a pool of 5503
+constants, used against a pool of 396. That is not corruption in the abstract - it is one pool's
+index resolved against another pool's list, which is exactly the cross-pool contamination of
+[T12](#t12---the-shared-library-s-caches-capture-per-compile-types-this-is-t1-s-real-limit) arriving
+in the read path.
+
+### T14.1 - the lock was in the wrong place
+
+T13 put `synchronized (pool)` around `FileStructure.writeTo`. The CME above shows why that was too
+narrow: `reregisterConstants` has ANOTHER caller, `Compiler.generateCode`, and that one was still
+racing - the trace runs `generateCode -> reregisterConstants -> postRegisterAll -> optimize`.
+
+The lock now lives in `reregisterConstants` itself, which is the operation that walks and rewrites
+the pool wholesale: `preRegisterAll` resets every constant's refs and `optimize` reorders and
+discards. Guarding the operation rather than one of its callers is what makes it hold for the next
+caller too. It is reentrant, so `writeTo` keeping the outer monitor across its fixed-point loop
+costs nothing.
+
+Result: **59 of 60 iterations clean at 10 threads with randomized order**, and the
+`ConcurrentModificationException` class is gone.
+
+### What is left, and what it means
+
+One residual, roughly 1 in 60: a `ClassCastException` or `IndexOutOfBoundsException` while
+**reading back** the module just written. The bytes are malformed - a constant index does not match
+the pool written beside it. Both are the read-path face of T12: a foreign pool's constant reachable
+through the shared library's caches.
+
+**This is the honest state of T1.** Locking made the intrusion non-destructive in the common case
+and the failure rate fell from every iteration to about one in sixty, but a design defect throttled
+to 1.6% is still a design defect, and the next step is T12's overlay rather than another lock. The
+fixed-point pass count was tested as a suspect and cleared: 60 iterations at one pass and at nine
+both fail at about the same rate, so registration convergence is not the cause.
+
+### Two knobs, deliberately
+
+`-Dxvm.parallel.threads` and `-Dxvm.parallel.seed` alongside `-Dxvm.parallel.iterations`. Raising
+contention and varying the schedule are the only two things that reliably find these, and both were
+added after a green run turned out to mean less than it looked. 16 threads on a 10-core machine is
+also a useful setting for that reason.
+
 ## T5 - Prove diagnostics stay per request
 
 Each compile already collects into its own `ErrorList`, but that has not been tested under

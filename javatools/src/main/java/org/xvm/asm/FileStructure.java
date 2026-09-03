@@ -351,7 +351,8 @@ public final class FileStructure
         ConstantPool pool = m_pool;
         synchronized (pool) {
         int cPrev = -1;
-        for (int cTries = 0; pool.size() != cPrev; ++cTries) {
+        int cMaxPasses = Integer.getInteger("xvm.fixedpoint.passes", 9);
+        for (int cTries = 0; pool.size() != cPrev && cTries < cMaxPasses; ++cTries) {
             if (cTries > 8) {
                 throw new IllegalStateException("constant registration did not reach a fixed point"
                         + " for " + pool.describeOwner() + "; size still moving at " + pool.size());
@@ -1331,6 +1332,13 @@ public final class FileStructure
      */
     public void reregisterConstants(boolean fOptimize) {
         ConstantPool pool = m_pool;
+        // The lock belongs HERE, not at the call sites. This is the operation that walks and
+        // rewrites the pool wholesale - preRegisterAll resets every constant's refs, optimize
+        // reorders and discards - and it has more than one caller: writeTo, and Compiler.generateCode.
+        // Guarding only the write path left generateCode racing, which surfaced as a
+        // ConcurrentModificationException inside optimize(). Reentrant, so writeTo holding the same
+        // monitor across its fixed-point loop costs nothing extra.
+        synchronized (pool) {
         pool.preRegisterAll();
         registerConstants(pool);
         if (m_idModule != null) {
@@ -1341,6 +1349,7 @@ public final class FileStructure
             m_idModule = (ModuleConstant) pool.register(m_idModule);
         }
         pool.postRegisterAll(fOptimize);
+        }
     }
 
     @Override

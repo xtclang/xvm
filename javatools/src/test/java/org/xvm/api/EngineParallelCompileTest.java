@@ -6,9 +6,11 @@ import java.io.StringWriter;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -48,6 +50,9 @@ public class EngineParallelCompileTest {
                 .sorted(Comparator.comparing(File::getName)).toList();
 
         int iterations = Integer.getInteger("xvm.parallel.iterations", 3);
+        // Thread count is a knob for the same reason the iteration count is: these are races, and
+        // raising contention is the cheapest way to find the next one.
+        int cThreads   = Integer.getInteger("xvm.parallel.threads", 8);
         var failures   = new TreeMap<String, Integer>();
 
         try (var engine = XtcEngine.builder()
@@ -55,11 +60,19 @@ public class EngineParallelCompileTest {
                             root.resolve("xdk/build/install/xdk/javatools").toFile())
                 .build()) {
             for (int iter = 1; iter <= iterations; iter++) {
-                ExecutorService pool = Executors.newFixedThreadPool(8);
+                ExecutorService pool = Executors.newFixedThreadPool(cThreads);
                 var outcomes = new ConcurrentSkipListMap<String, String>();
                 long t0 = System.nanoTime();
+                // Shuffle the submission order each iteration. Sorted order samples ONE
+                // interleaving over and over; these are races, so varying which compiles overlap is
+                // most of what more iterations buys. Seeded off the iteration so a failure is
+                // reproducible from the printed seed.
+                var order = new ArrayList<>(srcs);
+                long seed = Long.getLong("xvm.parallel.seed", 20260903L) + iter;
+                Collections.shuffle(order, new Random(seed));
+
                 var futures = new ArrayList<Future<?>>();
-                for (File f : srcs) {
+                for (File f : order) {
                     futures.add(pool.submit(() -> {
                         try {
                             var r = engine.compile(f.toPath());
@@ -85,7 +98,7 @@ public class EngineParallelCompileTest {
                 System.out.print("PAR caches after iter=" + iter + "\n" + engine.cacheReport());
                 long ok = outcomes.values().stream().filter("OK"::equals).count();
                 System.out.println("PAR iter=" + iter + " modules=" + srcs.size() + " ok=" + ok
-                        + " notok=" + (srcs.size() - ok) + " wall=" + ms + " ms (8 threads)");
+                        + " notok=" + (srcs.size() - ok) + " wall=" + ms + " ms (" + cThreads + " threads, seed=" + seed + ")");
                 outcomes.forEach((name, outcome) -> {
                     if (!"OK".equals(outcome)) {
                         System.out.println("PAR " + name + " -> " + outcome);
