@@ -3056,10 +3056,23 @@ probe.ensure();
 for (String name : ["a.txt", ...]) { assert probe.fileFor(name).create(); }
 ```
 
-`runner.x` starts every module it is handed **concurrently** (`new Array(modules.size, i ->
-loadAndRun(modules[i]))`), so `xec runner.xtc TestFiles TestFiles` runs two instances against that
-one directory: one calls `ensure()` while the other calls `deleteRecursively()`, and the following
-`create()` fails for whichever loses.
+Any two concurrent runs collide on that directory. **This is not confined to `runner.x`**, which
+was the first framing here and was too narrow. `runner.x` is one way in - it starts every module it
+is handed concurrently (`new Array(modules.size, i -> loadAndRun(modules[i]))`) - but two
+*independent* `xec` processes collide just as readily, because the path is derived from the OS temp
+directory and nothing else. Measured on unmodified master: two separate `xec` processes running
+`TestFiles`, no runner involved, failed **2 of 3 attempts**.
+
+That matters because it is reachable by ordinary developer and CI behaviour - a parallel test run,
+or simply running the suite while someone else on the same machine is.
+
+There are two failure modes, and the second is worse:
+
+- one process calls `ensure()` while the other calls `deleteRecursively()`, and the following
+  `create()` fails for whichever loses;
+- or the directory survives and the **count assertions read the other run's deletions**:
+  `assert probe.files().count() == 5` observed `count()=4`. That is a wrong answer rather than a
+  crash, and it names neither concurrency nor the other process.
 
 **Why it misleads.** The failure is reported against whichever run loses the race, so it can appear
 on run #1 - which is what finally ruled out the "stale state from the previous run" reading. It was
@@ -3069,8 +3082,9 @@ a clean slate with no leftover directory on disk, and that a single run always p
 
 **Fix.** A directory per run: `tmpDir.dirFor($"xvm_listing_probe_{rnd.int(0x7FFF_FFFF)}")`.
 Verified on `lagergren/master-testfiles-listing-collision` (`51efcbfb7`, off `origin/master`):
-TestFiles once, twice and three times all exit 0 with no exceptions and nothing left in the temp
-directory.
+TestFiles once, twice and three times through `runner.x` all exit 0, and - the case that actually
+matters - **15 concurrent standalone `xec` processes** (5 rounds of 3) produced 0 failures and left
+nothing in the temp directory, against 2-of-3 failures for the same shape unfixed.
 
 **Worth filing** on its own terms: it costs nothing to fix and it actively wastes investigation
 time, which is exactly what it did here. It also blocks using `runner.x` to exercise repeated
