@@ -140,6 +140,30 @@ An earlier claim that "the engine is also compiling the ecstasy library" was **w
 retracted: it came from grepping a Gradle log that interleaved several compile tasks. The
 in-process probe shows the engine compiling exactly the five `lib_json` classes, as it should.
 
+### Ruled out inside the engine itself
+
+- **Not duplicate compilation.** The engine builds exactly **one** `Compiler`, for
+  `json.xtclang.org`. The same module is not compiled twice.
+- **Not a skipped or stalled phase.** The compiler's stage advances correctly through every phase:
+  `Registered -> Loaded -> Resolved -> Validated -> Emitted`. Validation genuinely ran and
+  completed.
+
+### The shape of what is left
+
+`COMPILER-137` is raised by `CmpExpression.checkNullComparison`, which fires when
+`exprTarget.getType().isOnlyNullable()` - that is, when `buf`'s expression type is literally
+`Null`. That method is **validation** logic, and the phase instrumentation shows it running during
+`generateCode`.
+
+So: the register holds `StringBuffer?`, validation completed and advanced the stage, and then
+during code generation a validation check runs again on `buf == Null` and sees `Null`. Either the
+expression is re-validated at generation time against a context where `buf` still holds its
+initial `Null` assignment, or generation reads a narrowing that validation had already discarded.
+
+`eatString()` is the relevant shape: `buf` is declared `StringBuffer?` and assigned `Null`, then
+assigned a real buffer inside `case '\\':` of a `switch` inside a `while`, and used after. The
+narrowing that has to survive is "assigned in the then-branch, therefore non-null afterwards".
+
 ## Also established
 
 - Both paths build the module node tree through the same `ModuleInfo.getSourceTree(errs)` walk.
