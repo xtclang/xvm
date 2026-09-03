@@ -164,6 +164,48 @@ initial `Null` assignment, or generation reads a narrowing that validation had a
 assigned a real buffer inside `case '\\':` of a `switch` inside a `while`, and used after. The
 narrowing that has to survive is "assigned in the then-branch, therefore non-null afterwards".
 
+### Traced to the narrowing context, and to a pass-count difference
+
+Tracing `CmpExpression.checkNullComparison` at the moment it fires, during an engine compile:
+
+```
+NULLCMP name=buf exprType=Null ctxVar=Null assign=AssignedOnce ctx=IfContext
+  path= CmpExpression.validate <- Statement.validate x5
+        <- MethodDeclarationStatement.generateCode <- TypeCompositionStatement.generateCode
+        <- Compiler.generateCode
+```
+
+Two things fall out.
+
+**"Errors only in generateCode" is not the anomaly.** The call path shows method bodies are
+validated *during* code generation by design - `Compiler.generateCode` ->
+`MethodDeclarationStatement.generateCode` -> `Statement.validate`. Both compilers do this. That
+earlier framing is withdrawn.
+
+**The context narrows `buf` to `Null`.** `ctxVar=Null` is the Context's own type for the variable,
+against a `Register` that correctly holds `StringBuffer?`. In `eatString()` the declaration is
+`StringBuffer? buf = Null` inside a `while` loop, and `buf` is assigned a real buffer inside one of
+the `switch` branches. Narrowing it to `Null` at the top of the loop ignores the back-edge: on any
+iteration after the first, `buf` can be a `StringBuffer`. The warning "always matches Null" is
+therefore wrong, and the later `buf.add(...)` failure follows from it.
+
+**The likely mechanism is the pass count.** Measured earlier:
+
+| | `generateCode` passes |
+| --- | --- |
+| Engine | **1** - reports `done=true` while logging 10 errors |
+| CLI | **2-3** |
+
+A single pass cannot converge narrowing across a loop back-edge: the assignment inside the loop is
+not yet known when the loop head is analyzed. The CLI iterates and converges; the engine declares
+itself done after one pass and logs the not-yet-converged state as errors. `buf` is seen four times
+during that pass, twice as `AssignedOnce` and twice as `Assigned`, which is the shape of an
+analysis still in motion.
+
+**Next:** find why the engine's `generateCode` returns `done=true` on its first pass where the
+CLI's does not. Both call the same `Compiler.generateCode(isLastAttempt)`; the difference is in
+what that returns, or in what deferred work is outstanding when it is asked.
+
 ## Also established
 
 - Both paths build the module node tree through the same `ModuleInfo.getSourceTree(errs)` walk.
