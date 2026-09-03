@@ -52,6 +52,47 @@ compile. That is exactly what `assertRegisterBeforeRuntimePublished` exists to c
 failure mode is a loud error at the offending write rather than a silent cross-request leak. T2
 makes that error usable.
 
+### T1 progress - implemented, measured, and blocked on T4
+
+**Done and measured.** The change is small: prepare each library once (`ensureLibraryPrepared`,
+keyed by repository so a per-call library gets its own preparation), take the NakedRef type from
+that preparation rather than from a clone in the build repo, and turn read-through OFF so
+`repoBuild` holds only the modules being compiled.
+
+| | before | after |
+| --- | --- | --- |
+| Sequential, 45 manualTests modules | 9494 ms | **5855 ms** (-38%) |
+| crashes | 0 | 0 |
+| ok / fail | 42 / 3 | 42 / 3 |
+
+One bug found on the way, caught immediately by `EngineSuiteCompileTest`: `injectNakedRefType`
+looked the turtle up **in `repoBuild`**, which only ever contained it because read-through had
+cloned it there. With cloning off, all 43 compiles threw "Mack module (javatools_turtle) is
+missing". Sourcing the type from the prepared library fixes it - and is the more honest place for
+it to come from.
+
+**Blocked on T4, exactly as this plan predicted.** With the clone gone, concurrent compiles share
+the library's `TypeConstant`s, and `EngineParallelCompileTest` goes from 42/42 to **0/42**, every
+one of them:
+
+```
+NullPointerException: Cannot invoke "TypeInfo.isPlaceHolder()" because "info" is null
+```
+
+That is the TypeInfo placeholder race - row 26 of the master issue board, *"TypeInfo placeholder
+identity race strands types as 'being built'"*. The per-compile clone was what hid it. This is the
+plan's own warning coming true: *"the clone is currently what makes concurrent compiles safe, so
+removing it moves the burden to the shared read path"*.
+
+**State.** T1 is reverted from the tree so the suite stays green, and the diff is kept at
+[t1-share-the-library.patch](t1-share-the-library.patch) - 106 lines, re-appliable once T4 lands.
+It is worth ~38% sequentially on its own, so if concurrency slips, T1 could ship first behind a
+single-threaded engine contract; that is a decision, not a default.
+
+**T4 is therefore no longer optional or later - it is T1's blocker**, and it has a precise target
+rather than a general audit: make `TypeInfo` construction safe for concurrent readers of a shared
+library, starting from master row 26.
+
 ## T2 - Make a publication-guard trip actionable
 
 Today the guard throws. For a host serving requests it has to say which module, which constant, and

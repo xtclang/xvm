@@ -1,0 +1,106 @@
+diff --git a/javatools/src/main/java/org/xvm/api/XtcEngine.java b/javatools/src/main/java/org/xvm/api/XtcEngine.java
+index b4ed367cb..e7800faf2 100644
+--- a/javatools/src/main/java/org/xvm/api/XtcEngine.java
++++ b/javatools/src/main/java/org/xvm/api/XtcEngine.java
+@@ -16,6 +16,7 @@ import java.util.Objects;
+ import java.util.Optional;
+ 
+ import java.util.concurrent.CompletableFuture;
++import java.util.concurrent.ConcurrentHashMap;
+ 
+ import java.util.stream.Collectors;
+ 
+@@ -157,6 +158,51 @@ public final class XtcEngine
+                 NativeContainer.create(runtimeNew, repoLibrary, diagnosticSink));
+     }
+ 
++    /**
++     * Libraries this engine has already linked and NakedRef-injected, so it does not redo either
++     * per compile. Keyed by the repository, because a compile may name its own
++     * (see {@link #compile(ModuleRepository, ModuleSource...)}).
++     *
++     * <p>T1 of the parallel-compile plan. Before this, every compile cloned the whole ecstasy
++     * module - 60-72ms warm, about a fifth of a warm compile - purely so it had a private copy to
++     * link and inject into. Doing that work once against the shared library makes the copy
++     * unnecessary.</p>
++     */
++    private final Map<ModuleRepository, TypeConstant> f_mapPreparedLibraries =
++            new ConcurrentHashMap<>();
++
++    /**
++     * Link and NakedRef-inject a library once, however many compiles use it.
++     */
++    private TypeConstant ensureLibraryPrepared(@NotNull ModuleRepository repoLib) {
++        return f_mapPreparedLibraries.computeIfAbsent(repoLib, repo -> {
++            prelinkSystemLibraries(repo);
++            return injectNakedRefIntoLibrary(repo);
++        });
++    }
++
++    /**
++     * Set the NakedRef type on the library's own modules. The per-compile
++     * {@link #injectNakedRefType} still covers the modules being compiled; this covers the ones
++     * they compile against, which used to be reached only because a clone of each had been dropped
++     * into the compile's build repository.
++     */
++    private static TypeConstant injectNakedRefIntoLibrary(ModuleRepository repoLib) {
++        ModuleStructure moduleTurtle = repoLib.loadModule(Constants.TURTLE_MODULE);
++        if (moduleTurtle == null) {
++            return null;
++        }
++        TypeConstant typeNakedRef =
++                ((ClassStructure) moduleTurtle.getChild("NakedRef")).getFormalType();
++        for (var sModule : repoLib.getModuleNames()) {
++            ModuleStructure module = repoLib.loadModule(sModule);
++            if (module != null) {
++                module.getConstantPool().setNakedRefType(typeNakedRef);
++            }
++        }
++        return typeNakedRef;
++    }
++
+     private NativeContainer containerNative() {
+         return f_plane.get(this).containerNative();
+     }
+@@ -441,12 +487,13 @@ public final class XtcEngine
+         // compiled so its NakedRef type can be injected across them all (see below). The caller never
+         // has to name the turtle/native-bridge modules per request the way the CLI does with -L flags;
+         // the engine already resolved them when it booted its native container from this same path.
+-        var repoCompile = new LinkedRepository(true, repoBuild, repoInput);
++        // The library is linked and injected once per engine, so a compile no longer needs a
++        // private clone of it: read-through is off, and repoBuild holds only what is being
++        // compiled. See ensureLibraryPrepared.
++        TypeConstant typeNakedRef = ensureLibraryPrepared(repoInput);
++        var repoCompile = new LinkedRepository(false, repoBuild, repoInput);
+         var compilers   = new ArrayList<Compiler>();
+ 
+-        // pre-load and link the system libraries (ecstasy + turtle prototype) so they are cached into
+-        // repoBuild before anything is compiled against them - the Launcher's prelinkSystemLibraries step
+-        prelinkSystemLibraries(repoCompile);
+ 
+         // stage 1: parse each source and create its initial module structure in the build repo
+         for (var stmtModule : fnParse.apply(errs)) {
+@@ -480,7 +527,7 @@ public final class XtcEngine
+             runPhase(compilers, Compiler::resolveNames);
+         }
+         if (!errsCollect.hasSeriousErrors()) {
+-            injectNakedRefType(repoBuild);
++            injectNakedRefType(repoBuild, typeNakedRef);
+             runPhase(compilers, Compiler::validateExpressions);
+         }
+         if (!errsCollect.hasSeriousErrors()) {
+@@ -577,12 +624,10 @@ public final class XtcEngine
+      * This mirrors {@code org.xvm.tool.Compiler.injectNativeTurtle} exactly: the compiler needs the
+      * NakedRef type available to each ConstantPool that participates in building Ref TypeInfo.
+      */
+-    private static void injectNakedRefType(BuildRepository repoBuild) {
+-        ModuleStructure moduleTurtle = repoBuild.loadModule(Constants.TURTLE_MODULE);
+-        if (moduleTurtle == null) {
++    private static void injectNakedRefType(BuildRepository repoBuild, TypeConstant typeNakedRef) {
++        if (typeNakedRef == null) {
+             return;
+         }
+-        TypeConstant typeNakedRef = ((ClassStructure) moduleTurtle.getChild("NakedRef")).getFormalType();
+         for (var sModule : repoBuild.getModuleNames()) {
+             repoBuild.loadModule(sModule).getConstantPool().setNakedRefType(typeNakedRef);
+         }
