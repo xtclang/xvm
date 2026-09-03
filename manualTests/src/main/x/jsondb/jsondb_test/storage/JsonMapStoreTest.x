@@ -592,4 +592,100 @@ class JsonMapStoreTest {
         assert !keys.contains("seed-0");
         assert keys.contains("overflow-x");
     }
+
+    @Test
+    void probeConcurrentMultiMapTransactionsAgainstMediumModelDoNotDesyncSize() {
+        @Inject Console console;
+        assert TestClient client := clientProvider.getClient();
+        Catalog<TestSchema> catalog = client.catalog;
+
+        TestSchema schema = client.testSchema;
+        // initialize both maps otherwise forcing the model type will fail
+        assert schema.mapData.size == 0;
+        assert schema.people.size == 0;
+        schema.getMapStore().model    = Medium;
+        schema.getPeopleStore().model = Medium;
+
+        Int iterationsPerWorker = 1500;
+        Int keySpace            = 150; // deliberate overlap to force write-write conflicts
+
+        MultiMapWorker w0  = new MultiMapWorker(catalog.createClient().as(TestClient), 0,  iterationsPerWorker, keySpace);
+        MultiMapWorker w1  = new MultiMapWorker(catalog.createClient().as(TestClient), 1,  iterationsPerWorker, keySpace);
+        MultiMapWorker w2  = new MultiMapWorker(catalog.createClient().as(TestClient), 2,  iterationsPerWorker, keySpace);
+        MultiMapWorker w3  = new MultiMapWorker(catalog.createClient().as(TestClient), 3,  iterationsPerWorker, keySpace);
+        MultiMapWorker w4  = new MultiMapWorker(catalog.createClient().as(TestClient), 4,  iterationsPerWorker, keySpace);
+        MultiMapWorker w5  = new MultiMapWorker(catalog.createClient().as(TestClient), 5,  iterationsPerWorker, keySpace);
+        MultiMapWorker w6  = new MultiMapWorker(catalog.createClient().as(TestClient), 6,  iterationsPerWorker, keySpace);
+        MultiMapWorker w7  = new MultiMapWorker(catalog.createClient().as(TestClient), 7,  iterationsPerWorker, keySpace);
+        MultiMapWorker w8  = new MultiMapWorker(catalog.createClient().as(TestClient), 8,  iterationsPerWorker, keySpace);
+        MultiMapWorker w9  = new MultiMapWorker(catalog.createClient().as(TestClient), 9,  iterationsPerWorker, keySpace);
+        MultiMapWorker w10 = new MultiMapWorker(catalog.createClient().as(TestClient), 10, iterationsPerWorker, keySpace);
+        MultiMapWorker w11 = new MultiMapWorker(catalog.createClient().as(TestClient), 11, iterationsPerWorker, keySpace);
+
+        @Future Boolean r0  = w0.run();
+        @Future Boolean r1  = w1.run();
+        @Future Boolean r2  = w2.run();
+        @Future Boolean r3  = w3.run();
+        @Future Boolean r4  = w4.run();
+        @Future Boolean r5  = w5.run();
+        @Future Boolean r6  = w6.run();
+        @Future Boolean r7  = w7.run();
+        @Future Boolean r8  = w8.run();
+        @Future Boolean r9  = w9.run();
+        @Future Boolean r10 = w10.run();
+        @Future Boolean r11 = w11.run();
+
+        console.print("CHECKPOINT: about to await all worker futures");
+        assert r0 && r1 && r2 && r3 && r4 && r5 && r6 && r7 && r8 && r9 && r10 && r11;
+        console.print("CHECKPOINT: all worker futures resolved");
+
+        console.print("CHECKPOINT: about to read mapData.size");
+        Int mapFinalSize = schema.mapData.size;
+        console.print($"CHECKPOINT: mapData.size = {mapFinalSize}");
+
+        console.print("CHECKPOINT: about to read mapData.keys.toArray()");
+        String[] mapFinalKeys = schema.mapData.keys.toArray();  // <-- hangs here, intermittently, forever
+        console.print($"CHECKPOINT: mapData.keys.toArray() = {mapFinalKeys.size} keys");
+    }
+
+    /**
+     * A worker used by the probe above. Each iteration is a single explicit transaction that
+     * writes (or deletes) a key in BOTH `mapData` and `people` together, so a conflict or partial
+     * failure has to be reconciled across two different JsonMapStore instances within the same
+     * prepare/commit cycle.
+     */
+    static service MultiMapWorker(TestClient client, Int workerId, Int iterations, Int keySpace) {
+        @Inject Console console;
+
+        Boolean run() {
+            TestSchema              schema = client.testSchema;
+            Connection<TestSchema>  conn   = client.ensureConnection();
+            Int conflicts = 0;
+            for (Int i : 0 ..< iterations) {
+                Int    idx       = (workerId * 37 + i) % keySpace;
+                String stringKey = $"k{idx}";
+                try {
+                    using (Transaction<TestSchema> tx = conn.createTransaction()) {
+                        if (i % 5 <= 1) {
+                            schema.mapData.remove(stringKey);
+                            schema.people.remove(idx);
+                        } else {
+                            schema.mapData.put(stringKey, $"v-{workerId}-{i}");
+                            schema.people.put(idx, new Person($"First{workerId}", Null, $"Last{i}"));
+                        }
+                    }
+                } catch (Exception e) {
+                    // Concurrent writers hitting the same keys will legitimately conflict
+                    // sometimes (e.g. oodb:CommitFailed/ConcurrentConflict) -- that is correct
+                    // OODB behavior, not the bug being probed for.
+                    ++conflicts;
+                }
+                if (i % 200 == 0) {
+                    console.print($"PROGRESS(multi) worker {workerId}: {i}/{iterations} (conflicts so far: {conflicts})");
+                }
+            }
+            console.print($"PROGRESS(multi) worker {workerId}: DONE ({iterations}/{iterations}, conflicts: {conflicts})");
+            return True;
+        }
+    }
 }
