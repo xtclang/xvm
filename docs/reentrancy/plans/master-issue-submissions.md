@@ -3069,10 +3069,23 @@ directory and nothing else. Measured on unmodified master: two separate `xec` pr
 parallel containers inside a single process - and `TestFiles` is in that list (`:468`). So that task
 starts ten concurrent `TestFiles` instances against one fixed directory, every time it runs.
 
-That task is the ownership stress harness: it sets
-`-Dxvm.runtime.validateOwnership=true` and exists to find same-JVM container races. So this defect
-sits directly in the path of the tool used to validate the container work, and fires there wearing
-a disguise. The separate-process measurement above is only how the cause was isolated - multiple
+**Priority, stated accurately - this is a false-positive generator, not a blocker.** Three earlier
+framings here were too strong and are corrected: it is not "running a module twice", it is not CI
+parallelism, and it is not "breaks the harness we depend on". `runParallelStress` is a local
+race-finder, explicitly *"not wired into CI aggregate tasks"*; the intended path for repeated
+compiles and runs is the ToolConnector API
+([toolconnector-api-proposal.md](../toolconnector-api-proposal.md)), whose §4 treats concurrency
+safety as a prerequisite still to be hardened.
+
+Sequential runs are unaffected: the test opens with
+`if (probe.exists) { probe.deleteRecursively(); }`, so it self-heals against anything a previous
+run left behind. The collision needs two instances *in flight at once*.
+
+What makes it worth the one-line fix anyway is that it manufactures phantom races in exactly the
+workload §4 exists to validate. When concurrent runs are hardened and someone runs the suite
+repeatedly to check, this fires as either a `create()` failure or a bogus `count()=4`, neither of
+which names concurrency, and both of which read as a runtime defect. It has already cost two wrong
+diagnoses. The separate-process measurement above is only how the cause was isolated - multiple
 JVMs are not a realistic workload and are not the argument.
 
 There are two failure modes, and the second is worse:
