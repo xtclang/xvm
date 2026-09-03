@@ -32,6 +32,7 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.ErrorList;
+import org.xvm.compiler.ast.AstNode;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.InjectionKey;
@@ -887,6 +888,19 @@ public final class XtcEngine
             // compiler run to completion. A host that only observes is unaffected, because a
             // stateless listener answers false.
             return primary.isAbortDesired() || secondary.isAbortDesired();
+        }
+
+        @Override
+        public @NotNull ErrorListener branch(AstNode node) {
+            // MUST override. The interface default branches with a budget of ONE serious error
+            // (`new BranchedErrorListener(this, 1, node)`), while an ErrorList branches with its
+            // own (`f_cMaxErrors`). A method body is validated through such a branch in
+            // StatementBlock.compileMethod, and BranchedErrorListener.isAbortDesired() is true as
+            // soon as the budget is spent - so inheriting the default made the engine abandon
+            // validation of a method after its first error, before a loop's type narrowing could
+            // reach a fixed point. Branching off the tee (rather than off `primary`) keeps both
+            // sinks fed when the branch merges.
+            return new ErrorList.BranchedErrorListener(this, primary.getSeriousErrorMax(), node);
         }
 
         @Override

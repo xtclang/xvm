@@ -47,10 +47,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 public class EngineCompilesLikeTheCliTest {
     @Test
-    @Disabled("Reproduces an open defect: XtcEngine miscompiles lib_json where the CLI does not. "
-            + "Enable this the moment the engine's compile path is fixed - it is the regression "
-            + "test, not a wish. Verified to fail for the right reason: COMPILER-56 on "
-            + "StringBuffer? at json/Lexer.x:482.")
     public void theEngineCompilesLibJson() throws Exception {
         assumeTrue(XdkOutputs.systemModulesAvailable(), "compiled XDK system modules are required");
 
