@@ -29,6 +29,9 @@ import org.xtclang.plugin.runtime.DirectRunRequest;
 import org.xtclang.plugin.runtime.DirectTestRequest;
 
 public final class IsolatedDirectExecutor {
+    /** Opt-in switch for routing compiles through a warm {@link XtcEngine}; see the blocker. */
+    private static final String ENGINE_COMPILE_PROPERTY = "xtc.plugin.engineCompile";
+
     private static final int DEFAULT_ERROR_LIMIT = 100;
     private static final int DEFAULT_OWNERSHIP_VALIDATION_WINDOW = 6;
     private static final String OWNERSHIP_VALIDATION_WINDOW_PROPERTY =
@@ -104,6 +107,18 @@ public final class IsolatedDirectExecutor {
      * @return why this compile cannot go through the engine, or null if it can
      */
     private static String engineCompileBlocker(final DirectCompileRequest request) {
+        if (!Boolean.getBoolean(ENGINE_COMPILE_PROPERTY)) {
+            // OFF BY DEFAULT: the engine's compile path is not yet equivalent to the CLI's.
+            // Compiling lib_json through it reports five errors the CLI does not, starting with
+            // COMPILER-137 "the evaluating expression buf has a type of Null" at Lexer.x:457 -
+            // type inference going wrong, not a missing feature. It reproduces on a FRESH engine
+            // compiling that module alone, so it is a difference in the compile path itself and
+            // not state left behind by an earlier compile on a warm one.
+            //
+            // Until that is closed, DIRECT mode still pays: it avoids a JVM fork per task and
+            // reuses the isolated classloader, which is where its measured win comes from.
+            return "engine compile is opt-in via -D" + ENGINE_COMPILE_PROPERTY + "=true";
+        }
         if (request.sourceFiles().isEmpty()) {
             return "no source files";
         }
@@ -113,13 +128,16 @@ public final class IsolatedDirectExecutor {
         if (request.strict()) {
             return "strict mode is not modelled by the engine";
         }
-        if (request.modulePath().stream().noneMatch(File::isDirectory)) {
+        if (request.modulePath().stream().noneMatch(f -> f.isDirectory() || f.isFile())) {
             // The bootstrap case: lib_ecstasy compiles against nothing, so its module path is
-            // legitimately empty. An engine cannot serve it at all - constructing one boots a
+            // genuinely empty. An engine cannot serve it at all - constructing one boots a
             // NativeContainer, which needs the very system modules this compile is producing - so
-            // this is a permanent exclusion rather than a gap to close. Without it the engine
-            // throws "no valid module-path directories were provided" and fails the build.
-            return "no module path: the bootstrap module cannot boot an engine";
+            // this is a permanent exclusion rather than a gap to close.
+            //
+            // Note this tests for readable entries of EITHER kind. An earlier version asked only
+            // for directories, which excluded every compile in the build rather than just this
+            // one, because a resolved module path is mostly individual .xtc files.
+            return "empty module path: the bootstrap module cannot boot an engine";
         }
         return null;
     }

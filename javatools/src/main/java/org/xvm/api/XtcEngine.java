@@ -29,6 +29,7 @@ import org.jetbrains.annotations.Nullable;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
+import org.xvm.asm.FileRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ErrorListener.ErrorInfo;
@@ -62,6 +63,8 @@ import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.NestedContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Runtime;
+
+import org.xvm.util.Lazy;
 
 import org.xvm.util.Severity;
 
@@ -109,20 +112,48 @@ import org.xvm.util.Severity;
 public final class XtcEngine
         implements AutoCloseable {
     private final ModuleRepository repoLibrary;
-    private final Runtime          runtime;
-    private final NativeContainer  containerNative;
     private final @NotNull ErrorListener diagnosticSink;
+
+    /**
+     * The runtime plane: a started {@link Runtime} and the {@link NativeContainer} rooted on it.
+     *
+     * <p>Booted on first use rather than in the constructor, because <b>compiling needs no
+     * runtime</b>. Booting eagerly cost every caller a full native-template initialization they
+     * might never use, and made the engine unusable for the case that wants it most: a compile
+     * during a build of the XDK itself, where the boot-strap library the container requires
+     * ({@code _native.xtclang.org}) is an output of the very build in progress. That failed with
+     * "Missing boot-strap library" from the constructor, before any source was read.</p>
+     *
+     * <p>{@link Lazy.Bound} rather than {@code Lazy.of(this::boot)}: a supplier capturing
+     * {@code this} in a field initializer is a constructor this-escape, which this build makes a
+     * fatal lint.</p>
+     */
+    private final Lazy.Bound<XtcEngine, RuntimePlane> f_plane =
+            Lazy.ofBound(XtcEngine::bootPlane);
+
+    /** A started runtime and the native container rooted on it. */
+    private record RuntimePlane(Runtime runtime, NativeContainer containerNative) {}
 
     private XtcEngine(@NotNull ModuleRepository repoLibrary, @NotNull ErrorListener diagnosticSink) {
         this.repoLibrary     = Objects.requireNonNull(repoLibrary, "repoLibrary");
         this.diagnosticSink  = Objects.requireNonNull(diagnosticSink, "diagnosticSink");
-        this.runtime         = new Runtime();
-        this.runtime.start();
-        this.containerNative = NativeContainer.create(this.runtime, this.repoLibrary,
-                diagnosticSink);
+    }
 
-        // The native container is the root of every run, and a NestedContainer with none of its own
-        // inherits from its parent - so a host sink set here reaches every run this engine starts.
+    /**
+     * Start the runtime and boot the native container this engine's runs are rooted on.
+     *
+     * <p>The native container is the root of every run, and a NestedContainer with none of its own
+     * inherits from its parent - so a host sink set here reaches every run this engine starts.</p>
+     */
+    private RuntimePlane bootPlane() {
+        Runtime runtimeNew = new Runtime();
+        runtimeNew.start();
+        return new RuntimePlane(runtimeNew,
+                NativeContainer.create(runtimeNew, repoLibrary, diagnosticSink));
+    }
+
+    private NativeContainer containerNative() {
+        return f_plane.get(this).containerNative();
     }
 
     public static @NotNull Builder builder() {
@@ -526,7 +557,7 @@ public final class XtcEngine
      * @return the native ("-1") container this engine booted
      */
     public @NotNull Container diagnosticContainer() {
-        return containerNative;
+        return containerNative();
     }
 
     // ----- run -----------------------------------------------------------------------------------
@@ -587,6 +618,7 @@ public final class XtcEngine
                     "module not found on the module path: " + sModuleName));
         }
 
+        NativeContainer containerNative = containerNative();
         FileStructure struct = containerNative.createFileStructure(moduleApp);
 
         ModuleConstant idMissing = struct.linkModules(repoRun, true);
@@ -734,7 +766,10 @@ public final class XtcEngine
 
     @Override
     public void close() {
-        runtime.shutdownXVM();
+        // nothing to shut down if no run ever needed a runtime
+        if (f_plane.isComputed()) {
+            f_plane.get(this).runtime().shutdownXVM();
+        }
     }
 
     // ----- diagnostics ---------------------------------------------------------------------------
@@ -974,14 +1009,21 @@ public final class XtcEngine
         }
 
         public @NotNull XtcEngine build() {
+            // A module path is directories AND individual .xtc module files, which is what the CLI
+            // accepts (see Launcher.makeRepo) and what the Gradle plugin resolves - its path is
+            // mostly files. Taking only directories made the engine unusable for a plugin compile:
+            // every file entry was dropped silently, and a path of nothing but files threw.
             var repositories = new ArrayList<ModuleRepository>();
-            for (File dir : modulePath) {
-                if (dir.isDirectory()) {
-                    repositories.add(new DirRepository(dir, true));
+            for (File file : modulePath) {
+                if (file.isDirectory()) {
+                    repositories.add(new DirRepository(file, true));
+                } else if (file.isFile()) {
+                    repositories.add(new FileRepository(file, true));
                 }
             }
             if (repositories.isEmpty()) {
-                throw new IllegalStateException("no valid module-path directories were provided");
+                throw new IllegalStateException(
+                        "no readable module-path entries were provided: " + modulePath);
             }
             ModuleRepository repo = repositories.size() == 1
                     ? repositories.get(0)
