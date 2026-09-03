@@ -134,10 +134,11 @@ public class ConstantAdoptionTest {
         ParameterizedTypeConstant source = (ParameterizedTypeConstant)
                 sourcePool.ensureParameterizedTypeConstant(
                         sourcePool.typeArray(), sourcePool.typeString());
-        AtomicInteger sourceDepth = fieldValue(source, "m_cRecursiveDepth");
+        // m_cRecursiveDepth is deliberately absent: the TypeInfo rebuild depth used to be an
+        // AtomicInteger here and is now per-thread state on TypeSystemThread, so there is nothing
+        // for adoption to clear. Not needing to clear a field beats clearing it correctly.
         Object tlo = new TransientThreadLocal<Set<TypeConstant>>();
 
-        sourceDepth.set(7);
         setField(source, "m_tloInProgress", tlo);
         setField(source, "m_mapConsumes", Map.of("source", new Object()));
         setField(source, "m_mapProduces", Map.of("source", new Object()));
@@ -147,9 +148,6 @@ public class ConstantAdoptionTest {
         ParameterizedTypeConstant adopted = adopt(source, targetPool);
 
         assertNotSame(source, adopted);
-        assertSame(sourceDepth, fieldValue(source, "m_cRecursiveDepth"));
-        assertNotSame(sourceDepth, fieldValue(adopted, "m_cRecursiveDepth"));
-        assertEquals(0, ((AtomicInteger) fieldValue(adopted, "m_cRecursiveDepth")).get());
         assertNull(fieldValue(adopted, "m_tloInProgress"));
         assertNull(fieldValue(adopted, "m_mapConsumes"));
         assertNull(fieldValue(adopted, "m_mapProduces"));

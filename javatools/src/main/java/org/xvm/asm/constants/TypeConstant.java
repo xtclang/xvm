@@ -53,6 +53,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
+import org.xvm.asm.TypeSystemThread;
 import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.XvmStructure;
 
@@ -1953,7 +1954,12 @@ public abstract sealed class TypeConstant
                             // infinite recursion, so be very careful about what can allow a
                             // TypeInfo to be built "incomplete" (it needs to be impossible to
                             // rebuild a TypeInfo and have it be incomplete for the second time)
-                            if (m_cRecursiveDepth.getAndIncrement() > 2) {
+                            // THIS thread's depth. It used to be an AtomicInteger on the type,
+                            // so two threads two levels deep in the same type summed to four and
+                            // one threw about a build that was progressing perfectly well.
+                            TypeSystemThread work = TypeSystemThread.current();
+                            if (work.enterRebuild(this) > 2) {
+                                work.exitRebuild(this);
                                 // an infinite loop
                                 throw new IllegalStateException("Infinite loop while producing a " +
                                         "TypeInfo for " + this + "; deferred type=" + typeDeferred);
@@ -1962,8 +1968,13 @@ public abstract sealed class TypeConstant
                             // merge the errors only after the completed "buildTypeInfo" run
                             ErrorListener errsTemp = errs.branch(null);
 
-                            infoDeferred = typeDeferred.buildTypeInfo(errsTemp);
-                            m_cRecursiveDepth.getAndDecrement();
+                            try {
+                                infoDeferred = typeDeferred.buildTypeInfo(errsTemp);
+                            } finally {
+                                // in a finally: the decrement used to be a plain statement after
+                                // the call, so a throw left the depth permanently raised
+                                work.exitRebuild(this);
+                            }
 
                             if (isComplete(infoDeferred)) {
                                 if (errsTemp.hasSeriousErrors()) {
@@ -8174,7 +8185,6 @@ public abstract sealed class TypeConstant
         // must be rebuilt by the new owner.
         m_cInvalidations  = 0;
         m_typeinfo        = null;
-        m_cRecursiveDepth = new AtomicInteger();
         m_mapRelations    = null;
         m_tloInProgress   = null;
         m_mapConsumes     = null;
@@ -8607,7 +8617,6 @@ public abstract sealed class TypeConstant
     private transient volatile TypeInfo m_typeinfo;
     private static final AtomicReferenceFieldUpdater<TypeConstant, TypeInfo> s_typeinfo =
             AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TypeInfo.class, "m_typeinfo");
-    private transient AtomicInteger m_cRecursiveDepth = new AtomicInteger();
 
     /**
      * The last time that we checked the invalidations from the ConstantPool, we cached the number

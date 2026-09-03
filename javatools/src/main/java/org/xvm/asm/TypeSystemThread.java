@@ -80,6 +80,37 @@ public final class TypeSystemThread {
     private final Map<Component, Boolean> visiting = new IdentityHashMap<>();
 
     /**
+     * How deep this thread is into REBUILDING each type, for the deferred-TypeInfo loop's
+     * runaway check.
+     *
+     * <p>This was an {@code AtomicInteger} on the TypeConstant, which is the sharpest example of
+     * the pattern: being atomic made the count CORRECT and left it WRONG, because the quantity is a
+     * property of one descent and was shared by all of them. Two threads two levels deep in the
+     * same type summed to four, and one of them threw "Infinite loop while producing a TypeInfo"
+     * about a build that was making perfectly good progress. Thread-safety of the mechanism cannot
+     * repair a mis-scoped quantity.
+     */
+    private final Map<TypeConstant, Integer> rebuildDepth = new IdentityHashMap<>();
+
+    /**
+     * @param type  the type about to be rebuilt
+     *
+     * @return this thread's rebuild depth for the type BEFORE entering
+     */
+    public int enterRebuild(TypeConstant type) {
+        return rebuildDepth.merge(type, 1, Integer::sum) - 1;
+    }
+
+    /**
+     * Leave a rebuild; always call from a {@code finally}.
+     *
+     * @param type  the type
+     */
+    public void exitRebuild(TypeConstant type) {
+        rebuildDepth.computeIfPresent(type, (_, cDepth) -> cDepth == 1 ? null : cDepth - 1);
+    }
+
+    /**
      * @param component  the component about to be descended into
      *
      * @return the {@code fAllowInto} this thread already entered the component with, or null if
@@ -184,8 +215,10 @@ public final class TypeSystemThread {
      */
     public String describeLeak() {
         return building.isEmpty() && deferred.isEmpty() && visiting.isEmpty()
+                    && rebuildDepth.isEmpty()
                 ? null
-                : "building=" + building + " deferred=" + deferred + " visiting=" + visiting.size();
+                : "building=" + building + " deferred=" + deferred + " visiting=" + visiting.size()
+                        + " rebuilding=" + rebuildDepth.size();
     }
 
     @Override

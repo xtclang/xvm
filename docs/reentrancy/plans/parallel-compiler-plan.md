@@ -59,6 +59,54 @@ a code that is not in `errors.properties` **crashes the compiler instead of repo
 diagnostic** - the failure path fails. It is one `containsKey` check away from degrading to the raw
 code, and it is not parallel-compiler work, but anything that adds diagnostic codes trips over it.
 
+## The principle: prefer a mechanism that is reentrant by construction
+
+Every concurrency defect found in this work has been the same mistake, and naming it is worth more
+than the individual fixes. **A fact about one call stack was stored where every call stack could see
+it.**
+
+| what it was | where it lived | what it made happen |
+| --- | --- | --- |
+| "this TypeInfo is being built" | a place-holder in the type's shared slot | a peer's build read as recursion; deferred lists that never drained |
+| "I am inside this component" | `Component.m_FVisited` | `VERIFY-11`, contribution forms a cycle, on a declaration with no cycle |
+| "how deep is this rebuild" | `TypeConstant.m_cRecursiveDepth`, an `AtomicInteger` | two threads two deep summed to four, and one threw "Infinite loop" |
+| "what work do I still owe" | a thread-local hung off the POOL | entries recorded on a library pool, drained against a compile's |
+
+The third is the sharpest. It was **atomic**, so the count was always correct - and it was still
+wrong, because the quantity itself was mis-scoped. **Thread-safety of a mechanism cannot repair a
+fact that belongs to a narrower scope than the place it is kept.** Reaching for `Atomic*`,
+`volatile` or a lock at that point makes the defect harder to see, not less real.
+
+### The ladder, best first
+
+1. **No shared mutable state.** The operation is a function of its inputs; results are returned
+   rather than stashed. Reentrant because there is nothing to re-enter.
+2. **State on the call stack - a parameter.** This is what `ErrorListener` already does, and it is
+   correct under ANY execution model: threads, virtual threads, work-stealing, continuations. The
+   honest end state for `building`/`deferred` is `ensureTypeInfo(work, errs)`.
+3. **State owned by the executing thread** - `TypeSystemThread`. Correct while one task equals one
+   thread, which is why [the execution-model section](#the-execution-model-this-depends-on-and-why-it-is-not-a-parallel-stream)
+   rules out work-stealing pools. This is where the branch is now, and it is a stepping stone to 2,
+   not a destination.
+4. **A marker on shared state.** What all of the above were. It asks "am I inside?" and answers
+   "is anyone inside?", and the two are indistinguishable at the point of use.
+
+### How to find the next one
+
+The smell is greppable, because these fields name themselves - `m_FVisited`, `m_fRecurseReg`,
+`m_cRecursiveDepth`, `m_tloInProgress`, anything whose javadoc says *recursion check*, *in
+progress*, *being built*, or (as `m_FVisited`'s did) *Not thread-safe*. A field whose NAME is a
+sentence about the current call is a call-stack fact, and it belongs to the call.
+
+Two further rules learned the hard way:
+
+- **Reset in a `finally`.** `m_FVisited` and `m_cRecursiveDepth` both reset with a plain statement
+  after the recursive call, so a throw left the marker set or the depth raised forever. On a
+  per-compile clone that poison died with the clone; shared, it does not.
+- **State that is not there needs no clearing.** `ConstantAdoptionTest` used to assert that
+  adoption CLEARED `m_cRecursiveDepth` correctly. Moving the field out deleted the requirement
+  rather than satisfying it.
+
 ## T1 - Share the library instead of cloning it
 
 The one change that matters. Link and inject the system libraries **once per engine**, publish
