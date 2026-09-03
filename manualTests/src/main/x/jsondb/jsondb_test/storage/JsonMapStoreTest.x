@@ -674,7 +674,7 @@ class JsonMapStoreTest {
                             schema.people.put(idx, new Person($"First{workerId}", Null, $"Last{i}"));
                         }
                     }
-                } catch (Exception e) {
+                } catch (Exception _) {
                     // Concurrent writers hitting the same keys will legitimately conflict
                     // sometimes (e.g. oodb:CommitFailed/ConcurrentConflict) -- that is correct
                     // OODB behavior, not the bug being probed for.
