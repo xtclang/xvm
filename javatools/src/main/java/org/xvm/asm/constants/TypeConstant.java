@@ -1909,6 +1909,11 @@ public abstract sealed class TypeConstant
         errs = errsBuild;
 
         Set<TypeConstant> setInvalidate = null;
+
+        // declare that THIS thread owns the build, so that recursion back into this type takes the
+        // "defer" path in ensureTypeInfoInternal while a CONCURRENT thread takes the "build your
+        // own" path instead of deferring to a peer that can never drain its list
+        markBuildingTypeInfo(this);
         try {
             // build the TypeInfo for this type
             info = buildTypeInfo(errs);
@@ -1982,6 +1987,8 @@ public abstract sealed class TypeConstant
             // clean up the deferred types
             takeDeferredTypeInfo();
             throw e;
+        } finally {
+            unmarkBuildingTypeInfo(this);
         }
 
         // RECORD BEFORE DECIDING WHAT TO DO WITH THE CACHE. The order is the safeguard: whichever
@@ -2023,7 +2030,8 @@ public abstract sealed class TypeConstant
      *         build the TypeInfo at this point due to recursion
      */
     protected TypeInfo ensureTypeInfoInternal(ErrorListener errs) {
-        TypeInfo info = getTypeInfo();
+        ConstantPool pool = getConstantPool();
+        TypeInfo     info = getTypeInfo();
         if (info == null) {
             // ensure the root Object is built first, since it helps to avoid chicken-and-egg issues
             ensureObjectTypeInfo(errs);
@@ -2032,27 +2040,45 @@ public abstract sealed class TypeConstant
         }
 
         if (info != null && info.isPlaceHolder()) {
-            // the TypeInfo is already being built, so we're in the catch-22 situation; note that it
-            // is even more complicated, because it could be being built by a different thread, so
-            // always add it to the deferred list _on this thread_ so that we will force the rebuild
-            // of the TypeInfo if necessary (imagine that the other thread is super slow, so we need
-            // to preemptively duplicate its work on this thread, so we don't have to "wait" for
-            // the other thread); the one exception is for the root of the type system, Object, and
-            // any interfaces that it depends on
-            addDeferredTypeInfo(this);
-            return null;
+            // somebody is building this TypeInfo. WHO decides what we do, and the place-holder
+            // cannot tell us - it is a per-pool singleton in a single shared slot (see
+            // ConstantPool.markBuildingTypeInfo), so it means "being built", never "being built by
+            // you". The declared owner answers that, and the two answers need opposite actions.
+            if (isBuildingTypeInfo(this)) {
+                // OURS: the genuine catch-22 the place-holder exists for - to complete X we need Y,
+                // and to build Y we need X. Defer, and let the frame that owns the build finish it.
+                addDeferredTypeInfo(this);
+                return null;
+            }
+
+            // THEIRS: not recursion at all, so deferring would be a bet that the other thread
+            // publishes before we run out of retries - and nothing makes that true, because the
+            // deferred list is thread-local and their progress can never drain ours. Build our own
+            // copy instead, which is exactly what the original comment here said it wanted to do
+            // ("preemptively duplicate its work on this thread, so we don't have to wait"). It is
+            // safe to duplicate because building is deterministic - two threads flattening the same
+            // type produce the same TypeInfo - and setTypeInfo is a rank-ordered CAS that keeps the
+            // better answer, so the loser of the race costs CPU and never correctness.
+            info = null;
         }
 
         if (info == null || !isUpToDate(info)) {
-            setTypeInfo(getConstantPool().infoPlaceholder());
-            info = buildTypeInfo(errs);
-            if (info == null) {
-                clearTypeInfoPlaceholder();
-            } else {
-                setTypeInfo(info);
-                if (errs.hasSeriousErrors()) {
-                    info.markWithError();
+            // declare the build before installing the place-holder, so that any recursion back into
+            // this type on this thread takes the "OURS" path above
+            markBuildingTypeInfo(this);
+            try {
+                setTypeInfo(pool.infoPlaceholder());
+                info = buildTypeInfo(errs);
+                if (info == null) {
+                    clearTypeInfoPlaceholder();
+                } else {
+                    setTypeInfo(info);
+                    if (errs.hasSeriousErrors()) {
+                        info.markWithError();
+                    }
                 }
+            } finally {
+                unmarkBuildingTypeInfo(this);
             }
         }
 
@@ -2084,12 +2110,14 @@ public abstract sealed class TypeConstant
         TypeInfo     infoObject = typeObject.getTypeInfo();
         if (infoObject == null) {
             // this is basically an inlined ensureTypeInfoInternal()
+            markBuildingTypeInfo(typeObject);
             try {
-                typeObject.setTypeInfo(getConstantPool().infoPlaceholder());
+                typeObject.setTypeInfo(pool.infoPlaceholder());
                 infoObject = typeObject.buildTypeInfo(errs);
                 typeObject.setTypeInfo(infoObject);
             } finally {
                 typeObject.clearTypeInfoPlaceholder();
+                unmarkBuildingTypeInfo(typeObject);
             }
 
             if (infoObject == null || infoObject.getProgress() != Progress.Complete) {

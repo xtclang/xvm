@@ -3584,6 +3584,67 @@ public class ConstantPool
     }
 
     /**
+     * Record that THIS thread has begun building the TypeInfo for the specified type.
+     *
+     * <p>This is the declared owner of an in-progress build, and it exists because the
+     * "being built" place-holder cannot be one. The place-holder lives in a single slot on the
+     * TypeConstant ({@code m_typeinfo}) and is a per-pool singleton by necessity - see
+     * {@link #infoPlaceholder} - so it can answer "is somebody building this?" but never "is it
+     * ME?". Those two questions require OPPOSITE actions:
+     *
+     * <ul>
+     * <li><b>Mine</b> - this is the genuine catch-22 the place-holder was invented for: to build X
+     *     we need Y, and to build Y we need X. The only correct move is to defer and let the
+     *     outer frame complete it.</li>
+     * <li><b>Another thread's</b> - not recursion at all. Deferring to it is a bet that the other
+     *     thread will publish before we run out of retries, and nothing makes that true; the
+     *     deferred list is thread-local, so our list can never be drained by their progress.</li>
+     * </ul>
+     *
+     * Conflating them is what made concurrent compiles against a SHARED library fail with
+     * "Failure to make progress on a TypeInfo": every cross-thread encounter took the defer path,
+     * so the deferred list never shrank and {@code ensureTypeInfoInWindow} gave up after three
+     * passes. Ownership is per-thread state precisely because the question is per-thread.
+     *
+     * <p>Identity, not equality: the place-holder it replaces was a field on one TypeConstant
+     * instance, so an identity set is exactly the old semantics and costs no hashing of types.
+     *
+     * @param type  the type whose TypeInfo this thread is about to build
+     */
+    void markBuildingTypeInfo(TypeConstant type) {
+        assert type != null;
+
+        f_tlosetBuilding.computeIfAbsent(
+                () -> Collections.newSetFromMap(new IdentityHashMap<>())).add(type);
+    }
+
+    /**
+     * Record that this thread has finished (or abandoned) building the TypeInfo for the type.
+     * Always call this from a {@code finally}: a leaked mark would convince this thread, on a
+     * later and unrelated compile, that it is already building a type it is not, and it would
+     * defer forever.
+     *
+     * @param type  the type this thread is no longer building
+     */
+    void unmarkBuildingTypeInfo(TypeConstant type) {
+        Set<TypeConstant> set = f_tlosetBuilding.get();
+        if (set != null && set.remove(type) && set.isEmpty()) {
+            f_tlosetBuilding.remove();
+        }
+    }
+
+    /**
+     * @param type  the type to test
+     *
+     * @return true iff THIS thread is currently building a TypeInfo for the specified type, i.e.
+     *         iff encountering its place-holder means real recursion rather than a peer at work
+     */
+    boolean isBuildingTypeInfo(TypeConstant type) {
+        Set<TypeConstant> set = f_tlosetBuilding.get();
+        return set != null && set.contains(type);
+    }
+
+    /**
      * Cause all TypeInfos that are built from the specified class to re-build. This is necessary
      * during compilation when additional information becomes visible as the compilation progresses,
      * for example, when the compiler pierces a method boundary and discovers nested methods and/or
@@ -4453,7 +4514,35 @@ public class ConstantPool
     /**
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.
      */
-    private final TransientThreadLocal<List<TypeConstant>> f_tlolistDeferred =
+    /**
+     * The types this THREAD still owes TypeInfo work for.
+     *
+     * <p>STATIC, i.e. per-thread and not per-thread-per-pool, because that is what every consumer
+     * already assumes. A deferred entry is recorded against the DEFERRED TYPE's pool
+     * ({@code Constant.addDeferredTypeInfo} -> {@code getConstantPool()} of that type), while the
+     * drain in {@code TypeConstant.ensureTypeInfoInWindow} runs against the WINDOW TYPE's pool. Those
+     * are different pools as soon as one compile's types depend on a shared library's types, so a
+     * per-pool list lets an entry recorded on the library pool survive a window that drained only
+     * the compile pool - and the next window entered on the library pool then finds a stale entry
+     * and throws "Infinite loop while producing a TypeInfo".
+     *
+     * <p>That the queue was always meant to be per-thread is visible in the drain loop itself, which
+     * already handles an entry belonging to another pool by re-registering it
+     * ({@code if (typeDeferred.getConstantPool() != pool)}). It could only ever have seen such an
+     * entry if the list spanned pools.
+     *
+     * <p>This is latent whenever one pool outlives a single compile - which is the whole point of
+     * sharing a prebuilt library rather than cloning it per compile.
+     */
+    private static final TransientThreadLocal<List<TypeConstant>> f_tlolistDeferred =
+            new TransientThreadLocal<>();
+
+    /**
+     * The types whose TypeInfo the current thread is building; see {@link #markBuildingTypeInfo}.
+     * Thread-local for the same reason {@code f_tlolistDeferred} is: it is the record of what THIS
+     * thread is in the middle of, and it is meaningless to any other thread.
+     */
+    private final TransientThreadLocal<Set<TypeConstant>> f_tlosetBuilding =
             new TransientThreadLocal<>();
 
     /**

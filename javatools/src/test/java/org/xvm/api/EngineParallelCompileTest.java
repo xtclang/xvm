@@ -2,8 +2,16 @@ package org.xvm.api;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.xvm.test.XdkOutputs;
@@ -27,7 +35,7 @@ public class EngineParallelCompileTest {
                             root.resolve("xdk/build/install/xdk/javatools").toFile())
                 .build()) {
           for (int iter = 1; iter <= 3; iter++) {
-            var pool = Executors.newFixedThreadPool(8);
+            ExecutorService pool = Executors.newFixedThreadPool(8);
             var outcomes = new ConcurrentSkipListMap<String, String>();
             long t0 = System.nanoTime();
             var futures = new ArrayList<Future<?>>();
@@ -35,7 +43,8 @@ public class EngineParallelCompileTest {
                 futures.add(pool.submit(() -> {
                     try {
                         var r = engine.compile(f.toPath());
-                        outcomes.put(f.getName(), r.isSuccess() ? "OK" : "FAIL(" + r.diagnostics().size() + ")");
+                        outcomes.put(f.getName(), r.isSuccess() ? "OK"
+                                : "FAIL(" + r.diagnostics().size() + ") " + r.diagnostics().getFirst());
                     } catch (Throwable t) {
                         outcomes.put(f.getName(), "THREW " + t.getClass().getSimpleName()
                                 + ": " + String.valueOf(t.getMessage()).split("\n")[0]);

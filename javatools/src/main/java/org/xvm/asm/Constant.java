@@ -733,6 +733,34 @@ public abstract class Constant
     }
 
     /**
+     * Declare that this thread has begun building the TypeInfo for the specified type.
+     *
+     * @param type  the TypeConstant whose TypeInfo this thread is about to build
+     */
+    protected void markBuildingTypeInfo(TypeConstant type) {
+        getConstantPool().markBuildingTypeInfo(type);
+    }
+
+    /**
+     * Declare that this thread has finished or abandoned building the TypeInfo for the type;
+     * always call from a {@code finally}.
+     *
+     * @param type  the TypeConstant this thread is no longer building
+     */
+    protected void unmarkBuildingTypeInfo(TypeConstant type) {
+        getConstantPool().unmarkBuildingTypeInfo(type);
+    }
+
+    /**
+     * @param type  the TypeConstant to test
+     *
+     * @return true iff THIS thread is currently building a TypeInfo for the specified type
+     */
+    protected boolean isBuildingTypeInfo(TypeConstant type) {
+        return getConstantPool().isBuildingTypeInfo(type);
+    }
+
+    /**
      * Register each of the constants in the passed array.
      * <p/>
      * Important note: the caller may share the array with a cloned constant in a different pool;
