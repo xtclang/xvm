@@ -50,7 +50,29 @@ currently fails. Enable it the moment this is fixed; it is the regression test.
 | The engine prelinking system libraries when the CLI does not | The CLI prelinks when `cSystemModules == 0`, which holds for a non-system module like `lib_json` | **Not it** — both prelink |
 | The engine setting an `ErrorListener` on the **library** module's `ConstantPool` in its prelink (`struct.getConstantPool().setErrorListener(diagnosticSink)`), which the CLI's prelink does not do at all — a listener with different abort semantics could end a type resolution early | Removed the assignment so the prelink matches the CLI's | **Not it** — identical 5 errors |
 | A nested vs flat library repository. The CLI builds one flat `LinkedRepository(true, BuildRepo, DirRepo…)`; the engine nests `LinkedRepository(true, repoBuild, repoLibrary)` where `repoLibrary` is itself a `LinkedRepository` with `readThrough=false` | Read both constructors; read-through stores a copy in the FIRST repo, and both end up caching into a build repo at the front | **Not established either way** — the shapes differ but no behavioural difference was demonstrated; left as a suspect, not an elimination |
+| The ambient `ConstantPool` — the CLI establishing a current pool that the engine does not, with generation depending on it | Grepped every `getCurrentPool()` reference | **Not it** — all five are *comments* documenting that this branch deleted it; there are no live calls, and the CLI does not set one either |
+| A prebuilt `json.xtc` on the module path, so the engine resolves against the built module instead of the one being compiled — this would also have invalidated the CLI baseline | Ran BOTH sides with a module path stripped of `json.xtc` | **Not it** — the engine fails identically with and without, and the CLI still succeeds without, so the A/B is sound |
 | The engine silently swallowing a non-convergence where the CLI calls `logRemainingDeferredAsErrors()` | Read `runPhase` in full | **Not it** — the engine already calls it. This was briefly written up as a suspect on the strength of a truncated `grep`; the line was there all along |
+
+## The narrowing that matters: it is `generateCode`, not validation
+
+Instrumented the engine's phase sequence with the running error count:
+
+```
+linkModules          errors = 0
+resolveNames         errors = 0
+validateExpressions  errors = 0
+generateCode         errors = 10     <-- all of them, on ONE pass, reporting done=true
+```
+
+**Validation passes cleanly.** Every diagnostic appears during code generation, and generation
+converges on its first pass while logging them. That is a much narrower target than "the compile
+paths differ": the AST validated, so the types were resolvable a phase earlier, and it is code
+generation's own resolution that fails. `COMPILER-56 "could not find a matching method add for
+type StringBuffer?"` has no business arriving in `generateCode` at all.
+
+Next step from here: instrument inside `Compiler.generateCode` to see what type it resolves for
+`buf`, and compare against what `validateExpressions` had.
 
 ## Also established
 
