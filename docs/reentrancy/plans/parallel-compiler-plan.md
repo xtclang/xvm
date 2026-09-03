@@ -162,11 +162,62 @@ so that a library type which cannot build a TypeInfo standalone would not fail p
 left a **half-built TypeInfo cached on a shared TypeConstant**, which then poisoned every later
 compile. The swallow did not paper over a failure; it manufactured one.
 
-**What that tells the next attempt.** Warming is still the promising direction, but it needs the
-opposite of a swallow: a type whose TypeInfo cannot be completed during warm-up must leave **no**
-cached entry behind, and the failure has to be recorded rather than discarded. `setTypeInfo` is a
-"one way" setter that keeps whatever is better than what is there, with no notion of "this attempt
-failed, remove it" - that gap is the thing to close first.
+**What that told the next attempt.** Warming treats the symptom: it tries to finish all the
+shared work before anyone can race on it. The next attempt removed the REASON the shared path
+fails instead, and that turned out to be much smaller.
+
+### T4 approach C - give the in-progress build a declared owner. SHIPPED
+
+Two defects, both a thread being unable to tell its own work from a peer's. Committed as
+`1026e5e3e` here and as `ca2aa7434` on the local branch `lagergren/master-typeinfo-build-owner`;
+written up as rows 41 and 42 of [master-issue-submissions.md](master-issue-submissions.md).
+
+**C1 - the place-holder cannot say WHO is building.** `ensureTypeInfoInternal` treated any
+place-holder as the catch-22 it was invented for and deferred. Right when the place-holder is
+ours; wrong when it is a peer's, because then it is not recursion at all, and deferring bets on
+the other thread publishing before we run out of retries - which nothing makes true, since the
+deferred list is thread-local and their progress can never drain ours. The place-holder cannot
+answer "is it mine" even in principle: it is a per-pool singleton in one shared slot that must
+stay identity-stable for `clearTypeInfoPlaceholder`'s CAS. So the owner is now recorded
+separately and per thread, exactly as the deferred list already is. Ours defers; theirs builds
+its own copy - which is what the comment on that branch always said it wanted to do.
+
+Duplicating is safe: building is deterministic, and `setTypeInfo` is a rank-ordered CAS that
+keeps the better answer, so the loser costs CPU and never correctness. And no thread ever waits,
+so this adds no deadlock - which is what ruled out approach A.
+
+**C2 - the deferred list was per-pool but is drained per-window.** Found only after C1 stopped
+masking it. An entry is recorded against the DEFERRED TYPE's pool; the drain runs against the
+WINDOW TYPE's pool. Different pools as soon as a compile's types depend on a shared library's
+types, so an entry recorded on the library pool survives a window that drained only the compile
+pool, and the next window on the library pool throws "Infinite loop while producing a TypeInfo".
+The drain loop already re-registers entries from another pool - it could only ever see one if the
+list spanned pools, so making it `static` restores the original intent.
+
+| | sequential | parallel (42 modules, 8 threads) |
+| --- | --- | --- |
+| T1 alone | 42 ok, 0 threw | 0/42 |
+| T1 + warming (approach B) | 33 ok, 9 threw | 30/42 |
+| T1 + C1 | 42 ok, 0 threw | 37/42 |
+| **T1 + C1 + C2** | **42 ok, 0 threw** | **41/42**, flaky; a full iteration is sometimes green |
+
+Full `javatools` + `javatools_utils` suites: **667 tests, 0 failures** - measured without T1, since
+that is what is committed.
+
+**Two residuals remain, and neither is a TypeInfo race:**
+
+1. `THREW IllegalStateException: Mack module (javatools_turtle) is missing` - **XtcEngine's own
+   bug, not the compiler's.** `ensureLibraryPrepared` is check-then-act rather than atomic, so a
+   second thread can observe a half-prepared library. Fix belongs in T1's patch.
+2. `reflect.x -> FAIL(1) COMPILER-56: Could not find a matching method or function "toString" for
+   type "Directory"` - a genuine incomplete-`TypeInfo` read, surfacing as a miscompile rather than
+   a crash. Note `setTypeInfo`'s `|| info.isPlaceHolder()` clause lets a place-holder overwrite a
+   COMPLETE TypeInfo, which is the most likely mechanism and the place to look next.
+
+**T1 status.** Still not landed, and still kept as
+[t1-share-the-library.patch](t1-share-the-library.patch) (applies cleanly; it is `XtcEngine`-only).
+It is worth ~38% sequentially on its own and now reaches 41/42 in parallel rather than 0/42. It
+lands when the two residuals above are closed.
 
 ## T5 - Prove diagnostics stay per request
 

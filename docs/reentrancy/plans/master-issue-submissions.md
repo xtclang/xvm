@@ -87,6 +87,8 @@ Status is as of this file's last update; check the PR before re-filing.
 | 38 | `&a == &slice_of_a` crashes for every non-generic element type | **merged** (#564, 2026-08-31) | - | - |
 | 39 | One-return service call completes a bare handle, reads it as an array | **latent, NOT filed** - no reproduction; see the section below | independent | `ServiceContext` |
 | 40 | `TestFiles.testListing` shares a fixed temp dir across concurrent runs | **fixed, not filed** - `51efcbfb7` on a master branch | independent | `manualTests/files.x` |
+| 41 | An in-progress `TypeInfo` build has no declared owner, so a peer's place-holder is misread as recursion | **latent, NOT filed** - no red-on-master repro; fixed on `lagergren/master-typeinfo-build-owner` (`ca2aa7434`, local) | independent | `TypeConstant`, `ConstantPool` |
+| 42 | Deferred-`TypeInfo` list is per-pool but drained per-window, so cross-pool entries leak | **latent, NOT filed** - no red-on-master repro; fixed on `lagergren/master-typeinfo-build-owner` (`ca2aa7434`, local) | 41 (same commit) | `ConstantPool` |
 
 ### Filing a row as an issue or PR
 
@@ -3111,3 +3113,181 @@ nothing in the temp directory, against 2-of-3 failures for the same shape unfixe
 **Worth filing** on its own terms: it costs nothing to fix and it actively wastes investigation
 time, which is exactly what it did here. It also blocks using `runner.x` to exercise repeated
 module runs, which is the workload the same-JVM reuse work needs.
+
+## 41. An in-progress TypeInfo build has no declared owner, so a peer's place-holder is misread as recursion
+
+**Issue title:** `TypeConstant.ensureTypeInfoInternal` treats another thread's
+"being built" place-holder as its own recursion and defers to a build it can
+never observe.
+
+**Status/category:** Real defect in current master source, no red-on-master
+reproduction yet. Distinct from [row 26](#26-typeinfo-placeholder-identity-race-strands-types-as-being-built),
+which is about the place-holder SINGLETON being created racily; this row is
+about the place-holder carrying no owner even when its creation is correct.
+Fixing 26 does not fix this.
+
+**Explanation:** While a `TypeInfo` is being built, the builder installs a
+place-holder in the type's single `m_typeinfo` slot. Any thread that then asks
+for that type sees the place-holder and takes one branch:
+
+```java
+// origin/master:TypeConstant.java:1842-1852
+if (info != null && info.isPlaceHolder()) {
+    // the TypeInfo is already being built, so we're in the catch-22 situation; note that it
+    // is even more complicated, because it could be being built by a different thread, so
+    // always add it to the deferred list _on this thread_ so that we will force the rebuild
+    // of the TypeInfo if necessary (imagine that the other thread is super slow, so we need
+    // to preemptively duplicate its work on this thread, so we don't have to "wait" for
+    // the other thread) ...
+    addDeferredTypeInfo(this);
+    return null;
+}
+```
+
+The comment states the intended behaviour for the cross-thread case -
+*preemptively duplicate its work on this thread* - and the code does not do it.
+It defers, unconditionally. That is correct for exactly one of the two
+situations the branch covers:
+
+- **the place-holder is ours** - the genuine catch-22 the mechanism exists for:
+  to complete X we need Y, and to build Y we need X. Deferring is right.
+- **the place-holder is another thread's** - not recursion at all. Deferring
+  bets that the other thread publishes before we exhaust our retries, and
+  nothing makes that true: `f_tlolistDeferred` is thread-local, so the peer's
+  progress can never drain OUR list.
+
+The place-holder cannot distinguish them even in principle. It is a per-pool
+singleton (`ConstantPool.infoPlaceholder`) occupying one shared slot, and it has
+to stay identity-stable because `clearTypeInfoPlaceholder` CASes the slot
+against that exact instance. It can therefore answer *"is somebody building
+this?"* but never *"is it me?"* - and those two questions demand opposite
+actions.
+
+**Master evidence:** `origin/master:TypeConstant.java:1842-1852` (the branch
+above, byte-identical to the pre-fix branch code);
+`origin/master:TypeConstant.java:1731` (the `hasDeferredTypeInfo()` guard that
+throws when the list has not drained);
+`origin/master:ConstantPool.java:3991` (`f_tlolistDeferred`, thread-local).
+
+**Failure mode:** Every cross-thread encounter takes the defer path, so the
+deferred list never shrinks; `ensureTypeInfoInWindow` gives up after three
+passes with `IllegalStateException: Failure to make progress on a TypeInfo for
+<type>; deferred types=[...]`. Downstream this also surfaces as
+`NullPointerException: Cannot invoke "TypeInfo.isPlaceHolder()" because "info"
+is null`, which is the symptom usually seen first and is NOT the first failure.
+
+**Reachability on master:** needs two threads building types that share a
+dependency against one pool that outlives a single operation. That is the
+ordinary shape of a container's service threads warming types on the shared
+`ecstasy` pool - the same window [row 26](#26-typeinfo-placeholder-identity-race-strands-types-as-being-built)
+already argues is routine. It is NOT hit by the ordinary CLI compiler, because
+each compile clones library modules into its own `BuildRepository`
+(`LinkedRepository:119`) and therefore gets its own pools; the clone is what
+hides this.
+
+**Minimal master-portable fix strategy:** Record the owner separately, per
+thread, the same way and for the same reason the deferred list already is -
+`markBuildingTypeInfo` / `unmarkBuildingTypeInfo` / `isBuildingTypeInfo` on
+`ConstantPool`, with protected forwarders on `Constant` next to the existing
+`addDeferredTypeInfo` ones. Then split the branch: ours defers as today,
+theirs builds its own copy. An identity set is exactly the old semantics,
+because the place-holder it replaces was a field on one `TypeConstant`
+instance.
+
+Duplicating a build is safe: it is deterministic, so two threads flattening the
+same type produce the same `TypeInfo`, and `setTypeInfo` is already a
+rank-ordered CAS that keeps the better answer - the loser costs CPU, never
+correctness. Crucially no thread ever waits on another, so this adds no
+deadlock, which a per-type lock WOULD: the `TypeInfo` recursion is a graph, and
+two threads entering it at different points can each hold what the other needs.
+
+**Tests to add/run on master:** no master-side test yet; this is why the row is
+latent rather than filed. Measured on the experiment branch that serves one
+prepared library to concurrent compiles instead of cloning it per compile, over
+42 manualTests modules through one warm engine: **0/42 before, 37/42 with this
+fix alone**, with the remaining failures changing shape to [row 42](#42-the-deferred-typeinfo-list-is-scoped-per-pool-but-drained-per-window).
+Sequential compilation unchanged at 42 ok / 0 crashes; full `javatools` +
+`javatools_utils` suites green at 667 tests.
+
+**Dependencies/order:** Independent of every other row; ships together with
+row 42 in `ca2aa7434` because the second defect is only observable once this
+one stops masking it.
+
+## 42. The deferred-TypeInfo list is scoped per pool but drained per window
+
+**Issue title:** `ConstantPool.f_tlolistDeferred` is per-pool-per-thread, but
+`ensureTypeInfoInWindow` drains only the window type's pool, so cross-pool
+deferrals leak and later throw "Infinite loop while producing a TypeInfo".
+
+**Status/category:** Real defect in current master source, no red-on-master
+reproduction yet.
+
+**Explanation:** A deferred entry is recorded against the **deferred type's**
+pool - `Constant.addDeferredTypeInfo` forwards to `getConstantPool()` of the
+type being deferred. The drain runs against the **window type's** pool -
+`ensureTypeInfoInWindow` calls the same forwarders on `this`. Those are
+different pools as soon as one compile's types depend on a shared library's
+types. An entry recorded on the library pool therefore survives a window that
+drained only the compile pool, and the next window entered on a type in the
+library pool finds a stale entry and fails its own entry invariant:
+
+```java
+// origin/master:TypeConstant.java:1729-1733
+// since this can only be used "from the outside", there should be no deferred TypeInfo
+// objects at this point
+if (hasDeferredTypeInfo()) {
+    throw new IllegalStateException("Infinite loop while producing a TypeInfo for " ...);
+}
+```
+
+That the queue was always MEANT to be per-thread rather than per-pool is
+visible in the drain loop itself, which already handles an entry belonging to
+another pool:
+
+```java
+// origin/master:TypeConstant.java:1760-1764
+for (TypeConstant typeDeferred : listDeferred) {
+    if (typeDeferred != this) {
+        if (typeDeferred.getConstantPool() != pool) {
+            typeDeferred = pool.register(typeDeferred);
+        }
+```
+
+It could only ever see such an entry if the list spanned pools - which, with a
+per-pool list, it cannot. The re-registration is dead code today and is the
+strongest evidence for the intended scope.
+
+**Master evidence:** `origin/master:ConstantPool.java:3991` (`private final`,
+i.e. per pool instance); `origin/master:ConstantPool.java:3126,3136,3143-3147`
+(add / has / take, all on the instance field);
+`origin/master:TypeConstant.java:1729-1733` (the entry guard);
+`origin/master:TypeConstant.java:1760-1764` (the cross-pool branch in the drain).
+
+**Failure mode:** `IllegalStateException: Infinite loop while producing a
+TypeInfo for <type>; deferred types=[<stale entry>]`, thrown on a LATER and
+unrelated operation than the one that leaked the entry - which is what makes it
+hard to attribute. The leak is per thread, so a pooled worker carries it across
+requests.
+
+**Reachability on master:** needs one thread to touch two pools during type
+building, and one of those pools to outlive the operation. The `ecstasy` pool
+is loaded once and used for the life of the process, so both conditions hold
+whenever library types are deferred while building a non-library type. As with
+row 41, per-compile cloning is what keeps the ordinary CLI path clear of it.
+
+**Minimal master-portable fix strategy:** Make `f_tlolistDeferred` `static`.
+It is a per-thread work queue - "the types this thread still owes TypeInfo work
+for" - and every consumer already treats it that way. One-word change; the
+cross-pool re-registration in the drain loop then does the job it was written
+for.
+
+**Tests to add/run on master:** none yet, hence latent. On the experiment
+branch this moved concurrent compiles from **37/42 to 41/42** and restored
+sequential compilation to its baseline of 42 ok / 0 crashes (owner-fix-only had
+regressed nothing sequentially, but this defect accounted for all three
+remaining crash-shaped parallel failures). Full `javatools` +
+`javatools_utils` suites green at 667 tests.
+
+**Dependencies/order:** Ships with row 41 in `ca2aa7434`; on its own it is
+invisible, because row 41's failure mode fires first.
+
