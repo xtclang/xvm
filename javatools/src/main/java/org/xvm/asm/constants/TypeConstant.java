@@ -1914,9 +1914,15 @@ public abstract sealed class TypeConstant
         // "defer" path in ensureTypeInfoInternal while a CONCURRENT thread takes the "build your
         // own" path instead of deferring to a peer that can never drain its list
         markBuildingTypeInfo(this);
+        if (TypeInfoTrace.ENABLED) {
+            TypeInfoTrace.log(errs, "window.enter", pool, this, null);
+        }
         try {
             // build the TypeInfo for this type
             info = buildTypeInfo(errs);
+            if (TypeInfoTrace.ENABLED) {
+                TypeInfoTrace.log(errs, "window.built", pool, this, TypeInfoTrace.progress(info));
+            }
             if (info != null) {
                 setTypeInfo(info);
             }
@@ -2017,6 +2023,9 @@ public abstract sealed class TypeConstant
             }
         }
 
+        if (TypeInfoTrace.ENABLED) {
+            TypeInfoTrace.log(errs, "window.exit", pool, this, TypeInfoTrace.progress(info));
+        }
         errs.merge();
         return info;
     }
@@ -2047,8 +2056,15 @@ public abstract sealed class TypeConstant
             if (isBuildingTypeInfo(this)) {
                 // OURS: the genuine catch-22 the place-holder exists for - to complete X we need Y,
                 // and to build Y we need X. Defer, and let the frame that owns the build finish it.
+                if (TypeInfoTrace.ENABLED) {
+                    TypeInfoTrace.log(errs, "ph.mine.defer", pool, this, null);
+                }
                 addDeferredTypeInfo(this);
                 return null;
+            }
+
+            if (TypeInfoTrace.ENABLED) {
+                TypeInfoTrace.log(errs, "ph.theirs.build", pool, this, null);
             }
 
             // THEIRS: not recursion at all, so deferring would be a bet that the other thread
@@ -2067,8 +2083,14 @@ public abstract sealed class TypeConstant
             // this type on this thread takes the "OURS" path above
             markBuildingTypeInfo(this);
             try {
+                if (TypeInfoTrace.ENABLED) {
+                    TypeInfoTrace.log(errs, "build.begin", pool, this, null);
+                }
                 setTypeInfo(pool.infoPlaceholder());
                 info = buildTypeInfo(errs);
+                if (TypeInfoTrace.ENABLED) {
+                    TypeInfoTrace.log(errs, "build.end", pool, this, TypeInfoTrace.progress(info));
+                }
                 if (info == null) {
                     clearTypeInfoPlaceholder();
                 } else {
@@ -2129,6 +2151,10 @@ public abstract sealed class TypeConstant
                 for (int i = 0, c = pool.size(); i < c; ++i) {
                     if (pool.getConstant(i) instanceof TypeConstant type
                             && type.getTypeInfo() != null && !type.isRootObject()) {
+                        if (TypeInfoTrace.ENABLED) {
+                            TypeInfoTrace.log(errs, "object.sweep.clear", pool, type,
+                                    TypeInfoTrace.progress(type.getTypeInfo()));
+                        }
                         type.clearTypeInfo();
                     }
                 }

@@ -246,6 +246,9 @@ tasks.withType<Test>().configureEach {
     inputs.property("defaultJvmArgs", defaultJvmArgs)
     inputs.property("showTestStdout", showTestStdout)
     inputs.property("failFastTests", failFastTests)
+    // Forward -Dxvm.* from the Gradle invocation into the forked test JVM, so opt-in diagnostics
+    // (e.g. -Dxvm.typeinfo.trace) can be switched on for one run without editing the build.
+    systemProperties(providers.systemPropertiesPrefixedBy("xvm.").get())
     // Skip all tests when -PskipAllTests is set (configuration cache safe)
     onlyIf(SkipAllTestsSpec(project.hasProperty("skipAllTests")))
 }

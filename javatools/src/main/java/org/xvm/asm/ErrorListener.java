@@ -133,6 +133,59 @@ public interface ErrorListener {
     }
 
     /**
+     * Log an {@link Severity#INFO} diagnostic with no associated structure.
+     *
+     * <p>{@link Severity} already carries the levels every logger has - INFO, WARNING, ERROR,
+     * FATAL - and {@code Slf4jErrorListener} already maps them onto exactly those log levels. These
+     * aliases just let a call site name the level instead of passing it, which is how the severity
+     * reads at the point it is decided.
+     *
+     * @param sCode    the error code
+     * @param aoParam  the message parameters
+     */
+    default void info(String sCode, Object... aoParam) {
+        log(Severity.INFO, sCode, (XvmStructure) null, aoParam);
+    }
+
+    /**
+     * Log a {@link Severity#WARNING} diagnostic with no associated structure.
+     *
+     * @param sCode    the error code
+     * @param aoParam  the message parameters
+     */
+    default void warn(String sCode, Object... aoParam) {
+        log(Severity.WARNING, sCode, (XvmStructure) null, aoParam);
+    }
+
+    /**
+     * Log a {@link Severity#ERROR} diagnostic with no associated structure.
+     *
+     * @param sCode    the error code
+     * @param aoParam  the message parameters
+     */
+    default void error(String sCode, Object... aoParam) {
+        log(Severity.ERROR, sCode, (XvmStructure) null, aoParam);
+    }
+
+    /**
+     * Log a {@link Severity#FATAL} diagnostic with no associated structure.
+     *
+     * @param sCode    the error code
+     * @param aoParam  the message parameters
+     */
+    default void fatal(String sCode, Object... aoParam) {
+        log(Severity.FATAL, sCode, (XvmStructure) null, aoParam);
+    }
+
+    // NOTE: the obvious further convenience - log(Severity, String, Object...) for a diagnostic
+    // with no structure at all - cannot be added today. Launcher implements this interface and
+    // already declares exactly that signature with an INCOMPATIBLE meaning: its second parameter
+    // is a "{}" message template rather than an error code, and it is protected, so it can neither
+    // implement nor coexist with an interface default of the same erasure. Callers with no context
+    // pass a null XvmStructure to the overload above, which needs no cast because no other
+    // overload is applicable.
+
+    /**
      * Log an error against a source position, taking the message parameters as varargs.
      *
      * @param severity   the severity level

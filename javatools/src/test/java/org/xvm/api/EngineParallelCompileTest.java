@@ -1,6 +1,8 @@
 package org.xvm.api;
 
 import java.io.File;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,10 +46,15 @@ public class EngineParallelCompileTest {
                     try {
                         var r = engine.compile(f.toPath());
                         outcomes.put(f.getName(), r.isSuccess() ? "OK"
-                                : "FAIL(" + r.diagnostics().size() + ") " + r.diagnostics().getFirst());
+                                : "FAIL(" + r.diagnostics().size() + ")\n    "
+                                  + r.diagnostics().stream().map(String::valueOf)
+                                        .collect(java.util.stream.Collectors.joining("\n    ")));
                     } catch (Throwable t) {
+                        var sw = new StringWriter();
+                        t.printStackTrace(new PrintWriter(sw));
                         outcomes.put(f.getName(), "THREW " + t.getClass().getSimpleName()
-                                + ": " + String.valueOf(t.getMessage()).split("\n")[0]);
+                                + ": " + String.valueOf(t.getMessage()).split("\n")[0]
+                                + "\n" + sw);
                     }
                 }));
             }

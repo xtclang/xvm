@@ -1,5 +1,5 @@
 diff --git a/javatools/src/main/java/org/xvm/api/XtcEngine.java b/javatools/src/main/java/org/xvm/api/XtcEngine.java
-index b4ed367cb..e7800faf2 100644
+index b4ed367cb..ce80c9c73 100644
 --- a/javatools/src/main/java/org/xvm/api/XtcEngine.java
 +++ b/javatools/src/main/java/org/xvm/api/XtcEngine.java
 @@ -16,6 +16,7 @@ import java.util.Objects;
@@ -10,7 +10,7 @@ index b4ed367cb..e7800faf2 100644
  
  import java.util.stream.Collectors;
  
-@@ -157,6 +158,51 @@ public final class XtcEngine
+@@ -157,6 +158,79 @@ public final class XtcEngine
                  NativeContainer.create(runtimeNew, repoLibrary, diagnosticSink));
      }
  
@@ -33,7 +33,9 @@ index b4ed367cb..e7800faf2 100644
 +    private TypeConstant ensureLibraryPrepared(@NotNull ModuleRepository repoLib) {
 +        return f_mapPreparedLibraries.computeIfAbsent(repoLib, repo -> {
 +            prelinkSystemLibraries(repo);
-+            return injectNakedRefIntoLibrary(repo);
++            TypeConstant typeNakedRef = injectNakedRefIntoLibrary(repo);
++            warmRootObject(repo);
++            return typeNakedRef;
 +        });
 +    }
 +
@@ -59,10 +61,36 @@ index b4ed367cb..e7800faf2 100644
 +        return typeNakedRef;
 +    }
 +
++    /**
++     * Build the root Object's TypeInfo once, here, while preparation is still single-threaded.
++     *
++     * <p>Building it is a one-time DESTRUCTIVE step: on success {@code ensureObjectTypeInfo}
++     * discards EVERY other TypeInfo in the pool, because anything built while Object itself was
++     * incomplete may have been flattened against a partial Object. That is correct and harmless
++     * when one thread owns the pool. It is ruinous when several share one, which is exactly what
++     * serving a single prepared library to concurrent compiles creates: the sweep clears types
++     * other threads are in the middle of using, and a type flattened across that moment can be
++     * marked Complete while missing the members it should have inherited. It surfaces far away, as
++     * "Could not find a matching method or function" against a perfectly good library type.
++     *
++     * <p>Doing it during preparation means the sweep happens exactly once, with nobody else in the
++     * pool. This is NOT the blanket "warm every type" that was tried and rejected earlier - that
++     * one swallowed failures and cached half-built TypeInfos. This warms one type, the one whose
++     * construction is documented as special, and lets any failure propagate.
++     */
++    private static void warmRootObject(ModuleRepository repoLib) {
++        ModuleStructure moduleEcstasy = repoLib.loadModule(Constants.ECSTASY_MODULE);
++        if (moduleEcstasy != null) {
++            // BLACKHOLE per the ensureTypeInfo convention: this is the COMPUTE half - a question,
++            // not an assertion - and the types it validates are owned by no particular request.
++            moduleEcstasy.getConstantPool().typeObject().ensureTypeInfo(ErrorListener.BLACKHOLE);
++        }
++    }
++
      private NativeContainer containerNative() {
          return f_plane.get(this).containerNative();
      }
-@@ -441,12 +487,13 @@ public final class XtcEngine
+@@ -441,12 +515,13 @@ public final class XtcEngine
          // compiled so its NakedRef type can be injected across them all (see below). The caller never
          // has to name the turtle/native-bridge modules per request the way the CLI does with -L flags;
          // the engine already resolved them when it booted its native container from this same path.
@@ -80,7 +108,7 @@ index b4ed367cb..e7800faf2 100644
  
          // stage 1: parse each source and create its initial module structure in the build repo
          for (var stmtModule : fnParse.apply(errs)) {
-@@ -480,7 +527,7 @@ public final class XtcEngine
+@@ -480,7 +555,7 @@ public final class XtcEngine
              runPhase(compilers, Compiler::resolveNames);
          }
          if (!errsCollect.hasSeriousErrors()) {
@@ -89,7 +117,7 @@ index b4ed367cb..e7800faf2 100644
              runPhase(compilers, Compiler::validateExpressions);
          }
          if (!errsCollect.hasSeriousErrors()) {
-@@ -577,12 +624,10 @@ public final class XtcEngine
+@@ -577,12 +652,10 @@ public final class XtcEngine
       * This mirrors {@code org.xvm.tool.Compiler.injectNativeTurtle} exactly: the compiler needs the
       * NakedRef type available to each ConstantPool that participates in building Ref TypeInfo.
       */
