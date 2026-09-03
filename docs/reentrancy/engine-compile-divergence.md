@@ -375,3 +375,53 @@ module NullableDeclProbe {
 It reproduces both diagnostics **on the engine and on the CLI**. Both compilers agree, so it
 reduces a different question and is not a reduction of this one. **Any further reduction must be
 checked against the CLI: if the CLI also fails, it is pinning the wrong thing.**
+
+
+## The library is cloned on every compile, and need not be
+
+Measured by timing `new FileStructure(module, false)` inside the read-through clone in
+`LinkedRepository`, compiling `misc.x` three times on one warm engine:
+
+| compile | clone of `ecstasy` | total | share |
+| --- | --- | --- | --- |
+| 1 (cold) | 257 ms | 1593 ms | 16% |
+| 2 | 72 ms | 441 ms | 16% |
+| 3 | 60 ms | 328 ms | 18% |
+
+**Roughly a fifth of every warm compile is spent copying the ecstasy module**, and it recurs for
+every compile forever. For an LSP recompiling on each edit that is the single largest avoidable
+cost in the request.
+
+### Why the clone exists
+
+`LinkedRepository:119` says it plainly - *"create a copy, allowing the compiler to mutate the
+repos[0] contents"*. Three things mutate a library module during a compile:
+
+- `prelinkSystemLibraries` - `struct.getConstantPool().setErrorListener(...)` and
+  `struct.linkModules(repo, false)`;
+- `injectNakedRefType` - sets the NakedRef type on the pool of **every** module in the build repo,
+  which includes the cloned library modules;
+- `TypeInfo` population - validation builds and caches `TypeInfo` on library `TypeConstant`s.
+
+So the library is not read-only because the compiler writes to it, and the clone is what keeps one
+compile's writes out of another's.
+
+### Why it could be
+
+The first two are idempotent: the NakedRef type and the link result are the same every time, so a
+library that was linked and injected **once per engine** would satisfy every later compile without
+being touched again. The third is not merely harmless but valuable - a shared `TypeInfo` cache on
+library types is work every compile currently redoes, and `ensureTypeInfo` was 12% of runtime
+startup in the performance analysis.
+
+The hazard is the one this branch already has machinery for: a compile that registers a NEW
+constant into a shared library pool - which happens when user code parameterizes a library generic
+- would leak that constant into every later compile. `ConstantPool`'s publication marker
+(`markRuntimePublished` / `assertRegisterBeforeRuntimePublished`) exists to catch exactly that, and
+would turn a silent leak into a loud failure at the point of the write.
+
+So the shape is: link and inject the library once per engine, publish its pools, share them
+read-only across compiles, and let the guard reject any compile that tries to write. That removes
+the clone AND the repeated TypeInfo work. It is the same disease the performance analysis found on
+the runtime side, where `NativeContainer.createFileStructure` re-merges the whole XDK per run -
+one shared immutable library, many cheap per-request scratch areas.
