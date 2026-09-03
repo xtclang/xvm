@@ -460,6 +460,7 @@ val testModuleNames = listOf(
     "TestAnnotations",
     "TestArray",
     "TestCollections",
+    "TestDec28",
     "TestDefAsn",
     "TestTry",
     "TestGenerics",

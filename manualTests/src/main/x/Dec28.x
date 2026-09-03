@@ -2,12 +2,31 @@ module TestDec28 {
     @Inject Console console;
 
     void run() {
-        assert:debug;
+        // assert:debug;  -- deliberately disabled. A debug assert is a debugger break-point, and
+        // this module is now in testModuleNames, so it runs in CI. It is a link-time no-op unless
+        // the "debug" condition is defined, so nothing is lost by leaving it off - but if that
+        // condition is ever turned on, an enabled break-point here would hang the CI run.
 
-        for (String s : ["0", "1", "123", "123.45", "1.234567", "0.0001234567",
-                         ".00001234500", "1234000"]) {
-            Dec28 dec = new Dec28(s);
-            console.print($"s={s}, dec={dec}");
+        // Each literal is paired with the rendering it must produce, so a regression fails the
+        // build instead of quietly printing something different. This module is also the
+        // regression guard for the compiler fix that made it compilable at all: an assignable
+        // SyntheticExpression used to ping-pong between generateAssignable and generateAssignables
+        // until the stack was exhausted, so a StackOverflowError while COMPILING this file is a
+        // compiler regression rather than anything to do with decimal formatting.
+        String[] literals = ["0", "1", "123", "123.45", "1.234567", "0.0001234567",
+                             ".00001234500", "1234000"];
+        String[] expected = ["0", "1", "123", "123.45", "1.234567", "0.0001234567",
+                             "0.000012345", "1234000"];
+        assert literals.size == expected.size;
+
+        for (Int i : 0 ..< literals.size) {
+            String literal = literals[i];
+            Dec28  dec     = new Dec28(literal);
+            String actual  = dec.toString();
+            console.print($"s={literal}, dec={actual}");
+            assert actual == expected[i] as $|Dec28("{literal}") rendered "{actual}", \
+                                             |expected "{expected[i]}"
+                                            ;
         }
     }
 
