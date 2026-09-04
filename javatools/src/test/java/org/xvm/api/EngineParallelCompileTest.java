@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.xvm.test.XdkOutputs;
 
@@ -39,6 +40,13 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <p>{@code -Dxvm.parallel.iterations=N} raises the count when chasing something rare.
  */
 public class EngineParallelCompileTest {
+    /**
+     * A wedged run must fail, not hang. One earlier soak sat for TWELVE HOURS after the test itself
+     * had finished - the work was done in 22 minutes and the JVM then parked in Gradle's
+     * {@code MessageHub.stop}, which waits without a useful bound. Nothing in the test noticed,
+     * because nothing was watching. A timeout turns that into a failed build in a knowable time.
+     */
+    @Timeout(value = 30, unit = TimeUnit.MINUTES)
     @Test public void parallel() throws Exception {
         assumeTrue(XdkOutputs.systemModulesAvailable(), "needs XDK");
         Path root = XdkOutputs.root();
@@ -80,6 +88,13 @@ public class EngineParallelCompileTest {
                                     : "FAIL(" + r.diagnostics().size() + ") "
                                       + r.diagnostics().stream().map(String::valueOf)
                                             .collect(Collectors.joining("; ")));
+                        } catch (OutOfMemoryError e) {
+                            // NEVER record an OOM as a compile outcome. It is not one: the compile
+                            // did not fail, the harness ran out of memory, and every result after it
+                            // is meaningless. Recording it produced a run that reported "skipped"
+                            // with twelve OOMs in its output and no failure - the exact shape of a
+                            // problem being hidden by the thing meant to report it.
+                            throw e;
                         } catch (Throwable t) {
                             var sw = new StringWriter();
                             t.printStackTrace(new PrintWriter(sw));
@@ -92,7 +107,19 @@ public class EngineParallelCompileTest {
                 for (var fut : futures) {
                     fut.get(300, TimeUnit.SECONDS);
                 }
+                // shutdown() only STOPS ACCEPTING work; it does not wait, and
+                // Executors.newFixedThreadPool creates NON-DAEMON threads. A soak creates one pool
+                // per iteration, so a thousand threads accumulate, and any task that never finishes
+                // - after an OutOfMemoryError, for instance - keeps its non-daemon thread alive,
+                // which keeps the JVM alive, which leaves Gradle's worker parked in
+                // MessageHub.stop. That is what sat for twelve hours after a soak had finished its
+                // work in twenty-two minutes.
                 pool.shutdown();
+                if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
+                    pool.shutdownNow();
+                    throw new IllegalStateException("compile threads did not terminate on iteration "
+                            + iter + "; refusing to leave non-daemon threads behind");
+                }
 
                 long ms = (System.nanoTime() - t0) / 1_000_000;
                 System.out.print("PAR caches after iter=" + iter + "\n" + engine.cacheReport());

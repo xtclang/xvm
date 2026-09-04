@@ -4594,6 +4594,62 @@ public class ConstantPool
     /** How many ConstantPool instances this JVM has created; see getPoolsCreated. */
     private static final AtomicInteger POOLS_CREATED = new AtomicInteger();
 
+    /**
+     * The pool this thread is currently assembling, for {@link Constant#getPosition} to check
+     * against; see {@link #checkAssemblyOwnership}.
+     */
+    private static final ThreadLocal<ConstantPool> ASSEMBLING = new ThreadLocal<>();
+
+    /**
+     * True iff assembly should verify that every position it writes belongs to the pool being
+     * written. Off by default because {@code getPosition} is hot; on, it turns a malformed module
+     * into an immediate, attributable failure.
+     */
+    public static final boolean CHECK_ASSEMBLY_OWNERSHIP =
+            Boolean.getBoolean("xvm.assembly.checkOwnership");
+
+    /**
+     * Note that this thread is assembling the given pool, and return what it was assembling before
+     * so the caller can restore it.
+     *
+     * <p>A module is written as a constant pool followed by structures that reference those
+     * constants BY POSITION. A position is only meaningful in the pool that assigned it, so writing
+     * one that belongs to a different pool produces a file whose indices point at the wrong
+     * constants - observed as "Index 5503 out of bounds for length 396" when reading back a module
+     * of 396 constants. The reference is not corrupt; it was simply never re-interned locally, so
+     * it still answers with its original owner's index.
+     *
+     * @param pool  the pool being assembled, or null to clear
+     *
+     * @return the previously-assembling pool
+     */
+    public static ConstantPool beginAssembly(ConstantPool pool) {
+        ConstantPool poolPrev = ASSEMBLING.get();
+        if (pool == null) {
+            ASSEMBLING.remove();
+        } else {
+            ASSEMBLING.set(pool);
+        }
+        return poolPrev;
+    }
+
+    /**
+     * Fail if the constant does not belong to the pool currently being assembled on this thread.
+     *
+     * @param constant  the constant whose position is about to be written
+     */
+    public static void checkAssemblyOwnership(Constant constant) {
+        ConstantPool poolWriting = ASSEMBLING.get();
+        if (poolWriting != null && constant.getConstantPool() != poolWriting) {
+            throw new IllegalStateException("assembling " + poolWriting.describeOwner()
+                    + " would write the position of a constant owned by "
+                    + constant.getConstantPool().describeOwner() + ": "
+                    + constant.getClass().getSimpleName() + " " + constant
+                    + " (position " + constant.getPosition() + " is meaningless in the pool"
+                    + " being written, which holds " + poolWriting.size() + " constants)");
+        }
+    }
+
     /** Non-null while this pool is being written; see assemble. */
     private transient volatile Thread m_threadAssembling;
 

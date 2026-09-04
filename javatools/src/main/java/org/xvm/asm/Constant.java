@@ -404,6 +404,11 @@ public abstract class Constant
      *         to the constant
      */
     public int getPosition() {
+        if (ConstantPool.CHECK_ASSEMBLY_OWNERSHIP) {
+            // A position only means anything in the pool that assigned it; see
+            // ConstantPool.checkAssemblyOwnership.
+            ConstantPool.checkAssemblyOwnership(this);
+        }
         return m_iPos;
     }
 

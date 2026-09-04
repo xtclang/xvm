@@ -361,7 +361,12 @@ public final class FileStructure
             reregisterConstants(true);
         }
 
-        assemble(out);
+        ConstantPool poolPrev = ConstantPool.beginAssembly(pool);
+        try {
+            assemble(out);
+        } finally {
+            ConstantPool.beginAssembly(poolPrev);
+        }
         }
         resetModified();
     }

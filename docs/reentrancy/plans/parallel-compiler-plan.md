@@ -647,6 +647,84 @@ during its own write, but a foreign index written into the file.
 another pool, and that is checkable at the moment it happens. Locks made this class rare; only
 enforcing ownership at the write will make it impossible.
 
+## T15 - A soak found a retention leak proportional to compiles. T1 is not shippable yet.
+
+126 iterations, 8 threads, 8 GB heap, roughly 5,300 compiles. It ended in `OutOfMemoryError`, and
+the per-iteration cache report says exactly what grew:
+
+| iteration | library typeInfos | library relations | poolsCreated | heap after GC |
+| --- | --- | --- | --- | --- |
+| 1 | 1030 | 13095 | 109 | 188 MB |
+| 32 | 1030 | 13095 | 2713 | 2249 MB |
+| 64 | 1030 | 13095 | 5401 | 4232 MB |
+| 95 | 1030 | 13095 | 8005 | 6172 MB |
+| 126 | 1030 | 13095 | 10597 | **8177 MB (99%)** |
+
+**The library caches are perfectly flat and the heap is perfectly linear in pools created.** About
+770 KB retained per compile. So the leak is not the shared library - the isolation test already
+proves the library holds nothing from any request - it is that **per-compile `ConstantPool`s are
+retained**, one per compile, forever.
+
+This also corrects [T9](#t9---it-was-never-a-leak-a-512m-ceiling-and-the-residuals-it-hid), which
+concluded "no leak" from a five-iteration histogram showing pools being collected (102 live against
+400 created). That measurement was right and the generalisation was wrong: at five iterations
+nothing had accumulated, and the conclusion did not survive two orders of magnitude more compiles.
+**A leak that only shows at scale is invisible to a short run, and short runs were all T9 had.**
+
+### What this means for T1
+
+A resident host built on this engine would die after roughly ten thousand compiles. That is worse
+than the clone it replaces, whose cost - about 18% of a warm compile - is known, bounded and
+survivable. **T1 should not be the default until the retainer is found.**
+
+The correctness work is separable and stands on its own: the ownership fixes (T4, T11, T13, T14),
+the null guard, the locking and the diagnostics are all improvements with or without sharing, and
+rows 41-45 carry the master-applicable ones.
+
+### The next step, precisely
+
+Take a class histogram at high iteration count - `jcmd <pid> GC.class_histogram` against a run of 60
+or more iterations - and compare live `ConstantPool` instances against `poolsCreated`. That is the
+same method that settled T9 in one shot, and the same method that should have been applied at scale
+before T9's conclusion was written. If pools are live, the histogram's dominators name the retainer.
+
+**Thread-local state is already RULED OUT**, and by accident. Fixing the harness to await executor
+termination (below) means every worker thread now dies at the end of its iteration, taking its
+`ThreadLocal`s with it - and the heap still climbs about 68 MB per iteration afterwards:
+
+| iteration | poolsCreated | heap after GC |
+| --- | --- | --- |
+| 1 | 109 | 187 MB |
+| 16 | 1369 | 1152 MB |
+| 30 | 2545 | 2035 MB |
+
+So the retainer is neither `TypeSystemThread` nor `ConstantPool.ASSEMBLING`, which were the two
+obvious candidates and are both thread-local. Roughly 800 KB per compile is held by something that
+outlives the threads.
+
+Remaining suspects, in order:
+
+1. **Something reachable from the engine itself.** It is the only object that outlives a request by
+   design - `f_mapPreparedLibraries`, the runtime plane, the diagnostic sink.
+2. **A static.** `POOLS_CREATED` is an int, but the locator tables and interning maps are worth
+   confirming rather than assuming.
+3. **The JFR `CompileEvent`** committed per compile, if a recording is active.
+
+The histogram will say which without further guessing, and guessing is what T9 got wrong.
+
+### The harness lied about this, and that is fixed
+
+The soak reported `skipped="1" failures="0"` while its output contained twelve
+`OutOfMemoryError`s. The per-task `catch (Throwable)` recorded the OOM as a compile *outcome* - the
+"never swallow" rule broken by the code meant to enforce it. An `OutOfMemoryError` is not a compile
+result: the compile did not fail, the harness ran out of memory, and every result after it is
+meaningless. It now rethrows, so a soak that exhausts the heap fails loudly.
+
+The same run then sat for **twelve hours** after finishing its work in 22 minutes, parked in
+Gradle's `MessageHub.stop`. It would not have exited on its own. The test now carries a 30-minute
+`@Timeout`, so a wedge becomes a failed build in a knowable time rather than a machine quietly
+holding a dead JVM.
+
 ## T5 - Prove diagnostics stay per request
 
 Each compile already collects into its own `ErrorList`, but that has not been tested under
