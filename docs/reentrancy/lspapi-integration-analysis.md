@@ -1295,6 +1295,87 @@ that supplies a complete set *per container* rather than choosing between fabric
 and forwarding to a shared one. That is a contribution to `lib_runner`, and it is the thing standing
 between the runner model and feature parity.
 
+### H20 - Dynamic injection changes what "owns" a resource, and that IS intended
+
+Worth settling explicitly, because this branch's ownership diagnostics were written against the
+older model and will otherwise report the new one as broken.
+
+**Their model, from the code.** A per-run resource is:
+
+- registered on the **`NativeContainer`** - the shared plane - not on the run's own container
+  (`xExternalConsole.register(NativeContainer, ...)`);
+- keyed by a **unique name**, `console_<id>`, from an `AtomicLong`;
+- reached from Ecstasy **by name**: `@Inject(resourceName=$"console_{consoleId}") Console console`;
+- **unregistered when the run ends**, on both the success path (`finish`) and the failure path in
+  `start`.
+
+That is a deliberate design, and the concurrent resource maps and the public `add`/`remove` exist to
+serve it. It is also the only shape available: Java cannot register a resource on a container that
+**Ecstasy** is about to create, so the resource has to be parked somewhere both sides can see, under
+a name only this run knows.
+
+**What it changes.** Ownership moves from STRUCTURAL - the resource lives on the run's own container,
+which is what `NestedContainer.registerHostResource` gave - to **name-scoped with an explicit
+lifetime**: the resource lives on the shared plane, under a name no other run can guess, for exactly
+as long as the run.
+
+**So the diagnostics have to change, not the design.** The invariant worth asserting is no longer
+"each run container holds its own injected resources". It is:
+
+1. **uniqueness** - no two live runs share a resource name, so no run can resolve another's;
+2. **lifetime** - the name is gone from the plane once the run ends, so the plane does not
+   accumulate;
+3. **non-leakage** - a run cannot reach a resource it was not given a name for.
+
+That is a stronger and more directly testable property than the structural one, and it is what
+`InjectedResourceOwnershipTest` should assert against the runner model.
+
+**But note what this does NOT cover, which is H19.** Named host resources are only the *supplied*
+ones - a console. Ordinary resources like `curDir` and `storage` come from the `ResourceProvider`,
+and there the intended model is per-run fabrication (`BasicResourceProvider`) rather than a shared
+plane. So the complete intended picture is:
+
+| resource kind | owner | isolation mechanism |
+| --- | --- | --- |
+| host-supplied (console) | native container | unique name, removed at end of run |
+| fabricated (`HashCollector`, `Linker`, ...) | the run's provider | a new instance per container |
+| **everything else** (`curDir`, `storage`, clock) | **nothing supplies it** | **H19 - this is the gap** |
+
+Which means the `PassThroughResourceProvider` substitution tried in H19 is **not** their model
+either: it shares the parent's instances for everything, so it fixes availability by giving up
+exactly the isolation this section says the design is trying to preserve. The intended fix is to
+fabricate the missing resources per run, not to forward them.
+
+### H21 - Container zero caches op-info across runs, so one run can see another's resolutions
+
+Found by this branch's `RepeatedRunSweepTest` after the engine was wired to the runner. Two runs on
+one engine, and the sweep reports:
+
+```
+a container holds a reference to an unrelated container's state after a second run
+  [ForeignReference path=container.m_contextMain.f_mapOpInfo.value[250].value[1].ref]
+```
+
+**Why the runner model creates this.** Every run is a request into the SAME container zero, so every
+run executes the same `runTask` ops on the same `ServiceContext`. That context carries
+`f_mapOpInfo`, a per-op cache, and entries cached while serving run 1 are still there when run 2
+arrives. Under the previous model each run had its own container and its own contexts, so there was
+no shared op to cache on.
+
+**How bad.** The values are `WeakReference`, so this is not primarily a retention problem - the
+sweep follows the referent, which is why it is visible at all. The correctness question is the live
+case: if an op in the shared runner module caches a resolution derived from run 1's types, run 2
+executing that same op can be served run 1's answer. That is the shape of
+[T12](plans/parallel-compiler-plan.md) - a long-lived shared structure caching something derived
+from one request - which took a long time to find on the compile side precisely because it fails far
+from its cause.
+
+**Not investigated further here**, and deliberately not papered over: `RepeatedRunSweepTest` is left
+failing rather than relaxed, because it is reporting a genuine cross-run reference that the runner
+model introduces and the previous model did not have. What it needs is a decision about whether
+op-info may be cached on a context that serves many requests, or must be keyed by something that
+distinguishes them.
+
 ### H15 - What is NOT a smell here, having checked
 
 Worth recording so a reviewer does not re-raise them:
@@ -1548,4 +1629,6 @@ above with file and line references so it can be checked rather than believed.
 | H17 | module output has two mechanisms - static `CONSOLE_OUT` vs a per-run `PrintStream` | give `xTerminalConsole` an instance sink; the second template stops being needed |
 | H18 | `ConsoleLog` - shared static ring buffer, no synchronization at all, written on every print | a master defect the runner model makes routine |
 | H19 | the runner can give a run a complete resource set **or** per-run isolation, never both | `runTask` takes no injector/rootDir; the two stock providers are opposite extremes |
+| H20 | dynamic injection moves ownership from structural to name-scoped-with-lifetime, deliberately | the diagnostics must assert uniqueness/lifetime/non-leakage instead |
+| H21 | container zero caches op-info across runs, so a shared op can serve one run another's resolution | same shape as T12; `RepeatedRunSweepTest` left failing rather than relaxed |
 | H15 | what is NOT a smell, having checked | anonymous `Console`, the two-map update, native `switch` dispatch |
