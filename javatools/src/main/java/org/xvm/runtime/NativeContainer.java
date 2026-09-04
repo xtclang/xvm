@@ -400,9 +400,9 @@ public class NativeContainer
      * @param supplier  the resource supplier
      */
     public void addResourceSupplier(InjectionKey key, InjectionSupplier supplier) {
-        assert !f_mapResources.containsKey(key);
+        InjectionSupplier prev = f_mapResources.putIfAbsent(key, supplier);
+        assert prev == null;
 
-        f_mapResources.put(key, supplier);
         f_mapResourceNames.put(key.f_sName, key);
     }
 
