@@ -5,10 +5,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
-
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -109,17 +111,50 @@ public abstract class OpIndexInPlace
                                          TypeConstant typeEl) {
 
         RegisterInfo regElement = loadArrayElement(bctx, code, regArray);
-        regElement.load(code);
-        bctx.loadArgument(code, getValueId());
 
         if (typeEl.isJavaPrimitive()) {
             buildOptimizedBinary(bctx, code, regElement, m_nValue);
-        } else if (typeEl.isXvmPrimitive()) {
-            buildXvmOptimizedBinary(bctx, code, regElement, m_nValue);
+        } else if (typeEl.isXvmPrimitive() && typeEl.isA(bctx.pool().typeNumber())) {
+            buildOptimizedNumber(bctx, code, regElement, m_nValue);
+        } else {
+            MethodInfo    method = findOpMethod(bctx, typeEl);
+            JitMethodDesc jmd    = buildXvmOptimized(bctx, code, regElement, method,
+                    new int[] {m_nValue});
+
+            for (int i = 1; i < jmd.optimizedReturns.length; i++) {
+                Builder.loadFromContext(code,
+                        jmd.optimizedReturns[i].cd, jmd.optimizedReturns[i].altIndex);
+            }
         }
 
         regElement.store(bctx, code, typeEl);
         storeArrayElement(bctx, code, regArray, regElement);
+    }
+
+    /**
+     * Find the natural operator method for a non-numeric primitive array element.
+     */
+    private MethodInfo findOpMethod(BuildContext bctx, TypeConstant typeElement) {
+        String name;
+        String op;
+        switch (getOpCode()) {
+            case OP_IIP_ADD  -> {name = "add";           op = "+";  }
+            case OP_IIP_SUB  -> {name = "sub";           op = "-";  }
+            case OP_IIP_MUL  -> {name = "mul";           op = "*";  }
+            case OP_IIP_DIV  -> {name = "div";           op = "/";  }
+            case OP_IIP_MOD  -> {name = "mod";           op = "%";  }
+            case OP_IIP_SHL  -> {name = "shiftLeft";     op = "<<"; }
+            case OP_IIP_SHR  -> {name = "shiftRight";    op = ">>"; }
+            case OP_IIP_USHR -> {name = "shiftAllRight"; op = ">>>"; }
+            case OP_IIP_AND  -> {name = "and";           op = "&";  }
+            case OP_IIP_OR   -> {name = "or";            op = "|";  }
+            case OP_IIP_XOR  -> {name = "xor";           op = "^";  }
+
+            default -> throw new UnsupportedOperationException(toName(getOpCode()));
+        }
+
+        TypeConstant typeArg = bctx.getArgumentType(m_nValue);
+        return bctx.getTypeInfo(typeElement).findOpMethod(name, op, typeArg);
     }
 
     // ----- fields --------------------------------------------------------------------------------

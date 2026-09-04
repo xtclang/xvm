@@ -320,11 +320,13 @@ public class NativeTypeSystem
         TypeConstant appenderᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeAppender(), typeChar);
         nativeByType.put(appenderᐸCharᐳ, Builder.N_AppenderChar);
 
-        TypeConstant[] primitiveTypes = new TypeConstant[] {pool.typeBit(), pool.typeBoolean(),
-                typeChar, pool.typeDec32(), pool.typeDec64(), pool.typeDec128(), pool.typeFloat32(),
-                pool.typeFloat64(), pool.typeInt8(), pool.typeInt16(), pool.typeInt32(),
-                pool.typeInt64(), pool.typeInt128(), pool.typeNibble(), pool.typeUInt8(),
-                pool.typeUInt16(), pool.typeUInt32(), pool.typeUInt64(), pool.typeUInt128()
+        TypeConstant[] primitiveTypes = new TypeConstant[] {
+                pool.typeBit(), pool.typeBoolean(), typeChar, pool.typeDec32(), pool.typeDec64(),
+                pool.typeDec128(), pool.typeFloat32(), pool.typeFloat64(),
+                pool.typeInt8(), pool.typeInt16(), pool.typeInt32(), pool.typeInt64(),
+                pool.typeInt128(), pool.typeNibble(), pool.typeUInt8(), pool.typeUInt16(),
+                pool.typeUInt32(), pool.typeUInt64(), pool.typeUInt128(),
+                pool.typeDuration()
         };
 
         for (TypeConstant type : primitiveTypes) {

@@ -6,10 +6,13 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -144,12 +147,94 @@ public abstract class OpPropInPlaceAssign
             return buildOptimizedBinary(bctx, code, regTarget, argValue);
         }
 
-        if (regTarget.type().isXvmPrimitive()) {
-            return buildXvmOptimizedBinary(bctx, code, regTarget, argValue);
+        TypeConstant typeTarget = regTarget.type();
+        if (typeTarget.isXvmPrimitive()) {
+            if (typeTarget.isA(bctx.pool().typeNumber())) {
+                return buildOptimizedNumber(bctx, code, regTarget, argValue);
+            }
+
+            MethodInfo    method = findOpMethod(bctx, typeTarget, argValue);
+            JitMethodDesc jmd    = buildXvmOptimized(bctx, code, regTarget, method,
+                    new int[] {argValue});
+            for (int i = 1; i < jmd.optimizedReturns.length; i++) {
+                Builder.loadFromContext(code,
+                        jmd.optimizedReturns[i].cd, jmd.optimizedReturns[i].altIndex);
+            }
+            return method.getSignature().getRawReturns()[0];
         }
 
         throw new UnsupportedOperationException(toName(getOpCode()) + " on "
-                + regTarget.type().getValueString());
+                + typeTarget.getValueString());
+    }
+
+    /**
+     * Find the natural operator method for a non-numeric XVM primitive property.
+     */
+    private MethodInfo findOpMethod(BuildContext bctx, TypeConstant typeTarget, int argValue) {
+        String name;
+        String op;
+        switch (getOpCode()) {
+            case OP_PIP_ADD:
+                name = "add";
+                op   = "+";
+                break;
+
+            case OP_PIP_SUB:
+                name = "sub";
+                op   = "-";
+                break;
+
+            case OP_PIP_MUL:
+                name = "mul";
+                op   = "*";
+                break;
+
+            case OP_PIP_DIV:
+                name = "div";
+                op   = "/";
+                break;
+
+            case OP_PIP_MOD:
+                name = "mod";
+                op   = "%";
+                break;
+
+            case OP_PIP_SHL:
+                name = "shiftLeft";
+                op   = "<<";
+                break;
+
+            case OP_PIP_SHR:
+                name = "shiftRight";
+                op   = ">>";
+                break;
+
+            case OP_PIP_USHR:
+                name = "shiftAllRight";
+                op   = ">>>";
+                break;
+
+            case OP_PIP_AND:
+                name = "and";
+                op   = "&";
+                break;
+
+            case OP_PIP_OR:
+                name = "or";
+                op   = "|";
+                break;
+
+            case OP_PIP_XOR:
+                name = "xor";
+                op   = "^";
+                break;
+
+            default:
+                throw new UnsupportedOperationException(toName(getOpCode()));
+        }
+
+        TypeConstant typeArg = bctx.getArgumentType(argValue);
+        return bctx.getTypeInfo(typeTarget).findOpMethod(name, op, typeArg);
     }
 
 

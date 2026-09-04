@@ -23,7 +23,9 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitCtorDesc;
+import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
@@ -137,8 +139,38 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected void assembleField(ClassBuilder classBuilder, PropertyInfo prop) {
-        String jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
-        if (findField(jitName) == null) {
+        String      jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
+        JitTypeDesc jtd     = prop.getType().getJitDesc(this);
+
+        boolean isNativeField = switch (jtd.flavor) {
+            case XvmPrimitive, NullableXvmPrimitive -> {
+                ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(prop.getType());
+                assert cds != null && cds.length > 0;
+
+                // all or none of the fields should be present
+                boolean any = false;
+                boolean all = true;
+                for (int i = 0; i < cds.length; i++) {
+                    boolean present = findField(jitName + "$" + i) != null;
+                    any |= present;
+                    all &= present;
+                }
+                if (jtd.flavor == JitFlavor.NullableXvmPrimitive) {
+                    boolean present = findField(jitName + EXT) != null;
+                    any |= present;
+                    all &= present;
+                }
+
+                if (all != any) {
+                    throw new IllegalStateException("Native fields for property \"" + jitName
+                            + "\" must be either all present or all absent");
+                }
+                yield all;
+            }
+            default -> findField(jitName) != null;
+        };
+
+        if (!isNativeField) {
             super.assembleField(classBuilder, prop);
         }
     }

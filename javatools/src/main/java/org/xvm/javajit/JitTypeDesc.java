@@ -18,6 +18,7 @@ import static org.xvm.javajit.Builder.CD_Dec64;
 import static org.xvm.javajit.Builder.CD_Int128;
 import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_UInt128;
+import static org.xvm.javajit.Builder.CD_Duration;
 import static org.xvm.javajit.Builder.CDs_Int;
 import static org.xvm.javajit.Builder.CDs_Long;
 import static org.xvm.javajit.Builder.CDs_LongLong;
@@ -102,12 +103,13 @@ public class JitTypeDesc {
     public static ClassDesc getXvmPrimitiveClass(TypeConstant type) {
         if (type.isSingleUnderlyingClass(false)) {
             return switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Dec32"   -> CD_Dec32;
-                case "Dec64"   -> CD_Dec64;
-                case "Dec128"  -> CD_Dec128;
-                case "Int128"  -> CD_Int128;
-                case "UInt128" -> CD_UInt128;
-                default        -> null;
+                case "Dec32"    -> CD_Dec32;
+                case "Dec64"    -> CD_Dec64;
+                case "Dec128"   -> CD_Dec128;
+                case "Int128"   -> CD_Int128;
+                case "UInt128"  -> CD_UInt128;
+                case "Duration" -> CD_Duration;
+                default         -> null;
             };
         }
         return null;
@@ -123,7 +125,7 @@ public class JitTypeDesc {
             return switch (baseType.getSingleUnderlyingClass(false).getName()) {
                 case "Dec32" -> CDs_Int;
                 case "Dec64" -> CDs_Long;
-                case "Dec128", "Int128", "UInt128" -> CDs_LongLong;
+                case "Dec128", "Int128", "UInt128", "Duration" -> CDs_LongLong;
                 default        -> {
                     ClassDesc cd = getJavaPrimitive(baseType);
                     if (cd == null) {

@@ -253,26 +253,27 @@ public abstract class Array
         }
 
         return switch(elementType.getSingleUnderlyingClass(true).getName()) {
-            case "Bit"     -> ArrayᐸBitᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Boolean" -> ArrayᐸBooleanᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Char"    -> ArrayᐸCharᐳ.$new$2(ctx, type, mutability, (IterableᐸCharᐳ) elements);
-            case "Dec32"   -> ArrayᐸDec32ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Dec64"   -> ArrayᐸDec64ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Dec128"  -> ArrayᐸDec128ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Float32" -> ArrayᐸFloat32ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Float64" -> ArrayᐸFloat64ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int8"    -> ArrayᐸInt8ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int16"   -> ArrayᐸInt16ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int32"   -> ArrayᐸInt32ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int64"   -> ArrayᐸInt64ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int128"  -> ArrayᐸInt128ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Nibble"  -> ArrayᐸNibbleᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt8"   -> ArrayᐸUInt8ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt16"  -> ArrayᐸUInt16ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt32"  -> ArrayᐸUInt32ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt64"  -> ArrayᐸUInt64ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt128" -> ArrayᐸUInt128ᐳ.$new$2$p(ctx, type, mutability, elements);
-            default        -> throw new UnsupportedOperationException("Unsupported array type " + type);
+            case "Bit"      -> ArrayᐸBitᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Boolean"  -> ArrayᐸBooleanᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Char"     -> ArrayᐸCharᐳ.$new$2(ctx, type, mutability, (IterableᐸCharᐳ) elements);
+            case "Dec32"    -> ArrayᐸDec32ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Dec64"    -> ArrayᐸDec64ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Dec128"   -> ArrayᐸDec128ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Float32"  -> ArrayᐸFloat32ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Float64"  -> ArrayᐸFloat64ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Int8"     -> ArrayᐸInt8ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Int16"    -> ArrayᐸInt16ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Int32"    -> ArrayᐸInt32ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Int64"    -> ArrayᐸInt64ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Int128"   -> ArrayᐸInt128ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Nibble"   -> ArrayᐸNibbleᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "UInt8"    -> ArrayᐸUInt8ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "UInt16"   -> ArrayᐸUInt16ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "UInt32"   -> ArrayᐸUInt32ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "UInt64"   -> ArrayᐸUInt64ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "UInt128"  -> ArrayᐸUInt128ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Duration" -> ArrayᐸDurationᐳ.$new$2$p(ctx, type, mutability, elements);
+            default -> throw new UnsupportedOperationException("Unsupported array type " + type);
         };
     }
 

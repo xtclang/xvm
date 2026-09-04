@@ -10,6 +10,8 @@ import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.numbers.*;
 
+import org.xtclang.ecstasy.temporal.Duration;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -165,6 +167,11 @@ public class nRef
                                    && n1.$lowBits  == ((Dec128) ref2.$referent).$lowBits;
                     default -> throw new UnsupportedOperationException(ref1.$referentType.getValueString());
                 };
+            }
+            if (ref1.$referent instanceof Duration d1) {
+                Duration d2 = (Duration) ref2.$referent;
+                return Duration.$equals(d1.picoseconds$0, d1.picoseconds$1,
+                                        d2.picoseconds$0, d2.picoseconds$1);
             }
             throw new UnsupportedOperationException("TODO " + ref1.$referentType);
         }

@@ -13,6 +13,8 @@ import org.xtclang.ecstasy.reflect.Type;
 import org.xtclang.ecstasy.text.Char;
 import org.xtclang.ecstasy.text.String;
 
+import org.xtclang.ecstasy.temporal.Duration;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -206,6 +208,9 @@ public class nType
                 case Dec128 n1 -> Dec128.$compare(n1.$lowBits, n1.$highBits,
                         ((Dec128) value2).$lowBits, ((Dec128) value2).$highBits);
 
+                case Duration d1 -> Duration.$compare(d1.picoseconds$0, d1.picoseconds$1,
+                        ((Duration) value2).picoseconds$0, ((Duration) value2).picoseconds$1);
+
                 default -> throw new UnsupportedOperationException($dataType.getValueString());
             };
             return result < 0 ? Ordered.Lesser.$INSTANCE
@@ -251,6 +256,8 @@ public class nType
                 case Dec32 n1 -> collector.addInt32(n1.$bits);
                 case Dec64 n1 -> collector.addLong(n1.$bits);
                 case Dec128 n1 -> collector.addLong(n1.$lowBits).addLong(n1.$highBits);
+
+                case Duration d -> collector.addLong(d.picoseconds$0).addLong(d.picoseconds$1);
 
                 default -> throw new UnsupportedOperationException($dataType.getValueString());
             };

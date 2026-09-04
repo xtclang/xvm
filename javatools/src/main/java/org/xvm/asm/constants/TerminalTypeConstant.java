@@ -1934,7 +1934,7 @@ public class TerminalTypeConstant
         if (isSingleDefiningConstant() && getDefiningConstant() instanceof ClassConstant id
                 && id.getModuleConstant().isEcstasyModule()) {
             return switch (id.getName()) {
-                case "Dec32", "Dec64", "Dec128", "Int128", "UInt128" -> true;
+                case "Dec32", "Dec64", "Dec128", "Int128", "UInt128", "Duration" -> true;
                 default -> false;
             };
         }

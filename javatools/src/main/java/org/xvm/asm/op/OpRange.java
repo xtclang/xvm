@@ -51,7 +51,7 @@ public abstract class OpRange
     }
 
     @Override
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+    protected TypeConstant buildOptimizedNumber(BuildContext bctx, CodeBuilder code,
                                                    RegisterInfo regTarget, int nArgValue) {
         return buildRange(bctx, code, regTarget, nArgValue);
     }
