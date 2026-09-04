@@ -7,8 +7,13 @@ this analysis.**
 The branch is 19 files, +1761/-90. It is small, and almost all of it exists to make one structural
 change possible.
 
-> **Status: analysis only.** Nothing here has been raised on PR #545, nothing has been committed to
-> `cpurdy/LSPAPI`, and the `../lspapi` checkout is unmodified. The hardening items in
+> **Status.** Nothing has been raised on PR #545, nothing has been committed to `cpurdy/LSPAPI`,
+> and the `../lspapi` checkout is unmodified - verified by `git status` returning zero changed files.
+>
+> **The migration itself HAS been carried out in `lagergren/lazy-instance`** (see
+> [Part 6](#part-6---the-migration-what-to-lift-in-what-form-in-what-order) for what landed and what
+> did not). Several findings below - H5, H19, H20, H21 - were found *by* doing that rather than by
+> reading, which is why they carry test evidence. The hardening items in
 > [Part 4b](#part-4b---hardening-the-lspapi-branch-ownership-finality-isolation) are written to be
 > taken up as a **structured review or a sub-branch**, not as drive-by comments. Every claim below
 > cites a file and line so a reviewer can check it rather than take it on trust - and two of my own
@@ -217,7 +222,7 @@ Absent all three, a Java host had no choice but to build containers itself - whi
 
 ---
 
-## Part 3 - What `XtcEngine` has to become
+## Part 3 - What `XtcEngine` has to become (DONE - see Part 6 for the outcome)
 
 ### 3.1 What `XtcEngine` does now
 
@@ -1501,6 +1506,27 @@ knob, and an invariant asserted directly rather than inferred. Porting that shap
 API is a better contribution than porting more assertions into a `main`.
 
 ## Part 6 - The migration: what to lift, in what form, in what order
+
+### Status ledger - what actually landed
+
+| piece | state | adaptation forced |
+| --- | --- | --- |
+| `MainContainer.invokeAsync` | **done** | their body opens `ConstantPool.withPool`; the ambient pool is deleted here, so ownership comes from `f_idModule` and `frame.poolContext()` |
+| `InterpreterConnector` accessors | **done** | their guard checks only `m_fStarted`; this connector also clears `m_containerMain` in `join()`, so the guard covers that |
+| `NativeContainer` dynamic resources | **done** | + H4: `putIfAbsent` instead of assert-then-put |
+| `xCoreRepository` per-handle repository | **done** | the owner's handle stays in its `Lazy.Bound` cell; the per-request path bypasses it |
+| `lib_runner` in the build | **done** | + H5: `forgetTask`, container released on completion and kill |
+| per-run console | **done, differently** | H17/E38: `xTerminalConsole` gained an instance sink instead of adding a second template |
+| `XtcEngine` run path -> `runTask` | **done** | `createForHost`, `registerInjections` and `RuntimePlane` deleted |
+| `Control` as the run handle | **not done** | the engine still returns `CompletableFuture<ObjectHandle>`; adopting `Control` is a follow-up |
+| per-run injections | **blocked** | H19 - `runTask` has no injector or rootDir parameter |
+| `waitForTask` instead of polling | **not done** | H10 - the engine polls, as theirs does |
+
+**Test state: 672 tests, 2 failing, both deliberately left red** because they report defects that
+apply upstream as well (H19, H21) rather than local breakage. Every other test passes, including the
+compile path, which the migration does not touch.
+
+### The original plan, for reference
 
 Measured gap, not estimated. Every piece of the runner machinery is **absent** from this branch:
 
