@@ -8,7 +8,6 @@ import java.time.Instant;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
@@ -36,6 +35,8 @@ import org.xvm.tool.Console;
 import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.ModuleInfo.Node;
+
+import org.xvm.util.Lazy;
 
 import static org.xvm.util.Handy.readFileChars;
 
@@ -66,8 +67,6 @@ public class LspSupport {
         static LspSupport instance = new LspSupport();
     }
 
-    private static final Object LOCK = new Object();
-
     private static final Console SILENT_CONSOLE = new Console() {
         @Override
         public String out(Object value) {
@@ -80,17 +79,36 @@ public class LspSupport {
         }
     };
 
-    private boolean          configured;
-    private ModuleRepository cfgRepo;
-    private String           cfgInjector;
-    private Connector        connector;
+    /**
+     * The configuration, as one immutable value. Either it has been established or it has not;
+     * "half configured" is not representable.
+     *
+     * @param repo      the ModuleRepository the core libraries are loaded from
+     * @param injector  (optional) "module:class" of a custom injector
+     */
+    private record Config(ModuleRepository repo, String injector) {}
 
     /**
-     * @return true if configured
-     * @throws IllegalStateException if not configured
+     * Null until configured, then never null and never replaced with a different value. Volatile,
+     * so a reader that does not synchronize still has a happens-before with the write.
      */
-    private boolean verifyConfigured() {
-        if (!configured) {
+    private volatile Config config;
+
+    /**
+     * The Connector, derived from {@link #config} on first use. {@link Lazy.Bound} publishes the
+     * fully computed value with volatile ordering and computes it at most once, which is why no
+     * lock is needed here or in {@link #configure}'s readers.
+     */
+    private final Lazy.Bound<LspSupport, Connector> connector = Lazy.ofBound(LspSupport::createConnector);
+
+    /**
+     * @return the configuration, auto-configuring from "XDK_HOME" if it has not been set explicitly
+     *
+     * @throws IllegalStateException if not configured and auto-configuration is not possible
+     */
+    private Config requireConfig() {
+        Config config = this.config;
+        if (config == null) {
             // attempt to auto-configure
             String home = System.getenv("XDK_HOME");
             if (home != null) {
@@ -100,12 +118,13 @@ public class LspSupport {
                 }
             }
 
-            if (!configured) {
-                throw new IllegalStateException("ToolConnect has not been configured, and the"
+            config = this.config;
+            if (config == null) {
+                throw new IllegalStateException("LspSupport has not been configured, and the"
                         + " \"XDK_HOME\" environment variable is missing or invalid");
             }
         }
-        return true;
+        return config;
     }
 
     /**
@@ -119,15 +138,19 @@ public class LspSupport {
      * @return the Connector instance
      */
     public Connector ensureConnector() {
-        synchronized (LOCK) {
-            if (connector == null) {
-                Connector connector = useJit()
-                        ? JitControl.createConnector(cfgRepo)
-                        : InterpreterControl.createConnector(cfgRepo);
-                this.connector = connector;
-            }
-            return connector;
-        }
+        return connector.get(this);
+    }
+
+    /**
+     * Build the Connector. Public entry points reach this through {@link #ensureConnector}, which
+     * may be called before {@link #configure}, so the precondition is stated here rather than
+     * assumed: without it this would build a Connector over a null repository.
+     */
+    private Connector createConnector() {
+        ModuleRepository repo = requireConfig().repo();
+        return useJit()
+                ? JitControl.createConnector(repo)
+                : InterpreterControl.createConnector(repo);
     }
 
     // ----- API -----------------------------------------------------------------------------------
@@ -149,15 +172,13 @@ public class LspSupport {
      *                        for this implementation
      */
     public LspSupport configure(ModuleRepository coreRepo, String customInjector) {
-        synchronized (LOCK) {
-            if (configured) {
-                if (!(Objects.equals(coreRepo, cfgRepo) && Objects.equals(customInjector, cfgInjector))) {
-                    throw new IllegalStateException("configuration has been performed, and cannot be modified");
-                }
-            } else {
-                cfgRepo     = coreRepo;
-                cfgInjector = customInjector;
-                configured  = true;
+        Config wanted = new Config(coreRepo, customInjector);
+        synchronized (this) {
+            Config current = config;
+            if (current == null) {
+                config = wanted;                 // the one publication
+            } else if (!current.equals(wanted)) {
+                throw new IllegalStateException("configuration has been performed, and cannot be modified");
             }
         }
         return this;
@@ -167,14 +188,15 @@ public class LspSupport {
      * @return true iff the TooolConnector has been configured
      */
     public boolean isConfigured() {
-        return configured;
+        return config != null;
     }
 
     /**
      * @return the configured repository, or null if the ToolConnector has not been configured
      */
     public ModuleRepository getConfiguredRepository() {
-        return cfgRepo;
+        Config config = this.config;
+        return config == null ? null : config.repo();
     }
 
     /**
@@ -182,7 +204,8 @@ public class LspSupport {
      *         or null to use the ToolConnector's built-in default injector
      */
     public String getConfiguredInjector() {
-        return cfgInjector;
+        Config config = this.config;
+        return config == null ? null : config.injector();
     }
 
     /**
@@ -190,7 +213,6 @@ public class LspSupport {
      *         that is instantiated by this ToolConnector
      */
     public ConstantPool getConstantPool() {
-        verifyConfigured();
         return ensureConnector().getConstantPool();
     }
 
@@ -206,7 +228,7 @@ public class LspSupport {
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      */
     public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
-        verifyConfigured();
+        ModuleRepository cfgRepo = requireConfig().repo();
         try {
             LspCompiler compiler = new LspCompiler(source, input, cfgRepo, errs);
             return compiler.process() == 0
@@ -454,7 +476,7 @@ public class LspSupport {
             Map<String, List<String>> injections,
             String                    customInjector,
             ErrorListener             errs) {
-        verifyConfigured();
+        ModuleRepository cfgRepo = requireConfig().repo();
 
         ModuleRepository repository = input == null || input == cfgRepo
                 ? cfgRepo
@@ -471,7 +493,7 @@ public class LspSupport {
         }
 
         if (rootDir != null || injections != null && !injections.isEmpty()
-                || customInjector != null || cfgInjector != null) {
+                || customInjector != null || getConfiguredInjector() != null) {
             throw new UnsupportedOperationException(
                     "Custom file systems and injectors are not implemented yet");
         }
