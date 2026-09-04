@@ -83,6 +83,16 @@ module runner.xtclang.org {
     void killTask(Int id) = TaskRegistry.killTask(id);
 
     /**
+     * Forget the identified task, releasing its container.
+     *
+     * Eviction is explicit rather than automatic on completion, because a caller reads [taskResult]
+     * and [taskFailure] after [taskRunning] has gone `False`. Until this is called the registry
+     * holds the task, and the task holds its `Container`, and through it that container's
+     * composition and template caches.
+     */
+    void forgetTask(Int id) = TaskRegistry.forgetTask(id);
+
+    /**
      * @return a human-readable task status
      */
     String taskStatus(Int id) = TaskRegistry.taskStatus(id);
@@ -111,6 +121,13 @@ module runner.xtclang.org {
 
         void killTask(Int id) {
             taskFor(id).kill();
+        }
+
+        void forgetTask(Int id) {
+            if (Task task := tasks.get(id)) {
+                task.release();
+                tasks.remove(id);
+            }
         }
 
         Int submitTask(String moduleName, ModuleRepository repository) {
@@ -175,14 +192,31 @@ module runner.xtclang.org {
                 } else {
                     failure = exception.toString();
                 }
-                running = False;
+                running        = False;
+                // "this." is required here: the local from start() shadows the property
+                this.container = Null;   // the run is over; stop pinning the container
             });
         }
 
         void kill() {
             if (Container container ?= this.container, running) {
                 container.kill();
-                running = False;
+                running        = False;
+                this.container = Null;
+            }
+        }
+
+        /**
+         * Drop any remaining reference to the container, killing it if it is still running. Safe to
+         * call more than once.
+         */
+        void release() {
+            if (Container container ?= this.container) {
+                if (running) {
+                    container.kill();
+                    running = False;
+                }
+                this.container = Null;
             }
         }
     }
