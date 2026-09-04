@@ -286,7 +286,8 @@ public class XtcEngineTest {
         }
     }
 
-    private static File[] xdkModulePath() {
+    // package-private: EngineRunContractTest builds the same module path
+    static File[] xdkModulePath() {
         return List.of("xdk/build/install/xdk/lib", "xdk/build/install/xdk/javatools",
                         "lib_ecstasy/build/xtc/main/lib", "javatools_bridge/build/xtc/main/lib")
                 .stream()
