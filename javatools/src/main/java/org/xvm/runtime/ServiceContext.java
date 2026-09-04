@@ -6,7 +6,6 @@ import java.lang.ref.WeakReference;
 
 import java.util.Arrays;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -273,19 +272,8 @@ public class ServiceContext {
      *
      * @return the map of callbacks keyed by unique ids
      */
-    protected Map<Long, WeakCallback.Callback> ensureCallbackMap() {
-        Map<Long, WeakCallback.Callback> map = m_mapCallbacks;
-        if (map == null) {
-            map = m_mapCallbacks = new HashMap<>();
-        }
-        return map;
-    }
-
-    /**
-     * @return the map of callbacks keyed by unique ids
-     */
     protected Map<Long, WeakCallback.Callback> getCallbackMap() {
-        return m_mapCallbacks;
+        return f_mapCallbacks;
     }
 
     // ----- scheduling  ---------------------------------------------------------------------------
@@ -1030,7 +1018,7 @@ public class ServiceContext {
         if (future != null) {
             future.whenComplete((r, x) -> {
                 if (x != null) {
-                    callUnhandledExceptionHandler(((WrapperException) x).getExceptionHandle());
+                    reportUnhandledException(x);
                 }
             });
         }
@@ -1053,7 +1041,7 @@ public class ServiceContext {
         if (future != null) {
             future.whenComplete((r, x) -> {
                 if (x != null) {
-                    callUnhandledExceptionHandler(((WrapperException) x).getExceptionHandle());
+                    reportUnhandledException(x);
                 }
             });
         }
@@ -1503,6 +1491,34 @@ public class ServiceContext {
         addRequest(request);
 
         return request.f_future;
+    }
+
+    /**
+     * Report a failed "callLater" to the unhandled exception handler.
+     * <p/>
+     * This runs inside a {@link CompletableFuture} completion stage, which discards anything thrown
+     * out of it - so nothing here may assume what the failure is, and nothing here may throw. The
+     * previous code cast the throwable straight to {@link WrapperException}: any other failure
+     * turned into a ClassCastException that the completion stage swallowed, taking the original
+     * failure with it and leaving the handler uncalled. A reported failure became a silent one.
+     *
+     * @param e  the throwable the future completed with; never null
+     */
+    private void reportUnhandledException(Throwable e) {
+        try {
+            // translate() unwraps CompletionException/ExecutionException, maps a WrapperException
+            // to its handle, and renders anything else - including a cancellation, an interrupt, or
+            // a native failure - as a visible exception rather than discarding it
+            ExceptionHandle hException = Utils.translate(e);
+            if (hException != null) {
+                callUnhandledExceptionHandler(hException);
+            }
+        } catch (Throwable eReport) {
+            // must not happen, and must not escape into the completion stage that would swallow it
+            System.err.println("Unexpected failure reporting an unhandled exception: " + f_sName);
+            eReport.printStackTrace(System.err);
+            e.printStackTrace(System.err);
+        }
     }
 
     protected void callUnhandledExceptionHandler(ExceptionHandle hException) {
@@ -2191,9 +2207,12 @@ public class ServiceContext {
     private Map<TransientId, ObjectHandle> m_mapTransient;
 
     /**
-     * A "service-local" cache for service callbacks.
+     * The registered service callbacks. The map is deliberately eager, final, and concurrent: the
+     * owning service registers callbacks on its own thread, but alarm maturation extracts them on
+     * the shared native timer thread and alarm cancellation discards them from natural code, so
+     * this registry is mutated from multiple threads by design.
      */
-    private Map<Long, WeakCallback.Callback> m_mapCallbacks;
+    private final Map<Long, WeakCallback.Callback> f_mapCallbacks = new ConcurrentHashMap<>();
 
     /**
      * A wake-up scheduler to process registered timeouts.
