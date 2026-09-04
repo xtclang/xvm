@@ -9,6 +9,8 @@ import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import java.time.Instant;
+
 import java.util.ArrayList;
 
 import org.xvm.api.Connector;
@@ -124,6 +126,11 @@ public class LspTest {
     }
 
     private static void await(Control control, String moduleName) throws Exception {
+        Instant started = control.whenStarted();
+        if (started == null) {
+            throw new IllegalStateException("run of " + moduleName + " has no start time");
+        }
+
         long timeout = System.currentTimeMillis() + 10_000;
         while (control.running() && System.currentTimeMillis() < timeout) {
             Thread.sleep(10);
@@ -131,6 +138,12 @@ public class LspTest {
         if (control.running()) {
             control.kill();
             throw new IllegalStateException("run of " + moduleName + " did not finish");
+        }
+
+        Instant stopped = control.whenStopped();
+        if (stopped == null || stopped.isBefore(started)) {
+            throw new IllegalStateException(
+                    "run of " + moduleName + " has invalid timing: " + started + " to " + stopped);
         }
     }
 

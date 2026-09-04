@@ -12,6 +12,9 @@ module runner_client.xtclang.org {
     @Command("run", "Run a module")
     String runModule(String moduleName) = post($"/run/{moduleName}");
 
+    @Command("tasks", "Show all running tasks")
+    String tasks() = get("/tasks");
+
     @Command("status", "Show task status")
     String status(Int id) = get($"/task/{id}");
 

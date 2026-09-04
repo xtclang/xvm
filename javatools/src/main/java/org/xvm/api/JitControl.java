@@ -1,6 +1,5 @@
 package org.xvm.api;
 
-import java.io.File;
 import java.io.PrintStream;
 
 import java.time.Instant;
@@ -47,11 +46,6 @@ class JitControl
 
     @Override
     public Long result() {
-        throw unsupported();
-    }
-
-    @Override
-    public File console() {
         throw unsupported();
     }
 
