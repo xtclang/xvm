@@ -18,6 +18,7 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token.Id;
@@ -139,11 +140,9 @@ public class Compiler extends Launcher<CompilerOptions> {
         return options().getInputLocations();
     }
 
-    // TODO: Also support a process call with an optional options parameter (and likely run and
-    //  stuff...)
     @Override
     protected int process() {
-        final var opts = options();
+        CompilerOptions opts = options();
 
         if (opts.showVersion()) {
             showSystemVersion(ensureLibraryRepo());
@@ -151,9 +150,9 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         log(INFO, "Selecting compilation targets");
 
-        var resourceDirs = opts.getResourceLocations();
-        var outputLoc    = opts.getOutputLocation().orElse(null);
-        var targets      = selectTargets(opts.getInputLocations(), resourceDirs, outputLoc);
+        List<File>       resDirs   = opts.getResourceLocations();
+        File             outputLoc = opts.getOutputLocation().orElse(null);
+        List<ModuleInfo> targets   = selectTargets(opts.getInputLocations(), resDirs, outputLoc);
 
         prevModules = targets;
 
@@ -172,10 +171,10 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         var infoByName = new LinkedHashMap<String, ModuleInfo>();
         for (int i = 0; i < cTargets; ++i) {
-            var info    = targets.get(i);
-            var sModule = info.getQualifiedModuleName();
-            var srcFile = info.getSourceFile();
-            var binFile = info.getBinaryFile();
+            ModuleInfo info    = targets.get(i);
+            String     sModule = info.getQualifiedModuleName();
+            File       srcFile = info.getSourceFile();
+            File       binFile = info.getBinaryFile();
 
             log(srcFile == null ? ERROR : INFO, "  [{}]={}", i,
                     srcFile == null ? "<unknown>" : srcFile.getPath());
@@ -211,16 +210,16 @@ public class Compiler extends Launcher<CompilerOptions> {
         }
         checkErrors("target selection");
 
-        final boolean           fRebuild = opts.isForcedRebuild();
-        final Optional<Version> verStamp = opts.getVersion();
+        boolean fRebuild = opts.isForcedRebuild();
+        var     verStamp = opts.getVersion();
         log(INFO, "Output-path={}, force-rebuild={}", outputLoc, fRebuild);
 
-        final var mapTargets     = new LinkedHashMap<File, Node>();
-        var       cSystemModules = 0;
-        for (var moduleInfo : targets) {
+        var       mapTargets     = new LinkedHashMap<File, Node>();
+        int       cSystemModules = 0;
+        for (ModuleInfo moduleInfo : targets) {
             log(INFO, "Loading and parsing sources for module: {}",
                     moduleInfo.getQualifiedModuleName());
-            var node = moduleInfo.getSourceTree(this);
+            Node node = moduleInfo.getSourceTree(this);
             // short-circuit the compilation of any up-to-date modules
             if (fRebuild || !moduleInfo.isUpToDate()) {
                 mapTargets.put(moduleInfo.getSourceFile(), node);
@@ -240,7 +239,8 @@ public class Compiler extends Launcher<CompilerOptions> {
             log(INFO, "All modules are up to date; terminating compiler");
             return 0;
         }
-        final var allNodes = List.copyOf(mapTargets.values());
+
+        var allNodes = List.copyOf(mapTargets.values());
         flushAndCheckErrors(allNodes);
 
         // repository setup
@@ -254,42 +254,30 @@ public class Compiler extends Launcher<CompilerOptions> {
         prevLibs = repoLib;
         checkErrors("system library linking");
 
-        final var repoOutput = new ModuleInfoRepository(infoByName, false);
+        ModuleInfoRepository repoOutput = new ModuleInfoRepository(infoByName, false);
         prevOutput = repoOutput;
         checkErrors("output repository setup");
 
-        // the code below could be extracted if necessary: compile(allNodes, repoLib, repoOutput);
+        // prepare a compiler for each parsed module before running the shared compilation phases
         log(INFO, "Creating empty modules and populating namespaces");
-        final var mapCompilers = resolveCompilers(allNodes, repoLib);
+        var mapCompilers = resolveCompilers(allNodes, repoLib);
         log(INFO, "Resolved compilers: {}", mapCompilers);
         flushAndCheckErrors(allNodes);
 
         log(INFO, "Resolving names and dependencies");
-        final var compilers = List.copyOf(mapCompilers.values());
-        linkModules(compilers, repoLib);
-        flushAndCheckErrors(allNodes);
-
-        resolveNames(compilers);
-        flushAndCheckErrors(allNodes);
-
-        injectNativeTurtle(repoLib);
-        checkErrors("native turtle injection");
-
-        log(INFO, "Validating expressions");
-        validateExpressions(compilers);
-        flushAndCheckErrors(allNodes);
-
-        log(INFO, "Generating code");
-        generateCode(compilers);
-        flushAndCheckErrors(allNodes);
+        var compilers = List.copyOf(mapCompilers.values());
+        int result    = compile(compilers, repoLib);
+        if (result != 0) {
+            return result;
+        }
 
         if (allNodes.size() == 1) {
             log(INFO, "Storing results of compilation: {}",
                     allNodes.getFirst().moduleInfo().getBinaryFile());
         } else {
             log(INFO, "Storing results of compilation:");
-            for (var node : allNodes) {
-                var info = node.moduleInfo();
+            for (Node node : allNodes) {
+                ModuleInfo info = node.moduleInfo();
                 log(INFO, "  {} -> {}", info.getQualifiedModuleName(), info.getBinaryFile());
             }
         }
@@ -298,6 +286,54 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         log(INFO, "Finished; terminating compiler");
         return hasSeriousErrors() ? 1 : 0;
+    }
+
+    /**
+     * Complete compilation after the module compilers and library repository have been prepared.
+     *
+     * @param compilers  a compiler for each module
+     * @param repoLib    the library repository, with the build repository at the front
+     *
+     * @return 0 for success, non-zero for failure
+     */
+    protected int compile(List<org.xvm.compiler.Compiler> compilers, ModuleRepository repoLib) {
+        linkModules(compilers, repoLib);
+        flushAndCheckErrors(compilers, "module linking");
+
+        resolveNames(compilers);
+        flushAndCheckErrors(compilers, "name resolution");
+
+        injectNativeTurtle(repoLib);
+        checkErrors("native turtle injection");
+
+        log(INFO, "Validating expressions");
+        validateExpressions(compilers);
+        flushAndCheckErrors(compilers, "expression validation");
+
+        log(INFO, "Generating code");
+        generateCode(compilers);
+        flushAndCheckErrors(compilers, "code generation");
+
+        return hasSeriousErrors() ? 1 : 0;
+    }
+
+    /**
+     * Flush errors from the module compilers and then check for errors globally.
+     *
+     * @param compilers  the module compilers whose listeners may contain deferred errors
+     * @param context    the compilation phase being checked
+     *
+     * @return 0 if no serious errors, 1 if serious errors exist but do not require an abort
+     */
+    protected int flushAndCheckErrors(List<org.xvm.compiler.Compiler> compilers, String context) {
+        for (org.xvm.compiler.Compiler compiler : compilers) {
+            ErrorListener errs = compiler.getErrorListener();
+            if (errs instanceof ErrorList list) {
+                list.logTo(this);
+                list.clear();
+            }
+        }
+        return checkErrors(context);
     }
 
     /**
@@ -310,7 +346,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         ModuleRepository repoBuild    = extractBuildRepo(repoLib);
         ModuleStructure  moduleTurtle = repoBuild.loadModule(Constants.TURTLE_MODULE);
         if (moduleTurtle != null) {
-            try (var ignore = ConstantPool.withPool(moduleTurtle.getConstantPool())) {
+            try (var _ = ConstantPool.withPool(moduleTurtle.getConstantPool())) {
                 ClassStructure clzNakedRef  = (ClassStructure) moduleTurtle.getChild("NakedRef");
                 TypeConstant   typeNakedRef = clzNakedRef.getFormalType();
 
@@ -333,20 +369,22 @@ public class Compiler extends Launcher<CompilerOptions> {
      */
     protected Map<String, org.xvm.compiler.Compiler> resolveCompilers(List<Node>       allNodes,
                                                                       ModuleRepository repo) {
-        final var mapCompilers = new LinkedHashMap<String, org.xvm.compiler.Compiler>();
-        final var repoBuild    = extractBuildRepo(repo);
-        for (var node : allNodes) {
+        var mapCompilers = new LinkedHashMap<String, org.xvm.compiler.Compiler>();
+        var repoBuild    = extractBuildRepo(repo);
+        for (Node node : allNodes) {
             // Create a module/package/class structure for each dir/file node in the "module tree"
             if (node.type().getCategory().getId() != Id.MODULE) {
                 log(ERROR, "File {} doesn't contain a module statement", quoted(node));
                 continue;
             }
-            final var compiler = new org.xvm.compiler.Compiler(node.type(), node.errs());
-            final var struct   = compiler.generateInitialFileStructure();
+            org.xvm.compiler.Compiler compiler =
+                    new org.xvm.compiler.Compiler(node.type(), node.errs());
+            FileStructure struct = compiler.generateInitialFileStructure();
             if (struct == null) {
                 continue;
             }
-            final var name = struct.getModuleId().getName();
+
+            String name = struct.getModuleId().getName();
             if (mapCompilers.containsKey(name)) {
                 log(ERROR, "Duplicate module name: {}", quoted(name));
                 continue;
@@ -386,7 +424,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      */
     protected void linkModules(List<org.xvm.compiler.Compiler> compilers, ModuleRepository repo) {
         for (var compiler : compilers) {
-            final var idMissing = compiler.linkModules(repo);
+            ModuleConstant idMissing = compiler.linkModules(repo);
             if (idMissing != null) {
                 compiler.getErrorListener().log(FATAL, MODULE_MISSING,
                         new String[]{idMissing.getName()}, null);
@@ -434,7 +472,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         int cTriesLeft = 0x3F;
         do {
             boolean fDone = true;
-            for (var compiler : compilers) {
+            for (org.xvm.compiler.Compiler compiler : compilers) {
                 fDone &= phase.run(compiler, cTriesLeft == 1);
                 if (compiler.isAbortDesired()) {
                     return;
@@ -446,7 +484,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         } while (--cTriesLeft > 0);
 
         // something couldn't get resolved; must be a bug in the compiler
-        for (var compiler : compilers) {
+        for (org.xvm.compiler.Compiler compiler : compilers) {
             compiler.logRemainingDeferredAsErrors();
         }
     }
@@ -460,7 +498,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         int cTriesLeft = 0x3F;
         do {
             boolean fDone = true;
-            for (var compiler : compilers) {
+            for (org.xvm.compiler.Compiler compiler : compilers) {
                 try {
                     fDone &= compiler.generateCode(cTriesLeft == 1);
                     if (compiler.isAbortDesired()) {
@@ -478,16 +516,16 @@ public class Compiler extends Launcher<CompilerOptions> {
         } while (--cTriesLeft > 0);
 
         // something couldn't get resolved; must be a bug in the compiler
-        for (var compiler : compilers) {
+        for (org.xvm.compiler.Compiler compiler : compilers) {
             compiler.logRemainingDeferredAsErrors();
         }
     }
 
     @SuppressWarnings("UnusedReturnValue")
     private boolean addVersion(ModuleInfo info, Version ver) {
-        var fileBin = info.getBinaryFile();
+        File fileBin = info.getBinaryFile();
         try {
-            var struct = new FileStructure(fileBin);
+            FileStructure struct = new FileStructure(fileBin);
             struct.getModule().setVersion(ver);
             struct.writeTo(fileBin);
             return true;
@@ -504,10 +542,10 @@ public class Compiler extends Launcher<CompilerOptions> {
      */
     @SuppressWarnings("UnusedReturnValue")
     protected int emitModules(List<Node> allNodes, ModuleRepository repoOutput) {
-        var opts = options();
-        var version = opts.getVersion();
-        for (var nodeModule : allNodes) {
-            var module = (ModuleStructure) nodeModule.type().getComponent();
+        CompilerOptions opts    = options();
+        var             version = opts.getVersion();
+        for (Node nodeModule : allNodes) {
+            ModuleStructure module = (ModuleStructure) nodeModule.type().getComponent();
 
             assert !module.isFingerprint();
             version.ifPresent(module::setVersion);
@@ -524,7 +562,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 }
             } else {
                 // figure out where to put the resulting module
-                var file = nodeModule.file().getParentFile();
+                File file = nodeModule.file().getParentFile();
                 if (file == null) {
                     log(ERROR, "Unable to determine output location for module {} from file: {}",
                             quoted(nodeModule.name()), nodeModule.file());
@@ -534,7 +572,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 // at this point, we either have a directory or a file to put it in; resolve that to
                 // an actual compiled module file name
                 if (file.isDirectory()) {
-                    var sName = nodeModule.name();
+                    String sName = nodeModule.name();
                     if (!opts.isOutputFilenameQualified()) {
                         int ofDot = sName.indexOf('.');
                         if (ofDot > 0) {
@@ -544,7 +582,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                     file = new File(file, sName + ".xtc");
                 }
 
-                final var struct = module.getFileStructure();
+                FileStructure struct = module.getFileStructure();
                 try {
                     struct.writeTo(file);
                 } catch (IOException e) {
@@ -567,14 +605,14 @@ public class Compiler extends Launcher<CompilerOptions> {
         if (cErrs > 0) {
             // if there are any COMPILER errors, suppress all VERIFY errors except the first three
             boolean fSuppressVerify = false;
-            for (var err : listErrs) {
+            for (ErrorInfo err : listErrs) {
                 if (err.getCode().startsWith("COMPILER")) {
                     fSuppressVerify = true;
                     break;
                 }
             }
             int cVerify = 0;
-            for (var err : listErrs) {
+            for (ErrorInfo err : listErrs) {
                 if (fSuppressVerify && err.getCode().startsWith("VERIFY") && ++cVerify > 3) {
                     continue;
                 }
@@ -635,7 +673,7 @@ public class Compiler extends Launcher<CompilerOptions> {
 
     @Override
     protected void validateOptions() {
-        var opts = options();
+        CompilerOptions opts = options();
         // Set strictness level based on options
         //   NOTE: --strict and --nowarn are mutually exclusive (enforced by OptionGroup in
         //   LauncherOptions), so we do not need to check if nowarn and strict are both set and

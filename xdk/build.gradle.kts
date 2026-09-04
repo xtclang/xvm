@@ -114,6 +114,7 @@ dependencies {
     xtcModule(libs.xdk.metrics)
     xtcModule(libs.xdk.net)
     xtcModule(libs.xdk.oodb)
+    xtcModule(libs.xdk.runner)
     xtcModule(libs.xdk.sec)
     xtcModule(libs.xdk.web)
     xtcModule(libs.xdk.webauth)
