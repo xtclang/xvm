@@ -934,6 +934,60 @@ already touches - has cache-if-null getters at `:421`, `:456`, `:470`, `:484` an
 be final `Lazy` fields, of which 7 need a resettable variant. None of that is this branch's to fix;
 it is where the same change pays next.
 
+### H14 - `PrintStream` as the console type is a new decision, and it disagrees with its own parent class
+
+**This is new in LSPAPI, and the codebase already had two better answers - one of which `LspSupport`
+itself is already using.**
+
+| where | abstraction |
+| --- | --- |
+| `org.xvm.tool.Console` (existing interface) | `out()` / `err()`, **separate streams** - and `LspSupport` uses it for `SILENT_CONSOLE` (`:71`) |
+| `xTerminalConsole` (existing, the class `xExternalConsole` **extends**) | `PrintWriter CONSOLE_OUT`, built from `System.console().writer()` when available (`:226-237`) |
+| `xExternalConsole` / `LspSupport.run` (**new**) | `PrintStream` |
+
+So a single class, `LspSupport`, now uses `Console` for the compiler's output and `PrintStream` for a
+run's output, and the new native template takes a byte stream while the template it inherits from
+writes through a character writer. That is three abstractions for one concept.
+
+**Why `PrintStream` is the wrong one of the three, concretely:**
+
+1. **It cannot report a write failure.** `PrintStream` never throws `IOException`; it sets an
+   internal flag that the caller is expected to poll with `checkError()`, and nothing here does. If
+   the host's stream is a closed socket or a full disk, **the application's output is silently
+   discarded** and the run reports success. This is the never-swallow rule violated by the *choice of
+   type* rather than by a `catch` block - the swallowing is inside the JDK class.
+2. **The character encoding becomes the caller's accident.** Ecstasy strings arrive as `char[]` and
+   are written with `out.print(ach)` (`:100-118`). `PrintStream` encodes them with whatever charset
+   it was constructed with, and `LspTest` uses `new PrintStream(bytes, true)` - the platform default.
+   The parent class deliberately goes through `System.console().writer()` precisely to get the
+   console's real encoding. The new path throws that away, and the first non-ASCII test will find it.
+3. **Auto-flush is a requirement the API cannot state.** `xExternalConsole` flushes explicitly after
+   `print` (`:103`, `:118`) but not after `println` (`:100`, `:112`), so line output depends on the
+   stream having been constructed with `autoFlush = true`. `LspTest` passes `true`; a host that
+   forgets gets a console that appears to produce nothing. A type that carried the guarantee - or an
+   interface with a `flush()` contract - would remove the trap.
+4. **It is a concrete class, so the host cannot adapt.** Routing a run's output to a logger, an LSP
+   `window/logMessage` notification, or a structured capture all require first turning it back into
+   bytes. An interface - even `Consumer<String>` - would let the host receive text.
+5. **`out` and `err` are conflated.** `InterpreterControl.finish` writes
+   `console.println("Unhandled exception: " + failure)` into the same stream as ordinary output, so a
+   host cannot distinguish a crash report from what the program printed. The existing
+   `org.xvm.tool.Console` already separates them.
+
+**Recommendation, in order of preference:**
+
+- reuse `org.xvm.tool.Console` - it exists, it is already imported by this file, it separates
+  `out`/`err`, and it makes the compiler and run paths speak the same type;
+- failing that, `PrintWriter` or `Appendable`, which at least matches the `char[]` data and the
+  parent class;
+- if a functional sink is wanted, `Consumer<String>` composes with everything and costs nothing.
+
+**A related loose end.** `Control.console()` is documented as returning *"the File containing the
+output that the application printed to the Console"*, and `InterpreterControl.console()` returns
+`null` unconditionally. An interface method that always returns null is a promise the implementation
+does not keep; either it is unimplemented and should say so, or it should be removed until there is
+a file to return.
+
 ### H11 - What is NOT a smell here, having checked
 
 Worth recording so a reviewer does not re-raise them:
@@ -1036,4 +1090,5 @@ which is what it should have been, and roughly a third of its current size.
 | H10 | Java polls every 25ms for a completion Ecstasy already has | a `waitForTask(id)` future instead of 40 requests/sec/run |
 | H12 | write-once fields that cannot be `final` because the object is constructed then started | do the work in the factory, hand the constructor finished values |
 | H13 | `Lazy` is already upstream and **entirely unused**; `connector` is the textbook case | one `Lazy.ofBound` field deletes the lock, the null check and the mutability |
+| H14 | `PrintStream` as the console type - new, and disagrees with both existing abstractions | swallows write failures, charset is the caller's accident, conflates out/err |
 | H11 | what is NOT a smell, having checked | anonymous `Console`, the two-map update, native `switch` dispatch |
