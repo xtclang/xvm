@@ -153,11 +153,11 @@ module runner.xtclang.org {
      * State and control for one application container.
      */
     service Task(Int id, ModuleTemplate template, ModuleRepository repository, Int? consoleId) {
-        Boolean running;
+        public/private Boolean running;
 
-        Int? result;
+        public/private Int? result;
 
-        String? failure;
+        public/private String? failure;
 
         String status.get() = running
                 ? "running"
