@@ -196,7 +196,19 @@ written in `lagergren/lazy-instance` (`lib_runner/src/main/x/runner.x`) - lift i
 
 ---
 
-### 4. H1 + H3b + H13 - the configuration state (ONE sub-branch, in this order)
+### 4. H1 + H3b + H13 - POSTED 2026-09-04
+
+Reply into the August thread, not a new comment:
+https://github.com/xtclang/xvm/pull/545#discussion_r3933764850
+Branch `lagergren/lspapi-config-lifecycle`, commit `618e1f9` (pushed, `:javatools:compileJava` clean).
+
+**Two corrections found while implementing it:** the unsynchronized read sites are **eight**
+(`:93`, `:103`, `:170`, `:177`, `:185`, `:211`, `:459`, `:474`), not the six this file listed -
+`getConfiguredInjector` (`:185`) and `compile` (`:211`) were missed; and the August comment
+itself said *two*, which the reply corrects first. `getConstantPool`'s `verifyConfigured()` call
+became redundant once the precondition moved into `createConnector`.
+
+#### the plan as written
 
 These three only work together; taking H13 alone trades a real if incidental serialization for none.
 
