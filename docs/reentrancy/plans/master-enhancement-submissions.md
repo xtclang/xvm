@@ -3542,6 +3542,22 @@ paths). Not pushed.
 sink off the target handle, at the cost of one lambda allocation on the deferred (`R_CALL`) path
 where there used to be a shared static.
 
+**Scope correction, found by asking what happens when nothing injects a console.** Console injection
+is served by a **static**: `NativeContainer:313-315` does
+`xTerminalConsole templateConsole = xTerminalConsole.INSTANCE;` and registers
+`templateConsole::ensureConsole`. `INSTANCE` is the mutable static the template's constructor
+assigns, so one template instance serves console injection for the whole JVM and its `m_hConsole` is
+a process-wide singleton - **every container injecting `Console` gets the same handle**, the same
+sink and the same log.
+
+Consequences: (1) "the container's console" does not exist, so the idea of the debugger rendering
+the console of the frame's container has nothing to distinguish until E1 is fixed; (2) a container
+that never injects a console has no console and no log at all, which any non-printing module
+demonstrates - so a per-console log needs a fallback for the debugger, not an edge case;
+(3) **this enhancement removes the hard-wiring but does not make injected consoles per-run.** A host
+still needs name-based registration (LSPAPI's approach) or E1 to give a run its own injected
+console. `ensureConsole(PrintWriter)` creates a handle that nothing currently injects.
+
 **`CONSOLE_OUT` stays.** `DebugConsole` writes to it at `:232`, `:302`, `:2133`. What is removed is
 the console template's *dependence* on it, not the field. Note that `DebugConsole` is itself
 `public static final ... INSTANCE` with static `LINE_READER`/`READER` and reads commands at `:315`/
