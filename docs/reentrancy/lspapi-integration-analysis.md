@@ -1,0 +1,664 @@
+# The `cpurdy/LSPAPI` branch, and what `XtcEngine` has to become
+
+Analysis of `cpurdy/LSPAPI` at `2568d6be4` ("All reproducers are working as expected"), branched
+from master at `443770bcc`. Checked out locally at `../lspapi`. **No code was changed anywhere for
+this analysis.**
+
+The branch is 19 files, +1761/-90. It is small, and almost all of it exists to make one structural
+change possible.
+
+> **Status: analysis only.** Nothing here has been raised on PR #545, nothing has been committed to
+> `cpurdy/LSPAPI`, and the `../lspapi` checkout is unmodified. The hardening items in
+> [Part 4b](#part-4b---hardening-the-lspapi-branch-ownership-finality-isolation) are written to be
+> taken up as a **structured review or a sub-branch**, not as drive-by comments. Every claim below
+> cites a file and line so a reviewer can check it rather than take it on trust - and two of my own
+> first readings were wrong and are marked as such where they were corrected.
+
+---
+
+## Part 1 - What the LSPAPI branch actually is
+
+### 1.1 The one structural idea
+
+**Container creation moves out of Java and into Ecstasy.**
+
+Today - in master, and in this branch's `XtcEngine` - a host that wants to run a module reaches into
+the runtime from Java, builds a container, and invokes it. LSPAPI instead boots **one long-lived
+Ecstasy application in container zero** whose whole job is to spawn child containers on request:
+
+```java
+// InterpreterControl.createConnector
+InterpreterConnector connector = new InterpreterConnector(repository);
+connector.loadModule("runner.xtclang.org");
+connector.start(null);
+connector.getMainContainer().invokeAsync("run").join();   // starts, and STAYS running
+```
+
+Every subsequent run is a **request posted into that already-running application**:
+
+```java
+// InterpreterControl.start
+ObjectHandle hTaskId = postRequest("runTask", hModule, hRepository, hConsoleId).join();
+```
+
+and the container itself is created by Ecstasy code, using Ecstasy's own container API:
+
+```ecstasy
+// lib_runner/src/main/x/runner.x
+service Task(Int id, ModuleTemplate template, ModuleRepository repository, Int? consoleId) {
+    void start() {
+        Container container = new Container(
+                template, Container.Model.Lightweight, repository, injector);
+        ...
+        @Future Tuple outcome = container.invoke("run", ());
+    }
+}
+```
+
+That is the whole proposal. Everything else in the branch is the plumbing that makes it expressible.
+
+### 1.2 The new `lib_runner` module
+
+A new Ecstasy library, `runner.xtclang.org`, containing:
+
+| element | kind | role |
+| --- | --- | --- |
+| `runTask` / `taskRunning` / `taskResult` / `taskFailure` / `killTask` / `taskStatus` | module methods | the surface the Java side calls by name |
+| `TaskRegistry` | **`static service`** | owns the task map and the id counter |
+| `Task` | **`service`** per run | owns one container and its lifecycle |
+| `Api` | `@WebService` | an HTTP surface over the same registry |
+| `TaskResourceProvider` | `service` | supplies the per-run console, delegating the rest to `BasicResourceProvider` |
+
+`TaskRegistry` being a **service** is the load-bearing detail. An Ecstasy service processes one
+fiber at a time, so the registry's mutable state - `tasks`, `nextTaskId` - is serialized *by the
+language*, not by Java locking. The same is true of each `Task`. This is the reentrancy principle
+this branch has been converging on, applied on the Ecstasy side: **state is owned by something that
+is single-threaded by construction.**
+
+Note that the module is `@web.WebApp` and its `run()` starts a Xenia HTTP server. The javadoc says
+"Native callers should invoke `runTask` directly", so the HTTP surface is an alternative front end,
+not part of the Java path.
+
+### 1.3 The Java changes, and why each is needed
+
+| change | why it is required |
+| --- | --- |
+| `MainContainer.invokeAsync(String, ObjectHandle...)` returning `CompletableFuture<ObjectHandle>` | **The enabling change.** Master had only `invoke0`, which is fire-and-forget with no result. There was no way to call *into* a running container-zero and get an answer back. `invokeAsync` posts through `m_contextMain.postRequest(...)`, so the call is a normal service request on the runner's own fiber. Without this, the runner-app model is not expressible at all. |
+| `InterpreterConnector.getNativeContainer()` / `getMainContainer()` | The control layer needs the native container (to register consoles) and the main container (to post requests). Previously neither was reachable. |
+| `NativeContainer` resource maps become `ConcurrentHashMap`; `addResourceSupplier`/`removeResourceSupplier` made public | Injectable resources are now **registered and unregistered dynamically, while the runtime is live** - one console per run, removed when that run ends. Master's `HashMap` and private registration assumed the resource set was fixed at boot. |
+| `NativeContainer.getInjectable` re-reads the supplier and null-checks it | Direct consequence of the above: a resource can now disappear between the name lookup and the supplier lookup, because another run just finished. |
+| `xExternalConsole` (new, 153 lines) | Per-run console. Registered as a **named** native resource `console_<id>`, so the Ecstasy side asks for it by name: `@Inject(resourceName=$"console_{consoleId}") Console console`. |
+| `xCoreRepository` handle carries its own repository | Master took the repository from `f_container.getModuleRepository()` - one per container. Now `CoreRepoHandle` holds the repository it was made with, so **each run can be handed a different repository** as an argument. |
+| `compiler.Compiler` takes `ErrorListener` instead of `ErrorList` | A tool caller wants to supply its own sink. Independently the same generalisation this branch made for [E32](plans/master-enhancement-submissions.md). |
+| `tool.Compiler` gains `protected compile(List<Compiler>, ModuleRepository)` and `protected flushAndCheckErrors(...)` | So `LspSupport.LspCompiler` can **subclass the real CLI compiler** and reuse its pipeline rather than reimplementing it. |
+| `TC-01`..`TC-99` in `errors.properties` | A diagnostic vocabulary for tool-facing failures, distinct from `COMPILER-`/`VERIFY-`. |
+
+### 1.4 The compile path
+
+`LspSupport.compile(String source, ModuleRepository input, ErrorListener errs)` builds an
+`LspCompiler extends org.xvm.tool.Compiler` and calls `process()`. It:
+
+1. builds its library repo by overriding `configureLibraryRepo`:
+   `new LinkedRepository(true, build, inRepo, coreRepo)` - **read-through is `true`**;
+2. parses the source from a `String`;
+3. requires the last statement to be a module declaration;
+4. `generateInitialFileStructure()`, stores the module into the library repo;
+5. delegates to the inherited `super.compile(List.of(compiler), repoLib)`;
+6. forbids `emitModules` and the inherited `compile(...)` overload with
+   `throw new IllegalStateException("This method must not be called")`.
+
+Two things follow. First, **this is the CLI compiler**, not a reimplementation - which is a
+deliberate and good decision, because it means the tool path and the CLI path cannot drift.
+Second, **read-through cloning is retained**, so every compile gets private copies of the library
+modules. That is the isolation mechanism [T1](plans/parallel-compiler-plan.md) tried to remove, and
+LSPAPI keeps it.
+
+### 1.5 The run path, end to end
+
+```
+LspSupport.run(module, console, rootDir, injections, errs)
+  -> InterpreterControl.create(connector, module, repository, console, errs).start()
+       prepareModule():
+         module.getFileStructure().writeTo(bytes)                 // SERIALIZE
+         new FileStructure(new ByteArrayInputStream(bytes), ...)  // DESERIALIZE -> fresh pool
+         connector.getNativeContainer().createFileStructure(copy)
+         file.linkModules(repository, true)
+       xExternalConsole.register(nativeContainer, console)  -> console_<id>
+       postRequest("runTask", hModule, hRepository, hConsoleId)
+         -> MainContainer.invokeAsync -> m_contextMain.postRequest
+            -> runner.runTask -> TaskRegistry (service) -> new Task (service)
+               -> new Container(template, Lightweight, repository, injector)
+               -> container.invoke("run", ())
+       watch(): poll taskRunning() every 25ms; then taskResult()/taskFailure()
+       finish(): report, unregister console
+```
+
+The `prepareModule` round-trip deserves emphasis. **The module is serialized and read back before
+it is run.** That gives the run a `FileStructure` with a brand-new `ConstantPool`, structurally
+disconnected from whatever the compiler produced. It is the same isolation the CLI gets for free by
+writing a `.xtc` to disk and loading it again - and it is exactly what `XtcEngine.assemble` already
+does in this branch, for the same reason.
+
+### 1.6 What it is intended to solve
+
+Reading the reproducers in `LspTest`, the intent is explicit:
+
+- `testCompile` - compile from a String, in process, and get either a module or errors.
+- `testRun` - run a compiled module and capture **its own** console output.
+- `testRunException` - an application exception must reach the host, on that run's console and
+  through that run's `ErrorListener`, rather than being printed to the JVM's stderr.
+- `testRunLatency` - **five sequential runs of the same module in one hot JVM**, timed. This is the
+  headline case: repeated runs must be fast and must not interfere.
+- `testPoolGrows` - twelve runs, each using a *distinct* parameterized type, printing the native
+  `ConstantPool` size after each. The comment is candid: *"a main container's pool dies with its
+  run, but interning routinely reaches this shared pool"*. They are watching the shared plane grow.
+
+---
+
+## Part 2 - Why the old model was racy, and what replaced it
+
+### 2.1 `manualTests/runner.x` was never designed for this
+
+The existing `Runner` module used by `:manualTests:runParallel`:
+
+```ecstasy
+void run(String[] modules=[]) {
+    Tuple<String, Future, ConsoleBuffer>[] results =
+        new Array(modules.size, i -> loadAndRun(modules[i]));
+    ...
+}
+```
+
+`loadAndRun` creates a container and starts it. The array initializer therefore **creates and starts
+every container in one burst, from a single fiber**, and only afterwards walks the results in order.
+
+That shape has no lifecycle at all: no registry, no ids, no status, no kill, no per-task result. It
+is a fixture for running a fixed list of test modules once, and it was written for that. Using it as
+the model for "how a host runs modules" reads intent into it that was never there.
+
+The concurrency consequence is specific: N containers perform their **first-time** initialization
+simultaneously. Everything lazily built on the shared native plane - template `INSTANCE` fields,
+the template cache, `TypeInfo` on shared pools, implicitly-imported identities - is raced by N
+threads at once. This branch has documented that class of defect exhaustively; the mutable-static
+`INSTANCE` cache is one member of it, and rows 26, 27, 41-45 of
+[master-issue-submissions.md](plans/master-issue-submissions.md) are others.
+
+### 2.2 What LSPAPI does instead
+
+| | old `Runner` | LSPAPI `runner.xtclang.org` |
+| --- | --- | --- |
+| container zero | started per invocation, exits when the list is done | started **once**, stays alive |
+| how a run is requested | an argument in the initial `run(String[])` | a **request** posted into the live app |
+| when containers are created | all of them, at once, in an array initializer | one at a time, on demand |
+| what serializes the state | nothing | `TaskRegistry` and `Task` are **services** |
+| lifecycle | none | `running` / `result` / `failure` / `kill` / `status`, per task |
+| console | `ConsoleBuffer` per container | native `console_<id>`, registered and unregistered per run |
+| repository | the container's | passed per task as a handle |
+
+The startup burst disappears not because the races were fixed, but because **the shape stopped
+producing them**: the first task warms the shared plane while later tasks queue behind the
+registry's fiber.
+
+### 2.3 Why this was not possible before
+
+Three hard blockers in master, each removed by exactly one change in this branch:
+
+1. **No way to call into a running container.** `MainContainer.invoke0` is fire-and-forget with no
+   return. A long-lived container-zero you cannot ask for anything is useless as a service.
+   `invokeAsync` fixes this.
+2. **No way to give a run its own console.** Resources were registered at boot into a `HashMap`;
+   there was no dynamic registration, and no named-resource convention. `xExternalConsole` plus the
+   concurrent resource maps fix this.
+3. **No way to give a run its own repository.** `xCoreRepository` read the repository from its
+   container. Carrying it on the handle fixes this.
+
+Absent all three, a Java host had no choice but to build containers itself - which is precisely what
+`XtcEngine.runFrom` does today.
+
+---
+
+## Part 3 - What `XtcEngine` has to become
+
+### 3.1 What `XtcEngine` does now
+
+```java
+// XtcEngine.runFrom
+NativeContainer containerNative = containerNative();
+FileStructure   struct          = containerNative.createFileStructure(moduleApp);
+struct.linkModules(repoRun, true);
+NestedContainer containerRun =
+        NestedContainer.createForHost(containerNative, struct.getModuleId(), List.of());
+registerInjections(containerRun, mapInjections);
+return containerRun.runModule(sMethodName);
+```
+
+**`NestedContainer.createForHost` does not exist in master or in LSPAPI.** It is this branch's own
+invention. So the engine's run path is not merely different from what Cam and Gene propose - it is
+built on an API they have not got and have not asked for.
+
+### 3.2 The changes required
+
+| # | change | replaces |
+| --- | --- | --- |
+| 1 | Boot container zero on `runner.xtclang.org` once per engine, and keep it | `NestedContainer.createForHost` per run |
+| 2 | Run by `invokeAsync("runTask", hModule, hRepository, hConsoleId)` | `containerRun.runModule(sMethodName)` |
+| 3 | Return a `Control`-shaped handle (`running`/`whenStarted`/`whenStopped`/`kill`/`result`) | returning a bare `CompletableFuture<ObjectHandle>` |
+| 4 | Per-run console through `xExternalConsole.register/unregister` | nothing - the engine has no per-run console today |
+| 5 | Per-run repository as an `xCoreRepository` handle | `LinkedRepository` assembled Java-side and given to the container |
+| 6 | `prepareModule`'s serialize/deserialize round-trip before running | already equivalent - `XtcEngine.assemble` does this |
+| 7 | Adopt `TC-xx` codes for tool-facing diagnostics | the engine's own ad-hoc messages |
+
+Item 2 has a consequence worth stating plainly: **`runTask` runs `run()`**. The engine's ability to
+invoke an arbitrary `sMethodName` has no equivalent in the LSPAPI surface. Either the runner module
+grows a method-name parameter, or that capability is given up.
+
+### 3.3 Where the engine should NOT follow
+
+**`LspSupport` is a singleton with one-shot configuration.** `instance()` plus a `configure` that
+throws if called twice with different arguments is process-global, first-caller-wins state. That
+forecloses two engines with different module paths in one JVM, which is exactly what a test suite
+and a multi-root LSP server both need. `XtcEngine` is instance-based with a builder, and that is the
+better shape. The Ecstasy-side runner-app model and the Java-side singleton are **separable
+decisions**, and only the first is load-bearing.
+
+### 3.4 The compiler question, answered
+
+The user asked whether they intend the compiler to stay a containerless Java API. **Yes - and the
+code is unambiguous.** `LspSupport.compile` never touches the connector, never creates a container,
+and calls `verifyConfigured()` only to obtain the core repository. Container zero is *only* for
+runs. `LspCompiler` is a subclass of the CLI compiler operating on ordinary Java structures.
+
+So the split they intend is:
+
+- **compiling** - a plain Java API over the existing compiler, isolated by per-compile
+  read-through cloning;
+- **running** - a request into a long-lived Ecstasy application that owns container creation.
+
+This branch's `XtcEngine` already matches on the compile side and diverges entirely on the run side.
+
+---
+
+## Part 4 - Concurrency
+
+### 4.1 They have not addressed concurrent use, and the class doc overstates it
+
+`LspSupport`'s javadoc says *"The methods on the LspSupport itself can be assumed to be thread-safe
+and concurrent."* The implementation does not yet support that claim:
+
+- **`configured`, `cfgRepo`, `cfgInjector`, `connector` are plain fields - no `volatile`, no
+  `final`** (`LspSupport.java:83-86`) - and only TWO methods in the class take the lock:
+  `configure` (`:152`) and `ensureConnector` (`:122`). Every other access reads them with no
+  synchronization at all:
+
+  | line | method | reads |
+  | --- | --- | --- |
+  | 93, 103 | `verifyConfigured()` | `configured` |
+  | 170 | `isConfigured()` | `configured` |
+  | 177 | `getConfiguredRepository()` | `cfgRepo` |
+  | 185 | `getConfiguredInjector()` | `cfgInjector` |
+  | 459 | `run(...)` | `cfgRepo` |
+  | 474 | `run(...)` | `cfgInjector` |
+
+  This is textbook unsafe publication. `configure` writes the fields while holding `LOCK`, but a
+  reader that never acquires `LOCK` has no happens-before with those writes, so it may see any,
+  all, or none of them. Two concrete failures follow, and both are silent:
+
+  1. **A configured host reports itself unconfigured.** Thread B's `verifyConfigured()` may not
+     observe `configured == true` at all, falls into the `XDK_HOME` path, and - if that variable is
+     unset - throws *"ToolConnect has not been configured"* about an instance that was configured
+     before the call was made.
+  2. **A half-configured host is worse.** The boolean and the reference are independent
+     non-volatile writes with no ordering between them, so B can observe `configured == true` while
+     `cfgRepo` is still `null`. `verifyConfigured()` then returns happily and `compile` hands that
+     null to `LspCompiler` as `coreRepo`, where `configureLibraryRepo` passes it into
+     `new LinkedRepository(true, build, coreRepo)` - which asserts its repositories are non-null.
+     The failure surfaces inside the compiler, attributed to the compile, with nothing pointing back
+     at configuration.
+- **The auto-configure path is safe, but only by luck of one class having value equality.**
+  `verifyConfigured()` builds a `new DirRepository(dir, true)` and calls `configure(...)`, so two
+  threads arriving together produce two distinct instances and the second is compared against the
+  first with `Objects.equals`. That is benign *because* `DirRepository.equals` compares directory
+  and read-only flag (`DirRepository.java:129`), so the two are equal and the loser simply discards
+  its copy. The guard is not robust in general: the same double-configure with a repository type
+  that does not define value equality - `LinkedRepository`, for instance - would fail with
+  `IllegalStateException: configuration has been performed, and cannot be modified`, for doing
+  nothing worse than calling a method concurrently. **Verified rather than assumed; my first reading
+  of this was wrong.**
+- **`InterpreterControl`'s `taskId` and `consoleId` are non-volatile - and this one is NOT a
+  defect.** Both are written on the calling thread in `start()` *before* `watch()` submits the first
+  polling task, and handing a task to an `Executor` establishes a happens-before with its execution,
+  so the watcher sees both; each recursive `watch()` re-submission chains that edge onward. It is a
+  fragility rather than a bug: the safety comes from a submission ordering nothing states, and
+  moving the `watch()` call or adding a second reader breaks it silently. **I flagged this as an
+  omission on first reading and that was wrong.**
+- **`watch()` polls every 25ms on the common ForkJoinPool** via
+  `CompletableFuture.delayedExecutor`. Each poll is a request into container zero. With many
+  concurrent runs this is both traffic on the runner's single fiber and load on a JVM-wide pool the
+  host does not control.
+
+None of these are hard to fix, and none invalidate the design. They mean the claim is aspirational
+at `2568d6be4`.
+
+### 4.1b Does any of that bite in the SUPPORTED scenario? No - but something else does
+
+The unsafe publication in 4.1 is **latent, not active**, for consecutive compiles and runs driven
+from one thread. Those fields are read only by the calling thread, and a thread reading its own
+prior writes needs no synchronization. Other threads do exist in that scenario - the polling watcher
+on the common ForkJoinPool, the runtime's service threads - but none of them touch
+`configured`/`cfgRepo`/`cfgInjector`; `InterpreterControl` reaches the connector through its own
+`final` field. So the sequential story is thread-safe, and the javadoc's claim only becomes wrong
+when a host takes it at its word and calls from several threads.
+
+**The sequential scenario has a different problem, and this one is active: nothing is ever
+released.**
+
+```ecstasy
+Int runTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId) {
+    Int  id   = allocateTaskId();
+    Task task = new Task(id, template, repository, consoleId);
+    tasks[id] = task;          // added...
+    task.start();
+    return id;
+}
+```
+
+There is **no removal from `tasks` anywhere in `runner.x`** - the only other references to the map
+are the `get` in `taskFor` and the `contains` in `allocateTaskId`. And `Task.container` is assigned
+once in `start()` (`:166`) and never cleared, not even by `kill()` (`:182-186`), which calls
+`container.kill()` and sets `running = False`.
+
+So every run permanently adds a `Task` service to the registry, and each `Task` holds its
+`Container`, its `ModuleTemplate` and its `ModuleRepository`. On normal completion `kill()` is not
+called at all - the container simply finishes `run()` - so even the explicit teardown path does not
+run. The reference chain is retained for the life of container zero, which in this design is the
+life of the JVM.
+
+How much memory that holds depends on what a completed `Container` still owns, which is not measured
+here. What is certain is that the retention is unbounded and grows once per run, in precisely the
+scenario the branch exists to support - a long-lived VM doing many consecutive runs.
+
+This is the same shape as [T15](plans/parallel-compiler-plan.md)'s finding on the compile side of
+this branch, arrived at independently on the Ecstasy side: **the thing that makes reuse fast is a
+long-lived owner, and a long-lived owner turns every missing release into a leak.** A registry needs
+an eviction rule, and `Task` needs to drop its container when it stops.
+
+They are plainly aware of the adjacent version of this: `testPoolGrows` prints the shared native
+`ConstantPool` size after each of thirteen runs and its comment notes that "interning routinely
+reaches this shared pool". That is measurement of a known concern, not a solution to it.
+
+### 4.2 Sequential runs - what the design gives, honestly
+
+The runner-app model makes sequential runs **structurally sound**: tasks queue on the registry's
+fiber, containers are created one at a time, each gets its own console, and each is torn down before
+the next result is collected.
+
+It does not make the *shared native plane* safe. `testPoolGrows` says as much in its own comment.
+The first run still warms every lazily-built structure on that plane; later runs read what it built.
+Sequentially that is fine, and it is exactly why this model works where the old burst did not.
+
+### 4.3 Parallel runs - not addressed
+
+Nothing prevents a host calling `run(...)` from several threads. What then happens:
+
+- `TaskRegistry` serializes registry mutation - **safe**;
+- each `Task` is its own service - **safe**;
+- but `new Container(...)` inside each task still initializes shared native state, and two tasks
+  admitted in quick succession can be inside that concurrently, since the registry's fiber returns
+  as soon as `task.start()` posts;
+- `xExternalConsole.register/unregister` mutate the native container's resource maps concurrently -
+  which is why they became `ConcurrentHashMap`, and why `getInjectable` had to tolerate a
+  disappearing supplier. **That specific hazard they did address.**
+
+So parallel runs are *better founded* than before but not established. The honest reading is that
+they built for sequential and left parallel to be proven.
+
+### 4.4 Parallel compiles - safe, and for the reason we already know
+
+`LspCompiler` uses `LinkedRepository(true, ...)`, so each compile clones the library modules it
+touches, each clone getting a fresh `ConstantPool`. Concurrent compiles therefore do not share
+mutable type state. This is the same isolation the CLI has, and it is the reason master's compiler
+survives concurrency at all - documented in [T12](plans/parallel-compiler-plan.md) and measured at
+about **18% of a warm compile**.
+
+**This is where this branch and LSPAPI actively disagree.** T1 removes the clone to reclaim that
+18%; LSPAPI keeps it. Everything T4/T8/T10-T15 found - the place-holder without an owner,
+`m_FVisited`, `m_cRecursiveDepth`, the unsynchronized `f_listConst` reads, the retention leak - are
+defects the clone hides and T1 exposes. If the engine adopts LSPAPI's compile path as-is, it gets
+their safety and loses T1's win; if it keeps T1, it must also keep the fixes this branch made, and
+close the retention leak in [T15](plans/parallel-compiler-plan.md).
+
+### 4.5 What a combined design would look like
+
+| | compiles | runs |
+| --- | --- | --- |
+| **sequential** | LSPAPI's `LspCompiler` as-is | runner-app; sound today |
+| **parallel** | needs T1 + T4/T8/T11/T13/T14 fixes + T15's leak closed; otherwise keep cloning | needs container-creation admission control, or an explicit warm-up before concurrency |
+
+The cheapest correct parallel-run story is to **warm the native plane deliberately before admitting
+concurrency** - run one trivial module to completion at boot - which is the same shape as
+[T8.1](plans/parallel-compiler-plan.md)'s fix for the root-`Object` sweep.
+
+---
+
+## Part 4b - Hardening the LSPAPI branch: ownership, finality, isolation
+
+Concrete, small, and mostly deletions of mutability. Ordered by value.
+
+### H1 - Collapse the four configuration fields into one immutable record
+
+```java
+private boolean          configured;      // :83
+private ModuleRepository cfgRepo;         // :84
+private String           cfgInjector;     // :85
+private Connector        connector;       // :86
+```
+
+Four mutable fields describing **one** decision, so every reader has to observe a consistent
+combination of them and nothing enforces that. Replace with a single reference:
+
+```java
+private record Config(ModuleRepository repo, String injector) {}
+private volatile Config config;           // null == not configured
+```
+
+This is worth more than adding `volatile` to each field, because it changes what is expressible:
+
+- **"half-configured" stops being a state.** The record's fields are `final`, so publishing it
+  through one volatile write publishes them safely as a unit. The
+  `configured == true` / `cfgRepo == null` window in 4.1 cannot occur.
+- **`configured` stops being separate data**; it becomes `config != null`, so the two cannot
+  disagree.
+- **The reads need no lock at all**, which removes the disagreement between the two methods that
+  take `LOCK` and the six places that do not.
+
+### H2 - The singleton is not actually a singleton, and the lock assumes it is
+
+```java
+LspSupport() {}                                        // package-private, not private
+private static class Singleton {
+    static LspSupport instance = new LspSupport();     // not final
+}
+private static final Object LOCK = new Object();       // STATIC lock, INSTANCE state
+```
+
+Three defects that only combine into correctness by convention:
+
+1. the constructor is **package-private**, so any class in `org.xvm.api` can make a second instance;
+2. `Singleton.instance` is **not `final`**, so it is reassignable;
+3. `LOCK` is **static** but guards **instance** fields - correct only while exactly one instance
+   exists, which (1) and (2) do not guarantee.
+
+Make the constructor `private`, make `instance` `static final`, and either make the lock an instance
+field or drop it entirely once H1 removes the need. If a second instance is ever wanted - and this
+branch argues it should be, see 3.3 - then the static lock is actively wrong and must go first.
+
+### H3 - `xExternalConsole.INSTANCE` is a mutable public static, newly used across threads
+
+```java
+public static xExternalConsole INSTANCE;               // :31
+
+public xExternalConsole(Container container, ClassStructure structure, boolean fInstance) {
+    super(container, structure, false);
+    if (fInstance) {
+        INSTANCE = this;                               // this-escape from a constructor
+    }
+}
+
+public static long register(NativeContainer container, PrintStream out) {
+    ... INSTANCE.getCanonicalType() ...                // read from a HOST thread
+}
+```
+
+**In fairness this is the house pattern** - 144 native templates declare
+`public static X INSTANCE`, including `xTerminalConsole` which this class extends. It is not a new
+sin. What *is* new is the exposure: `register`/`unregister` are static entry points called by the
+LSP control layer on a host thread, while `INSTANCE` was written by a constructor on the boot
+thread, into a field that is neither `final` nor `volatile`. The old pattern was only ever read from
+runtime threads that had already synchronized with boot.
+
+Minimum: make it `volatile`, or set it outside the constructor so `this` does not escape before
+construction finishes. Better: have `register` take the template explicitly - the
+`NativeContainer` can resolve it - so the static is not on the path at all. This is the same
+mutable-static-`INSTANCE` class this branch has spent months removing, and the fix here is one field.
+
+### H4 - `addResourceSupplier` is check-then-act on a concurrent map
+
+```java
+public void addResourceSupplier(InjectionKey key, InjectionSupplier supplier) {
+    assert !f_mapResources.containsKey(key);           // check ...
+    f_mapResources.put(key, supplier);                 // ... then act
+    f_mapResourceNames.put(key.f_sName, key);
+}
+```
+
+The map became `ConcurrentHashMap` precisely because registration is now concurrent, but the
+assertion that a key is unregistered is not atomic with registering it. Today the keys carry a
+unique `console_<id>` so a collision is unlikely; the guard still asserts something it cannot see.
+`putIfAbsent` states and enforces the same invariant in one operation.
+
+**Credit where due:** the matching hazard on the read side *was* handled -
+`removeResourceSupplier` updates two maps non-atomically, and `getInjectable` was changed to look
+the supplier up and null-check it rather than assume the name mapping implies one. That is exactly
+the right treatment.
+
+### H5 - `TaskRegistry` needs an eviction rule, and `Task` should release its container
+
+From 4.1b: `tasks` is never pruned and `Task.container` is never cleared. Whatever policy is chosen -
+evict on completion, bounded LRU, explicit `forgetTask(id)` - the state to assert is that **a
+stopped task holds no container**. That invariant is checkable in one line and would have made the
+retention visible immediately rather than as heap growth much later.
+
+### H6 - `Task`'s observable state is publicly writable
+
+```ecstasy
+service Task(...) {
+    Boolean running;      // :139
+    Int?    result;       // :141
+    String? failure;      // :143
+    private Container? container;   // :151  - correctly private
+}
+```
+
+`container` is properly private; the other three are public and mutable, so anything holding a
+`Task` can assign them. They are outputs, not inputs. Making them `@RO` with private setters - the
+same shape `status.get()` already uses - states that they are computed by the task and observed by
+everyone else.
+
+### H7 - State that could be described but is not
+
+Two assertions worth adding because they are cheap and encode assumptions currently living in
+comments:
+
+- **`prepareModule` must yield a pool distinct from the compiler's.** The serialize/deserialize
+  round-trip exists to guarantee that; asserting `file.getConstantPool() != module.getConstantPool()`
+  documents the intent and catches a future "optimization" that skips the round-trip.
+- **A run's container must be a child of the native container it registered its console with.**
+  This branch's `OwnershipDiagnostics` already expresses this kind of check; the LSP path creates
+  containers in Ecstasy but registers resources in Java, which is exactly where the two can drift.
+
+## Part 5 - Porting cost, here and on master
+
+### 5.1 Into this branch
+
+Three real obstacles, all from this branch being *ahead* of master rather than behind:
+
+1. **This branch deleted the ambient pool.** `ConstantPool.withPool` / `getCurrentPool` were removed
+   here (E3); `XvmStructure.java:416` records that "ownership is always a parameter". LSPAPI's
+   `MainContainer.invokeAsync` and the `compiler.Compiler` phases all use
+   `try (var _ = ConstantPool.withPool(...))`. Porting means rewriting those to pass ownership
+   explicitly - mechanical, and in the direction this branch already argues for.
+2. **`NestedContainer.createForHost` has to go**, along with `registerInjections`, replaced by the
+   runner-app path. That is a deletion, which is the good kind of change.
+3. **The `ErrorListener` work overlaps.** LSPAPI's `ErrorList` -> `ErrorListener` change in
+   `compiler.Compiler` is a subset of what this branch did; they converge, and this branch's version
+   is the more complete one.
+
+Nothing here is architecturally hard. The work is largely deleting this branch's run path.
+
+### 5.2 On a merged-LSPAPI master
+
+If LSPAPI lands and `XtcEngine` is rebuilt fresh on top of it, the shape is much simpler, because
+most of what `XtcEngine` currently does would be provided:
+
+- **compile** - wrap `LspSupport.compile`, or subclass `tool.Compiler` the same way `LspCompiler`
+  does. Keep this branch's per-call input repository and the `TeeErrorListener` fix (the missing
+  `branch()` override that caused the `lib_json` miscompile), neither of which LSPAPI has.
+- **run** - boot the runner app, post `runTask`, wrap `Control`.
+- **do not** reproduce `LspSupport`'s singleton. Take the connector-and-runner model, keep the
+  builder.
+- **contribute back** what LSPAPI leaves unimplemented: `run(...)` currently throws
+  `UnsupportedOperationException` for `rootDir`, `injections` and `customInjector`. This branch has
+  working per-run `String`/`String[]` injections and the ownership analysis behind them; on the new
+  model they belong in `TaskResourceProvider` on the Ecstasy side rather than in Java.
+
+The engine then becomes a thin, instance-based, builder-configured facade over their two APIs -
+which is what it should have been, and roughly a third of its current size.
+
+---
+
+## Summary
+
+**What it is**
+
+1. LSPAPI's single idea is to **move container creation from Java into a long-lived Ecstasy runner
+   app**, with `TaskRegistry`/`Task` as services so the language provides the serialization.
+2. It was impossible before because `MainContainer` had no way to be *called into* with a result, a
+   run could not be given its own console, and a run could not be given its own repository. One
+   change each fixes those.
+3. The old `manualTests/runner.x` created every container at once from one fiber with no lifecycle.
+   It was a fixture, not a design, and the startup races follow directly from that shape.
+4. **The compiler stays a containerless Java API** - deliberately, and the code is unambiguous.
+   Container zero is only for runs.
+
+**What it means for `XtcEngine`**
+
+5. It must drop `NestedContainer.createForHost` - which exists in neither master nor LSPAPI and is
+   this branch's own invention - boot the runner app, post `runTask`, and return a `Control`. It
+   should **not** adopt the singleton.
+6. Parallel *compiles* are safe in LSPAPI only because the per-compile clone is retained: the same
+   18% [T1](plans/parallel-compiler-plan.md) reclaims, and the reason every defect T4-T15 found was
+   invisible before.
+
+**What is not yet true**
+
+7. The class javadoc's thread-safety claim is **not met** (`LspSupport.java:52` against `:83-86`),
+   though it is **latent in the supported single-threaded scenario** - the unsynchronized fields are
+   read only by the calling thread.
+8. **The supported scenario has its own active defect:** `TaskRegistry.tasks` is never pruned and
+   `Task.container` is never cleared, so consecutive runs in a hot VM accumulate a task and a
+   container each, forever. Independently the same shape as
+   [T15](plans/parallel-compiler-plan.md) on this branch's compile side.
+9. Parallel *runs* are better founded than the old model but unproven; container creation still
+   touches the shared native plane, which `testPoolGrows` measures without solving.
+
+**Hardening, for a structured review**
+
+| | item | shape |
+| --- | --- | --- |
+| H1 | four config fields -> one immutable `Config` record behind a volatile | makes "half-configured" unrepresentable |
+| H2 | package-private constructor, non-final `instance`, static lock over instance state | the singleton is not enforced and the lock assumes it is |
+| H3 | `xExternalConsole.INSTANCE` mutable public static, written by a constructor, read cross-thread | the house pattern, newly load-bearing |
+| H4 | `addResourceSupplier` check-then-act on a concurrent map | `putIfAbsent` |
+| H5 | task/container eviction | assert a stopped task holds no container |
+| H6 | `Task.running`/`result`/`failure` publicly writable | `@RO` |
+| H7 | two cheap assertions encoding assumptions now living in comments | pool distinctness; container parentage |
