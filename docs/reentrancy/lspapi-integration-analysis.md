@@ -449,6 +449,31 @@ concurrency** - run one trivial module to completion at boot - which is the same
 
 Concrete, small, and mostly deletions of mutability. Ordered by value.
 
+### Corrections to the review comments already posted on 2026-08-28
+
+Six review threads were posted before this analysis existed. Re-checked against `2568d6be4`; the
+playbook carries the disposition, but two of them need recording here because they change what this
+document should claim.
+
+**Two were real and have since been fixed upstream**, so neither is a live finding:
+
+- `LOCK` was not `final` when commented; `LspSupport.java:69` is now
+  `private static final Object LOCK = new Object();`. Every mutual-exclusion argument in H2 and H13
+  below assumes the fixed form, which is correct as of `2568d6be4`.
+- `InterpreterControl` loaded `"org.ecstasy.runner"` while `runner.x:6` declares
+  `module runner.xtclang.org`. `InterpreterControl.java:50` now loads the declared name. This
+  document never assigned the mismatch an `H` number; it is recorded here only so it is not raised
+  again.
+
+**One was wrong and H13 retracts it.** The thread on `LspSupport.java:86` says `connector` "is the
+one field here with a genuine reason not to be final", conceding lazy initialization as grounds for
+mutability. H13 shows that is not so: a `final Lazy.Bound` field is lazy *and* final, which is why
+the static `LOCK` can then be deleted rather than bypassed. The same comment also asserts the field
+is safe because it is only read under `LOCK` - true (`ensureConnector` is `synchronized` at `:122`,
+and the only other use, `:480`, goes through it) but beside the point, because it misses the defect
+H1 records: `ensureConnector` is public and never calls `verifyConfigured`, so calling it before
+`configure` builds a connector on a null `cfgRepo` (`:125-126`). `LspTest` does exactly that.
+
 ### H1 - Collapse the four configuration fields into one immutable record
 
 ```java

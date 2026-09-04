@@ -37,7 +37,39 @@ Anything that is really a master defect does not belong in this PR at all.
 | "isn't that what the old runner did?" | [not what runner.x did](#no---this-is-not-what-the-old-runnerx-did) - no, it made Containers, never Connectors |
 | "when do we get concurrent runners?" | [which day and how](#we-want-concurrent-runners-some-day---which-day-and-how) - Axis A first; H19 and H21 are worth fixing for sequential runs anyway |
 | "should we just take your engine?" | [no](#what-to-say-if-asked-should-we-just-take-the-lazy-instance-engine-instead) - take their runner model, lift back four narrow things |
+| "didn't you already say this?" | [already open](#already-open-on-the-pr---deal-with-these-before-posting-anything-new) - yes, six threads from 2026-08-28; two are now fixed |
 | "is this a regression from what we had?" | almost never - most findings are pre-existing or unimplemented upstream; H19 and H21 are the exceptions, and both apply to their branch too |
+
+---
+
+## Already open on the PR - deal with these before posting anything new
+
+Six review threads from 2026-08-28 are still unresolved. Checked against `2568d6be4`; two of them
+have since been fixed upstream, one is superseded in a way that matters, and one anchors to the
+exact line H1 wants.
+
+| # | anchored at | state at `2568d6be4` | do |
+| --- | --- | --- | --- |
+| 1 | `ToolConnector.java:48` - `instance` not final | **still true** (`LspSupport.java:66`), but the file was renamed at `d3a1ba480`, so GitHub shows the thread outdated and it never appears next to the code | close; H2 re-posts it live, with the rationale |
+| 2 | `ToolConnector.java:51` - `LOCK` not final | **fixed** - `LspSupport.java:69` is now `private static final Object LOCK` | close as addressed |
+| 3 | `LspSupport.java:83` - the field block | **still true**, and this is exactly where H1 goes | **reply in this thread; do not open a second one** |
+| 4 | `LspSupport.java:86` - `connector` | its claim still holds (the field is touched only inside `ensureConnector`, which is `synchronized (LOCK)` at `:122`), but it concedes a point H13 retracts, and it misses the defect | close, superseded - see below |
+| 5 | `ToolConnector.java:95` - module name mismatch | **fixed** - `InterpreterControl.java:50` now loads `runner.xtclang.org`, matching `runner.x:6` | close as addressed |
+| 6 | `LspSupport.java:169` - `configured` read without `LOCK` | **still true** (the read is `:170`), but it names two unsynchronized reads where H1 names six | close, folded into H1 |
+
+**Thread 3 is the one to be careful with.** It already proposes the `record Config` + `volatile`
+shape that is step 4.1 of this playbook, and it has had no response since 2026-08-28. So that design
+is not a new suggestion to them - it is an unanswered one. Posting H1 as a fresh comment on the same
+line would read as repeating myself louder. Reply in the thread instead.
+
+**Thread 4 needs an explicit retraction, not a silent close.** It says `connector` "is the one field
+here with a genuine reason not to be final". H13 retracts that: a `final Lazy.Bound` field is lazy
+*and* final. It also missed what the analysis later found - `ensureConnector` is public and never
+calls `verifyConfigured`, so calling it before `configure` builds a connector on a null `cfgRepo`
+(`LspSupport.java:125-126`), which `LspTest` does. Leaving it standing tells them the field is fine
+as it is.
+
+Threads 3, 4 and 6 are all H1. After this, there should be **one** thread on that topic.
 
 ---
 
@@ -222,7 +254,7 @@ declaration. (Skip if the sub-branch above lands, which deletes the file.)
 | --- | --- | --- |
 | H4 | `NativeContainer.java:403` | `assert !containsKey` + `put` -> `putIfAbsent`; the map was made concurrent precisely because more than one thread reaches it |
 | H6 | `runner.x:139` | `running`/`result`/`failure` are outputs; make them `@RO` with private setters, as `status.get()` already is |
-| H2 (partial) | `LspSupport.java:59,66` | constructor `private`, `instance` `static final`. **Not** the singleton itself - see the frame |
+| H2 (partial) | `LspSupport.java:60,66` | constructor `private`, `instance` `static final`. The holder idiom's safe-publication guarantee is what `static final` buys; without it a reader can in principle observe a partially constructed instance, so this is not cosmetic. **Not** the singleton itself - see the frame |
 
 ---
 
