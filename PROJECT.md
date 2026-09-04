@@ -43,6 +43,7 @@ is not there needs no clearing): [parallel-compiler-plan.md](docs/reentrancy/pla
 | --- | --- |
 | [plans/parallel-compiler-plan.md](docs/reentrancy/plans/parallel-compiler-plan.md) | **Start here.** T1-T15: serving one prepared library to concurrent compiles. Every task carries what was measured, what was tried and rejected, and why. |
 | [engine-compile-divergence.md](docs/reentrancy/engine-compile-divergence.md) | The investigation log for the engine-vs-CLI miscompile, including the reductions that were rejected and the reason. |
+| [lspapi-review-playbook.md](docs/reentrancy/lspapi-review-playbook.md) | The running order for reviewing PR #545: what to comment and on which line, what to commit directly, what needs a sub-branch, and what is a master issue instead. |
 | [lspapi-integration-analysis.md](docs/reentrancy/lspapi-integration-analysis.md) | Analysis of `cpurdy/LSPAPI` (PR #545): what it proposes, why the old runner model was racy, what `XtcEngine` must become, and a hardening list for a structured review. Analysis only - nothing raised on the PR. |
 | [fixed-in-this-branch.md](docs/reentrancy/fixed-in-this-branch.md) | Fixes that landed here, with their red-on-master proof where one exists. |
 
