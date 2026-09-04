@@ -6,9 +6,16 @@ Findings are `H1`-`H21` in
 [lspapi-integration-analysis.md](lspapi-integration-analysis.md); this file only says **where each
 one goes** and **in what order**.
 
-**The disposition rule.** Commit directly only what is uncontroversial and self-contained. Anything
-that changes a design decision goes in a sub-branch so it can be accepted or rejected as a unit.
-Anything that is really a master defect does not belong in this PR at all.
+**The disposition rule.** Anything that changes a design decision goes in a sub-branch so it can be
+accepted or rejected as a unit. Anything that is really a master defect does not belong in this PR
+at all.
+
+**Revised 2026-09-04: "commit directly" is not available.** Gene has force-pushed `cpurdy/LSPAPI`
+five times since 31 Aug (08-31, 09-01, 09-02, 09-03 twice), so a commit of ours onto that branch
+would be silently dropped by the next one. The small, uncontroversial fixes instead accumulate on
+**`lagergren/lspapi-review-fixes`** (off `2568d6be4`), **one commit per finding**, so they can be
+cherry-picked individually or taken together. The design-changing units still get their own
+branches. Rows below that say "commit directly" mean "a commit on that branch".
 
 ---
 
