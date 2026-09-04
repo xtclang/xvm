@@ -227,6 +227,69 @@ declaration. (Skip if the sub-branch above lands, which deletes the file.)
 
 ---
 
+## If asked: "is two connectors in one JVM actually a use case, or is this theoretical?"
+
+### It is not theoretical - it is happening in this branch right now
+
+`XtcEngine.builder()` appears at **19 sites** across this branch's tests, no `forkEvery` is
+configured, so Gradle runs them all in **one** JVM. Multiple connectors, each with its own runtime
+and native container, coexist there on every build. That works here **only** because the 144 static
+`INSTANCE` templates are gone (E1); on master the second one would quietly overwrite the first's.
+
+### The use cases, concretely
+
+| use case | why one connector is not enough |
+| --- | --- |
+| **Testing** - the one in use today | Each test wants its own module path and its own clean plane. With a one-shot `configure`, the first test wins and every later one inherits its configuration. |
+| **A multi-root LSP workspace** | VS Code opens several roots; two projects can sit on different XDK versions. One connector means one module path per process, so the server must fork a process per root. |
+| **Two XDK versions side by side** | Anything comparing behaviour across versions - a migration tool, a bisect harness - needs both loaded at once. |
+| **Isolating untrusted code** | A playground or CI service wants a run's plane thrown away entirely, not just its container. |
+
+### What being unable to do it blocks
+
+For an LSP server: **one module path per JVM, permanently**. Multi-root support becomes
+process-per-root, with the memory and warm-up cost repeated. For tests: no independence, so the
+suite cannot check configuration behaviour at all - which is why nothing upstream tests
+`configure(...)` being called twice.
+
+### No - this is NOT what the old `runner.x` did
+
+Worth being precise, because it is easy to assume this is a regression. The old
+`manualTests/runner.x` creates `new Container(template, Lightweight, repository, injector)` - it
+never creates a `Connector`. The shape was **one connector, one container zero, N sibling child
+containers**, all on a single runtime and a single native plane.
+
+So two connectors has **never** existed. Nothing regressed; it is a capability that was never
+available, and the LSPAPI branch does not change that either way.
+
+### "We want concurrent runners some day" - which day, and how
+
+Two different axes, and conflating them is what makes this look harder than it is.
+
+**Axis A - concurrent RUNS within one connector.** This is what "concurrent runners" almost always
+means, and the runner model already supports it *structurally*: each `Task` is a service, and
+`TaskRegistry` serializes admission. What stands in the way is not architecture:
+
+1. **H19** - a run cannot be given a complete resource set of its own, so concurrent runs would
+   share or lack resources;
+2. **H21** - runs share container zero's op-info cache;
+3. **native-plane warm-up** - the first run still builds shared metadata that later runs read. This
+   branch hit exactly that on the compile side, where building root `Object` sweeps the whole pool
+   ([T8.1](plans/parallel-compiler-plan.md)); the answer there was to do the one-time destructive
+   work deliberately at startup rather than let it happen under concurrency.
+
+**Axis B - multiple connectors, i.e. multiple planes.** Needed only for multi-workspace and
+multi-version, and blocked by exactly one thing: **E1**. Nothing in the runner model prevents it.
+
+**Order: A first, B when there is a workspace that needs it.** A is a smaller, better-defined
+problem, it is what a hosted test runner or `xunit` actually wants, and its three blockers are all
+already written down. B is a bigger mechanical change (144 templates) whose only consumers today are
+tests - which this branch already serves, so there is no urgency.
+
+**What to do now, given "not yet":** nothing structural. Keep `TaskRegistry` and `Task` as services,
+which is already right, and close H19 and H21 - both of which are worth doing for *sequential* runs
+anyway. That leaves concurrency a configuration change rather than a redesign.
+
 ## What to say if asked "should we just take the lazy-instance engine instead?"
 
 No. Take the **runner model** - it is theirs and it is right: container creation belongs in Ecstasy,
