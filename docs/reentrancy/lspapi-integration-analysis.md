@@ -576,6 +576,44 @@ the right treatment.
 
 ### H5 - `TaskRegistry` needs an eviction rule, and `Task` should release its container
 
+**Is this a real bug? Yes - and here is what was verified rather than assumed.**
+
+Certain, from the code:
+
+1. `tasks` has exactly four references in the module: the declaration (`:94`), `tasks[id] = task`
+   (`:101`), `contains` (`:125`) and `get` (`:130`). **No removal anywhere.** One permanent entry per
+   `runTask`.
+2. `kill()` (`:182`) calls `container.kill()` and sets `running = False`; it does **not** clear
+   `container`. On normal completion `kill()` is never called at all, so even that path does not run.
+3. A Java `Container` holds `f_mapCompositions` (`Map<TypeConstant, ClassComposition>`,
+   `Container.java:743`) and `f_mapTemplatesByType` (`:748`), both populated lazily as it runs.
+
+Which gives the retained chain:
+
+```
+TaskRegistry (static service - lives as long as container zero, i.e. the JVM)
+  -> tasks -> Task -> Container
+      -> f_mapCompositions / f_mapTemplatesByType
+          -> TypeConstants -> ConstantPool -> FileStructure
+```
+
+**Not verified: the magnitude.** How many megabytes a finished `Container` actually pins has not
+been measured, and is not claimed. The unbounded *reference* retention is certain; the cost per run
+is not. That distinction matters here because getting it wrong in the other direction is exactly the
+error [T9](plans/parallel-compiler-plan.md) records - a short measurement turned into a confident
+generalisation that did not survive more compiles.
+
+**In fairness:** one of the branch's own commits is titled *"Add runner.x API (WIP)"*. This is a real
+defect in work-in-progress code, not a shipped bug, and it is easy to miss precisely because nothing
+fails until much later - the same reason T15 took a long soak to find on this branch's compile side.
+
+**Fixed on the way in.** `lib_runner` as lifted here adds `forgetTask(id)` for the caller to evict
+once it has collected result and failure, clears `container` when a run completes or is killed, and
+adds an idempotent `release()`. Eviction has to be explicit rather than automatic on completion,
+because the Java control flow polls `taskRunning` and only then reads `taskResult` and `taskFailure`
+- an id removed at completion would break the collection it exists to serve.
+
+
 From 4.1b: `tasks` is never pruned and `Task.container` is never cleared. Whatever policy is chosen -
 evict on completion, bounded LRU, explicit `forgetTask(id)` - the state to assert is that **a
 stopped task holds no container**. That invariant is checkable in one line and would have made the
