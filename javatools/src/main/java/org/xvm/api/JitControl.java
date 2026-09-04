@@ -30,6 +30,11 @@ class JitControl
     }
 
     @Override
+    public void join() {
+        throw unsupported();
+    }
+
+    @Override
     public Instant whenStarted() {
         throw unsupported();
     }

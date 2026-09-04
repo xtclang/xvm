@@ -158,20 +158,13 @@ public class LspTest {
         }
     }
 
-    private static void await(Control control, String moduleName) throws Exception {
+    private static void await(Control control, String moduleName) {
         Instant started = control.whenStarted();
         if (started == null) {
             throw new IllegalStateException("run of " + moduleName + " has no start time");
         }
 
-        long timeout = System.currentTimeMillis() + 10_000;
-        while (control.running() && System.currentTimeMillis() < timeout) {
-            Thread.sleep(10);
-        }
-        if (control.running()) {
-            control.kill();
-            throw new IllegalStateException("run of " + moduleName + " did not finish");
-        }
+        control.join();
 
         Instant stopped = control.whenStopped();
         if (stopped == null || stopped.isBefore(started)) {
