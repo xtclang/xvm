@@ -3529,6 +3529,26 @@ signature; B is mechanical once A has settled which methods are even required.
 
 ## E38 - Give the console its sink instead of hard-wiring it to the terminal
 
+**IMPLEMENTED 2026-09-04** on `lagergren/console-sink` (off `origin/master` `443770bcc`), commit
+`456664d`, together with the row 46 fix. Verified rather than asserted: built the patched XDK, built
+stock master, ran the same compiled module through both, and `cmp` on the captured output says the
+two are **byte-for-byte identical** (21 bytes, mixed `print`/`print(suppressNewline)`/empty-string
+paths). Not pushed.
+
+**Shape.** The sink moves onto the handle - `ConsoleHandle` carries its `PrintWriter`;
+`ensureConsole(Frame, ObjectHandle)` binds the terminal writer and caches as before, and a new
+`ensureConsole(PrintWriter)` binds anything else and does not cache. The two static
+`PRINT`/`PRINTLN` continuations become one `print(frame, hConsole, fNewline)` helper reading the
+sink off the target handle, at the cost of one lambda allocation on the deferred (`R_CALL`) path
+where there used to be a shared static.
+
+**`CONSOLE_OUT` stays.** `DebugConsole` writes to it at `:232`, `:302`, `:2133`. What is removed is
+the console template's *dependence* on it, not the field. Note that `DebugConsole` is itself
+`public static final ... INSTANCE` with static `LINE_READER`/`READER` and reads commands at `:315`/
+`:324`, so redirecting a debugger session needs an input channel too - that is E1's problem, not
+this one's.
+
+
 **What.** `xTerminalConsole` writes to `CONSOLE_OUT`, a `public static final PrintWriter` built once
 from `System.console()`. There is no per-instance sink, so a module's output can only ever go to the
 terminal.

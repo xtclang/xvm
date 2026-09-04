@@ -3462,6 +3462,13 @@ occurrences in 12 iterations to 1 in 20.
 
 ## 46. `ConsoleLog` is a shared unsynchronized ring buffer, written on every console print
 
+**FIXED 2026-09-04** on `lagergren/console-sink` (off `origin/master`), commit `456664d`, alongside
+E38. Two parts, because the correction below says it is two problems: `ConsoleLog`'s four public
+methods are now `synchronized` (the write/read race is real regardless of ownership), and only the
+**terminal** console handle feeds the buffer, so redirected per-run output stays out of the
+scrollback the debugger renders. Not pushed.
+
+
 **Issue title:** `xTerminalConsole.CONSOLE_LOG` is a JVM-wide `ConsoleLog` with no synchronization
 of any kind, mutated on every `Console.print` from any service.
 
