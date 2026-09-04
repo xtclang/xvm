@@ -5,6 +5,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 
+import java.lang.ref.Cleaner;
+
 import java.time.Instant;
 
 import java.util.concurrent.CompletableFuture;
@@ -22,6 +24,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
+import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template.xNullable;
@@ -94,6 +97,8 @@ class InterpreterControl
 
             ObjectHandle hTaskId = postRequest("registerTask", hModule, hRepository, hConsoleId).join();
             taskId = ((JavaLong) hTaskId).getValue();
+
+            CLEANER.register(this, new TaskCleanup(connector, module.getSimpleName(), taskId));
 
             postRequest("startTask", hTaskId).whenComplete((r, e) -> {
                 if (e == null) {
@@ -171,6 +176,18 @@ class InterpreterControl
         }
     }
 
+    /**
+     * A task's that deletes a task's file-system root after its Control becomes phantom reachable.
+     */
+    private record TaskCleanup(InterpreterConnector connector, String moduleName, long taskId)
+            implements Runnable {
+        @Override
+        public void run() {
+            connector.getMainContainer().invokeAsync("deleteTaskDirectory",
+                    xInt64.makeHandle(taskId), xString.makeHandle(moduleName)).join();
+        }
+    }
+
     @Override
     public boolean running() {
         return running;
@@ -210,4 +227,6 @@ class InterpreterControl
     private volatile Long    result;
     private          long    taskId;
     private          Long    consoleId;
+
+    private static final Cleaner CLEANER = Cleaner.create();
 }

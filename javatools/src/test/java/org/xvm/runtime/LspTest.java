@@ -52,6 +52,7 @@ public class LspTest {
 
         testCompile();
         testRun();
+        testFileSystem();
         testRunException();
         testRunLatency();
         testPoolGrows();
@@ -90,6 +91,38 @@ public class LspTest {
         if (!bytes.toString().contains("hello from Hello")) {
             throw new IllegalStateException("run of Hello produced unexpected output: " + bytes);
         }
+    }
+
+    private static void testFileSystem() throws Exception {
+        ErrorList errs = new ErrorList(25);
+        ModuleStructure module = LspSupport.instance().compile("""
+                module FileSystemTest {
+                    void run() {
+                        @Inject FileStore storage;
+                        @Inject Directory rootDir;
+                        @Inject Directory curDir;
+                        @Inject Directory tmpDir;
+
+                        assert rootDir.path == storage.root.path;
+                        assert curDir.path  == storage.root.path;
+                        assert tmpDir.name == ".temp";
+
+                        rootDir.fileFor("root.txt").ensure();
+                        tmpDir.fileFor("temporary.txt").ensure();
+                    }
+                }
+                """, repo(), errs);
+        if (module == null || errs.hasSeriousErrors()) {
+            throw new IllegalStateException(
+                    "compile of FileSystemTest failed: " + errs.getErrors());
+        }
+
+        Control control = LspSupport.instance().run(module, null, null, null, errs);
+        if (control == null || errs.hasSeriousErrors()) {
+            throw new IllegalStateException(
+                    "run of FileSystemTest failed to start: " + errs.getErrors());
+        }
+        await(control, "FileSystemTest");
     }
 
     // ----- a failed run reports its exception through the supplied console ----------------------
