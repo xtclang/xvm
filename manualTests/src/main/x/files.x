@@ -105,7 +105,7 @@ module TestFiles {
                                 );
                 return False;
             }
-        };
+        }.makeImmutable();
 
         File file = tmpDir.fileFor("test.dat");
 
