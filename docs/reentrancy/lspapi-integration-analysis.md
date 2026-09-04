@@ -701,6 +701,140 @@ which is the state that made `taskId`'s safe publication depend on an unstated o
 but there it is forced by the inherited `int process()` protocol, which has nowhere to return a
 module. Worth a comment rather than a refactor.
 
+#### The diff
+
+```diff
+--- a/javatools/src/main/java/org/xvm/api/InterpreterControl.java
++++ b/javatools/src/main/java/org/xvm/api/InterpreterControl.java
+@@ -55,17 +55,29 @@
+     /**
+      * Create and start a control for the specified module.
+      */
+     static LspSupport.Control create(Connector connector, ModuleStructure module,
+                                      ModuleRepository repository, PrintStream console,
+                                      ErrorListener errs) {
+         if (!(connector instanceof InterpreterConnector interpreter)) {
+             throw new IllegalArgumentException("An InterpreterConnector is required");
+         }
+-        return new InterpreterControl(interpreter, module, repository, console, errs).start();
++
++        // Do the starting work HERE, then hand the constructor finished values, so the object has
++        // no "constructed but not yet valid" state and its identity fields can all be final.
++        Long consoleId = console == null
++                ? null
++                : xExternalConsole.register(interpreter.getNativeContainer(), console);
++        long taskId;
++        try {
++            taskId = postRunTask(interpreter, module, repository, consoleId);
++        } catch (RuntimeException e) {
++            unregisterConsole(interpreter, consoleId);
++            throw e;
++        }
++
++        var control = new InterpreterControl(
++                interpreter, module, console, errs, Instant.now(), taskId, consoleId);
++        control.watch();
++        return control;
+     }
+ 
+-    private InterpreterControl(InterpreterConnector connector, ModuleStructure module,
+-                               ModuleRepository repository, PrintStream console,
+-                               ErrorListener errs) {
+-        this.connector  = connector;
+-        this.module     = module;
+-        this.repository = repository;
+-        this.console    = console;
+-        this.errs       = errs;
+-    }
+-
+-    private InterpreterControl start() {
+-        started = Instant.now();
+-        running = true;
+-
+-        try {
+-            FileStructure file = prepareModule();
+-            MainContainer main = connector.getMainContainer();
+-
+-            if (console != null) {
+-                consoleId = xExternalConsole.register(connector.getNativeContainer(), console);
+-            }
+-
+-            ObjectHandle hModule     = xRTModuleTemplate.makeHandle(main, file.getModule());
+-            ObjectHandle hRepository = xCoreRepository.INSTANCE.makeHandle(repository);
+-            ObjectHandle hConsoleId  = consoleId == null
+-                    ? xNullable.NULL
+-                    : xInt64.makeHandle(consoleId);
+-            ObjectHandle hTaskId = postRequest("runTask", hModule, hRepository, hConsoleId).join();
+-            taskId = ((JavaLong) hTaskId).getValue();
+-        } catch (RuntimeException e) {
+-            stopped = Instant.now();
+-            running = false;
+-            unregisterConsole();
+-            throw e;
+-        }
+-
+-        watch();
+-        return this;
+-    }
++    private InterpreterControl(InterpreterConnector connector, ModuleStructure module,
++                               PrintStream console, ErrorListener errs,
++                               Instant started, long taskId, Long consoleId) {
++        this.connector = connector;
++        this.module    = module;
++        this.console   = console;
++        this.errs      = errs;
++        this.started   = started;
++        this.taskId    = taskId;
++        this.consoleId = consoleId;
++    }
++
++    /**
++     * Prepare the module and post the run request. Static: it runs before any control exists.
++     */
++    private static long postRunTask(InterpreterConnector connector, ModuleStructure module,
++                                    ModuleRepository repository, Long consoleId) {
++        FileStructure file = prepareModule(connector, module, repository);
++        MainContainer main = connector.getMainContainer();
++
++        ObjectHandle hModule     = xRTModuleTemplate.makeHandle(main, file.getModule());
++        ObjectHandle hRepository = xCoreRepository.INSTANCE.makeHandle(repository);
++        ObjectHandle hConsoleId  = consoleId == null
++                ? xNullable.NULL
++                : xInt64.makeHandle(consoleId);
++        ObjectHandle hTaskId = main.invokeAsync("runTask", hModule, hRepository, hConsoleId).join();
++        return ((JavaLong) hTaskId).getValue();
++    }
+@@ -240,11 +252,14 @@
+     private final InterpreterConnector connector;
+     private final ModuleStructure      module;
+-    private final ModuleRepository     repository;
+     private final PrintStream          console;
+     private final ErrorListener        errs;
++    private final Instant              started;
++    private final long                 taskId;
++    private final Long                 consoleId;
+ 
+-    private volatile boolean running;
+-    private volatile Instant started;
++    private volatile boolean running = true;
+     private volatile Instant stopped;
+     private volatile Long    result;
+-    private          long    taskId;
+-    private          Long    consoleId;
+```
+
+`prepareModule` and `unregisterConsole` become static helpers taking what they need; `repository`
+stops being a field because only `prepareModule` used it. Three consequences beyond finality:
+
+- **no half-built object can escape.** The old failure path set `stopped`/`running` on a
+  partially-initialized `this` and rethrew, so a `Control` could in principle be observed in a state
+  that never ran. Now the failure happens before the object exists.
+- **`consoleId` stops being nulled.** `unregisterConsole()` currently writes `this.consoleId = null`
+  as its idempotence guard; with a final field, idempotence moves to a `volatile boolean
+  consoleReleased`, which says what it means.
+- **`taskId`'s safe publication stops depending on the `watch()` submission ordering** (see 4.1),
+  because a final field written in the constructor is safely published by the JMM.
+
 ### H13 - `Lazy` is already in the tree, unused, and this is exactly what it is for
 
 `javatools_utils/.../util/Lazy.java` is present and tracked on their branch - it came in with the
@@ -742,6 +876,57 @@ and that single change:
 `ofBound` rather than `of` is deliberate: `Lazy.of(this::createConnector)` in a field initializer
 captures `this` before construction finishes, which is a constructor this-escape. `Lazy.Bound` takes
 the owner as a parameter at `get(this)` time and avoids it.
+
+#### It is NOT a drop-in, and the differences matter
+
+Checked against `Lazy`'s implementation rather than assumed:
+
+| behaviour | their `ensureConnector` | `Lazy` | same? |
+| --- | --- | --- | --- |
+| supplier runs at most once | yes | yes - `ThreadSafeLazy.get` double-checks under `synchronized (this)` | **yes** |
+| supplier throws | `connector` stays null, next call retries | `valueRef` stays `UNSET` and the supplier is not cleared, next call retries | **yes** |
+| value publication | non-final field written under a lock, read under the same lock | `AtomicReference` / `VarHandle.getVolatile` | **yes, and stronger** |
+| mutual exclusion scope | a **static** `LOCK`, shared by every instance | `synchronized (this)` on the holder, i.e. **per instance** | **NO** |
+| serialized against `configure(...)` | yes - `configure` takes the same static `LOCK` | no - different monitors | **NO** |
+
+The last two are why this cannot be applied on its own. Today `configure(...)` and
+`ensureConnector()` are mutually exclusive because they share `LOCK`, so a thread cannot be reading
+`cfgRepo` to build a connector while another thread is writing it. `Lazy` would remove that.
+
+It is worth being precise about how much that protection is actually worth: it is **incidental, not
+designed**. The lock narrows the window but does not establish the precondition - a thread that
+takes the lock first still builds a connector on a null `cfgRepo`, which is H3b. So the current code
+is not correct either; it is merely less likely to be observed failing.
+
+**The three changes only work together:**
+
+1. **H1** makes configuration one immutable `Config` behind a volatile, so reading it is atomic and
+   needs no lock;
+2. **H3b** makes the connector's supplier *assert* it, so the precondition is stated instead of
+   assumed:
+   ```java
+   private Connector createConnector() {
+       Config cfg = config;      // one volatile read
+       if (cfg == null) {
+           throw new IllegalStateException("configure(...) must be called before ensureConnector()");
+       }
+       return useJit() ? JitControl.createConnector(cfg.repo())
+                       : InterpreterControl.createConnector(cfg.repo());
+   }
+   ```
+3. **H13** then holds it in a final `Lazy` field, and the static `LOCK` can be deleted rather than
+   merely bypassed.
+
+Applied in that order the result is strictly stronger than today. Applied alone, H13 trades a real
+(if incidental) serialization for none.
+
+#### Other `Lazy` candidates in the new code: none
+
+Scanned, so the answer is not a shrug. Within what LSPAPI adds, `connector` is the only clean
+lazy-initialization: `xExternalConsole.INSTANCE` is constructor-assigned rather than lazy (H3),
+`InterpreterControl` holds no deferred state once H12 lands, and `LspCompiler` is short-lived.
+`verifyConfigured`'s `XDK_HOME` fallback is *shaped* like a lazy default, but it belongs in H1's
+explicit configuration rather than behind another holder.
 
 Two adjacent populations, for scope rather than for this review: `NativeContainer` - a file LSPAPI
 already touches - has cache-if-null getters at `:421`, `:456`, `:470`, `:484` and more, and
