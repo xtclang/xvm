@@ -1381,6 +1381,25 @@ executing that same op can be served run 1's answer. That is the shape of
 from one request - which took a long time to find on the compile side precisely because it fails far
 from its cause.
 
+**Does this break only here, or upstream too? Upstream too.** The cache is not this branch's
+invention: `ServiceContext.java:2186` in `cpurdy/LSPAPI` reads
+
+```java
+private final Map<Op, EnumMap> f_mapOpInfo = new WeakHashMap<>();
+```
+
+and their design routes **every** run through the one container zero's main context via
+`invokeAsync`. So the same ops cache across the same runs there. The three tests that surface this
+(`RepeatedRunSweepTest`, `PerRunInjectionTest`, `InjectedResourceOwnershipTest`) are all **this
+branch's** - none exists upstream, where the only test is `LspTest` - so nothing there looks for it.
+**These tests are detecting their defects, not being broken by them.**
+
+The same is true of per-run injections: `LspSupport.java:475` throws
+`UnsupportedOperationException` for `rootDir`, `injections` and `customInjector`, so that capability
+is absent upstream as well. `PerRunInjectionTest` failing here is not a regression this branch
+introduced by adopting the runner model - it is that model's unimplemented feature, made visible by
+a test that exists only here.
+
 **Not investigated further here**, and deliberately not papered over: `RepeatedRunSweepTest` is left
 failing rather than relaxed, because it is reporting a genuine cross-run reference that the runner
 model introduces and the previous model did not have. What it needs is a decision about whether
