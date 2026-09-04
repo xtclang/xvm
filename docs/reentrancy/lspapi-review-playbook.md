@@ -245,7 +245,25 @@ before `configure` must fail with a clear message rather than an NPE later.
 
 ---
 
-### 5. H17 + H14 + H16 + H3 - the console (ONE sub-branch)
+### 5. H17 + H14 + H16 + H3 - POSTED 2026-09-04, scope changed
+
+https://github.com/xtclang/xvm/pull/545#discussion_r3933846869 - and the rename landed as
+`045404b` on `lagergren/lspapi-review-fixes` (full `xdk:installDist` green).
+
+**The consolidation did NOT go on a branch off their head, deliberately.** It changes
+`xTerminalConsole`, which is master's code, and `CONSOLE_OUT` cannot simply be deleted:
+`DebugConsole` writes to it at `:232`, `:302` and `:2133`, and a terminal debugger writing to
+the terminal is correct. What changes is the console template's *dependence* on the static, not
+its existence - which makes this **E38, off `origin/master`**, not a rejection of two files in
+their PR.
+
+**One claim in the wording below was wrong and was measured before posting.** `println` does not
+universally depend on auto-flush: over an *unbuffered* sink it delivers with no flush. Over a
+**buffered** sink it is stark - 0 bytes until a flush, versus arriving immediately with
+`autoFlush=true`. `LspTest` passes a `ByteArrayOutputStream`, unbuffered, which is why nothing
+has hit it. The posted comment carries the measured version.
+
+#### the plan as written
 
 **Comment on** `javatools/src/main/java/org/xvm/runtime/template/_native/io/xExternalConsole.java:31`
 
