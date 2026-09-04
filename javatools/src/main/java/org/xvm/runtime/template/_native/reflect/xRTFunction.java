@@ -58,7 +58,8 @@ public class xRTFunction
     public void initNative() {
         ConstantPool pool = f_container.getConstantPool();
 
-        TO_ARRAY = getStructure().findMethod("toArray", 1);
+        TO_ARRAY     = getStructure().findMethod("toArray", 1);
+        NATIVE_NO_OP = new NativeFunctionHandle((_, _, _) -> Op.R_NEXT);
 
         FUNCTION_ARRAY_TYPE  = pool.ensureArrayType(pool.typeFunction());
         EMPTY_FUNCTION_ARRAY = pool.ensureArrayConstant(FUNCTION_ARRAY_TYPE, Constant.NO_CONSTS);
@@ -1503,7 +1504,9 @@ public class xRTFunction
         return frame.f_context.f_container.resolveClass(typeArray);
     }
 
-    // ----- data members --------------------------------------------------------------------------
+    // ----- constants -----------------------------------------------------------------------------
+
+    public static FunctionHandle NATIVE_NO_OP;
 
     private static TypeConstant  FUNCTION_ARRAY_TYPE;
     private static ArrayConstant EMPTY_FUNCTION_ARRAY;

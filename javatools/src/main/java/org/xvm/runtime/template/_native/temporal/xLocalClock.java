@@ -27,6 +27,7 @@ import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.xInt64;
 
+import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
@@ -120,6 +121,11 @@ public class xLocalClock
      */
     private int invokeSchedule(Frame frame, long ldtWakeup, long cDelay,
                                FunctionHandle hAlarm, BooleanHandle hKeepAlive, int iReturn) {
+        if (cDelay == 0) {
+            frame.f_context.callLater(hAlarm, Utils.OBJECTS_NONE);
+            return frame.assignValue(iReturn, xRTFunction.NATIVE_NO_OP);
+        }
+
         Alarm alarm = new Alarm(new WeakCallback(frame, hAlarm), ldtWakeup, hKeepAlive.get());
         try {
             TIMER.schedule(alarm.getTrigger(), cDelay);
