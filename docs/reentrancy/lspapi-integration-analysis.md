@@ -453,8 +453,35 @@ private String           cfgInjector;     // :85
 private Connector        connector;       // :86
 ```
 
-Four mutable fields describing **one** decision, so every reader has to observe a consistent
-combination of them and nothing enforces that. Replace with a single reference:
+**They are not four fields describing one thing - they are two different lifecycles in one
+block, and the code shows an intent the language does not honour.**
+
+The three configuration fields are written together, once, in `configure` (`:158-160`):
+
+```java
+cfgRepo     = coreRepo;
+cfgInjector = customInjector;
+configured  = true;        // deliberately LAST
+```
+
+Writing the flag last is the classic "publish only when the data is ready" ordering, so the intent
+is unmistakable. It buys nothing here: without `volatile` there is no happens-before for a reader
+that does not take `LOCK`, and the JMM permits a reader to see `configured == true` before either
+reference. **The design is visible in the code and unenforced by it, and it is written down
+nowhere** - no comment states that the flag guards the other two, which is why the six unsynchronized
+reads look reasonable at each individual site.
+
+`connector` is a different lifecycle entirely: written once, lazily, in `ensureConnector` (`:127`),
+long after configuration. Grouping it with the configuration fields hides that it is a derived
+resource rather than a setting - and that it *depends* on configuration being complete, since
+`ensureConnector` reads `cfgRepo` to build it.
+
+That dependency is unchecked. **`ensureConnector()` is `public` and does not call
+`verifyConfigured()`**, so calling it before `configure(...)` builds a connector on a null
+repository. `LspTest` calls it directly (`support.ensureConnector()`), so it is a real entry point,
+not a theoretical one.
+
+Replace with a single reference:
 
 ```java
 private record Config(ModuleRepository repo, String injector) {}
@@ -521,6 +548,12 @@ construction finishes. Better: have `register` take the template explicitly - th
 `NativeContainer` can resolve it - so the static is not on the path at all. This is the same
 mutable-static-`INSTANCE` class this branch has spent months removing, and the fix here is one field.
 
+### H3b - `ensureConnector()` is public and skips the precondition it depends on
+
+Covered under H1: it reads `cfgRepo` and is callable before anything sets it. Either call
+`verifyConfigured()` at the top, or make it non-public and let `getConstantPool()`/`run(...)` - which
+do check - be the entry points.
+
 ### H4 - `addResourceSupplier` is check-then-act on a concurrent map
 
 ```java
@@ -575,6 +608,69 @@ comments:
 - **A run's container must be a child of the native container it registered its console with.**
   This branch's `OwnershipDiagnostics` already expresses this kind of check; the LSP path creates
   containers in Ecstasy but registers resources in Java, which is exactly where the two can drift.
+
+### H8 - Every result crossing the Java/Ecstasy boundary is an unchecked downcast
+
+```java
+taskId = ((JavaLong) hTaskId).getValue();                          // InterpreterControl:96
+        : ((JavaLong) result).getValue());                         // :168
+        : ((StringHandle) result).getStringValue());               // :175
+```
+
+`MainContainer.invokeAsync` returns `CompletableFuture<ObjectHandle>`, so every caller casts to the
+shape it expects. If a runner method's signature ever changes, the failure is a
+`ClassCastException` inside the LSP control layer, blaming the caller rather than the Ecstasy method
+that returned the wrong thing.
+
+This is the `ObjectHandle`-as-calling-convention problem - **[E22](plans/master-enhancement-submissions.md)
+counts 1,439 such casts, about 50% of all casts in the tree** - and the new API adds to it rather
+than containing it. Contained cheaply: typed wrappers over `invokeAsync` (`invokeLong`,
+`invokeString`, `invokeBoolean`, or one `invokeAsync(String, Class<T>, ObjectHandle...)`), so the
+cast happens once, in one place, with a message naming the method and the type it actually returned.
+
+### H9 - `new Object[] {...}` at every diagnostic site - and this branch already fixed it
+
+Six sites in `LspSupport` build an array by hand to log a diagnostic:
+
+```java
+errs.log(ERROR, ERR_INTERNAL, new Object[] {e, "Compilation failed"}, null);
+```
+
+**This is not their fault: master's `ErrorListener` has no varargs `log` overload**, so the array is
+the only option. This branch added `log(Severity, String, XvmStructure, Object...)` and the
+`info`/`warn`/`error`/`fatal` aliases, which turn every one of those into
+`errs.error(ERR_INTERNAL, e, "Compilation failed")`. It is a small, self-contained contribution that
+would delete boilerplate from their branch rather than add to it.
+
+### H10 - Java polls every 25ms for something Ecstasy already knows
+
+```java
+private void watch() {
+    CompletableFuture.delayedExecutor(25, TimeUnit.MILLISECONDS).execute(() ->
+        taskRunning().whenComplete(...));      // re-arms itself until the task stops
+}
+```
+
+Each tick is a full service request into container zero, per running task, forever, on the common
+ForkJoinPool. But the Ecstasy side **already has the completion event** - `Task.start` does
+`&outcome.whenComplete((tuple, exception) -> ...)` (`runner.x:170`) and sets `running = False` right
+there.
+
+So the information exists and is being rediscovered by polling. A `waitForTask(id)` on the runner
+that returns only when the task finishes would let Java hold **one** future per run instead of
+40 requests per second per run, and would remove the JVM-wide pool from the design. The polling
+looks like a placeholder for a completion channel that was not built yet.
+
+### H11 - What is NOT a smell here, having checked
+
+Worth recording so a reviewer does not re-raise them:
+
+- **`SILENT_CONSOLE` as an anonymous class is correct.** `Console` declares four methods, so it is
+  not a functional interface and cannot be a lambda.
+- **`removeResourceSupplier`'s two-map update is deliberately tolerated**, and correctly - see H4.
+- **`xExternalConsole`'s `switch` on method name** is the established native-template dispatch
+  convention, not new code. ([E23](plans/master-enhancement-submissions.md) proposes replacing that
+  convention wholesale across 744 labels; it is not this branch's to fix.)
 
 ## Part 5 - Porting cost, here and on master
 
@@ -662,3 +758,7 @@ which is what it should have been, and roughly a third of its current size.
 | H5 | task/container eviction | assert a stopped task holds no container |
 | H6 | `Task.running`/`result`/`failure` publicly writable | `@RO` |
 | H7 | two cheap assertions encoding assumptions now living in comments | pool distinctness; container parentage |
+| H8 | every Java/Ecstasy result is an unchecked `ObjectHandle` downcast | typed `invokeAsync` wrappers; E22's 1,439-cast problem, extended |
+| H9 | `new Object[]{}` at six diagnostic sites | master lacks a varargs `log`; **this branch already added one** |
+| H10 | Java polls every 25ms for a completion Ecstasy already has | a `waitForTask(id)` future instead of 40 requests/sec/run |
+| H11 | what is NOT a smell, having checked | anonymous `Console`, the two-map update, native `switch` dispatch |
