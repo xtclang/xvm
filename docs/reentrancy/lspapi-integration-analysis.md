@@ -515,6 +515,39 @@ Three defects that only combine into correctness by convention:
 3. `LOCK` is **static** but guards **instance** fields - correct only while exactly one instance
    exists, which (1) and (2) do not guarantee.
 
+#### If it were not a singleton and two were run, would that break? YES - and here is what breaks
+
+This is the question that decides whether the singleton is a style choice or load-bearing. It is
+load-bearing, and the reason is not in `LspSupport` at all.
+
+`xExternalConsole.register(...)` is a **static** method that reads a **mutable static**:
+
+```java
+public static xExternalConsole INSTANCE;                       // :31
+public xExternalConsole(Container container, ...) { ... INSTANCE = this; }   // :37
+
+public static long register(NativeContainer container, PrintStream out) {
+    container.addResourceSupplier(
+            new InjectionKey(consoleName(id), INSTANCE.getCanonicalType()),   // :49
+            (frame, opts) -> INSTANCE.ensureConsole(frame, out));             // :50
+}
+```
+
+Two `LspSupport` instances mean two connectors, two `NativeContainer`s, and therefore **two
+`xExternalConsole` instances - the second overwrites `INSTANCE`**. From then on
+`register(containerA, out)` builds its injection key and its supplier from container **B**'s
+template, whose `f_container` is B, so the console's service context comes from the wrong container.
+
+And that is one instance of a class: **144 templates in master declare a mutable
+`public static X INSTANCE`**, versus **0** in this branch. So on master the runtime cannot host two
+independent connectors, and the singleton is the honest response to that - not laziness.
+
+**Which reframes the objection.** The singleton is a *symptom*. The defect is the template design,
+already filed as [E1](plans/master-enhancement-submissions.md), and this is new evidence for it: the
+static `INSTANCE` fields are what make an instance-based tool API impossible upstream. That this
+branch removed all 144 is precisely why `XtcEngine` *can* be instance-based - the campaign that
+started this branch is what buys the choice.
+
 #### Why do they want a singleton at all, and is there an alternative?
 
 Worth asking rather than just objecting. The defensible reasons:
@@ -546,7 +579,20 @@ The one thing the singleton offers that the builder does not is a *default* - "j
 `instance()`" - and that is a static convenience method over an instance, not a reason to make the
 type itself a singleton.
 
-**Plan:** take the connector-and-runner model, leave `LspSupport`'s singleton behind. If upstream
+**Plan for this branch, as best practice:** take the connector-and-runner model, leave
+`LspSupport`'s singleton behind. Concretely:
+
+1. `XtcEngine` stays **instance-based with a builder**; configuration is final at construction, so
+   there is no `configured` flag, no one-shot `configure`, and no half-configured state (H1 for
+   free);
+2. each engine owns **its own connector**, booted lazily so that compiling never requires a runtime;
+3. `close()` releases that engine's connector and nothing else - no process-global teardown;
+4. two engines with different module paths coexist, which is what the test suite already does;
+5. a host that wants one shared engine holds one, which is a caller's decision rather than the
+   type's.
+
+This is only safe **because** the static-`INSTANCE` templates are gone here. Any port of this shape
+to master has to take E1 first, or it will hit the `xExternalConsole` failure above. If upstream
 wants the convenience, `LspSupport.instance()` can remain as a thin default over an instance-based
 implementation, which is a strictly smaller commitment than the current one-shot `configure`.
 

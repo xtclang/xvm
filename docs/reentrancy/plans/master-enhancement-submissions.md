@@ -90,6 +90,7 @@ surface graduate into individual rows on the bug list.
 | E35 | Finish the listener: parallel gap, last 3 mutable fields, `withListener` | A-C one PR; D incremental; E one line | after E32/E34 | the parallel gap and the ambient default are one problem |
 | E36 | The debugger reads another thread's fiber state; the monitor meant to stop that is only entered at breakpoints | 1 record + 1 volatile + 3 reads | independent | analysis only - no reproduction; publish a snapshot instead |
 | E37 | `Assignable[]` as an API, and the mutual-recursion bridge that let a subclass overriding neither method loop forever | 38 usages, 11 override points; the bridge fix is separate and small | independent; do NOT ride it on PR #585 | the bridge cost a `StackOverflowError` in the compiler |
+| E38 | Module output cannot be redirected: `xTerminalConsole`'s sink is a static, so hosting a run forces a second console template | 1 instance field + a registration helper | independent | deletes the need for `xExternalConsole` |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -176,6 +177,16 @@ never done - the split alone turned master bug 36 into a compile error.
    it is.
 
 ## E1 — Owner-local instance caches (retire the static `INSTANCE`/`fInstance` role)
+
+> **New evidence (LSPAPI integration).** This is what stops the runtime hosting two independent
+> connectors in one JVM, and it is measurable: **144** templates in master declare a mutable
+> `public static X INSTANCE`, against **0** in `lagergren/lazy-instance`. The consequence is
+> concrete rather than theoretical - `xExternalConsole.register(...)` is a static method that reads
+> `INSTANCE` three times, so with two native containers the second container's construction
+> overwrites it and consoles registered against the first are built from the second's template.
+> That is why `LspSupport` is a singleton: given master's template design it very nearly has to be.
+> Retiring these statics is therefore not only tidiness - it is the precondition for an
+> instance-based tool API. See [lspapi-integration-analysis.md](../lspapi-integration-analysis.md).
 
 **What it is.** Templates cached their singleton behavior in **process-static**
 fields (`INSTANCE`, `fInstance` flags). One static instance per template is fine
@@ -3515,4 +3526,33 @@ do not fail builds.
 
 **Order:** A before B. A is small, fixes a real footgun, and does not touch the
 signature; B is mechanical once A has settled which methods are even required.
+
+## E38 - Give the console its sink instead of hard-wiring it to the terminal
+
+**What.** `xTerminalConsole` writes to `CONSOLE_OUT`, a `public static final PrintWriter` built once
+from `System.console()`. There is no per-instance sink, so a module's output can only ever go to the
+terminal.
+
+**Why it matters.** Any host that runs a module and wants its output - an LSP server, a test runner,
+`xunit` - has to invent a way around that. The `cpurdy/LSPAPI` branch invents one: a second native
+template (`xExternalConsole`), a second Ecstasy service declaration, a mutable public static, and
+dynamic named-resource registration on `NativeContainer`. That is a lot of machinery to answer
+"where does this console write".
+
+The result is that **one concern has two mechanisms** - the CLI's static writer and the host's
+per-run stream - in two different stream types, and neither can do the other's job.
+
+**The change.** Give the template an instance sink defaulting to `CONSOLE_OUT`, and route printing
+by the console HANDLE rather than by the static. The CLI is unaffected, because the default sink is
+the terminal. A host creates a console bound to its own writer.
+
+**Consequences:** `xExternalConsole` and its Ecstasy declaration stop being necessary; the surviving
+type is `PrintWriter`, which matches the `char[]` the runtime hands over and cannot silently swallow
+a write failure the way `PrintStream` does; and [row 46](master-issue-submissions.md)'s exposure
+narrows, because only the terminal console needs to feed the shared `ConsoleLog`.
+
+**Prototyped** in the `lagergren/lazy-instance` branch, where the engine's run path and the CLI share
+one console implementation.
+
+**Dependencies/order:** Independent. Pairs naturally with row 46.
 

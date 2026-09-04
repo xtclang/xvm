@@ -92,6 +92,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 43 | `Component.m_FVisited` is a recursion marker on shared state, so a peer's descent is reported as a contribution cycle | 1 field move + a `finally` | independent | its own javadoc says "Not thread-safe" |
 | 44 | `UnresolvedTypeConstant.compareDetails` dereferences an `m_constId` the codebase itself sets to null | 3-line guard | independent | plain unguarded NPE, not only a concurrency issue |
 | 45 | `FileStructure.writeTo` assumes one registration pass is a fixed point; the pool can grow mid-write | loop to a fixed point | independent | a malformed `.xtc` is the worst case |
+| 46 | `ConsoleLog` is a shared unsynchronized ring buffer written on every console print | 1 class; synchronize or replace | independent | zero `synchronized`/`volatile`/`Atomic` in the whole file |
 
 ### Filing a row as an issue or PR
 
@@ -3456,6 +3457,58 @@ surfacing as a bare CME.
 
 **Tests to add/run on master:** none yet. On the branch this took "pool grew during write" from 5
 occurrences in 12 iterations to 1 in 20.
+
+**Dependencies/order:** Independent.
+
+## 46. `ConsoleLog` is a shared unsynchronized ring buffer, written on every console print
+
+**Issue title:** `xTerminalConsole.CONSOLE_LOG` is a JVM-wide `ConsoleLog` with no synchronization
+of any kind, mutated on every `Console.print` from any service.
+
+**Status/category:** Real defect in current master source. Found while integrating the
+`cpurdy/LSPAPI` runner model, which makes concurrent printing routine rather than incidental.
+
+**Explanation:** every console print goes through one of two continuations in `xTerminalConsole`:
+
+```java
+CONSOLE_LOG.log(ach, false);   // PRINT
+CONSOLE_LOG.log(ach, true);    // PRINTLN
+```
+
+`CONSOLE_LOG` is `public static final ConsoleLog` - one instance for the JVM - and `ConsoleLog` is a
+fixed ring buffer with two cursors:
+
+```java
+private final String[] m_asLine = new String[1024];
+private int            m_cLines = 0;
+private int            m_iLine  = 0;
+```
+
+The file contains **zero** occurrences of `synchronized`, `volatile`, `Atomic` or any lock. Two
+threads printing concurrently interleave read-modify-write on `m_iLine` and `m_cLines`.
+
+**Master evidence:** `javatools_utils/src/main/java/org/xvm/util/ConsoleLog.java:190-192` (the
+state), the same file's total absence of synchronization, and
+`javatools/src/main/java/org/xvm/runtime/template/_native/io/xTerminalConsole.java` (the two
+continuations that call it on every print).
+
+**Failure mode:** lost log lines, one line's text stored under another's index, and
+`get(int)`/`render(int,int)` observing a torn buffer - potentially an
+`ArrayIndexOutOfBoundsException` when a cursor is read between the two updates. Nothing fails
+loudly, so the scrollback is silently wrong.
+
+**Reachability on master:** two services printing at the same time. Possible today and unusual;
+**routine** under any model that runs several modules concurrently, which is exactly what the LSPAPI
+runner is for. That is why this is worth fixing before that model lands rather than after.
+
+**Minimal master-portable fix strategy:** synchronize `log`, `size`, `get` and `render` on the
+instance, or replace the ring buffer with a concurrent structure. One class, no API change. A
+cheaper partial mitigation - used in this branch - is to feed `CONSOLE_LOG` only from the TERMINAL
+console, so redirected per-run output does not touch it at all; that narrows the exposure without
+fixing the buffer.
+
+**Tests to add/run on master:** none yet. The defect is by inspection - a shared mutable ring buffer
+with no synchronization - rather than by reproduction.
 
 **Dependencies/order:** Independent.
 
