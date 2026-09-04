@@ -12,7 +12,14 @@ time**, placing each fix where it belongs rather than doing them in bulk.
 - Working repo: `/Users/marcus/src/xtclang0`, branch `lagergren/lazy-instance`, worktree clean.
 - Their branch is checked out **read-only** at `../lspapi` (`cpurdy/LSPAPI` @ `2568d6be4`),
   currently **0 modified files**. Keep it that way unless I say otherwise.
-- `origin/master` is `036e42ffd`.
+- `origin/master` is `443770bcc` (as of 2026-09-04; the earlier `036e42ffd` was a stale local ref,
+  and is an ancestor of it). Re-check with `git fetch origin master` rather than trusting this line.
+- **PR #545 is Marcus's own draft PR whose head branch is `cpurdy/LSPAPI`** - opened as a review
+  vehicle because Cameron and Gene had not opened one. Head sha `2568d6be4`, 8 commits (3 Cameron,
+  5 Gene), `master...cpurdy/LSPAPI` is ahead 8 / behind 0. So commenting on #545 *is* commenting on
+  their branch, and the six review threads live there. Do not close #545 and open a replacement:
+  the threads do not travel, and H1 is meant to go as a reply into the one at `LspSupport.java:83`.
+  Edit the title and body in place instead.
 
 ## Read these first
 
