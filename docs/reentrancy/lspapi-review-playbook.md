@@ -12,6 +12,35 @@ Anything that is really a master defect does not belong in this PR at all.
 
 ---
 
+## Live index
+
+**Work through in this order:**
+
+| | topic | goes where |
+| --- | --- | --- |
+| [1](#1-h19---a-standard-xdk-module-cannot-run-blocking) | H19 - a CI module cannot run | sub-branch |
+| [2](#2-h21---container-zero-caches-op-info-across-runs-design-question) | H21 - op-info shared across runs | question first |
+| [3](#3-h5---the-task-registry-never-releases-anything) | H5 - registry never releases | **commit directly** |
+| [4](#4-h1--h3b--h13---the-configuration-state-one-sub-branch-in-this-order) | H1+H3b+H13 - configuration state | sub-branch |
+| [5](#5-h17--h14--h16--h3---the-console-one-sub-branch) | H17+H14+H16+H3 - the console | sub-branch |
+| [6](#6-h12---write-once-fields-small-sub-branch) | H12 - write-once fields | sub-branch |
+| [7](#7-mechanical---commit-directly-one-commit-each) | H4, H6, H2-partial | **commit directly** |
+| [8](#8-comment-only---not-this-prs-job) | H18, H8, H9, H20, H10, tests | comment only |
+| [9](#9-separate-master-issues---open-these-regardless-of-this-pr) | rows 46, E1, E38, 43-45 | master issues |
+
+**If they ask, jump to:**
+
+| question | section |
+| --- | --- |
+| "why is the singleton a problem?" | [the frame](#before-you-start-the-frame) - it is not; it is load-bearing, and E1 is the cause |
+| "do we ever need two connectors?" | [two connectors](#if-asked-is-two-connectors-in-one-jvm-actually-a-use-case-or-is-this-theoretical) - 19 sites in this branch's tests already do |
+| "isn't that what the old runner did?" | [not what runner.x did](#no---this-is-not-what-the-old-runnerx-did) - no, it made Containers, never Connectors |
+| "when do we get concurrent runners?" | [which day and how](#we-want-concurrent-runners-some-day---which-day-and-how) - Axis A first; H19 and H21 are worth fixing for sequential runs anyway |
+| "should we just take your engine?" | [no](#what-to-say-if-asked-should-we-just-take-the-lazy-instance-engine-instead) - take their runner model, lift back four narrow things |
+| "is this a regression from what we had?" | almost never - most findings are pre-existing or unimplemented upstream; H19 and H21 are the exceptions, and both apply to their branch too |
+
+---
+
 ## Before you start: the frame
 
 Lead with this, or the whole review reads as style nagging.
@@ -54,6 +83,12 @@ changes are left as a tidy-up.
 **Where the fix goes:** **sub-branch**. It is an API change to `runTask` plus a provider that
 fabricates a complete set per container. Do not attempt it inline.
 
+**If the conversation turns to concurrency here** - it will, because "a run needs its own resources"
+sounds like a parallelism question - go to
+[which day and how](#we-want-concurrent-runners-some-day---which-day-and-how). The short version is
+that this is worth fixing for **sequential** runs on its own merits, and fixing it happens to be one
+of the three things concurrency later needs.
+
 **Test to add:** run `TestFiles` through the runner. It is an existing module; if it passes, the gap
 is closed.
 
@@ -75,6 +110,10 @@ is closed.
 
 **Where the fix goes:** nowhere yet - **this is a question, not a patch**. Get an answer on whether
 op-info may be cached on a context that serves many requests before anyone writes code.
+
+**Same note as H19:** this is the second of the three blockers in
+[which day and how](#we-want-concurrent-runners-some-day---which-day-and-how), and it bites
+sequentially too - two runs in a row already share the cache.
 
 **Test to add (this branch has it):** `RepeatedRunSweepTest` - two runs on one engine, then sweep for
 cross-container references. It currently fails, which is the point.
