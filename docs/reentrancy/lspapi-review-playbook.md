@@ -273,7 +273,19 @@ declaration. (Skip if the sub-branch above lands, which deletes the file.)
 
 ---
 
-### 6. H12 - write-once fields (small sub-branch)
+### 6. H12 - POSTED 2026-09-04
+
+https://github.com/xtclang/xvm/pull/545#discussion_r3933798724 - branch
+`lagergren/lspapi-control-finality`, commit `980d1a5` (pushed, `:javatools:compileJava` clean).
+
+**Two things the analysis's diff did not predict.** `repository` stops being a field at all -
+it is only read while starting, so it becomes a parameter of a now-static `prepareModule`
+rather than lifetime state; the analysis expected it to become a final field. And
+`unregisterConsole` no longer needs to null `consoleId` for idempotency: with the failure path
+moved into the factory, its only caller is `finish`, which is synchronized and returns early
+once `running` is false. Seven final fields, not eight.
+
+#### the plan as written
 
 **Comment on** `InterpreterControl.java:65` - `new InterpreterControl(...).start()`
 
