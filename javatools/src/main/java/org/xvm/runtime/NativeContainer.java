@@ -449,11 +449,41 @@ public class NativeContainer
      * @param key       the injection key
      * @param supplier  the resource supplier
      */
-    private void addResourceSupplier(InjectionKey key, InjectionSupplier supplier) {
-        assert !f_mapResources.containsKey(key);
-
-        f_mapResources.put(key, supplier);
+    /**
+     * Register a native resource supplier.
+     *
+     * <p>Lifted from the LSPAPI branch, where registration became DYNAMIC: a resource is now added
+     * and removed while the runtime is live - one console per run - where before the set was fixed
+     * at boot. That is why the two maps are concurrent.
+     *
+     * <p><b>Adapted:</b> the original keeps {@code assert !containsKey(key)} followed by
+     * {@code put}, which is check-then-act on a map made concurrent precisely because more than one
+     * thread reaches it. {@code putIfAbsent} states and enforces the same invariant in one
+     * operation.
+     *
+     * @param key       the injection key
+     * @param supplier  the resource supplier
+     */
+    public void addResourceSupplier(InjectionKey key, InjectionSupplier supplier) {
+        InjectionSupplier supplierPrev = f_mapResources.putIfAbsent(key, supplier);
+        if (supplierPrev != null) {
+            throw new IllegalStateException("a resource is already registered for " + key);
+        }
         f_mapResourceNames.put(key.f_sName, key);
+    }
+
+    /**
+     * Remove a native resource supplier.
+     *
+     * <p>The two maps are updated separately, so a reader can briefly see a name that resolves to a
+     * key whose supplier is already gone. {@link #getInjectable} tolerates that by looking the
+     * supplier up and checking it, rather than assuming the name mapping implies one.
+     *
+     * @param key  the injection key
+     */
+    public void removeResourceSupplier(InjectionKey key) {
+        f_mapResourceNames.remove(key.f_sName, key);
+        f_mapResources.remove(key);
     }
 
     public ObjectHandle ensureOSStorage(Frame frame, ObjectHandle hOpts) {
@@ -762,8 +792,11 @@ public class NativeContainer
 
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts) {
-        InjectionKey key = f_mapResourceNames.get(sName);
-        if (key == null) {
+        // Look the supplier up HERE and test it, rather than testing only the name: a resource can
+        // be unregistered between the two lookups now that registration is dynamic.
+        InjectionKey      key      = f_mapResourceNames.get(sName);
+        InjectionSupplier supplier = key == null ? null : f_mapResources.get(key);
+        if (supplier == null) {
             // for "Nullable" types the NativeContainer can only supply a trivial result;
             // anything better than that must be done naturally by a container that hosts the
             // calling container
@@ -775,7 +808,7 @@ public class NativeContainer
         TypeConstant typeResource = key.f_type;
         return typeResource.equals(type) || typeResource.isEquivalent(type)
                     || typeResource.isEquivalent(type.removeNullable())
-                ? f_mapResources.get(key).supply(frame, hOpts)
+                ? supplier.supply(frame, hOpts)
                 : null;
     }
 
@@ -969,10 +1002,12 @@ public class NativeContainer
     /**
      * Map of resource names for a name based lookup.
      */
-    private final Map<String, InjectionKey> f_mapResourceNames = new HashMap<>();
+    private final ConcurrentMap<String, InjectionKey> f_mapResourceNames =
+            new ConcurrentHashMap<>();
 
     /**
      * Map of resources that are injectable from this container, keyed by their InjectionKey.
      */
-    private final Map<InjectionKey, InjectionSupplier> f_mapResources = new HashMap<>();
+    private final ConcurrentMap<InjectionKey, InjectionSupplier> f_mapResources =
+            new ConcurrentHashMap<>();
 }

@@ -63,7 +63,7 @@ public class xCoreRepository
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         switch (sPropName) {
         case "moduleNames": {
-            ModuleRepository repo     = f_container.getModuleRepository();
+            ModuleRepository repo     = ((CoreRepoHandle) hTarget).f_repository;
             Set<String>      setNames = repo.getModuleNames();
 
             ArrayHandle hArray = xString.makeArrayHandle(frame.container(),
@@ -80,7 +80,7 @@ public class xCoreRepository
         switch (method.getName()) {
         case "getModule": { // conditional ModuleTemplate getModule(String name, Version? version = Null)
             String           sName  = ((StringHandle) ahArg[0]).getStringValue();
-            ModuleRepository repo   = f_container.getModuleRepository();
+            ModuleRepository repo   = ((CoreRepoHandle) hTarget).f_repository;
             ModuleStructure  module = repo.loadModule(sName);
 
             if (module != null && !module.isMainModule()
@@ -116,13 +116,43 @@ public class xCoreRepository
         if (requireNonNull(container, "container") != f_container) {
             throw new IllegalArgumentException("Repository handle owner does not match template owner");
         }
-        return new CoreRepoHandle(requireNonNull(m_clzRepo, "m_clzRepo"));
+        return new CoreRepoHandle(requireNonNull(m_clzRepo, "m_clzRepo"),
+                container.getModuleRepository());
+    }
+
+    /**
+     * Create a handle over a SPECIFIC repository, rather than the template container's own.
+     *
+     * <p>Lifted from the LSPAPI branch. It is what lets a run be handed its own repository as an
+     * argument: their {@code runTask(template, repository, consoleId)} passes one of these into
+     * Ecstasy, where the container is created with it. Before this, the handle answered from
+     * {@code f_container.getModuleRepository()}, so every run necessarily saw the same repository as
+     * the container that made the handle.
+     *
+     * <p><b>Adapted:</b> this branch caches the container's own handle in a {@link Lazy.Bound} cell
+     * keyed to the owner, so this path deliberately does NOT use that cache - a per-request handle
+     * is not the owner's handle and must not displace it.
+     *
+     * @param repository  the repository the handle reads from
+     *
+     * @return a handle over that repository
+     */
+    public ObjectHandle makeHandle(ModuleRepository repository) {
+        return new CoreRepoHandle(requireNonNull(m_clzRepo, "m_clzRepo"),
+                requireNonNull(repository, "repository"));
     }
 
     public static class CoreRepoHandle
             extends ObjectHandle {
-        protected CoreRepoHandle(TypeComposition clazz) {
+        /**
+         * The repository this handle reads from. Final, and per handle: a request's repository must
+         * not leak into another request's handle.
+         */
+        protected final ModuleRepository f_repository;
+
+        protected CoreRepoHandle(TypeComposition clazz, ModuleRepository repository) {
             super(clazz);
+            f_repository = repository;
         }
     }
 

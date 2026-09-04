@@ -156,6 +156,41 @@ public class InterpreterConnector
         return nResult;
     }
 
+    /**
+     * @return the native container this connector booted
+     *
+     * <p>Lifted from the LSPAPI branch, where the control layer needs it to register a run's
+     * console as a named native resource.</p>
+     */
+    public NativeContainer getNativeContainer() {
+        return f_containerNative;
+    }
+
+    /**
+     * @return container zero, for posting requests into a long-lived hosted application
+     *
+     * <p>Lifted from the LSPAPI branch. <b>Adapted:</b> their {@code getMainContainer} guards only
+     * on {@code m_fStarted}, because in their usage container zero runs forever. This connector
+     * additionally CLEARS {@code m_containerMain} in {@link #join()} once a run completes, so the
+     * guard has to cover that too - otherwise a caller that joined a previous run gets a null and
+     * a NullPointerException somewhere else entirely.</p>
+     *
+     * @throws IllegalStateException if the connector has not been started, or its main container
+     *                               has already completed
+     */
+    public MainContainer getMainContainer() {
+        if (!m_fStarted) {
+            throw new IllegalStateException("the connector has not been started");
+        }
+
+        MainContainer container = m_containerMain;
+        if (container == null) {
+            throw new IllegalStateException(
+                    "the main container has completed; a hosted application must still be running");
+        }
+        return container;
+    }
+
     @Override
     public MainContainer diagnosticContainer() {
         return m_containerMain == null ? m_containerLast : m_containerMain;

@@ -198,6 +198,65 @@ public class MainContainer
     }
 
     /**
+     * Post an asynchronous request to a method on this container's module, and answer with its
+     * result.
+     *
+     * <p>Lifted from the LSPAPI branch, where it is the change that makes a resident host possible
+     * at all: {@link #invoke0} is fire-and-forget with no result, so a long-lived container zero
+     * could be started but never asked for anything. This posts through the main service context,
+     * so the call is an ordinary service request on that container's own fiber and the caller gets
+     * a future.
+     *
+     * <p><b>Adapted:</b> the original wraps its body in {@code ConstantPool.withPool(...)}. This
+     * branch deleted the ambient pool (see {@code XvmStructure}: "ownership is always a
+     * parameter"), and nothing in the body needs it - {@code findModuleMethod} and
+     * {@code resolveClass} work from {@code f_idModule}, and the frame supplies its own pool
+     * through {@code frame.poolContext()}.
+     *
+     * @param sMethodName  the method to invoke on the module
+     * @param ahArg        the arguments
+     *
+     * @return the future result; completes with null for a void method
+     *
+     * @throws IllegalArgumentException if the method does not exist, or returns more than one value
+     * @throws IllegalStateException    if the main service has terminated
+     */
+    public CompletableFuture<ObjectHandle> invokeAsync(String sMethodName, ObjectHandle... ahArg) {
+        MethodConstant idMethod = findModuleMethod(sMethodName, ahArg);
+        if (idMethod == null) {
+            throw new IllegalArgumentException("no such method \"" + sMethodName
+                    + "\" on " + f_idModule.getValueString());
+        }
+
+        TypeConstant      typeModule = f_idModule.getType();
+        TypeComposition   clzModule  = resolveClass(typeModule);
+        SignatureConstant sigMethod  = idMethod.getSignature();
+        CallChain         chain      = clzModule.getMethodCallChain(sigMethod);
+        int               cReturns   = sigMethod.getReturnCount();
+        if (cReturns > 1) {
+            throw new IllegalArgumentException("method returns more than one value: "
+                    + idMethod.getValueString());
+        }
+
+        FunctionHandle hFunction = new NativeFunctionHandle(this, (frame, ahRealArg, iReturn) -> {
+            SingletonConstant idModule =
+                    frame.poolContext().ensureSingletonConstConstant(f_idModule);
+            ObjectHandle hModule = frame.getConstHandle(idModule);
+            return Op.isDeferred(hModule)
+                    ? hModule.proceed(frame, frameCaller ->
+                            chain.invoke(frameCaller, frameCaller.popStack(), ahRealArg, iReturn))
+                    : chain.invoke(frame, hModule, ahRealArg, iReturn);
+        });
+
+        CompletableFuture<ObjectHandle> future =
+                m_contextMain.postRequest(null, hFunction, ahArg, cReturns);
+        if (future == null) {
+            throw new IllegalStateException("the main service has terminated");
+        }
+        return future;
+    }
+
+    /**
      * Invoke the specified entry point.
      */
     public void invoke0(String sMethodName, ObjectHandle... ahArg) {

@@ -1039,6 +1039,49 @@ which is what it should have been, and roughly a third of its current size.
 
 ---
 
+## Part 5b - Their tests: valid, but not tests
+
+`LspTest` (252 lines) is the only test the branch adds, and the first thing to say is that **it is
+not a test**:
+
+- **no JUnit.** No `import org.junit`, no `@Test`. Its entry point is `static void main(String[])`,
+  run by hand from a command line documented in its own javadoc - `--patch-module`, explicit
+  `-p` module path, two directory arguments.
+- **not referenced by any build file or CI workflow.** `grep` across `javatools/build.gradle.kts`,
+  `xdk/build.gradle.kts` and `.github/workflows/` finds nothing. It cannot run in CI, cannot gate a
+  merge, and will rot the first time an API it touches moves.
+- **it "asserts" by throwing `IllegalStateException`** - fourteen sites - which works for a
+  reproducer and gives no test report, no per-case isolation, and no continuation after the first
+  failure.
+
+That is a fair thing for a spike to be. It is stated here because *"the reproducers are working"*
+(the head commit message) is a weaker claim than it sounds: nothing re-checks it.
+
+**What the five cases do cover, and well:** compiling from a String including a deliberately broken
+module, running and capturing that run's own console, an application exception reaching the host,
+five sequential runs of one module in a hot JVM with timings, and shared-pool growth over twelve
+runs with distinct generic shapes. Those are the right scenarios; the intent is not in question.
+
+### What is missing, and why each matters
+
+| missing | why it matters |
+| --- | --- |
+| **Any automated test at all** | The single biggest gap. Everything below is secondary to `LspTest` not running. |
+| **An assertion in `testPoolGrows`** | It prints `ConstantPool size = N` twelve times and **never checks it**. It is an observation, not a test - so unbounded growth in the shared plane cannot fail the build. Compare [T15](plans/parallel-compiler-plan.md), where growth was only found because something measured it *against a threshold*. |
+| **Task/container accumulation** | [H5](#h5---taskregistry-needs-an-eviction-rule-and-task-should-release-its-container): `TaskRegistry.tasks` is never pruned and `Task.container` never cleared. In their headline scenario - consecutive runs in a hot VM - this grows once per run and nothing observes it. |
+| **Concurrency of any kind** | No parallel compiles, no parallel runs. The class javadoc claims the API "can be assumed to be thread-safe and concurrent" (4.1) and **not one test exercises more than one thread**. |
+| **`Control.kill()`** | Appears once, in `await`'s timeout path, so it only runs when a test is already failing. The normal kill path is unexercised. |
+| **The failure paths** | `ERR_NO_APP_MODULE`, `ERR_NO_APP_MODULE_VER`, `ERR_MISSING_MODULE` - none reached. `grep` finds no test for a missing or misnamed module, so the TC codes are untested. |
+| **Diagnostic isolation** | Two concurrent runs with distinct known errors, each `ErrorListener` receiving exactly its own. Directly analogous to this branch's T5. |
+| **Repeated `configure(...)`** | The one-shot semantics, including the `IllegalStateException` on a differing second call, are unexercised - and 4.1 shows that path is more fragile than it looks. |
+
+### What this branch should contribute
+
+`EngineParallelCompileTest` and `SharedLibraryIsolationTest` here already have the shape the first
+four of those need - a distribution over iterations rather than one bit, a thread-count and seed
+knob, and an invariant asserted directly rather than inferred. Porting that shape onto the runner
+API is a better contribution than porting more assertions into a `main`.
+
 ## Part 6 - The migration: what to lift, in what form, in what order
 
 Measured gap, not estimated. Every piece of the runner machinery is **absent** from this branch:
