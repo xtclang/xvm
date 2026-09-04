@@ -1039,6 +1039,106 @@ which is what it should have been, and roughly a third of its current size.
 
 ---
 
+## Part 6 - The migration: what to lift, in what form, in what order
+
+Measured gap, not estimated. Every piece of the runner machinery is **absent** from this branch:
+
+| piece | here |
+| --- | --- |
+| `lib_runner` (`runner.xtclang.org`) | absent |
+| `MainContainer.invokeAsync` | absent |
+| `InterpreterConnector.getMainContainer` / `getNativeContainer` | absent |
+| `xExternalConsole` | absent |
+| `xCoreRepository` per-handle repository | absent - still reads `f_container.getModuleRepository()` |
+| `NativeContainer` concurrent resource maps + add/remove | absent - still `HashMap`, registration private |
+
+That is good news: the set is well defined and nothing has to be reconciled with a local variant.
+`Connector` and `InterpreterConnector` already exist here unchanged; `XtcEngine` simply does not use
+them, booting `Runtime` + `NativeContainer` itself into a `RuntimePlane`.
+
+### Tier 1 - lift essentially verbatim
+
+No conflict with this branch's divergence; take them as they are.
+
+1. **`lib_runner`** - `runner.x`, `runnerClient.x`, its `build.gradle.kts`, and the `xdk`
+   settings/build wiring. Pure Ecstasy; nothing in this branch touches it.
+   **Apply H5 while lifting** - give `TaskRegistry` an eviction rule and have `Task` drop its
+   container when it stops - because this branch already knows (T15) what a long-lived owner without
+   a release rule costs, and lifting the leak knowingly would be silly.
+2. **`NativeContainer`**: resource maps to `ConcurrentHashMap`, `addResourceSupplier` /
+   `removeResourceSupplier` public, `getInjectable` re-reading the supplier with a null check.
+   **Apply H4** - `putIfAbsent` instead of `assert !containsKey` then `put`.
+3. **`xCoreRepository`** - carry the repository on `CoreRepoHandle` and add `makeHandle(repository)`.
+   Mechanical, and it is what lets a run be given its own repository.
+4. **`InterpreterConnector`** - the two accessors, and `invoke0` -> `invoke`.
+
+### Tier 2 - lift with one real adaptation
+
+5. **`MainContainer.invokeAsync`.** The only piece that genuinely conflicts. Their implementation
+   opens `try (var _ = ConstantPool.withPool(f_idModule.getConstantPool()))`, and **this branch
+   deleted the ambient pool** (E3; see `XvmStructure.java:416`, "ownership is always a parameter").
+   Lift the body - `findModuleMethod`, the `NativeFunctionHandle`, `postRequest` - and pass the pool
+   explicitly instead of installing it ambiently. This is a small rewrite in the direction this
+   branch already argues for, and it is the one place a naive copy would not compile.
+
+### Tier 3 - take the shape, write the code here
+
+6. **`xExternalConsole`** - lift the mechanism (named `console_<id>` resource, register/unregister),
+   but **apply H14**: take `org.xvm.tool.Console` or a `PrintWriter`, not a `PrintStream`. The class
+   it extends already uses `PrintWriter`, and `XtcEngine` has no `PrintStream` in its API to
+   preserve compatibility with. **Apply H3** too - do not add another mutable public static
+   `INSTANCE` to a branch that has spent months removing them.
+7. **`InterpreterControl` -> the engine's run handle.** Lift the flow exactly - `prepareModule`'s
+   serialize/deserialize round-trip, `runTask`, result collection - but build it as
+   [H12](#h12---write-once-state-that-is-not-final-and-the-refactor-that-fixes-it-without-work-in-a-constructor)
+   describes: the factory does the work, the constructor takes finished values, the fields are final.
+   **Prefer H10's `waitForTask` over the 25ms poll** if `lib_runner` is being modified anyway for H5 -
+   the completion is already in hand at `runner.x:170`, and adding one method there is cheaper than
+   inheriting a polling loop.
+8. **`Control`** - adopt the interface as the return type of `run(...)`, replacing
+   `CompletableFuture<ObjectHandle>`. `running` / `whenStarted` / `whenStopped` / `kill` / `result`
+   is strictly more than a bare future gives, and it is their vocabulary.
+   Drop `console()` until it returns something (H14's loose end).
+
+### Tier 4 - do NOT lift
+
+9. **`LspSupport` itself.** Take `compile`/`run`/`Control` as *shapes*; leave the singleton,
+   `configure`, the static `LOCK` and `verifyConfigured` behind. `XtcEngine`'s builder already
+   expresses configuration immutably at construction, which is what H1 and H2 are asking `LspSupport`
+   to become. Lifting it would import the exact defects this review lists.
+10. **Their `LspCompiler`.** This branch's compile path is ahead: the `TeeErrorListener.branch()`
+    fix (the missing budget propagation that caused the `lib_json` miscompile), the per-call input
+    repository, the inter-phase error checks. Keep them. What is worth taking is the *idea* of
+    subclassing `tool.Compiler` rather than reimplementing the pipeline - and the protected hooks
+    (`compile(List, ModuleRepository)`, `flushAndCheckErrors`) that make it possible.
+
+### What gets deleted here
+
+11. `NestedContainer.createForHost` - the API that exists in neither master nor LSPAPI.
+12. `XtcEngine.runFrom`'s container creation, and `registerInjections`.
+13. `RuntimePlane` - replaced by the connector, which owns both the runtime and the native container.
+
+### Where this branch's injections work goes
+
+`LspSupport.run` currently throws `UnsupportedOperationException` for `rootDir`, `injections` and
+`customInjector`. This branch has working per-run `String`/`String[]` injections. They cannot be
+lifted as-is, because on the new model the injector is chosen **in Ecstasy** -
+`TaskResourceProvider` already does exactly this for the console. The port is to extend
+`TaskResourceProvider` and pass the injection map through `runTask`, which is a contribution to
+`lib_runner` rather than to Java, and fills a hole they have explicitly left open.
+
+### Ordering, and the one judgement call
+
+Tier 1 first (mechanical, independently testable), then 5, then 6-8. `EngineSuiteCompileTest`
+guards the compile path throughout, since none of this touches it.
+
+**The judgement call is T1.** Their compile path clones per compile; this branch's T1 shares one
+prepared library and is worth ~38% sequentially, but [T15](plans/parallel-compiler-plan.md) has an
+unclosed retention leak. **Recommendation: default to their semantics** - cloning - and keep T1
+behind the existing opt-in until T15 is closed. A resident host that is 38% slower is strictly better
+than one that dies after ten thousand compiles, and this ordering also means the runner migration
+can be evaluated without T1's variables in the same measurement.
+
 ## Summary
 
 **What it is**
