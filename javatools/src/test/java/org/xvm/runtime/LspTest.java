@@ -100,10 +100,12 @@ public class LspTest {
                     void run() {
                         @Inject FileStore storage;
                         @Inject Directory rootDir;
+                        @Inject Directory homeDir;
                         @Inject Directory curDir;
                         @Inject Directory tmpDir;
 
                         assert rootDir.path == storage.root.path;
+                        assert homeDir.path == storage.root.path;
                         assert curDir.path  == storage.root.path;
                         assert tmpDir.name == ".temp";
 

@@ -144,7 +144,8 @@ module runner.xtclang.org {
          * immediately removed upon the task completion.
          */
         Int submitTask(String moduleName, ModuleRepository repository) {
-            Int id = registerTask(repository.getResolvedModule(moduleName), repository, Null, False);
+            Int id = registerTask(
+                    repository.getResolvedModule(moduleName), repository, Null, False);
             taskFor(id).start^();
             return id;
         }
@@ -357,6 +358,7 @@ module runner.xtclang.org {
                 return &store.maskAs(FileStore);
 
             case (Directory, "rootDir"):
+            case (Directory, "homeDir"):
             case (Directory, "curDir"):
                 Directory root = store.root;
                 return &root.maskAs(Directory);
