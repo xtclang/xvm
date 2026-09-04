@@ -227,16 +227,16 @@ module runner.xtclang.org {
             started = clock.now;
 
             BufferedConsole? bufferedConsole = Null;
-            ResourceProvider injector;
+            Console          taskConsole;
             if (Int consoleId ?= this.consoleId) {
                 @Inject(resourceName=$"console_{consoleId}") Console console;
-                injector = new TaskResourceProvider(id, template, console);
+                taskConsole = console;
             } else {
                 @Inject Console console;
                 bufferedConsole = new BufferedConsole($"{id}> ", console);
-                injector = new TaskResourceProvider(
-                        id, template, &bufferedConsole.maskAs(Console));
+                taskConsole = &bufferedConsole.maskAs(Console);
             }
+            ResourceProvider injector = new TaskResourceProvider(id, template, taskConsole);
 
             container = new Container(template, Lightweight, repository, injector);
             running   = True;
@@ -244,16 +244,16 @@ module runner.xtclang.org {
             @Future Tuple<Int, String> completion;
             @Future Tuple              outcome = container.as(Container).invoke("run", ());
             &outcome.whenComplete((tuple, exception) -> {
-                bufferedConsole?.flush();
-
                 Int    result  = 0;
                 String failure = "";
                 if (exception == Null) {
                     if (tuple != Null && !tuple.empty && tuple[0].is(Int)) {
                         result = tuple[0].as(Int);
                     }
+                    bufferedConsole?.flush();
                 } else {
                     failure = exception.toString();
+                    taskConsole.print($"Unhandled exception: {failure}");
                 }
 
                 running    = False;
@@ -326,13 +326,23 @@ module runner.xtclang.org {
 
         @Get("task{/id}")
         @Produces(Text)
-        String status(Int id) = TaskRegistry.taskStatus(id);
+        String status(Int id) {
+            try {
+                return TaskRegistry.taskStatus(id);
+            } catch (IllegalState e) {
+                return e.message;
+            }
+        }
 
         @Post("task{/id}/kill")
         @Produces(Text)
         String kill(Int id) {
-            TaskRegistry.killTask(id);
-            return TaskRegistry.taskStatus(id);
+            try {
+                TaskRegistry.killTask(id);
+                return TaskRegistry.taskStatus(id);
+            } catch (IllegalState e) {
+                return e.message;
+            }
         }
     }
 

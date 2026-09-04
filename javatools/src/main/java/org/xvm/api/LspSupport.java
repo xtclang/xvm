@@ -494,52 +494,27 @@ public class LspSupport {
     // ----- constants -----------------------------------------------------------------------------
 
     /**
-     * Informational only: App starting.
+     * "%1" - name of missing app module
+     * "%2" - version of missing app module
      */
-    public static final String INFO_STARTED               = "TC-01";
-    /**
-     * Informational only: App stopped.
-     */
-    public static final String INFO_STOPPED               = "TC-02";
+    public static final String ERR_NO_APP_MODULE        = "LSP-1";
     /**
      * "%1" - name of missing app module
      * "%2" - version of missing app module
      */
-    public static final String ERR_NO_APP_MODULE          = "TC-10";
-    /**
-     * "%1" - name of missing app module
-     * "%2" - version of missing app module
-     */
-    public static final String ERR_NO_APP_MODULE_VER      = "TC-11";
-    /**
-     * "%1" - name of app module
-     * "%2" - exception (may be null)
-     * "%3" - additional description (may be null)
-     */
-    public static final String ERR_BAD_APP_MODULE         = "TC-12";
-    /**
-     * "%1" - name of missing module
-     */
-    public static final String ERR_MISSING_MODULE         = "TC-13";
+    public static final String ERR_NO_APP_MODULE_VER    = "LSP-2";
     /**
      * "%1" - exception (may be null)
      * "%2" - additional description (may be null)
      */
-    public static final String ERR_CREATE_APP_CONTAINER   = "TC-14";
-    /**
-     * "%1" - name of injector module
-     * "%2" - name of injector class
-     * "%3" - exception (may be null)
-     * "%4" - additional description (may be null)
-     */
-    public static final String ERR_CREATE_CUSTOM_INJECTOR = "TC-15";
+    public static final String ERR_CREATE_APP_CONTAINER = "LSP-3";
     /**
      * "%1" - exception
      */
-    public static final String ERR_UNHANDLED_EXCEPTION    = "TC-16";
+    public static final String ERR_UNHANDLED_EXCEPTION  = "LSP-4";
     /**
      * "%1" - exception (may be null)
      * "%2" - additional description (may be null)
      */
-    public static final String ERR_INTERNAL               = "TC-99";
+    public static final String ERR_INTERNAL             = "LSP-5";
 }

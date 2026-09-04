@@ -154,9 +154,6 @@ class InterpreterControl
                 this.result = result;
             } else {
                 this.result = null;
-                if (console != null) {
-                    console.println("Unhandled exception: " + failure);
-                }
                 if (errs != null) {
                     errs.log(ERROR, ERR_UNHANDLED_EXCEPTION, new Object[] {failure}, module);
                 }
