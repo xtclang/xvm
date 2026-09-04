@@ -19,7 +19,7 @@ Anything that is really a master defect does not belong in this PR at all.
 | | topic | goes where |
 | --- | --- | --- |
 | [1](#1-h19---a-standard-xdk-module-cannot-run-blocking) | H19 - a CI module cannot run | sub-branch |
-| [2](#2-h21---container-zero-caches-op-info-across-runs-design-question) | H21 - op-info shared across runs | question first |
+| [2](#2-h21---container-zero-caches-op-info-across-runs-design-question) | ~~H21 - op-info shared across runs~~ **WITHDRAWN** | do not post |
 | [3](#3-h5---the-task-registry-never-releases-anything) | H5 - registry never releases | **commit directly** |
 | [4](#4-h1--h3b--h13---the-configuration-state-one-sub-branch-in-this-order) | H1+H3b+H13 - configuration state | sub-branch |
 | [5](#5-h17--h14--h16--h3---the-console-one-sub-branch) | H17+H14+H16+H3 - the console | sub-branch |
@@ -35,10 +35,10 @@ Anything that is really a master defect does not belong in this PR at all.
 | "why is the singleton a problem?" | [the frame](#before-you-start-the-frame) - it is not; it is load-bearing, and E1 is the cause |
 | "do we ever need two connectors?" | [two connectors](#if-asked-is-two-connectors-in-one-jvm-actually-a-use-case-or-is-this-theoretical) - 19 sites in this branch's tests already do |
 | "isn't that what the old runner did?" | [not what runner.x did](#no---this-is-not-what-the-old-runnerx-did) - no, it made Containers, never Connectors |
-| "when do we get concurrent runners?" | [which day and how](#we-want-concurrent-runners-some-day---which-day-and-how) - Axis A first; H19 and H21 are worth fixing for sequential runs anyway |
+| "when do we get concurrent runners?" | [which day and how](#we-want-concurrent-runners-some-day---which-day-and-how) - Axis A first; H19 is worth fixing for sequential runs anyway (H21 is withdrawn) |
 | "should we just take your engine?" | [no](#what-to-say-if-asked-should-we-just-take-the-lazy-instance-engine-instead) - take their runner model, lift back four narrow things |
 | "didn't you already say this?" | [already open](#already-open-on-the-pr---deal-with-these-before-posting-anything-new) - yes, six threads from 2026-08-28; two are now fixed |
-| "is this a regression from what we had?" | almost never - most findings are pre-existing or unimplemented upstream; H19 and H21 are the exceptions, and both apply to their branch too |
+| "is this a regression from what we had?" | almost never - most findings are pre-existing or unimplemented upstream; H19 is the exception, and it applies to their branch too |
 
 ---
 
@@ -79,9 +79,9 @@ Threads 3, 4 and 6 are all H1. After this, there should be **one** thread on tha
 
 Lead with this, or the whole review reads as style nagging.
 
-> Most of what follows is small. Two things are not: a standard XDK module cannot run under the
-> runner as written (H19), and every run shares container zero's op-info cache (H21). Both were
-> found by wiring `XtcEngine` to this branch and running existing tests against it - not by reading.
+> Most of what follows is small. One thing is not: a standard XDK module cannot run under the
+> runner as written (H19). It was found by wiring `XtcEngine` to this branch and running existing
+> tests against it - not by reading.
 
 And say this early, because it changes the tone of everything about `LspSupport`:
 
@@ -136,29 +136,31 @@ is closed.
 
 ---
 
-### 2. H21 - container zero caches op-info across runs (DESIGN QUESTION)
+### 2. H21 - WITHDRAWN, do not post
 
-**Comment on** `lib_runner/src/main/x/runner.x:101` - `tasks[id] = task;` (the request entry point)
+**Checked 2026-09-04 before drafting the comment, and it does not hold.** Every consumer of
+`getOpInfo` re-validates before use - `OpInvocable.getCallChain:143` guards on **object identity** of
+the target's `TypeComposition`, and compositions are per-container, so run 2 can never be served run
+1's answer. The `OpCallable` sites compare `IdentityConstant`s. The one site guarded only by
+`function == null` caches a compile-time `MethodStructure` and a template from
+`context.f_container`, which is `public final` (`ServiceContext.java:2055`) and therefore always the
+context's own container. Full evidence in the analysis under H21's correction block.
 
-> Every run is a request into the same container zero, so every run executes the same `runTask` ops
-> on the same `ServiceContext` - and that context carries `f_mapOpInfo`
-> (`ServiceContext.java:2186`, `WeakHashMap<Op, EnumMap>`). Entries cached while serving one run are
-> still there for the next.
->
-> Values are `WeakReference`, so retention is not the worry. The question is correctness: can a
-> shared op cache a resolution derived from one request and serve it to another? On the compile side
-> this exact shape (a long-lived structure caching something derived from one request) took a long
-> soak to find, because it fails far from its cause.
+**What survives is not a finding against this PR:**
 
-**Where the fix goes:** nowhere yet - **this is a question, not a patch**. Get an answer on whether
-op-info may be cached on a context that serves many requests before anyone writes code.
+- container zero's cache holds *weak* references into each run's container, so the graph stays
+  reachable until GC - and H5's registry pins the same containers strongly, which is worse and is
+  already covered;
+- `ServiceContext.java:2181-2185` documents "only one fiber can access the service context at any
+  time, a simple HashMap is used" - which is what **concurrent** runs on one container zero would
+  break. That is an Axis A blocker, not a defect today, and it belongs in that conversation.
 
-**Same note as H19:** this is the second of the three blockers in
-[which day and how](#we-want-concurrent-runners-some-day---which-day-and-how), and it bites
-sequentially too - two runs in a row already share the cache.
+**And this branch's `RepeatedRunSweepTest` is the thing that is wrong.** It follows weak referents
+and reports them as foreign references. Weak reachability from a shared cache is not ownership
+leakage. Fix the test here; do not report it there.
 
-**Test to add (this branch has it):** `RepeatedRunSweepTest` - two runs on one engine, then sweep for
-cross-container references. It currently fails, which is the point.
+**Consequence for the PR description:** it currently names this as one of two things worth answering
+before the PR lands. That paragraph has to go - the question in it now has an answer, and it is "no".
 
 ---
 
@@ -357,7 +359,10 @@ means, and the runner model already supports it *structurally*: each `Task` is a
 
 1. **H19** - a run cannot be given a complete resource set of its own, so concurrent runs would
    share or lack resources;
-2. **H21** - runs share container zero's op-info cache;
+2. **the op-info cache's single-fiber assumption** - `ServiceContext.java:2181-2185` says "only
+   one fiber can access the service context at any time, a simple HashMap is used", and concurrent
+   runs on one container zero put two fibers on that unsynchronized `WeakHashMap`. (This is all that
+   survives of the withdrawn H21, and only in the concurrent case.);
 3. **native-plane warm-up** - the first run still builds shared metadata that later runs read. This
    branch hit exactly that on the compile side, where building root `Object` sweeps the whole pool
    ([T8.1](plans/parallel-compiler-plan.md)); the answer there was to do the one-time destructive
@@ -372,8 +377,8 @@ already written down. B is a bigger mechanical change (144 templates) whose only
 tests - which this branch already serves, so there is no urgency.
 
 **What to do now, given "not yet":** nothing structural. Keep `TaskRegistry` and `Task` as services,
-which is already right, and close H19 and H21 - both of which are worth doing for *sequential* runs
-anyway. That leaves concurrency a configuration change rather than a redesign.
+which is already right, and close H19 - which is worth doing for *sequential* runs anyway. That
+leaves concurrency a configuration change rather than a redesign.
 
 ## What to say if asked "should we just take the lazy-instance engine instead?"
 
@@ -381,4 +386,5 @@ No. Take the **runner model** - it is theirs and it is right: container creation
 and `TaskRegistry`/`Task` being services means the language provides the serialization rather than
 Java locking. What this branch has that is worth lifting the other way is narrower: the
 `ErrorListener` varargs overload (H9), the console sink (E38), `Lazy` actually being used (H13), and
-the ownership tests that found H19 and H21.
+the ownership test that found H19. (Not the sweep test - see the H21 withdrawal: it follows weak
+referents and needs fixing here before it is worth anyone's attention.)

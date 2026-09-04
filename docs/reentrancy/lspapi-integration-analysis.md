@@ -1454,6 +1454,50 @@ is absent upstream as well. `PerRunInjectionTest` failing here is not a regressi
 introduced by adopting the runner model - it is that model's unimplemented feature, made visible by
 a test that exists only here.
 
+**CORRECTION, 2026-09-04 - the correctness claim above does not hold.** Written before the
+consumers of `getOpInfo` were read. They were read before drafting the review comment, and every one
+of them re-validates the cached value before using it:
+
+| site | guard |
+| --- | --- |
+| `OpInvocable.getCallChain` `:143` | `if (chain != null && clazz == clazzPrev)` - **object identity** on the target's `TypeComposition` |
+| `OpVar.getArrayClass` `:145` | `if (clzArray == null || !typeList.equals(typePrev))` |
+| `OpCallable.getChildConstructor` `:205-209` | cached `IdentityConstant` vs the run-time parent's |
+| `OpCallable.getTargetConstructor` `:259-264` | same, against the run-time target |
+| `OpCallable.getConstructor` `:333` | same, against `frame.getThis()` |
+| `OpCallable.getFunction` `:403-425` | only `function == null` - but see below |
+
+A `TypeComposition` is per-container, which is exactly why the sweep reported one owned by a
+`NestedContainer`. So for the composition-keyed sites, run 2's handle can never satisfy an identity
+guard against run 1's cached composition: the guard fails and the op recomputes. "A resolution
+derived from one request served to another" would require a guard to pass while the answer is wrong,
+and identity comparison does not permit that.
+
+The one site with only a null guard, `getFunction`'s `Module`/`Package`/`Class` branch, caches
+`idFunction.getComponent()` - a compile-time `MethodStructure` - and
+`context.f_container.getTemplate(typeTarget)`. `ServiceContext.java:2055` declares
+`public final Container f_container`, so that template is always the *context's own* container's,
+invariant across every run served by that context. Safe for a different reason: nothing per-run
+enters it.
+
+**What is actually left**, and it is much smaller than this section claimed:
+
+1. **Retention, weakly.** Container zero's cache keeps a `WeakReference` to run 1's
+   `ClassComposition`, so that run's container graph stays reachable from the shared plane until GC.
+   Bounded by weakness - and H5's registry pins the same containers **strongly**, which is strictly
+   worse and is already the finding.
+2. **A documented assumption that concurrency would break.** `ServiceContext.java:2181-2185`:
+   "Since only one fiber can access the service context at any time, a simple HashMap is used."
+   Concurrent runs on one container zero put two fibers on that unsynchronized `WeakHashMap`. That
+   is forward-looking, not a present defect, and belongs with the Axis A blockers rather than as a
+   finding against this PR.
+
+**And `RepeatedRunSweepTest` is over-strict, not vindicated.** It follows weak referents and reports
+them as foreign references. Weak reachability from a shared cache is not ownership leakage. The test
+needs to distinguish strong from weak reachability before its failure means anything; as it stands
+the failure is the test's fault, not the runner model's. That is a defect in this branch's
+diagnostics, not upstream's code.
+
 **Not investigated further here**, and deliberately not papered over: `RepeatedRunSweepTest` is left
 failing rather than relaxed, because it is reporting a genuine cross-run reference that the runner
 model introduces and the previous model did not have. What it needs is a decision about whether
