@@ -634,6 +634,11 @@ construction finishes. Better: have `register` take the template explicitly - th
 `NativeContainer` can resolve it - so the static is not on the path at all. This is the same
 mutable-static-`INSTANCE` class this branch has spent months removing, and the fix here is one field.
 
+> **Superseded by [H17](#h17---module-output-now-has-two-mechanisms-for-one-concern).** The
+> observation stands as a description of their code, but its remedy is moot if the better answer is
+> taken: giving `xTerminalConsole` an instance sink means `xExternalConsole` does not exist, so
+> neither does its static. Fix H3 only if the second template is kept.
+
 ### H3b - `ensureConnector()` is public and skips the precondition it depends on
 
 Covered under H1: it reads `cfgRepo` and is callable before anything sets it. Either call
@@ -1098,13 +1103,25 @@ writes through a character writer. That is three abstractions for one concept.
    host cannot distinguish a crash report from what the program printed. The existing
    `org.xvm.tool.Console` already separates them.
 
-**Recommendation, in order of preference:**
+**Recommendation - CORRECTED after implementing it.** The first version of this section
+recommended reusing `org.xvm.tool.Console`, on the grounds that it exists, is already imported by
+this file, and separates `out`/`err`. **That is wrong, and trying it is what showed why.**
+`Console` is LINE-oriented: `out(Object)` always prints a line and there is no partial-line
+primitive. The Ecstasy console's contract is `print(Object, Boolean suppressNewline)`, so a
+suppressed newline cannot be expressed through it at all. `Console` is the right type for the
+TOOL's messages and the wrong type for a program's output - which is [H17](#h17---module-output-now-has-two-mechanisms-for-one-concern)'s
+distinction, arrived at from the other direction.
 
-- reuse `org.xvm.tool.Console` - it exists, it is already imported by this file, it separates
-  `out`/`err`, and it makes the compiler and run paths speak the same type;
-- failing that, `PrintWriter` or `Appendable`, which at least matches the `char[]` data and the
-  parent class;
-- if a functional sink is wanted, `Consumer<String>` composes with everything and costs nothing.
+So, in order of preference:
+
+- **`PrintWriter`** - what the parent class already uses, takes the `char[]` the runtime produces
+  without an encoding guess, has `flush()`, and cannot silently swallow a write failure. This is
+  what this branch implemented;
+- `Appendable` if only text is needed and flushing is the caller's business;
+- `Consumer<String>` if a functional sink is wanted, though it loses the partial-line distinction
+  unless the boolean is passed too.
+
+Not `org.xvm.tool.Console`, and not `PrintStream`.
 
 **A related loose end.** `Control.console()` is documented as returning *"the File containing the
 output that the application printed to the Console"*, and `InterpreterControl.console()` returns
