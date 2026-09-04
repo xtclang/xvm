@@ -100,11 +100,15 @@ changes are left as a tidy-up.
 
 **Comment on** `lib_runner/src/main/x/runner.x:161` - `injector = new BasicResourceProvider();`
 
-> `BasicResourceProvider` is a minimal whitelist - `HashCollector`, `Linker`, nullable types - and
-> supplies no `curDir`, `storage` or clock. Wiring this up and running `TestFiles`
+> `BasicResourceProvider`'s `getResource` handles `Console`, `Clock`, `Timer`, `Random`/`rnd`,
+> `String`, `List<String>` and enum/`Destringable` string injections. It has **no case for
+> `Directory` or `FileStore`**, so `curDir`, `rootDir`, `homeDir` and `storage` fall to `default:`
+> and return a deferred exception. Wiring this up and running `TestFiles`
 > (`manualTests/src/main/x/files.x`, in `testModuleNames`, run by CI) gives
 > `Invalid resource: Key: storage, FileStore`. The old `manualTests/runner.x` used
-> `PassThroughResourceProvider` for exactly this reason.
+> `PassThroughResourceProvider` for exactly this reason - `manualTests/src/main/x/runner.x:100`
+> declares `RunnerResourceProvider ... extends PassThroughResourceProvider`, the same
+> console-supplying-subclass shape as `TaskResourceProvider` here, differing only in the base.
 >
 > Switching to pass-through fixes availability and loses isolation instead - every run then resolves
 > to container zero's instances. So the two stock providers are opposite extremes and neither is
