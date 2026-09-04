@@ -3501,6 +3501,15 @@ loudly, so the scrollback is silently wrong.
 **routine** under any model that runs several modules concurrently, which is exactly what the LSPAPI
 runner is for. That is why this is worth fixing before that model lands rather than after.
 
+**Refinement, 2026-09-04 - the LSPAPI branch already mitigates half of this, by accident or design.**
+`xExternalConsole.invokeNativeN` overrides `case "print"` and writes to the per-run
+`hConsole.f_out`, never to `CONSOLE_LOG` (`xExternalConsole.java:83-127`), so a run given a console
+id does not touch the ring buffer at all. The residual exposure is the **fallback**: a run with no
+console id gets `BasicResourceProvider`'s `case (Console, "console")`, which resolves to the parent's
+terminal console and therefore prints through `CONSOLE_LOG`. That is the path `runTask(..., Null)`
+takes, which is every run the Java side starts today. So the defect is narrower than first written -
+concurrent runs *without* console ids - but not closed.
+
 **Minimal master-portable fix strategy:** synchronize `log`, `size`, `get` and `render` on the
 instance, or replace the ring buffer with a concurrent structure. One class, no API change. A
 cheaper partial mitigation - used in this branch - is to feed `CONSOLE_LOG` only from the TERMINAL
