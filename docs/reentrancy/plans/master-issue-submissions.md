@@ -3516,6 +3516,26 @@ cheaper partial mitigation - used in this branch - is to feed `CONSOLE_LOG` only
 console, so redirected per-run output does not touch it at all; that narrows the exposure without
 fixing the buffer.
 
+**Correction, 2026-09-04 - this is misfiled as a synchronization bug. It is an ownership bug.**
+`ConsoleLog` has exactly **one** reader in the entire tree, and it is the debugger:
+`DebugConsole.java:1407` (`render` into the "Console:" pane), `:1442` (`size`) and `:1554`
+(`render`). `xTerminalConsole` only ever **writes** it (`:241`, `:249`). So `CONSOLE_LOG` is the
+debugger's scrollback buffer, parked as a `public static final` field on the console template
+because that is where the writes happen.
+
+Which means the better fix is to move it to `DebugConsole`, where its only reader lives, and let the
+console feed it through its terminal sink. Synchronization is still needed - it is written by every
+printing fiber and read by the debugger, so the cross-thread access does not go away - but the
+rationale changes from "a JVM-wide shared buffer" to "the debugger's buffer, written from elsewhere",
+and the fix stops looking like an arbitrary lock on a utility class.
+
+**And `DebugConsole` is not a special case that justifies a static sink.** It is
+`public static final DebugConsole INSTANCE` (`:2416`) with static `LINE_READER` (`:2421`) and
+`READER` (`:2431`), reading commands at `:315`/`:324`. That is the same E1 shape as the 144
+templates. The one true asymmetry is that the debugger is **interactive**: giving it a per-run sink
+without a per-run input channel would redirect its output while it still reads commands from the
+process terminal. That makes it harder than the console, not exempt from the same argument.
+
 **Tests to add/run on master:** none yet. The defect is by inspection - a shared mutable ring buffer
 with no synchronization - rather than by reproduction.
 
