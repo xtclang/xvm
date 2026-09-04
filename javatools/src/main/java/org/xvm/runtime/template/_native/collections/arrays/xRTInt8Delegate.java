@@ -16,14 +16,8 @@ import org.xvm.runtime.template.numbers.xInt8;
 public class xRTInt8Delegate
         extends ByteBasedDelegate
         implements ByteView {
-    public static xRTInt8Delegate INSTANCE;
-
-    public xRTInt8Delegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTInt8Delegate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, Byte.MIN_VALUE, Byte.MAX_VALUE);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -40,6 +34,6 @@ public class xRTInt8Delegate
 
     @Override
     protected ObjectHandle makeElementHandle(long lValue) {
-        return xInt8.INSTANCE.makeJavaLong(lValue);
+        return f_container.nativeTemplate(xInt8.class).makeJavaLong(lValue);
     }
 }

@@ -37,16 +37,11 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  */
 public class xFuture
         extends xVar {
-    public static xFuture INSTANCE;
     public static TypeConstant TYPE;
     public static xEnum COMPLETION;
 
-    public xFuture(Container container, ClassStructure structure, boolean fInstance) {
+    public xFuture(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -54,7 +49,7 @@ public class xFuture
         ConstantPool  pool     = pool();
         ClassConstant idMixin  = (ClassConstant) f_struct.getIdentityConstant();
         Annotation    anno     = pool.ensureAnnotation(idMixin);
-        TypeConstant  typeVar  = xVar.INSTANCE.getCanonicalType();
+        TypeConstant  typeVar  = f_container.nativeTemplate(xVar.class).getCanonicalType();
 
         TYPE       = pool.ensureAnnotatedTypeConstant(typeVar, anno);
         COMPLETION = (xEnum) f_container.getTemplate("annotations.Future.Completion");
@@ -745,8 +740,10 @@ public class xFuture
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    public static FutureHandle makeHandle(CompletableFuture<ObjectHandle> future) {
-        return makeHandle(INSTANCE.getCanonicalClass(), future);
+    public static FutureHandle makeHandle(Container container,
+                                          CompletableFuture<ObjectHandle> future) {
+        return makeHandle(container.nativeTemplate(xFuture.class).getCanonicalClass(),
+                future);
     }
 
     public static FutureHandle makeHandle(TypeComposition clz, CompletableFuture<ObjectHandle> future) {

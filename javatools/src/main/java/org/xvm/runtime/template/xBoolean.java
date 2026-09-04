@@ -18,7 +18,7 @@ public class xBoolean
     public static BooleanHandle TRUE;
     public static BooleanHandle FALSE;
 
-    public xBoolean(Container container, ClassStructure structure, boolean fInstance) {
+    public xBoolean(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 
@@ -65,7 +65,7 @@ public class xBoolean
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
         return frame.assignValue(iReturn,
-                xString.makeHandle(hTarget == FALSE ? "False" : "True"));
+                xString.makeHandle(frame, hTarget == FALSE ? "False" : "True"));
     }
 
     public static BooleanHandle makeHandle(boolean f) {

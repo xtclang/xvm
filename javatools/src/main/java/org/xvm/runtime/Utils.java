@@ -89,7 +89,7 @@ public abstract class Utils {
         ANNOTATION_TEMPLATE_CONSTRUCT = ANNOTATION_TEMPLATE_TEMPLATE.getStructure().findMethod("construct", 2);
         ARGUMENT_CONSTRUCT            = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
         RT_PARAMETER_CONSTRUCT        = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
-        LIST_MAP_CONSTRUCT            = xListMap.INSTANCE.ensureConstructor();
+        LIST_MAP_CONSTRUCT            = container.nativeTemplate(xListMap.class).ensureConstructor();
         ANNOTATION_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Annotation"));
         ARGUMENT_ARRAY_TYPE           = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Argument"));
         CONST_HELPER                  = container.getClassStructure("_native.ConstHelper");
@@ -135,7 +135,8 @@ public abstract class Utils {
 
         return methodFinally == null
             ? null
-            : xRTFunction.makeInternalHandle(frame, methodFinally).bindArguments(ahArg);
+            : xRTFunction.makeInternalHandle(frame.container(), methodFinally).
+                    bindArguments(ahArg);
     }
 
     /**
@@ -284,7 +285,7 @@ public abstract class Utils {
 
             ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars()];
             ahArg[0] = type.ensureTypeHandle(frame.f_context.f_container);
-            ahArg[1] = xString.makeHandle(sName);
+            ahArg[1] = xString.makeHandle(frame, sName);
 
             iResult = chain.invoke(frame, hInjector, ahArg, Op.A_STACK);
         }
@@ -330,7 +331,7 @@ public abstract class Utils {
             ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars()];
             ahArg[0] = type.ensureTypeHandle(frame.f_context.f_container);
             ahArg[1] = ahArg[0];
-            ahArg[2] = xString.makeHandle(sName);
+            ahArg[2] = xString.makeHandle(frame, sName);
             ahArg[3] = hOpts;
 
             iResult = chain.invoke(frame, hInjector, ahArg, Op.A_STACK);
@@ -869,10 +870,10 @@ public abstract class Utils {
 
         switch (constValue.getFormat()) {
         case Module:
-            return xModule.INSTANCE.createConstHandle(frame, constValue);
+            return frame.nativeTemplate(xModule.class).createConstHandle(frame, constValue);
 
         case Package:
-            return xPackage.INSTANCE.createConstHandle(frame, constValue);
+            return frame.nativeTemplate(xPackage.class).createConstHandle(frame, constValue);
 
         case Property:
             return callPropertyInitializer(frame, (PropertyConstant) constValue);
@@ -1538,7 +1539,8 @@ public abstract class Utils {
      */
     public static ArrayHandle makeAnnoArrayHandle(Container container, ObjectHandle[] ahAnno) {
         return xArray.makeArrayHandle(
-                container.ensureClassComposition(ANNOTATION_ARRAY_TYPE, xArray.INSTANCE),
+                container.ensureClassComposition(ANNOTATION_ARRAY_TYPE,
+                        container.nativeTemplate(xArray.class)),
                 ahAnno.length, ahAnno, Mutability.Constant);
     }
 
@@ -1547,7 +1549,8 @@ public abstract class Utils {
      */
     public static ArrayHandle makeArgumentArrayHandle(Container container, ObjectHandle[] ahArg) {
         return xArray.makeArrayHandle(
-                container.ensureClassComposition(ARGUMENT_ARRAY_TYPE, xArray.INSTANCE),
+                container.ensureClassComposition(ARGUMENT_ARRAY_TYPE,
+                        container.nativeTemplate(xArray.class)),
                 ahArg.length, ahArg, Mutability.Constant);
     }
 
@@ -1591,8 +1594,8 @@ public abstract class Utils {
 
                 MethodStructure  construct = RT_PARAMETER_CONSTRUCT;
                 ObjectHandle[]   ahArg     = new ObjectHandle[construct.getMaxVars()];
-                ahArg[0] = xInt64.makeHandle(index); // ordinal
-                ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
+                ahArg[0] = xInt64.makeHandle(frameCaller, index); // ordinal
+                ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(frameCaller, sName);
                 ahArg[2] = xBoolean.makeHandle(fFormal);
                 if (constDefault == null) {
                     ahArg[3] = xBoolean.FALSE;
@@ -1656,7 +1659,7 @@ public abstract class Utils {
         MethodStructure constructor = ARGUMENT_CONSTRUCT;
         ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = hValue;
-        ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
+        ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(frame, sName);
 
         TypeComposition clzArg = ARGUMENT_TEMPLATE.
                 ensureParameterizedClass(frame.f_context.f_container, typeReferent);

@@ -13,7 +13,7 @@ public class xNullable
         extends xEnum {
     public static EnumHandle NULL;
 
-    public xNullable(Container container, ClassStructure structure, boolean fInstance) {
+    public xNullable(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

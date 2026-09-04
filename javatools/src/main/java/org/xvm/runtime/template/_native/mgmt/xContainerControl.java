@@ -36,14 +36,8 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
  */
 public class xContainerControl
         extends xRTServiceControl {
-    public static xContainerControl INSTANCE;
-
-    public xContainerControl(Container container, ClassStructure structure, boolean fInstance) {
+    public xContainerControl(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

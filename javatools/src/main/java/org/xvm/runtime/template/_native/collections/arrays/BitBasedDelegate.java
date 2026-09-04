@@ -132,7 +132,7 @@ public abstract class BitBasedDelegate
     public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
         BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle((long) hDelegate.m_abValue.length << 3));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, (long) hDelegate.m_abValue.length << 3));
     }
 
     @Override

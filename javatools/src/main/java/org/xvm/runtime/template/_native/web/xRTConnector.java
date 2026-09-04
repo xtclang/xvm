@@ -66,13 +66,10 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
  */
 public class xRTConnector
         extends xService {
-    public static xRTConnector INSTANCE;
-
-    public xRTConnector(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTConnector(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
 
-        if (fInstance) {
-            INSTANCE = this;
+        if (fBaseTemplate) {
             s_sAgent = "Mozilla/5.0 (compatible; Ecstasy/"
                        + structure.getFileStructure().getModule().getVersionString()
                        + ')' ;
@@ -133,7 +130,7 @@ public class xRTConnector
                     ? invokeSendRequest(frame, hConnector, (StringHandle) ahArg[0],
                         (StringHandle) ahArg[1], (ArrayHandle) ahArg[2],
                         (ArrayHandle) ahArg[3], (ArrayHandle) ahArg[4], aiReturn)
-                    : xRTFunction.makeAsyncNativeHandle(method).
+                    : xRTFunction.makeAsyncNativeHandle(frame.container(), method).
                         callN(frame, hConnector, ahArg, aiReturn);
         }
         }
@@ -151,8 +148,9 @@ public class xRTConnector
         ArrayHandle hNames  = m_hDefaultNames;
         ArrayHandle hValues = m_hDefaultValues;
         if (hNames == null) {
-            m_hDefaultNames  = hNames  = xString.makeArrayHandle(new String[] {"User-Agent"});
-            m_hDefaultValues = hValues = xString.makeArrayHandle(new String[] {s_sAgent});
+            m_hDefaultNames  = hNames  = xString.makeArrayHandle(frame.container(),
+                    new String[] {"User-Agent"});
+            m_hDefaultValues = hValues = xString.makeArrayHandle(frame.container(), new String[] {s_sAgent});
         }
 
         return frame.assignValues(aiReturn, hNames, hValues);
@@ -256,9 +254,9 @@ public class xRTConnector
                     : xArray.makeByteArrayHandle(abResponse, Mutability.Constant);
 
             return frame.assignValues(aiReturn,
-                    xInt64.makeHandle(nResponseCode),
-                    xString.makeArrayHandle(asResponseNames),
-                    xString.makeArrayHandle(asResponseValues),
+                    xInt64.makeHandle(frame, nResponseCode),
+                    xString.makeArrayHandle(frame.container(), asResponseNames),
+                    xString.makeArrayHandle(frame.container(), asResponseValues),
                     hResponseBytes
                     );
         } catch (Exception e) {

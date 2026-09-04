@@ -18,19 +18,13 @@ import org.xvm.util.PackedInteger;
  */
 public class xUInt64
         extends xUnsignedConstrainedInt {
-    public static xUInt64 INSTANCE;
-
-    public xUInt64(Container container, ClassStructure structure, boolean fInstance) {
+    public xUInt64(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 0, -1, 64, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return xInt64.INSTANCE;
+        return f_container.nativeTemplate(xInt64.class);
     }
 
     @Override

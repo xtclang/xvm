@@ -30,19 +30,13 @@ import org.xvm.runtime.template.collections.xArray;
  */
 public class xRTPropertyClassTemplate
         extends xRTComponentTemplate {
-    public static xRTPropertyClassTemplate INSTANCE;
-
-    public xRTPropertyClassTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTPropertyClassTemplate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xRTPropertyClassTemplate.class)) {
             TypeConstant typeMask = pool().ensureEcstasyTypeConstant("reflect.ClassTemplate");
 
             PROPERTY_CLASS_TEMPLATE_COMP = ensureClass(f_container, getCanonicalType(), typeMask);
@@ -199,13 +193,14 @@ public class xRTPropertyClassTemplate
         List<ComponentTemplateHandle> listProps = new ArrayList<>();
         for (Component child : prop.children()) {
             if (child instanceof PropertyStructure) {
-                listProps.add(xRTPropertyTemplate.makePropertyHandle((PropertyStructure) child));
+                listProps.add(xRTPropertyTemplate.makePropertyHandle(
+                        frame.container(), (PropertyStructure) child));
             }
         }
 
         ComponentTemplateHandle[] ahProp = listProps.toArray(xRTClassTemplate.NO_TEMPLATES);
         ObjectHandle hArray = xArray.createImmutableArray(
-                xRTPropertyTemplate.ensureArrayComposition(), ahProp);
+                xRTPropertyTemplate.ensureArrayComposition(frame.container()), ahProp);
         return frame.assignValue(iReturn, hArray);
     }
 
@@ -253,7 +248,8 @@ public class xRTPropertyClassTemplate
     protected int invokeFromProperty(Frame frame, ComponentTemplateHandle hComponent, int[] aiReturn) {
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
         return frame.assignValues(aiReturn,
-            xBoolean.TRUE, xRTPropertyTemplate.makePropertyHandle(prop));
+            xBoolean.TRUE, xRTPropertyTemplate.makePropertyHandle(
+                        frame.container(), prop));
     }
 
     // ----- ObjectHandle support ------------------------------------------------------------------

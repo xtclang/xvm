@@ -48,14 +48,8 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  */
 public class xContainerLinker
         extends xService {
-    public static xContainerLinker INSTANCE;
-
-    public xContainerLinker(Container container, ClassStructure structure, boolean fInstance) {
+    public xContainerLinker(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -157,7 +151,7 @@ public class xContainerLinker
         TypeHandle[]   ahType    = new TypeHandle[cInjects];
         int            ix        = 0;
         for (InjectionKey key : setInjections) {
-            ahName[ix  ] = xString.makeHandle(key.f_sName);
+            ahName[ix  ] = xString.makeHandle(frame, key.f_sName);
             ahType[ix++] = key.f_type.ensureTypeHandle(container);
         }
         ArrayHandle haNames = xArray.makeStringArrayHandle(ahName);
@@ -212,7 +206,7 @@ public class xContainerLinker
             return frame.raiseException(e);
         }
 
-        switch (xRTFileTemplate.INSTANCE.invokeResolve(frame, file, hRepo,
+        switch (f_container.nativeTemplate(xRTFileTemplate.class).invokeResolve(frame, file, hRepo,
                     ahShared, ahAdditional, Op.A_STACK)) {
         case Op.R_NEXT:
             return completeResolveAndLink(frame, container, popModule(frame),
@@ -275,7 +269,7 @@ public class xContainerLinker
             while (++index < aKeys.length) {
                 InjectionKey key   = aKeys[index];
                 TypeHandle   hType = key.f_type.ensureTypeHandle(container);
-                StringHandle hName = xString.makeHandle(key.f_sName);
+                StringHandle hName = xString.makeHandle(frameCaller, key.f_sName);
                 CallChain    chain = hProvider.getComposition().getMethodCallChain(GET_RESOURCE);
 
                 ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars()];
@@ -301,7 +295,7 @@ public class xContainerLinker
             }
 
             return frameCaller.assignValue(iReturn,
-                xContainerControl.INSTANCE.makeHandle(container));
+                frameCaller.nativeTemplate(xContainerControl.class).makeHandle(container));
         }
 
         private final NestedContainer container;

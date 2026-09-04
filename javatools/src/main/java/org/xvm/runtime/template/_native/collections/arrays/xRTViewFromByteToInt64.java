@@ -23,14 +23,8 @@ import org.xvm.util.Handy;
  */
 public class xRTViewFromByteToInt64
         extends xRTViewFromByte {
-    public static xRTViewFromByteToInt64 INSTANCE;
-
-    public xRTViewFromByteToInt64(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewFromByteToInt64(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -57,7 +51,7 @@ public class xRTViewFromByteToInt64
                 alValue[i] = Handy.byteArrayToLong(ab, 0);
             }
 
-            return xRTInt64Delegate.INSTANCE.makeHandle(alValue, alValue.length, mutability);
+            return f_container.nativeTemplate(xRTInt64Delegate.class).makeHandle(alValue, alValue.length, mutability);
         }
 
         throw new UnsupportedOperationException();
@@ -73,7 +67,7 @@ public class xRTViewFromByteToInt64
             byte[] ab = tView.getBytes(hSource, lIndex*8, 8, false);
             long   l  = Handy.byteArrayToLong(ab, 0);
 
-            return frame.assignValue(iReturn, xInt64.makeHandle(l));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, l));
         }
 
         throw new UnsupportedOperationException();

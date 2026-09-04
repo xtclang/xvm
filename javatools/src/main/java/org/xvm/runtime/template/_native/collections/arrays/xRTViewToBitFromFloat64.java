@@ -32,14 +32,8 @@ import static org.xvm.runtime.template._native.collections.arrays.LongBasedDeleg
 public class xRTViewToBitFromFloat64
         extends xRTViewToBit
         implements BitView {
-    public static xRTViewToBitFromFloat64 INSTANCE;
-
-    public xRTViewToBitFromFloat64(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewToBitFromFloat64(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -79,7 +73,7 @@ public class xRTViewToBitFromFloat64
 
         byte[] abBits = getBits(hView, ofStart, cSize, fReverse);
 
-        return xRTBitDelegate.INSTANCE.makeHandle(abBits, cSize, mutability);
+        return f_container.nativeTemplate(xRTBitDelegate.class).makeHandle(abBits, cSize, mutability);
     }
 
     @Override

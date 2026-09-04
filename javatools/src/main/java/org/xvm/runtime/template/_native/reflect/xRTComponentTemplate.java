@@ -35,21 +35,15 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xRTComponentTemplate
         extends ClassTemplate {
-    public static xRTComponentTemplate INSTANCE;
-
-    public xRTComponentTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTComponentTemplate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void registerNativeTemplates() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xRTComponentTemplate.class)) {
             ClassStructure struct = f_container.getClassStructure("_native.reflect.RTMultiMethodTemplate");
-            registerNativeTemplate(new xRTComponentTemplate(f_container, struct, false));
+            registerAuxiliaryTemplate(new xRTComponentTemplate(f_container, struct, false));
         }
     }
 
@@ -150,7 +144,7 @@ public class xRTComponentTemplate
         String    sDoc      = component.getDocumentation();
         return frame.assignValue(iReturn, sDoc == null
                 ? xNullable.NULL
-                : xString.makeHandle(sDoc));
+                : xString.makeHandle(frame, sDoc));
     }
 
     /**
@@ -183,7 +177,7 @@ public class xRTComponentTemplate
      */
     protected int getPropertyName(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component component = hComponent.getComponent();
-        return frame.assignValue(iReturn, xString.makeHandle(component.getSimpleName()));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, component.getSimpleName()));
     }
 
     /**
@@ -225,7 +219,7 @@ public class xRTComponentTemplate
         // the only possible child type of MultiMethodTemplate is the MethodTemplate
         TypeComposition clzArray = component instanceof MultiMethodStructure
                 ? xRTClassTemplate.ensureMethodTemplateArrayComposition(container)
-                : container.resolveClass(ensureComponentArrayType());
+                : container.resolveClass(ensureComponentArrayType(container));
 
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahChildren));
     }
@@ -235,10 +229,10 @@ public class xRTComponentTemplate
     /**
      * @return the TypeConstant for an Array of ComponentTemplate
      */
-    public static TypeConstant ensureComponentArrayType() {
+    public static TypeConstant ensureComponentArrayType(Container container) {
         TypeConstant type = COMPONENT_ARRAY_TYPE;
         if (type == null) {
-            ConstantPool pool = INSTANCE.pool();
+            ConstantPool pool = container.nativeTemplate(xRTComponentTemplate.class).pool();
             COMPONENT_ARRAY_TYPE = type = pool.ensureArrayType(
                     pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
         }
@@ -252,7 +246,7 @@ public class xRTComponentTemplate
         ClassTemplate templateRT = MULTI_METHOD_TEMPLATE;
         if (templateRT == null) {
             MULTI_METHOD_TEMPLATE = templateRT =
-                INSTANCE.f_container.getTemplate("_native.reflect.RTMultiMethodTemplate");
+                container.getTemplate("_native.reflect.RTMultiMethodTemplate");
         }
 
         ConstantPool pool         = container.getConstantPool();
@@ -271,7 +265,8 @@ public class xRTComponentTemplate
      * @return the handle to the appropriate Ecstasy {@code ComponentTemplate.Format} enum value
      */
     protected static EnumHandle makeFormatHandle(Frame frame, Component.Format format) {
-        xEnum enumForm = INSTANCE.f_container.getTemplate("reflect.ComponentTemplate.Format", xEnum.class);
+        xEnum enumForm = frame.container().getTemplate(
+                "reflect.ComponentTemplate.Format", xEnum.class);
 
         switch (format) {
         case INTERFACE:
@@ -346,10 +341,10 @@ public class xRTComponentTemplate
             return new ComponentTemplateHandle(getMultiMethodTemplateComposition(container), component);
 
         case METHOD:
-            return xRTMethodTemplate.makeHandle((MethodStructure) component);
+            return xRTMethodTemplate.makeHandle(container, (MethodStructure) component);
 
         case PROPERTY:
-            return xRTPropertyTemplate.makePropertyHandle((PropertyStructure) component);
+            return xRTPropertyTemplate.makePropertyHandle(container, (PropertyStructure) component);
 
         default:
             throw new UnsupportedOperationException("unsupported format " + component.getFormat());

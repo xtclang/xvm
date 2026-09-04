@@ -15,14 +15,8 @@ import org.xvm.runtime.template.numbers.xUInt64;
  */
 public class xRTUInt64Delegate
         extends LongDelegate {
-    public static xRTUInt64Delegate INSTANCE;
-
-    public xRTUInt64Delegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTUInt64Delegate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -39,6 +33,6 @@ public class xRTUInt64Delegate
 
     @Override
     protected ObjectHandle makeElementHandle(long lValue) {
-        return xUInt64.INSTANCE.makeJavaLong(lValue);
+        return f_container.nativeTemplate(xUInt64.class).makeJavaLong(lValue);
     }
    }

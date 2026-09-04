@@ -16,21 +16,15 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
  */
 public class xUInt8
         extends xUnsignedConstrainedInt {
-    public static xUInt8 INSTANCE;
-
-    public xUInt8(Container container, ClassStructure structure, boolean fInstance) {
+    public xUInt8(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 0, 255, 8, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
         super.initNative();
 
-        if (this == INSTANCE) {
+        if (isNativeInstance(xUInt8.class)) {
             ClassComposition clz = getCanonicalClass();
             for (int i = 0; i < cache.length; ++i) {
                 cache[i] = new JavaLong(clz, i);
@@ -40,7 +34,7 @@ public class xUInt8
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return xInt8.INSTANCE;
+        return f_container.nativeTemplate(xInt8.class);
     }
 
     @Override
@@ -57,9 +51,26 @@ public class xUInt8
         return makeHandle(lValue & 0xFFL);
     }
 
-    public static JavaLong makeHandle(long lValue) {
+    /**
+     * @return a Byte handle owned by this template's container
+     */
+    public JavaLong makeHandle(long lValue) {
         assert lValue >= 0 & lValue <= 255;
-        return INSTANCE.cache[(int) lValue];
+        return cache[(int) lValue];
+    }
+
+    /**
+     * @return a Byte handle owned by the specified container
+     */
+    public static JavaLong makeHandle(Container container, long lValue) {
+        return container.nativeTemplate(xUInt8.class).makeHandle(lValue);
+    }
+
+    /**
+     * @return a Byte handle owned by the container the specified frame runs in
+     */
+    public static JavaLong makeHandle(Frame frame, long lValue) {
+        return makeHandle(frame.container(), lValue);
     }
 
     private final JavaLong[] cache = new JavaLong[256];

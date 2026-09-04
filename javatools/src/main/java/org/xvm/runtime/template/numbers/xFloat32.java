@@ -16,14 +16,8 @@ import org.xvm.runtime.Frame;
  */
 public class xFloat32
         extends BaseBinaryFP {
-    public static xFloat32 INSTANCE;
-
-    public xFloat32(Container container, ClassStructure structure, boolean fInstance) {
+    public xFloat32(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 32);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

@@ -38,14 +38,8 @@ import org.xvm.util.PackedInteger;
  */
 public class xIntLiteral
         extends xConst {
-    public static xIntLiteral INSTANCE;
-
-    public xIntLiteral(Container container, ClassStructure structure, boolean fInstance) {
+    public xIntLiteral(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -341,7 +335,7 @@ public class xIntLiteral
     @Override
     protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         IntNHandle hLiteral = (IntNHandle) hTarget;
-        return frame.assignValue(iReturn, xInt64.makeHandle(hLiteral.getValue().hashCode()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hLiteral.getValue().hashCode()));
     }
 
     @Override
@@ -445,7 +439,8 @@ public class xIntLiteral
         public StringHandle getText() {
             StringHandle hText = m_hText;
             if (hText == null) {
-                m_hText = hText = xString.makeHandle(m_piValue.toString());
+                m_hText = hText = xString.makeHandle(getComposition().getContainer(),
+                        m_piValue.toString());
             }
             return hText;
         }

@@ -44,19 +44,13 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public class xPackage
         extends xConst {
-    public static xPackage INSTANCE;
-
-    public xPackage(Container container, ClassStructure structure, boolean fInstance) {
+    public xPackage(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xPackage.class)) {
             ConstantPool pool = f_container.getConstantPool();
             LIST_MAP_TYPE = pool.ensureParameterizedTypeConstant(
                     pool.typeListMap(), pool.typeString(), pool.typeClass());
@@ -117,7 +111,7 @@ public class xPackage
     @Override
     protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         return frame.assignValue(iReturn,
-            xInt64.makeHandle(((PackageHandle) hTarget).getId().hashCode()));
+            xInt64.makeHandle(frame, ((PackageHandle) hTarget).getId().hashCode()));
     }
 
     // ----- property implementations --------------------------------------------------------------
@@ -146,7 +140,7 @@ public class xPackage
                 IdentityConstant id     = component.getIdentityConstant();
                 ObjectHandle     hClass = frame.getConstHandle(pool.ensureClassConstant(id.getType()));
 
-                listNames  .add(xString.makeHandle(entry.getKey()));
+                listNames  .add(xString.makeHandle(frame, entry.getKey()));
                 listClasses.add(hClass);
                 fDeferred |= Op.isDeferred(hClass);
             }

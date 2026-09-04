@@ -35,14 +35,8 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xRTNetwork
         extends xService {
-    public static xRTNetwork INSTANCE;
-
-    public xRTNetwork(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTNetwork(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -90,7 +84,8 @@ public class xRTNetwork
 
         if (frame.f_context != hService.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
+                    call1(frame, hTarget, ahArg, iReturn);
         }
 
         switch (method.getName()) {
@@ -108,7 +103,8 @@ public class xRTNetwork
 
         if (frame.f_context != hService.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(method).callN(frame, hTarget, ahArg, aiReturn);
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
+                    callN(frame, hTarget, ahArg, aiReturn);
         }
 
         switch (method.getName()) {
@@ -197,7 +193,7 @@ public class xRTNetwork
      * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
      */
     protected int instantiateNameService(Frame frame, ServiceHandle hNetwork, int iReturn) {
-        ClassTemplate    templateSvc  = xRTNameService.INSTANCE;
+        ClassTemplate    templateSvc  = f_container.nativeTemplate(xRTNameService.class);
         ClassComposition clz          = templateSvc.getCanonicalClass();
         MethodStructure  constructor  = templateSvc.getStructure().findConstructor(getCanonicalType());
         ObjectHandle[]   ahParams     = new ObjectHandle[constructor.getMaxVars()];

@@ -96,10 +96,12 @@ public abstract class Container
         ServiceContext ctx = m_contextMain;
         if (ctx == null) {
             try (var ignore = ConstantPool.withPool(getConstantPool())) {
+                xService templateService = nativeTemplate(xService.class);
+
                 m_contextMain = ctx = createServiceContext(getModule().getName());
-                xService.INSTANCE.createServiceHandle(ctx,
-                    xService.INSTANCE.getCanonicalClass(),
-                    xService.INSTANCE.getCanonicalType());
+                templateService.createServiceHandle(ctx,
+                    templateService.getCanonicalClass(),
+                    templateService.getCanonicalType());
             }
         }
         return ctx;
@@ -394,6 +396,32 @@ public abstract class Container
         return isShared(idClz.getModuleConstant())
                 ? f_parent.getOriginContainer(constSingle)
                 : this;
+    }
+
+    /**
+     * Obtain this container's table of native templates.
+     *
+     * <p>One of three ways in. This one is the table itself, for bulk work - registering a
+     * template, or anything else that is not a single lookup. To look one template up, use
+     * {@link #nativeTemplate}. To get the table from something that is not a container -
+     * a frame, a template, a composition - use {@link NativeTemplates#of}.</p>
+     *
+     * @return this container's table of native templates
+     */
+    public NativeTemplates nativeTemplates() {
+        return getNativeContainer().f_templates;
+    }
+
+    /**
+     * Look one native template up - the shorthand for the common case, over
+     * {@link #nativeTemplates()}.
+     *
+     * @param clzTemplate  the native template class
+     *
+     * @return this container's native template of that class
+     */
+    public <T extends ClassTemplate> T nativeTemplate(Class<T> clzTemplate) {
+        return nativeTemplates().get(clzTemplate);
     }
 
     /**

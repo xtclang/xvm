@@ -47,19 +47,13 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  */
 public class xRTClassTemplate
         extends xRTComponentTemplate {
-    public static xRTClassTemplate INSTANCE;
-
-    public xRTClassTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTClassTemplate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xRTClassTemplate.class)) {
             ConstantPool pool = f_container.getConstantPool();
 
             ACTION_TEMPLATE = (xEnum) f_container.getTemplate("reflect.ClassTemplate.Composition.Action");
@@ -180,7 +174,7 @@ public class xRTClassTemplate
         if (id instanceof ClassConstant idClz) {
             String sAlias = idClz.getImplicitImportName();
             if (sAlias != null) {
-                return frame.assignValue(iReturn, xString.makeHandle(sAlias));
+                return frame.assignValue(iReturn, xString.makeHandle(frame, sAlias));
             }
         }
         return frame.assignValue(iReturn, xNullable.NULL);
@@ -274,7 +268,7 @@ public class xRTClassTemplate
                     for (int i = 0; i < cParams; i++) {
                         Parameter param = ctor.getParam(i);
 
-                        ahNames[i] = xString.makeHandle(param.getName());
+                        ahNames[i] = xString.makeHandle(container, param.getName());
                         if (ahParam[i] == null) {
                             if (!param.hasDefaultValue()) {
                                 return frameCaller.raiseException(
@@ -329,7 +323,7 @@ public class xRTClassTemplate
                         TypeConstant type  = entry.getValue();
 
                         // use Type<Object> as an indicator of a non-constrained formal type
-                        ahNames[i] = xString.makeHandle(sName);
+                        ahNames[i] = xString.makeHandle(container, sName);
                         ahTypes[i] = (type == null ? pool().typeObject() : type).
                                         ensureTypeHandle(container);
                         i++;
@@ -401,13 +395,13 @@ public class xRTClassTemplate
         List<ComponentTemplateHandle> listProps = new ArrayList<>();
         for (Component child : clz.children()) {
             if (child instanceof PropertyStructure prop) {
-                listProps.add(xRTPropertyTemplate.makePropertyHandle(prop));
+                listProps.add(xRTPropertyTemplate.makePropertyHandle(frame.container(), prop));
             }
         }
 
         ComponentTemplateHandle[] ahProp = listProps.toArray(NO_TEMPLATES);
         ArrayHandle hArray = xArray.createImmutableArray(
-                xRTPropertyTemplate.ensureArrayComposition(), ahProp);
+                xRTPropertyTemplate.ensureArrayComposition(frame.container()), ahProp);
         return frame.assignValue(iReturn, hArray);
     }
 
@@ -464,7 +458,7 @@ public class xRTClassTemplate
 
         int i = 0;
         for (Map.Entry<StringConstant, TypeConstant> entry : listParams) {
-            ahName[i]   = xString.makeHandle(entry.getKey().getValue());
+            ahName[i]   = xString.makeHandle(container, entry.getKey().getValue());
             ahType[i++] = xRTTypeTemplate.makeHandle(container, entry.getValue());
         }
 
@@ -514,8 +508,9 @@ public class xRTClassTemplate
      */
     public static ComponentTemplateHandle makeHandle(Container container, ClassStructure struct) {
         // note: no need to initialize the struct because there are no natural fields
-        TypeComposition clz = INSTANCE.ensureClass(container,
-                                INSTANCE.getCanonicalType(), CLASS_TEMPLATE_TYPE);
+        xRTClassTemplate template = container.nativeTemplate(xRTClassTemplate.class);
+        TypeComposition   clz      = template.ensureClass(container, template.getCanonicalType(),
+                CLASS_TEMPLATE_TYPE);
         return new ComponentTemplateHandle(clz, struct);
     }
 
@@ -523,35 +518,36 @@ public class xRTClassTemplate
      * @return the ClassComposition for an Array of Contributions
      */
     public static TypeComposition ensureContribArrayComposition(Container container) {
-        return container.ensureClassComposition(CONTRIBUTION_ARRAY_TYPE, xArray.INSTANCE);
+        return container.ensureClassComposition(CONTRIBUTION_ARRAY_TYPE, container.nativeTemplate(xArray.class));
     }
 
     /**
      * @return the ClassComposition for an Array of ClassTemplates
      */
     public static TypeComposition ensureClassTemplateArrayComposition(Container container) {
-        return container.ensureClassComposition(CLASS_TEMPLATE_ARRAY_TYPE, xArray.INSTANCE);
+        return container.ensureClassComposition(CLASS_TEMPLATE_ARRAY_TYPE,
+                container.nativeTemplate(xArray.class));
     }
 
     /**
      * @return the ClassComposition for an Array of MultiMethodTemplates
      */
     public static TypeComposition ensureMultiMethodTemplateArrayComposition(Container container) {
-        return container.ensureClassComposition(MULTI_METHOD_ARRAY_TYPE, xArray.INSTANCE);
+        return container.ensureClassComposition(MULTI_METHOD_ARRAY_TYPE, container.nativeTemplate(xArray.class));
     }
 
     /**
      * @return the ClassComposition for an Array of MethodTemplates
      */
     public static TypeComposition ensureMethodTemplateArrayComposition(Container container) {
-        return container.ensureClassComposition(METHOD_ARRAY_TYPE, xArray.INSTANCE);
+        return container.ensureClassComposition(METHOD_ARRAY_TYPE, container.nativeTemplate(xArray.class));
     }
 
     /**
      * @return the ClassComposition for an Array of AnnotationTemplates
      */
     public static TypeComposition ensureAnnotationTemplateArrayComposition(Container container) {
-        return container.ensureClassComposition(ANNOTATION_ARRAY_TYPE, xArray.INSTANCE);
+        return container.ensureClassComposition(ANNOTATION_ARRAY_TYPE, container.nativeTemplate(xArray.class));
     }
 
     /**
@@ -561,7 +557,8 @@ public class xRTClassTemplate
         ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_PARAMETER_ARRAY);
         if (haEmpty == null) {
             haEmpty = xArray.createImmutableArray(
-                        container.ensureClassComposition(EMPTY_PARAMETER_ARRAY.getType(), xArray.INSTANCE),
+                        container.ensureClassComposition(EMPTY_PARAMETER_ARRAY.getType(),
+                                f_container.nativeTemplate(xArray.class)),
                         Utils.OBJECTS_NONE);
             container.f_heap.saveConstHandle(EMPTY_PARAMETER_ARRAY, haEmpty);
         }

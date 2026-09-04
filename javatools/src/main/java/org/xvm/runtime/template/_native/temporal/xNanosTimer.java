@@ -37,14 +37,8 @@ import org.xvm.util.ListSet;
  */
 public class xNanosTimer
         extends xService {
-    public static xNanosTimer INSTANCE;
-
-    public xNanosTimer(Container container, ClassStructure structure, boolean fInstance) {
+    public xNanosTimer(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -144,7 +138,8 @@ public class xNanosTimer
         long           cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
 
         return frame.assignValue(iReturn,
-                hTimer.addAlarm(cNanos, new WeakCallback(frame, hAlarm), hKeepAlive.get()));
+                hTimer.addAlarm(frame.container(), cNanos,
+                        new WeakCallback(frame, hAlarm), hKeepAlive.get()));
     }
 
     // ----- ObjectHandle --------------------------------------------------------------------------
@@ -242,7 +237,8 @@ public class xNanosTimer
                 llPicos = new LongLong(Long.MAX_VALUE);
             }
 
-            hDuration.setField(null, "picoseconds", xInt128.INSTANCE.makeHandle(llPicos));
+            hDuration.setField(null, "picoseconds",
+                    frame.nativeTemplate(xInt128.class).makeHandle(llPicos));
             hDuration.makeImmutable();
 
             return hDuration;
@@ -251,7 +247,8 @@ public class xNanosTimer
         /**
          * @return a "cancel" function for the alarm
          */
-        public FunctionHandle addAlarm(long cNanos, WeakCallback refCallback, boolean fKeepAlive) {
+        public FunctionHandle addAlarm(Container container, long cNanos,
+                                       WeakCallback refCallback, boolean fKeepAlive) {
             Alarm alarm = new Alarm(cNanos, refCallback, fKeepAlive);
 
             synchronized (f_setAlarms) {
@@ -262,7 +259,7 @@ public class xNanosTimer
                 alarm.start();
             }
 
-            return new NativeFunctionHandle((_frame, _ah, _iReturn) -> {
+            return new NativeFunctionHandle(container, (_frame, _ah, _iReturn) -> {
                 alarm.cancel();
                 return Op.R_NEXT;
             });

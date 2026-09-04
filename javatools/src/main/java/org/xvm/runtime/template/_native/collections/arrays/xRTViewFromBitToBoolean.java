@@ -23,14 +23,8 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
  */
 public class xRTViewFromBitToBoolean
         extends xRTViewFromBit {
-    public static xRTViewFromBitToBoolean INSTANCE;
-
-    public xRTViewFromBitToBoolean(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewFromBitToBoolean(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -70,7 +64,7 @@ public class xRTViewFromBitToBoolean
         if (tSource instanceof BitView tView) {
             byte[] abBits = tView.getBytes(hSource, ofStart, cSize, fReverse);
 
-            return xRTBooleanDelegate.INSTANCE.makeHandle(abBits, cSize, mutability);
+            return f_container.nativeTemplate(xRTBooleanDelegate.class).makeHandle(abBits, cSize, mutability);
         }
 
         throw new UnsupportedOperationException();

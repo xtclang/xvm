@@ -10,6 +10,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
@@ -28,14 +29,8 @@ import org.xvm.runtime.template.text.xChar;
  */
 public class xRTCharDelegate
         extends xRTDelegate {
-    public static xRTCharDelegate INSTANCE;
-
-    public xRTCharDelegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTCharDelegate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -78,7 +73,7 @@ public class xRTCharDelegate
             --hDelegate.m_achValue[(int) lIndex];
             return overflow(frame);
         }
-        return frame.assignValue(iReturn, xChar.makeHandle(chValue+1));
+        return frame.assignValue(iReturn, xChar.makeHandle(frame, chValue+1));
     }
 
     @Override
@@ -95,7 +90,7 @@ public class xRTCharDelegate
             ++hDelegate.m_achValue[(int) lIndex];
             return overflow(frame);
         }
-        return frame.assignValue(iReturn, xChar.makeHandle(chValue-1));
+        return frame.assignValue(iReturn, xChar.makeHandle(frame, chValue-1));
     }
 
     @Override
@@ -111,7 +106,7 @@ public class xRTCharDelegate
             --hDelegate.m_achValue[(int) lIndex];
             return overflow(frame);
         }
-        return frame.assignValue(iReturn, xChar.makeHandle(chValue));
+        return frame.assignValue(iReturn, xChar.makeHandle(frame, chValue));
     }
 
     @Override
@@ -127,7 +122,7 @@ public class xRTCharDelegate
             ++hDelegate.m_achValue[(int) lIndex];
             return overflow(frame);
         }
-        return frame.assignValue(iReturn, xChar.makeHandle(chValue));
+        return frame.assignValue(iReturn, xChar.makeHandle(frame, chValue));
     }
 
     @Override
@@ -143,7 +138,7 @@ public class xRTCharDelegate
     public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_achValue.length));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_achValue.length));
     }
 
     @Override
@@ -211,7 +206,7 @@ public class xRTCharDelegate
     protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn, xChar.makeHandle(hDelegate.m_achValue[(int) lIndex]));
+        return frame.assignValue(iReturn, xChar.makeHandle(frame, hDelegate.m_achValue[(int) lIndex]));
     }
 
     @Override
@@ -297,7 +292,7 @@ public class xRTCharDelegate
         if (cchThat == 0) {
             return ofStart > cchThis
                 ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofStart));
+                : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, ofStart));
         }
         if (ofStart > cchThis - cchThat) {
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -312,7 +307,7 @@ public class xRTCharDelegate
                         continue Next;
                     }
                 }
-                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(of));
+                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, of));
             }
         }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -380,7 +375,8 @@ public class xRTCharDelegate
 
         @Override
         public boolean checkAssign(ObjectHandle hValue) {
-            return hValue.getTemplate() == xChar.INSTANCE;
+            return hValue.getTemplate()
+                    == NativeTemplates.of(getComposition()).get(xChar.class);
         }
 
         @Override

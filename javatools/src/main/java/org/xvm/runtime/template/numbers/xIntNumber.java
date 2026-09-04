@@ -9,7 +9,7 @@ import org.xvm.runtime.Container;
  */
 public abstract class xIntNumber
         extends xNumber {
-    public xIntNumber(Container container, ClassStructure structure, boolean fInstance) {
+    public xIntNumber(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

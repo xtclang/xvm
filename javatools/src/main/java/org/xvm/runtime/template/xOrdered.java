@@ -17,7 +17,7 @@ public class xOrdered
     public static EnumHandle EQUAL;
     public static EnumHandle GREATER;
 
-    public xOrdered(Container container, ClassStructure structure, boolean fInstance) {
+    public xOrdered(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 
@@ -30,9 +30,9 @@ public class xOrdered
             EQUAL   = getEnumByOrdinal(1);
             GREATER = getEnumByOrdinal(2);
 
-            LESSER .setField(null, "symbol", xString.makeHandle("<"));
-            EQUAL  .setField(null, "symbol", xString.makeHandle("="));
-            GREATER.setField(null, "symbol", xString.makeHandle(">"));
+            LESSER .setField(null, "symbol", xString.makeHandle(f_container, "<"));
+            EQUAL  .setField(null, "symbol", xString.makeHandle(f_container, "="));
+            GREATER.setField(null, "symbol", xString.makeHandle(f_container, ">"));
 
             LESSER .setField(null, "reversed", GREATER);
             EQUAL  .setField(null, "reversed", EQUAL);

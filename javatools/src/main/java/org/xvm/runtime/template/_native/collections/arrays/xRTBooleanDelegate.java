@@ -18,14 +18,8 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
  */
 public class xRTBooleanDelegate
         extends BitBasedDelegate {
-    public static xRTBooleanDelegate INSTANCE;
-
-    public xRTBooleanDelegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTBooleanDelegate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

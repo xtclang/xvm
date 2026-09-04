@@ -125,7 +125,49 @@ public abstract class ClassTemplate
      * @param template  the new template
      */
     protected void registerNativeTemplate(ClassTemplate template) {
+        registerAuxiliaryTemplate(template);
+
+        // this template implements a composite type declared by "this" one, so it has no name of
+        // its own to be found under; publish it into the container's native template table
+        nativeTemplates().register(template);
+    }
+
+    /**
+     * Register a native template that serves an additional structure using a template class that
+     * is already spoken for. Unlike {@link #registerNativeTemplate}, this does not make the
+     * template its class's native instance - {@link NativeTemplates#get} must keep answering with
+     * the template registered for the class's own structure.
+     *
+     * @param template  the new template
+     */
+    protected void registerAuxiliaryTemplate(ClassTemplate template) {
         ((NativeContainer) f_container).registerNativeTemplate(template.getCanonicalType(), template);
+    }
+
+    /**
+     * Obtain this template's container's table of native templates - for registering a template,
+     * or anything else that works on the table itself. To just look one up, prefer the shorthand
+     * {@link Container#nativeTemplate} on {@link #f_container}.
+     *
+     * @return this template's container's table of native templates
+     */
+    protected NativeTemplates nativeTemplates() {
+        return f_container.nativeTemplates();
+    }
+
+    /**
+     * Note: the class has to be named explicitly, because it is the class that <i>declares</i> the
+     * calling method that matters, not this template's own class. A template that inherits such a
+     * method - {@code xVar} extends {@code xRef} - is the native instance of its own class while
+     * still not being the one the inherited method is asking about.
+     *
+     * @param clzTemplate  the native template class being asked about
+     *
+     * @return true iff this is the container's native template for the specified class, rather
+     *         than one of the per-structure templates that the same class also backs
+     */
+    protected boolean isNativeInstance(Class<? extends ClassTemplate> clzTemplate) {
+        return this == f_container.nativeTemplate(clzTemplate);
     }
 
     /**
@@ -178,7 +220,7 @@ public abstract class ClassTemplate
                 if ("Object".equals(f_sName)) {
                     return null;
                 }
-                templateSuper = m_templateSuper = xObject.INSTANCE;
+                templateSuper = m_templateSuper = f_container.nativeTemplate(xObject.class);
             } else {
                 templateSuper = m_templateSuper =
                     f_container.getTemplate(f_structSuper.getIdentityConstant());
@@ -1959,7 +2001,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
-        return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, hTarget.toString()));
     }
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -2414,7 +2456,7 @@ public abstract class ClassTemplate
             if (hfn == null) {
                 // in case super constructors have their own finalizers, we need a non-null anchor
                 // that may be replaced by Frame.chainFinalizers()
-                hfn = FullyBoundHandle.NO_OP;
+                hfn = FullyBoundHandle.ensureNoOp(frame.container());
             }
 
             frame.m_hfnFinally = hfn;
