@@ -2,14 +2,12 @@ package org.xvm.api;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 
 import java.time.Instant;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
@@ -22,9 +20,10 @@ import org.xvm.runtime.MainContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
+import org.xvm.runtime.template.collections.xTuple.TupleHandle;
+
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.numbers.xInt64;
@@ -92,16 +91,27 @@ class InterpreterControl
             ObjectHandle hConsoleId  = consoleId == null
                     ? xNullable.NULL
                     : xInt64.makeHandle(consoleId);
-            ObjectHandle hTaskId = postRequest("runTask", hModule, hRepository, hConsoleId).join();
+
+            ObjectHandle hTaskId = postRequest("registerTask", hModule, hRepository, hConsoleId).join();
             taskId = ((JavaLong) hTaskId).getValue();
+
+            postRequest("startTask", hTaskId).whenComplete((r, e) -> {
+                if (e == null) {
+                    TupleHandle tuple   = (TupleHandle) r;
+                    long        result  = ((JavaLong) tuple.m_ahValue[0]).getValue();
+                    String      failure = ((StringHandle) tuple.m_ahValue[1]).getStringValue();
+                    finish(result, failure);
+                } else {
+                    finish(-1, e.toString());
+                }
+            });
         } catch (RuntimeException e) {
-            stopped = Instant.now();
             running = false;
+            stopped = Instant.now();
             unregisterConsole();
             throw e;
         }
 
-        watch();
         return this;
     }
 
@@ -129,61 +139,16 @@ class InterpreterControl
         return connector.getMainContainer().invokeAsync(methodName, arguments);
     }
 
-    private void watch() {
-        CompletableFuture.delayedExecutor(25, TimeUnit.MILLISECONDS).execute(() ->
-            taskRunning().whenComplete((isRunning, exception) -> {
-                if (exception != null) {
-                    finish(null, exception.toString());
-                } else if (isRunning) {
-                    watch();
-                } else {
-                    collectResult();
-                }
-            }));
-    }
-
-    private CompletableFuture<Boolean> taskRunning() {
-        return postRequest("taskRunning", xInt64.makeHandle(taskId))
-                .thenApply(result -> result == xBoolean.TRUE);
-    }
-
-    private void collectResult() {
-        taskResult().whenComplete((result, exception) -> {
-            if (exception != null) {
-                finish(null, exception.toString());
-                return;
-            }
-
-            taskFailure().whenComplete((failure, failureException) ->
-                finish(result, failureException == null
-                        ? failure
-                        : failureException.toString()));
-        });
-    }
-
-    private CompletableFuture<Long> taskResult() {
-        return postRequest("taskResult", xInt64.makeHandle(taskId))
-                .thenApply(result -> result == xNullable.NULL
-                        ? null
-                        : ((JavaLong) result).getValue());
-    }
-
-    private CompletableFuture<String> taskFailure() {
-        return postRequest("taskFailure", xInt64.makeHandle(taskId))
-                .thenApply(result -> result == xNullable.NULL
-                        ? null
-                        : ((StringHandle) result).getStringValue());
-    }
-
-    private synchronized void finish(Long result, String failure) {
+    private synchronized void finish(long result, String failure) {
         if (!running) {
             return;
         }
 
-        this.result  = result;
-        this.stopped = Instant.now();
         try {
-            if (failure != null) {
+            if (failure.isEmpty()) {
+                this.result = result;
+            } else {
+                this.result = null;
                 if (console != null) {
                     console.println("Unhandled exception: " + failure);
                 }
@@ -192,8 +157,9 @@ class InterpreterControl
                 }
             }
         } finally {
-            unregisterConsole();
             this.running = false;
+            this.stopped = Instant.now();
+            unregisterConsole();
         }
     }
 
@@ -230,11 +196,6 @@ class InterpreterControl
     @Override
     public Long result() {
         return result;
-    }
-
-    @Override
-    public File console() {
-        return null;
     }
 
     private final InterpreterConnector connector;

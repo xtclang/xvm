@@ -1,6 +1,13 @@
 /**
  * This is an application intended to be hosted in "Container 0" for the purpose of running
  * additional applications (such as module test-runs) that can be loaded dynamically.
+ *
+ * To run the server and interactive client from the `manualTests` directory, use two terminal
+ * tabs:
+ *
+ *     xec -L build/xtc/main/lib runner.xtclang.org
+ *
+ *     xec runner_client.xtclang.org http://localhost:8080
  */
 @web.WebApp
 module runner.xtclang.org {
@@ -17,11 +24,13 @@ module runner.xtclang.org {
 
     import web.Get;
     import web.Post;
+    import web.Produces;
     import web.WebService;
     import web.http.HostInfo;
 
     /**
-     * Start the HTTP endpoint. Native callers should invoke [runTask] directly.
+     * Start the HTTP endpoint. Native callers should invoke [registerTask] and [startTask]
+     * directly.
      */
     void run(String[] args=["localhost:8080/8090", "localhost:8080/8090"]) {
         String routeString = args.size > 0 ? args[0] : "localhost:8080/8090";
@@ -51,7 +60,7 @@ module runner.xtclang.org {
     }
 
     /**
-     * Create a container for the supplied module and start its `run()` method.
+     * Register a task for the supplied module.
      *
      * @param template    the module to run
      * @param repository  the repository used to resolve the module's dependencies
@@ -59,28 +68,16 @@ module runner.xtclang.org {
      *
      * @return the task identifier
      */
-    Int runTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId) =
-            TaskRegistry.runTask(template, repository, consoleId);
+    Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId) =
+            TaskRegistry.registerTask(template, repository, consoleId);
 
     /**
-     * Wait for the identified task to finish and remove it from the task registry.
+     * Start the identified task.
      *
-     * @return the task's integer result, if it completed with one
-     * @return the task failure text, if it completed exceptionally
-     * @return the task start time as milliseconds since the epoch
-     * @return the task stop time as milliseconds since the epoch
+     * @return the task's integer result, or zero if it completed without one
+     * @return the task failure text, or an empty string if it completed normally
      */
-    Tuple<Int?, String?, Int, Int> awaitTask(Int id) = TaskRegistry.awaitTask(id);
-
-    /**
-     * @return the identified task's start time as milliseconds since the epoch
-     */
-    Int taskStarted(Int id) = TaskRegistry.taskStarted(id);
-
-    /**
-     * @return a list of all running tasks and their processing times
-     */
-    String runningTasks() = TaskRegistry.runningTasks();
+    Tuple<Int, String> startTask(Int id) = TaskRegistry.startTask(id);
 
     /**
      * @return a human-readable task status
@@ -100,51 +97,83 @@ module runner.xtclang.org {
 
         private Int nextTaskId = 1;
 
-        Int runTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId) {
+        /**
+         * Implementation of the `registerTask` API.
+         */
+        Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId) {
             Int  id   = nextTaskId++;
             Task task = new Task(id, template, repository, consoleId);
             tasks[id] = task;
-            task.start();
             return id;
         }
 
-        Tuple<Int?, String?, Int, Int> awaitTask(Int id) {
-            Task task = taskFor(id);
-            Tuple<Int?, String?, Int, Int> outcome = task.awaitCompletion();
-            tasks.remove(id);
-            return outcome;
+        /**
+         * Implementation of the `startTask` API.
+         */
+        Tuple<Int, String> startTask(Int id) = taskFor(id).start();
+
+        /**
+         * Implementation of the `taskStatus` API.
+         */
+        String taskStatus(Int id) {
+            if (Task task := findTask(id)) {
+                return task.status;
+            }
+            return "terminated";
         }
 
-        Int taskStarted(Int id) = taskFor(id).startedMillis;
+        /**
+         * Implementation of the `killTask` API.
+         */
+        void killTask(Int id) = taskFor(id).kill();
 
+        /**
+         * Remove the identified task from the registry.
+         */
+        void unregisterTask(Int id) = tasks.remove(id);
+
+        /**
+         * Register and start a task requested through the web API.
+         */
+        Int submitTask(String moduleName, ModuleRepository repository) {
+            Int id = registerTask(repository.getResolvedModule(moduleName), repository, Null);
+            taskFor(id).start^();
+            return id;
+        }
+
+        /**
+         * Implementation of the `runningTasks` through web API.
+         */
         String runningTasks() {
             StringBuffer listing = new StringBuffer();
             for (Task task : tasks.values) {
                 if (String description := task.runningDescription()) {
-                    if (listing.empty) {
-                        listing.addAll("ID\tMODULE\tPROCESSING TIME");
+                    if (!listing.empty) {
+                        listing.add('\n');
                     }
-                    listing.add('\n').addAll(description);
+                    listing.addAll(description);
                 }
             }
             return listing.empty ? "No running tasks" : listing.toString();
         }
 
-        String taskStatus(Int id) {
+        /**
+         * @return True iff the identified task remains registered
+         * @return (conditional) the registered task
+         */
+        private conditional Task findTask(Int id) {
             if (Task task := tasks.get(id)) {
-                return task.status;
+                return True, task;
             }
             assert 0 < id < nextTaskId as $"Unknown task {id}";
-            return "terminated";
+            return False;
         }
 
-        void killTask(Int id) = taskFor(id).kill();
-
-        Int submitTask(String moduleName, ModuleRepository repository) =
-                runTask(repository.getResolvedModule(moduleName), repository, Null);
-
+        /**
+         * @return a registered task, asserting that it is still available
+         */
         private Task taskFor(Int id) {
-            assert Task task := tasks.get(id) as $"Unknown task {id}";
+            assert Task task := findTask(id) as $"Task {id} has terminated";
             return task;
         }
     }
@@ -157,24 +186,9 @@ module runner.xtclang.org {
 
         private Time? started;
 
-        @Future Tuple<Int?, String?, Int, Int> completion;
-
         Boolean running;
 
-        Int? result;
-
-        String? failure;
-
-        String status.get() = running
-                ? "running"
-                : failure == Null
-                    ? result == Null ? "stopped" : $"stopped: {result}"
-                    : $"failed: {failure}";
-
-        Int startedMillis.get() {
-            assert Time started ?= this.started;
-            return epochMillis(started);
-        }
+        String status.get() = running ? "running" : "stopped";
 
         conditional String runningDescription() {
             if (!running) {
@@ -183,12 +197,10 @@ module runner.xtclang.org {
 
             assert Time started ?= this.started;
             @Inject Clock clock;
-            return True, $"{id}\t{template.qualifiedName}\t{clock.now - started}";
+            return True, $"{id} {template.qualifiedName} processing: {clock.now - started} sec";
         }
 
-        Tuple<Int?, String?, Int, Int> awaitCompletion() = completion;
-
-        void start() {
+        Tuple<Int, String> start() {
             assert container == Null;
 
             @Inject Clock clock;
@@ -205,24 +217,25 @@ module runner.xtclang.org {
             container = new Container(template, Lightweight, repository, injector);
             running   = True;
 
-            @Future Tuple outcome = container.invoke("run", ());
+            @Future Tuple<Int, String> completion;
+            @Future Tuple              outcome = container.as(Container).invoke("run", ());
             &outcome.whenComplete((tuple, exception) -> {
+                Int    result  = 0;
+                String failure = "";
                 if (exception == Null) {
                     if (tuple != Null && !tuple.empty && tuple[0].is(Int)) {
                         result = tuple[0].as(Int);
-                    } else {
-                        result = 0;
                     }
                 } else {
                     failure = exception.toString();
                 }
 
-                Time stopped = clock.now;
-                assert Time started ?= this.started;
-                running   = False;
-                container = null;
-                completion = (result, failure, epochMillis(started), epochMillis(stopped));
+                running    = False;
+                container  = Null;
+                completion = (result, failure);
+                TaskRegistry.unregisterTask^(id);
             });
+            return completion;
         }
 
         void kill() {
@@ -232,8 +245,6 @@ module runner.xtclang.org {
             }
         }
 
-        private static Int epochMillis(Time time) =
-                (time.epochPicos / Duration.PicosPerMilli).toInt64();
     }
 
     /**
@@ -244,19 +255,19 @@ module runner.xtclang.org {
         @Post("run{/moduleName}")
         Int runModule(String moduleName) {
             @Inject("repository") ModuleRepository repository;
-
-            Int id = TaskRegistry.submitTask(moduleName, repository);
-            @Future Tuple<Int?, String?, Int, Int> ignored = TaskRegistry.awaitTask(id);
-            return id;
+            return TaskRegistry.submitTask(moduleName, repository);
         }
 
         @Get("tasks")
+        @Produces(Text)
         String tasks() = TaskRegistry.runningTasks();
 
         @Get("task{/id}")
+        @Produces(Text)
         String status(Int id) = TaskRegistry.taskStatus(id);
 
         @Post("task{/id}/kill")
+        @Produces(Text)
         String kill(Int id) {
             TaskRegistry.killTask(id);
             return TaskRegistry.taskStatus(id);

@@ -386,10 +386,6 @@ public class LspSupport {
          */
         Long result();
 
-        /**
-         * @return the File containing the output that the application printed to the Console
-         */
-        File console();
     }
 
     // ----- run support ---------------------------------------------------------------------------
