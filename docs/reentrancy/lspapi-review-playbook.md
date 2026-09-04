@@ -171,7 +171,11 @@ before the PR lands. That paragraph has to go - the question in it now has an an
 
 ---
 
-### 3. H5 - the task registry never releases anything
+### 3. H5 - POSTED 2026-09-04
+
+https://github.com/xtclang/xvm/pull/545#discussion_r3933558506 - fix `e886707`.
+
+#### the finding as written
 
 **Comment on** `lib_runner/src/main/x/runner.x:94` - `private Map<Int, Task> tasks = new HashMap();`
 
@@ -271,7 +275,13 @@ declaration. (Skip if the sub-branch above lands, which deletes the file.)
 
 ---
 
-### 7. Mechanical - commit directly, one commit each
+### 7. Mechanical - POSTED 2026-09-04, fixes on `lagergren/lspapi-review-fixes`
+
+All three posted, each linking its commit on `lagergren/lspapi-review-fixes` (pushed, off
+`2568d6be4`; all four commits verified to compile with `xdk:installDist`):
+H4 https://github.com/xtclang/xvm/pull/545#discussion_r3933563530 (`9f2e7f6`),
+H6 https://github.com/xtclang/xvm/pull/545#discussion_r3933579905 (`b561e3b`),
+H2 https://github.com/xtclang/xvm/pull/545#discussion_r3933586804 (`6b92b36`).
 
 | finding | file:line | change |
 | --- | --- | --- |
