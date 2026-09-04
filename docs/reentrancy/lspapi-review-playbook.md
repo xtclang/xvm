@@ -98,6 +98,10 @@ changes are left as a tidy-up.
 
 ### 1. H19 - a standard XDK module cannot run (BLOCKING)
 
+**POSTED 2026-09-04** on `runner.x:161`:
+https://github.com/xtclang/xvm/pull/545#discussion_r3933436017 - with the corrected provider
+description, not the wording below, which had the clock and the whitelist wrong.
+
 **Comment on** `lib_runner/src/main/x/runner.x:161` - `injector = new BasicResourceProvider();`
 
 > `BasicResourceProvider`'s `getResource` handles `Console`, `Clock`, `Timer`, `Random`/`rnd`,
