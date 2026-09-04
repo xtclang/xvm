@@ -988,7 +988,7 @@ output that the application printed to the Console"*, and `InterpreterControl.co
 does not keep; either it is unimplemented and should say so, or it should be removed until there is
 a file to return.
 
-### H11 - What is NOT a smell here, having checked
+### H15 - What is NOT a smell here, having checked
 
 Worth recording so a reviewer does not re-raise them:
 
@@ -1074,13 +1074,16 @@ which is what it should have been, and roughly a third of its current size.
 9. Parallel *runs* are better founded than the old model but unproven; container creation still
    touches the shared native plane, which `testPoolGrows` measures without solving.
 
-**Hardening, for a structured review**
+**Hardening, for a structured review.** These are recorded here and **nowhere else** - none has
+been raised on PR #545, and nothing has been committed to `cpurdy/LSPAPI`. Each links to a section
+above with file and line references so it can be checked rather than believed.
 
 | | item | shape |
 | --- | --- | --- |
 | H1 | four config fields -> one immutable `Config` record behind a volatile | makes "half-configured" unrepresentable |
 | H2 | package-private constructor, non-final `instance`, static lock over instance state | the singleton is not enforced and the lock assumes it is |
 | H3 | `xExternalConsole.INSTANCE` mutable public static, written by a constructor, read cross-thread | the house pattern, newly load-bearing |
+| H3b | `ensureConnector()` is public and never checks the precondition it depends on | builds a connector on a null repository; `LspTest` calls it directly |
 | H4 | `addResourceSupplier` check-then-act on a concurrent map | `putIfAbsent` |
 | H5 | task/container eviction | assert a stopped task holds no container |
 | H6 | `Task.running`/`result`/`failure` publicly writable | `@RO` |
@@ -1091,4 +1094,4 @@ which is what it should have been, and roughly a third of its current size.
 | H12 | write-once fields that cannot be `final` because the object is constructed then started | do the work in the factory, hand the constructor finished values |
 | H13 | `Lazy` is already upstream and **entirely unused**; `connector` is the textbook case | one `Lazy.ofBound` field deletes the lock, the null check and the mutability |
 | H14 | `PrintStream` as the console type - new, and disagrees with both existing abstractions | swallows write failures, charset is the caller's accident, conflates out/err |
-| H11 | what is NOT a smell, having checked | anonymous `Console`, the two-map update, native `switch` dispatch |
+| H15 | what is NOT a smell, having checked | anonymous `Console`, the two-map update, native `switch` dispatch |
