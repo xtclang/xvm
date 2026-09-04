@@ -1026,6 +1026,48 @@ output that the application printed to the Console"*, and `InterpreterControl.co
 does not keep; either it is unimplemented and should say so, or it should be removed until there is
 a file to return.
 
+### H16 - Was a new native console needed at all? Yes - and here is the comparison
+
+`xExternalConsole.java` and `ExtermalConsole.x` are both **new files** in the branch (9 new files in
+total). Worth asking whether they had to be, because a per-run console redirect **already existed**.
+
+**The existing option is Ecstasy-side**, in `manualTests/runner.x`:
+
+```ecstasy
+const ConsoleBuffer implements Console {
+    ConsoleBack backService = new ConsoleBack();
+    void print(Object object = "", Boolean suppressNewline = False) {
+        backService.print(object.toString(), suppressNewline);
+    }
+}
+service ConsoleBack { private StringBuffer buffer = new StringBuffer(); ... }
+```
+
+injected through `RunnerResourceProvider`. It needs **no Java changes whatsoever** - no native
+template, no dynamic resource registration, no concurrent resource maps.
+
+**There is no Java variant.** `xTerminalConsole` writes to a static `CONSOLE_OUT` and cannot be
+redirected per instance, which is precisely why a new template was needed.
+
+| | Ecstasy `ConsoleBuffer` (existing) | `xExternalConsole` (new) |
+| --- | --- | --- |
+| Java changes required | none | concurrent resource maps, public add/remove, dynamic registration |
+| delivery | **batch** - a `String` read at the end via `backService.toString()` | **streaming** - written to the host sink as it happens |
+| memory for a long run | unbounded Ecstasy `StringBuffer` | none retained |
+| host integration | marshal a String back across the boundary | the host's own sink receives it directly |
+
+**So the new template is justified**, and for a real reason rather than novelty: a host wants output
+as it is produced, and a long-running module must not accumulate its entire output in an Ecstasy
+buffer first. The cost is the `NativeContainer` work in Part 1.3, which is what pays for it.
+
+**Two trivia worth fixing while it is new.** The Ecstasy file is named `ExtermalConsole.x` while
+declaring `service ExternalConsole`; every sibling in that directory (`TerminalConsole.x`,
+`RTBuffer.x`, `RTChannel.x`) matches its declaration. Nothing references the filename so it compiles,
+but it breaks the convention and defeats a search for the name. And see
+[H14](#h14---printstream-as-the-console-type-is-a-new-decision-and-it-disagrees-with-its-own-parent-class)
+for the stream type: the parent writes through a `PrintWriter`, so the child taking a `PrintStream`
+puts a byte stream under a char-oriented parent.
+
 ### H15 - What is NOT a smell here, having checked
 
 Worth recording so a reviewer does not re-raise them:
@@ -1275,4 +1317,5 @@ above with file and line references so it can be checked rather than believed.
 | H12 | write-once fields that cannot be `final` because the object is constructed then started | do the work in the factory, hand the constructor finished values |
 | H13 | `Lazy` is already upstream and **entirely unused**; `connector` is the textbook case | one `Lazy.ofBound` field deletes the lock, the null check and the mutability |
 | H14 | `PrintStream` as the console type - new, and disagrees with both existing abstractions | swallows write failures, charset is the caller's accident, conflates out/err |
+| H16 | was a new native console needed? yes - existing redirect is Ecstasy-side and batch-only | streaming to a host sink justifies it; note the `ExtermalConsole.x` filename typo |
 | H15 | what is NOT a smell, having checked | anonymous `Console`, the two-map update, native `switch` dispatch |
