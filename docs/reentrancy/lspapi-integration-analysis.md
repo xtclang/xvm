@@ -661,6 +661,94 @@ that returns only when the task finishes would let Java hold **one** future per 
 40 requests per second per run, and would remove the JVM-wide pool from the design. The polling
 looks like a placeholder for a completion channel that was not built yet.
 
+### H12 - Write-once state that is not final, and the refactor that fixes it without work in a constructor
+
+```java
+private volatile boolean running;     // genuinely mutable - lifecycle
+private volatile Instant started;     // WRITE-ONCE
+private volatile Instant stopped;     // genuinely mutable
+private volatile Long    result;      // genuinely mutable
+private          long    taskId;      // WRITE-ONCE
+private          Long    consoleId;   // write-once, then nulled on unregister
+```
+
+Three of the six never change after startup, but none can be `final`, because the object is
+constructed and *then* started:
+
+```java
+return new InterpreterControl(interpreter, module, repository, console, errs).start();   // :65
+```
+
+The obvious repair - move `start()`'s work into the constructor - is the wrong one, and this branch
+has a rule against it: a constructor that boots things fails at construction time for reasons
+unrelated to what the caller asked for. The right shape puts the work in the **factory**, which is
+already there, and hands the constructor finished values:
+
+```java
+static Control create(...) {
+    Long consoleId = console == null ? null : xExternalConsole.register(native, console);
+    long taskId    = postRunTask(...);                       // work happens HERE
+    return new InterpreterControl(connector, module, consoleId, taskId, Instant.now());
+}
+```
+
+Then `connector`, `module`, `repository`, `console`, `errs`, `started`, `taskId` and `consoleId` are
+all `final`, and only `running`/`stopped`/`result` remain mutable - which they honestly are, since
+they are the outcome. **The class stops having a "constructed but not yet valid" state at all**,
+which is the state that made `taskId`'s safe publication depend on an unstated ordering (see 4.1).
+
+`LspCompiler.module` (`:276`) is the same shape - assigned in `process()`, read by `getModule()` -
+but there it is forced by the inherited `int process()` protocol, which has nowhere to return a
+module. Worth a comment rather than a refactor.
+
+### H13 - `Lazy` is already in the tree, unused, and this is exactly what it is for
+
+`javatools_utils/.../util/Lazy.java` is present and tracked on their branch - it came in with the
+owner-lazy work - and **`grep` finds no use of it anywhere in `javatools`**. The tool landed and
+nobody applied it. `LspSupport.connector` is the textbook case:
+
+```java
+private Connector connector;                                    // non-final
+
+public Connector ensureConnector() {
+    synchronized (LOCK) {
+        if (connector == null) {
+            Connector connector = useJit() ? JitControl.createConnector(cfgRepo)
+                                           : InterpreterControl.createConnector(cfgRepo);
+            this.connector = connector;
+        }
+        return connector;
+    }
+}
+```
+
+becomes
+
+```java
+private final Lazy.Bound<LspSupport, Connector> f_connector =
+        Lazy.ofBound(LspSupport::createConnector);
+```
+
+and that single change:
+
+- makes the field **`final`**, so it cannot be reassigned or observed half-published;
+- **deletes the static `LOCK`**, which H2 shows is guarding instance state and is only safe while
+  the un-enforced singleton holds;
+- **deletes the null check**, and with it the "is it built yet" state a reader could see;
+- gives **exactly-once** creation without the double-checked idiom;
+- gives `isComputed()`, so a shutdown path can skip a connector that was never booted rather than
+  booting one in order to close it.
+
+`ofBound` rather than `of` is deliberate: `Lazy.of(this::createConnector)` in a field initializer
+captures `this` before construction finishes, which is a constructor this-escape. `Lazy.Bound` takes
+the owner as a parameter at `get(this)` time and avoids it.
+
+Two adjacent populations, for scope rather than for this review: `NativeContainer` - a file LSPAPI
+already touches - has cache-if-null getters at `:421`, `:456`, `:470`, `:484` and more, and
+[E31](plans/master-enhancement-submissions.md) counts **42 such getters** across the tree that could
+be final `Lazy` fields, of which 7 need a resettable variant. None of that is this branch's to fix;
+it is where the same change pays next.
+
 ### H11 - What is NOT a smell here, having checked
 
 Worth recording so a reviewer does not re-raise them:
@@ -761,4 +849,6 @@ which is what it should have been, and roughly a third of its current size.
 | H8 | every Java/Ecstasy result is an unchecked `ObjectHandle` downcast | typed `invokeAsync` wrappers; E22's 1,439-cast problem, extended |
 | H9 | `new Object[]{}` at six diagnostic sites | master lacks a varargs `log`; **this branch already added one** |
 | H10 | Java polls every 25ms for a completion Ecstasy already has | a `waitForTask(id)` future instead of 40 requests/sec/run |
+| H12 | write-once fields that cannot be `final` because the object is constructed then started | do the work in the factory, hand the constructor finished values |
+| H13 | `Lazy` is already upstream and **entirely unused**; `connector` is the textbook case | one `Lazy.ofBound` field deletes the lock, the null check and the mutability |
 | H11 | what is NOT a smell, having checked | anonymous `Console`, the two-map update, native `switch` dispatch |
