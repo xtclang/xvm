@@ -1259,7 +1259,18 @@ IllegalStateException: Exception: Invalid resource: Key: storage, FileStore
 ```
 
 Any module asking for a file system, a directory, a clock or any other ordinary container resource
-dies. The old `manualTests/runner.x` used `PassThroughResourceProvider` for exactly this reason -
+dies.
+
+**And this is not an artifact of this branch's tests.** `InjectProbe` is inlined test source written
+here for the issue-576 ownership work, and it is deliberately resource-heavy - so on its own it
+would prove little. The second failure is not: `RepeatedRunSweepTest` runs **`TestFiles`**, which is
+`manualTests/src/main/x/files.x` - a **pre-existing XDK module**, listed in `testModuleNames` and run
+by CI on every commit. It asks for `storage` and dies under `BasicResourceProvider` exactly the same
+way.
+
+So the limitation is not "this branch injects unusual things". **A standard XDK test module cannot
+run under the runner as written.** Any module that touches the file system is excluded, which is a
+large fraction of anything real. The old `manualTests/runner.x` used `PassThroughResourceProvider` for exactly this reason -
 LSPAPI's runner is a strictly smaller world than the path it replaces, and `LspSupport.run` throwing
 `UnsupportedOperationException` for `rootDir` is the same gap seen from the Java side.
 
