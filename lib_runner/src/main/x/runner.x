@@ -90,6 +90,12 @@ module runner.xtclang.org {
     void killTask(Int id) = TaskRegistry.killTask(id);
 
     /**
+     * Delete the file-system root allocated to the identified task.
+     */
+    void deleteTaskDirectory(Int id, String moduleName) =
+            TaskRegistry.deleteTaskDirectory(id, moduleName);
+
+    /**
      * Task registry singleton service.
      */
     static service TaskRegistry {
@@ -100,9 +106,10 @@ module runner.xtclang.org {
         /**
          * Implementation of the `registerTask` API.
          */
-        Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId) {
+        Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
+                         Boolean retainStore = True) {
             Int  id   = nextTaskId++;
-            Task task = new Task(id, template, repository, consoleId);
+            Task task = new Task(id, template, repository, consoleId, retainStore);
             tasks[id] = task;
             return id;
         }
@@ -133,12 +140,23 @@ module runner.xtclang.org {
         void unregisterTask(Int id) = tasks.remove(id);
 
         /**
-         * Register and start a task requested through the web API.
+         * Register and start a task requested through the web API. Note, that the file store is
+         * immediately removed upon the task completion.
          */
         Int submitTask(String moduleName, ModuleRepository repository) {
-            Int id = registerTask(repository.getResolvedModule(moduleName), repository, Null);
+            Int id = registerTask(repository.getResolvedModule(moduleName), repository, Null, False);
             taskFor(id).start^();
             return id;
+        }
+
+        /**
+         * Delete the file-system root allocated to the identified task.
+         */
+        void deleteTaskDirectory(Int id, String moduleName) {
+            assert !findTask(id);
+
+            @Inject Directory curDir;
+            curDir.dirFor(taskDirectoryName(moduleName, id)).deleteRecursively();
         }
 
         /**
@@ -181,7 +199,8 @@ module runner.xtclang.org {
     /**
      * State and control for one application container.
      */
-    service Task(Int id, ModuleTemplate template, ModuleRepository repository, Int? consoleId) {
+    service Task(Int id, ModuleTemplate template, ModuleRepository repository, Int? consoleId,
+                 Boolean retainStore) {
         private Container? container;
 
         private Time? started;
@@ -210,11 +229,12 @@ module runner.xtclang.org {
             ResourceProvider injector;
             if (Int consoleId ?= this.consoleId) {
                 @Inject(resourceName=$"console_{consoleId}") Console console;
-                injector = new TaskResourceProvider(console);
+                injector = new TaskResourceProvider(id, template, console);
             } else {
                 @Inject Console console;
                 bufferedConsole = new BufferedConsole($"{id}> ", console);
-                injector = new TaskResourceProvider(&bufferedConsole.maskAs(Console));
+                injector = new TaskResourceProvider(
+                        id, template, &bufferedConsole.maskAs(Console));
             }
 
             container = new Container(template, Lightweight, repository, injector);
@@ -239,6 +259,10 @@ module runner.xtclang.org {
                 container  = Null;
                 completion = (result, failure);
                 TaskRegistry.unregisterTask^(id);
+
+                if (!retainStore) {
+                    TaskRegistry.deleteTaskDirectory^(id, template.name);
+                }
             });
             return completion;
         }
@@ -312,16 +336,41 @@ module runner.xtclang.org {
     }
 
     /**
-     * Provides an external console and delegates the remaining basic injections.
+     * Provides the task-specific file system and console, and delegates the remaining basic
+     * injections.
      */
-    service TaskResourceProvider(Console console)
+    service TaskResourceProvider(Int id, ModuleTemplate template, Console console)
             extends BasicResourceProvider {
+        @Lazy FileStore store.calc() {
+            @Inject Directory curDir;
+            Directory taskDir = curDir.dirFor(taskDirectoryName(template.name, id)).ensure();
+            return new ecstasy.fs.DirectoryFileStore(taskDir);
+        }
+
         @Override
         Supplier getResource(Type type, String name) {
-            if (type == Console && name == "console") {
+            switch (type.isNullable() ?: type, name) {
+            case (Console, "console"):
                 return console;
+
+            case (FileStore, "storage"):
+                return &store.maskAs(FileStore);
+
+            case (Directory, "rootDir"):
+            case (Directory, "curDir"):
+                Directory root = store.root;
+                return &root.maskAs(Directory);
+
+            case (Directory, "tmpDir"):
+                Directory temp = store.root.dirFor(".temp").ensure();
+                return &temp.maskAs(Directory);
             }
             return super(type, name);
         }
     }
+
+    /**
+     * Compute the file-system root name for a task.
+     */
+    static String taskDirectoryName(String moduleName, Int id) = $"{moduleName}_{id}";
 }
