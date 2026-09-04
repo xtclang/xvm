@@ -515,6 +515,41 @@ Three defects that only combine into correctness by convention:
 3. `LOCK` is **static** but guards **instance** fields - correct only while exactly one instance
    exists, which (1) and (2) do not guarantee.
 
+#### Why do they want a singleton at all, and is there an alternative?
+
+Worth asking rather than just objecting. The defensible reasons:
+
+- **container zero is expensive to boot** - it starts a runtime, a native container, loads
+  `runner.xtclang.org` and runs its `run()` - so it should be shared rather than repeated;
+- **an LSP server is one process serving one workspace**, so one connector is all that is ever
+  wanted, and a singleton makes that the path of least resistance;
+- it removes lifecycle questions from the caller: nothing to construct, nothing to close.
+
+**But none of those requires a singleton, and one of them is not even true.** Sharing an expensive
+resource is a *caller's* decision, not a property the class has to enforce. And the assumption
+underneath - that a JVM can only host one runtime - does not hold: `XtcEngine` in this branch boots
+its own `Runtime` and `NativeContainer` per instance, and the suite runs several engines in one JVM.
+
+**The alternative is what this branch already does:** an instance with a builder, configured
+immutably at construction. It gives everything the singleton gives, because a host that wants one
+shared connector simply holds one instance - and it gives back what the singleton takes away:
+
+| | singleton + `configure` | instance + builder |
+| --- | --- | --- |
+| two workspaces / module paths in one JVM | impossible | natural |
+| tests in one JVM | first test wins, the rest see its configuration | each test builds its own |
+| configuration validity | a mutable flag plus three fields (H1) | final fields, valid on construction |
+| lifecycle | implicit and unbounded | `close()` on something you own |
+| sharing | forced | the caller's decision |
+
+The one thing the singleton offers that the builder does not is a *default* - "just call
+`instance()`" - and that is a static convenience method over an instance, not a reason to make the
+type itself a singleton.
+
+**Plan:** take the connector-and-runner model, leave `LspSupport`'s singleton behind. If upstream
+wants the convenience, `LspSupport.instance()` can remain as a thin default over an instance-based
+implementation, which is a strictly smaller commitment than the current one-shot `configure`.
+
 Make the constructor `private`, make `instance` `static final`, and either make the lock an instance
 field or drop it entirely once H1 removes the need. If a second instance is ever wanted - and this
 branch argues it should be, see 3.3 - then the static lock is actively wrong and must go first.
@@ -1068,6 +1103,81 @@ but it breaks the convention and defeats a search for the name. And see
 for the stream type: the parent writes through a `PrintWriter`, so the child taking a `PrintStream`
 puts a byte stream under a char-oriented parent.
 
+### H17 - Module output now has two mechanisms for one concern
+
+Tracing what the CLI actually does separates a real wart from an apparent one.
+
+**Not a wart.** The CLI `Runner` takes an `org.xvm.tool.Console` for the TOOL's own messages -
+diagnostics, usage, compiler output. A running module's `@Inject Console` is a different thing
+entirely: the program's own output. Two concerns, two abstractions, correctly.
+
+**A real wart.** *Module* output now has **two** mechanisms:
+
+| | CLI | LSP / engine |
+| --- | --- | --- |
+| sink | the **static** `xTerminalConsole.CONSOLE_OUT` | a per-run `PrintStream` on `xExternalConsole` |
+| type | `PrintWriter` | `PrintStream` |
+| redirectable | **no** - hard-wired at `:225-237`, written at `:240`, `:248` | yes |
+| class | `xTerminalConsole` | a second template, plus a second Ecstasy declaration |
+
+One concern, two code paths, two stream types, and a second native template - and neither can do
+the other's job: the CLI's console cannot be redirected, and the new one cannot be the terminal.
+
+**The fix is to delete the second mechanism rather than add to it.** `xTerminalConsole`'s sink is
+static only because nothing ever needed it otherwise. Give the template an instance sink defaulting
+to `CONSOLE_OUT` and:
+
+- the CLI keeps its behaviour exactly - the default sink *is* the terminal;
+- a host registers a console with its own sink, with no second class;
+- there is one type (`PrintWriter`, which [H14](#h14---printstream-as-the-console-type-is-a-new-decision-and-it-disagrees-with-its-own-parent-class) argues for anyway), one code path, and one place where console semantics live;
+- `xExternalConsole.java` and `ExtermalConsole.x` - and its filename typo - are not needed at all.
+
+**A caveat that matters:** none of this says the CLI is the reference implementation. The launcher
+side is itself incompletely wired for both consoles and error listeners - that is the subject of
+[E32, E34 and E35](plans/master-enhancement-submissions.md), which count 665 listener parameters, 87
+`BLACKHOLE` sites and an error sink smuggled through a resolution callback. So the argument is not
+"make the LSP path match the CLI". It is that **one concern should have one mechanism**, and that
+mechanism should be designed rather than inherited from either side's status quo. Unifying on a
+sink-parameterised console is a step toward that; it does not fix the launcher's own wiring, and it
+should not be described as if it did.
+
+**This branch implements it that way**, so the engine's run path and the CLI share one console
+implementation rather than forking it. It is a smaller change than the one it replaces: the
+per-instance sink and the registration helper, against a new template, a new Ecstasy service and a
+new mutable public static.
+
+### H18 - `ConsoleLog` is a shared unsynchronized ring buffer, written on every print
+
+Found while wiring the console. `xTerminalConsole` writes to `CONSOLE_LOG` on **every** console
+print:
+
+```java
+CONSOLE_LOG.log(ach, false);      // in the PRINT continuation
+CONSOLE_LOG.log(ach, true);       // in the PRINTLN continuation
+```
+
+`CONSOLE_LOG` is a `public static final ConsoleLog` - one instance for the whole JVM - and
+`ConsoleLog` is a 1024-entry ring buffer:
+
+```java
+private final String[] m_asLine = new String[1024];
+private int            m_cLines = 0;
+private int            m_iLine  = 0;
+```
+
+with **zero** occurrences of `synchronized`, `volatile`, `Atomic` or any lock **in the entire
+file** - verified by grep on both branches. Two threads printing concurrently race on `m_iLine` and
+`m_cLines`: lines lost, slots overwritten, and `get(i)`/`render(...)` reading a torn state.
+
+**This is a master defect, not an LSPAPI one** - the file and the call sites are identical on both -
+but the runner model is what makes it *routine*, because concurrent runs are the point of it. Before,
+two services printing at once was possible but unusual; now it is the design.
+
+**Mitigated here.** In this branch's sink-parameterised console, only the terminal console feeds
+`CONSOLE_LOG` - a redirected run writes to its own writer and does not touch the shared buffer. That
+narrows the exposure to genuinely-concurrent *terminal* printing rather than fixing `ConsoleLog`,
+which still needs synchronizing or replacing with a concurrent structure.
+
 ### H15 - What is NOT a smell here, having checked
 
 Worth recording so a reviewer does not re-raise them:
@@ -1318,4 +1428,6 @@ above with file and line references so it can be checked rather than believed.
 | H13 | `Lazy` is already upstream and **entirely unused**; `connector` is the textbook case | one `Lazy.ofBound` field deletes the lock, the null check and the mutability |
 | H14 | `PrintStream` as the console type - new, and disagrees with both existing abstractions | swallows write failures, charset is the caller's accident, conflates out/err |
 | H16 | was a new native console needed? yes - existing redirect is Ecstasy-side and batch-only | streaming to a host sink justifies it; note the `ExtermalConsole.x` filename typo |
+| H17 | module output has two mechanisms - static `CONSOLE_OUT` vs a per-run `PrintStream` | give `xTerminalConsole` an instance sink; the second template stops being needed |
+| H18 | `ConsoleLog` - shared static ring buffer, no synchronization at all, written on every print | a master defect the runner model makes routine |
 | H15 | what is NOT a smell, having checked | anonymous `Console`, the two-map update, native `switch` dispatch |

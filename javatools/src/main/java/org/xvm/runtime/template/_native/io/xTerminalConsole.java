@@ -38,6 +38,9 @@ import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import java.util.Objects;
+import org.xvm.runtime.ServiceContext;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.util.ConsoleLog;
 
 
@@ -48,6 +51,60 @@ public class xTerminalConsole
         extends xService {
     public xTerminalConsole(Container container, ClassStructure structure) {
         super(container, structure);
+    }
+
+    /**
+     * Create a console handle whose output goes to the supplied writer rather than the terminal.
+     *
+     * <p>This is what the LSPAPI branch adds a whole second native template for
+     * ({@code xExternalConsole}, plus an {@code ExternalConsole} Ecstasy service and a mutable
+     * public static). The sink here was static only because nothing had ever needed it otherwise:
+     * a run's output and the CLI's output are the SAME concern, and giving the concern one
+     * mechanism is smaller than giving it two. The CLI keeps its behaviour exactly, because the
+     * default sink is the terminal.
+     *
+     * <p>{@link PrintWriter} rather than a byte stream: the data arriving here is {@code char[]},
+     * the caller chooses the encoding by choosing its writer, and a writer cannot silently swallow
+     * a write failure the way {@code PrintStream} does.
+     *
+     * @param frame  the current frame
+     * @param out    where this console's output goes
+     *
+     * @return a console handle bound to that writer
+     */
+    public ObjectHandle ensureConsole(Frame frame, PrintWriter out) {
+        Objects.requireNonNull(out, "out");
+        return new RedirectedConsoleHandle(
+                getCanonicalClass().maskAs(getCanonicalType()),
+                f_container.createServiceContext("Console"), out);
+    }
+
+    /**
+     * @param hTarget  the console handle being written through
+     *
+     * @return where that console's output goes - the handle's own writer if it has one, otherwise
+     *         the terminal
+     */
+    protected static PrintWriter writerOf(ObjectHandle hTarget) {
+        return hTarget instanceof RedirectedConsoleHandle hRedirected
+                ? hRedirected.f_out
+                : CONSOLE_OUT;
+    }
+
+    /**
+     * A console handle carrying its own output sink. Final, and per handle: one run's output must
+     * not reach another run's console.
+     */
+    protected static class RedirectedConsoleHandle
+            extends ServiceHandle {
+        protected final PrintWriter f_out;
+
+        protected RedirectedConsoleHandle(TypeComposition clazz, ServiceContext context,
+                                          PrintWriter out) {
+            super(clazz, context);
+            f_out = out;
+            context.setService(this);
+        }
     }
 
     @Override
@@ -95,23 +152,27 @@ public class xTerminalConsole
         case "print": { // Object o = "", Boolean suppressNewline = False
             boolean fNewline = !xBoolean.isTrue(ahArg[1]);
 
+            // Route by the HANDLE, not by a static: a redirected console writes to its own sink
+            // and the terminal console keeps writing to CONSOLE_OUT. One mechanism, two sinks.
+            PrintWriter out = writerOf(hTarget);
+
             ObjectHandle hVal = ahArg[0];
             if (hVal == ObjectHandle.DEFAULT) {
                 if (fNewline) {
-                    CONSOLE_OUT.println();
+                    out.println();
+                    out.flush();
                 }
                 return Op.R_NEXT;
             }
 
             int iResult = Utils.callToString(frame, hVal);
+            Frame.Continuation stepNext = frameCaller -> printTo(out, frameCaller, fNewline);
             switch (iResult) {
             case Op.R_NEXT:
-                return fNewline
-                        ? PRINTLN.proceed(frame)
-                        : PRINT.proceed(frame);
+                return stepNext.proceed(frame);
 
             case Op.R_CALL:
-                frame.m_frameNext.addContinuation(fNewline ? PRINTLN : PRINT);
+                frame.m_frameNext.addContinuation(stepNext);
                 // fall through
             case Op.R_EXCEPTION:
                 return iResult;
@@ -232,6 +293,31 @@ public class xTerminalConsole
         CONSOLE_OUT = CONSOLE == null || CONSOLE.writer() == null
                 ? new PrintWriter(System.out, true)
                 : CONSOLE.writer();
+    }
+
+    /**
+     * Write one already-rendered string to a console's own sink.
+     *
+     * <p>Only the TERMINAL console feeds {@code CONSOLE_LOG}: the log is a scrollback buffer for
+     * the terminal UI, so a redirected run's output does not belong in it - and, as its own state
+     * shows, it is not safe to write from several threads anyway.
+     */
+    private static int printTo(PrintWriter out, Frame frameCaller, boolean fNewline) {
+        char[] ach = ((StringHandle) frameCaller.popStack()).getValue().unsafeArray();
+        if (out == CONSOLE_OUT) {
+            CONSOLE_LOG.log(ach, fNewline);
+        }
+        // Deliberately NOT the shorter "out.print(ach); if (fNewline) out.println();". PrintWriter
+        // synchronizes per CALL, and println(char[]) writes the text and the line separator inside
+        // ONE lock acquisition; splitting it into two calls lets another thread's output interleave
+        // between a line and its own newline. Two branches, one atomic write each.
+        if (fNewline) {
+            out.println(ach);
+        } else {
+            out.print(ach);
+        }
+        out.flush();
+        return Op.R_NEXT;
     }
 
     private static final Frame.Continuation PRINT = frameCaller -> {
