@@ -57,13 +57,13 @@ public class LspSupport {
     /**
      * Internal constructor.
      */
-    LspSupport() {}
+    private LspSupport() {}
 
     /**
      * Internal singleton implementation.
      */
     private static class Singleton {
-        static LspSupport instance = new LspSupport();
+        static final LspSupport instance = new LspSupport();
     }
 
     private static final Object LOCK = new Object();
