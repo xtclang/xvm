@@ -68,7 +68,13 @@ import org.xvm.tool.ModuleInfo;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.NativeContainer;
-import org.xvm.runtime.NestedContainer;
+import org.xvm.runtime.MainContainer;
+import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xNullable;
+import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.text.xString.StringHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Runtime;
 import org.xvm.runtime.template.text.xString;
@@ -97,7 +103,9 @@ import org.xvm.util.Severity;
  * }
  * }</pre>
  *
- * <p><b>Deployment model.</b> Runs execute as {@link NestedContainer#createForHost nested containers}
+ * <p><b>Deployment model.</b> Runs are requests posted into a long-lived Ecstasy application
+ * ({@code runner.xtclang.org}) hosted in container zero, which creates the run's container itself -
+ * the model the LSPAPI branch proposes. This engine no longer builds containers from Java.
  * under the shared native plane - the sanctioned one-root-plus-nested-children model (the shape
  * {@code Runner.x} and the platform kernel use), reached from Java without a guest host module. This
  * is deliberately NOT sibling main containers over one plane, which leak, nor a fresh bootstrap per
@@ -137,11 +145,11 @@ public final class XtcEngine
      * {@code this} in a field initializer is a constructor this-escape, which this build makes a
      * fatal lint.</p>
      */
-    private final Lazy.Bound<XtcEngine, RuntimePlane> f_plane =
-            Lazy.ofBound(XtcEngine::bootPlane);
+    private final Lazy.Bound<XtcEngine, InterpreterConnector> f_connector =
+            Lazy.ofBound(XtcEngine::bootConnector);
 
-    /** A started runtime and the native container rooted on it. */
-    private record RuntimePlane(Runtime runtime, NativeContainer containerNative) {}
+    /** The Ecstasy application hosted in container zero that owns creating run containers. */
+    private static final String RUNNER_MODULE = "runner.xtclang.org";
 
     private XtcEngine(@NotNull ModuleRepository repoLibrary, @NotNull ErrorListener diagnosticSink) {
         this.repoLibrary     = Objects.requireNonNull(repoLibrary, "repoLibrary");
@@ -151,14 +159,21 @@ public final class XtcEngine
     /**
      * Start the runtime and boot the native container this engine's runs are rooted on.
      *
-     * <p>The native container is the root of every run, and a NestedContainer with none of its own
-     * inherits from its parent - so a host sink set here reaches every run this engine starts.</p>
+     * <p>Lazy on purpose: compiling must never require a bootable runtime, because the library a
+     * container needs can be an output of the very build that is compiling. Only runs touch it.</p>
      */
-    private RuntimePlane bootPlane() {
-        Runtime runtimeNew = new Runtime();
-        runtimeNew.start();
-        return new RuntimePlane(runtimeNew,
-                NativeContainer.create(runtimeNew, repoLibrary, diagnosticSink));
+    private InterpreterConnector bootConnector() {
+        var connector = new InterpreterConnector(repoLibrary, diagnosticSink);
+        connector.loadModule(RUNNER_MODULE);
+        connector.start(null);
+        return connector;
+    }
+
+    /**
+     * @return the native container every run is rooted on
+     */
+    private NativeContainer nativeContainer() {
+        return f_connector.get(this).getNativeContainer();
     }
 
     /**
@@ -387,7 +402,7 @@ public final class XtcEngine
     }
 
     private NativeContainer containerNative() {
-        return f_plane.get(this).containerNative();
+        return nativeContainer();
     }
 
     public static @NotNull Builder builder() {
@@ -960,54 +975,122 @@ public final class XtcEngine
                     "module not found on the module path: " + sModuleName));
         }
 
-        NativeContainer containerNative = containerNative();
-        FileStructure struct = containerNative.createFileStructure(moduleApp);
-
-        ModuleConstant idMissing = struct.linkModules(repoRun, true);
-        if (idMissing != null) {
-            return CompletableFuture.failedFuture(
-                    new IllegalStateException("missing dependency: " + idMissing.getName()));
+        if (!mapInjections.isEmpty()) {
+            // The runner app chooses a run's injector in Ecstasy (TaskResourceProvider), so
+            // per-run injections belong there rather than being registered from Java onto a
+            // container this side no longer creates. Failing loudly beats silently ignoring them.
+            return CompletableFuture.failedFuture(new UnsupportedOperationException(
+                    "per-run injections are not yet supported through the runner app: "
+                            + mapInjections.keySet()));
+        }
+        if (!"run".equals(sMethodName)) {
+            // runTask invokes run(); an arbitrary entry point has no equivalent in the runner
+            // surface, and pretending otherwise would run the wrong method.
+            return CompletableFuture.failedFuture(new UnsupportedOperationException(
+                    "the runner app invokes run(); no entry point named " + sMethodName));
         }
 
-        NestedContainer containerRun =
-                NestedContainer.createForHost(containerNative, struct.getModuleId(), List.of());
-        registerInjections(containerRun, mapInjections);
-        return containerRun.runModule(sMethodName);
+        InterpreterConnector connector = f_connector.get(this);
+        MainContainer        main      = connector.getMainContainer();
+
+        FileStructure struct;
+        try {
+            struct = prepareForRun(connector, moduleApp, repoRun);
+        } catch (RuntimeException e) {
+            return CompletableFuture.failedFuture(e);
+        }
+
+        // Hand the module and ITS repository to the runner app, which creates the container.
+        ObjectHandle hModule     = xRTModuleTemplate.makeHandle(main, struct.getModule());
+        ObjectHandle hRepository = connector.getNativeContainer().nativeTemplates()
+                                        .coreRepository().makeHandle(repoRun);
+
+        // No console for now: the runner's TaskResourceProvider takes a console id, and this
+        // branch's redirectable console (E38) is the sink it should be given once wired.
+        return main.invokeAsync("runTask", hModule, hRepository, xNullable.makeHandle(main))
+                .thenCompose(hTaskId -> awaitTask(main, ((JavaLong) hTaskId).getValue()));
     }
 
     /**
-     * Grant this run its own {@code String} and {@code String[]} injections.
+     * Copy the module through serialization so the run cannot share structures with the compiler.
      *
-     * <p>Registered on the run's own container through
-     * {@link NestedContainer#registerHostResource}, so they take precedence over the native plane
-     * and die with the container - a run cannot see another run's injections, and nothing is left
-     * behind on the shared plane afterwards. That is the difference from configuring a process-wide
-     * host once: two runs of the same module can be given different values.</p>
-     *
-     * <p>Both shapes are registered for every name because an injection is keyed by name AND type:
-     * the module decides which it declares, and asking for the one that was not registered is
-     * indistinguishable from asking for a name nobody supplied.</p>
+     * <p>Lifted from {@code InterpreterControl.prepareModule}. Writing the module out and reading it
+     * back gives the run a FileStructure with its own ConstantPool, structurally disconnected from
+     * whatever produced it - the isolation the CLI gets for free by writing a {@code .xtc} and
+     * loading it again.
      */
-    private void registerInjections(@NotNull NestedContainer containerRun,
-                                    @NotNull Map<String, List<String>> mapInjections) {
-        if (mapInjections.isEmpty()) {
-            return;
+    private static FileStructure prepareForRun(InterpreterConnector connector,
+                                               ModuleStructure moduleApp,
+                                               ModuleRepository repoRun) {
+        FileStructure struct;
+        try {
+            var bytes = new java.io.ByteArrayOutputStream();
+            moduleApp.getFileStructure().writeTo(bytes);
+            ModuleStructure moduleCopy = new FileStructure(
+                    new java.io.ByteArrayInputStream(bytes.toByteArray()), true, false).getModule();
+            struct = connector.getNativeContainer().createFileStructure(moduleCopy);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("unable to prepare " + moduleApp.getName(), e);
         }
 
-        ConstantPool pool        = containerRun.getConstantPool();
-        TypeConstant typeString  = pool.typeString();
-        TypeConstant typeStrings = pool.ensureArrayType(typeString);
+        ModuleConstant idMissing = struct.linkModules(repoRun, true);
+        if (idMissing != null) {
+            throw new IllegalStateException("missing dependency: " + idMissing.getName());
+        }
+        return struct;
+    }
 
-        mapInjections.forEach((sName, listValues) -> {
-            if (listValues == null || listValues.isEmpty()) {
-                return;
-            }
-            containerRun.registerHostResource(new InjectionKey(sName, typeString),
-                    (frame, hOpts) -> xString.makeHandle(frame, listValues.getLast()));
-            containerRun.registerHostResource(new InjectionKey(sName, typeStrings),
-                    (frame, hOpts) -> xString.makeArrayHandle(
-                            containerRun, listValues.toArray(String[]::new)));
-        });
+    /**
+     * Poll the runner app until the task stops, then answer with its result.
+     *
+     * <p>Polling because the runner exposes {@code taskRunning}/{@code taskResult} and no completion
+     * channel; the Ecstasy side already HAS the completion in hand, so a {@code waitForTask} there
+     * would replace this with a single future. Recorded as H10 in the LSPAPI analysis.
+     */
+    private static CompletableFuture<ObjectHandle> awaitTask(MainContainer main, long taskId) {
+        var future = new CompletableFuture<ObjectHandle>();
+        pollTask(main, taskId, future);
+        return future;
+    }
+
+    private static void pollTask(MainContainer main, long taskId,
+                                 CompletableFuture<ObjectHandle> future) {
+        CompletableFuture.delayedExecutor(5, java.util.concurrent.TimeUnit.MILLISECONDS)
+                .execute(() -> main.invokeAsync("taskRunning", xInt64.makeHandle(main, taskId))
+                        .whenComplete((hRunning, error) -> {
+                            if (error != null) {
+                                future.completeExceptionally(error);
+                            } else if (xBoolean.isTrue(hRunning)) {
+                                pollTask(main, taskId, future);
+                            } else {
+                                completeTask(main, taskId, future);
+                            }
+                        }));
+    }
+
+    private static void completeTask(MainContainer main, long taskId,
+                                     CompletableFuture<ObjectHandle> future) {
+        main.invokeAsync("taskFailure", xInt64.makeHandle(main, taskId))
+                .whenComplete((hFailure, error) -> {
+                    if (error != null) {
+                        future.completeExceptionally(error);
+                    } else if (!xNullable.isNull(hFailure)) {
+                        future.completeExceptionally(new IllegalStateException(
+                                ((StringHandle) hFailure).getStringValue()));
+                    } else {
+                        main.invokeAsync("taskResult", xInt64.makeHandle(main, taskId))
+                                .whenComplete((hResult, e2) -> {
+                                    // forget the task either way: the runner keeps it forever
+                                    // otherwise (H5), and this side is done reading it
+                                    main.invokeAsync("forgetTask", xInt64.makeHandle(main, taskId));
+                                    if (e2 == null) {
+                                        future.complete(hResult);
+                                    } else {
+                                        future.completeExceptionally(e2);
+                                    }
+                                });
+                    }
+                });
     }
 
     /**
@@ -1145,9 +1228,10 @@ public final class XtcEngine
 
     @Override
     public void close() {
-        // nothing to shut down if no run ever needed a runtime
-        if (f_plane.isComputed()) {
-            f_plane.get(this).runtime().shutdownXVM();
+        // nothing to shut down if no run ever needed a runtime: compiling never boots one, which
+        // is why the connector is lazy rather than built in the constructor
+        if (f_connector.isComputed()) {
+            f_connector.get(this).shutdown();
         }
     }
 

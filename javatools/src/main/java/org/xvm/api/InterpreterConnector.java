@@ -157,6 +157,19 @@ public class InterpreterConnector
     }
 
     /**
+     * Shut down the runtime this connector started.
+     *
+     * <p>Per connector, not global: {@code Runtime} holds no static state, and
+     * {@code shutdownXVM} stops that instance's two executors, so closing one embedder cannot
+     * affect another in the same JVM. Orderly rather than immediate - submitted work is allowed to
+     * finish - and it does NOT wait for termination, so a caller that needs quiescence has to
+     * arrange it separately.
+     */
+    public void shutdown() {
+        f_runtime.shutdownXVM();
+    }
+
+    /**
      * @return the native container this connector booted
      *
      * <p>Lifted from the LSPAPI branch, where the control layer needs it to register a run's

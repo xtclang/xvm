@@ -7,7 +7,7 @@ module runner.xtclang.org {
     package web   import web.xtclang.org;
     package xenia import xenia.xtclang.org;
 
-    import ecstasy.mgmt.BasicResourceProvider;
+    import ecstasy.mgmt.PassThroughResourceProvider;
     import ecstasy.mgmt.Container;
     import ecstasy.mgmt.ModuleRepository;
     import ecstasy.mgmt.ResourceProvider;
@@ -176,7 +176,13 @@ module runner.xtclang.org {
                 @Inject(resourceName=$"console_{consoleId}") Console console;
                 injector = new TaskResourceProvider(console);
             } else {
-                injector = new BasicResourceProvider();
+                // PassThrough, not Basic. BasicResourceProvider is a minimal hand-written
+                // whitelist - HashCollector, Linker, nullable types - and supplies none of the
+                // container's real injections, so a module asking for curDir, storage or a clock
+                // dies with "Invalid resource". The old manualTests runner used PassThrough for
+                // exactly this reason; using Basic gives a hosted run a strictly smaller world
+                // than the path it replaces.
+                injector = new PassThroughResourceProvider();
             }
 
             Container        container = new Container(
@@ -247,7 +253,7 @@ module runner.xtclang.org {
      * Provides an external console and delegates the remaining basic injections.
      */
     service TaskResourceProvider(Console console)
-            extends BasicResourceProvider {
+            extends PassThroughResourceProvider {
         @Override
         Supplier getResource(Type type, String name) {
             if (type == Console && name == "console") {

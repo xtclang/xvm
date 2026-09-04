@@ -1224,6 +1224,77 @@ two services printing at once was possible but unusual; now it is the design.
 narrows the exposure to genuinely-concurrent *terminal* printing rather than fixing `ConsoleLog`,
 which still needs synchronizing or replacing with a concurrent structure.
 
+### H19 - The runner cannot give a run both a complete resource set AND per-run isolation
+
+Found by wiring the engine to the runner and running this branch's existing ownership tests. It is
+the most consequential gap found, because it is not a defect that can be patched - the API has no
+way to express what is needed.
+
+**What LSPAPI's runner does.** `Task.start` picks one of two injectors:
+
+```ecstasy
+if (Int consoleId ?= this.consoleId) {
+    injector = new TaskResourceProvider(console);      // extends BasicResourceProvider
+} else {
+    injector = new BasicResourceProvider();
+}
+```
+
+**What `BasicResourceProvider` actually supplies.** Its own javadoc calls it "a minimal
+`ResourceProvider` implementation that is necessary to load an Ecstasy module dynamically into a
+lightweight container". It hand-implements a small whitelist - `HashCollector`, `Container.Linker`,
+nullable types - and **fabricates nothing else**. Both providers are pre-existing core Ecstasy; the
+branch did not touch `lib_ecstasy` at all. Nothing was missing from the platform. The more
+restrictive of two available options was chosen.
+
+**How the bug manifests.** Wiring `XtcEngine` to `runTask` and running modules that had worked
+under the previous host-container path:
+
+```
+IllegalStateException: Exception: Invalid resource: Key: curDir, Directory
+    at run() (InjectProbe.x:9)
+
+IllegalStateException: Exception: Invalid resource: Key: storage, FileStore
+    at testInject() (files.x:56)
+```
+
+Any module asking for a file system, a directory, a clock or any other ordinary container resource
+dies. The old `manualTests/runner.x` used `PassThroughResourceProvider` for exactly this reason -
+LSPAPI's runner is a strictly smaller world than the path it replaces, and `LspSupport.run` throwing
+`UnsupportedOperationException` for `rootDir` is the same gap seen from the Java side.
+
+**What was tried, and what it revealed.** Switching the runner to `PassThroughResourceProvider`
+(`@Inject Injector injector; opts -> injector.inject(type, name, opts)`) **fixes the missing
+resources** - those errors disappear. But two ownership tests then fail differently:
+
+```
+expected each of the two run containers to hold its own injected resources, found 1 that do
+a container holds a reference to an unrelated container's state after a second run
+    [ForeignReference path=container.m_contextMain.f_mapOpInfo...]
+```
+
+Because pass-through delegates to the PARENT, every run now resolves to **container zero's**
+resource instances - so runs share what they used to own separately.
+
+**Which is the actual gap.** The two available providers sit at opposite ends and neither is right
+for a host:
+
+| | complete resource set | per-run isolation |
+| --- | --- | --- |
+| `BasicResourceProvider` (LSPAPI's choice) | **no** - no `curDir`, no `storage`, no clock | yes - it fabricates |
+| `PassThroughResourceProvider` | yes | **no** - every run shares the parent's instances |
+| the previous host-container path | yes | yes |
+
+`runTask(template, repository, consoleId)` takes only a console id. There is no injector parameter,
+no root directory, no way for a caller to say "this run gets its own file system rooted here". So
+the runner API **cannot currently express** what the path it replaces already did.
+
+**The enhancement.** `runTask` needs to accept a resource description - at minimum a root directory
+and a string-injection map, ideally an injector selection - and `Task` needs to build a provider
+that supplies a complete set *per container* rather than choosing between fabricating a minimal one
+and forwarding to a shared one. That is a contribution to `lib_runner`, and it is the thing standing
+between the runner model and feature parity.
+
 ### H15 - What is NOT a smell here, having checked
 
 Worth recording so a reviewer does not re-raise them:
@@ -1476,4 +1547,5 @@ above with file and line references so it can be checked rather than believed.
 | H16 | was a new native console needed? yes - existing redirect is Ecstasy-side and batch-only | streaming to a host sink justifies it; note the `ExtermalConsole.x` filename typo |
 | H17 | module output has two mechanisms - static `CONSOLE_OUT` vs a per-run `PrintStream` | give `xTerminalConsole` an instance sink; the second template stops being needed |
 | H18 | `ConsoleLog` - shared static ring buffer, no synchronization at all, written on every print | a master defect the runner model makes routine |
+| H19 | the runner can give a run a complete resource set **or** per-run isolation, never both | `runTask` takes no injector/rootDir; the two stock providers are opposite extremes |
 | H15 | what is NOT a smell, having checked | anonymous `Console`, the two-map update, native `switch` dispatch |
