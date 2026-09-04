@@ -472,7 +472,14 @@ the static `LOCK` can then be deleted rather than bypassed. The same comment als
 is safe because it is only read under `LOCK` - true (`ensureConnector` is `synchronized` at `:122`,
 and the only other use, `:480`, goes through it) but beside the point, because it misses the defect
 H1 records: `ensureConnector` is public and never calls `verifyConfigured`, so calling it before
-`configure` builds a connector on a null `cfgRepo` (`:125-126`). `LspTest` does exactly that.
+`configure` builds a connector on a null `cfgRepo` (`:125-126`).
+
+**Correction, 2026-09-04.** An earlier draft of this section said `LspTest` does exactly that. It
+does not. `LspTest.main` calls `configure(repo(), null)` at `:49` before invoking any of the five
+scenario methods, and the only `ensureConnector` call is at `:184` inside `testPoolGrows`, which runs
+last. So the null-repository path is **latent** - reachable by any caller of a public method, not
+reached by anything upstream today. The comment being wrong does not depend on it: conceding
+mutability for lazy initialization is wrong whether or not the second defect is reachable.
 
 ### H1 - Collapse the four configuration fields into one immutable record
 

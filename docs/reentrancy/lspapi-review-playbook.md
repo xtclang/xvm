@@ -66,8 +66,10 @@ line would read as repeating myself louder. Reply in the thread instead.
 here with a genuine reason not to be final". H13 retracts that: a `final Lazy.Bound` field is lazy
 *and* final. It also missed what the analysis later found - `ensureConnector` is public and never
 calls `verifyConfigured`, so calling it before `configure` builds a connector on a null `cfgRepo`
-(`LspSupport.java:125-126`), which `LspTest` does. Leaving it standing tells them the field is fine
-as it is.
+(`LspSupport.java:125-126`). That path is **latent, not demonstrated** - `LspTest.main` configures at
+`:49` before any scenario runs, and only reaches `ensureConnector` at `:184`, so nothing upstream
+exercises it. Latent still beats the hypothetical the comment offers, which is what makes leaving it
+standing wrong: it tells them the field is fine as it is.
 
 Threads 3, 4 and 6 are all H1. After this, there should be **one** thread on that topic.
 
@@ -187,7 +189,8 @@ These three only work together; taking H13 alone trades a real if incidental ser
 >
 > `connector` is not part of that group - it is a lazily derived resource, and `ensureConnector` is
 > public and never calls `verifyConfigured`, so calling it first builds a connector on a null
-> repository. `LspTest` calls it directly.
+> repository. Latent rather than reached today: `LspTest` calls `ensureConnector` directly
+> (`:184`), but only after `main` has configured (`:49`).
 
 **Comment on** `LspSupport.java:52` - the thread-safety claim
 
@@ -199,7 +202,10 @@ These three only work together; taking H13 alone trades a real if incidental ser
    single `volatile` - "half-configured" stops being representable;
 2. `createConnector` asserts it, so the precondition is stated;
 3. `connector` becomes a `final Lazy.Bound` field - which then lets the static `LOCK` be deleted
-   rather than bypassed. `Lazy` is already in the tree and **entirely unused**.
+   rather than bypassed. `Lazy` is already in the tree, and `AbstractConverterMap` already uses exactly this idiom -
+   three `Lazy.ofBound` fields at `javatools_utils/.../converter/AbstractConverterMap.java:30-43`.
+   It is unused in `javatools` specifically, not unused in the codebase, which makes it a
+   precedent rather than a novelty.
 
 **Test to add:** two threads calling `configure` and `compile` concurrently; and `ensureConnector()`
 before `configure` must fail with a clear message rather than an NPE later.
