@@ -206,12 +206,15 @@ module runner.xtclang.org {
             @Inject Clock clock;
             started = clock.now;
 
+            BufferedConsole? bufferedConsole = Null;
             ResourceProvider injector;
             if (Int consoleId ?= this.consoleId) {
                 @Inject(resourceName=$"console_{consoleId}") Console console;
                 injector = new TaskResourceProvider(console);
             } else {
-                injector = new BasicResourceProvider();
+                @Inject Console console;
+                bufferedConsole = new BufferedConsole($"{id}> ", console);
+                injector = new TaskResourceProvider(&bufferedConsole.maskAs(Console));
             }
 
             container = new Container(template, Lightweight, repository, injector);
@@ -220,6 +223,8 @@ module runner.xtclang.org {
             @Future Tuple<Int, String> completion;
             @Future Tuple              outcome = container.as(Container).invoke("run", ());
             &outcome.whenComplete((tuple, exception) -> {
+                bufferedConsole?.flush();
+
                 Int    result  = 0;
                 String failure = "";
                 if (exception == Null) {
@@ -244,7 +249,39 @@ module runner.xtclang.org {
                 running = False;
             }
         }
+    }
 
+    /**
+     * A Console that buffers incomplete lines and identifies every output line with the specified
+     * prefix.
+     */
+    service BufferedConsole(String prefix, Console console)
+            implements Console {
+        private StringBuffer line = new StringBuffer();
+
+        @Override
+        void print(Object object = "", Boolean suppressNewline = False) {
+            line.append(object);
+            if (!suppressNewline) {
+                console.print(prefix + line.toString());
+                line.clear();
+            }
+        }
+
+        /**
+         * Flush an incomplete line.
+         */
+        void flush() {
+            if (!line.empty) {
+                console.print(prefix + line.toString());
+                line.clear();
+            }
+        }
+
+        @Override
+        String readLine(String prompt = "", Boolean suppressEcho = False) {
+            throw new Unsupported();
+        }
     }
 
     /**
