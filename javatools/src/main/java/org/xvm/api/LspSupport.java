@@ -365,6 +365,11 @@ public class LspSupport {
         boolean running();
 
         /**
+         * Wait for the module to finish running.
+         */
+        void join();
+
+        /**
          * @return the Java Instant when the app was started up
          */
         Instant whenStarted();

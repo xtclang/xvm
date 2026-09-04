@@ -100,7 +100,7 @@ class InterpreterControl
 
             CLEANER.register(this, new TaskCleanup(connector, module.getSimpleName(), taskId));
 
-            postRequest("startTask", hTaskId).whenComplete((r, e) -> {
+            completion = postRequest("startTask", hTaskId).whenComplete((r, e) -> {
                 if (e == null) {
                     TupleHandle tuple   = (TupleHandle) r;
                     long        result  = ((JavaLong) tuple.m_ahValue[0]).getValue();
@@ -194,6 +194,11 @@ class InterpreterControl
     }
 
     @Override
+    public void join() {
+        completion.join();
+    }
+
+    @Override
     public Instant whenStarted() {
         return started;
     }
@@ -220,6 +225,8 @@ class InterpreterControl
     private final ModuleRepository     repository;
     private final PrintStream          console;
     private final ErrorListener        errs;
+
+    private CompletableFuture<ObjectHandle> completion;
 
     private volatile boolean running;
     private volatile Instant started;
