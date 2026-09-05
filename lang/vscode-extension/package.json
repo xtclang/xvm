@@ -256,7 +256,7 @@
     },
     "dependencies": {
         "jdk-utils": "^0.7.0",
-        "vscode-languageclient": "^10.1.0"
+        "vscode-languageclient": "^10.1.1"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
@@ -270,9 +270,9 @@
         "eslint": "^10.9.1",
         "glob": "^13.0.6",
         "mocha": "^11.8.0",
-        "sharp": "^0.35.3",
+        "sharp": "^0.35.4",
         "typescript": "^6.0.3",
-        "typescript-eslint": "^8.68.0"
+        "typescript-eslint": "^8.69.0"
     },
     "overrides": {
         "diff": "^8.0.3",
