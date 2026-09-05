@@ -35,7 +35,7 @@ slf4j = "2.0.18"
 download = "5.7.0"
 foojay-resolver = "1.0.0"
 gradle-portal-publish = "2.1.1"
-palantir-git-version = "5.0.0"
+palantir-git-version = "5.1.0"
 vanniktech-maven-publish = "0.37.0"
 
 # =============================================================================
