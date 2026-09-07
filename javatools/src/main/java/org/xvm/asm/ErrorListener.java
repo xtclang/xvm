@@ -178,16 +178,22 @@ public interface ErrorListener {
     }
 
     // NOTE: the obvious further convenience - log(Severity, String, Object...) for a diagnostic
-    // with no structure at all - cannot be added today. Launcher implements this interface and
-    // already declares exactly that signature with an INCOMPATIBLE meaning: its second parameter
-    // is a "{}" message template rather than an error code, and it is protected, so it can neither
-    // implement nor coexist with an interface default of the same erasure. Callers with no context
-    // pass a null XvmStructure to the overload above, which needs no cast because no other
-    // overload is applicable.
+    // with no structure at all - still cannot be added, for a reason that outlived the one that
+    // used to be written here.
     //
-    // The clash is Launcher's to resolve, not this interface's: one class should not have log(...)
-    // meaning "look up this error code" on one overload and "format this {} template" on another.
-    // Renaming Launcher's template method frees the signature. Recorded as E45.
+    // The old reason was Launcher: it implements this interface and also declared exactly that
+    // signature with the String meaning a "{}" template rather than an error code. That is fixed -
+    // the method is Launcher.report now - so "log takes an error code" is finally true everywhere.
+    //
+    // The remaining reason is overload resolution, and it is not fixable by renaming. Adding
+    // log(Severity, String, Object...) makes every existing call of the form
+    //     log(sev, code, source, lStart, lEnd)
+    // ambiguous, because the varargs overload absorbs (Source, long, long) as three parameters
+    // just as well as the positional one takes them as a location. javac rejects those call sites
+    // outright - Lexer:2650, ModuleInfo:1384 and AstNode:739 among them.
+    //
+    // So callers with no context pass a null XvmStructure to the overload above. Where the null is
+    // untyped that needs no cast, because no other overload is applicable.
 
     /**
      * Log an error against a source position, taking the message parameters as varargs.

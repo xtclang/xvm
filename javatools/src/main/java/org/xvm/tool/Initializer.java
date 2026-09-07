@@ -48,7 +48,7 @@ public class Initializer extends Launcher<InitializerOptions> {
     @Override
     protected void validateOptions() {
         if (options().getProjectName().isEmpty()) {
-            log(ERROR, "Project name is required. Usage: xtc init <name> [--type=application|library|service] [--multi-module]");
+            report(ERROR, "Project name is required. Usage: xtc init <name> [--type=application|library|service] [--multi-module]");
         }
     }
 
@@ -79,7 +79,7 @@ public class Initializer extends Launcher<InitializerOptions> {
         var result = creator.create();
 
         if (!result.success()) {
-            log(ERROR, result.message());
+            report(ERROR, result.message());
             return 1;
         }
 

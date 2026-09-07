@@ -401,7 +401,7 @@ public class xRTCompiler
                 }
 
                 if (mapTargets.isEmpty()) {
-                    log(Severity.INFO, "All modules are up to date; terminating compiler");
+                    report(Severity.INFO, "All modules are up to date; terminating compiler");
                     return null;
                 }
 

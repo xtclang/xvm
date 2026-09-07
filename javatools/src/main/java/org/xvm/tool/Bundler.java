@@ -103,17 +103,17 @@ public class Bundler extends Launcher<BundlerOptions> {
         var fileOut   = resolveOutputFile(moduleMain);
         var dirParent = fileOut.getAbsoluteFile().getParentFile();
         if (dirParent != null && !dirParent.exists() && !dirParent.mkdirs()) {
-            log(ERROR, "Unable to create the output directory {}", dirParent);
+            report(ERROR, "Unable to create the output directory {}", dirParent);
             return checkErrors("bundle output");
         }
         try {
             bundle.writeTo(fileOut);
         } catch (IOException e) {
-            log(ERROR, e, "Failure writing the bundle to {}", fileOut);
+            report(ERROR, e, "Failure writing the bundle to {}", fileOut);
             return checkErrors("bundle output");
         }
 
-        log(INFO, "Wrote {} ({} bytes) containing {} modules: {}", fileOut, fileOut.length(),
+        report(INFO, "Wrote {} ({} bytes) containing {} modules: {}", fileOut, fileOut.length(),
                 selection.size(), String.join(", ", selection.keySet()));
         return checkErrors("bundle");
     }
@@ -137,7 +137,7 @@ public class Bundler extends Launcher<BundlerOptions> {
                     .sorted()
                     .forEach(name -> selection.put(name, repo.loadModule(name)));
             if (selection.isEmpty()) {
-                log(ERROR, "No modules to bundle: the module path contains no non-system modules");
+                report(ERROR, "No modules to bundle: the module path contains no non-system modules");
             }
             return selection;
         }
@@ -147,11 +147,11 @@ public class Bundler extends Launcher<BundlerOptions> {
                     ? loadModuleFile(new File(spec))
                     : repo.loadModule(spec);
             if (module == null) {
-                log(ERROR, "Unable to load module {} from the module path or file system", quoted(spec));
+                report(ERROR, "Unable to load module {} from the module path or file system", quoted(spec));
             } else {
                 var name = module.getIdentityConstant().getName();
                 if (selection.putIfAbsent(name, module) != null) {
-                    log(ERROR, "Duplicate explicit module selection for {} from {}",
+                    report(ERROR, "Duplicate explicit module selection for {} from {}",
                             quoted(name), quoted(spec));
                 }
             }
@@ -163,7 +163,7 @@ public class Bundler extends Launcher<BundlerOptions> {
         try {
             return new FileStructure(file).getModule();
         } catch (Exception e) {
-            log(ERROR, e, "Failure reading module file {}", file);
+            report(ERROR, e, "Failure reading module file {}", file);
             return null;
         }
     }
@@ -181,7 +181,7 @@ public class Bundler extends Launcher<BundlerOptions> {
         if (optMain.isPresent()) {
             var module = selection.get(optMain.get());
             if (module == null) {
-                log(ERROR, "The specified main module {} is not among the bundled modules: {}",
+                report(ERROR, "The specified main module {} is not among the bundled modules: {}",
                         quoted(optMain.get()), String.join(", ", selection.keySet()));
             }
             return module;
@@ -209,7 +209,7 @@ public class Bundler extends Launcher<BundlerOptions> {
         var candidates = roots.stream()
                 .map(module -> module.getIdentityConstant().getName())
                 .collect(Collectors.joining(", "));
-        log(ERROR, roots.isEmpty()
+        report(ERROR, roots.isEmpty()
                         ? "No main module candidate found (circular imports?); specify one with --main"
                         : "Ambiguous main module; specify one with --main from: {}",
                 candidates);
@@ -231,7 +231,7 @@ public class Bundler extends Launcher<BundlerOptions> {
             return;
         }
 
-        log(INFO, "External module dependencies (resolved at run time): {}",
+        report(INFO, "External module dependencies (resolved at run time): {}",
                 String.join(", ", external));
 
         var unbundled = external.stream()
@@ -239,7 +239,7 @@ public class Bundler extends Launcher<BundlerOptions> {
                 .filter(name -> !bundled.contains(name) && repo.getModuleNames().contains(name))
                 .toList();
         if (!unbundled.isEmpty()) {
-            log(WARNING, "Modules present on the module path but NOT included in the bundle: {}",
+            report(WARNING, "Modules present on the module path but NOT included in the bundle: {}",
                     String.join(", ", unbundled));
         }
     }
@@ -261,7 +261,7 @@ public class Bundler extends Launcher<BundlerOptions> {
 
         var opts = options();
         if (opts.getModulePath().isEmpty() && opts.getModuleSelection().isEmpty()) {
-            log(ERROR, "Nothing to bundle: specify a module path (-L) and/or explicit module files");
+            report(ERROR, "Nothing to bundle: specify a module path (-L) and/or explicit module files");
         }
     }
 

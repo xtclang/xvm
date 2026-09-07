@@ -410,12 +410,12 @@ public abstract class Launcher<T extends LauncherOptions>
     public int run() {
         final T opts = options();
 
-        log(INFO, "JVM version: {}", Runtime.version());
+        report(INFO, "JVM version: {}", Runtime.version());
 
         // TODO: Use a less warning prone way to determine if -ea is in use.
         boolean fAssertsEnabled = false;
         assert  fAssertsEnabled = true;
-        log(INFO, "Java assertions are {}", fAssertsEnabled ? "enabled" : "disabled");
+        report(INFO, "Java assertions are {}", fAssertsEnabled ? "enabled" : "disabled");
 
 
         if (opts.showHelp()) {
@@ -450,7 +450,7 @@ public abstract class Launcher<T extends LauncherOptions>
     // ----- text output and error handling --------------------------------------------------------
 
     /**
-     * Log a tool-level message with template substitution (SLF4J-style).
+     * Report a tool-level message with template substitution (SLF4J-style).
      * Use {} placeholders in the template for parameter substitution.
      * <p>
      * Tool-level logs (file not found, invalid options, etc.) are displayed via Console and
@@ -463,12 +463,12 @@ public abstract class Launcher<T extends LauncherOptions>
      * @param template  the message template with {} placeholders
      * @param params    parameters to substitute into the template
      */
-    protected void log(Severity sev, String template, Object... params) {
-        log(sev, null, template, params);
+    protected void report(Severity sev, String template, Object... params) {
+        report(sev, null, template, params);
     }
 
     /**
-     * Log an exception with an optional message template. Use {} placeholders in the template
+     * Report an exception with an optional message template. Use {} placeholders in the template
      * for parameter substitution. The exception message will be included in the Console
      * <p>
      * Tool-level exception logs are displayed via Console and tracked in Launcher, but NOT sent
@@ -482,7 +482,7 @@ public abstract class Launcher<T extends LauncherOptions>
      *                  message)
      * @param params    parameters to substitute into the template
      */
-    protected void log(Severity sev, Throwable cause, String template, Object... params) {
+    protected void report(Severity sev, Throwable cause, String template, Object... params) {
         if (errorsSuspended()) {
             return;
         }
@@ -507,7 +507,7 @@ public abstract class Launcher<T extends LauncherOptions>
      * @param errs  the ErrorList
      */
     protected void log(ErrorList errs) {
-        errs.getErrors().forEach(err -> log(err.getSeverity(), err.toString()));
+        errs.getErrors().forEach(err -> report(err.getSeverity(), err.toString()));
     }
 
     /**
@@ -561,8 +561,8 @@ public abstract class Launcher<T extends LauncherOptions>
         if (m_cSuspended > 0) {
             --m_cSuspended;
         } else {
-            log(FATAL, "Attempt to resume errors when errors have not been suspended");
-            // log(FATAL) throws LauncherException immediately
+            report(FATAL, "Attempt to resume errors when errors have not been suspended");
+            // report(FATAL) throws LauncherException immediately
         }
     }
 
@@ -635,7 +635,7 @@ public abstract class Launcher<T extends LauncherOptions>
     @Override
     public void log(ErrorInfo err) {
         m_sevWorst = worstOf(m_sevWorst, err.getSeverity());
-        log(err.getSeverity(), err.toString());
+        report(err.getSeverity(), err.toString());
         m_errors.log(err);
     }
 
@@ -799,8 +799,8 @@ public abstract class Launcher<T extends LauncherOptions>
         for (String moduleName : List.of(ECSTASY_MODULE, TURTLE_MODULE)) {
             ModuleStructure module = reposLib.loadModule(moduleName);
             if (module == null) {
-                log(FATAL, "Unable to load module: {}", moduleName);
-                // log(FATAL) throws LauncherException immediately - never gets here
+                report(FATAL, "Unable to load module: {}", moduleName);
+                // report(FATAL) throws LauncherException immediately - never gets here
                 return;
             }
 
@@ -808,9 +808,9 @@ public abstract class Launcher<T extends LauncherOptions>
             if (struct != null) {
                 ModuleConstant idMissing = struct.linkModules(reposLib, false);
                 if (idMissing != null) {
-                    log(FATAL, "Unable to link module {} due to missing module: {}",
+                    report(FATAL, "Unable to link module {} due to missing module: {}",
                             moduleName, idMissing.getName());
-                    // log(FATAL) throws LauncherException immediately - never gets here
+                    // report(FATAL) throws LauncherException immediately - never gets here
                     return;
                 }
             }
@@ -888,11 +888,11 @@ public abstract class Launcher<T extends LauncherOptions>
     protected void validateModulePath() {
         for (var file : options().getModulePath()) {
             if (!file.exists()) {
-                log(INFO, "File or directory {} does not exist", quoted(file));
+                report(INFO, "File or directory {} does not exist", quoted(file));
             } else if (file.isFile()) {
                 validateReadableFile(file, ".xtc");
             } else if (!file.canRead()) {
-                log(ERROR, "Directory {} is not readable", quoted(file));
+                report(ERROR, "Directory {} is not readable", quoted(file));
             }
         }
     }
@@ -911,10 +911,10 @@ public abstract class Launcher<T extends LauncherOptions>
                 var info = ensureModuleInfo(file, List.of(), null);
                 var srcFile = info == null ? null : info.getSourceFile();
                 if (srcFile == null || !srcFile.exists()) {
-                    log(ERROR, "Failed to locate the module source code for: {}", file);
+                    report(ERROR, "Failed to locate the module source code for: {}", file);
                 }
             } catch (RuntimeException e) {
-                log(ERROR, "Failed to identify the module for: {} ({})", file, e);
+                report(ERROR, "Failed to identify the module for: {} ({})", file, e);
             }
         } else {
             validateReadableFile(file, ".x");
@@ -931,9 +931,9 @@ public abstract class Launcher<T extends LauncherOptions>
      */
     protected void validateReadableFile(File file, String expectedExtension) {
         if (!file.canRead()) {
-            log(ERROR, "File not readable: {}", quoted(file));
+            report(ERROR, "File not readable: {}", quoted(file));
         } else if (expectedExtension != null && !file.getName().endsWith(expectedExtension)) {
-            log(WARNING, "File {} does not have the \"{}\" extension", quoted(file), expectedExtension);
+            report(WARNING, "File {} does not have the \"{}\" extension", quoted(file), expectedExtension);
         }
     }
 
@@ -957,10 +957,10 @@ public abstract class Launcher<T extends LauncherOptions>
                 var info    = ensureModuleInfo(file, resourceSpecs, outputSpec);
                 var srcFile = info == null ? null : info.getSourceFile();
                 if (srcFile == null) {
-                    log(ERROR, "Unable to find module source for file: {}", file);
+                    report(ERROR, "Unable to find module source for file: {}", file);
                 } else if (mapResults.containsKey(srcFile)) {
                     if (dups.add(srcFile)) {
-                        log(WARNING, "Module source was specified multiple times: {}",
+                        report(WARNING, "Module source was specified multiple times: {}",
                                 srcFile);
                     }
                 } else {
@@ -968,7 +968,7 @@ public abstract class Launcher<T extends LauncherOptions>
                 }
             } catch (IllegalStateException | IllegalArgumentException e) {
                 var msg = e.getMessage();
-                log(ERROR, "Could not find module information for {} ({})",
+                report(ERROR, "Could not find module information for {} ({})",
                         toPathString(file), msg == null ? "Reason unknown" : msg);
             }
         }

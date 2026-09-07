@@ -154,7 +154,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             showSystemVersion(ensureLibraryRepo());
         }
 
-        log(INFO, "Selecting compilation targets");
+        report(INFO, "Selecting compilation targets");
 
         var resourceDirs = opts.getResourceLocations();
         var outputLoc    = opts.getOutputLocation().orElse(null);
@@ -182,32 +182,32 @@ public class Compiler extends Launcher<CompilerOptions> {
             var srcFile = info.getSourceFile();
             var binFile = info.getBinaryFile();
 
-            log(srcFile == null ? ERROR : INFO, "  [{}]={}", i,
+            report(srcFile == null ? ERROR : INFO, "  [{}]={}", i,
                     srcFile == null ? "<unknown>" : srcFile.getPath());
 
             if (i == 1 && outputLoc != null && !outputLoc.isDirectory() &&
                     isExplicitCompiledFile(outputLoc.getName())) {
-                log(ERROR, "Multiple modules are being compiled, but only one output "
+                report(ERROR, "Multiple modules are being compiled, but only one output "
                         + "module file name ({}) was specified; specify a target directory instead",
                         outputLoc);
             }
             if (srcFile == null || !srcFile.exists()) {
-                log(ERROR, "Could not locate the source for the module {}", info.getFileSpec());
+                report(ERROR, "Could not locate the source for the module {}", info.getFileSpec());
             }
-	        // TODO: Consider log(ERROR, ...) -> error(...)
+	        // TODO: Consider report(ERROR, ...) -> error(...)
             if (sModule == null) {
-                log(ERROR, "Could not determine the module name for {}", info.getFileSpec());
+                report(ERROR, "Could not determine the module name for {}", info.getFileSpec());
             } else {
                 infoByName.put(sModule, info);
             }
             if (binFile == null) {
-                log(ERROR, "Could not determine the target location for {}; the module "
+                report(ERROR, "Could not determine the target location for {}; the module "
                         + "project may be missing a \"build\" or \"target\" directory",
                         info.getFileSpec());
             } else {
                 parentOf(binFile)
                         .filter(dir -> !dir.isDirectory() && dir.exists())
-                        .ifPresent(_ -> log(ERROR,
+                        .ifPresent(_ -> report(ERROR,
                                 "The output file {} cannot be written because its parent"
                                         + " directory cannot be created because a file already "
                                         + "exists with the same name",
@@ -218,12 +218,12 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         final boolean           fRebuild = opts.isForcedRebuild();
         final Optional<Version> verStamp = opts.getVersion();
-        log(INFO, "Output-path={}, force-rebuild={}", outputLoc, fRebuild);
+        report(INFO, "Output-path={}, force-rebuild={}", outputLoc, fRebuild);
 
         final var mapTargets     = new LinkedHashMap<File, Node>();
         var       cSystemModules = 0;
         for (var moduleInfo : targets) {
-            log(INFO, "Loading and parsing sources for module: {}",
+            report(INFO, "Loading and parsing sources for module: {}",
                     moduleInfo.getQualifiedModuleName());
             var node = moduleInfo.getSourceTree(this);
             // short-circuit the compilation of any up-to-date modules
@@ -234,7 +234,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 }
             } else if (verStamp.isPresent() && !verStamp.get().equals(moduleInfo.getModuleVersion())) {
                 // recompile is not required, but the version stamp needs to be added
-                log(INFO, "Stamping version {} onto module: {}", verStamp.get(),
+                report(INFO, "Stamping version {} onto module: {}", verStamp.get(),
                         moduleInfo.getQualifiedModuleName());
                 addVersion(moduleInfo, verStamp.get());
             }
@@ -242,7 +242,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         checkErrors("source loading");
 
         if (mapTargets.isEmpty()) {
-            log(INFO, "All modules are up to date; terminating compiler");
+            report(INFO, "All modules are up to date; terminating compiler");
             return 0;
         }
         final var allNodes = List.copyOf(mapTargets.values());
@@ -253,7 +253,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         checkErrors("repository setup");
 
         if (cSystemModules == 0) {
-            log(INFO, "Pre-loading and linking system libraries");
+            report(INFO, "Pre-loading and linking system libraries");
             prelinkSystemLibraries(repoLib);
         }
         prevLibs = repoLib;
@@ -264,12 +264,12 @@ public class Compiler extends Launcher<CompilerOptions> {
         checkErrors("output repository setup");
 
         // the code below could be extracted if necessary: compile(allNodes, repoLib, repoOutput);
-        log(INFO, "Creating empty modules and populating namespaces");
+        report(INFO, "Creating empty modules and populating namespaces");
         final var mapCompilers = resolveCompilers(allNodes, repoLib);
-        log(INFO, "Resolved compilers: {}", mapCompilers);
+        report(INFO, "Resolved compilers: {}", mapCompilers);
         flushAndCheckErrors(allNodes);
 
-        log(INFO, "Resolving names and dependencies");
+        report(INFO, "Resolving names and dependencies");
         final var compilers = List.copyOf(mapCompilers.values());
         linkModules(compilers, repoLib);
         flushAndCheckErrors(allNodes);
@@ -280,28 +280,28 @@ public class Compiler extends Launcher<CompilerOptions> {
         injectNativeTurtle(repoLib);
         checkErrors("native turtle injection");
 
-        log(INFO, "Validating expressions");
+        report(INFO, "Validating expressions");
         validateExpressions(compilers);
         flushAndCheckErrors(allNodes);
 
-        log(INFO, "Generating code");
+        report(INFO, "Generating code");
         generateCode(compilers);
         flushAndCheckErrors(allNodes);
 
         if (allNodes.size() == 1) {
-            log(INFO, "Storing results of compilation: {}",
+            report(INFO, "Storing results of compilation: {}",
                     allNodes.getFirst().moduleInfo().getBinaryFile());
         } else {
-            log(INFO, "Storing results of compilation:");
+            report(INFO, "Storing results of compilation:");
             for (var node : allNodes) {
                 var info = node.moduleInfo();
-                log(INFO, "  {} -> {}", info.getQualifiedModuleName(), info.getBinaryFile());
+                report(INFO, "  {} -> {}", info.getQualifiedModuleName(), info.getBinaryFile());
             }
         }
         emitModules(allNodes, repoOutput);
         flushAndCheckErrors(allNodes);
 
-        log(INFO, "Finished; terminating compiler");
+        report(INFO, "Finished; terminating compiler");
         return hasSeriousErrors() ? 1 : 0;
     }
 
@@ -341,7 +341,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         for (var node : allNodes) {
             // Create a module/package/class structure for each dir/file node in the "module tree"
             if (node.type().getCategory().getId() != Id.MODULE) {
-                log(ERROR, "File {} doesn't contain a module statement", quoted(node));
+                report(ERROR, "File {} doesn't contain a module statement", quoted(node));
                 continue;
             }
             final var compiler = new org.xvm.compiler.Compiler(node.type(), node.errs());
@@ -351,7 +351,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             }
             final var name = struct.getModuleId().getName();
             if (mapCompilers.containsKey(name)) {
-                log(ERROR, "Duplicate module name: {}", quoted(name));
+                report(ERROR, "Duplicate module name: {}", quoted(name));
                 continue;
             }
             // Hold on to the module compiler
@@ -362,7 +362,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 repo.storeModule(struct.getModule());
                 assert repoBuild.loadModule(name) != null;
             } catch (IOException e) {
-                log(FATAL, e, "I/O exception storing module: {}", name);
+                report(FATAL, e, "I/O exception storing module: {}", name);
                 // Error accumulates in m_sevWorst, flushAndCheckErrors() will abort if needed
             }
         }
@@ -376,7 +376,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      */
     protected ModuleRepository ensureLibraryRepo() {
         if (repoLib == null) {
-            log(INFO, "Creating and pre-populating library and build repositories");
+            report(INFO, "Creating and pre-populating library and build repositories");
             repoLib = configureLibraryRepo(options().getModulePath());
         }
         return repoLib;
@@ -475,7 +475,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                     // Code generation mutates module state. Continuing after an unchecked compiler
                     // defect can persist corrupted bytecode or mask an ownership failure as a normal
                     // diagnostic, so route it through the fatal launcher path with the cause intact.
-                    log(FATAL, e, "Failed to generate code for {}", compiler);
+                    report(FATAL, e, "Failed to generate code for {}", compiler);
                     throw e; // reachable only if error reporting is deliberately suspended
                 }
             }
@@ -499,7 +499,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             struct.writeTo(fileBin);
             return true;
         } catch (IOException e) {
-            log(ERROR, "Failed to stamp version {} onto file {}", ver, fileBin);
+            report(ERROR, "Failed to stamp version {} onto file {}", ver, fileBin);
             return false;
         }
     }
@@ -523,7 +523,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 try {
                     repoOutput.storeModule(module);
                 } catch (IOException e) {
-                    log(FATAL, e, "I/O exception storing module: {}", module.getName());
+                    report(FATAL, e, "I/O exception storing module: {}", module.getName());
                 }
                 int exitCode = checkErrors("module storage");
                 if (exitCode != 0) {
@@ -533,7 +533,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 // figure out where to put the resulting module
                 var file = nodeModule.file().getParentFile();
                 if (file == null) {
-                    log(ERROR, "Unable to determine output location for module {} from file: {}",
+                    report(ERROR, "Unable to determine output location for module {} from file: {}",
                             quoted(nodeModule.name()), nodeModule.file());
                     return checkErrors("output location resolution");
                 }
@@ -555,9 +555,9 @@ public class Compiler extends Launcher<CompilerOptions> {
                 try {
                     struct.writeTo(file);
                 } catch (IOException e) {
-                    log(FATAL, e, "Exception occurred while attempting to write module file {}",
+                    report(FATAL, e, "Exception occurred while attempting to write module file {}",
                             quoted(file.getAbsolutePath()));
-                    return 1;  // Unreachable - log(FATAL) throws
+                    return 1;  // Unreachable - report(FATAL) throws
                 }
             }
         }
@@ -586,7 +586,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 if (fSuppressVerify && err.getCode().startsWith("VERIFY") && ++cVerify > 3) {
                     continue;
                 }
-                log(err.getSeverity(), err.toString());
+                report(err.getSeverity(), err.toString());
             }
         }
     }
@@ -684,7 +684,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         options().getOutputLocation().ifPresent(file -> {
             boolean fSingle = isExplicitCompiledFile(file.getName());
             if (fSingle && numModules > 1) {
-                log(ERROR, "The single file {} is specified, but multiple modules are expected", file);
+                report(ERROR, "The single file {} is specified, but multiple modules are expected", file);
                 return;
             }
 
@@ -694,28 +694,28 @@ public class Compiler extends Launcher<CompilerOptions> {
             if (fSingle) {
                 optDir.filter(File::exists)
                       .filter(dir -> !dir.isDirectory())
-                      .ifPresent(_ -> log(ERROR,
+                      .ifPresent(_ -> report(ERROR,
                           "The output file is {} but the parent directory cannot be created"
                                   + " because a file already exists with the same name", file));
             }
 
             // Create directory if it doesn't exist
             optDir.filter(dir -> !dir.exists()).ifPresent(dir -> {
-                log(INFO, "Creating directory {}", dir);
+                report(INFO, "Creating directory {}", dir);
                 //noinspection ResultOfMethodCallIgnored
                 dir.mkdirs();
             });
 
             if (file.exists() && !file.isDirectory()) {
                 if (!fSingle) {
-                    log(WARNING, "File {} does not have the \".xtc\" extension", file);
+                    report(WARNING, "File {} does not have the \".xtc\" extension", file);
                 }
                 if (!file.canWrite()) {
-                    log(ERROR, "File {} can not be written to", file);
+                    report(ERROR, "File {} can not be written to", file);
                 }
             } else {
                 optDir.filter(dir -> !dir.exists()).ifPresent(dir ->
-                    log(ERROR, "Directory {} is missing", dir));
+                    report(ERROR, "Directory {} is missing", dir));
             }
         });
     }

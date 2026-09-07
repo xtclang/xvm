@@ -124,11 +124,11 @@ class LauncherErrorHandlingTest {
 
         // Expose protected methods for testing
         public void testLog(final Severity sev, final String template, final Object... params) {
-            log(sev, template, params);
+            report(sev, template, params);
         }
 
         public void testLogWithThrowable(final Severity sev, final Throwable cause, final String template, final Object... params) {
-            log(sev, cause, template, params);
+            report(sev, cause, template, params);
         }
 
         public int testCheckErrors() {

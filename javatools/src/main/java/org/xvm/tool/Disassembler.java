@@ -83,10 +83,10 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
                 // .xtc targets are file paths and must exist on disk; bare module names are
                 // resolved later against the module path by process()
                 if (file.getName().endsWith(".xtc") && !file.exists()) {
-                    log(ERROR, "Module file does not exist: {}", file);
+                    report(ERROR, "Module file does not exist: {}", file);
                 }
             },
-            () -> log(ERROR, "No module file specified")
+            () -> report(ERROR, "No module file specified")
         );
         validateModulePath();
     }
@@ -101,24 +101,24 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
 
         if (sModule.endsWith(".xtc")) {
             // it's a file
-            log(INFO, "Loading module file: {}", sModule);
+            report(INFO, "Loading module file: {}", sModule);
             try (var in = new FileInputStream(fileModule)) {
                 component = new FileStructure(in);
             } catch (IOException e) {
-                log(ERROR, "I/O exception ({}) reading module file: {}", e, fileModule);
+                report(ERROR, "I/O exception ({}) reading module file: {}", e, fileModule);
             }
         } else {
             // it's a module; set up the repository
-            log(INFO, "Creating and pre-populating library and build repositories");
+            report(INFO, "Creating and pre-populating library and build repositories");
             final var repo = configureLibraryRepo(opts.getModulePath());
             checkErrors();
 
-            log(INFO, "Loading module: {}", sModule);
+            report(INFO, "Loading module: {}", sModule);
             component = repo.loadModule(sModule);
         }
 
         if (component == null) {
-            log(ERROR, "Unable to load module: {}", fileModule);
+            report(ERROR, "Unable to load module: {}", fileModule);
         }
         checkErrors();
 

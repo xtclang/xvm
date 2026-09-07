@@ -116,7 +116,7 @@ public class Runner extends Launcher<RunnerOptions> {
             try {
                 info = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), outFile.orElse(null));
             } catch (RuntimeException e) {
-                log(ERROR, e, "Failed to identify the module for: {}", fileSpec);
+                report(ERROR, e, "Failed to identify the module for: {}", fileSpec);
                 return checkErrors("module identification");
             }
             checkErrors("module identification");
@@ -131,18 +131,18 @@ public class Runner extends Launcher<RunnerOptions> {
                 if (module == null) {
                     File fileSrc = info.getSourceFile();
                     if (fileSrc != null && fileSrc.exists() && !opts.isCompileDisabled()) {
-                        log(INFO, "The compiled module {} is missing; attempting to compile it from {} ...",
+                        report(INFO, "The compiled module {} is missing; attempting to compile it from {} ...",
                                 quoted(info.getQualifiedModuleName()), info.getSourceFile());
                         fCompile = true;
                     } else {
                         var possibles = resolvePossibleTargets(qualName, repo);
                         if (possibles.isEmpty()) {
-                            log(ERROR, "Failed to locate the module for: {}", fileSpec);
+                            report(ERROR, "Failed to locate the module for: {}", fileSpec);
                         } else {
                             var suggestions = possibles.stream()
                                     .map(Handy::quoted)
                                     .collect(Collectors.joining(", "));
-                            log(ERROR, "Unable to locate the module for {}; did you mean {}?",
+                            report(ERROR, "Unable to locate the module for {}; did you mean {}?",
                                     fileSpec, suggestions);
                         }
                     }
@@ -153,7 +153,7 @@ public class Runner extends Launcher<RunnerOptions> {
 
             if (binExists && !opts.isCompileDisabled() && info.getSourceFile() != null
                     && info.getSourceFile().exists() && !info.isUpToDate()) {
-                log(INFO, "The compiled module {} is out-of-date; recompiling ...",
+                report(INFO, "The compiled module {} is out-of-date; recompiling ...",
                         quoted(info.getQualifiedModuleName()));
                 fCompile = true;
             }
@@ -174,7 +174,7 @@ public class Runner extends Launcher<RunnerOptions> {
 
                 int exitCode = new Compiler(builder.build(), m_console, m_errors).run();
                 if (exitCode != 0) {
-                    log(ERROR, "Runner invoked compilation failed with exit code {}", exitCode);
+                    report(ERROR, "Runner invoked compilation failed with exit code {}", exitCode);
                     return checkErrors("compilation");
                 }
                 info = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), outFile.orElse(null));
@@ -194,22 +194,22 @@ public class Runner extends Launcher<RunnerOptions> {
                     var struct = new FileStructure(in);
                     module = struct.getModule();
                 } catch (IOException e) {
-                    log(FATAL, e, "I/O exception reading module file: {}", fileBin);
-                    return 1;  // Unreachable - log(FATAL) throws
+                    report(FATAL, e, "I/O exception reading module file: {}", fileBin);
+                    return 1;  // Unreachable - report(FATAL) throws
                 }
             }
         }
 
         if (module == null) {
-            log(ERROR, "Missing module for {}", fileSpec);
+            report(ERROR, "Missing module for {}", fileSpec);
             return checkErrors("module loading");
         }
 
         try {
             repo.storeModule(module);
         } catch (IOException e) {
-            log(FATAL, e, "I/O exception storing module file: {}", fileSpec);
-            return 1;  // Unreachable - log(FATAL) throws
+            report(FATAL, e, "I/O exception storing module file: {}", fileSpec);
+            return 1;  // Unreachable - report(FATAL) throws
         }
         checkErrors("module storage");
 
@@ -219,7 +219,7 @@ public class Runner extends Launcher<RunnerOptions> {
             sName = quoted(sName);
         }
 
-        log(INFO, "Executing {} from {}", sName, binLocDesc);
+        report(INFO, "Executing {} from {}", sName, binLocDesc);
 
         Connector connector = createConnector(repo, module);
 
@@ -228,7 +228,7 @@ public class Runner extends Launcher<RunnerOptions> {
             var sMethod    = opts.getMethodName();
             var setMethods = connector.findMethods(sMethod);
             if (setMethods.size() != 1) {
-                log(ERROR, "{} method {} in module {}",
+                report(ERROR, "{} method {} in module {}",
                         setMethods.isEmpty() ? "Missing" : "Ambiguous", quoted(sMethod), sName);
                 return checkErrors("method lookup");
             }
@@ -247,14 +247,14 @@ public class Runner extends Launcher<RunnerOptions> {
             m_containerDiagnostic = connector.diagnosticContainer();
             return result;
         } catch (InterruptedException e) {
-            log(WARNING, e, "Interrupted while waiting for method {}", quoted(sName));
+            report(WARNING, e, "Interrupted while waiting for method {}", quoted(sName));
             return 1;
         } catch (LauncherException e) {
             throw e;
         } catch (Exception e) {
             e.printStackTrace(System.err);
-            log(FATAL, e, "Unhandled exception");
-            return 1;  // Unreachable - log(FATAL) throws
+            report(FATAL, e, "Unhandled exception");
+            return 1;  // Unreachable - report(FATAL) throws
         }
     }
 
@@ -272,14 +272,14 @@ public class Runner extends Launcher<RunnerOptions> {
 
         // Only methods with 0 or 1 required parameters are supported
         if (requiredCount > 1) {
-            log(ERROR, "Unsupported method arguments {}",
+            report(ERROR, "Unsupported method arguments {}",
                     quoted(method.getIdentityConstant().getSignature().getValueString()));
             return 1;
         }
 
         // Warn if args provided but method takes no parameters
         if (!asArg.isEmpty() && totalCount == 0) {
-            log(WARNING, "Method {} does not take any parameters; ignoring the specified arguments",
+            report(WARNING, "Method {} does not take any parameters; ignoring the specified arguments",
                     quoted(sMethod));
         }
 
@@ -290,7 +290,7 @@ public class Runner extends Launcher<RunnerOptions> {
         if (willPassArgs) {
             var typeArg = method.getParam(0).getType();
             if (!typeStrings.isA(typeArg)) {
-                log(ERROR, "Unsupported argument type {} for method {}",
+                report(ERROR, "Unsupported argument type {} for method {}",
                         quoted(typeArg.getValueString()), quoted(sMethod));
                 return 1;
             }
