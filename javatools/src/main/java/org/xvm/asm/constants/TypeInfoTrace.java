@@ -25,9 +25,11 @@ import org.xvm.asm.ErrorListener;
  * <ul>
  * <li>the compile's own {@code ErrorList} - properly plumbed; a diagnostic found here would reach
  *     the caller who asked;</li>
- * <li>{@code SILENT} - somebody passed {@link ErrorListener#BLACKHOLE}. Legitimate for the
- *     "compute" half of {@code ensureTypeInfo} and a defect for the "validate" half, and the trace
- *     is what tells the two apart at a real call site;</li>
+ * <li>{@code (Probe)} - somebody passed {@link ErrorListener#PROBE}, which is legitimate for the
+ *     "compute" half of {@code ensureTypeInfo}; {@code (Blackhole)} in the same slot is the
+ *     "validate" half reporting into an absent sink, which is a defect. The two used to be one
+ *     constant and the trace was the only thing that told them apart at a real call site; now the
+ *     name does, and the trace confirms it;</li>
  * <li>a listener belonging to something other than this request - for instance a shared library
  *     pool's own sink - meaning a diagnostic discovered while building this type would be
  *     attributed to the wrong owner.</li>
@@ -121,15 +123,19 @@ public final class TypeInfoTrace {
     }
 
     /**
-     * @return a short identifier for a listener, marking a blackhole explicitly - "which listener"
-     *         and "is anyone listening at all" are the two things a plumbing question turns on
+     * @return a short identifier for a listener, naming a silent one explicitly - "which listener"
+     *         and "is anyone listening at all" are the two things a plumbing question turns on, and
+     *         for a silent listener a third: whether the silence is a question being asked
+     *         ({@code (Probe)}) or a diagnostic with nowhere to go ({@code (Blackhole)})
      */
     public static String listenerId(ErrorListener errs) {
-        return errs == null
-                ? "none"
+        if (errs == null) {
+            return "none";
+        }
+        return errs.isSilent()
+                ? errs + ":SILENT"
                 : errs.getClass().getSimpleName() + '@'
-                        + Integer.toHexString(System.identityHashCode(errs))
-                        + (errs.isSilent() ? ":SILENT" : "");
+                        + Integer.toHexString(System.identityHashCode(errs));
     }
 
     /**

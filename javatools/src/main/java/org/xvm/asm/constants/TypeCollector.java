@@ -174,14 +174,14 @@ public class TypeCollector {
         if (typeRequired != null && typeRequired.containsFormalType(true)) {
             typeCommon = typeRequired.resolvePending(f_pool, typeCommon);
         }
-        typeCommon = Op.selectCommonType(typeCommon, typeRequired, ErrorListener.BLACKHOLE);
+        typeCommon = Op.selectCommonType(typeCommon, typeRequired, ErrorListener.PROBE);
 
         if (typeRequired != null &&
                 (typeCommon == null || !typeCommon.isAssignableTo(typeRequired))) {
             // approach above didn't quite work; try to match with individual types one-by-one
-            TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.get(0), ErrorListener.BLACKHOLE);
+            TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.get(0), ErrorListener.PROBE);
             for (int i = 1; i < cTypes; i++) {
-                typeAlt = Op.selectCommonType(typeAlt, listTypes.get(i), ErrorListener.BLACKHOLE);
+                typeAlt = Op.selectCommonType(typeAlt, listTypes.get(i), ErrorListener.PROBE);
             }
 
             if (typeAlt != null) {
@@ -345,7 +345,7 @@ public class TypeCollector {
                 TypeConstant typeRequired = iCol < cReqTypes ? atypeRequired[iCol] : null;
                 if (typeRequired != null) {
                     aResult[iCol] = Op.selectCommonType(aResult[iCol], typeRequired,
-                            ErrorListener.BLACKHOLE);
+                            ErrorListener.PROBE);
                 }
             }
         }
@@ -431,7 +431,7 @@ public class TypeCollector {
                     }
                 }
 
-                typeCommon = Op.selectCommonType(type, typeCommon, ErrorListener.BLACKHOLE);
+                typeCommon = Op.selectCommonType(type, typeCommon, ErrorListener.PROBE);
                 if (typeCommon == null) {
                     // no obvious common type
                     return null;

@@ -42,7 +42,7 @@ public class TypeInfoDiagnosticsReplayTest {
         TypeConstant type = pool.typeInt64();
 
         // build it once, the ordinary way
-        TypeInfo info = type.ensureTypeInfo(ErrorListener.BLACKHOLE);
+        TypeInfo info = type.typeInfo();
 
         // stand in for a diagnostic that building it produced; doing it this way is what lets the
         // test pin the REPLAY without needing a deliberately broken module to produce a real one
@@ -69,7 +69,7 @@ public class TypeInfoDiagnosticsReplayTest {
     public void beingToldTwiceRecordsItOnce() {
         ConstantPool pool = systemPool();
         TypeConstant type = pool.typeInt64();
-        TypeInfo     info = type.ensureTypeInfo(ErrorListener.BLACKHOLE);
+        TypeInfo     info = type.typeInfo();
 
         info.recordDiagnostics(List.of(diagnostic("said twice")));
 
@@ -88,7 +88,7 @@ public class TypeInfoDiagnosticsReplayTest {
     @Test
     public void aCleanBuildRecordsNothing() {
         ConstantPool pool = systemPool();
-        TypeInfo     info = pool.typeInt64().ensureTypeInfo(ErrorListener.BLACKHOLE);
+        TypeInfo     info = pool.typeInt64().typeInfo();
 
         assertTrue(info.diagnostics().isEmpty(), () -> "unexpected: " + info.diagnostics());
 
@@ -111,7 +111,7 @@ public class TypeInfoDiagnosticsReplayTest {
     public void seriousDiagnosticsReachALaterCallerEvenFromTheCache() {
         ConstantPool pool = systemPool();
         TypeConstant type = pool.typeInt64();
-        TypeInfo     info = type.ensureTypeInfo(ErrorListener.BLACKHOLE);
+        TypeInfo     info = type.typeInfo();
 
         info.recordDiagnostics(List.of(new ErrorInfo(Severity.ERROR, Constants.VE_UNKNOWN,
                 new Object[] {"serious, and cached"}, (XvmStructure) null)));
@@ -133,7 +133,7 @@ public class TypeInfoDiagnosticsReplayTest {
         ConstantPool pool = systemPool();
         TypeConstant type = pool.typeInt64();
 
-        type.ensureTypeInfo(ErrorListener.BLACKHOLE)
+        type.typeInfo()
             .recordDiagnostics(List.of(diagnostic("from a build that no longer applies")));
 
         type.invalidateTypeInfo();

@@ -1144,7 +1144,7 @@ public class Context {
      * @return the Argument representing the meaning of the name, or null
      */
     public final Argument resolveName(String sName) {
-        return resolveName(sName, null, ErrorListener.BLACKHOLE);
+        return resolveName(sName, null, ErrorListener.PROBE);
     }
 
     /**
@@ -2541,7 +2541,7 @@ public class Context {
                 case Property:
                 case TypeParameter: {
                     String   sName = constFormal.getName();
-                    Argument arg   = resolveName(sName, null, ErrorListener.BLACKHOLE);
+                    Argument arg   = resolveName(sName, null, ErrorListener.PROBE);
                     if (arg != null) {
                         ensureFormalMap().putIfAbsent(sName, arg);
                     }

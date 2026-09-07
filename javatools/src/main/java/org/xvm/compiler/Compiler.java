@@ -129,10 +129,11 @@ public class Compiler {
             }
             m_structFile = m_stmtModule.getComponent().getFileStructure();
             // The pool holds this compilation's listener from here on, and keeps it. It used to be
-            // blanked to BLACKHOLE here and restored after code generation, which made every
-            // ambient ask - anything reaching getConstantPool().getErrorListener() - silent for the
-            // whole compile. Exactly one call site needed that silence, TypeConstant.getConverterTo
-            // (a speculative "is there a conversion?" query), and it now asks for BLACKHOLE itself.
+            // blanked to a silent listener here and restored after code generation, which made
+            // every ambient ask - anything reaching getConstantPool().getErrorListener() - silent
+            // for the whole compile. Exactly one call site needed that silence,
+            // TypeConstant.getConverterTo (a speculative "is there a conversion?" query), and it now
+            // asks for ErrorListener.PROBE itself.
             m_structFile.getConstantPool().setErrorListener(m_errs);
             setStage(Stage.Registered);
         }

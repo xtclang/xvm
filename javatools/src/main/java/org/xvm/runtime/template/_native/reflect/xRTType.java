@@ -681,7 +681,7 @@ public class xRTType
         }
 
         ObjectHandle[] ahFunctions;
-        if (infoTarget.isNewable(false, ErrorListener.BLACKHOLE)) {
+        if (infoTarget.isNewable(false, ErrorListener.PROBE)) {
             ConstantPool            pool        = frame.poolContext();
             TypeComposition         clzTarget   = typeTarget.ensureClass(frame);
             ArrayList<ObjectHandle> listHandles = new ArrayList<>();
@@ -1495,7 +1495,7 @@ public class xRTType
             assert !typeParent.equals(pool().typeObject());
         }
 
-        if (!infoTarget.isNewable(false, ErrorListener.BLACKHOLE)) {
+        if (!infoTarget.isNewable(false, ErrorListener.PROBE)) {
             return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
 

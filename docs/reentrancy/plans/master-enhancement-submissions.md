@@ -84,7 +84,7 @@ surface graduate into individual rows on the bug list.
 | E27 | Op-info cache: raw `EnumMap` whose key silently names the value type | 1 PR, per-op-class migration | independent | `OpInfoKey<V>` + generic get/set |
 | E30 | Storage operations belong on the handle; the `<H>` parameter is the symptom | per-handle, then one deleting commit | supersedes E25's parameter | measured: 105/132 bodies need only the handle |
 | E31 | 42 cache-if-null getters that could be final `Lazy` fields; 7 need a resettable variant | 2 PRs (35 sites, then API + 7) | independent | measured, not estimated |
-| E32 | Thread one `ErrorListener`; stop null-defaulting and blackholing diagnostics | stages 1-2 done; stage 3 re-scoped to splitting `PROBE` from `BLACKHOLE` | independent | 149 BLACKHOLE sites classified: 1 wrong, 118 are probes wearing the wrong name |
+| E32 | Thread one `ErrorListener`; stop null-defaulting and blackholing diagnostics | all 3 stages done; `PROBE` split from `BLACKHOLE` | independent | 149 sites classified; 135 -> `PROBE`, 12 kept, 1 deleted; a vacuous shape gate found and restored |
 | E33 | Census of every `Object` in the tree: 61 are `equals` and untouchable, ~132 are real | reference row; feeds E27/E28/E30/E32 | independent | 393 array initializers noted separately |
 | E34 | `ResolutionCollector.getErrorListener()` smuggles the error sink; pass it explicitly | 1 PR, ~60 mechanical sites | complements E32 | removes `NameResolver`'s un-cleaned stash |
 | E35 | Finish the listener: parallel gap, last 3 mutable fields, `withListener` | A-C one PR; D incremental; E one line | after E32/E34 | the parallel gap and the ambient default are one problem |
@@ -3098,21 +3098,70 @@ is the same shape - the returned `CompileResult` still carries the full `Diagnos
 listener only streams them as they happen. In every case `BLACKHOLE` is the null object that stage 1
 introduced precisely so the parameter could stop being nullable. That is the fix, working.
 
-**What is left, and it is a naming problem.** Buckets A-C are 118 of the 149 and they all mean *"I
-am asking a question, and I do not want the asking to be audible"* - which is not what a name
-meaning "destroy diagnostics" says. Bucket E means *"no caller sink is attached"*. One constant
-serves both, so a reader cannot tell a probe from a discard without reading the callee. The
-remaining work is therefore to split the name, not to remove the uses:
+**The rest was a naming problem, and the split is done.** Buckets A-D are 126 of the 149 and they
+all mean *"I am asking a question, and I do not want the asking to be audible"* - which is not what
+a name meaning "destroy diagnostics" says. Bucket E means *"no caller sink is attached"*. One
+constant served both, so a reader could not tell a probe from a discard without opening the callee.
+
+Both constants now exist, sharing one implementation:
 
 ```java
-ErrorListener PROBE     = new BlackholeErrorListener();  // asking, not asserting
-ErrorListener BLACKHOLE = new BlackholeErrorListener();  // no sink attached
+ErrorListener PROBE     = new SilentErrorListener("(Probe)");      // asking, not asserting
+ErrorListener BLACKHOLE = new SilentErrorListener("(Blackhole)");  // no sink attached
 ```
 
-Same behaviour, and afterwards `grep PROBE` is a list of the compiler's speculative paths - which is
-information the tree does not currently contain anywhere. `TypeConstant.typeInfo()` (which is pinned
-by `TypeInfoModeIsExplicitTest`) and `TypeCompositionStatement:2371` already carry that distinction
-as prose; this makes it mechanical.
+135 sites moved to `PROBE`; 12 kept `BLACKHOLE` - the `Launcher`/`Compiler`/`XtcEngine` overloads
+where no caller sink is attached and the console reports anyway. Behaviour is identical by
+construction, and nothing may branch on which one it holds: an `==` against either is the
+mode-flag-in-disguise the listener exists to avoid.
+
+Three things fell out of doing it that were not visible before:
+
+1. **`grep PROBE` is now the list of the compiler's speculative paths** - information the tree did
+   not previously contain anywhere.
+2. **`TypeInfoTrace` can tell them apart.** Its `errs=` field printed `SILENT` for both; its own
+   doc said "the trace is what tells the two apart at a real call site". It now prints `(Probe)`
+   or `(Blackhole)`, so a plumbing question can distinguish a legitimate compute-half query from a
+   diagnostic that went nowhere.
+3. **Two sites were spelling out a mode that a method name already says.** `XtcEngine.warmRootObject`
+   and `Parser(Source)` both wrote the silent listener out longhand where `typeInfo()` (and the
+   constructor's own contract) already meant it. Both now say it by choosing the method.
+
+`TypeConstant.typeInfo()` and `TypeCompositionStatement:2371` had carried the distinction as prose;
+it is now mechanical.
+
+### The gate that could not fail
+
+`TypeInfoModeIsExplicitTest` is the source-shape test that pins `ensureTypeInfo(<silent>)` out of the
+tree. It had lost its assertions: the class still declared `ALLOWED_IN_TYPE_CONSTANT`, still imported
+`assertEquals` and `ArrayList`, and still carried the javadoc describing what it forbade - but the
+only surviving `@Test` was `theGateIsReadingRealSources`, which asserts that the scan can find source
+files. It had been passing green while guarding nothing.
+
+That is worse than not having the test, because the green tick is evidence the shape is held. It is
+also the exact failure mode the repo's own testing notes warn about for `assumeTrue` skips, in a form
+no skip count would reveal - the test ran, and reported success.
+
+Restored, and extended to both constants, because they are wrong in different ways:
+
+- `ensureTypeInfo(ErrorListener.PROBE)` is the right value and the wrong spelling - `typeInfo()` is
+  where that idiom lives, so writing it out again puts the mode back at the call site. Allowed
+  exactly once, inside `TypeConstant`, which is that method's body.
+- `ensureTypeInfo(ErrorListener.BLACKHOLE)` is wrong outright - asking for a TypeInfo is always a
+  question, never a diagnostic with nowhere to go. Allowed nowhere.
+
+Both were verified to fail by introducing a violation and confirming the reported `file:line`:
+
+```
+nothingAsksForATypeInfoWithAnAbsentSink()  asking for a TypeInfo is a question; use typeInfo():
+                                             org/xvm/api/XtcEngine.java:322
+onlyTypeConstantSpellsOutTheComputeMode()  call typeInfo() instead of naming the mode:
+                                             org/xvm/api/XtcEngine.java:321
+```
+
+**Worth carrying to master as a habit, not just a fix:** a shape gate asserts something no runtime
+behaviour distinguishes, so nothing else will notice when its assertions go missing. Every one of
+them should be proven to fail once, deliberately, at the point it is written.
 
 ## E33 — Every `Object` in the tree, categorized, and which ones a type could actually replace
 

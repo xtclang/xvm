@@ -309,7 +309,7 @@ public final class LambdaExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        if (!ensurePrepared(ErrorListener.BLACKHOLE)) {
+        if (!ensurePrepared(ErrorListener.PROBE)) {
             return null;
         }
 
@@ -333,12 +333,12 @@ public final class LambdaExpression
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-        if (!collectParamNamesAndTypes(null, atypeParams, asParams, ErrorListener.BLACKHOLE)) {
+        if (!collectParamNamesAndTypes(null, atypeParams, asParams, ErrorListener.PROBE)) {
             return null;
         }
 
         TypeConstant[] atypeReturns =
-                extractReturnTypes(ctx, atypeParams, asParams, null, false, ErrorListener.BLACKHOLE);
+                extractReturnTypes(ctx, atypeParams, asParams, null, false, ErrorListener.PROBE);
         return atypeReturns == null
                 ? null
                 : pool().buildFunctionType(buildParamTypes(), atypeReturns);

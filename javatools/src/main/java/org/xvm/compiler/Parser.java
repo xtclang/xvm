@@ -47,15 +47,15 @@ public class Parser {
      * @param source  the source to parse
      */
     public Parser(@NotNull Source source) {
-        this(source, ErrorListener.BLACKHOLE);
+        this(source, ErrorListener.PROBE);
     }
 
     /**
      * Construct an Ecstasy lexical analyzer.
      *
      * @param source   the source to parse
-     * @param listener the error listener; required - pass {@link ErrorListener#BLACKHOLE}, or use
-     *                 {@link #Parser(Source)}, to discard the diagnostics
+     * @param listener the error listener; required - pass {@link ErrorListener#PROBE}, or use
+     *                 {@link #Parser(Source)}, if the parse is a question rather than a compile
      */
     public Parser(@NotNull Source source, @NotNull ErrorListener listener) {
         this(source, listener, new Lexer(source, listener));
@@ -149,7 +149,7 @@ public class Parser {
      * listener to detect - {@code parseQualifiedName} signals it by throwing, since {@code expect}
      * logs and then throws a {@link CompilerException} - so this does not substitute a listener of
      * its own. Whether the scan is silent is therefore the caller's choice, made when it constructs
-     * the Parser; {@code ModuleInfo} passes {@link ErrorListener#BLACKHOLE}, which is what "ignore
+     * the Parser; {@code ModuleInfo} passes {@link ErrorListener#PROBE}, which is what "ignore
      * everything else" means for its use.
      *
      * @return the module name

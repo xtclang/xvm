@@ -314,9 +314,11 @@ public final class XtcEngine
     private static void warmRootObject(ModuleRepository repoLib) {
         ModuleStructure moduleEcstasy = repoLib.loadModule(Constants.ECSTASY_MODULE);
         if (moduleEcstasy != null) {
-            // BLACKHOLE per the ensureTypeInfo convention: this is the COMPUTE half - a question,
-            // not an assertion - and the types it validates are owned by no particular request.
-            moduleEcstasy.getConstantPool().typeObject().ensureTypeInfo(ErrorListener.BLACKHOLE);
+            // typeInfo(), not ensureTypeInfo(PROBE): this is the COMPUTE half - a question, not
+            // an assertion - and the types it validates are owned by no particular request. The
+            // no-listener overload is where that idiom is spelled, so this says it by choosing the
+            // method rather than by handing in a listener that means "do not listen".
+            moduleEcstasy.getConstantPool().typeObject().typeInfo();
         }
     }
 

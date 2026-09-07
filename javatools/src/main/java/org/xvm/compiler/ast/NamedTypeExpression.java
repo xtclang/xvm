@@ -370,7 +370,7 @@ public sealed class NamedTypeExpression
 
         // constId has been already "auto-narrowed" by resolveNames()
         ConstantPool pool = pool();
-        TypeConstant type = calculateDefaultType(ctx, constId, ErrorListener.BLACKHOLE);
+        TypeConstant type = calculateDefaultType(ctx, constId, ErrorListener.PROBE);
 
         if (listParams != null) {
             int            cParams     = listParams.size();

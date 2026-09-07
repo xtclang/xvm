@@ -1312,7 +1312,7 @@ public abstract sealed class AstNode
                                 lit.getLiteral().getValueText());
                     } else {
                         if (exprArg instanceof NameExpression exprName) {
-                            typeExpr = exprName.getImplicitType(ctx, typeParam, ErrorListener.BLACKHOLE);
+                            typeExpr = exprName.getImplicitType(ctx, typeParam, ErrorListener.PROBE);
                         }
 
                         log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
@@ -1420,7 +1420,7 @@ public abstract sealed class AstNode
     protected TypeConstant transformType(Context ctx, NameExpression exprName) {
         ConstantPool pool = pool();
         TypeConstant type = pool.typeType();
-        Argument     arg  = exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+        Argument     arg  = exprName.resolveRawArgument(ctx, false, ErrorListener.PROBE);
         if (arg instanceof Register reg) {
             PropertyConstant idProp   = type.ensureTypeInfo().findProperty("DataType").getIdentity();
             FormalConstant   idFormal = pool.ensureDynamicFormal(

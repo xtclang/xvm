@@ -423,12 +423,12 @@ public final class AssignmentStatement
                 // contributions
                 Context ctxInfer = ctxRValue.enterInferring(atypeLeft[0]);
 
-                TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, false, ErrorListener.BLACKHOLE);
+                TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, false, ErrorListener.PROBE);
 
                 if (!fit.isFit() && cLeft > 1) {
                     Expression exprUnpack = UnpackExpression.create(rvalue, null);
 
-                    fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, false, ErrorListener.BLACKHOLE);
+                    fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, false, ErrorListener.PROBE);
                     if (fit.isFit()) {
                         rvalue = exprUnpack;
                     }
@@ -472,7 +472,7 @@ public final class AssignmentStatement
                 if (exprLeft instanceof NameExpression exprName && exprName.isDynamicVar()) {
                     // test for a future assignment first
                     TypeConstant typeFuture = pool.ensureFuture(typeLeft);
-                    if (rvalue.testFit(ctxRValue, typeFuture, false, ErrorListener.BLACKHOLE).isFit()) {
+                    if (rvalue.testFit(ctxRValue, typeFuture, false, ErrorListener.PROBE).isFit()) {
                         typeLeft = typeFuture;
                     }
                 }

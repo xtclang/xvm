@@ -191,7 +191,7 @@ public final class NewExpression
     public TypeConstant getImplicitType(Context ctx) {
         // no listener overload: this is an implicit-type query, so errors are discarded by
         // choice rather than by a null that happens to mean the same thing
-        return calculateTargetType(ctx, ErrorListener.BLACKHOLE);
+        return calculateTargetType(ctx, ErrorListener.PROBE);
     }
 
     private TypeConstant calculateTargetType(Context ctx, ErrorListener errs) {
@@ -701,7 +701,7 @@ public final class NewExpression
             // structures, such that we can revert it after we collect the information about the
             // captures; force a temp clone of the inner class to go through its validate() stage so
             // that we can determine what variables get captured (and if they are effectively final)
-            ensureInnerClass(ctx, AnonPurpose.CaptureAnalysis, ErrorListener.BLACKHOLE);
+            ensureInnerClass(ctx, AnonPurpose.CaptureAnalysis, ErrorListener.PROBE);
 
             // the capture information gets collected in a specialized Context that was created with
             // the inner class

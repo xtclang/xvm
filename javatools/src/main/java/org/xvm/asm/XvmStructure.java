@@ -392,8 +392,9 @@ public abstract class XvmStructure
     /**
      * Log an error against this structure.
      *
-     * @param errs     the listener to log to; required - pass {@link ErrorListener#BLACKHOLE} to
-     *                 discard the diagnostic
+     * @param errs     the listener to log to; required - pass {@link ErrorListener#PROBE} if the
+     *                 caller is asking a question rather than reporting, or
+     *                 {@link ErrorListener#BLACKHOLE} if there is simply no sink
      * @param sev      the severity of the error
      * @param sCode    the error code
      * @param aoParam  the parameters of the error

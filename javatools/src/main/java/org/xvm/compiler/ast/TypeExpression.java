@@ -47,10 +47,10 @@ public abstract sealed class TypeExpression
      * @return a TypeConstant
      */
     public TypeConstant ensureTypeConstant() {
-        // BLACKHOLE, not null: this overload exists for callers that want the type and not the
+        // PROBE, not null: this overload exists for callers that want the type and not the
         // diagnostics, which is a choice, not an absence. Passing null made "I do not want them"
         // and "I did not think about them" the same call.
-        return ensureTypeConstant(null, ErrorListener.BLACKHOLE);
+        return ensureTypeConstant(null, ErrorListener.PROBE);
     }
 
     /**
@@ -59,7 +59,7 @@ public abstract sealed class TypeExpression
      *
      * @param ctx  an optional Context; may be null
      * @param errs the ErrorListener to report through; required - pass
-     *             {@link ErrorListener#BLACKHOLE} to discard the diagnostics
+     *             {@link ErrorListener#PROBE} to discard the diagnostics
      *
      * @return a TypeConstant
      */
@@ -199,7 +199,7 @@ public abstract sealed class TypeExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        TypeConstant type = ensureTypeConstant(ctx, ErrorListener.BLACKHOLE);
+        TypeConstant type = ensureTypeConstant(ctx, ErrorListener.PROBE);
         if (type == null) {
             throw new IllegalStateException("type has not yet been determined for this: " + this);
         }

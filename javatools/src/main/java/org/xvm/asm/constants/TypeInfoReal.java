@@ -823,7 +823,7 @@ public final class TypeInfoReal
                 return false;
             }
             TypeConstant typeParent = f_type.getParentType();
-            if (!typeParent.ensureTypeInfo(errs).isNewable(false, ErrorListener.BLACKHOLE)) {
+            if (!typeParent.ensureTypeInfo(errs).isNewable(false, ErrorListener.PROBE)) {
                 // the parent is abstract, so the virtual child "new-ability" will be checked
                 // by concrete parent's subclasses
                 return true;

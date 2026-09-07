@@ -123,7 +123,7 @@ public final class PropertyClassTypeConstant
             if (typeParent.isSingleDefiningConstant() && !typeParent.isFormalType()) {
                 typeParent = typeParent.ensureAccess(Access.PRIVATE);
             }
-            // BLACKHOLE, explicitly, and here the caching makes it necessary rather than merely
+            // PROBE, explicitly, and here the caching makes it necessary rather than merely
             // right: m_info is computed once, so reporting would hand the errors to whichever
             // caller happened to ask first - routinely a speculative testFit - and say nothing to
             // any caller after it. A lookup that memoizes its answer must not also emit

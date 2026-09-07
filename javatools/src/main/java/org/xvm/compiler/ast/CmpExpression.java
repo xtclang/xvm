@@ -388,7 +388,7 @@ public final class CmpExpression
             type2 = type2.getUnderlyingType2();
         }
 
-        TypeConstant typeCommon = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+        TypeConstant typeCommon = Op.selectCommonType(type1, type2, ErrorListener.PROBE);
 
         if (type1 == null || type2 == null) {
             return typeCommon;

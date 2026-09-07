@@ -739,7 +739,7 @@ public non-sealed class MethodDeclarationStatement
                     shuffle(atypeInto,  iFound, iNext);
                     shuffle(atypeAnno, iFound, iNext);
 
-                    if (validateAnnotations(typeBase, aAnno, atypeAnno, atypeInto, ErrorListener.BLACKHOLE)) {
+                    if (validateAnnotations(typeBase, aAnno, atypeAnno, atypeInto, ErrorListener.PROBE)) {
                         fReordered = true;
                         break Validate;
                     }

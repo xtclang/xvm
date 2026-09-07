@@ -2368,7 +2368,7 @@ public final class TypeCompositionStatement
                     if (typeConstraint.equals(pool.typeObject())) {
                         // report errors only at the "top" level
                         mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints,
-                                            fAllowInto, ErrorListener.BLACKHOLE);
+                                            fAllowInto, ErrorListener.PROBE);
                     } else {
                         if (mapConstraints == null) {
                             mapConstraints = new ListMap<>();

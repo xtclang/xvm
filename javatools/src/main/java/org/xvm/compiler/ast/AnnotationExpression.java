@@ -304,7 +304,7 @@ public final class AnnotationExpression
                         if (exprNew instanceof NameExpression exprName &&
                                 exprName.getMeaning() == NameExpression.Meaning.Method) {
                             MethodConstant idMethod = (MethodConstant)
-                                exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+                                exprName.resolveRawArgument(ctx, false, ErrorListener.PROBE);
                             method = idMethod.getComponent();
                         } else if (exprNew instanceof LambdaExpression exprLambda) {
                             method = exprLambda.getLambda();

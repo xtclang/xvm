@@ -36,7 +36,7 @@ public final class TraceExpression
         assert expr.isValidated();
 
         exprTrace.finishValidations(null, null, expr.getTypes(), expr.getTypeFit(),
-                expr.toConstants(), ErrorListener.BLACKHOLE);
+                expr.toConstants(), ErrorListener.PROBE);
         return exprTrace;
     }
 

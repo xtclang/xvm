@@ -32,8 +32,8 @@ public final class ParenthesizedExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive,
                            ErrorListener errs) {
-        TypeFit fitTuple = testTupleFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE);
-        TypeFit fitValue = super.testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE);
+        TypeFit fitTuple = testTupleFit(ctx, typeRequired, fExhaustive, ErrorListener.PROBE);
+        TypeFit fitValue = super.testFit(ctx, typeRequired, fExhaustive, ErrorListener.PROBE);
         return fitValue.betterOf(fitTuple);
     }
 
@@ -102,8 +102,8 @@ public final class ParenthesizedExpression
 
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         if (typeRequired != null) {
-            TypeFit fitTuple = testTupleFit(ctx, typeRequired, true, ErrorListener.BLACKHOLE);
-            TypeFit fitValue = super.testFit(ctx, typeRequired, true, ErrorListener.BLACKHOLE);
+            TypeFit fitTuple = testTupleFit(ctx, typeRequired, true, ErrorListener.PROBE);
+            TypeFit fitValue = super.testFit(ctx, typeRequired, true, ErrorListener.PROBE);
             if (fitTuple.betterThan(fitValue)) {
                 // replace this parenthesized expression with an actual tuple expression containing
                 // the one element `(expr)`

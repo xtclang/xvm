@@ -105,8 +105,10 @@ public class DecoratingErrorListenerTest {
         assertTrue(new Slf4jErrorListener(strict, new RecordingLogger(true)).hasSeriousErrors());
         assertTrue(new JfrErrorListener(strict).hasSeriousErrors());
 
-        var silent = ErrorListener.BLACKHOLE;
-        assertTrue(new JfrErrorListener(silent).isSilent(), "silence is the wrapped listener's");
+        for (var silent : List.of(ErrorListener.PROBE, ErrorListener.BLACKHOLE)) {
+            assertTrue(new JfrErrorListener(silent).isSilent(),
+                    () -> "silence is the wrapped listener's, and " + silent + " is silent");
+        }
     }
 
     @Test

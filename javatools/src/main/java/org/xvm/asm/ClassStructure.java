@@ -1010,7 +1010,7 @@ public sealed class ClassStructure
         if (result == ResolutionResult.UNKNOWN && getFormat() == Format.SERVICE) {
             // look into the Service interface itself
             ClassStructure   clzSvc       = (ClassStructure) getConstantPool().clzService().getComponent();
-            SimpleCollector  collectorSvc = new SimpleCollector(ErrorListener.BLACKHOLE);
+            SimpleCollector  collectorSvc = new SimpleCollector(ErrorListener.PROBE);
             ResolutionResult resultSvc    = clzSvc.resolveName(sName, Access.PROTECTED, collectorSvc, errs);
             if (resultSvc == ResolutionResult.RESOLVED) {
                 // only allow child classes; properties and methods are resolved by the TypeInfo

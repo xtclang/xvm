@@ -309,7 +309,7 @@ public abstract sealed class Expression
      *
      * @param ctx            the compiler context
      * @param errs           the listener to report through; required - pass
-     *                       {@link ErrorListener#BLACKHOLE} for a purely speculative test
+     *                       {@link ErrorListener#PROBE} for a purely speculative test
      * @param atypeRequired  the type(s) the expression is being tested against
      */
     protected TypeFit testFitMultiExhaustive(Context ctx, @NotNull ErrorListener errs,
@@ -481,9 +481,9 @@ public abstract sealed class Expression
         // itself is on the next line and as validateAsType() below does for the same step. Passing
         // the caller's listener here would report staging failures for an expression we are only
         // speculating about; it previously reached StageMgr as null and was silently turned into
-        // BLACKHOLE anyway, which said the same thing without admitting it.
-        return new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20)
-                ? exprType.testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE)
+        // a discarding listener anyway, which said the same thing without admitting it.
+        return new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.PROBE).fastForward(20)
+                ? exprType.testFit(ctx, typeRequired, fExhaustive, ErrorListener.PROBE)
                 : TypeFit.NoFit;
     }
 
@@ -495,7 +495,7 @@ public abstract sealed class Expression
     protected Expression validateAsType(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         TypeExpression exprType = toTypeExpression();
 
-        if (new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20)) {
+        if (new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.PROBE).fastForward(20)) {
             ErrorListener errsTemp = errs.branch(this);
             Expression    exprNew  = exprType.validate(ctx, typeRequired, errsTemp);
             if (exprNew != null) {
@@ -1959,7 +1959,7 @@ public abstract sealed class Expression
             TypeConstant typeElse = atypeElse[i];
 
             ConstantPool pool       = pool();
-            TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, ErrorListener.BLACKHOLE);
+            TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, ErrorListener.PROBE);
             atypeCommon[i] = typeCommon == null && typeThen != null && typeElse != null
                     ? typeThen.isOnlyNullable() ? pool.ensureNullableTypeConstant(typeElse)
                     : typeElse.isOnlyNullable() ? pool.ensureNullableTypeConstant(typeThen)

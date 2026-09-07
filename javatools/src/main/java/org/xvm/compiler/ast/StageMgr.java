@@ -36,7 +36,7 @@ public class StageMgr {
      * @param node         the node to process
      * @param stageTarget  the target stage
      * @param errs         the error list to log to; required. A caller that genuinely wants
-     *                     errors discarded passes {@link ErrorListener#BLACKHOLE} and says so
+     *                     errors discarded passes {@link ErrorListener#PROBE} and says so
      */
     public StageMgr(AstNode node, Stage stageTarget, @NotNull ErrorListener errs) {
         assert node != null;
@@ -54,7 +54,7 @@ public class StageMgr {
      * @param list         the list of nodes to process
      * @param stageTarget  the target stage
      * @param errs         the error list to log to; required. A caller that genuinely wants
-     *                     errors discarded passes {@link ErrorListener#BLACKHOLE} and says so
+     *                     errors discarded passes {@link ErrorListener#PROBE} and says so
      */
     public StageMgr(List<AstNode> list, Stage stageTarget, @NotNull ErrorListener errs) {
         assert list != null && !list.isEmpty();

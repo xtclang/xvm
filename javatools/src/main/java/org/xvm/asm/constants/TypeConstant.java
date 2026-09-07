@@ -1678,7 +1678,7 @@ public abstract sealed class TypeConstant
      *
      * <p>This builds and validates; see {@link #ensureTypeInfo(ErrorListener)} for what that means
      * and for how a caller decides between its own listener and
-     * {@link ErrorListener#BLACKHOLE}. Using this overload says "whoever owns this constant owns
+     * {@link ErrorListener#PROBE}. Using this overload says "whoever owns this constant owns
      * the diagnostics", which the adoption invariant below makes a sound default - but an explicit
      * caller should always win over it.
      *
@@ -1705,7 +1705,7 @@ public abstract sealed class TypeConstant
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
     public TypeInfo typeInfo() {
-        return ensureTypeInfo(ErrorListener.BLACKHOLE);
+        return ensureTypeInfo(ErrorListener.PROBE);
     }
 
     public TypeInfo ensureTypeInfo() {
@@ -1793,24 +1793,29 @@ public abstract sealed class TypeConstant
      * hear them again. That is a real mitigation and also an admission - it only covers ERROR and
      * above, and it means a type that fails is rebuilt on every subsequent ask, forever.
      * ({@code PropertyClassTypeConstant.getPropertyInfo} has no such escape hatch: it memoizes
-     * unconditionally, which is why it passes BLACKHOLE.)
+     * unconditionally, which is why it passes {@link ErrorListener#PROBE}.)
      *
      * <p><b>So what is the parameter?</b> This method fuses two operations with different natures -
      * COMPUTE the metadata (idempotent, cacheable, must never report) and VALIDATE the type
      * (diagnostics owned by whoever asked, at a source position they own). Because they are fused,
      * every caller has to choose a mode, and the mode is expressed by which listener it hands in.
-     * {@link ErrorListener#BLACKHOLE} means "I am in the compute half". <b>The listener parameter is
-     * a mode flag in disguise.</b> That is the whole reason call sites pass BLACKHOLE to something
-     * that looks like it should be given the real listener.
+     * {@link ErrorListener#PROBE} means "I am in the compute half". <b>The listener parameter is
+     * a mode flag in disguise.</b> That is the whole reason call sites pass a silent listener to
+     * something that looks like it should be given the real one.
+     *
+     * <p>{@code PROBE} does not fix that - it names it. The mode is still expressed by which
+     * listener is handed in, but the constant now says which mode it means, so a reader no longer
+     * has to open the callee to tell "I am asking a question" from "I have nowhere to report".
+     * The real fix is below, and it deletes the choice rather than labelling it.
      *
      * <p><b>How to choose.</b> Ask whether the call is ASSERTING that this type is valid or ASKING
      * whether it is. Assertions - validate(), emit(), anything that has already committed to the
      * type - pass the caller's listener. Questions - fit tests, searches, guesses, and any accessor
-     * that memoizes - pass {@link ErrorListener#BLACKHOLE}, with the reason at the call site.
+     * that memoizes - pass {@link ErrorListener#PROBE}, with the reason at the call site.
      *
      * <p><b>The fix, and why it has not been done.</b> The honest shape is a {@code typeInfo()} that
      * never reports and always caches, plus a {@code validate(errs)} that reports once, called by
-     * the stage that owns the source position; then nobody passes BLACKHOLE because nobody is
+     * the stage that owns the source position; then nobody passes {@code PROBE} because nobody is
      * choosing a mode. The obstacle is that building is WHERE the errors are found, so buildTypeInfo
      * would have to record its diagnostics into the TypeInfo and let a caller replay them - which
      * has to survive the incomplete/deferred machinery above, where a type can be built twice and a
@@ -1825,7 +1830,7 @@ public abstract sealed class TypeConstant
      * docs/errorlistener/README.md section 8.4 has the staged migration and, more importantly, the
      * order the steps have to go in - doing them out of order loses diagnostics silently.
      *
-     * @param errs  the listener to report through; {@link ErrorListener#BLACKHOLE} if this call is
+     * @param errs  the listener to report through; {@link ErrorListener#PROBE} if this call is
      *              a question rather than an assertion (see above)
      *
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
@@ -2487,7 +2492,7 @@ public abstract sealed class TypeConstant
 
         // validate the type parameters against the properties
         checkTypeParameterProperties(mapTypeParams, mapVirtProps,
-                fComplete && !errs.hasSeriousErrors() ? errs : ErrorListener.BLACKHOLE);
+                fComplete && !errs.hasSeriousErrors() ? errs : ErrorListener.PROBE);
 
         Annotation[] aAnnoMixin = fComplete
                 ? collectMixinAnnotations(listProcess)
@@ -6876,7 +6881,7 @@ public abstract sealed class TypeConstant
      *         multiple ambiguous answers exist)
      */
     public MethodConstant getConverterTo(TypeConstant that) {
-        // BLACKHOLE, explicitly. This is a speculative query - every caller uses it as a predicate
+        // PROBE, explicitly. This is a speculative query - every caller uses it as a predicate
         // ("is there a conversion?") - so the TypeInfo it forces must not report. Same reasoning as
         // the testFit/getImplicitType family that E32 stage 2 made explicit: a fit test that fails
         // is not a diagnostic.
@@ -7622,7 +7627,7 @@ public abstract sealed class TypeConstant
             return getUnderlyingType().getInstanceJitType();
         }
 
-        assert typeInfo().isNewable(false, ErrorListener.BLACKHOLE);
+        assert typeInfo().isNewable(false, ErrorListener.PROBE);
         return removeAutoNarrowing();
     }
 

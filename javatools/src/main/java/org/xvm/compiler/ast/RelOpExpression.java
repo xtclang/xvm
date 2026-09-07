@@ -211,7 +211,7 @@ public final class RelOpExpression
      *         for inference purposes
      */
     // No ErrorListener: "for inference purposes" says it - this is a guess, and both callers
-    // already passed BLACKHOLE. It never used the listener it took.
+    // already passed PROBE. It never used the listener it took.
     protected MethodConstant getImplicitMethod(Context ctx) {
         TypeConstant typeLeft = expr1.getImplicitType(ctx);
         if (typeLeft == null) {
@@ -593,7 +593,7 @@ public final class RelOpExpression
      * @return the type to request from the left expression, or null
      */
     // No ErrorListener: this is a guess, and a guess that comes out "no" is an answer, not a
-    // diagnostic. It used to take one and never use it - every call inside it passes BLACKHOLE
+    // diagnostic. It used to take one and never use it - every call inside it passes PROBE
     // explicitly - which read as if the method reported when it deliberately does not.
     private TypeConstant guessLeftType(Context ctx, TypeConstant typeRequired) {
         // all of these operators work the same way, in terms of types and left associativity:
@@ -637,11 +637,11 @@ public final class RelOpExpression
 
         String sMethod = getDefaultMethodName();
         String sOp     = operator.getId().TEXT;
-        if (expr1.testFit(ctx, typeRequired, false, ErrorListener.BLACKHOLE).isFit()) {
+        if (expr1.testFit(ctx, typeRequired, false, ErrorListener.PROBE).isFit()) {
             Set<MethodConstant> setOps = typeRequired.typeInfo()
                                                      .findOpMethods(sMethod, sOp, 1);
             for (MethodConstant idMethod : setOps) {
-                if (expr2.testFit(ctx, idMethod.getRawParams().get(0), false, ErrorListener.BLACKHOLE).isFit()) {
+                if (expr2.testFit(ctx, idMethod.getRawParams().get(0), false, ErrorListener.PROBE).isFit()) {
                     TypeConstant typeReturn = idMethod.getRawReturns().get(0);
                     if (typeReturn.containsAutoNarrowing(false)) {
                         typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
@@ -657,11 +657,11 @@ public final class RelOpExpression
 
         if (typeRequired.isParamsSpecified()) {
             for (TypeConstant typeParam : typeRequired.getParamTypesArray()) {
-                if (expr1.testFit(ctx, typeParam, false, ErrorListener.BLACKHOLE).isFit()) {
+                if (expr1.testFit(ctx, typeParam, false, ErrorListener.PROBE).isFit()) {
                     Set<MethodConstant> setOps = typeParam.typeInfo()
                                                           .findOpMethods(sMethod, sOp, 1);
                     for (MethodConstant idMethod : setOps) {
-                        if (expr2.testFit(ctx, idMethod.getRawParams().get(0), false, ErrorListener.BLACKHOLE).isFit()) {
+                        if (expr2.testFit(ctx, idMethod.getRawParams().get(0), false, ErrorListener.PROBE).isFit()) {
                             TypeConstant typeReturn = idMethod.getRawReturns().get(0);
                             if (typeReturn.containsAutoNarrowing(false)) {
                                 typeReturn = typeReturn.resolveAutoNarrowing(pool(), false,
@@ -716,9 +716,9 @@ public final class RelOpExpression
                 }
 
                 TypeConstant typeParam = idMethod.getRawParams().get(0);
-                TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, ErrorListener.BLACKHOLE);
+                TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, ErrorListener.PROBE);
                 if (!fit.isFit()) {
-                    fit = expr2.testFitMultiExhaustive(ctx, ErrorListener.BLACKHOLE, typeParam);
+                    fit = expr2.testFitMultiExhaustive(ctx, ErrorListener.PROBE, typeParam);
                 }
 
                 if (fit.betterThan(fitBest)) {

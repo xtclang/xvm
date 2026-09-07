@@ -1463,7 +1463,7 @@ public class ModuleInfo {
             if (isExplicitSourceFile(name)) {
                 try {
                     Source source = new Source(file);
-                    Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
+                    Parser parser = new Parser(source, ErrorListener.PROBE);
                     return parser.parseModuleNameIgnoreEverythingElse();
                 } catch (CompilerException | IOException ignore) {}
             } else if (isExplicitCompiledFile(name)) {

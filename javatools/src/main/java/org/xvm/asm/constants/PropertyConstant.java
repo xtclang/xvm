@@ -396,7 +396,7 @@ public sealed class PropertyConstant
         }
 
         TypeConstant typePrivate  = typeTarget.ensureAccess(Access.PRIVATE);
-        // BLACKHOLE, explicitly: this is a metadata lookup, not an operation that produces
+        // PROBE, explicitly: this is a metadata lookup, not an operation that produces
         // diagnostics. Whoever asked for typeTarget to be validated owns the errors that building
         // its TypeInfo turns up; a caller asking "what type does this property hold?" does not, and
         // is routinely a speculative one (NewExpression.testFit reaches here through

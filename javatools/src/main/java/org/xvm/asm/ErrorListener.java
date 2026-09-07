@@ -294,21 +294,32 @@ public interface ErrorListener {
     /**
      * Used for debugging only.
      *
-     * @return true iff this listener sits on top of the BlackHoleListener
+     * @return true iff this listener discards what it is told; see {@link #PROBE} and
+     *         {@link #BLACKHOLE}
      */
     default boolean isSilent() {
         return false;
     }
 
 
-    // ----- inner class: BlackholeErrorListener ---------------------------------------------------
+    // ----- inner class: silent listeners ---------------------------------------------------------
 
     /**
-     * A simple implementation of the ErrorListener that converts reported errors to ErrorInfo
-     * objects and routes them to a single sink method.
+     * A listener that records nothing.
+     *
+     * <p>{@link #PROBE} and {@link #BLACKHOLE} share this implementation because they behave
+     * identically and differ only in what they mean. The distinction is for the reader, so it is
+     * carried by the constant's name and not by the type - nothing may branch on which one it has,
+     * and {@code ==} against either is the mode-flag-in-disguise this listener exists to avoid.
      */
-    class BlackholeErrorListener
+    class SilentErrorListener
             implements ErrorListener {
+        private final String f_sName;
+
+        SilentErrorListener(String sName) {
+            f_sName = sName;
+        }
+
         @Override
         public void log(ErrorInfo err) {
         }
@@ -325,7 +336,7 @@ public interface ErrorListener {
 
         @Override
         public String toString() {
-            return "(Blackhole)";
+            return f_sName;
         }
     }
 
@@ -612,10 +623,42 @@ public interface ErrorListener {
     ResourceBundle RESOURCES = ResourceBundle.getBundle("errors");
 
     /**
-     * Stateless ErrorListeners.
+     * The listener for a question: speculative work whose failure IS the answer, and whose failure
+     * must therefore not be audible.
+     *
+     * <p>The compiler asks a great many questions - does this expression fit that type, does this
+     * name resolve, which of these candidates is best, would this body validate. It asks them by
+     * running the real machinery and looking at what comes back: a {@code TypeFit}, or {@code null},
+     * or a clone that did or did not survive {@code validate}. The errors raised on the way to that
+     * answer are not diagnostics about the user's program; they are the mechanics of the question,
+     * and surfacing them would report a failure the compiler went on to recover from.
+     *
+     * <p>Behaviourally identical to {@link #BLACKHOLE}. It is a separate constant because the two
+     * are separate intentions, and a reader at the call site could not otherwise tell a probe from
+     * a discarded sink without reading the callee. {@code grep PROBE} is now the list of the
+     * compiler's speculative paths.
+     *
+     * <p>Not for: work whose failure the user should hear about if every alternative also fails.
+     * That is {@link #branch}, which keeps the errors so the caller can promote them with
+     * {@link #merge} when it runs out of alternatives.
      */
-    ErrorListener BLACKHOLE = new BlackholeErrorListener();
-    ErrorListener RUNTIME   = new RuntimeErrorListener();
+    ErrorListener PROBE = new SilentErrorListener("(Probe)");
+
+    /**
+     * The listener for an absent sink: nobody is listening, so there is nowhere to put a diagnostic.
+     *
+     * <p>This is the null object that lets an {@code ErrorListener} parameter be non-null
+     * everywhere. Before it, "no listener" was spelled {@code null} and every entry point
+     * re-decided what that meant; now a caller that has no sink says so, once, at the call site.
+     *
+     * <p>Reaching for it to silence work that might fail is what {@link #PROBE} is for.
+     */
+    ErrorListener BLACKHOLE = new SilentErrorListener("(Blackhole)");
+
+    /**
+     * The listener an owner that nobody configured answers with; see {@link RuntimeErrorListener}.
+     */
+    ErrorListener RUNTIME = new RuntimeErrorListener();
 
     /**
      * Indicates that the compiler probably runs inside of IntelliJ IDEA.
