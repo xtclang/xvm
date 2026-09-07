@@ -81,22 +81,13 @@ public class ConstantPool
      * <p>Defaults to {@link ErrorListener#RUNTIME}: a pool that nobody has told otherwise is being
      * used at run time, which is what the old walk resolved to when the field was unset.
      */
-    private volatile @NotNull ErrorListener m_errs = ErrorListener.RUNTIME;
+    private final @NotNull ErrorListener f_errs;
 
     /**
      * @return the listener work owned by this pool reports to; never null
      */
     public @NotNull ErrorListener getErrorListener() {
-        return m_errs;
-    }
-
-    /**
-     * Supply the listener that work owned by this pool reports to.
-     *
-     * @param errs  the listener; required
-     */
-    public void setErrorListener(ErrorListener errs) {
-        m_errs = requireNonNull(errs, "errs");
+        return f_errs;
     }
 
 // ----- constructors --------------------------------------------------------------------------
@@ -104,10 +95,27 @@ public class ConstantPool
     /**
      * Construct a ConstantPool.
      *
+     * <p>The listener is taken here and never afterwards, because "who hears diagnostics about this
+     * pool" is not something that may change while the pool is in use. There used to be a setter,
+     * and its two callers show why it had to go: one was the {@code Compiler} patching in the
+     * listener it already had at registration time, which is a constructor parameter written as a
+     * mutation; the other was {@code XtcEngine} pointing a SHARED library pool at one engine's sink,
+     * which is a pool being redirected by something that does not own it. Two engines over one
+     * repository would race, last writer winning, and each would then be reporting library
+     * diagnostics to the other's host.
+     *
+     * <p>That is the same defect E32 deleted from {@code FileStructure} - a mutable field deciding
+     * who hears - moved down one level. With the field final, {@link #getErrorListener} no longer
+     * answers "it depends when you ask".
+     *
      * @param fileStructure  the FileStructure that contains this ConstantPool
+     * @param errs           the listener that work owned by this pool reports to; required.
+     *                       {@link ErrorListener#RUNTIME} for a pool that no compilation owns,
+     *                       which is every pool but the one being compiled
      */
-    public ConstantPool(FileStructure fileStructure) {
+    public ConstantPool(FileStructure fileStructure, @NotNull ErrorListener errs) {
         super(fileStructure);
+        f_errs = requireNonNull(errs, "errs");
         POOLS_CREATED.incrementAndGet();
     }
 

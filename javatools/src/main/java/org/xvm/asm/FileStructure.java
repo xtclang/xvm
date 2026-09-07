@@ -36,6 +36,8 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import static java.util.Objects.requireNonNull;
+
 import static org.xvm.util.Handy.intToHexString;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -64,7 +66,23 @@ public final class FileStructure
      * @param sModule   the fully qualified module name
      */
     public FileStructure(String sModule) {
-        this(sModule, Instant.now());
+        this(sModule, Instant.now(), ErrorListener.RUNTIME);
+    }
+
+    /**
+     * Construct a file structure for a module being compiled, reporting to the compilation's own
+     * listener.
+     *
+     * <p>This is the only constructor that names a listener, because compilation is the only thing
+     * that owns one. Every other FileStructure - a module read back from disk, a repository's
+     * read-through clone, a merge - belongs to no compilation, so its pool answers
+     * {@link ErrorListener#RUNTIME}.
+     *
+     * @param sModule  the fully qualified module name
+     * @param errs     the compilation's listener; required
+     */
+    public FileStructure(String sModule, @NotNull ErrorListener errs) {
+        this(sModule, Instant.now(), errs);
     }
 
     /**
@@ -78,6 +96,19 @@ public final class FileStructure
      *                   epoch
      */
     public FileStructure(String sModule, Instant timestamp) {
+        this(sModule, timestamp, ErrorListener.RUNTIME);
+    }
+
+    /**
+     * Construct a file structure that will initially contain one module, stamped with the specified
+     * creation timestamp, reporting to the specified listener.
+     *
+     * @param sModule    the fully qualified module name
+     * @param timestamp  the creation timestamp to stamp the module with; null is recorded as the
+     *                   epoch
+     * @param errs       the listener that work owned by this file's pool reports to; required
+     */
+    public FileStructure(String sModule, Instant timestamp, @NotNull ErrorListener errs) {
         super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
 
         // module name required
@@ -85,8 +116,10 @@ public final class FileStructure
             throw new IllegalArgumentException("module name required");
         }
 
+        f_errs = requireNonNull(errs, "errs");
+
         // create and register the main module
-        ConstantPool    pool     = new ConstantPool(this);
+        ConstantPool    pool     = new ConstantPool(this, f_errs);
         ModuleConstant  idModule = pool.ensureModuleConstant(sModule);
         ModuleStructure module   = new ModuleStructure(this, idModule);
         module.setTimestamp(pool.ensureTimeConstant(timestamp));
@@ -154,6 +187,7 @@ public final class FileStructure
             throws IOException {
         super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
 
+        f_errs       = ErrorListener.RUNTIME;
         m_fLazyDeser = fLazy;
         try {
             disassemble(new DataInputStream(in));
@@ -179,7 +213,8 @@ public final class FileStructure
 
         m_nMajorVer = fileStructure.m_nMajorVer;
         m_nMinorVer = fileStructure.m_nMinorVer;
-        m_pool      = new ConstantPool(this);
+        f_errs      = ErrorListener.RUNTIME;
+        m_pool      = new ConstantPool(this, f_errs);
 
         merge(module, fSynthesize, true);
     }
@@ -1334,7 +1369,7 @@ public final class FileStructure
         m_kind      = info.kind;
 
         // read in the constant pool
-        ConstantPool pool = new ConstantPool(this);
+        ConstantPool pool = new ConstantPool(this, f_errs);
         m_pool = pool;
         pool.disassemble(in);
 
@@ -1654,6 +1689,15 @@ public final class FileStructure
      * Note: for persistent file structures the main module id is never versioned (its version is
      * null).
      */
+    /**
+     * The listener this file's pools report to.
+     *
+     * <p>Held here as well as on the pool because {@link #disassemble} builds a pool after
+     * construction is under way, and the owner has to be known by then. It is assigned before any
+     * pool is created and never afterwards.
+     */
+    private final @NotNull ErrorListener f_errs;
+
     private ModuleConstant m_idModule;
 
     /**

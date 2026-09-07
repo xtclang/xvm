@@ -21,13 +21,11 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 public class ConstantAdoptionListenerTest {
     @Test
     public void registeringAForeignConstantAdoptsItIntoTheRegisteringPool() {
-        var library  = new FileStructure("library");
-        var compiling = new FileStructure("compiling");
-
         ErrorListener libraryListener   = err -> {};
         ErrorListener compilingListener = err -> {};
-        library.getConstantPool().setErrorListener(libraryListener);
-        compiling.getConstantPool().setErrorListener(compilingListener);
+
+        var library   = new FileStructure("library", libraryListener);
+        var compiling = new FileStructure("compiling", compilingListener);
 
         // a constant that originates in the library's pool
         Constant fromLibrary = library.getConstantPool().ensureStringConstant("shared");

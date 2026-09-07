@@ -127,14 +127,13 @@ public class Compiler {
                 }
                 throw new CompilerException("failed to create module");
             }
+            // The pool already holds this compilation's listener: registration built it, and
+            // TypeCompositionStatement handed errs to the FileStructure constructor. This used to
+            // patch it in afterwards, and before that it blanked the pool to a silent listener here
+            // and restored it after code generation - which made every ambient ask silent for the
+            // whole compile. Exactly one call site needed that silence, TypeConstant.getConverterTo
+            // (a speculative "is there a conversion?" query), and it now asks for PROBE itself.
             m_structFile = m_stmtModule.getComponent().getFileStructure();
-            // The pool holds this compilation's listener from here on, and keeps it. It used to be
-            // blanked to a silent listener here and restored after code generation, which made
-            // every ambient ask - anything reaching getConstantPool().getErrorListener() - silent
-            // for the whole compile. Exactly one call site needed that silence,
-            // TypeConstant.getConverterTo (a speculative "is there a conversion?" query), and it now
-            // asks for ErrorListener.PROBE itself.
-            m_structFile.getConstantPool().setErrorListener(m_errs);
             setStage(Stage.Registered);
         }
 

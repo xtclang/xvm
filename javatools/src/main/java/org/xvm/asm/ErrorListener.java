@@ -79,6 +79,12 @@ public interface ErrorListener {
      * legitimate abort, {@code true} invented one. Making it {@code void} is what makes an observer
      * impossible to get wrong - a lambda that only wants to watch now simply watches.
      *
+     * <p><b>An implementation must tolerate concurrent calls.</b> A host passes one listener to an
+     * engine that compiles modules in parallel, so the sink at the end of the chain is shared by
+     * construction - it is not something a caller can arrange its way out of. {@link ErrorList}
+     * and the silent listeners are safe; a lambda that only reads is safe; one that accumulates
+     * into a collection of its own must say how it is guarded.
+     *
      * @param err  the error info
      */
     void log(ErrorInfo err);
@@ -508,7 +514,7 @@ public interface ErrorListener {
          * @return an ID that allows redundant errors to be filtered out
          */
         public String genUID() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.append(m_severity.ordinal())
                     .append(':')
                     .append(m_sCode);
@@ -538,7 +544,7 @@ public interface ErrorListener {
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             // source code location
             if (m_source != null) {

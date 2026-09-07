@@ -491,8 +491,10 @@ public final class TypeCompositionStatement
                     return;
                 }
 
-                // create the FileStructure and "this" ModuleStructure
-                FileStructure struct = new FileStructure(sModule);
+                // create the FileStructure and "this" ModuleStructure. Naming the listener here
+                // is what lets ConstantPool hold it as a final field: registration is where the
+                // compiling module's pool comes into existence, and errs is already in scope.
+                FileStructure struct = new FileStructure(sModule, errs);
                 component = struct.getModule();
                 pool      = struct.getConstantPool();
 

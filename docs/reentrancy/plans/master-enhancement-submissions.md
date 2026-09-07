@@ -3330,6 +3330,13 @@ doing as its own PR, after E32 stage 1 so the two are reviewable apart.
 **Depends on:** E32/E34, which are implemented. This is what is left, and the three questions turn
 out to have one shared answer.
 
+> **Status: done.** A and B were completed earlier (`Container.f_errs` is final and injected; the
+> registration silence stopped being a mode). C is now done and went further than written - the
+> setter is deleted outright rather than merely unused - and D stays declined for the reason
+> recorded below. The parallel gap turned out to be real but in a different place than this row
+> predicted; see the two sections appended at the end.
+
+
 ### The parallel-compile gap
 
 Each `FileStructure` builds its own `ConstantPool`, and a compile sets the listener only on its own
@@ -3448,6 +3455,88 @@ So: parameters as the rule, `withListener` as a named exception for a class whos
 field and where threading a parameter through thousands of call sites is disproportionate. If it is
 added, its javadoc should say that explicitly, so the next person does not read it as an
 endorsement.
+
+### C, done: `setErrorListener` is deleted, not merely unused
+
+`ConstantPool.m_errs` was the last mutable listener field, and its two callers are the argument for
+removing the setter rather than leaving it available:
+
+| caller | what it was doing |
+| --- | --- |
+| `Compiler.generateInitialFileStructure` | patching in the listener it already held at registration - a constructor parameter written as a mutation, because the pool is created deep inside `FileStructure` construction |
+| `XtcEngine.prelinkSystemLibraries` | pointing a **shared library pool** at one engine's `diagnosticSink` - a pool being redirected by something that does not own it, since the `FileStructure` comes out of the caller's `ModuleRepository` |
+
+The second is the one that matters. Two engines over one repository both write that pool, last
+writer winning, and each then hears the other's library diagnostics. Whether it bites depends on
+whether a given repository hands back the same instance, so it is a live hazard rather than a proven
+leak - but the direction is wrong either way, and the setter is the only reason it was expressible.
+
+The unconditional argument is simpler: with a setter, `getErrorListener()` answers *"depends when
+you ask"*. That is exactly the defect E32 deleted from `FileStructure` - a mutable field deciding
+who hears - relocated one level down into `ConstantPool`.
+
+The fix splits by owner and is small, because only one caller ever has a listener:
+
+- `ConstantPool` takes the listener at construction; the field is `final`; the setter is gone.
+- `FileStructure` gains `FileStructure(String sModule, ErrorListener errs)`. **It is the only
+  constructor that names one**, because compilation is the only thing that owns one. A module read
+  from disk, a repository's read-through clone, a merge - none belongs to a compilation, so their
+  pools answer `RUNTIME` by construction instead of by mutation.
+- `TypeCompositionStatement` passes `errs` when registration creates the module's `FileStructure`.
+  The listener is already in scope there; the `StageMgr` driving registration carries it.
+- The `XtcEngine` call is deleted with nothing put in its place. Library diagnostics do not need
+  redirecting: `ConstantPool.register` adopts a foreign constant into the registering pool, so a
+  compile referencing a library type asks **its own** pool, holding **its own** listener. What stays
+  library-owned is work done entirely inside the library, and a failure there is a broken library -
+  a system fault, which is what `RUNTIME` is for.
+
+`ConstantAdoptionListenerTest` already pins that adoption invariant, which is what makes deleting
+the redirect safe rather than hopeful.
+
+### The parallel gap was real, and it was in `ErrorList`
+
+This row predicted the parallel problem would be about *which* listener a library type resolves to.
+That turned out to be handled by adoption. The actual gap is cruder and sits in the sink itself.
+
+`ErrorList` had **no synchronization at all** - zero occurrences of the keyword in the file - while
+`log` performed an unguarded `HashSet.add`, a read-modify-write on the worst severity, an
+`ArrayList.add` and a `++`. `getErrors()` handed out the live `ArrayList`, so a caller iterating it
+could take a `ConcurrentModificationException` from a sibling compile.
+
+This is not an exotic path. `ErrorList` is what a host passes to
+`XtcEngine.compile(errsCaller, ...)`, and the engine tees that one object into every compile thread
+`BuildDriver` runs. **The shared terminal sink is concurrent by construction, not by a caller's
+choice.** Measured: 8 threads logging 500 distinct diagnostics each kept **2125 of 4000**.
+
+**Why locking rather than "merge at end".** Merge-at-end already exists and is the right answer for
+speculative work - `branch()`/`merge()` is exactly that, and `logTo` replays one list into another.
+But making it the answer *here* would delete two properties this branch has: streaming (the reason
+`compile(errsCaller, ...)` exists at all - an LSP or build daemon wants messages as they happen, not
+a batch after each module) and cross-compile fail-fast (`BuildDriver`'s `AbortableListener` stops
+siblings by answering `isAbortDesired()` on the shared listener). It also would not remove the race,
+only move it to the merge point, where nothing enforces serialization.
+
+A rule nobody enforces is the same failure mode as the mutable field above: correct only while
+everyone remembers. So the implementation provides the property.
+
+- Every method touching mutable state is `synchronized`. Contention is a non-issue: diagnostics are
+  rare next to the work producing them, and each compile still collects into its own list, so the
+  monitor is only ever contended on the host's shared sink.
+- `getErrors()` returns `List.copyOf(...)` - an immutable snapshot. No caller mutated the returned
+  list, so this costs nothing and removes the escape.
+- `logTo` is deliberately **not** synchronized: it snapshots under the lock and iterates outside, so
+  a foreign listener is never called while the monitor is held. Holding a lock across a call into
+  somebody else's code is how two teed listeners deadlock.
+- `ErrorListener.log`'s contract now states that implementations must tolerate concurrent calls.
+  Every implementation in the tree already does: the silent listeners and `RuntimeErrorListener` are
+  stateless, `AbortableListener` holds an `AtomicBoolean`, `BranchedErrorListener` inherits the lock.
+
+**A bug found while doing it.** `clear()` reset the list, the count and the severity but not
+`f_setUID`, so a cleared list silently dropped any diagnostic it had seen before. Reachable:
+`xRTCompiler` clears and reuses one list across compiles, so the same diagnostic from a later module
+was deduplicated into nothing. Fixed in the same change.
+
+`ErrorListConcurrencyTest` pins it, and was verified to fail without the lock rather than assumed to.
 
 ---
 

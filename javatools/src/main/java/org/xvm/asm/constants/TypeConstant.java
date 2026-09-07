@@ -6887,10 +6887,11 @@ public abstract sealed class TypeConstant
         // is not a diagnostic.
         //
         // This one call site is why the compiler used to blank the pool's listener for the whole
-        // compile (ConstantPool.setErrorListener(BLACKHOLE) after registration, restored after code
+        // compile (a setter on ConstantPool, called after registration and restored after code
         // generation). Asking for silence here instead means the pool can hold the compilation's
         // real listener throughout, and the silence is visible at the site that wants it rather
-        // than being a field swapped a hundred and seventy lines apart.
+        // than being a field swapped a hundred and seventy lines apart. The setter is now gone
+        // entirely: the pool takes its listener at construction and it is final.
         return typeInfo().findConversion(that);
     }
 

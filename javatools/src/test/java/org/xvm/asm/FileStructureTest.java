@@ -48,26 +48,24 @@ public class FileStructureTest {
      * crash when no ambient pool was installed.
      *
      * <p>The listener now belongs to the {@link ConstantPool} that owns the constants rather than
-     * to a mutable field on the structure, so the isolation this guards is asserted at that owner:
-     * setting one file's listener must not reach another's, and a file nobody has configured still
-     * answers {@link ErrorListener#RUNTIME}.
+     * to a mutable field on the structure, and is fixed at construction, so the isolation this
+     * guards is asserted at that owner: one file's listener must not reach another's, and a file
+     * nobody configured still answers {@link ErrorListener#RUNTIME}.
      */
     @Test
     public void errorListenerIgnoresAmbientPool() {
-        var file  = new FileStructure("owner");
-        var other = new FileStructure("other");
         ErrorListener otherListener = err -> {};
-        other.getConstantPool().setErrorListener(otherListener);
+
+        var file  = new FileStructure("owner");
+        var other = new FileStructure("other", otherListener);
 
         // configuring another file must not reach this one
         assertSame(ErrorListener.RUNTIME, file.getConstantPool().getErrorListener());
         assertSame(ErrorListener.RUNTIME, file.getErrorListener());
 
-        file.getConstantPool().setErrorListener(otherListener);
-        assertSame(otherListener, file.getConstantPool().getErrorListener());
-
-        // and the other file is still its own
+        // and each answers its own, for the life of the structure
         assertSame(otherListener, other.getConstantPool().getErrorListener());
+        assertSame(otherListener, other.getErrorListener());
     }
 
     @Test @Disabled("TODO: Re-enable test")
