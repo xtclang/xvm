@@ -91,7 +91,7 @@ public class PlatformBuildBenchmarkTest {
     }
 
     private static List<XdkBuildHarness.Node> discover(Path platform) throws IOException {
-        record Found(String moduleName, String label, Path source, List<File> resources,
+        record Found(String moduleName, String label, Path source, List<Path> resources,
                      Set<String> declared) {}
 
         var found = new ArrayList<Found>();
@@ -116,11 +116,11 @@ public class PlatformBuildBenchmarkTest {
                             // modules use src/main/resources; platformUI's build adds gui/dist as
                             // a resource srcDir, which is where its `Directory:/spa` lives. A real
                             // integration has to be told these, the way Gradle tells xcc.
-                            var resources = new ArrayList<File>();
+                            var resources = new ArrayList<Path>();
                             for (String candidate : List.of("src/main/resources", "gui/dist")) {
                                 Path res = dir.resolve(candidate);
                                 if (Files.isDirectory(res)) {
-                                    resources.add(res.toFile());
+                                    resources.add(res);
                                 }
                             }
                             found.add(new Found(m.group(1), dir.getFileName().toString(), f,

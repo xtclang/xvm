@@ -67,7 +67,7 @@ public final class XdkBuildHarness {
      *                      {@code TypeSystem.x} reads {@code $/implicit.x} as a resource literal
      * @param deps          the qualified names of the modules it imports
      */
-    public record Node(String moduleName, String label, Path source, List<File> resourceDirs,
+    public record Node(String moduleName, String label, Path source, List<Path> resourceDirs,
                        Set<String> deps) {
         public Node {
             resourceDirs = List.copyOf(resourceDirs);

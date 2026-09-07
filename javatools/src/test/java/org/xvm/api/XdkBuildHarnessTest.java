@@ -128,7 +128,7 @@ public class XdkBuildHarnessTest {
     }
 
     private static List<XdkBuildHarness.Node> discover(Path root) throws IOException {
-        record Found(String moduleName, String label, Path source, List<File> resources,
+        record Found(String moduleName, String label, Path source, List<Path> resources,
                      Set<String> declared) {}
 
         var found = new ArrayList<Found>();
@@ -160,7 +160,7 @@ public class XdkBuildHarnessTest {
                         // $/implicit.x, and without this it fails to parse
                         Path res = dir.toPath().resolve("src/main/resources");
                         found.add(new Found(m.group(1), dir.getName(), f,
-                                Files.isDirectory(res) ? List.of(res.toFile()) : List.of(),
+                                Files.isDirectory(res) ? List.of(res) : List.of(),
                                 declared));
                         break;
                     }

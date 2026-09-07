@@ -524,7 +524,7 @@ public final class XtcEngine
         event.modules = Arrays.stream(units).map(SourceUnit::moduleName).collect(Collectors.joining(","));
         event.begin();
         try {
-            return compileInternal(errsCaller, event, errs -> parseSources(errs, units));
+            return compileInternal(errsCaller, event, errs -> parseSources(errs, List.of(units)));
         } finally {
             event.commit();
         }
@@ -580,6 +580,28 @@ public final class XtcEngine
      */
     public @NotNull CompileResult compile(@NotNull ModuleRepository repoInput,
                                           @NotNull ModuleSource @NotNull... sources) {
+        return compile(ErrorListener.BLACKHOLE, repoInput, sources);
+    }
+
+    /**
+     * Compile against a caller-supplied library, reporting diagnostics as they are logged.
+     *
+     * <p>The combination matters: a caller that needs its own input repository - anything compiling
+     * a dependency graph, where each module resolves against what the ones before it produced - had
+     * no way to supply a listener, and therefore no way to see diagnostics as they happen and no
+     * way to <b>stop</b>. Cancellation in this compiler is cooperative and runs through
+     * {@link ErrorListener#isAbortDesired()}, which the stages consult (see {@code runPhase}), so a
+     * caller with no listener cannot abort a compile it has started.</p>
+     *
+     * @param errsCaller  the caller's diagnostic sink, and its means of aborting
+     * @param repoInput   the library to resolve dependencies against
+     * @param sources     the modules to compile
+     *
+     * @return the compile result
+     */
+    public @NotNull CompileResult compile(@NotNull ErrorListener errsCaller, @NotNull ModuleRepository repoInput,
+                                          @NotNull ModuleSource @NotNull... sources) {
+        Objects.requireNonNull(errsCaller, "errsCaller (use ErrorListener.BLACKHOLE to discard)");
         Objects.requireNonNull(repoInput, "repoInput");
         Objects.requireNonNull(sources, "sources");
 
@@ -588,8 +610,8 @@ public final class XtcEngine
                 .map(source -> source.source().toString()).collect(Collectors.joining(","));
         event.begin();
         try {
-            return compileInternal(ErrorListener.BLACKHOLE, event,
-                    errs -> parseModuleSources(errs, sources), repoInput);
+            return compileInternal(errsCaller, event,
+                    errs -> parseModuleSources(errs, List.of(sources)), repoInput);
         } finally {
             event.commit();
         }
@@ -617,7 +639,7 @@ public final class XtcEngine
                 .map(source -> source.source().toString()).collect(Collectors.joining(","));
         event.begin();
         try {
-            return compileInternal(errsCaller, event, errs -> parseModuleSources(errs, sources));
+            return compileInternal(errsCaller, event, errs -> parseModuleSources(errs, List.of(sources)));
         } finally {
             event.commit();
         }
@@ -640,7 +662,7 @@ public final class XtcEngine
         event.modules = Arrays.stream(paths).map(Path::toString).collect(Collectors.joining(","));
         event.begin();
         try {
-            return compileInternal(errsCaller, event, errs -> parseSourceTrees(errs, paths));
+            return compileInternal(errsCaller, event, errs -> parseSourceTrees(errs, List.of(paths)));
         } finally {
             event.commit();
         }
@@ -649,38 +671,26 @@ public final class XtcEngine
     /**
      * Parse in-memory sources into module node trees.
      */
-    private static List<TypeCompositionStatement> parseSources(ErrorListener errs, SourceUnit[] units) {
-        var listModules = new ArrayList<TypeCompositionStatement>(units.length);
-        for (var unit : units) {
-            TypeCompositionStatement stmtModule = parseModule(unit.source(), errs);
-            if (stmtModule != null) {
-                listModules.add(stmtModule);
-            }
-        }
-        return listModules;
+    private static List<TypeCompositionStatement> parseSources(ErrorListener errs, List<SourceUnit> units) {
+        return units.stream().map(unit -> parseModule(unit.source(), errs)).filter(Objects::nonNull).toList();
     }
 
     /**
      * Parse on-disk sources into module node trees, through the same {@link ModuleInfo} walk the CLI
      * compiler uses, so a directory-tree module is handled exactly as the CLI handles it.
      */
-    private static List<TypeCompositionStatement> parseSourceTrees(ErrorListener errs, Path[] paths) {
-        var aSource = new ModuleSource[paths.length];
-        for (int i = 0; i < paths.length; i++) {
-            aSource[i] = ModuleSource.of(paths[i]);
-        }
-        return parseModuleSources(errs, aSource);
+    private static List<TypeCompositionStatement> parseSourceTrees(ErrorListener errs, List<Path> paths) {
+        return parseModuleSources(errs, paths.stream().map(ModuleSource::of).toList());
     }
 
     /**
      * Parse on-disk sources into module node trees, through the same {@link ModuleInfo} walk the CLI
      * compiler uses, resolving each module's file/directory literals against its resource root.
      */
-    private static List<TypeCompositionStatement> parseModuleSources(ErrorListener errs,
-                                                                     ModuleSource[] sources) {
-        var listModules = new ArrayList<TypeCompositionStatement>(sources.length);
+    private static List<TypeCompositionStatement> parseModuleSources(ErrorListener errs, List<ModuleSource> sources) {
+        var listModules = new ArrayList<TypeCompositionStatement>(sources.size());
         for (ModuleSource source : sources) {
-            List<File> listResource = source.resourceDirs();
+            List<File> listResource = source.resourceDirs().stream().map(Path::toFile).toList();
             // deduce=false, deliberately. The engine is handed exact paths by its caller - a build
             // tool knows precisely which sources and resource roots it means - so inferring
             // locations from filesystem convention can only turn a known input into a guessed one.
@@ -1368,9 +1378,13 @@ public final class XtcEngine
      * file and directory literals in that source are resolved.
      *
      * @param source        the module's source file or source directory
-     * @param resourceDirs  the module's resource roots, in aggregate; empty when it has none
+     * @param resourceDirs  the module's resource roots, in aggregate; empty when it has none.
+     *                       {@link Path}, like {@code source}: {@link ModuleInfo} wants
+     *                       {@link File}, but that is a property of the consumer and is converted
+     *                       at the call, not a reason for one field of this record to be modern and
+     *                       the other legacy.
      */
-    public record ModuleSource(@NotNull Path source, @NotNull List<File> resourceDirs) {
+    public record ModuleSource(@NotNull Path source, @NotNull List<Path> resourceDirs) {
         public ModuleSource {
             Objects.requireNonNull(source, "source");
             // copied, so the record is immutable whatever the caller does with its list afterwards
@@ -1393,7 +1407,7 @@ public final class XtcEngine
          * @param source        the module's source file or source directory
          * @param resourceDirs  the resource roots
          */
-        public static @NotNull ModuleSource of(@NotNull Path source, @NotNull File @NotNull... resourceDirs) {
+        public static @NotNull ModuleSource of(@NotNull Path source, @NotNull Path @NotNull... resourceDirs) {
             return new ModuleSource(source, List.of(resourceDirs));
         }
     }

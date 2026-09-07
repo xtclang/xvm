@@ -148,7 +148,7 @@ public final class IsolatedDirectExecutor {
         final boolean fResources = dirResource != null && dirResource.isDirectory();
         final XtcEngine.ModuleSource[] aSource = request.sourceFiles().stream()
             .map(file -> fResources
-                ? XtcEngine.ModuleSource.of(file.toPath(), dirResource)
+                ? XtcEngine.ModuleSource.of(file.toPath(), dirResource.toPath())
                 : XtcEngine.ModuleSource.of(file.toPath()))
             .toArray(XtcEngine.ModuleSource[]::new);
 
