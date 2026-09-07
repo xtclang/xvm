@@ -2810,7 +2810,31 @@ The errors then exist, and the caller can ask `hasSeriousErrors()` before discar
 what makes "every overload failed, here is why" reportable instead of silent. `InvocationExpression`
 (13 uses) and `TypeConstant` (10) are most of the work and are also where the silence hurts most.
 
-**Stage 3 - `BLACKHOLE` stops being reachable by default.** Once stages 1 and 2 are done, the
+**Stage 3 - RE-SCOPED 2026-09-07: `BLACKHOLE` cannot stop being reachable, because it has a
+legitimate use.** The original intent was to make it unreachable once stages 1 and 2 were done. The
+classification above shows that is wrong: 67 of the 150 uses are `testFit`/`isA` probes whose
+contract is to answer a question without reporting, and whose return value IS the answer. There is
+nothing to replace them with, and `branch()` would allocate per probe to collect diagnostics nobody
+reads.
+
+What stage 3 can honestly be is narrower: **make the two meanings distinguishable at the call site.**
+`BLACKHOLE` currently reads the same whether the caller means "this is a probe and the boolean is my
+answer" or "I have not thought about where these errors should go". A second constant - or a name
+like `PROBE` for the first - would let a reviewer tell them apart, and would make the second kind
+findable.
+
+**State after stage 1 and one stage-2 conversion:** 149 `BLACKHOLE` uses; 5 listener null-comparisons
+remain and all are deliberate - `Lexer:53` throws (correct enforcement), `Container:94` is a
+documented fallback chain ending in `requireNonNull` where null means "inherit the parent's", and
+`TypeInfoTrace` treats a null listener as a finding to echo rather than a reason to go quiet, which
+its own comment states. The two `assert errs != null` sites became `requireNonNull`, since asserts
+enforce nothing under `-da`.
+
+**Cost of the stage-2 conversion, measured** on the XDK build harness: pass 1 24.27s -> 23.36s,
+pass 2 17.89s -> 18.06s, parallel 9.70s -> 9.99s, sampled allocation 29.6 GB -> 29.5 GB. Within
+noise, because the conversion is on a failure path rather than on the probe path.
+
+**Stage 3 (original text) - `BLACKHOLE` stops being reachable by default.** Once stages 1 and 2 are done, the
 remaining uses should be few and deliberate. Making the constant package-private, or renaming it to
 something that reads as a decision (`DISCARD_ALL`), stops it being the path of least resistance.
 

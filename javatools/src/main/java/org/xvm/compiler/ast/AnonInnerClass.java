@@ -38,8 +38,8 @@ public class AnonInnerClass {
      * @param errs  the error listener to use to log errors to
      */
     public AnonInnerClass(TypeExpression expr, ErrorListener errs) {
-        assert expr != null;
-        assert errs != null;
+        requireNonNull(expr, "expr");
+        requireNonNull(errs, "errs");
 
         m_exprType = expr;
         f_errs     = requireNonNull(errs, "errs");

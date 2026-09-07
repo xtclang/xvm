@@ -1,6 +1,8 @@
 package org.xvm.asm.constants;
 
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -153,7 +155,8 @@ public class PropertyInfo
             ContribSource  contribSource,
             boolean        fMixin,
             ErrorListener  errs) {
-        assert that != null && errs != null;
+        requireNonNull(that, "that");
+        requireNonNull(errs, "errs");
 
         PropertyConstant idProp = getIdentity();
         assert idProp.getName().equals(that.getName());
