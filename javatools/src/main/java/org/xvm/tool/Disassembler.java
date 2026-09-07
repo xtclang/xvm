@@ -12,6 +12,8 @@ import java.time.format.TextStyle;
 import java.util.Arrays;
 import java.util.Locale;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
@@ -63,8 +65,8 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
      * @param console     representation of the terminal within which this command is run, or null
      * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Disassembler(DisassemblerOptions options, Console console, ErrorListener errListener) {
-        super(options, console, errListener);
+    public Disassembler(DisassemblerOptions options, Console console, @NotNull ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**

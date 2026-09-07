@@ -6,6 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.api.Connector;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ModuleRepository;
@@ -83,8 +85,8 @@ public class TestRunner extends Runner {
      * @param console     representation of the terminal within which this command is run
      * @param errListener optional error listener for programmatic error access
      */
-    public TestRunner(final TestRunnerOptions options, final Console console, final ErrorListener errListener) {
-        super(options, console, errListener);
+    public TestRunner(final TestRunnerOptions options, final Console console, final @NotNull ErrorListener errs) {
+        super(options, console, errs);
     }
 
     @Override

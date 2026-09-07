@@ -9,6 +9,8 @@ import java.util.Set;
 
 import java.util.stream.Collectors;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
@@ -52,8 +54,8 @@ public class Bundler extends Launcher<BundlerOptions> {
      * @param console     representation of the terminal within which this command is run, or null
      * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Bundler(BundlerOptions options, Console console, ErrorListener errListener) {
-        super(options, console, errListener);
+    public Bundler(BundlerOptions options, Console console, @NotNull ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**

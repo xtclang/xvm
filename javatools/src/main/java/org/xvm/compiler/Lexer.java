@@ -46,20 +46,20 @@ public class Lexer
      *
      * @param source  the source to parse
      */
-    public Lexer(Source source, ErrorListener errorListener) {
+    public Lexer(Source source, ErrorListener errs) {
         if (source == null) {
             throw new IllegalArgumentException("Source required");
         }
-        if (errorListener == null) {
+        if (errs == null) {
             throw new IllegalArgumentException("ErrorListener required");
         }
 
         m_source        = source;
-        m_errs = requireNonNull(errorListener, "errorListener");
+        m_errs = requireNonNull(errs, "errs");
 
         // Constructors must not dispatch through overridable tokenization hooks; subclasses are
         // still incomplete here. Keep the old leading-whitespace priming through a private helper.
-        m_fWhitespace   = eatInitialWhitespace(source, errorListener);
+        m_fWhitespace   = eatInitialWhitespace(source, errs);
     }
 
     /**
@@ -2621,10 +2621,10 @@ public class Lexer
     /**
      * Eat leading whitespace without calling overridable lexer methods during construction.
      */
-    private static boolean eatInitialWhitespace(Source source, ErrorListener errorListener) {
+    private static boolean eatInitialWhitespace(Source source, ErrorListener errs) {
         boolean fWhitespace = false;
         while (source.hasNext()) {
-            if (isWhitespace(nextSourceChar(source, errorListener))) {
+            if (isWhitespace(nextSourceChar(source, errs))) {
                 fWhitespace = true;
             } else {
                 // put back the non-whitespace character
@@ -2639,7 +2639,7 @@ public class Lexer
      * Read the next source character and report the same illegal embedded EOF diagnostic as the
      * instance lexer path.
      */
-    private static char nextSourceChar(Source source, ErrorListener errorListener) {
+    private static char nextSourceChar(Source source, ErrorListener errs) {
         char ch = source.next();
         if (ch == EOF && source.hasNext()) {
             long lPos = source.getPosition();
@@ -2647,9 +2647,9 @@ public class Lexer
             long lStartPos = source.getPosition();
             source.setPosition(lPos);
 
-            errorListener.log(Severity.ERROR, UNEXPECTED_EOF, source, lStartPos, source.getPosition());
-            if (errorListener.isAbortDesired()) {
-                throw new CompilerException("aborting the lexer; " + errorListener);
+            errs.log(Severity.ERROR, UNEXPECTED_EOF, source, lStartPos, source.getPosition());
+            if (errs.isAbortDesired()) {
+                throw new CompilerException("aborting the lexer; " + errs);
             }
         }
         return ch;

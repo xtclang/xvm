@@ -772,7 +772,12 @@ public sealed class NameExpression
                     }
                     // there is a read of the implicit "this" variable
                     else if (getParent() instanceof NameExpression) {
-                        if (!ctx.requireThis(getStartPosition(), null)) {
+                        // A BRANCH, not null: this asks whether "this" is available without
+                        // reporting that it is not, and a branch that is never merged discards
+                        // what it collected. Passing null said the same thing by making the
+                        // listener optional, which is what forced every implementation of
+                        // requireThis to guard before logging.
+                        if (!ctx.requireThis(getStartPosition(), errs.branch(this))) {
                             // we know that this expression represents a property but there is
                             // no "this"; we can only proceed with the identity mode here;
                             // it becomes the outer expression's job to report any errors that

@@ -2,6 +2,8 @@ package org.xvm.tool;
 
 import java.nio.file.Path;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.BuildInfo;
 import org.xvm.asm.ErrorListener;
 
@@ -32,8 +34,8 @@ public class Initializer extends Launcher<InitializerOptions> {
      * @param console     representation of the terminal within which this command is run, or null
      * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Initializer(InitializerOptions options, Console console, ErrorListener errListener) {
-        super(options, console, errListener);
+    public Initializer(InitializerOptions options, Console console, @NotNull ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**

@@ -10,6 +10,8 @@ import java.util.Set;
 
 import java.util.stream.Collectors;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.api.Connector;
 import org.xvm.api.InterpreterConnector;
 
@@ -59,8 +61,8 @@ public class Runner extends Launcher<RunnerOptions> {
      * @param console     representation of the terminal within which this command is run, or null
      * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Runner(RunnerOptions options, Console console, ErrorListener errListener) {
-        super(options, console, errListener);
+    public Runner(RunnerOptions options, Console console, @NotNull ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**

@@ -120,8 +120,8 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param errListener the ErrorListener to receive errors; required - pass
      *                    {@link ErrorListener#BLACKHOLE} for no delegation
      */
-    public Compiler(CompilerOptions options, Console console, @NotNull ErrorListener errListener) {
-        super(options, console, errListener);
+    public Compiler(CompilerOptions options, Console console, @NotNull ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**

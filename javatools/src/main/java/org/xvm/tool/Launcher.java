@@ -72,7 +72,7 @@ public abstract class Launcher<T extends LauncherOptions>
      */
     @FunctionalInterface
     private interface CommandHandler {
-        int launch(String[] args, Console console, ErrorListener errListener);
+        int launch(String[] args, Console console, @NotNull ErrorListener errs);
     }
 
     /**
@@ -228,15 +228,15 @@ public abstract class Launcher<T extends LauncherOptions>
      * @param cmd          command name: build, run, or test
      * @param args         command line arguments (options and files)
      * @param console      console for output (must not be null)
-     * @param errListener  the ErrorListener to receive errors; required - pass
+     * @param errs  the ErrorListener to receive errors; required - pass
      *                     {@link ErrorListener#BLACKHOLE}, or use
      *                     {@link #launch(String, String[], Console)}, to discard them
      *
      * @return exit code (0 for success, non-zero for error)
      */
     public static int launch(String cmd, String[] args, Console console,
-            @NotNull ErrorListener errListener) {
-        requireNonNull(errListener, "errListener");
+            @NotNull ErrorListener errs) {
+        requireNonNull(errs, "errs");
         try {
             // Check for global options first
             return switch (cmd) {
@@ -251,7 +251,7 @@ public abstract class Launcher<T extends LauncherOptions>
                 default -> {
                     final var handler = COMMANDS.get(cmd);
                     if (handler != null) {
-                        yield handler.launch(args, console, errListener);
+                        yield handler.launch(args, console, errs);
                     }
                     // If the command looks like an option (e.g., "-L"), no command was provided;
                     // show help without an error message
@@ -326,27 +326,27 @@ public abstract class Launcher<T extends LauncherOptions>
      * @param options      pre-built options (CompilerOptions, RunnerOptions, or
      *                     DisassemblerOptions)
      * @param console      console for output (must not be null)
-     * @param errListener  the ErrorListener to receive errors; required - pass
+     * @param errs  the ErrorListener to receive errors; required - pass
      *                     {@link ErrorListener#BLACKHOLE}, or use
      *                     {@link #launch(LauncherOptions, Console)}, to discard them
      *
      * @return exit code (0 for success, non-zero for error)
      */
     public static int launch(LauncherOptions options, Console console,
-            @NotNull ErrorListener errListener) {
-        requireNonNull(errListener, "errListener");
+            @NotNull ErrorListener errs) {
+        requireNonNull(errs, "errs");
         if (options == null) {
             console.log(ERROR, "Options must not be null");
             return 1;
         }
 
         final var launcher = switch (options) {
-            case final CompilerOptions opts     -> new Compiler(opts, console, errListener);
-            case final InitializerOptions opts  -> new Initializer(opts, console, errListener);
-            case final TestRunnerOptions opts   -> new TestRunner(opts, console, errListener);
-            case final RunnerOptions opts       -> new Runner(opts, console, errListener);
-            case final DisassemblerOptions opts -> new Disassembler(opts, console, errListener);
-            case final BundlerOptions opts      -> new Bundler(opts, console, errListener);
+            case final CompilerOptions opts     -> new Compiler(opts, console, errs);
+            case final InitializerOptions opts  -> new Initializer(opts, console, errs);
+            case final TestRunnerOptions opts   -> new TestRunner(opts, console, errs);
+            case final RunnerOptions opts       -> new Runner(opts, console, errs);
+            case final DisassemblerOptions opts -> new Disassembler(opts, console, errs);
+            case final BundlerOptions opts      -> new Bundler(opts, console, errs);
             default -> {
                 console.log(ERROR, "Unknown options type: {}", options.getClass().getName());
                 yield null;

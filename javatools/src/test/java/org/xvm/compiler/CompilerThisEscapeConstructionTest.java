@@ -55,10 +55,10 @@ public class CompilerThisEscapeConstructionTest {
     @Test
     public void lexerConstructorUsesPrivateWhitespacePriming() throws IOException {
         String source = source("org/xvm/compiler/Lexer.java");
-        String ctor   = between(source, "public Lexer(Source source, ErrorListener errorListener)",
+        String ctor   = between(source, "public Lexer(Source source, ErrorListener errs)",
                 "protected Lexer(Lexer parent)");
 
-        assertTrue(ctor.contains("eatInitialWhitespace(source, errorListener)"));
+        assertTrue(ctor.contains("eatInitialWhitespace(source, errs)"));
         assertFalse(ctor.contains("eatWhitespace();"));
     }
 

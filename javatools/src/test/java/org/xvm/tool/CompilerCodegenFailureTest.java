@@ -36,7 +36,7 @@ class CompilerCodegenFailureTest {
                         "fatal VM errors must be rethrown directly"),
                 () -> assertTrue(method.contains("catch (RuntimeException e)"),
                         "unchecked compiler defects must be treated as terminal"),
-                () -> assertTrue(method.contains("log(FATAL, e, \"Failed to generate code for {}\", compiler)"),
+                () -> assertTrue(method.contains("report(FATAL, e, \"Failed to generate code for {}\", compiler)"),
                         "terminal compiler failure must keep the original cause"));
     }
 
