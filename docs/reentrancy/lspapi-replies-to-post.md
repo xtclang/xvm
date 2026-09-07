@@ -1,5 +1,46 @@
 # What to reply on PR #545, and where
 
+**SUPERSEDED 2026-09-07 - everything below has been posted, and section A was already wrong when
+written.** Kept as the record of what was said and why. Current state at the bottom.
+
+---
+
+## What actually happened
+
+Section A was drafted from Friday's state and had already been answered before I wrote it: Marcus
+replied to `xExternalConsole.java:31` (PrintWriter - "go with a PrintWriter for now"),
+`xExternalConsole.java:83` (PrintStream has no way of reporting an error) and
+`InterpreterControl.java:99` (type it properly so the downcasts do not grow) on the morning of
+2026-09-07, before this document existed. **Check the threads before drafting, not after.**
+
+Posted on 2026-09-07:
+
+| thread | what went | link |
+| --- | --- | --- |
+| `runner.x:161` H19 | confirmed the file system, corrected myself on `DirectoryFileStore`, offered our injections | r3947931439 |
+| `runner.x:102` registry | confirmed, said his is more complete than ours was | r3947943606 - **resolved** |
+| `InterpreterControl.java:132` poll | confirmed, and why the separate `completion` future is the safe shape | r3947956928 - **resolved** |
+| `LspTest.java:45` | answered his CI question: annotate the five, tag the slow two | r3947999462 |
+| `InterpreterControl.java:101` Cleaner | **new thread** - the one pushback, with his own `retainStore=False` as the alternative | r3948018564 |
+| `runner.x:139` H6 | still externally writable | r3948041183 |
+| `InterpreterControl.java:67` H12 | still construct-then-start | r3948047866 |
+
+Two threads resolved; every remaining open thread is waiting on him.
+
+**Still to send:** the H12 follow-up carrying an actual diff, applied to his current head
+(`d18f351` on `lagergren/lspapi-h12-on-new-head`, compiles). Prose about a refactor is easy to
+disagree with; the diff shows `completion` ending up final too, which the prose version could not
+manage.
+
+**Still ours, not offered yet beyond a mention:** per-run string injections. Implemented on our side
+as parallel `String[]` arrays on `registerTask`, `PerRunInjectionTest` passes, and the offer is made
+in the H19 thread. Waiting for him to say whether he wants it.
+
+---
+
+# Original draft, as written
+
+
 Drafted 2026-09-07 after porting our engine onto Gene's `registerTask`/`startTask`. **Nothing here
 has been posted.** Each item names the thread to reply into, so nothing opens a duplicate.
 
