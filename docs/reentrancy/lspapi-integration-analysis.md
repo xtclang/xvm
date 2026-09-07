@@ -1770,6 +1770,50 @@ identity comparison.
 
 ### Must audit
 
+### Audit results (2026-09-07)
+
+**A1 - DONE, and it was worse than described: the class javadoc was wrong.** The doc at
+`OwnershipDiagnostics:358` said the sweep "flags them when unrelated but does not descend". It did
+not flag them: `isOwnerScoped` deliberately excludes `Container`, and the descent code reached
+`if (container != root) continue;` - a bare skip, with no violation and no blind-spot record, even
+though a `blindSpots` list exists and `isClean()` already requires it to be empty.
+
+Fixed: an **unrelated** container reached during a sweep is now recorded as a blind spot (a related
+one is not - parent/child links are legitimate and recording them would be pure noise). The javadoc
+now states the actual rule, including why `Container` is not owner-scoped.
+
+Verified both ways: the existing 13 ownership tests still pass, so it does not cry wolf; and a new
+test, `aContainerRetainedInACollectionIsRecordedRatherThanSkippedSilently`, plants an unrelated
+container in a map and asserts the sweep records it - **red without the fix, green with it**.
+
+**A2 - one site, and it compounds M1.** `forgetTask` is the only `invokeAsync` in the tree whose
+result is discarded (`XtcEngine:1085`, no `whenComplete`). Every other call chains. So the registry
+can retain a task two ways: the run failed, and `forgetTask` was never called at all (M1); or it was
+called, failed, and nobody heard.
+
+**A3 - the requesting container is the parent, and six native resources are shared plane-wide.**
+Under `PassThroughResourceProvider` a child's injection resolves in the parent's context, so keying
+per-run state on `frame.f_context.f_container` keys on container zero - measured on
+`lagergren/per-container-console`, where the map held one entry across two runs.
+
+Auditing the eleven `ensureXxx(Frame, ...)` suppliers for cached handles, six cache on the NATIVE
+container's template and are therefore one object shared by every run on the plane:
+
+| template | cached | shared across runs |
+| --- | --- | --- |
+| `xLocalClock` | `m_hLocalClock`, `m_hUTCClock` | yes - harmless, a clock is a reading |
+| `xRTAlgorithms` | `m_hAlgorithms` | yes - effectively immutable |
+| `xTerminalConsole` | `m_hConsole` | yes - this is E38's subject |
+| `xRTServer` | `m_hBinding` | yes - shared network binding |
+| `xRTConnector` | `m_hDefaultNames`, `m_hDefaultValues` | yes |
+| **`xRTRandom`** | **`m_hRandom`** | **yes - one RNG STREAM for every run** |
+
+`xRTRandom.ensureDefaultRandom` (`:195-215`) returns a per-call service only when a non-zero seed is
+passed in the options; every plain `@Inject Random` gets the one cached service. So two sequential
+runs share one stream, and run 1's draws advance what run 2 sees. For a hosted test runner that is a
+reproducibility hazard - the same module run twice gets different values depending on what ran
+before it - and the only escape today is to inject a seed.
+
 **A1 - the ownership sweep is blind to a container held in a collection.**
 `OwnershipDiagnostics` documents other `Container`s as traversal **boundaries**, and
 `isOwnerScoped` does not list `Container`. So anything retaining a container as a map key or list

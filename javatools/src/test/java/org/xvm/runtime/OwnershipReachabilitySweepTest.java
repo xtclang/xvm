@@ -73,6 +73,33 @@ public class OwnershipReachabilitySweepTest {
     }
 
     @Test
+    public void aContainerRetainedInACollectionIsRecordedRatherThanSkippedSilently() {
+        var runtime = new Runtime();
+        try {
+            var left  = new TestContainer(runtime, null, "left");
+            var right = new TestContainer(runtime, null, "right");
+
+            // retain an UNRELATED container itself - the shape a per-container cache has
+            var holder = new Holder();
+            holder.map = new HashMap<>();
+            holder.map.put("planted", right);
+
+            left.putRuntimeOpCacheIfAbsent(new TestOp(), Category.SWEEP, holder, Holder.class);
+
+            SweepReport report = OwnershipDiagnostics.sweepForeignReferences(left);
+
+            // deliberately NOT a violation: Container is not owner-scoped, because containers
+            // legitimately reference one another. But it must not pass in silence either - a
+            // retention path running through a container was previously invisible.
+            assertTrue(report.violations().isEmpty(), report::render);
+            assertFalse(report.blindSpots().isEmpty(), report::render);
+            assertFalse(report.isClean(), report::render);
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    @Test
     public void mutableForeignHandleIsFlaggedButImmutableIsLegitimateCurrency() {
         var runtime = new Runtime();
         try {

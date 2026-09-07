@@ -355,9 +355,13 @@ public final class OwnershipDiagnostics {
      * reachable pool whose owner is unrelated.
      * <p/>
      * Deliberate scope limits, stated so nobody mistakes a clean sweep for more than it is:
-     * other {@link Container} objects and unrelated {@link ServiceContext}s are boundaries - the
-     * sweep flags them when unrelated but does not descend into their state (sweep each
-     * container separately); the constant/structure plane below {@link ConstantPool} is
+     * other {@link Container} objects and unrelated {@link ServiceContext}s are boundaries and are
+     * not descended into (sweep each container separately). An unrelated {@link ServiceContext} is
+     * flagged as a violation, because it is owner-scoped. An unrelated {@link Container} is NOT -
+     * {@code Container} is deliberately absent from {@code isOwnerScoped}, since containers legitimately
+     * reference each other - so it is recorded as a BLIND SPOT instead. That distinction matters:
+     * anything retaining a container in a collection is invisible to the ownership check, and
+     * before this was recorded, such a retention produced a completely silent pass; the constant/structure plane below {@link ConstantPool} is
      * owner-neutral module data and is not walked (except the {@code HandleConstant} live-handle
      * check); {@code static} roots are not enumerated - process-global leaks through statics are
      * the province of the source-shape scans and the parked JIT-statics rows; and a reachability
@@ -402,6 +406,16 @@ public final class OwnershipDiagnostics {
             // descent
             if (value instanceof Container container) {
                 if (container != root) {
+                    if (!isRelated(root, container)) {
+                        // An UNRELATED container reached from here is a reference to another
+                        // container's entire graph, and nothing above flagged it: Container is
+                        // deliberately not owner-scoped, so the check at the top of the loop does
+                        // not apply to it. Record it, because otherwise a retention path that runs
+                        // THROUGH a container - a map keyed by one, a field holding one - produces
+                        // a silent pass and a clean sweep means less than it appears to.
+                        blindSpots.add(node.renderPath() + " -> unrelated "
+                                + describeContainer(container));
+                    }
                     continue; // container boundary: sweep it separately
                 }
             } else if (value instanceof ServiceContext context) {
