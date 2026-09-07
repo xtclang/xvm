@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.LinkerContext;
@@ -770,8 +771,7 @@ public class ServiceContext {
                 int nResult = getDebugger().checkBreakPoint(frame, iPC);
                 switch (nResult) {
                 default -> {
-                    f_container.getErrorListener().log(Severity.WARNING,
-                        RT_DEBUGGER_RESULT_UNSUPPORTED, null, nResult);
+                    f_container.getErrorListener().warn(RT_DEBUGGER_RESULT_UNSUPPORTED, nResult);
                     aOp[iPC] = opReset;
                     return iPC; // repeat with a real op
                 }

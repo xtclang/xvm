@@ -13,6 +13,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -170,8 +171,7 @@ public class xOSFileStore
 
                 if (Files.isSymbolicLink(path)) {
                     // TODO: implement native support for link files
-                    frame.container().getErrorListener().log(Severity.WARNING, RT_LINK_UNSUPPORTED,
-                            null, path);
+                    frame.container().getErrorListener().warn(RT_LINK_UNSUPPORTED, path);
                 }
                 return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
             } catch (InvalidPathException e) {

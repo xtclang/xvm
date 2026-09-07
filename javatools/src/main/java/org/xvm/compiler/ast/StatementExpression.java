@@ -234,8 +234,8 @@ public final class StatementExpression
         m_aLVal = aLVal;
         if (body.completes(ctx, true, code, errs) &&
                 m_atypeRequired != null && m_atypeRequired.length > 0) {
-            errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
-                    getEndPosition(), getEndPosition());
+            errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED,
+                    ErrorListener.in(getSource(), getEndPosition(), getEndPosition()));
         }
         m_astBody = ctx.getHolder().getAst(body);
     }

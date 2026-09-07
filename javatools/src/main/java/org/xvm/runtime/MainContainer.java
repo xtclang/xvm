@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.Set;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -265,8 +266,7 @@ public class MainContainer
             if (idMethod == null) {
                 // ERROR: the entry point does not exist, so nothing runs. That is a failure of
                 // the operation the caller asked for, not an oddity worth noting.
-                getErrorListener().log(Severity.ERROR, RT_MODULE_METHOD_MISSING, null,
-                        sMethodName, f_idModule.getValueString());
+                getErrorListener().error(RT_MODULE_METHOD_MISSING, sMethodName, f_idModule.getValueString());
                 return;
             }
 

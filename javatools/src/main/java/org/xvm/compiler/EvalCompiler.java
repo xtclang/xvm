@@ -141,8 +141,8 @@ public class EvalCompiler {
             return lambda;
         } catch (Exception e) {
             if (!errs.hasSeriousErrors()) {
-                errs.log(Severity.FATAL, Parser.FATAL_ERROR, null,
-                    f_source, f_source.getPosition(), f_source.getPosition());
+                errs.log(Severity.FATAL, Parser.FATAL_ERROR,
+                    ErrorListener.in(f_source, f_source.getPosition(), f_source.getPosition()));
             }
             return null;
         }

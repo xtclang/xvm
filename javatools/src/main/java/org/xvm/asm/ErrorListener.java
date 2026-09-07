@@ -144,7 +144,7 @@ public interface ErrorListener {
      * @param aoParam  the message parameters
      */
     default void info(String sCode, Object... aoParam) {
-        log(Severity.INFO, sCode, (XvmStructure) null, aoParam);
+        log(Severity.INFO, sCode, Site.NONE, aoParam);
     }
 
     /**
@@ -154,7 +154,7 @@ public interface ErrorListener {
      * @param aoParam  the message parameters
      */
     default void warn(String sCode, Object... aoParam) {
-        log(Severity.WARNING, sCode, (XvmStructure) null, aoParam);
+        log(Severity.WARNING, sCode, Site.NONE, aoParam);
     }
 
     /**
@@ -164,7 +164,7 @@ public interface ErrorListener {
      * @param aoParam  the message parameters
      */
     default void error(String sCode, Object... aoParam) {
-        log(Severity.ERROR, sCode, (XvmStructure) null, aoParam);
+        log(Severity.ERROR, sCode, Site.NONE, aoParam);
     }
 
     /**
@@ -174,7 +174,7 @@ public interface ErrorListener {
      * @param aoParam  the message parameters
      */
     default void fatal(String sCode, Object... aoParam) {
-        log(Severity.FATAL, sCode, (XvmStructure) null, aoParam);
+        log(Severity.FATAL, sCode, Site.NONE, aoParam);
     }
 
     // NOTE: the obvious further convenience - log(Severity, String, Object...) for a diagnostic
@@ -194,6 +194,72 @@ public interface ErrorListener {
     //
     // So callers with no context pass a null XvmStructure to the overload above. Where the null is
     // untyped that needs no cast, because no other overload is applicable.
+
+    /**
+     * Where a diagnostic happened.
+     *
+     * <p>A type, rather than three positional parameters, and that is the whole point. Location used
+     * to be encoded in the shape of the call - an {@link XvmStructure} in one overload, a
+     * {@code (Source, long, long)} triple in another, nothing at all in the aliases - so every
+     * convenience anyone tried to add collided with one of them. A varargs {@code Object...}
+     * absorbs {@code (Source, long, long)} as three message parameters exactly as readily as the
+     * positional overload takes them as a location, which is why {@code log(Severity, String,
+     * Object...)} could never be added. A {@code Site} cannot be confused with a message parameter,
+     * so it can be.</p>
+     */
+    sealed interface Site {
+        /**
+         * A diagnostic with no location. Distinct from "unknown": the caller HAS no location to
+         * give, which used to be spelled as a null {@link XvmStructure} and a cast.
+         */
+        Site NONE = new None();
+
+        /** Located at a structure. */
+        record At(XvmStructure structure) implements Site {}
+
+        /** Located at a span of source. */
+        record In(Source source, long start, long end) implements Site {}
+
+        /** @see #NONE */
+        record None() implements Site {}
+    }
+
+    /**
+     * @param structure  the structure the diagnostic concerns
+     *
+     * @return a {@link Site} at that structure
+     */
+    static Site at(XvmStructure structure) {
+        return new Site.At(structure);
+    }
+
+    /**
+     * @param source  the source the diagnostic is in
+     * @param start   the position where it begins
+     * @param end     the position where it ends
+     *
+     * @return a {@link Site} at that span
+     */
+    static Site in(Source source, long start, long end) {
+        return new Site.In(source, start, end);
+    }
+
+    /**
+     * Log a diagnostic. The one shape: a severity, a code, where it happened, and its parameters.
+     *
+     * @param severity  the severity level
+     * @param sCode     the error code
+     * @param site      where the diagnostic happened
+     * @param aoParam   the error message parameters
+     */
+    default void log(Severity severity, String sCode, Site site, Object... aoParam) {
+        log(switch (site) {
+            case Site.At(XvmStructure structure)          -> new ErrorInfo(severity, sCode, aoParam, structure);
+            case Site.In(Source source, long start, long end) ->
+                    new ErrorInfo(severity, sCode, aoParam, source, start, end);
+            case Site.None ignored                        -> new ErrorInfo(severity, sCode, aoParam, (XvmStructure) null);
+        });
+    }
 
     /**
      * Log an error against a source position, taking the message parameters as varargs.

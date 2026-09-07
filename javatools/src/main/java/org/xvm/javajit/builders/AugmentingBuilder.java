@@ -13,6 +13,7 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.List;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -199,8 +200,7 @@ public class AugmentingBuilder extends CommonBuilder {
             // ERROR: the method is left with no implementation at all. The line above this used
             // to be a commented-out `throw new IllegalStateException(...)`, which is what the
             // author thought of it; the severity now says the same thing without the throw.
-            typeSystem.pool().getErrorListener().log(Severity.ERROR, RT_NATIVE_IMPL_MISSING,
-                null, art.className(), jitName, method.getSignature().getValueString());
+            typeSystem.pool().getErrorListener().error(RT_NATIVE_IMPL_MISSING, art.className(), jitName, method.getSignature().getValueString());
             return;
         }
 

@@ -11,6 +11,7 @@ import java.lang.constant.ClassDesc;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -461,8 +462,7 @@ public class TypeSystem {
             if (publicType.isEnumValue()) {
                 return new EnumerationBuilder(this, art);
             } else {
-                pool.getErrorListener().log(Severity.WARNING, RT_CLASS_BUILDER_MISSING, null,
-                        type.getValueString());
+                pool.getErrorListener().warn(RT_CLASS_BUILDER_MISSING, type.getValueString());
             }
         }
 

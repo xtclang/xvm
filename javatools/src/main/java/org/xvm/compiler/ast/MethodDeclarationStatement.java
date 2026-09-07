@@ -373,8 +373,8 @@ public non-sealed class MethodDeclarationStatement
                 if (fValidator) {
                     if (modifiers != null && !modifiers.isEmpty()) {
                         Token tok = modifiers.getFirst();
-                        errs.log(Severity.ERROR, Compiler.ILLEGAL_MODIFIER, null,
-                            getSource(), tok.getStartPosition(), tok.getEndPosition());
+                        errs.log(Severity.ERROR, Compiler.ILLEGAL_MODIFIER,
+                            ErrorListener.in(getSource(), tok.getStartPosition(), tok.getEndPosition()));
                         return;
                     }
                     if (params != null && !params.isEmpty()) {

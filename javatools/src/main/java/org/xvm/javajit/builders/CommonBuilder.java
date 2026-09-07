@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
@@ -245,8 +246,7 @@ public class CommonBuilder
                 MethodInfo method2 = typeInfo.getNarrowingMethod(method);
                 String     name2   = method2.ensureJitMethodName(typeSystem);
 
-                typeSystem.pool().getErrorListener().log(Severity.WARNING,
-                        RT_VIRTUAL_CTOR_CAPPED, null, name1, name2);
+                typeSystem.pool().getErrorListener().warn(RT_VIRTUAL_CTOR_CAPPED, name1, name2);
             }
             String jitName = virtCtor.getIdentity().
                     ensureJitMethodName(typeSystem).replace("construct", NEW);
@@ -3975,8 +3975,7 @@ public class CommonBuilder
 
             if (NO_JIT_METHODS.getOrDefault(className, Set.of()).contains(methodId.getName())) {
                 if (METHOD_SKIP_SET.add(className)) {
-                    typeSystem.pool().getErrorListener().log(Severity.WARNING,
-                            RT_METHODS_SKIPPED, null, className);
+                    typeSystem.pool().getErrorListener().warn(RT_METHODS_SKIPPED, className);
                 }
                 SKIP_SET.add(className); // stops the skipping class log message
                 break GenerateStub;
@@ -3987,8 +3986,7 @@ public class CommonBuilder
         }
 
         if (SKIP_SET.add(className)) {
-            typeSystem.pool().getErrorListener().log(Severity.WARNING, RT_CODE_GEN_SKIPPED,
-                    null, className);
+            typeSystem.pool().getErrorListener().warn(RT_CODE_GEN_SKIPPED, className);
         }
         defaultLoad(code, md.returnType());
         addReturn(code, md.returnType());

@@ -607,9 +607,9 @@ public final class LambdaExpression
 
         if (hasOnlyParamNames()) {
             if (atypeReqParams == null) {
-                errs.log(Severity.ERROR, Compiler.PARAMETER_TYPES_REQUIRED, null,
-                        getSource(), paramNames.get(0).getStartPosition(),
-                        paramNames.get(cParams-1).getEndPosition());
+                errs.log(Severity.ERROR, Compiler.PARAMETER_TYPES_REQUIRED,
+                        ErrorListener.in(getSource(), paramNames.get(0).getStartPosition(),
+                                paramNames.get(cParams-1).getEndPosition()));
                 fValid = false;
             }
 

@@ -184,8 +184,8 @@ public class Parser {
             // CompilerException - so reaching here IS the failure signal, and answering null is the
             // documented outcome. The listener still hears about it, because whatever expect()
             // logged went to the caller's listener on the way past.
-            m_errs.log(Severity.WARNING, Compiler.FATAL_ERROR, null, m_source,
-                    m_source.getPosition(), m_source.getPosition());
+            m_errs.log(Severity.WARNING, Compiler.FATAL_ERROR,
+                    ErrorListener.in(m_source, m_source.getPosition(), m_source.getPosition()));
         }
 
         return null;

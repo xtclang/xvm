@@ -3,6 +3,7 @@ package org.xvm.runtime.template;
 
 import java.util.List;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -70,8 +71,7 @@ public class xException
                 String sTag = ((StringHandle) hText).getStringValue();
                 // INFO: internal detail attached to an exception the program is already
                 // handling. Reading it is not itself a problem.
-                frame.container().getErrorListener().log(Severity.INFO, RT_EXCEPTION_DETAIL,
-                        null, sTag, hException.f_sRTError);
+                frame.container().getErrorListener().info(RT_EXCEPTION_DETAIL, sTag, hException.f_sRTError);
             }
             return frame.assignValue(iReturn, hText);
         }

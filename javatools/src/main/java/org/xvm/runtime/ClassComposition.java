@@ -329,8 +329,7 @@ public final class ClassComposition
                     } else {
                         // what else can we do here?
                         fCache = false;
-                        f_container.getErrorListener().log(Severity.WARNING,
-                            RT_FOREIGN_METHOD_CHAIN, null, sig.getValueString());
+                        f_container.getErrorListener().warn(RT_FOREIGN_METHOD_CHAIN, sig.getValueString());
                     }
                 }
             } else {
@@ -342,8 +341,8 @@ public final class ClassComposition
                         nidMethod = idParent.appendNestedIdentity(pool, idNested);
                     } else {
                         fCache = false;
-                        f_container.getErrorListener().log(Severity.WARNING,
-                            RT_FOREIGN_NESTED_METHOD, null, idNested, idParent.getValueString());
+                        f_container.getErrorListener().warn(RT_FOREIGN_NESTED_METHOD, idNested,
+                            idParent.getValueString());
                     }
                 }
             }
