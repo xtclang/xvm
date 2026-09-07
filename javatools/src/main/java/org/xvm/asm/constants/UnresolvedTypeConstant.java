@@ -524,7 +524,7 @@ public final class UnresolvedTypeConstant
             return getResolvedType().validate(errs);
         }
 
-        errs.log(Severity.ERROR, Compiler.NAME_UNRESOLVABLE, new Object[]{getValueString()}, this);
+        errs.log(Severity.ERROR, Compiler.NAME_UNRESOLVABLE, this, getValueString());
         return true;
     }
 

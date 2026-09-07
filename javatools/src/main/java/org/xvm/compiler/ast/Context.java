@@ -1051,7 +1051,7 @@ public class Context {
         Context ctxOuter = getOuterContext();
         if (ctxOuter == null) {
             if (errs != null) {
-                errs.log(Severity.ERROR, Compiler.NO_THIS, new Object[0], getSource(), lPos, lPos);
+                errs.log(Severity.ERROR, Compiler.NO_THIS, getSource(), lPos, lPos);
             }
             return false;
         }

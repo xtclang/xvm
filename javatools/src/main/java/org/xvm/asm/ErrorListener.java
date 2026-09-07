@@ -184,6 +184,10 @@ public interface ErrorListener {
     // implement nor coexist with an interface default of the same erasure. Callers with no context
     // pass a null XvmStructure to the overload above, which needs no cast because no other
     // overload is applicable.
+    //
+    // The clash is Launcher's to resolve, not this interface's: one class should not have log(...)
+    // meaning "look up this error code" on one overload and "format this {} template" on another.
+    // Renaming Launcher's template method frees the signature. Recorded as E45.
 
     /**
      * Log an error against a source position, taking the message parameters as varargs.

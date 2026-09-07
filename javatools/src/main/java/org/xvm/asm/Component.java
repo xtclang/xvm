@@ -2097,8 +2097,8 @@ public abstract sealed class Component
                 Boolean          fVisited = work.visitedWith(this);
                 if (fVisited != null && fVisited.booleanValue() == fAllowInto) {
                     // recursive contribution
-                    errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
-                            new Object[] {getName(), contrib.getComposition().toString().toLowerCase()}, this);
+                    errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION, this,
+                                getName(), contrib.getComposition().toString().toLowerCase());
                     return ResolutionResult.ERROR;
                 }
 

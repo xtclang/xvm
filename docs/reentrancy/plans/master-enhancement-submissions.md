@@ -3599,6 +3599,39 @@ not done**: `runTask` still has no root directory, so `curDir`/`storage` still r
 pass-through to container zero. Closing that needs either this enhancement in `lib_ecstasy` or a
 rooted `FileStore` fabricated in the runner.
 
+## E45 - `Launcher.log` means two different things, and that blocks the interface
+
+**Status/category:** Enhancement against **master**. Not fixed here; the rename is small but it is a
+tool-surface change.
+
+**What.** `Launcher` implements `ErrorListener` - it has `@Override public void log(ErrorInfo err)`
+(`:636`) - and *also* declares
+
+```java
+protected void log(Severity sev, String template, Object... params)   // :466
+```
+
+where the `String` is **a `{}` message template**, not an error code. Every other `log` in the
+`ErrorListener` family takes an error code that is looked up in `errors.properties`. So one class
+has `log(...)` meaning "look up this diagnostic" on some overloads and "format this template" on
+another, at the same name and the same erasure.
+
+**What it costs.** `ErrorListener` cannot gain the obvious convenience
+`log(Severity, String, Object...)` for a diagnostic with no associated structure, because
+`Launcher`'s protected method has that exact erasure with a different meaning and can neither
+implement nor coexist with it. The interface carries a NOTE saying so. Callers with no structure
+write `log(sev, code, (XvmStructure) null, params...)` instead - a cast that exists only to route
+around the clash.
+
+**The fix is Launcher's.** Rename the template method - `report`, `printf`, `message`, anything that
+does not read as the diagnostic API - and the interface signature is free. That also removes a real
+reading hazard: two `log` calls next to each other in a `Launcher` subclass can mean entirely
+different things depending on whether the second argument happens to be a constant from
+`errors.properties`.
+
+Worth doing with [E44](#e44---the-object-logging-shape-measured-by-deprecating-it), since both are
+about the same interface and the same call sites.
+
 ## E44 - The `Object[]` logging shape, measured by deprecating it
 
 **Status/category:** Enhancement against **master**. **Measured here, not applied** - the measurement

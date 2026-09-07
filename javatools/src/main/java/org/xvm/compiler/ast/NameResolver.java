@@ -456,8 +456,7 @@ public class NameResolver
             }
 
             if (!type.isTypeOfType()) {
-                errs.log(Severity.ERROR, Compiler.NOT_CLASS_TYPE,
-                        new Object[] {id.getValueString()}, component);
+                errs.log(Severity.ERROR, Compiler.NOT_CLASS_TYPE, component, id.getValueString());
                 m_stage = Stage.ERROR;
                 return null;
             }

@@ -400,7 +400,7 @@ public abstract class XvmStructure
      */
     public void log(@NotNull ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
         // TODO need a way to log to compiler error list if we have compile-time info on the location in the source code
-        requireNonNull(errs, "errs").log(sev, sCode, aoParam, this);
+        requireNonNull(errs, "errs").log(sev, sCode, this, aoParam);
     }
 
     /**

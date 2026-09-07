@@ -17,6 +17,7 @@ import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.Version;
+import org.xvm.asm.XvmStructure;
 
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Lexer;
@@ -1058,7 +1059,7 @@ public class ModuleInfo {
         public void registerName(String name, Node node) {
             if (name != null) {
                 if (children().containsKey(name)) {
-                    log(Severity.ERROR, DUP_NAME, new Object[] {name, descriptiveName()}, null);
+                    log(Severity.ERROR, DUP_NAME, (XvmStructure) null, name, descriptiveName());
                 } else {
                     children().put(name, node);
                 }
@@ -1069,7 +1070,7 @@ public class ModuleInfo {
         public void linkParseTrees() {
             Node nodePkg = sourceNode();
             if (nodePkg == null) {
-                log(Severity.ERROR, MISSING_PKG_NODE, new Object[]{descriptiveName()}, null);
+                log(Severity.ERROR, MISSING_PKG_NODE, (XvmStructure) null, descriptiveName());
             } else {
                 TypeCompositionStatement typePkg = nodePkg.type();
 
@@ -1298,7 +1299,7 @@ public class ModuleInfo {
             try {
                 return readFileChars(m_file);
             } catch (IOException e) {
-                log(Severity.ERROR, READ_FAILURE, new Object[] {m_file}, null);
+                log(Severity.ERROR, READ_FAILURE, (XvmStructure) null, m_file);
             }
 
             return new char[0];
@@ -1380,7 +1381,7 @@ public class ModuleInfo {
                 m_stmtAST = new Parser(source, this).parseSource();
             } catch (CompilerException e) {
                 if (!hasSeriousErrors()) {
-                    log(Severity.FATAL, Parser.FATAL_ERROR, null, source,
+                    log(Severity.FATAL, Parser.FATAL_ERROR, source,
                             source.getPosition(), source.getPosition());
                 }
             }
