@@ -3599,6 +3599,46 @@ not done**: `runTask` still has no root directory, so `curDir`/`storage` still r
 pass-through to container zero. Closing that needs either this enhancement in `lib_ecstasy` or a
 rooted `FileStore` fabricated in the runner.
 
+## E44 - The `Object[]` logging shape, measured by deprecating it
+
+**Status/category:** Enhancement against **master**. **Measured here, not applied** - the measurement
+is the point, because it shows the change is wider than the call-site count suggests.
+
+**What.** `ErrorListener` carries both shapes:
+
+| | |
+| --- | --- |
+| array | `log(Severity, String, Object[] aoParam, XvmStructure)` and `log(Severity, String, Object[], Source, long, long)` |
+| varargs | `log(Severity, String, XvmStructure, Object...)` and `log(Severity, String, Source, long, long, Object...)` |
+
+The varargs forms already exist, so the array forms are legacy, and every caller of them allocates an
+`Object[]` for what is almost always a fixed short list - or writes `null` or `new Object[0]` to say
+"no parameters".
+
+**Measured** by adding `@Deprecated` to the two array overloads and compiling: **20 call sites across
+13 files.**
+
+| file | sites |
+| --- | --- |
+| `tool/ModuleInfo` | 4 |
+| `asm/ErrorList` | 3 |
+| `compiler/Lexer`, `compiler/ast/StatementBlock` | 2 each |
+| `compiler/Token`, `compiler/ast/NewExpression`, `NameResolver`, `Context`, `AstNode`, `asm/XvmStructure`, `MethodStructure`, `constants/UnresolvedTypeConstant`, `asm/Component` | 1 each |
+
+**Why 20 understates it, which is the finding.** Most are not leaf calls. `XvmStructure.log`,
+`AstNode.log`, `Token.log`, `Lexer.log` and `ErrorList`'s inner override all *take* `Object[]`
+themselves and forward it. The array is not 20 mistakes; it is a shape propagating through the API,
+and converting the interface means converting those signatures too - each of which has its own
+callers. That is the same scope as [E32](#e32--thread-one-errorlistener-and-stop-destroying-diagnostics-at-the-source),
+which is why it belongs with that work rather than as a quick tidy.
+
+**Also worth knowing:** `javatools` compiles with `-Werror`, so the deprecation cannot be added
+incrementally as a signpost. It is all-or-nothing: either every caller is converted in the same
+change, or the annotation cannot land at all.
+
+**Only 16 sites pass an array literal** (`new Object[]{...}` / `new String[]{...}`), and 12 of those
+are in `compiler/Lexer`. The rest pass `null`, `new Object[0]`, or a forwarded variable.
+
 ## E43 - "Invalid path" cannot distinguish a missing file from no resource roots at all
 
 **Status/category:** Enhancement against **master**, diagnostics quality. Not a defect: the compile
