@@ -3599,6 +3599,68 @@ not done**: `runTask` still has no root directory, so `curDir`/`storage` still r
 pass-through to container zero. Closing that needs either this enhancement in `lib_ecstasy` or a
 rooted `FileStore` fabricated in the runner.
 
+## E41 - Compile allocation: a boolean answered by materialising every module
+
+**Status/category:** Enhancement against **master**, measured. `FileStructure.hasLibraryPayload` is
+byte-for-byte the same on `origin/master` (`:365-368`), including its own `// TODO get rid of this`.
+**Fixed on `lagergren/lazy-instance` 2026-09-07.**
+
+**What.** The predicate is reached from `isSiblingAllowed()`, which the component tree consults
+constantly while compiling, and it was:
+
+```java
+private boolean hasLibraryPayload() {
+    var modules = realModules().toList();
+    return modules.size() > 1 || modules.stream().anyMatch(module -> module.getVersions().size() > 1);
+}
+```
+
+Four allocations to answer a boolean: `children()` wraps the child map in an
+`unmodifiableCollection`, `realModules()` builds a `Stream` with a filter and a lambda over it,
+`.toList()` materialises every module, and `.stream()` builds a second pipeline.
+
+**Measured** by JFR while building the XDK three times in-process (see
+[the harness](xdk-in-process-build-assessment.md)): **the single largest allocation site in a
+compile, 10.5% of 33.2 GB sampled**, plus 2.1% of CPU samples.
+
+**The fix** iterates the children directly and short-circuits. A second real module settles it; the
+version check can only concern the first, because reaching it means there was exactly one.
+
+**Result:** `hasLibraryPayload` and `realModules` both disappear from the top allocation sites, and
+total sampled allocation drops from **34.0 GB to 29.6 GB (-13%)**. Pass-1 heap after GC went 555 MB
+to 505 MB, pass-2 572 MB to 369 MB. 781 tests, 0 failures.
+
+**Related, not done:** `Component.children()` (`Component.java:1637` on master) allocates an
+`unmodifiableCollection` wrapper on every call, and `getChildByNameMap` is itself 3.8% of
+allocation. Both are hot enough to be worth a look; neither was touched here.
+
+## E42 - `Constant.checkValidPools` is described as an assertion and runs unconditionally
+
+**Status/category:** Enhancement against **master**, measured, **NOT fixed** - it needs a decision
+that is not mine to make.
+
+**What.** `ConstantPool` calls it on the registration path with this comment:
+
+> once all of the modules are linked together, we know all of the valid upstream constant pools that
+> we are allowed to refer to from this constant pool, so **this is an assertion** to make sure that
+> we don't accidentally refer to a constant pool that isn't in that set of valid pools
+
+It is not an assertion. It is a plain call (`ConstantPool.java:382` here, `:250` on master), so it
+runs in every production compile, and it walks the constant graph recursively.
+
+**Measured:** after E41, it is the **largest single allocation site in a compile at 10.5%**, plus
+2.5% of CPU samples.
+
+**Why this is not a patch here.** Wrapping it in `assert` makes it free in production and keeps it
+in tests, which is what the comment says was intended - but it is a real invariant check on
+cross-pool references, and the branch has already been bitten by pool-ownership bugs that this is
+exactly the shape of guard for. Turning it off in production is a deliberate trade between about
+10% of compile allocation and losing the check where it would matter most. That is a call for
+whoever owns the invariant.
+
+Worth noting the third option: keep it unconditional and make it allocation-free. The recursion
+allocating per node is what costs, not the checking.
+
 ## E39 - Lazily cached handles are published through a data race
 
 **Status/category:** Enhancement, not a filed bug. The pattern is on master and on this branch; no

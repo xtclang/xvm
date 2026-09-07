@@ -21,8 +21,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -383,8 +383,26 @@ public final class FileStructure
     }
     // TODO get rid of this
     private boolean hasLibraryPayload() {
-        var modules = realModules().toList();
-        return modules.size() > 1 || modules.stream().anyMatch(module -> module.getVersions().size() > 1);
+        // Iterated and short-circuited rather than collected. This is reached from
+        // isSiblingAllowed(), which the component tree asks constantly while compiling, and
+        // materializing every module to ask whether there is more than one made this the single
+        // largest allocation site in a compile - 10.5% of 33 GB sampled while building the XDK.
+        // The second module, if there is one, settles it; the version check can then only concern
+        // the first, because reaching it means there was exactly one.
+        // Iterated directly rather than through realModules(): that builds a Stream with a filter
+        // and a lambda over children(), and children() wraps the child map in an unmodifiable view
+        // on every call. Three allocations to answer a boolean, on a path the component tree walks
+        // constantly.
+        ModuleStructure first = null;
+        for (Component child : children()) {
+            if (child instanceof ModuleStructure module && !module.isFingerprint()) {
+                if (first != null) {
+                    return true;    // a second real module settles it
+                }
+                first = module;
+            }
+        }
+        return first != null && first.getVersions().size() > 1;
     }
 
     /**

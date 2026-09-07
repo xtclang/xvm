@@ -71,7 +71,9 @@ public class XdkBuildHarnessTest {
             // SEQUENTIAL: one thread, so per-call compiler state cannot bleed between compiles.
             // Swapping in Executors.newVirtualThreadPerTaskExecutor() is the whole of the parallel
             // experiment - the dependency graph and the code below are unchanged.
-            try (var executor = Executors.newSingleThreadExecutor()) {
+            try (var executor = Executors.newSingleThreadExecutor();
+                 var sampler  = new CompileSampler(5);
+                 var jfr      = new JfrProfile("xdk-build")) {
                 var first = XdkBuildHarness.build(engine, repoLibrary, nodes, executor);
                 System.out.println("=== XDK build, pass 1 ===");
                 System.out.print(first.render());
@@ -110,6 +112,10 @@ public class XdkBuildHarnessTest {
                     System.out.printf("prepared libraries retained after parallel: %d%n",
                             prepared.size());
                 }
+                System.out.println("=== where the time goes: stack sampler ===");
+                System.out.print(sampler.render(15));
+                System.out.println("=== where the time goes: JFR ===");
+                System.out.print(jfr.stopAndRender(15));
             }
         }
     }

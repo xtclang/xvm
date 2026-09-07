@@ -21,6 +21,7 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.compiler.BuildRepository;
+import org.xvm.compiler.ConcurrentBuildRepository;
 
 import org.xvm.api.XtcEngine.CompileResult;
 import org.xvm.api.XtcEngine.ModuleSource;
@@ -122,7 +123,7 @@ public final class XdkBuildHarness {
      */
     public static Report build(XtcEngine engine, ModuleRepository repoLibrary,
                                List<Node> nodes, ExecutorService executor) {
-        var shared = new SharedOutput();
+        var shared = new ConcurrentBuildRepository();
         var outcomes = new ArrayList<Outcome>();       // guarded by itself
         var futures  = new LinkedHashMap<String, CompletableFuture<Boolean>>();
         var start    = Instant.now();
@@ -157,7 +158,8 @@ public final class XdkBuildHarness {
     }
 
     private static boolean compileOne(XtcEngine engine, ModuleRepository repoLibrary,
-                                      SharedOutput shared, Node node, List<Outcome> outcomes) {
+                                      ConcurrentBuildRepository shared, Node node,
+                                      List<Outcome> outcomes) {
         var start = Instant.now();
 
         CompileResult result;
@@ -210,32 +212,6 @@ public final class XdkBuildHarness {
                     errors, warnings, elapsed, first));
         }
         return result.isSuccess();
-    }
-
-    /**
-     * The build's accumulated output, served safely to concurrent compiles.
-     *
-     * <p>{@link BuildRepository} is backed by a plain {@code TreeMap}, so a compile reading it
-     * while another stores into it is a data race on the map itself - separate from, and in
-     * addition to, the sharing problem the per-compile front repository solves.</p>
-     */
-    private static final class SharedOutput implements ModuleRepository {
-        private final BuildRepository f_delegate = new BuildRepository();
-
-        @Override
-        public synchronized Set<String> getModuleNames() {
-            return Set.copyOf(f_delegate.getModuleNames());
-        }
-
-        @Override
-        public synchronized ModuleStructure loadModule(String sModule) {
-            return f_delegate.loadModule(sModule);
-        }
-
-        @Override
-        public synchronized void storeModule(ModuleStructure module) {
-            f_delegate.storeModule(module);
-        }
     }
 
     private static boolean skip(Node node, List<Outcome> outcomes) {
