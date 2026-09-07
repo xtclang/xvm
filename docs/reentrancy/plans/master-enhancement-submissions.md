@@ -3685,8 +3685,26 @@ on its own.
 
 ## E45 - `Launcher.log` means two different things, and that blocks the interface
 
-**Status/category:** Enhancement against **master**. Not fixed here; the rename is small but it is a
-tool-surface change.
+**Status/category:** Enhancement against **master**. **FIXED on `lagergren/lazy-instance`
+2026-09-07** (`ec9e6f30c`): the two template methods are `Launcher.report(...)`, across 97 call
+sites in `Compiler`, `Launcher`, `Runner`, `Bundler`, `Disassembler`, `Initializer`, `xRTCompiler`
+and one test. Zero template `log` declarations remain in `Launcher`, so **`log` means "error code"
+everywhere**.
+
+**The intended payoff did NOT follow, and that is the useful part of this row.** Freeing the
+signature was supposed to allow `log(Severity, String, Object...)`. It does not, for a second reason
+that has nothing to do with naming: a varargs `Object...` absorbs `(Source, long, long)` as three
+parameters exactly as well as the positional overload takes them as a location, so adding it makes
+every existing `log(sev, code, source, lStart, lEnd)` ambiguous - javac rejects `Lexer:2650`,
+`ModuleInfo:1384` and `AstNode:739` among others. Renaming was necessary and insufficient; the
+positional encoding of location is the real obstacle, which is
+[E46](#e46---make-the-diagnostics-location-a-value-not-three-overloads).
+
+**Two source-text tests broke on the rename** - `CompilerCodegenFailureTest` pinned the literal
+`log(FATAL, e, ...)` and `CompilerThisEscapeConstructionTest` pinned a parameter name. Neither name
+was what the test guarded, and the first one passed once on stale build state before failing
+correctly. Worth knowing before the much larger E46 conversion: that style of test can hide a rename
+rather than catch it.
 
 **What.** `Launcher` implements `ErrorListener` - it has `@Override public void log(ErrorInfo err)`
 (`:636`) - and *also* declares
