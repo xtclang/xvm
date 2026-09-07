@@ -1786,6 +1786,25 @@ Verified both ways: the existing 13 ownership tests still pass, so it does not c
 test, `aContainerRetainedInACollectionIsRecordedRatherThanSkippedSilently`, plants an unrelated
 container in a map and asserts the sweep records it - **red without the fix, green with it**.
 
+**Are any of these master bugs? Checked, one at a time.**
+
+| finding | on master? | verdict |
+| --- | --- | --- |
+| A1 - sweep skips containers silently | `OwnershipDiagnostics` is branch-only | branch defect, fixed here |
+| A2 - `forgetTask` result discarded | `XtcEngine` is branch-only | branch defect |
+| A3 - six native resources cached plane-wide | **yes**, same six fields | master **design property**, not a defect: a service handle crossing containers is the designed mechanism |
+| A3 - unseeded `@Inject Random` shares one stream | **yes**, `ensureDefaultRandom` identical | master **enhancement**, not a bug - reproducibility, not correctness |
+| lazy publication of those handles | **yes**, all six plain on master | master defect **category**, mostly benign; four are `volatile` + DCL here already |
+| `xRTConnector` default headers bound to the first caller | **no** - master passes no container | **introduced by this branch**, fixed 2026-09-07 |
+
+The last row is the one worth carrying forward, because it names a hazard the container-parameter
+campaign creates generally: **binding handle construction to a container is correct per call, and
+becomes a cross-container leak the moment the result is cached on a template that serves the whole
+plane.** Audited the general form - every other cached handle or composition built from a container
+uses the template's own `f_container` and is correct; `xRTConnector` was the only one keyed on the
+caller's. Details and the corrected audit command are in
+[must-fix-races.md](must-fix-races.md#manual-lazy-publication).
+
 **A2 - one site, and it compounds M1.** `forgetTask` is the only `invokeAsync` in the tree whose
 result is discarded (`XtcEngine:1085`, no `whenComplete`). Every other call chains. So the registry
 can retain a task two ways: the run failed, and `forgetTask` was never called at all (M1); or it was
