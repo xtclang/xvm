@@ -2762,6 +2762,36 @@ decide - which is why the code that does it properly uses `branch()`/`merge()`.
 Both look like "we do not care about errors here". Only the second is ever true, and even then only
 until the speculation fails.
 
+### Measured again on `lagergren/lazy-instance`, 2026-09-07, and stage 2 is NOT a bulk conversion
+
+| | row's count | this branch |
+| --- | --- | --- |
+| `ErrorListener` params and locals | 665 | 764 |
+| `BLACKHOLE` uses | 87 | **150** |
+| null-guards / blackhole-defaults | 28 | **0** - stage 1 is done |
+| `branch()` / `merge()` | 44 / 56 | 44 / 56 |
+
+**The 150 do not all want converting, and the row's "only the second is ever true" is too strong.**
+Classified:
+
+| shape | count | verdict |
+| --- | --- | --- |
+| `testFit(...)` / `isA(...)` probes | **67** | **BLACKHOLE is honest here.** The method's whole contract is "answer a question, do not report", and the RETURN VALUE is the answer. Branching would allocate a listener per probe on a hot path to collect diagnostics nobody reads |
+| unclassified - collectors, `selectCommonType`, cached lookups | 77 | needs per-site judgement; many are like `testFit` |
+| `validate(..., BLACKHOLE)` | 3 | genuine stage-2 candidates |
+| `ensureTypeInfo(BLACKHOLE)` | 3 | genuine stage-2 candidates |
+
+**Where it actually hurts is narrower and specific**: a chain of speculative attempts each
+blackholed, where the caller reports a generic failure after discarding every reason.
+`InvocationExpression` is the case - `resolveName`, `findCallable` and `getTypeInfo` are each tried
+with `BLACKHOLE` (`:1932`, `:1942`, `:1967`, `:2026`, `:2086`, `:2299`), and when they all fail the
+user is told a method was not found rather than why each candidate was rejected.
+
+**So stage 2 should be re-scoped from "convert 87 call sites" to "find the chains that end in a
+generic failure, and keep the branch that explains the last one".** That is a much smaller change
+and a much larger improvement, and it needs per-site judgement rather than a mechanical pass -
+converting a `testFit` probe to `branch()` would cost allocation and buy nothing.
+
 ### The refactor, in three independent stages
 
 **Stage 1 - the listener is never null.** Every method that takes an `ErrorListener` requires one:
@@ -3601,9 +3631,28 @@ rooted `FileStore` fabricated in the runner.
 
 ## E46 - Make the diagnostic's LOCATION a value, not three overloads
 
-**Status/category:** Enhancement against **master**, design proposal. Not implemented. Follows
-directly from [E45](#e45---launcherlog-means-two-different-things-and-that-blocks-the-interface),
-which was fixed and did not deliver what it promised.
+**Status/category:** Enhancement against **master**. **IMPLEMENTED on `lagergren/lazy-instance`
+2026-09-07** (`8ea0c39ea`, `e6a39165a`). Follows directly from
+[E45](#e45---launcherlog-means-two-different-things-and-that-blocks-the-interface), which was fixed
+and did not deliver what it promised.
+
+**The cost estimate below was wrong by a factor of forty, and the reason is worth keeping.** This row
+said 835 call sites. The conversion was about twenty. The 835 counts every `log(` call; what mattered
+is how many talk to `ErrorListener` *directly*. The rest go to per-class helpers - `Parser.log`,
+`Lexer.log`, `AstNode.log`, `Token.log`, `XvmStructure.log` - which **already were the location
+abstraction, one informal version per class**. Converting those five bodies to build a `Site` left
+their ~561 callers untouched. Look for the adapter layer before costing an interface change.
+
+**Method that made it safe:** delete the old overloads first, then let javac enumerate what breaks.
+That found a `BranchedErrorListener` override that redirected a structure-located diagnostic to the
+branch's node by overriding **one** overload and saying nothing about the other three - now a
+substitution of one `Site` for another - and a malformed call written minutes earlier. It also
+surfaced a regression introduced by [E44](#e44---the-object-logging-shape-measured-by-deprecating-it)'s
+conversion: `AstNode.log` had silently dropped `aoParam`, so every diagnostic through that path lost
+its message parameters while the tests stayed green.
+
+**`Site.NONE` appears at zero call sites**, because the four severity aliases already mean "no
+location". Those aliases had 2 uses in the whole tree before this.
 
 ### The problem is not the names, it is that location is encoded positionally
 
