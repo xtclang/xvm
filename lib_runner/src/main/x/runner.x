@@ -11,6 +11,10 @@ module runner.xtclang.org {
     import ecstasy.mgmt.Container;
     import ecstasy.mgmt.ModuleRepository;
     import ecstasy.mgmt.ResourceProvider;
+    import ecstasy.fs.Directory;
+    import ecstasy.fs.FileStore;
+    import ecstasy.fs.Path;
+
     import ecstasy.maps.HashMap;
 
     import ecstasy.reflect.ModuleTemplate;
@@ -62,8 +66,10 @@ module runner.xtclang.org {
      * @return the task identifier
      */
     Int runTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                String[] injectionNames = [], String[] injectionValues = []) =
-            TaskRegistry.runTask(template, repository, consoleId, injectionNames, injectionValues);
+                String[] injectionNames = [], String[] injectionValues = [],
+                String? rootDir = Null) =
+            TaskRegistry.runTask(template, repository, consoleId,
+                                 injectionNames, injectionValues, rootDir);
 
     /**
      * @return True iff the identified task has not completed
@@ -110,13 +116,14 @@ module runner.xtclang.org {
         private Int nextTaskId;
 
         Int runTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                    String[] injectionNames = [], String[] injectionValues = []) {
+                    String[] injectionNames = [], String[] injectionValues = [],
+                    String? rootDir = Null) {
             assert injectionNames.size == injectionValues.size
                     as $"{injectionNames.size} injection names for {injectionValues.size} values";
 
             Int  id   = allocateTaskId();
             Task task = new Task(id, template, repository, consoleId,
-                                 injectionNames, injectionValues);
+                                 injectionNames, injectionValues, rootDir);
             tasks[id] = task;
             task.start();
             return id;
@@ -162,7 +169,8 @@ module runner.xtclang.org {
      * State and control for one application container.
      */
     service Task(Int id, ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                 String[] injectionNames = [], String[] injectionValues = []) {
+                 String[] injectionNames = [], String[] injectionValues = [],
+                 String? rootDir = Null) {
         Boolean running;
 
         Int? result;
@@ -183,9 +191,11 @@ module runner.xtclang.org {
             ResourceProvider injector;
             if (Int consoleId ?= this.consoleId) {
                 @Inject(resourceName=$"console_{consoleId}") Console console;
-                injector = new TaskResourceProvider(console, injectionNames, injectionValues);
-            } else if (!injectionNames.empty) {
-                injector = new TaskResourceProvider(Null, injectionNames, injectionValues);
+                injector = new TaskResourceProvider(console, injectionNames, injectionValues,
+                                                    rootDir);
+            } else if (!injectionNames.empty || rootDir != Null) {
+                injector = new TaskResourceProvider(Null, injectionNames, injectionValues,
+                                                    rootDir);
             } else {
                 // PassThrough, not Basic. BasicResourceProvider is a minimal hand-written
                 // whitelist - HashCollector, Linker, nullable types - and supplies none of the
@@ -265,7 +275,8 @@ module runner.xtclang.org {
      */
     service TaskResourceProvider(Console? console,
                                  String[] injectionNames  = [],
-                                 String[] injectionValues = [])
+                                 String[] injectionValues = [],
+                                 String?  rootDir         = Null)
             extends PassThroughResourceProvider {
         @Override
         Supplier getResource(Type type, String name) {
@@ -282,6 +293,17 @@ module runner.xtclang.org {
                         return injectionValues[i];
                     }
                 }
+            }
+
+            // A run given a root directory gets ITS directory for curDir, rather than resolving
+            // the name through pass-through and landing on container zero's. Derived from the
+            // parent's FileStore, so this bounds where the run STARTS, not where it can reach -
+            // confining a run to a subtree needs a FileStore that can be rooted below "/", which
+            // xOSFileStore cannot be (its ROOT is a static File("/")).
+            if (type == Directory, String rootDir ?= this.rootDir,
+                    name == "curDir" || name == "rootDir") {
+                @Inject FileStore storage;
+                return storage.dirFor(new Path(rootDir));
             }
 
             return super(type, name);

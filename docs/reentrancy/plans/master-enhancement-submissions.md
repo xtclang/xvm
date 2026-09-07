@@ -3550,10 +3550,33 @@ exactly that module.
 **Verified identical to master**: the file is byte-for-byte the same on `origin/master` and on this
 branch, so this is master's gap and not something a branch introduced.
 
-**What a host actually needs** is a third shape: fabricate the resources that must be per-run - a
-file system rooted somewhere the run owns, the run's own string injections, its own console - and
-delegate the rest. Neither stock provider expresses it, which is why a host has to choose between a
-run that cannot open a file and runs that share one file system.
+**Correction, 2026-09-07 - "add a third provider" was the wrong conclusion.** A provider can already
+fabricate what it needs and delegate the rest; that is what `TaskResourceProvider` does, and the
+console proves the whole path end to end (a named resource registered on the plane, pulled by
+container zero, served to the child under the standard name). Nothing in `lib_ecstasy` blocks that,
+and no dynamic registration is even required for directories: `FileStore.dirFor(Path)` (`FileStore.x:38`)
+yields a `Directory` for any path, so a run's own `curDir` is three lines inside the provider.
+
+So the gap is **not** the injection mechanism and **not** the provider shape. It is that there is
+nothing to inject for one specific resource:
+
+| resource | can a run be given its own today? |
+| --- | --- |
+| string injections | **yes** - done on this branch |
+| `curDir`, `rootDir` | **yes** - `storage.dirFor(path)`; done on this branch |
+| `console` | yes - the existing named-resource registration |
+| **`storage` (`FileStore`)** | **no** - and this is the whole of the remaining gap |
+
+**Why the `FileStore` is different.** `NativeContainer.ensureFileStore` reads the `store` property
+off the plane-wide `OSStorage` service, and `xOSFileStore` is bound to a static
+`private static final File ROOT = new File("/")` (`xOSFileStore.java:188`). There is no
+"FileStore rooted at this directory" object in the runtime, so there is nothing a provider could
+fabricate or a host could register. Giving a run its own `curDir` bounds where it **starts**; it
+does not bound where it can **reach**, because the `Directory` still comes from the one OS-rooted
+store.
+
+**So the real enhancement is narrower and clearer than this row first claimed: a `FileStore` that
+can be rooted below `/`.** Everything else the runner needs is already expressible.
 
 **Partially closed on `lagergren/lazy-instance` 2026-09-07, in the runner rather than in
 `lib_ecstasy`.** `runTask` now carries the run's string injections, and `TaskResourceProvider`
