@@ -122,8 +122,7 @@ public final class XdkBuildHarness {
      */
     public static Report build(XtcEngine engine, ModuleRepository repoLibrary,
                                List<Node> nodes, ExecutorService executor) {
-        var built       = new BuildRepository();       // guarded by itself; see compileOne
-        var sharedInput = new LinkedRepository(true, built, repoLibrary);
+        var shared = new SharedOutput();
         var outcomes = new ArrayList<Outcome>();       // guarded by itself
         var futures  = new LinkedHashMap<String, CompletableFuture<Boolean>>();
         var start    = Instant.now();
@@ -139,7 +138,7 @@ public final class XdkBuildHarness {
                             // a dependency's failure is not this module's failure to report
                             .handle((ignored, error) -> depsOk(node, futures))
                             .thenApplyAsync(depsOk -> depsOk
-                                    ? compileOne(engine, sharedInput, built, node, outcomes)
+                                    ? compileOne(engine, repoLibrary, shared, node, outcomes)
                                     : skip(node, outcomes), executor));
         }
 
@@ -157,20 +156,27 @@ public final class XdkBuildHarness {
                 .allMatch(f -> f == null || (!f.isCompletedExceptionally() && f.join()));
     }
 
-    private static boolean compileOne(XtcEngine engine, ModuleRepository sharedInput,
-                                      BuildRepository built, Node node, List<Outcome> outcomes) {
+    private static boolean compileOne(XtcEngine engine, ModuleRepository repoLibrary,
+                                      SharedOutput shared, Node node, List<Outcome> outcomes) {
         var start = Instant.now();
 
         CompileResult result;
         try {
             // A snapshot of what is built so far, taken under the lock: the compile itself must not
             // hold it, or a parallel run would serialize on the whole compile rather than the copy.
-            // ONE input repository object for the whole build, not a fresh snapshot per compile.
-            // The engine caches a fully prepared library per input-repository INSTANCE and never
-            // evicts, so a new repository per compile retains a prepared library per compile - the
-            // T15 leak. `built` is mutable and the LinkedRepository reads through, so later
-            // compiles still see earlier outputs.
-            ModuleRepository input = sharedInput;
+            // Each compile gets its OWN empty front repository, with the shared accumulated
+            // output and the library BEHIND it. That is not a style choice - it is what keeps
+            // compiles isolated. LinkedRepository clones a module only when it finds it in a
+            // repository after the first (`i > 0 && readThrough`), and caches the clone in the
+            // front one. With a SHARED front repository, the first compile gets a private clone
+            // and every later compile finds that same instance at position 0 and mutates it,
+            // which is precisely what the clone existed to prevent. An empty front per compile
+            // means every module this compile touches is cloned for this compile.
+            //
+            // The engine's prepared-library cache is weak-keyed, so a fresh repository per compile
+            // no longer retains anything.
+            ModuleRepository input =
+                    new LinkedRepository(true, new BuildRepository(), shared, repoLibrary);
             // diagnostics come back on the CompileResult, so no separate listener is needed
             result = engine.compile(input,
                     new ModuleSource(node.source(), node.resourceDirs()));
@@ -186,12 +192,10 @@ public final class XdkBuildHarness {
         int warnings = result.diagnostics().size() - errors;
 
         if (result.isSuccess()) {
-            synchronized (built) {
-                for (String name : result.buildRepository().getModuleNames()) {
-                    ModuleStructure compiled = result.buildRepository().loadModule(name);
-                    if (compiled != null) {
-                        built.storeModule(compiled);
-                    }
+            for (String name : result.buildRepository().getModuleNames()) {
+                ModuleStructure compiled = result.buildRepository().loadModule(name);
+                if (compiled != null) {
+                    shared.storeModule(compiled);
                 }
             }
         }
@@ -206,6 +210,32 @@ public final class XdkBuildHarness {
                     errors, warnings, elapsed, first));
         }
         return result.isSuccess();
+    }
+
+    /**
+     * The build's accumulated output, served safely to concurrent compiles.
+     *
+     * <p>{@link BuildRepository} is backed by a plain {@code TreeMap}, so a compile reading it
+     * while another stores into it is a data race on the map itself - separate from, and in
+     * addition to, the sharing problem the per-compile front repository solves.</p>
+     */
+    private static final class SharedOutput implements ModuleRepository {
+        private final BuildRepository f_delegate = new BuildRepository();
+
+        @Override
+        public synchronized Set<String> getModuleNames() {
+            return Set.copyOf(f_delegate.getModuleNames());
+        }
+
+        @Override
+        public synchronized ModuleStructure loadModule(String sModule) {
+            return f_delegate.loadModule(sModule);
+        }
+
+        @Override
+        public synchronized void storeModule(ModuleStructure module) {
+            f_delegate.storeModule(module);
+        }
     }
 
     private static boolean skip(Node node, List<Outcome> outcomes) {

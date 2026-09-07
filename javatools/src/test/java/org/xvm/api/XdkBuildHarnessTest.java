@@ -97,6 +97,19 @@ public class XdkBuildHarnessTest {
                 var prepared = (java.util.Map<?, ?>) field.get(engine);
                 System.out.printf("prepared libraries retained: %d  (compiles performed: %d)%n",
                         prepared.size(), nodes.size() * 2);
+
+                // PARALLEL: the only change is the executor. One task per thread, per the plan's
+                // execution model - never a work-stealing pool, which would run several compiles
+                // on one carrier thread and bleed TypeSystemThread state between them.
+                try (var parallel = Executors.newVirtualThreadPerTaskExecutor()) {
+                    var third = XdkBuildHarness.build(engine, repoLibrary, nodes, parallel);
+                    System.out.println("=== XDK build, pass 3, VIRTUAL THREADS ===");
+                    System.out.print(third.render());
+                    System.out.printf("pass 3 (parallel): %d built / %d failed / %d skipped in %s%n",
+                            third.built(), third.failed(), third.skipped(), third.wall());
+                    System.out.printf("prepared libraries retained after parallel: %d%n",
+                            prepared.size());
+                }
             }
         }
     }
