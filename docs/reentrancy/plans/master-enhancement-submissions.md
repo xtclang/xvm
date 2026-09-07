@@ -3599,6 +3599,42 @@ not done**: `runTask` still has no root directory, so `curDir`/`storage` still r
 pass-through to container zero. Closing that needs either this enhancement in `lib_ecstasy` or a
 rooted `FileStore` fabricated in the runner.
 
+## E43 - "Invalid path" cannot distinguish a missing file from no resource roots at all
+
+**Status/category:** Enhancement against **master**, diagnostics quality. Not a defect: the compile
+correctly fails. Found by embedding the engine twice and misdiagnosing it twice.
+
+**What.** A resource literal that will not resolve reports `PARSER-24 = Invalid path: "{0}"`
+(`Parser.java:3693`, from `m_source.resolvePath(sFile)` returning null). The message is the same
+whether:
+
+1. resource roots were supplied and the file genuinely is not in them - a real source error; or
+2. **no resource roots were supplied at all** - a caller-configuration error, where the source is
+   fine and the build was invoked wrong.
+
+**Why it matters more than it looks.** Case 2 is the normal failure for anything embedding the
+compiler, because **resource roots are build configuration and cannot be inferred from the source
+tree**. Two examples from one afternoon:
+
+- `lib_ecstasy` reads `$/implicit.x` from `src/main/resources` - the conventional location;
+- `platformUI` reads `Directory:/spa` from `gui/dist`, which its `build.gradle.kts` adds as a
+  resource `srcDir` - not conventional, not discoverable, and knowable only from the build.
+
+Both surfaced as `Invalid path`, and both read as "the compiler cannot find a file that is plainly
+right there". The first cost a round of investigation into `TypeSystem.x`; the second, a round into
+`platformUI`.
+
+**The API is not the gap.** `ModuleSource(Path source, List<File> resourceDirs)` and
+`ModuleSource.of(path, dirs...)` already express this, mirroring `xcc -r`
+(`LauncherOptions.java:65`). What is missing is only that the failure does not say which of the two
+situations it is.
+
+**Suggested:** `Source` knows whether any roots were configured, so a second message is enough - the
+existing `PARSER-24` for case 1, and for case 2 something naming the cause, e.g. "no resource roots
+were supplied to this compilation". Worth noting separately that `XtcEngine.compile(Path...)` and
+`compile(ErrorListener, Path...)` supply no resource roots at all and look interchangeable with the
+`ModuleSource` forms that do; a word in their javadoc would help.
+
 ## E41 - Compile allocation: a boolean answered by materialising every module
 
 **Status/category:** Enhancement against **master**, measured. `FileStructure.hasLibraryPayload` is
