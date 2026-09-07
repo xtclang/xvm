@@ -84,7 +84,7 @@ surface graduate into individual rows on the bug list.
 | E27 | Op-info cache: raw `EnumMap` whose key silently names the value type | 1 PR, per-op-class migration | independent | `OpInfoKey<V>` + generic get/set |
 | E30 | Storage operations belong on the handle; the `<H>` parameter is the symptom | per-handle, then one deleting commit | supersedes E25's parameter | measured: 105/132 bodies need only the handle |
 | E31 | 42 cache-if-null getters that could be final `Lazy` fields; 7 need a resettable variant | 2 PRs (35 sites, then API + 7) | independent | measured, not estimated |
-| E32 | Thread one `ErrorListener`; stop null-defaulting and blackholing diagnostics | 3 stages, stage 1 alone is mechanical | independent | 665 params, 87 BLACKHOLE, 28 null-guards |
+| E32 | Thread one `ErrorListener`; stop null-defaulting and blackholing diagnostics | stages 1-2 done; stage 3 re-scoped to splitting `PROBE` from `BLACKHOLE` | independent | 149 BLACKHOLE sites classified: 1 wrong, 118 are probes wearing the wrong name |
 | E33 | Census of every `Object` in the tree: 61 are `equals` and untouchable, ~132 are real | reference row; feeds E27/E28/E30/E32 | independent | 393 array initializers noted separately |
 | E34 | `ResolutionCollector.getErrorListener()` smuggles the error sink; pass it explicitly | 1 PR, ~60 mechanical sites | complements E32 | removes `NameResolver`'s un-cleaned stash |
 | E35 | Finish the listener: parallel gap, last 3 mutable fields, `withListener` | A-C one PR; D incremental; E one line | after E32/E34 | the parallel gap and the ambient default are one problem |
@@ -3057,6 +3057,62 @@ payoff, and it is unreachable while the listener is optional and half the paths 
 nobody is obliged to carry cannot be relied on to be there.
 
 Do stage 1 first and separately. It is the one that makes the other two provable.
+
+### Stage 3, settled: every `BLACKHOLE` site classified
+
+Stage 3 as originally written - "make `BLACKHOLE` unreachable" - is withdrawn. All 149 mentions in
+the tree were classified by hand. The result is that **`BLACKHOLE` is almost entirely honest**, and
+the ~87 figure in the state table above was counting a problem that stage 1 has since removed.
+
+| bucket | n | verdict |
+| --- | --- | --- |
+| A - probe: `testFit*`, `isA`, `isNewable`, `calculateReturnFit` | 78 | correct. The question *is* "does this fit", and a failed fit is the answer, not a diagnostic. |
+| B - type query: `getImplicitType`, `ensureTypeConstant`, `ensureTypeInfo` | 14 | correct. The compute half of a query; the caller asserts separately. |
+| C - find that returns null: `selectCommonType`, `resolveName`, `chooseBest`, `findCallable` | 26 | correct. Null *is* the failure channel and every caller checks it. |
+| D - speculative work on a throwaway clone | 8 | correct, and two are textbook: `MethodDeclarationStatement` tries annotation reorderings and reports the original order's error via `errsTemp.merge()`; `NewExpression` clones an inner class for capture analysis, then runs the real stage with `errs`. |
+| E - default overload standing in for an absent caller sink | 8 | correct, and this is stage 1's fix, not a regression. See below. |
+| F - prose in a comment or a `requireNonNull` message | 6 | not a use. |
+| **wrong** | **1** | `Compiler.isAbortDesired` - removed. |
+
+**The one removal.** `Compiler.isAbortDesired` read:
+
+```java
+return isBadEnoughToAbort(m_sevWorst) ||
+        (m_errors != ErrorListener.BLACKHOLE && m_errors.isAbortDesired());
+```
+
+`BlackholeErrorListener` does not override `isAbortDesired`, so it inherits the interface default of
+`false`. The identity guard could never change the answer. It is the mode-flag-in-disguise in its
+purest form - an `==` against a sentinel, standing in for a capability question - and deleting it is
+a no-op the compiler could not prove but a reader can:
+
+```java
+return isBadEnoughToAbort(m_sevWorst) || m_errors.isAbortDesired();
+```
+
+**Why bucket E is not a smell.** `Launcher.launch(cmd, args, console)` and `new Compiler(options)`
+default their listener to `BLACKHOLE`, which reads like "discard the errors" and is not. `Launcher`
+reports through `report(...)`, which writes to `m_console` and tracks `m_sevWorst` independently of
+`m_errors`; the delegate is an *additional* programmatic sink for an embedder. `XtcEngine.compile`
+is the same shape - the returned `CompileResult` still carries the full `Diagnostic` list, and the
+listener only streams them as they happen. In every case `BLACKHOLE` is the null object that stage 1
+introduced precisely so the parameter could stop being nullable. That is the fix, working.
+
+**What is left, and it is a naming problem.** Buckets A-C are 118 of the 149 and they all mean *"I
+am asking a question, and I do not want the asking to be audible"* - which is not what a name
+meaning "destroy diagnostics" says. Bucket E means *"no caller sink is attached"*. One constant
+serves both, so a reader cannot tell a probe from a discard without reading the callee. The
+remaining work is therefore to split the name, not to remove the uses:
+
+```java
+ErrorListener PROBE     = new BlackholeErrorListener();  // asking, not asserting
+ErrorListener BLACKHOLE = new BlackholeErrorListener();  // no sink attached
+```
+
+Same behaviour, and afterwards `grep PROBE` is a list of the compiler's speculative paths - which is
+information the tree does not currently contain anywhere. `TypeConstant.typeInfo()` (which is pinned
+by `TypeInfoModeIsExplicitTest`) and `TypeCompositionStatement:2371` already carry that distinction
+as prose; this makes it mechanical.
 
 ## E33 — Every `Object` in the tree, categorized, and which ones a type could actually replace
 
