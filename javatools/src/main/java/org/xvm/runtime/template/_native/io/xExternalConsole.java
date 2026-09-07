@@ -1,6 +1,6 @@
 package org.xvm.runtime.template._native.io;
 
-import java.io.PrintStream;
+import java.io.PrintWriter;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -24,7 +24,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 /**
- * The injectable "Console" that prints to the specified PrintStream.
+ * The injectable "Console" that prints to the specified PrintWriter.
  */
 public class xExternalConsole
         extends xTerminalConsole {
@@ -43,7 +43,7 @@ public class xExternalConsole
      *
      * @return the ID contained in the registered resource name
      */
-    public static long register(NativeContainer container, PrintStream out) {
+    public static long register(NativeContainer container, PrintWriter out) {
         long id = CONSOLE_ID.incrementAndGet();
         container.addResourceSupplier(
                 new InjectionKey(consoleName(id), INSTANCE.getCanonicalType()),
@@ -66,7 +66,7 @@ public class xExternalConsole
     /**
      * Injection support.
      */
-    public ObjectHandle ensureConsole(Frame frame, PrintStream out) {
+    public ObjectHandle ensureConsole(Frame frame, PrintWriter out) {
         ServiceContext   ctx = f_container.createServiceContext("Console");
         ClassComposition clz = getCanonicalClass();
 
@@ -91,7 +91,7 @@ public class xExternalConsole
                 return Op.R_NEXT;
             }
 
-            PrintStream out     = hConsole.f_out;
+            PrintWriter out     = hConsole.f_out;
             int         iResult = Utils.callToString(frame, hVal);
             switch (iResult) {
             case Op.R_NEXT: {
@@ -137,9 +137,9 @@ public class xExternalConsole
 
     protected static class ConsoleHandle
             extends ServiceHandle {
-        protected final PrintStream f_out;
+        protected final PrintWriter f_out;
 
-        protected ConsoleHandle(TypeComposition clazz, ServiceContext context, PrintStream out) {
+        protected ConsoleHandle(TypeComposition clazz, ServiceContext context, PrintWriter out) {
             super(clazz, context);
 
             f_out = out;

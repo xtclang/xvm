@@ -3,7 +3,7 @@ package org.xvm.api;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
+import java.io.PrintWriter;
 
 import java.lang.ref.Cleaner;
 
@@ -59,7 +59,7 @@ class InterpreterControl
      * Create and start a control for the specified module.
      */
     static LspSupport.Control create(Connector connector, ModuleStructure module,
-                                     ModuleRepository repository, PrintStream console,
+                                     ModuleRepository repository, PrintWriter console,
                                      ErrorListener errs) {
         if (!(connector instanceof InterpreterConnector interpreter)) {
             throw new IllegalArgumentException("An InterpreterConnector is required");
@@ -68,7 +68,7 @@ class InterpreterControl
     }
 
     private InterpreterControl(InterpreterConnector connector, ModuleStructure module,
-                               ModuleRepository repository, PrintStream console,
+                               ModuleRepository repository, PrintWriter console,
                                ErrorListener errs) {
         this.connector  = connector;
         this.module     = module;
@@ -220,7 +220,7 @@ class InterpreterControl
     private final InterpreterConnector connector;
     private final ModuleStructure      module;
     private final ModuleRepository     repository;
-    private final PrintStream          console;
+    private final PrintWriter          console;
     private final ErrorListener        errs;
 
     private CompletableFuture<ObjectHandle> completion;

@@ -1,6 +1,6 @@
 package org.xvm.api;
 
-import java.io.PrintStream;
+import java.io.PrintWriter;
 
 import java.time.Instant;
 
@@ -19,7 +19,7 @@ class JitControl
     }
 
     static LspSupport.Control create(Connector connector, ModuleStructure module,
-                                     ModuleRepository repository, PrintStream console,
+                                     ModuleRepository repository, PrintWriter console,
                                      ErrorListener errs) {
         throw unsupported();
     }

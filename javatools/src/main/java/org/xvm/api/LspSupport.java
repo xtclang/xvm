@@ -2,7 +2,7 @@ package org.xvm.api;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintStream;
+import java.io.PrintWriter;
 
 import java.time.Instant;
 
@@ -403,7 +403,7 @@ public class LspSupport {
      * parameter.
      *
      * @param module      the module to execute
-     * @param console     (optional) the PrintStream for the executing application
+     * @param console     (optional) the PrintWriter for the executing application
      * @param rootDir     (optional) the root directory for the application's file system; null
      *                    indicates a temporary (e.g. in-memory) file system only
      * @param injections  (optional) additional "String" and "String[]" injections
@@ -414,7 +414,7 @@ public class LspSupport {
      */
     public Control run(
             ModuleStructure           module,
-            PrintStream               console,
+            PrintWriter               console,
             File                      rootDir,
             Map<String, List<String>> injections,
             ErrorListener             errs) {
@@ -434,7 +434,7 @@ public class LspSupport {
      * @param input           the ModuleRepository providing any necessary modules
      * @param moduleName      the module name to execute; must be loadable from "input"
      * @param version         (optional) the version of the module to load
-     * @param console         (optional) the PrintStream for the executing application
+     * @param console         (optional) the PrintWriter for the executing application
      * @param rootDir         (optional) the root directory for the application's file system; null
      *                        indicates a temporary (e.g. in-memory) file system only
      * @param injections      (optional) additional "String" and "String[]" injections
@@ -450,7 +450,7 @@ public class LspSupport {
             ModuleRepository          input,
             String                    moduleName,
             Version                   version,
-            PrintStream               console,
+            PrintWriter               console,
             File                      rootDir,
             Map<String, List<String>> injections,
             String                    customInjector,

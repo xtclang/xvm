@@ -2,7 +2,7 @@ package org.xvm.runtime;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.PrintStream;
+import java.io.PrintWriter;
 
 import java.lang.reflect.Field;
 
@@ -82,7 +82,7 @@ public class LspTest {
 
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         Control control = LspSupport.instance().run(
-                module, new PrintStream(bytes, true), null, null, errs);
+                module, new PrintWriter(bytes, true), null, null, errs);
         if (control == null || errs.hasSeriousErrors()) {
             throw new IllegalStateException("run of Hello failed to start: " + errs.getErrors());
         }
@@ -148,7 +148,7 @@ public class LspTest {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         ErrorList runErrs = new ErrorList(25);
         Control control = LspSupport.instance().run(
-                module, new PrintStream(bytes, true), null, null, runErrs);
+                module, new PrintWriter(bytes, true), null, null, runErrs);
         if (control == null) {
             throw new IllegalStateException("run of Crasher failed to start: " + runErrs.getErrors());
         }
@@ -185,7 +185,7 @@ public class LspTest {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             ErrorList errs = new ErrorList(25);
             Control control = support.run(
-                    repo(), "Quick", null, new PrintStream(bytes, true), null, null, null, errs);
+                    repo(), "Quick", null, new PrintWriter(bytes, true), null, null, null, errs);
             if (control == null) {
                 throw new IllegalStateException(
                         "run " + run + " of Quick failed to start: " + errs.getErrors());
