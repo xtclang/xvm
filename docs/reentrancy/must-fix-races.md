@@ -425,6 +425,62 @@ Runtime-template subset after this branch:
 No strict same-field lazy-null hits remain under javatools/src/main/java/org/xvm/runtime/template.
 ```
 
+**Correction, 2026-09-07 - that zero is an artefact of the regex, not a fact about the code.** The
+audit command above requires the NULL CHECK to name the field. The common shape reads the field into
+a local first and checks the local:
+
+```java
+ArrayHandle hNames = m_hDefaultNames;      // read into a local
+if (hNames == null) {                      // the check names the LOCAL
+    m_hDefaultNames = hNames = ...;        // the write names the field
+}
+```
+
+That is the same defect and the regex does not see it. Scanning for it finds **17** shape matches
+under `runtime/template` where the documented command finds 0, of which **11** are on non-volatile
+fields:
+
+| field | verdict |
+| --- | --- |
+| `xRTAlgorithms.m_hAlgorithms`, `xTerminalConsole.m_hConsole`, `xRTRandom.m_hRandom`, `xLocalClock.m_hLocalClock`/`m_hUTCClock`, `xInjector.m_hInjector` | already `volatile` + DCL on this branch - safe |
+| `m_typeCanonical` in `xRTCertificateManager`, `xRTNetwork`, `xRTNetworkInterface`, `xRTSocket`, `xRTConnector`, `xRTServer` | plain, but idempotent value caches - benign race, worst case duplicate computation |
+| `xString.m_hash`, `xString.m_sValue` | plain, benign by idempotence (the `String.hashCode` pattern) |
+| `xFPLiteral.m_hText`, `xIntLiteral.m_hText` | plain, and these cache **handles** - worth review |
+| **`xRTConnector.m_hDefaultNames`/`m_hDefaultValues`** | **real, and fixed - see below** |
+
+Use this instead of the command above when auditing; it catches both shapes:
+
+```bash
+python3 - <<'EOF'
+import re, pathlib
+direct = re.compile(r"if\s*\(\s*(?:this\.)?((?:m_|s_|f_)\w+)\s*==\s*null\s*\)\s*\{[\s\S]{0,320}?\1\s*=(?!=)")
+local  = re.compile(r"(\w+)\s*=\s*(?:this\.)?((?:m_|s_|f_)\w+)\s*;[\s\S]{0,200}?if\s*\(\s*\1\s*==\s*null\s*\)\s*\{[\s\S]{0,400}?\2\s*=(?!=)")
+for p in pathlib.Path("javatools/src/main/java/org/xvm/runtime").rglob("*.java"):
+    t = p.read_text()
+    for m in list(direct.finditer(t)) + list(local.finditer(t)):
+        print(p, m.group(1))
+EOF
+```
+
+**The one that was a real defect: `xRTConnector.invokeGetDefaultHeaders`.** It cached two array
+handles built with `frame.container()` - the FIRST requesting container - on a template that belongs
+to the native container and serves the whole plane, so every later container was handed the first
+one's handles. Three defects in five lines: a cross-container ownership leak, unsafe publication on
+two plain fields, and a two-field update guarded by only the first field's null check.
+
+**Not a master bug - introduced here.** Master builds the same arrays with
+`xString.makeArrayHandle(new String[] {...})`, which takes no container; the explicit binding to
+`frame.container()` arrived with this branch's container-parameterisation of handle construction.
+That is the general hazard the campaign creates: **parameterising construction by container is
+correct per call, and becomes a leak the moment the result is cached on a plane-wide template.**
+Fixed by not caching - two one-element arrays are not worth it - and `xString.makeArrayHandle` is
+now varargs, so the call site reads `makeArrayHandle(container, "User-Agent")` with no array
+ceremony.
+
+Audited for the general form: every other cached handle or composition built from a container uses
+the template's OWN `f_container` (`xRegEx.m_clzRangeOfInt`/`m_clzRangeArray`, `xCoreRepository.m_clzRepo`),
+which is consistent and correct. `xRTConnector` was the only one keyed on the caller's.
+
 This branch removed the low-risk `xRegEx.RegExHandle.m_pattern` cache by
 replacing it with a final `Lazy<Pattern>`. It also fixed the owner-sensitive
 `FSNodeConstant.m_constPath` derived path cache: adopted copies now clear the

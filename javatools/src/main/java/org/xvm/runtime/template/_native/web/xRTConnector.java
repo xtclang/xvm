@@ -146,17 +146,15 @@ public class xRTConnector
     private int invokeGetDefaultHeaders(Frame frame, int[] aiReturn) {
         // REVIEW: should we allow them to specify default headers in the injection definition?
 
-        ArrayHandle hNames  = m_hDefaultNames;
-        ArrayHandle hValues = m_hDefaultValues;
-        if (hNames == null) {
-            Container container = frame.container();
-            String[]  names     = {"User-Agent"};
-            String[]  values    = {f_sAgent};
-            m_hDefaultNames  = hNames  = xString.makeArrayHandle(container, names);
-            m_hDefaultValues = hValues = xString.makeArrayHandle(container, values);
-        }
-
-        return frame.assignValues(aiReturn, hNames, hValues);
+        // Built per call, not cached. These handles are bound to the container that asks for
+        // them, and this template belongs to the native container and serves the whole plane, so
+        // a cached pair would hand the FIRST caller's handles to every later container. Two
+        // one-element arrays are not worth a cross-container leak, an unsafe publication, and a
+        // two-field update guarded by one field's null check.
+        Container container = frame.container();
+        return frame.assignValues(aiReturn,
+                xString.makeArrayHandle(container, "User-Agent"),
+                xString.makeArrayHandle(container, f_sAgent));
     }
 
     /**
@@ -392,6 +390,4 @@ public class xRTConnector
     /**
      * Cached default headers.
      */
-    private ArrayHandle m_hDefaultNames;
-    private ArrayHandle m_hDefaultValues;
 }

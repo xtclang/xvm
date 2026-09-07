@@ -483,7 +483,7 @@ public class xString
     /**
      * @return an immutable array of Strings
      */
-    public static ArrayHandle makeArrayHandle(Container container, String[] asValue) {
+    public static ArrayHandle makeArrayHandle(Container container, String... asValue) {
         int            cValues = asValue.length;
         StringHandle[] ahValue = new StringHandle[cValues];
         for (int i = 0; i < cValues; i++) {
