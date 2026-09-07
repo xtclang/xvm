@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
@@ -357,7 +358,7 @@ public class xRTCompiler
         }
 
         protected void logError(Severity severity, String sCode, Object[] aoParam) {
-            m_errorList.log(severity, sCode, aoParam, null);
+            m_errorList.log(severity, sCode, ErrorListener.Site.NONE, aoParam);
         }
 
         /**

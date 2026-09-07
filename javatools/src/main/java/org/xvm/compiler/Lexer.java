@@ -2511,7 +2511,7 @@ public class Lexer
      * Log an error.
      */
     protected void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd) {
-        m_errs.log(severity, sCode, m_source, lPosStart, lPosEnd, aoParam);
+        m_errs.log(severity, sCode, ErrorListener.in(m_source, lPosStart, lPosEnd), aoParam);
 
         // Report, then ask. The listener records; whether lexing can continue is a separate
         // question with a separate answer, and it is asked here rather than read out of log().
@@ -2647,7 +2647,7 @@ public class Lexer
             long lStartPos = source.getPosition();
             source.setPosition(lPos);
 
-            errs.log(Severity.ERROR, UNEXPECTED_EOF, source, lStartPos, source.getPosition());
+            errs.log(Severity.ERROR, UNEXPECTED_EOF, ErrorListener.in(source, lStartPos, source.getPosition()));
             if (errs.isAbortDesired()) {
                 throw new CompilerException("aborting the lexer; " + errs);
             }

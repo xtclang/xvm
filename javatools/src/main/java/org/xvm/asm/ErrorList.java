@@ -213,13 +213,18 @@ public class ErrorList
         }
 
         @Override
-        public void log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
-            if (f_node == null) {
-                super.log(severity, sCode, aoParam, xs);
-            } else {
-                log(severity, sCode, aoParam,
-                        f_node.getSource(), f_node.getStartPosition(), f_node.getEndPosition());
-            }
+        public void log(Severity severity, String sCode, Site site, Object... aoParam) {
+            // A branch made for a node reports AT that node: a diagnostic raised against a
+            // structure during speculative work belongs where the speculation is, not where the
+            // structure happens to live. Expressible now as a substitution of one Site for
+            // another; before Site it needed an override of one particular overload, and said
+            // nothing about the other three.
+            super.log(severity, sCode,
+                    f_node != null && site instanceof Site.At
+                            ? ErrorListener.in(f_node.getSource(), f_node.getStartPosition(),
+                                    f_node.getEndPosition())
+                            : site,
+                    aoParam);
         }
 
         @Override

@@ -1596,7 +1596,7 @@ public final class NewExpression
         @Override
         public boolean requireThis(long lPos, ErrorListener errs) {
             if (getMethod().isStatic()) {
-                errs.log(Severity.ERROR, Compiler.NO_THIS, getSource(), lPos, lPos);
+                errs.log(Severity.ERROR, Compiler.NO_THIS, ErrorListener.in(getSource(), lPos, lPos));
                 return false;
             }
 

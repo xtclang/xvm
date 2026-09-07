@@ -5629,7 +5629,7 @@ public class Parser {
             return;
         }
 
-        m_errs.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd);
+        m_errs.log(severity, sCode, ErrorListener.in(m_source, lPosStart, lPosEnd), aoParam);
 
         // Report, then ask. The listener records; whether parsing can continue is a separate
         // question with a separate answer, and it is asked here rather than read out of log().

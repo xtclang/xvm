@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.Op.Prefix;
 
@@ -1775,7 +1776,7 @@ public final class MethodStructure
                 // REVIEW need a better error?
                 AstNode node = collector.getNode();
                 if (node == null) {
-                    errs.log(Severity.ERROR, Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS, this);
+                    errs.log(Severity.ERROR, Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS, ErrorListener.at(this));
                 } else {
                     node.log(errs, Severity.ERROR,
                         Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS);

@@ -485,9 +485,9 @@ public final class TypeCompositionStatement
                 String sModule = getName();
                 if (!isValidQualifiedModule(sModule)) {
                     errs.log(Severity.FATAL, Compiler.MODULE_BAD_NAME,
-                            new String[] {sModule}, source,
-                            qualified.get(0).getStartPosition(),
-                            qualified.get(qualified.size()-1).getEndPosition());
+                            ErrorListener.in(source, qualified.get(0).getStartPosition(),
+                                    qualified.get(qualified.size()-1).getEndPosition()),
+                            sModule);
                     return;
                 }
 
@@ -1470,7 +1470,7 @@ public final class TypeCompositionStatement
             lEnd   = listParams.get(cParams - 1).getEndPosition();
         }
         errs.log(Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
-            new String[] {sb.toString()}, getSource(), lStart, lEnd);
+            ErrorListener.in(getSource(), lStart, lEnd), sb.toString());
     }
 
     /**
@@ -1544,11 +1544,9 @@ public final class TypeCompositionStatement
             }
 
             errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
-                    new Object[] {
-                        contribCyclical.getComponent().getIdentityConstant().getValueString(),
-                        contribCyclical.getTypeConstant().getValueString()
-                    },
-                    getSource(), lStartPos, lEndPos);
+                    ErrorListener.in(getSource(), lStartPos, lEndPos),
+                    contribCyclical.getComponent().getIdentityConstant().getValueString(),
+                    contribCyclical.getTypeConstant().getValueString());
             return;
         }
 

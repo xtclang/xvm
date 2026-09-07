@@ -23,6 +23,7 @@ import java.util.Set;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -1769,7 +1770,7 @@ public class BuildContext {
                     // unfortunately, if generated for any reachable code, this will throw
                     // during the verification phase without any useful information to debug
                     typeSystem.pool().getErrorListener().log(Severity.WARNING,
-                            RT_TYPES_UNRECONCILABLE, methodStruct,
+                            RT_TYPES_UNRECONCILABLE, ErrorListener.at(methodStruct),
                             typeFrom.getValueString(), typeTo.getValueString());
                     return;
                 }

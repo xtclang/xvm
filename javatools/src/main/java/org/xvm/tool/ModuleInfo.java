@@ -1059,7 +1059,7 @@ public class ModuleInfo {
         public void registerName(String name, Node node) {
             if (name != null) {
                 if (children().containsKey(name)) {
-                    log(Severity.ERROR, DUP_NAME, (XvmStructure) null, name, descriptiveName());
+                    error(DUP_NAME, name, descriptiveName());
                 } else {
                     children().put(name, node);
                 }
@@ -1070,7 +1070,7 @@ public class ModuleInfo {
         public void linkParseTrees() {
             Node nodePkg = sourceNode();
             if (nodePkg == null) {
-                log(Severity.ERROR, MISSING_PKG_NODE, (XvmStructure) null, descriptiveName());
+                error(MISSING_PKG_NODE, descriptiveName());
             } else {
                 TypeCompositionStatement typePkg = nodePkg.type();
 
@@ -1299,7 +1299,7 @@ public class ModuleInfo {
             try {
                 return readFileChars(m_file);
             } catch (IOException e) {
-                log(Severity.ERROR, READ_FAILURE, (XvmStructure) null, m_file);
+                error(READ_FAILURE, m_file);
             }
 
             return new char[0];
@@ -1381,8 +1381,8 @@ public class ModuleInfo {
                 m_stmtAST = new Parser(source, this).parseSource();
             } catch (CompilerException e) {
                 if (!hasSeriousErrors()) {
-                    log(Severity.FATAL, Parser.FATAL_ERROR, source,
-                            source.getPosition(), source.getPosition());
+                    log(Severity.FATAL, Parser.FATAL_ERROR,
+                            ErrorListener.in(source, source.getPosition(), source.getPosition()));
                 }
             }
         }

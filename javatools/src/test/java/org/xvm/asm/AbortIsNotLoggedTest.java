@@ -110,7 +110,7 @@ public class AbortIsNotLoggedTest {
         var strict = ErrorList.firstError();
         var branch = strict.branch(null);
 
-        branch.log(Severity.ERROR, Constants.VE_UNKNOWN, (XvmStructure) null, "in the branch");
+        branch.error(Constants.VE_UNKNOWN, "in the branch");
 
         assertTrue(branch.isAbortDesired(), "the branch collected an error and answers for itself");
         assertFalse(strict.isAbortDesired(), "and has not surfaced it, because nothing merged it");

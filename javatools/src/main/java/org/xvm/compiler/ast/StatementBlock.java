@@ -345,8 +345,8 @@ public final class StatementBlock
                     astRoot = new StmtBlockAST(newStmts, true);
                 }
             } else {
-                errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, getSource(),
-                            getEndPosition(), getEndPosition());
+                errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED,
+                            ErrorListener.in(getSource(), getEndPosition(), getEndPosition()));
             }
         } else {
             // it is possible that there is a dangling label at the end that is unreachable,
@@ -801,7 +801,7 @@ public final class StatementBlock
                     : !isFunction();
 
             if (!fHasThis) {
-                errs.log(Severity.ERROR, Compiler.NO_THIS, getSource(), lPos, lPos);
+                errs.log(Severity.ERROR, Compiler.NO_THIS, ErrorListener.in(getSource(), lPos, lPos));
             }
             return fHasThis;
         }

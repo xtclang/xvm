@@ -83,54 +83,8 @@ public interface ErrorListener {
      */
     void log(ErrorInfo err);
 
-    /**
-     * Handles the logging of an error that originates in Ecstasy source code.
-     *
-     * @param severity    the severity level of the error; one of
-     *                    {@link Severity#INFO}, {@link Severity#WARNING},
-     *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
-     * @param sCode       the error code that identifies the error message
-     * @param aoParam     the parameters for the error message; may be null
-     * @param source      the source code (optional)
-     * @param lPosStart   the position in the source where the error was detected
-     * @param lPosEnd     the position in the source at which the error concluded
-     */
-    default void log(Severity severity, String sCode, Object[] aoParam,
-            Source source, long lPosStart, long lPosEnd) {
-        log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
-    }
 
-    /**
-     * Handles the logging of an error that originates in an Ecstasy XVM structure.
-     *
-     * @param severity    the severity level of the error; one of
-     *                    {@link Severity#INFO}, {@link Severity#WARNING,
-     *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
-     * @param sCode       the error code that identifies the error message
-     * @param aoParam     the parameters for the error message; may be null
-     * @param xs          the XvmStructure that the error is related to; may
-     *                    be null
-     */
-    default void log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
-        log(new ErrorInfo(severity, sCode, aoParam, xs));
-    }
 
-    /**
-     * Log an error, taking the message parameters as varargs.
-     *
-     * <p>Identical to {@link #log(Severity, String, Object[], XvmStructure)} but with the
-     * parameters last, so callers write the values directly instead of building an
-     * {@code Object[]} at the call site. Added rather than replacing, because a varargs parameter
-     * must come last and the existing signature cannot be reordered without breaking every caller.
-     *
-     * @param severity  the severity level
-     * @param sCode     the error code
-     * @param xs        the XvmStructure the error relates to
-     * @param aoParam   the error message parameters
-     */
-    default void log(Severity severity, String sCode, XvmStructure xs, Object... aoParam) {
-        log(new ErrorInfo(severity, sCode, aoParam, xs));
-    }
 
     /**
      * Log an {@link Severity#INFO} diagnostic with no associated structure.
@@ -261,20 +215,6 @@ public interface ErrorListener {
         });
     }
 
-    /**
-     * Log an error against a source position, taking the message parameters as varargs.
-     *
-     * @param severity   the severity level
-     * @param sCode      the error code
-     * @param source     the source that the error is in
-     * @param lPosStart  the position in the source where the error begins
-     * @param lPosEnd    the position in the source where the error ends
-     * @param aoParam    the error message parameters
-     */
-    default void log(Severity severity, String sCode, Source source, long lPosStart, long lPosEnd,
-            Object... aoParam) {
-        log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
-    }
 
     /**
      * Branch this ErrorListener by creating a new one that will collect subsequent errors

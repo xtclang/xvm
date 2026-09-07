@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -2097,7 +2098,7 @@ public abstract sealed class Component
                 Boolean          fVisited = work.visitedWith(this);
                 if (fVisited != null && fVisited.booleanValue() == fAllowInto) {
                     // recursive contribution
-                    errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION, this,
+                    errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION, ErrorListener.at(this),
                                 getName(), contrib.getComposition().toString().toLowerCase());
                     return ResolutionResult.ERROR;
                 }

@@ -8,6 +8,7 @@ import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Component.Injection;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -931,7 +932,7 @@ public class Frame
                         // INFO: this is emitted only under -DDEBUG=all. It is a developer asking to
                         // watch, not the runtime reporting that something is wrong.
                         container().getErrorListener().log(Severity.INFO, RT_WRAPPING_REQUIRED,
-                            f_function, typeFrom.getValueString(), typeTo.getValueString());
+                            ErrorListener.at(f_function), typeFrom.getValueString(), typeTo.getValueString());
                     }
                     break;
 
@@ -964,7 +965,7 @@ public class Frame
                         break;
                     }
                     container().getErrorListener().log(Severity.WARNING, RT_SUSPICIOUS_ASSIGNMENT,
-                        f_function, this, typeFrom.getValueString(), typeTo.getValueString());
+                        ErrorListener.at(f_function), this, typeFrom.getValueString(), typeTo.getValueString());
                     break;
                 }
                 break;
@@ -1540,7 +1541,7 @@ public class Frame
                 // actually happened. Nothing at run time gates on hasSeriousErrors, so this
                 // informs a host without changing what the runtime does.
                 container().getErrorListener().log(Severity.ERROR, RT_TYPE_UNRESOLVED,
-                    f_function, type.getValueString());
+                    ErrorListener.at(f_function), type.getValueString());
             }
         }
 

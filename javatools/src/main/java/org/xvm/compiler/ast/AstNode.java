@@ -736,9 +736,11 @@ public abstract sealed class AstNode
      */
     public void log(@NotNull ErrorListener errs, Severity severity, String sCode, Object... aoParam) {
         Source source = getSource();
-        requireNonNull(errs, "errs").log(severity, sCode, source,
-                source == null ? 0L : getStartPosition(),
-                source == null ? 0L : getEndPosition());
+        requireNonNull(errs, "errs").log(severity, sCode,
+                ErrorListener.in(source,
+                        source == null ? 0L : getStartPosition(),
+                        source == null ? 0L : getEndPosition()),
+                aoParam);
     }
 
 

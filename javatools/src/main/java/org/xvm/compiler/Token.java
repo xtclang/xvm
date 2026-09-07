@@ -341,8 +341,10 @@ public final class Token {
             aoParam = new Object[] {source == null ? toString() : getString(source)};
         }
 
-        errs.log(severity, sCode, source,
-                source == null ? 0L : getStartPosition(), source == null ? 0L : getEndPosition(), aoParam);
+        errs.log(severity, sCode,
+                ErrorListener.in(source, source == null ? 0L : getStartPosition(),
+                        source == null ? 0L : getEndPosition()),
+                aoParam);
     }
 
 

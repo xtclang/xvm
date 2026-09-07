@@ -391,8 +391,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         for (var compiler : compilers) {
             final var idMissing = compiler.linkModules(repo);
             if (idMissing != null) {
-                compiler.getErrorListener().log(FATAL, MODULE_MISSING,
-                        new String[]{idMissing.getName()}, null);
+                compiler.getErrorListener().fatal(MODULE_MISSING, idMissing.getName());
                 return;
             }
         }
