@@ -77,6 +77,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Runtime;
+import org.xvm.runtime.template.collections.xTuple.TupleHandle;
+
 import org.xvm.runtime.template.text.xString;
 
 import org.xvm.util.Lazy;
@@ -1020,9 +1022,36 @@ public final class XtcEngine
         ObjectHandle hNames  = xString.makeArrayHandle(main, listNames.toArray(String[]::new));
         ObjectHandle hValues = xString.makeArrayHandle(main, listValues.toArray(String[]::new));
 
-        return main.invokeAsync("runTask", hModule, hRepository, xNullable.makeHandle(main),
-                                hNames, hValues)
-                .thenCompose(hTaskId -> awaitTask(main, ((JavaLong) hTaskId).getValue()));
+        // registerTransientTask, not registerTask: the run's file-system root is deleted by the
+        // runner as soon as the run completes. The alternative upstream is to let the root outlive
+        // the task and be removed when a Cleaner notices the Control has become unreachable, which
+        // is not deterministic, is not guaranteed to happen at JVM exit, and can call back into
+        // container zero after this engine has closed its connector.
+        return main.invokeAsync("registerTransientTask", hModule, hRepository,
+                                xNullable.makeHandle(main), hNames, hValues)
+                .thenCompose(hTaskId -> main.invokeAsync("startTask", hTaskId))
+                .thenApply(XtcEngine::resultOf);
+    }
+
+    /**
+     * Unpack the {@code (Int result, String failure)} tuple that {@code startTask} answers with.
+     *
+     * <p>One future for the whole run: the runner completes it once, after it has recorded the
+     * outcome, so there is nothing to poll and no window in which the result is not yet readable.
+     *
+     * @param hTuple  the completion tuple
+     *
+     * @return the run's result handle
+     *
+     * @throws IllegalStateException if the run completed exceptionally
+     */
+    private static @NotNull ObjectHandle resultOf(@NotNull ObjectHandle hTuple) {
+        ObjectHandle[] ahOutcome = ((TupleHandle) hTuple).m_ahValue;
+        String         sFailure  = ((StringHandle) ahOutcome[1]).getStringValue();
+        if (!sFailure.isEmpty()) {
+            throw new IllegalStateException(sFailure);
+        }
+        return ahOutcome[0];
     }
 
     /**
@@ -1052,59 +1081,6 @@ public final class XtcEngine
             throw new IllegalStateException("missing dependency: " + idMissing.getName());
         }
         return struct;
-    }
-
-    /**
-     * Poll the runner app until the task stops, then answer with its result.
-     *
-     * <p>Polling because the runner exposes {@code taskRunning}/{@code taskResult} and no completion
-     * channel; the Ecstasy side already HAS the completion in hand, so a {@code waitForTask} there
-     * would replace this with a single future. Recorded as H10 in the LSPAPI analysis.
-     */
-    private static CompletableFuture<ObjectHandle> awaitTask(MainContainer main, long taskId) {
-        var future = new CompletableFuture<ObjectHandle>();
-        pollTask(main, taskId, future);
-        return future;
-    }
-
-    private static void pollTask(MainContainer main, long taskId,
-                                 CompletableFuture<ObjectHandle> future) {
-        CompletableFuture.delayedExecutor(5, java.util.concurrent.TimeUnit.MILLISECONDS)
-                .execute(() -> main.invokeAsync("taskRunning", xInt64.makeHandle(main, taskId))
-                        .whenComplete((hRunning, error) -> {
-                            if (error != null) {
-                                future.completeExceptionally(error);
-                            } else if (xBoolean.isTrue(hRunning)) {
-                                pollTask(main, taskId, future);
-                            } else {
-                                completeTask(main, taskId, future);
-                            }
-                        }));
-    }
-
-    private static void completeTask(MainContainer main, long taskId,
-                                     CompletableFuture<ObjectHandle> future) {
-        main.invokeAsync("taskFailure", xInt64.makeHandle(main, taskId))
-                .whenComplete((hFailure, error) -> {
-                    if (error != null) {
-                        future.completeExceptionally(error);
-                    } else if (!xNullable.isNull(hFailure)) {
-                        future.completeExceptionally(new IllegalStateException(
-                                ((StringHandle) hFailure).getStringValue()));
-                    } else {
-                        main.invokeAsync("taskResult", xInt64.makeHandle(main, taskId))
-                                .whenComplete((hResult, e2) -> {
-                                    // forget the task either way: the runner keeps it forever
-                                    // otherwise (H5), and this side is done reading it
-                                    main.invokeAsync("forgetTask", xInt64.makeHandle(main, taskId));
-                                    if (e2 == null) {
-                                        future.complete(hResult);
-                                    } else {
-                                        future.completeExceptionally(e2);
-                                    }
-                                });
-                    }
-                });
     }
 
     /**

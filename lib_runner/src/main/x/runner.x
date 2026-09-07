@@ -1,31 +1,36 @@
 /**
  * This is an application intended to be hosted in "Container 0" for the purpose of running
  * additional applications (such as module test-runs) that can be loaded dynamically.
+ *
+ * To run the server and interactive client from the `manualTests` directory, use two terminal
+ * tabs:
+ *
+ *     xec -L build/xtc/main/lib runner.xtclang.org
+ *
+ *     xec runner_client.xtclang.org http://localhost:8080
  */
 @web.WebApp
 module runner.xtclang.org {
     package web   import web.xtclang.org;
     package xenia import xenia.xtclang.org;
 
-    import ecstasy.mgmt.PassThroughResourceProvider;
+    import ecstasy.mgmt.BasicResourceProvider;
     import ecstasy.mgmt.Container;
     import ecstasy.mgmt.ModuleRepository;
     import ecstasy.mgmt.ResourceProvider;
-    import ecstasy.fs.Directory;
-    import ecstasy.fs.FileStore;
-    import ecstasy.fs.Path;
-
     import ecstasy.maps.HashMap;
 
     import ecstasy.reflect.ModuleTemplate;
 
     import web.Get;
     import web.Post;
+    import web.Produces;
     import web.WebService;
     import web.http.HostInfo;
 
     /**
-     * Start the HTTP endpoint. Native callers should invoke [runTask] directly.
+     * Start the HTTP endpoint. Native callers should invoke [registerTask] and [startTask]
+     * directly.
      */
     void run(String[] args=["localhost:8080/8090", "localhost:8080/8090"]) {
         String routeString = args.size > 0 ? args[0] : "localhost:8080/8090";
@@ -55,52 +60,37 @@ module runner.xtclang.org {
     }
 
     /**
-     * Create a container for the supplied module and start its `run()` method.
+     * Register a task for the supplied module.
      *
      * @param template    the module to run
      * @param repository  the repository used to resolve the module's dependencies
      * @param consoleId   the optional ID of the named native console resource
-     * @param injectionNames   the names of the string resources this run is given
-     * @param injectionValues  the corresponding values, one per name
      *
      * @return the task identifier
      */
-    Int runTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                String[] injectionNames = [], String[] injectionValues = [],
-                String? rootDir = Null) =
-            TaskRegistry.runTask(template, repository, consoleId,
-                                 injectionNames, injectionValues, rootDir);
+    Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
+                     String[] injectionNames = [], String[] injectionValues = []) =
+            TaskRegistry.registerTask(template, repository, consoleId, True,
+                                      injectionNames, injectionValues);
 
     /**
-     * @return True iff the identified task has not completed
-     */
-    Boolean taskRunning(Int id) = TaskRegistry.taskRunning(id);
-
-    /**
-     * @return the task's integer result, if it completed with one
-     */
-    Int? taskResult(Int id) = TaskRegistry.taskResult(id);
-
-    /**
-     * @return the task failure text, if it completed exceptionally
-     */
-    String? taskFailure(Int id) = TaskRegistry.taskFailure(id);
-
-    /**
-     * Stop the identified task's container.
-     */
-    void killTask(Int id) = TaskRegistry.killTask(id);
-
-    /**
-     * Discard all record of a finished task, releasing its container.
+     * Register a task whose file-system root is deleted as soon as it completes.
      *
-     * Added when this module was lifted into the lazy-instance branch. Without it the registry
-     * grows by one task per run for the life of container zero, and each task holds its container,
-     * its template and its repository - in exactly the scenario this module exists to support, a
-     * long-lived VM performing many consecutive runs. The caller collects `taskResult` and
-     * `taskFailure` first, so eviction has to be explicit rather than automatic on completion.
+     * Deterministic, unlike letting the root outlive the task and be collected later: the run is
+     * over, so there is nothing left to read from it.
      */
-    void forgetTask(Int id) = TaskRegistry.forgetTask(id);
+    Int registerTransientTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
+                              String[] injectionNames = [], String[] injectionValues = []) =
+            TaskRegistry.registerTask(template, repository, consoleId, False,
+                                      injectionNames, injectionValues);
+
+    /**
+     * Start the identified task.
+     *
+     * @return the task's integer result, or zero if it completed without one
+     * @return the task failure text, or an empty string if it completed normally
+     */
+    Tuple<Int, String> startTask(Int id) = TaskRegistry.startTask(id);
 
     /**
      * @return a human-readable task status
@@ -108,59 +98,119 @@ module runner.xtclang.org {
     String taskStatus(Int id) = TaskRegistry.taskStatus(id);
 
     /**
-     * Mutable task registry.
+     * Stop the identified task's container.
+     */
+    void killTask(Int id) = TaskRegistry.killTask(id);
+
+    /**
+     * Delete the file-system root allocated to the identified task.
+     */
+    void deleteTaskDirectory(Int id, String moduleName) =
+            TaskRegistry.deleteTaskDirectory(id, moduleName);
+
+    /**
+     * Task registry singleton service.
      */
     static service TaskRegistry {
         private Map<Int, Task> tasks = new HashMap();
 
-        private Int nextTaskId;
+        private Int nextTaskId = 1;
 
-        Int runTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                    String[] injectionNames = [], String[] injectionValues = [],
-                    String? rootDir = Null) {
+        /**
+         * Implementation of the `registerTask` API.
+         */
+        Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
+                         Boolean retainStore = True,
+                         String[] injectionNames = [], String[] injectionValues = []) {
             assert injectionNames.size == injectionValues.size
                     as $"{injectionNames.size} injection names for {injectionValues.size} values";
 
-            Int  id   = allocateTaskId();
-            Task task = new Task(id, template, repository, consoleId,
-                                 injectionNames, injectionValues, rootDir);
+            Int  id   = nextTaskId++;
+            Task task = new Task(id, template, repository, consoleId, retainStore,
+                                 injectionNames, injectionValues);
             tasks[id] = task;
-            task.start();
             return id;
         }
 
-        Boolean taskRunning(Int id) = taskFor(id).running;
+        /**
+         * Implementation of the `startTask` API.
+         */
+        Tuple<Int, String> startTask(Int id) = taskFor(id).start();
 
-        Int? taskResult(Int id) = taskFor(id).result;
-
-        String? taskFailure(Int id) = taskFor(id).failure;
-
-        void killTask(Int id) {
-            taskFor(id).kill();
-        }
-
-        void forgetTask(Int id) {
-            if (Task task := tasks.get(id)) {
-                task.release();
-                tasks.remove(id);
+        /**
+         * Implementation of the `taskStatus` API.
+         */
+        String taskStatus(Int id) {
+            if (Task task := findTask(id)) {
+                return task.status;
             }
+            return "terminated";
         }
 
+        /**
+         * Implementation of the `killTask` API.
+         */
+        void killTask(Int id) = taskFor(id).kill();
+
+        /**
+         * Remove the identified task from the registry.
+         */
+        void unregisterTask(Int id) = tasks.remove(id);
+
+        /**
+         * Register and start a task requested through the web API. Note, that the file store is
+         * immediately removed upon the task completion.
+         */
         Int submitTask(String moduleName, ModuleRepository repository) {
-            return runTask(repository.getResolvedModule(moduleName), repository, Null);
+            Int id = registerTask(
+                    repository.getResolvedModule(moduleName), repository, Null, False);
+            taskFor(id).start^();
+            return id;
         }
 
-        String taskStatus(Int id) = taskFor(id).status;
+        /**
+         * Delete the file-system root allocated to the identified task.
+         */
+        void deleteTaskDirectory(Int id, String moduleName) {
+            assert !findTask(id);
 
-        private Int allocateTaskId() {
-            do {
-                ++nextTaskId;
-            } while (tasks.contains(nextTaskId));
-            return nextTaskId;
+            @Inject Directory curDir;
+            curDir.dirFor(taskDirectoryName(moduleName, id)).deleteRecursively();
         }
 
+        /**
+         * Implementation of the `runningTasks` through web API.
+         */
+        String runningTasks() {
+            StringBuffer listing = new StringBuffer();
+            for (Task task : tasks.values) {
+                if (String description := task.runningDescription()) {
+                    if (!listing.empty) {
+                        listing.add('\n');
+                    }
+                    listing.addAll(description);
+                }
+            }
+            return listing.empty ? "No running tasks" : listing.toString();
+        }
+
+        /**
+         * @return True iff the identified task remains registered
+         * @return (conditional) the registered task
+         */
+        private conditional Task findTask(Int id) {
+            if (Task task := tasks.get(id)) {
+                return True, task;
+            }
+            assert 0 < id < nextTaskId as $"Unknown task {id}";
+            return False;
+        }
+
+        /**
+         * @return a registered task, asserting that it is still available
+         */
         private Task taskFor(Int id) {
-            assert Task task := tasks.get(id) as $"Unknown task {id}";
+            assert Task task := findTask(id) as $"Task {id} has terminated";
             return task;
         }
     }
@@ -169,82 +219,114 @@ module runner.xtclang.org {
      * State and control for one application container.
      */
     service Task(Int id, ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                 String[] injectionNames = [], String[] injectionValues = [],
-                 String? rootDir = Null) {
-        Boolean running;
-
-        Int? result;
-
-        String? failure;
-
-        String status.get() = running
-                ? "running"
-                : failure == Null
-                    ? result == Null ? "stopped" : $"stopped: {result}"
-                    : $"failed: {failure}";
-
+                 Boolean retainStore,
+                 String[] injectionNames = [], String[] injectionValues = []) {
         private Container? container;
 
-        void start() {
-            assert container == Null;
+        private Time? started;
 
-            ResourceProvider injector;
-            if (Int consoleId ?= this.consoleId) {
-                @Inject(resourceName=$"console_{consoleId}") Console console;
-                injector = new TaskResourceProvider(console, injectionNames, injectionValues,
-                                                    rootDir);
-            } else if (!injectionNames.empty || rootDir != Null) {
-                injector = new TaskResourceProvider(Null, injectionNames, injectionValues,
-                                                    rootDir);
-            } else {
-                // PassThrough, not Basic. BasicResourceProvider is a minimal hand-written
-                // whitelist - HashCollector, Linker, nullable types - and supplies none of the
-                // container's real injections, so a module asking for curDir, storage or a clock
-                // dies with "Invalid resource". The old manualTests runner used PassThrough for
-                // exactly this reason; using Basic gives a hosted run a strictly smaller world
-                // than the path it replaces.
-                injector = new PassThroughResourceProvider();
+        // an output: the task writes it, everyone else reads it
+        public/private Boolean running;
+
+        String status.get() = running ? "running" : "stopped";
+
+        conditional String runningDescription() {
+            if (!running) {
+                return False;
             }
 
-            Container        container = new Container(
-                    template, Container.Model.Lightweight, repository, injector);
-            this.container = container;
-            running        = True;
+            assert Time started ?= this.started;
+            @Inject Clock clock;
+            return True, $"{id} {template.qualifiedName} processing: {clock.now - started} sec";
+        }
 
-            @Future Tuple outcome = container.invoke("run", ());
+        Tuple<Int, String> start() {
+            assert container == Null;
+
+            @Inject Clock clock;
+            started = clock.now;
+
+            BufferedConsole? bufferedConsole = Null;
+            Console          taskConsole;
+            if (Int consoleId ?= this.consoleId) {
+                @Inject(resourceName=$"console_{consoleId}") Console console;
+                taskConsole = console;
+            } else {
+                @Inject Console console;
+                bufferedConsole = new BufferedConsole($"{id}> ", console);
+                taskConsole = &bufferedConsole.maskAs(Console);
+            }
+            ResourceProvider injector = new TaskResourceProvider(id, template, taskConsole,
+                                                                injectionNames, injectionValues);
+
+            container = new Container(template, Lightweight, repository, injector);
+            running   = True;
+
+            @Future Tuple<Int, String> completion;
+            @Future Tuple              outcome = container.as(Container).invoke("run", ());
             &outcome.whenComplete((tuple, exception) -> {
+                Int    result  = 0;
+                String failure = "";
                 if (exception == Null) {
                     if (tuple != Null && !tuple.empty && tuple[0].is(Int)) {
                         result = tuple[0].as(Int);
                     }
+                    bufferedConsole?.flush();
                 } else {
                     failure = exception.toString();
+                    taskConsole.print($"Unhandled exception: {failure}");
                 }
-                running        = False;
-                // "this." is required: the local from start() shadows the property here
-                this.container = Null;   // the run is over; do not pin it
+
+                running    = False;
+                container  = Null;
+                completion = (result, failure);
+                TaskRegistry.unregisterTask^(id);
+
+                if (!retainStore) {
+                    TaskRegistry.deleteTaskDirectory^(id, template.name);
+                }
             });
+            return completion;
         }
 
         void kill() {
             if (Container container ?= this.container, running) {
                 container.kill();
-                running        = False;
-                this.container = Null;
+                running = False;
+            }
+        }
+    }
+
+    /**
+     * A Console that buffers incomplete lines and identifies every output line with the specified
+     * prefix.
+     */
+    service BufferedConsole(String prefix, Console console)
+            implements Console {
+        private StringBuffer line = new StringBuffer();
+
+        @Override
+        void print(Object object = "", Boolean suppressNewline = False) {
+            line.append(object);
+            if (!suppressNewline) {
+                console.print(prefix + line.toString());
+                line.clear();
             }
         }
 
         /**
-         * Drop any remaining reference to the container. Safe to call more than once.
+         * Flush an incomplete line.
          */
-        void release() {
-            if (Container container ?= this.container) {
-                if (running) {
-                    container.kill();
-                    running = False;
-                }
-                this.container = Null;
+        void flush() {
+            if (!line.empty) {
+                console.print(prefix + line.toString());
+                line.clear();
             }
+        }
+
+        @Override
+        String readLine(String prompt = "", Boolean suppressEcho = False) {
+            throw new Unsupported();
         }
     }
 
@@ -256,57 +338,85 @@ module runner.xtclang.org {
         @Post("run{/moduleName}")
         Int runModule(String moduleName) {
             @Inject("repository") ModuleRepository repository;
-
             return TaskRegistry.submitTask(moduleName, repository);
         }
 
+        @Get("tasks")
+        @Produces(Text)
+        String tasks() = TaskRegistry.runningTasks();
+
         @Get("task{/id}")
-        String status(Int id) = TaskRegistry.taskStatus(id);
+        @Produces(Text)
+        String status(Int id) {
+            try {
+                return TaskRegistry.taskStatus(id);
+            } catch (IllegalState e) {
+                return e.message;
+            }
+        }
 
         @Post("task{/id}/kill")
+        @Produces(Text)
         String kill(Int id) {
-            TaskRegistry.killTask(id);
-            return TaskRegistry.taskStatus(id);
+            try {
+                TaskRegistry.killTask(id);
+                return TaskRegistry.taskStatus(id);
+            } catch (IllegalState e) {
+                return e.message;
+            }
         }
     }
 
     /**
-     * Provides an external console and delegates the remaining basic injections.
+     * Provides the task-specific file system and console, and delegates the remaining basic
+     * injections.
      */
-    service TaskResourceProvider(Console? console,
+    service TaskResourceProvider(Int id, ModuleTemplate template, Console console,
                                  String[] injectionNames  = [],
-                                 String[] injectionValues = [],
-                                 String?  rootDir         = Null)
-            extends PassThroughResourceProvider {
+                                 String[] injectionValues = [])
+            extends BasicResourceProvider {
+        @Lazy FileStore store.calc() {
+            @Inject Directory curDir;
+            Directory taskDir = curDir.dirFor(taskDirectoryName(template.name, id)).ensure();
+            return new ecstasy.fs.DirectoryFileStore(taskDir);
+        }
+
         @Override
         Supplier getResource(Type type, String name) {
-            if (type == Console && name == "console", Console console ?= this.console) {
+            switch (type.isNullable() ?: type, name) {
+            case (Console, "console"):
                 return console;
-            }
 
-            // A string this run was given takes precedence over the parent's. That precedence is
-            // the point: pass-through would resolve the name against container zero, so two runs
-            // would see one value. Fabricating it here is what makes it the RUN's.
-            if (type == String) {
+            case (FileStore, "storage"):
+                return &store.maskAs(FileStore);
+
+            case (Directory, "rootDir"):
+            case (Directory, "homeDir"):
+            case (Directory, "curDir"):
+                Directory root = store.root;
+                return &root.maskAs(Directory);
+
+            case (Directory, "tmpDir"):
+                Directory temp = store.root.dirFor(".temp").ensure();
+                return &temp.maskAs(Directory);
+
+            case (String, _):
+                // A string this run was given, answered here rather than delegated. Basic's String
+                // case forwards to the parent, so without this two runs asking for the same name
+                // both resolve against container zero and see one value.
                 for (Int i : 0 ..< injectionNames.size) {
                     if (injectionNames[i] == name) {
                         return injectionValues[i];
                     }
                 }
+                break;
             }
-
-            // A run given a root directory gets ITS directory for curDir, rather than resolving
-            // the name through pass-through and landing on container zero's. Derived from the
-            // parent's FileStore, so this bounds where the run STARTS, not where it can reach -
-            // confining a run to a subtree needs a FileStore that can be rooted below "/", which
-            // xOSFileStore cannot be (its ROOT is a static File("/")).
-            if (type == Directory, String rootDir ?= this.rootDir,
-                    name == "curDir" || name == "rootDir") {
-                @Inject FileStore storage;
-                return storage.dirFor(new Path(rootDir));
-            }
-
             return super(type, name);
         }
     }
+
+    /**
+     * Compute the file-system root name for a task.
+     */
+    static String taskDirectoryName(String moduleName, Int id) = $"{moduleName}_{id}";
 }
