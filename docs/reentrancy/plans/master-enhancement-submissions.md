@@ -3575,8 +3575,21 @@ fabricate or a host could register. Giving a run its own `curDir` bounds where i
 does not bound where it can **reach**, because the `Directory` still comes from the one OS-rooted
 store.
 
-**So the real enhancement is narrower and clearer than this row first claimed: a `FileStore` that
-can be rooted below `/`.** Everything else the runner needs is already expressible.
+**WITHDRAWN 2026-09-07 - the row is wrong, and there is no enhancement here at all.**
+`ecstasy.fs.DirectoryFileStore` already exists **on master**, and its own doc states the purpose
+exactly: "A FileStore implementation that behaves as if the provided directory is actually the root
+of a new FileStore. This is useful for injecting a FileStore into a Container, because the Container
+will not be able to see 'above' the level of the injected FileStore's 'root' directory."
+
+So a confined, rootable FileStore has been available the whole time. The error was mine: I read
+`xOSFileStore` (the OS-rooted NATIVE store, pinned to `static final File ROOT = new File("/")`),
+concluded that no rootable store existed, and did not look in `lib_ecstasy/fs` for a wrapper.
+Gene's `1dd79f2b8` on `cpurdy/LSPAPI` uses `new DirectoryFileStore(taskDir)` to give every task its
+own file system, which closes H19's storage half with facilities master already had.
+
+Nothing to file. E40 stands only as a record of the mistake, and as the reason to search
+`lib_ecstasy` before concluding the platform lacks something: the native templates are the
+implementation, not the whole library.
 
 **Partially closed on `lagergren/lazy-instance` 2026-09-07, in the runner rather than in
 `lib_ecstasy`.** `runTask` now carries the run's string injections, and `TaskResourceProvider`
