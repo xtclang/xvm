@@ -64,30 +64,13 @@ class InterpreterControl
         if (!(connector instanceof InterpreterConnector interpreter)) {
             throw new IllegalArgumentException("An InterpreterConnector is required");
         }
-        return new InterpreterControl(interpreter, module, repository, console, errs).start();
-    }
-
-    private InterpreterControl(InterpreterConnector connector, ModuleStructure module,
-                               ModuleRepository repository, PrintStream console,
-                               ErrorListener errs) {
-        this.connector  = connector;
-        this.module     = module;
-        this.repository = repository;
-        this.console    = console;
-        this.errs       = errs;
-    }
-
-    private InterpreterControl start() {
-        started = Instant.now();
-        running = true;
-
+        Instant started   = Instant.now();
+        Long    consoleId = console == null
+                ? null
+                : xExternalConsole.register(interpreter.getNativeContainer(), console);
         try {
-            FileStructure file = prepareModule();
-            MainContainer main = connector.getMainContainer();
-
-            if (console != null) {
-                consoleId = xExternalConsole.register(connector.getNativeContainer(), console);
-            }
+            FileStructure file = prepareModule(interpreter, module, repository);
+            MainContainer main = interpreter.getMainContainer();
 
             ObjectHandle hModule     = xRTModuleTemplate.makeHandle(main, file.getModule());
             ObjectHandle hRepository = xCoreRepository.INSTANCE.makeHandle(repository);
@@ -95,32 +78,58 @@ class InterpreterControl
                     ? xNullable.NULL
                     : xInt64.makeHandle(consoleId);
 
-            ObjectHandle hTaskId = postRequest("registerTask", hModule, hRepository, hConsoleId).join();
-            taskId = ((JavaLong) hTaskId).getValue();
+            ObjectHandle hTaskId = main.invokeAsync(
+                    "registerTask", hModule, hRepository, hConsoleId).join();
+            long taskId = ((JavaLong) hTaskId).getValue();
 
-            CLEANER.register(this, new TaskCleanup(connector, module.getSimpleName(), taskId));
+            // the future exists before the task does, so the control can hold it as final
+            var completion = new CompletableFuture<ObjectHandle>();
 
-            completion = postRequest("startTask", hTaskId).whenComplete((r, e) -> {
+            InterpreterControl control = new InterpreterControl(interpreter, module, console, errs,
+                    started, consoleId, taskId, completion);
+
+            CLEANER.register(control, new TaskCleanup(interpreter, module.getSimpleName(), taskId));
+
+            main.invokeAsync("startTask", hTaskId).whenComplete((r, e) -> {
                 if (e == null) {
                     TupleHandle tuple   = (TupleHandle) r;
                     long        result  = ((JavaLong) tuple.m_ahValue[0]).getValue();
                     String      failure = ((StringHandle) tuple.m_ahValue[1]).getStringValue();
-                    finish(result, failure);
+                    control.finish(result, failure);
+                    completion.complete(r);
                 } else {
-                    finish(-1, e.toString());
+                    control.finish(-1, e.toString());
+                    completion.completeExceptionally(e);
                 }
             });
+            return control;
         } catch (RuntimeException e) {
-            running = false;
-            stopped = Instant.now();
-            unregisterConsole();
+            // nothing was constructed, so there is no half-started object to unwind - just release
+            // the console this factory registered
+            if (consoleId != null) {
+                xExternalConsole.unregister(interpreter.getNativeContainer(), consoleId);
+            }
             throw e;
         }
-
-        return this;
     }
 
-    private FileStructure prepareModule() {
+    private InterpreterControl(InterpreterConnector connector, ModuleStructure module,
+                               PrintStream console, ErrorListener errs, Instant started,
+                               Long consoleId, long taskId,
+                               CompletableFuture<ObjectHandle> completion) {
+        this.connector  = connector;
+        this.module     = module;
+        this.console    = console;
+        this.errs       = errs;
+        this.started    = started;
+        this.consoleId  = consoleId;
+        this.taskId     = taskId;
+        this.completion = completion;
+    }
+
+    private static FileStructure prepareModule(InterpreterConnector connector,
+                                               ModuleStructure module,
+                                               ModuleRepository repository) {
         FileStructure file;
         try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -165,11 +174,13 @@ class InterpreterControl
         }
     }
 
+    /**
+     * Release the run's console. Reached only from {@link #finish}, which is synchronized and
+     * returns early once {@code running} is false, so this happens exactly once.
+     */
     private void unregisterConsole() {
-        Long consoleId = this.consoleId;
         if (consoleId != null) {
             xExternalConsole.unregister(connector.getNativeContainer(), consoleId);
-            this.consoleId = null;
         }
     }
 
@@ -219,18 +230,19 @@ class InterpreterControl
 
     private final InterpreterConnector connector;
     private final ModuleStructure      module;
-    private final ModuleRepository     repository;
     private final PrintStream          console;
     private final ErrorListener        errs;
+    private final Instant              started;
+    private final Long                 consoleId;
+    private final long                 taskId;
 
-    private CompletableFuture<ObjectHandle> completion;
+    private final CompletableFuture<ObjectHandle> completion;
 
-    private volatile boolean running;
-    private volatile Instant started;
+    // the outcome, and the only genuinely mutable state; the task is already registered and
+    // running by the time this object exists, so "running" starts true
+    private volatile boolean running = true;
     private volatile Instant stopped;
     private volatile Long    result;
-    private          long    taskId;
-    private          Long    consoleId;
 
     private static final Cleaner CLEANER = Cleaner.create();
 }
