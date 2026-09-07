@@ -991,18 +991,17 @@ class IntNTests {
     }
 
     void testBitLength() {
+        // IntN bit length is always a multiple of 8
         IntN n = 0;
-        assert n.bitLength == 0; // 0b0 is zero bits
+        assert n.bitLength == 8; // 0b0 is zero bits (round up to one byte)
         n = 1;
-        assert n.bitLength == 1; // 0b1 is one bit
+        assert n.bitLength == 8; // 0b1 is one bit (round up to one byte)
         n = 2;
-        assert n.bitLength == 2; // 0b10 is two bits
+        assert n.bitLength == 8; // 0b10 is two bits (round up to one byte)
         n = 0x4D2;
-        assert n.bitLength == 11; // 0b100 is three bits + one byte for D2 == 11
+        assert n.bitLength == 16; // 0x4D2 is 12 bits (round up to two bytes)
         n = 0x499602D2;
-        // Four bytes, the most significant byte (49) is seven bits, so 7 + (3 * 8)
-        assert n.bitLength == 31;
-        // Eight bytes, the most significant byte (AB) is eight bits, so 8 + (7 * 8)
+        assert n.bitLength == 32;
         n = 0xAB54A98CEB1F0AD2;
         assert n.bitLength == 64;
     }
@@ -1211,18 +1210,17 @@ class IntNTests {
     }
 
     void testBitLengthAsNumber() {
+        // IntN bit length is always a multiple of 8
         IntN n = 0;
-        assert bitLengthNumber(n) == 0; // 0b0 is zero bits
+        assert bitLengthNumber(n) == 8;
         n = 1;
-        assert bitLengthNumber(n) == 1; // 0b1 is one bit
+        assert bitLengthNumber(n) == 8;
         n = 2;
-        assert bitLengthNumber(n)== 2; // 0b10 is two bits
+        assert bitLengthNumber(n)== 8;
         n = 0x4D2;
-        assert bitLengthNumber(n) == 11; // 0b100 is three bits + one byte for D2 == 11
+        assert bitLengthNumber(n) == 16;
         n = 0x499602D2;
-        // Four bytes, the most significant byte (49) is seven bits, so 7 + (3 * 8)
-        assert bitLengthNumber(n) == 31;
-        // Eight bytes, the most significant byte (AB) is eight bits, so 8 + (7 * 8)
+        assert bitLengthNumber(n) == 32;
         n = 0xAB54A98CEB1F0AD2;
         assert bitLengthNumber(n) == 64;
     }
@@ -1692,18 +1690,17 @@ class IntNTests {
     }
 
     void testBitLengthAsIntNumber() {
+        // UIntN bit length is always a multiple of 8
         IntN n = 0;
-        assert bitLengthIntNumber(n) == 0; // 0b0 is zero bits
+        assert bitLengthIntNumber(n) == 8;
         n = 1;
-        assert bitLengthIntNumber(n) == 1; // 0b1 is one bit
+        assert bitLengthIntNumber(n) == 8;
         n = 2;
-        assert bitLengthIntNumber(n)== 2; // 0b10 is two bits
+        assert bitLengthIntNumber(n)== 8;
         n = 0x4D2;
-        assert bitLengthIntNumber(n) == 11; // 0b100 is three bits + one byte for D2 == 11
+        assert bitLengthIntNumber(n) == 16;
         n = 0x499602D2;
-        // Four bytes, the most significant byte (49) is seven bits, so 7 + (3 * 8)
-        assert bitLengthIntNumber(n) == 31;
-        // Eight bytes, the most significant byte (AB) is eight bits, so 8 + (7 * 8)
+        assert bitLengthIntNumber(n) == 32;
         n = 0xAB54A98CEB1F0AD2;
         assert bitLengthIntNumber(n) == 64;
     }

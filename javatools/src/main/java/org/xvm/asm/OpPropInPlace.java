@@ -4,7 +4,15 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.InPlaceSupport;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -19,7 +27,8 @@ import static org.xvm.util.Handy.writePackedLong;
  * Note: "property in-place assign" ops derive from {@link OpPropInPlaceAssign}.
  */
 public abstract class OpPropInPlace
-        extends OpProperty {
+        extends OpProperty
+        implements InPlaceSupport {
     /**
      * Construct a "property in-place" op for the passed arguments.
      *
@@ -156,8 +165,62 @@ public abstract class OpPropInPlace
     public String toString() {
         return super.toString()
                 + ", " + Argument.toIdString(m_argTarget, m_nTarget)
-                + ", " + Argument.toIdString(m_argReturn, m_nTarget);
+                + ", " + Argument.toIdString(m_argReturn, m_nRetValue);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        if (isAssignOp()) {
+            PropertyConstant prop = bctx.getConstant(m_nPropId, PropertyConstant.class);
+            TypeConstant     typeProp;
+            if (prop.isFormalType()) {
+                typeProp = prop.getFormalValueType();
+            } else {
+                TypeConstant typeTarget = bctx.getArgumentType(m_nTarget);
+                PropertyInfo infoProp   = prop.getPropertyInfo(typeTarget);
+                typeProp = infoProp.getType().resolveAutoNarrowing(
+                        bctx.pool(), false, typeTarget, null);
+            }
+            bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeProp);
+        } else {
+            bctx.typeMatrix.follow(getAddress());
+        }
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        switch (getOpCode()) {
+        case OP_PIP_DEC, OP_PIP_DECA, OP_PIP_DECB,
+             OP_PIP_INC, OP_PIP_INCA, OP_PIP_INCB:
+            break;
+
+        default:
+            throw new UnsupportedOperationException(toName(getOpCode()));
+        }
+
+        PropertyConstant prop      = bctx.getConstant(m_nPropId, PropertyConstant.class);
+        RegisterInfo     regTarget = bctx.loadArgument(code, m_nTarget);
+        regTarget = bctx.storeTempRegister(code, m_nTarget, regTarget);
+
+        RegisterInfo regValue;
+        if (isAssignOp()) {
+            bctx.buildGetProperty(code, regTarget.load(code), m_nPropId, m_nRetValue);
+
+            RegisterInfo regResult = bctx.ensureRegister(code, m_nRetValue);
+            regResult.load(code);
+            regValue = bctx.storeTempRegister(code, m_nRetValue, regResult);
+        } else {
+            regValue = bctx.buildGetProperty(code, regTarget.load(code), m_nPropId);
+        }
+
+        buildLocalInPlace(bctx, code, regValue, isAssignOp(), m_nRetValue);
+        bctx.buildSetProperty(code, regTarget.type(), regTarget::load, prop, regValue::load);
+        return -1;
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     protected int m_nTarget;
     protected int m_nRetValue;

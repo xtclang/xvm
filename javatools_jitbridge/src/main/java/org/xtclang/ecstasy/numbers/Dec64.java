@@ -620,13 +620,4 @@ public class Dec64 extends DecimalFPNumber {
 
         return new BigDecimal(BigInteger.valueOf(nSig), -nExp, MathContext.DECIMAL64);
     }
-
-    protected long[] $longValues() {
-        return new long[]{$bits};
-    }
-
-    @Override
-    protected long bitLength$get$p() {
-        return 64;
-    }
 }

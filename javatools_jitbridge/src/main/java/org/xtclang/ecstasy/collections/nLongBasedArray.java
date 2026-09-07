@@ -474,8 +474,8 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
      */
     protected long $get128bitElement(Ctx ctx, long index) {
         int idx = (int) index * 2;
-        ctx.i0 = $storage[idx + 1];
-        return $storage[idx];
+        ctx.i0 = $storage[idx];
+        return $storage[idx + 1];
     }
 
     public void setElement$pi(Ctx ctx, long index, int value) {
@@ -604,8 +604,8 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
      */
     protected void $set128bitElement(long index, long lowBits, long highBits) {
         int idx = (int) index * 2;
-        $storage[idx] = lowBits;
-        $storage[idx + 1] = highBits;
+        $storage[idx] = highBits;
+        $storage[idx + 1] = lowBits;
     }
 
     // ----- Array internals -----------------------------------------------------------------------

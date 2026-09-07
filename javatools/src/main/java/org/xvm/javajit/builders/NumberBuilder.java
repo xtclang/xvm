@@ -64,6 +64,9 @@ public class NumberBuilder extends AugmentingBuilder {
         }
 
         if (type.isA(pool.typeIntNumber())) {
+            if (type.isA(pool.typeIntN()) || type.isA(pool.typeUIntN())) {
+                return new IntNBuilder(typeSystem, art, model);
+            }
             return new IntNumberBuilder(typeSystem, art, model);
         }
 

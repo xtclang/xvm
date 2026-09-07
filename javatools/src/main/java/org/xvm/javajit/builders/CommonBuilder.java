@@ -8,6 +8,8 @@ import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
+import java.lang.constant.DirectMethodHandleDesc.Kind;
+import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayList;
@@ -64,6 +66,7 @@ import org.xvm.javajit.registers.SingleSlot;
 import org.xvm.util.ByteHashCollector;
 import org.xvm.util.ShallowSizeOf;
 
+import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
@@ -487,6 +490,7 @@ public class CommonBuilder
             case ANNOTATION, MIXIN:
                 // annotations and mixins are incorporated (copied) into every class that
                 // annotates the annotation or incorporates the mixin
+                classBuilder.withFlags(flags | ClassFile.ACC_INTERFACE | ClassFile.ACC_ABSTRACT);
                 return false;
 
             default:
@@ -520,7 +524,7 @@ public class CommonBuilder
 
         for (Contribution contrib : typeInfo.getContributionList()) {
             switch (contrib.getComposition()) {
-                case Implements:
+                case Implements, Incorporates:
                     TypeConstant contribType = contrib.getTypeConstant().removeAccess();
                     if  (shouldAddInterface(contribType)) {
                         interfaces.add(ensureClassDesc(contribType));
@@ -587,7 +591,8 @@ public class CommonBuilder
 
         if (typeInfo.isSingleton()) {
             // public static final $INSTANCE;
-            classBuilder.withField(Instance, art.CD(),
+            ClassDesc cd = isContainerScoped(thisType) ? CD_MethodHandle : art.CD();
+            classBuilder.withField(Instance, cd,
                 ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
         }
 
@@ -622,13 +627,20 @@ public class CommonBuilder
      * Assemble the field(s) for the specified Ecstasy property.
      */
     protected void assembleField(ClassBuilder classBuilder, PropertyInfo prop) {
-        String      jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
-        JitTypeDesc jtd     = prop.getType().getJitDesc(this);
+        String jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
         int flags = ClassFile.ACC_PUBLIC;
         if (prop.isConstant()) {
             flags |= ClassFile.ACC_STATIC;
         }
+
+        if (isContainerScoped(prop)) {
+            // the generated class can be shared by containers, so store the computation means
+            classBuilder.withField(jitName, CD_MethodHandle, flags);
+            return;
+        }
+
+        JitTypeDesc jtd = prop.getType().getJitDesc(this);
         switch (jtd.flavor) {
         case Specific, Widened:
             classBuilder.withField(jitName, jtd.cd, flags);
@@ -665,20 +677,25 @@ public class CommonBuilder
      * initializer.
      */
     protected void assembleCLInit(ClassBuilder classBuilder) {
-        // ensure all injection types are added before we generate the TypeConstant fields
         List<PropertyInfo>     props     = lazyList(constProperties);
         Map<Constant, Integer> constants = this.constants;
+        boolean                isScoped  = isContainerScoped(thisType);
+
+        if (isScoped) {
+            assembleSingletonInitializer(classBuilder);
+        }
+
+        // ensure all injection types are added before we generate the TypeConstant fields
         for (PropertyInfo prop : props) {
             if (prop.isInjected()) {
                 constants.computeIfAbsent(prop.getType(), _ -> constants.size());
             }
         }
 
-        ClassDesc      CD_this          = art.CD();
-        ClassDesc      cdClassLoader    = ClassDesc.of(ClassLoader.class.getName());
-        ClassDesc      cdModuleLoader   = ClassDesc.of(ModuleLoader.class.getName());
-        MethodTypeDesc mdGetConstant    = MethodTypeDesc.of(
-                ClassDesc.of(Constant.class.getName()), CD_int);
+        ClassDesc      CD_this        = art.CD();
+        ClassDesc      cdClassLoader  = ClassDesc.of(ClassLoader.class.getName());
+        ClassDesc      cdModuleLoader = ClassDesc.of(ModuleLoader.class.getName());
+        MethodTypeDesc mdGetConstant  = MethodTypeDesc.of(ClassDesc.of(Constant.class.getName()), CD_int);
 
         classBuilder.withMethodBody(ConstantDescs.CLASS_INIT_NAME, MTD_void,
                 ClassFile.ACC_STATIC | ClassFile.ACC_PUBLIC, code -> {
@@ -757,19 +774,38 @@ public class CommonBuilder
 
             // add static field initialization
             for (PropertyInfo prop : props) {
-                String jitName = prop.getIdentity().ensureJitPropertyName(ts);
                 if (prop.isInjected()) {
-                    // this.[jitName] = ctx.inject(type, name, opts);
+                    // compose the MethodHandle in <clinit>; the injected value is computed later
+                    // through Ctx.getStatic() and cached by the container
+                    String    jitName   = prop.getIdentity().ensureJitPropertyName(ts);
                     Injection injection = computeInjection(code, prop);
-                    ClassDesc cd        = ensureClassDesc(injection.resourceType);
-                    code.aload(ctxSlot);
-                    loadTypeConstant(code, injection.resourceType);
-                    code.ldc(injection.resourceName());
-                    injection.optsLoader.run();
-                    code.invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
-                        .checkcast(cd)
-                        .putstatic(CD_this, jitName, cd);
-                } else if (prop.getInitializer() == null) {
+                    loadTypeConstant(code, injection.resourceType()); // resourceType
+                    code.ldc(injection.resourceName());               // resourceName
+                    injection.optsLoader.run();                       // opts
+                    code.invokestatic(CD_Container, "createInjectionHandle",
+                                MethodTypeDesc.of(CD_MethodHandle,
+                                        CD_TypeConstant, CD_JavaString, CD_JavaObject))
+                        .putstatic(CD_this, jitName, CD_MethodHandle);
+                    continue;
+                }
+
+                String jitName = prop.getIdentity().ensureJitPropertyName(ts);
+                if (isContainerScoped(prop)) {
+                    // store the initializer as a container-independent computation; its result can
+                    // be a service and therefore cannot be shared across containers using this class
+                    MethodConstant initId   = prop.getInitializer();
+                    String         initName = initId.ensureJitMethodName(ts);
+                    MethodBody     body     = new MethodBody((MethodStructure) initId.getComponent());
+                    JitMethodDesc  jmd      = body.getJitDesc(this, thisType);
+
+                    code.ldc(MethodHandleDesc.ofMethod(Kind.STATIC, CD_this, initName, jmd.standardMD))
+                        .invokestatic(CD_Container, "createInitializerHandle",
+                                MethodTypeDesc.of(CD_MethodHandle, CD_MethodHandle))
+                        .putstatic(CD_this, jitName, CD_MethodHandle);
+                    continue;
+                }
+
+                if (prop.getInitializer() == null) {
                     RegisterInfo reg = loadConstant(code, prop.getInitialValue());
                     if (reg instanceof ExtendedSlot extSlot) {
                         assert extSlot.flavor() == NullablePrimitive;
@@ -842,21 +878,24 @@ public class CommonBuilder
             }
 
             if (typeInfo.isSingleton()) {
-                // $INSTANCE = new Singleton($ctx);
-                // $ctx.allocated(implSize);
-                // $INSTANCE.$init($ctx);
-                MethodConstant ctorId  = typeInfo.findConstructor();
-                String         jitInit = ctorId.ensureJitMethodName(ts).replace("construct", INIT);
-                invokeDefaultConstructor(code, CD_this);
-                code.dup()
-                    .putstatic(CD_this, Instance, CD_this)
-                    .aload(ctxSlot)
-                    .ldc(implSize)
-                    .invokevirtual(CD_Ctx, "allocated", MethodTypeDesc.of(CD_void, CD_long))
-                    .aload(ctxSlot)
-                    .invokevirtual(CD_this, jitInit, MethodTypeDesc.of(CD_this, CD_Ctx))
-                    .pop()
-                ;
+                if (isScoped) {
+                    // store the singleton construction handle; each container computes its instance
+                    code.ldc(MethodHandleDesc.ofMethod(
+                                Kind.STATIC, CD_this, InstanceInit,
+                                MethodTypeDesc.of(CD_this, CD_Ctx)))
+                        .invokestatic(CD_Container, "createInitializerHandle",
+                                MethodTypeDesc.of(CD_MethodHandle, CD_MethodHandle))
+                        .putstatic(CD_this, Instance, CD_MethodHandle);
+                } else {
+                    // $INSTANCE = new Singleton($ctx);
+                    // $ctx.allocated(implSize);
+                    // $INSTANCE.$init($ctx);
+                    invokeDefaultConstructor(code, CD_this, ctxSlot);
+                    code.dup()
+                        .putstatic(CD_this, Instance, CD_this);
+                    initializeSingleton(code, CD_this, ctxSlot);
+                    code.pop();
+                }
             }
 
             appendCLInit(code);
@@ -872,6 +911,36 @@ public class CommonBuilder
             classBuilder.withField(CONST_PROP + entry.getValue(), constantClassDesc(entry.getKey()),
                     ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
         }
+    }
+
+    /**
+     * Assemble the static factory method used to create a container-scoped singleton value.
+     */
+    private void assembleSingletonInitializer(ClassBuilder classBuilder) {
+        ClassDesc CD_this = art.CD();
+
+        classBuilder.withMethodBody(InstanceInit, MethodTypeDesc.of(CD_this, CD_Ctx),
+                ClassFile.ACC_PRIVATE | ClassFile.ACC_STATIC, code -> {
+            int ctxSlot = code.parameterSlot(0);
+
+            invokeDefaultConstructor(code, CD_this, ctxSlot);
+            initializeSingleton(code, CD_this, ctxSlot);
+            code.areturn();
+        });
+    }
+
+    /**
+     * Initialize the singleton at the top of the Java stack leaving it on stack.
+     */
+    private void initializeSingleton(CodeBuilder code, ClassDesc CD_this, int ctxSlot) {
+        MethodConstant ctorId  = typeInfo.findConstructor();
+        String         jitInit = ctorId.ensureJitMethodName(typeSystem).replace("construct", INIT);
+
+        code.aload(ctxSlot)
+            .ldc(implSize)
+            .invokevirtual(CD_Ctx, "allocated", MethodTypeDesc.of(CD_void, CD_long))
+            .aload(ctxSlot)
+            .invokevirtual(CD_this, jitInit, MethodTypeDesc.of(CD_this, CD_Ctx));
     }
 
     private ClassDesc constantClassDesc(Constant constant) {
@@ -1032,6 +1101,11 @@ public class CommonBuilder
      * Assemble the property accessors for the "Impl" shape.
      */
     protected void assembleProperty(ClassBuilder classBuilder, PropertyInfo prop) {
+        if (isContainerScoped(prop)) {
+            // reads go directly through Ctx.getStatic(); no property getter is required
+            return;
+        }
+
         MethodInfo getterInfo = typeInfo.getMethodById(prop.getGetterId());
         if (getterInfo == null) {
             if (prop.hasField() && shouldGenerate(prop.getFieldIdentity())) {
@@ -4113,7 +4187,14 @@ public class CommonBuilder
         return thisType.removeAccess().getValueString();
     }
 
-    private final static String[] JIT_LIST = new String[] {
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * A synthetic singleton initializer method name for container scoped singleton values.
+     */
+    private static final String InstanceInit = Instance + "$=";
+
+    private static final String[] JIT_LIST = new String[] {
             "Test*", "test*",
             "anon*",                        // covers simple tests and examples
 
@@ -4221,10 +4302,10 @@ public class CommonBuilder
             "_native.io.TerminalConsole",
     };
 
-    private final static String[] NO_JIT_LIST = new String[] {
+    private static final String[] NO_JIT_LIST = new String[] {
     };
 
-    private final static Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
+    private static final Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
         Map.entry("org.xtclang.ecstasy.collections.UniformIndexed",
             Set.of("elementAt")), // TODO: NEWCG_N is not implemented
         Map.entry("org.xtclang.ecstasy.collections.Set",
@@ -4249,6 +4330,6 @@ public class CommonBuilder
             Set.of("not"))          // TODO: depends on virtual constructor
     );
 
-    private final static HashSet<String> SKIP_SET = new HashSet<>();
-    private final static HashSet<String> METHOD_SKIP_SET = new HashSet<>();
+    private static final HashSet<String> SKIP_SET = new HashSet<>();
+    private static final HashSet<String> METHOD_SKIP_SET = new HashSet<>();
 }

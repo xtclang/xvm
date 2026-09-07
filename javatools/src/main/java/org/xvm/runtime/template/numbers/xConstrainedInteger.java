@@ -134,7 +134,7 @@ public abstract class xConstrainedInteger
     @Override
     protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn) {
         return cBits == f_cNumBits
-            ? convertLong(frame, fromByteArray(ab, cBits >>> 3, f_fSigned), iReturn, f_fChecked)
+            ? convertLong(frame, fromByteArray(ab, (cBits + 7) >>> 3, f_fSigned), iReturn, f_fChecked)
             : frame.raiseException(
                 xException.illegalArgument(frame, "Invalid bit count: " + cBits));
     }

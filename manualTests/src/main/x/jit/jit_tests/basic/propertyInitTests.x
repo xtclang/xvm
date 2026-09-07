@@ -12,6 +12,10 @@ package propertyInitTests {
         testMethodResultProperty();
         testDefaultProperty();
         testNullablePropertyTarget();
+        testStaticServiceProperty();
+        testSingletonService();
+        testSingletonConstWithService();
+        testPipOps();
     }
 
     void testSimple() {
@@ -99,6 +103,99 @@ package propertyInitTests {
 
         assert read(new Test("set")) == "set";
         assert read(Null) == Null;
+    }
+
+    void testStaticServiceProperty() {
+        assert Test.counter.next() == 1;
+        assert Test.counter.next() == 2;
+
+        class Test {
+            static Counter counter = new CounterService();
+        }
+    }
+
+    interface Counter {
+        Int next();
+    }
+
+    service CounterService
+            implements Counter {
+        Int count;
+
+        @Override
+        Int next() = ++count;
+    }
+
+    void testSingletonService() {
+        // exercise the container-scoped $INSTANCE path and verify that the service retains state
+        assert SingletonService.next() == 1;
+        assert SingletonService.next() == 2;
+    }
+
+    void testSingletonConstWithService() {
+        // a singleton const that stores a service must use the same container-scoped path and
+        // retain the mutable state of that service
+        assert SingletonConst.counter.next() == 1;
+        assert SingletonConst.counter.next() == 2;
+    }
+
+    void testPipOps() {
+        class PipTarget {
+            Int value;
+        }
+
+        PipTarget target = new PipTarget();
+
+        assert ++target.value == 1;
+        assert target.value == 1;
+        assert target.value++ == 1;
+        assert target.value == 2;
+        assert --target.value == 1;
+        assert target.value == 1;
+        assert target.value-- == 1;
+        assert target.value == 0;
+        ++target.value;
+        assert target.value == 1;
+        --target.value;
+        assert target.value == 0;
+        target.value += 5;
+        assert target.value == 5;
+        target.value -= 2;
+        assert target.value == 3;
+        target.value *= 10;
+        assert target.value == 30;
+        target.value /= 3;
+        assert target.value == 10;
+        target.value %= 6;
+        assert target.value == 4;
+        target.value <<= 2;
+        assert target.value == 16;
+        target.value >>= 1;
+        assert target.value == 8;
+        target.value >>>= 1;
+        assert target.value == 4;
+        target.value &= 6;
+        assert target.value == 4;
+        target.value |= 1;
+        assert target.value == 5;
+        target.value ^= 7;
+        assert target.value == 2;
+    }
+
+    static service SingletonService
+            implements Counter {
+        private Int count = 0;
+
+        @Override
+        Int next() = ++count;
+    }
+
+    static const SingletonConst {
+        Counter counter;
+
+        construct() {
+            counter = new CounterService();
+        }
     }
 
     class Test() {

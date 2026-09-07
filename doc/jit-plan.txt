@@ -1,0 +1,33 @@
+From Cam's email on Mar 2025
+
+[ ] Mixin vs Annotation — also: Exception
+[ ] Service API review, also const
+[ ] make/immutable review
+[ ] Gold/types
+[ ] mixin design!
+[ ] AST vs byte code design
+[ ] GC & RAM usage design
+[ ] Fiber <-> virtual thread design
+[ ] Future design
+[ ] String design & review — graphemes, normalization
+[ ] Struct vs Object, also Public/RO references and +/- types/masking
+[ ] Unions
+[ ] Immutable Objects
+[ ] Properties
+[ ] Calling convention!!!
+[ ] Property/Field layout
+[ ] Container design & lifecycle/masking
+[ ] Bin code caching/storage/JIT/optJIT
+[ ] Safepoints — how to include & what do they do?
+[ ] CPU measure
+[ ] Intrinsics — how to design "the divide"
+[ ] Service boundary design & automation
+[ ] Class, Type, Generics
+[ ] Specialization
+[ ] default args
+[x] Construction — 7 steps (BaseTemplate.Construct proceed)
+[ ] Enum | Enumeration type design
+    Review eg. Prev & Next
+[ ] obj persistence (native optimization)
+[ ] Container persistence (shelf)
+

@@ -40,8 +40,7 @@ package genericTests {
 
     void testFormalComparison() {
         Formal<String> test = new Formal();
-        // TODO: the dynamic Orderable.compare call is not routed through the funky interface
-//        assert test.less("alpha", "beta");
+        assert test.less("alpha", "beta");
 
         class Formal<Element> {
             Boolean less(Element value1, Element value2) {
@@ -53,8 +52,7 @@ package genericTests {
 
     void testFormalType() {
         Iterator<String> iterator = ["alpha"].iterator();
-        // TODO GG/CP: formal type resolution recurses between nObject.$type() and $xvmType()
-//        assert iterator.Element.is(Type<Orderable>);
+        assert iterator.Element.is(Type<Orderable>);
     }
 
     static <Element, Result> Result apply(
