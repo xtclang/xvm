@@ -1770,6 +1770,46 @@ identity comparison.
 
 ### Must audit
 
+### Is explicit ownership broken, given A3? No - but it has been asked to mean something it never said
+
+Worth settling, because A3 looks like a refutation and is not.
+
+**What ownership actually claims.** `OwnershipDiagnostics:349-355`: it flags a mutable `ObjectHandle`
+owned by an unrelated container, and any `ClassTemplate`, `TypeComposition`, `NativeTemplates` or
+`ServiceContext` so owned - while stating that immutable handles are legitimate cross-owner currency
+and **"service/proxy handles are the designed cross-container mechanism"**. A3's shared resources are
+services owned by the native container, which is an ancestor of every run. They do not violate the
+invariant; they *are* the sanctioned mechanism.
+
+**So there are three properties here, and we have a diagnostic for one.**
+
+1. **Ownership** - does a handle carry a composition owned by a container that cannot legitimately
+   use it? This is about type identity, and the sweep checks it.
+2. **Retention** - is anything kept alive past its container? Partly checked, and A1 found a
+   structural hole: containers are traversal boundaries, so a container held in a collection was
+   invisible.
+3. **Isolation** - can one run observe or disturb another? **Nothing checks this**, and it is exactly
+   what A3 breaks: two runs share one RNG stream, one console, one server binding.
+
+**The evidence that we have been conflating 1 and 3 is already in the tree**, not a theory. The test
+is named `siblingContainersDoNotShareAnInjectedResource`, which is an isolation claim. What it
+asserts is that no resource carries a composition owned by an **unrelated** container - self or
+ancestor passes. Its own comment (`InjectedResourceOwnershipTest.java:77-90`) records the moment the
+isolation half was dropped: the check that each run holds its own resource cache "was a proxy for
+that invariant under the host-container model", and under the runner model "the proxy is reported
+rather than asserted" - it is now a `System.out.println`.
+
+`RepeatedRunSweepTest` (M2) is the same confusion pointed the other way: it uses the ownership sweep
+to ask a retention question, which is why it reports `WeakReference` targets as violations.
+
+**So the conclusion is not "ownership is broken" but "ownership is sound, correctly scoped, and load-bearing
+for something it cannot carry".** Two test names promise isolation and check ownership. What is
+missing is an isolation diagnostic, which is a different question - not "who owns this composition"
+but "can run A reach anything run B can reach" - and it cannot be built on top of the ownership
+sweep. It also cannot be satisfied today, because H19 means a run cannot be given its own resource
+set in the first place. That ordering matters: **close H19, then assert isolation**; asserting it now
+would only re-report H19.
+
 ### Audit results (2026-09-07)
 
 **A1 - DONE, and it was worse than described: the class javadoc was wrong.** The doc at
