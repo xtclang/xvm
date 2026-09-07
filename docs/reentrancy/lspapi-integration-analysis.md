@@ -1719,6 +1719,74 @@ behind the existing opt-in until T15 is closed. A resident host that is 38% slow
 than one that dies after ten thousand compiles, and this ordering also means the runner migration
 can be evaluated without T1's variables in the same measurement.
 
+## Part 7 - What THIS branch owes, after the migration (2026-09-07)
+
+The runner model is integrated and `XtcEngine` runs through it. This is what that left open, on
+`lagergren/lazy-instance` itself. Every line reference verified against the branch.
+
+### Must fix
+
+**M1 - a failed run is never forgotten, so it pins its container forever.**
+`XtcEngine.completeTask` (`:1072-1093`) calls `forgetTask` on exactly one path: the one where
+`taskFailure` returned null. If the run failed, or if the `taskFailure` request itself errored, the
+future completes exceptionally and `forgetTask` is never reached. The registry keeps the `Task`, the
+`Task` keeps its `Container`, and the container keeps its composition and template caches, for the
+life of container zero. This is H5 re-opened on the failure path after being fixed on the success
+path. The comment at `:1083` says "forget the task either way", but "either way" covers only the
+`taskResult` error `e2`, which makes the gap harder to see, not easier. **No test in the tree
+references `forgetTask` at all.**
+
+**M2 - `RepeatedRunSweepTest` reports a non-defect and cannot pass.** H21 is withdrawn: every
+consumer of `getOpInfo` re-validates before use, and `OpInvocable.getCallChain:143` guards on
+`TypeComposition` **identity**, which a second run can never satisfy against the first run's cached
+composition. What the test reports is `WeakReference` targets inside `f_mapOpInfo`. Weak
+reachability from a shared cache is not ownership leakage. The test needs to distinguish strong from
+weak reachability - not to be relaxed until it passes.
+
+**M3 - per-run injections are unimplemented.** `XtcEngine.runFrom:983` throws
+`UnsupportedOperationException` for a non-empty injection map, which is why `PerRunInjectionTest`
+fails. H19 from the Java side: `runTask(template, repository, consoleId)` has nowhere to carry them.
+Fixing it is the `runTask` signature change, and it is upstream's call.
+
+### Should fix
+
+**S1 - the completion poll runs at 5ms.** `pollTask` (`:1058`) is ~200 requests per second per run
+into container zero, plus two or three more at completion. The code's own comment says the Ecstasy
+side already holds the completion. Open design question before writing it: `Task` registers its own
+`whenComplete` to record `result`/`failure`, and nothing establishes that the task's continuation
+runs before a waiter is resumed - if it does not, the waiter reads the outcome fields before they
+are set, which is worse than polling.
+
+**S2 - arbitrary entry points are gone.** `runFrom:990` rejects any method name but `run`. The
+pre-runner path could invoke others.
+
+**S3 - port back the cleaner console shape.** This branch routes by `writerOf(hTarget)` with an
+`out == CONSOLE_OUT` identity test and logs conditionally. `lagergren/console-sink` puts the log on
+the handle (`ConsoleLog.NONE` for an unwatched console), so the print path has no branch and no
+identity comparison.
+
+**S4 - style.** `java.util.concurrent.TimeUnit` is written fully qualified at `:1058` while
+`CompletableFuture` and `ConcurrentHashMap` are imported at `:18-19`. Gratuitous FQN.
+
+### Must audit
+
+**A1 - the ownership sweep is blind to a container held in a collection.**
+`OwnershipDiagnostics` documents other `Container`s as traversal **boundaries**, and
+`isOwnerScoped` does not list `Container`. So anything retaining a container as a map key or list
+element produces no finding. Demonstrated: `lagergren/per-container-console` added a
+`Map<Container, ObjectHandle>` on a native template and the sweep reported nothing. **Everything the
+sweep has "cleared" needs re-reading against this limitation**, M1 included - the registry leak it
+describes is exactly the shape the sweep cannot see.
+
+**A2 - `forgetTask`'s outcome is discarded.** `:1085` fires it with no `whenComplete`. If it fails,
+the entry stays and nothing reports it.
+
+**A3 - under pass-through, injection resolves in the PARENT's context.** Measured, not inferred:
+after two runs of `TestFiles`, a console map keyed by the requesting container held **one** entry,
+keyed by container zero, and the run containers never appeared - even though `files.x:4` injects a
+`Console`. Any reasoning that assumes the child container is the requester is wrong. Audit anything
+else keyed on "the requesting container".
+
 ## Summary
 
 **What it is**
