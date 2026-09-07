@@ -728,9 +728,39 @@ repository object or leak", and nothing says so.
 for the whole build took retained libraries from **44 to 2** (one per pass) and pass-1 heap from
 745 MB to 558 MB.
 
-**It is NOT the whole leak.** With the prepared-library cache down to 2 entries, heap still goes
-558 MB after pass 1 to 1073 MB after pass 2 - about 515 MB, or ~23 MB per compile, still retained by
-something else. Suspects 2 and 3 below stand, and the class histogram is still the right next step.
+**CORRECTION: it IS the whole leak in this workload, and the "second retainer" was the same one.**
+That 515 MB was measured with the map still STRONG, and a strong map pins its KEY as well as its
+value. The key is the composite input repository, which wraps the `BuildRepository` holding
+**everything the build has produced** - so pass 1's entire set of 22 compiled XDK modules stayed
+reachable through the map. There was no second retainer; there was one retainer with two effects.
+
+### FIXED: weak keys
+
+`f_mapPreparedLibraries` is now `Collections.synchronizedMap(new WeakHashMap<>())`. The key decides
+the lifetime, which is what it should always have done:
+
+- a caller compiling against the engine's own library passes a repository that is a **field of the
+  engine**, so its entry stays strongly reachable and the library is prepared exactly once - T1
+  intact;
+- a caller feeding outputs forward drops its composite repository after each compile, and the entry
+  goes with it.
+
+Safe to key weakly because the value cannot reach the key: a `PreparedLibrary` holds a
+`BuildRepository` of `ModuleStructure`s, and a module has no back-reference to the repository it came
+from (`ModuleRepository` appears in `FileStructure` only as a method parameter).
+
+Preparation also moved out of `computeIfAbsent`, which would otherwise hold the map's lock across
+linking and warming an entire library and serialize every compile behind the first.
+
+**Measured, 44 compiles building the XDK twice on one engine:**
+
+| pattern | before | after |
+| --- | --- | --- |
+| fresh repository per compile | 44 retained, heap 745 -> 1446 MB | **0 retained, heap 596 -> 591 MB** |
+| one repository reused | 2 retained, heap 558 -> 1073 MB | **1 retained, heap 558 -> 558 MB** |
+
+Flat in both. Suspects 2 and 3 are not disproved - this workload simply no longer grows - so if the
+5,300-compile soak still climbs, the class histogram remains the method.
 
 Remaining suspects, in order:
 

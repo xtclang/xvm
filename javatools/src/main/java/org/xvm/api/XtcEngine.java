@@ -10,9 +10,11 @@ import java.time.Instant;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.WeakHashMap;
 import java.util.Optional;
 
 import java.util.concurrent.CompletableFuture;
@@ -188,8 +190,27 @@ public final class XtcEngine
      * link and inject into. Doing that work once against the shared library makes the copy
      * unnecessary.</p>
      */
+    /**
+     * Keyed WEAKLY on the input repository, because the key decides the lifetime.
+     *
+     * <p>A caller that compiles against the engine's own library passes the same repository every
+     * time; that repository is a field of this engine, so its entry is strongly reachable and the
+     * library is prepared exactly once - which is the whole point of T1.
+     *
+     * <p>A caller that feeds one compile's output into the next has to pass a composite of the
+     * library plus what it has built, and the natural way to write that is a new repository per
+     * compile. Under a strong map that retained a fully prepared library - about 16 MB - per
+     * compile, for the life of the engine: measured at 44 retained libraries for 44 compiles while
+     * building the XDK, and it is the first confirmed part of the T15 soak leak. Weak keys let each
+     * one go when the caller drops the repository, without the caller having to know that reusing
+     * the repository object was load-bearing.
+     *
+     * <p>Safe to key weakly because the value cannot reach the key: a {@code PreparedLibrary} holds
+     * a {@code BuildRepository} of {@code ModuleStructure}s, and a module has no reference back to
+     * the repository it was loaded from.
+     */
     private final Map<ModuleRepository, PreparedLibrary> f_mapPreparedLibraries =
-            new ConcurrentHashMap<>();
+            Collections.synchronizedMap(new WeakHashMap<>());
 
     /**
      * A library that has been linked, NakedRef-injected and warmed once, and is now HELD.
@@ -221,13 +242,24 @@ public final class XtcEngine
      * instances, not asking for them again.
      */
     private @NotNull PreparedLibrary ensureLibraryPrepared(@NotNull ModuleRepository repoLib) {
-        return f_mapPreparedLibraries.computeIfAbsent(repoLib, repo -> {
-            prelinkSystemLibraries(repo);
-            var repoHeld = new BuildRepository();
-            TypeConstant typeNakedRef = injectNakedRefIntoLibrary(repo, repoHeld);
-            warmRootObject(repoHeld);
-            return new PreparedLibrary(repoHeld, typeNakedRef);
-        });
+        PreparedLibrary prepared = f_mapPreparedLibraries.get(repoLib);
+        if (prepared != null) {
+            return prepared;
+        }
+
+        // Prepared outside the map's lock: this links, injects and warms an entire library, and
+        // holding a lock across it would serialize every compile in the engine behind the first
+        // one. Two callers racing a cold library each prepare one and the last put wins, which
+        // costs a duplicate preparation and is correct - preparation is idempotent, and the loser's
+        // copy is unreachable the moment it is replaced.
+        prelinkSystemLibraries(repoLib);
+        var repoHeld = new BuildRepository();
+        TypeConstant typeNakedRef = injectNakedRefIntoLibrary(repoLib, repoHeld);
+        warmRootObject(repoHeld);
+
+        prepared = new PreparedLibrary(repoHeld, typeNakedRef);
+        f_mapPreparedLibraries.put(repoLib, prepared);
+        return prepared;
     }
 
     /**
