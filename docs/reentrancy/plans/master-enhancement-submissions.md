@@ -3599,6 +3599,90 @@ not done**: `runTask` still has no root directory, so `curDir`/`storage` still r
 pass-through to container zero. Closing that needs either this enhancement in `lib_ecstasy` or a
 rooted `FileStore` fabricated in the runner.
 
+## E46 - Make the diagnostic's LOCATION a value, not three overloads
+
+**Status/category:** Enhancement against **master**, design proposal. Not implemented. Follows
+directly from [E45](#e45---launcherlog-means-two-different-things-and-that-blocks-the-interface),
+which was fixed and did not deliver what it promised.
+
+### The problem is not the names, it is that location is encoded positionally
+
+`ErrorListener` carries the same diagnostic in four shapes, differing only in how the *location* is
+expressed:
+
+```java
+void log(ErrorInfo err);                                              // the sink
+void log(Severity, String code, Object[] params, XvmStructure xs);    // located by structure
+void log(Severity, String code, XvmStructure xs, Object... params);   //   "  , varargs
+void log(Severity, String code, Object[] params, Source, long, long); // located by position
+void log(Severity, String code, Source, long, long, Object... params);//   "  , varargs
+void info|warn|error|fatal(String code, Object... params);            // NO location, hard-coded null
+```
+
+**Scale:** 835 `log(` calls across 115 files - 561 unqualified (a class's own helper or an inherited
+one), 24 through an `errs`-like receiver, and 8 `console.log`, which is a third unrelated `log`.
+
+### Why this shape cannot be improved by adding overloads
+
+Fixing E45 was supposed to free `log(Severity, String, Object...)` for the no-location case. It did
+not, and the reason generalises: **a varargs `Object...` absorbs `(Source, long, long)` as three
+parameters exactly as well as the positional overload takes them as a location.** Adding it makes
+every existing `log(sev, code, source, lStart, lEnd)` ambiguous - javac rejects `Lexer:2650`,
+`ModuleInfo:1384` and `AstNode:739` among others. Any future convenience collides the same way.
+
+That is also why `info`/`warn`/`error`/`fatal` hard-code a null structure and are therefore unusable
+at the great majority of call sites, which do have a location: **2 uses in the whole tree.**
+
+### The proposal: one parameter, one type
+
+Give location a type, so it cannot be confused with a message parameter:
+
+```java
+sealed interface Site {
+    record At(XvmStructure structure)                    implements Site {}
+    record In(Source source, long start, long end)       implements Site {}
+    record Node(AstNode node)                            implements Site {}   // the common case
+    Site NONE = ...;
+}
+
+void log(Severity severity, String code, Site site, Object... params);
+```
+
+Four overloads collapse to one. And because `Site` is a distinct type rather than `Object`, the
+varargs cannot swallow it, so the severity aliases finally work everywhere:
+
+```java
+errs.error(NOT_ASSIGNABLE, at(expr), expr.getValueString());
+errs.error(NO_APP_MODULE, name);                 // no location, no cast, no ambiguity
+```
+
+against today's:
+
+```java
+errs.log(Severity.ERROR, NOT_ASSIGNABLE, expr.getStartPosition(), expr.getEndPosition(), ...);
+errs.log(Severity.ERROR, NO_APP_MODULE, (XvmStructure) null, name);
+```
+
+### What it buys beyond tidiness
+
+- **The `(XvmStructure) null` cast disappears.** It exists only to disambiguate, and it is a cast to
+  a type the call has nothing to do with.
+- **Lazy parameters become expressible.** A `Site` parameter makes room for a
+  `log(Severity, String, Site, Supplier<Object[]>)` without colliding with anything, which matters
+  because `ErrorListener.isSilent()` already reports that a listener discards - and nothing checks
+  it, so speculative compilation renders diagnostic parameters it then throws away.
+- **`ErrorInfo` construction moves behind the interface**, so the positional `long` pair stops being
+  part of every caller's vocabulary.
+
+### Cost, honestly
+
+This is wide: 835 call sites, and the mechanical conversion is not regex-safe, because the argument
+ORDER differs between the existing shapes - the array overloads take params third, the varargs ones
+take the location third and params last. E44's much smaller conversion needed javac to find three
+sites a regex missed. This wants to be done with compiler assistance, in one change, and it belongs
+with [E32](#e32--thread-one-errorlistener-and-stop-destroying-diagnostics-at-the-source) rather than
+on its own.
+
 ## E45 - `Launcher.log` means two different things, and that blocks the interface
 
 **Status/category:** Enhancement against **master**. Not fixed here; the rename is small but it is a
