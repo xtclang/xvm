@@ -1934,12 +1934,19 @@ public final class InvocationExpression
             if (arg == null) {
                 typeLeft = ctx.getThisType();
 
+                // A BRANCH, not BLACKHOLE. If nothing below finds a method the user is told
+                // MISSING_METHOD, and every reason a candidate was rejected has been thrown away
+                // at the point it was raised. Collecting them here costs nothing when the search
+                // succeeds - the branch is simply dropped - and turns "no such method" into "no
+                // such method, and here is why each candidate did not match" when it fails.
+                ErrorListener errsFind = errs.branch(this);
+
                 if (ctx.isMethod()) {
                     // try to use the type info
                     TypeInfo infoLeft = getTypeInfo(ctx, typeLeft, errs);
 
                     arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any,
-                                true, atypeReturn, ErrorListener.BLACKHOLE);
+                                true, atypeReturn, errsFind);
                     if (arg instanceof MethodConstant idMethod) {
                         MethodStructure method = getMethod(ctx, typeLeft, infoLeft, idMethod);
                         if (method == null) {
@@ -1972,8 +1979,10 @@ public final class InvocationExpression
                                 true, atypeReturn, ErrorListener.BLACKHOLE) != null) {
                         log(errs, Severity.ERROR, Compiler.INVALID_CALL_FROM_CONSTRUCT, sName);
                     } else {
+                        // the primary error first, then whatever the search learned
                         log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName,
                                 typeTarget.getValueString());
+                        errsFind.merge();
                     }
                 }
                 return null;

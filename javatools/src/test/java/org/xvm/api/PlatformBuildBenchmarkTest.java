@@ -42,6 +42,11 @@ public class PlatformBuildBenchmarkTest {
     @Test
     public void buildThePlatformSeriallyAndInParallel() throws Exception {
         assumeTrue(XdkOutputs.systemModulesAvailable(), "compiled XDK system modules are required");
+        // These build the XDK from source, repeatedly, on one engine. Without the heap for it the
+        // failure is an OutOfMemoryError from inside a compile, which reads as a compiler defect
+        // rather than as "you did not give this enough memory". Skip, and say which flag.
+        assumeTrue(Runtime.getRuntime().maxMemory() > 4L << 30,
+                "needs a large heap; run with -PtestMaxHeap=8g");
 
         Path platform = Path.of("/Users/marcus/src/platform");
         assumeTrue(Files.isDirectory(platform), "platform sources not present at " + platform);
