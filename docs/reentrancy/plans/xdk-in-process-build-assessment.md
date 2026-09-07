@@ -86,3 +86,51 @@ dependency-ordered real workload is a much better stressor than a synthetic one.
 - Do not build step 2 before the divergence is fixed. Parallel wrong answers are harder to debug
   than sequential ones, and every failure would first have to be triaged against a known-open
   correctness bug.
+
+---
+
+# RESULTS — the harness was built and run, 2026-09-07
+
+`XdkBuildHarness` + `XdkBuildHarnessTest` (`javatools/src/test/java/org/xvm/api/`). Scheduling is
+dependency-driven, one `CompletableFuture` per module chained on its dependencies', parameterised by
+an `ExecutorService` — so sequential and parallel are the same code and only the executor differs.
+
+## The engine builds the whole XDK
+
+**22 of 22 modules, 0 errors, 0 warnings — twice on one warm engine.** Far better than predicted.
+The prediction was "about two modules in", based on the engine/CLI divergence; that divergence
+[no longer reproduces](../engine-compile-divergence.md).
+
+## The first failure was the harness's, not the engine's
+
+Run one died on `lib_ecstasy` with `PARSER-24: Invalid path: "/implicit.x"` at `TypeSystem.x:95`.
+Not an engine bug: `$/implicit.x` is a **resource literal** reading
+`lib_ecstasy/src/main/resources/implicit.x`, and `ModuleSource.of(path)` supplies no resource
+directories, where the CLI gets them from Gradle. `Node` now carries `resourceDirs`. Worth recording
+because it is the kind of difference that would otherwise be read as a compiler defect —
+`lib_ecstasy` is the only XDK library with a resources directory.
+
+## Measured, replacing the line-count proxy
+
+| | pass 1 | pass 2 (same engine) |
+| --- | --- | --- |
+| wall | 19.6 s | 14.7 s |
+| `lib_ecstasy` | 8.6 s | 4.8 s |
+| heap after | **746 MB** | **1448 MB** |
+
+- **Measured parallel ceiling: 1.32x** (serial 19,615 ms, critical path 14,811 ms). The line-count
+  estimate was 1.26x, so the proxy was sound and the conclusion stands: the XDK build is a poor
+  vehicle for parallel compilation. `lib_ecstasy` is 44% of the time in a level of its own.
+- **Warm helps a lot within a module**: `lib_ecstasy` is 44% faster on the second pass, and the
+  whole build 25% faster, with no change to inputs.
+- **Heap roughly doubles across one extra pass, and is not reclaimed** — 746 MB to 1448 MB after an
+  explicit collection, for ~700 MB per 22-compile pass. That is
+  [T15](parallel-compiler-plan.md)'s retention leak, measured at realistic scale rather than as a
+  microbenchmark, and it is the strongest argument against a long-lived engine today.
+
+## What to do next
+
+1. **Chase the ~700 MB per pass.** It is the blocker for a warm long-lived engine and now has a
+   repeatable, realistic measurement.
+2. **Only then try the parallel executor.** One line in the test. Expect 1.32x; the value is that a
+   dependency-ordered real workload is a far better race detector than a synthetic one.

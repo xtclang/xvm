@@ -1,4 +1,26 @@
-# `XtcEngine` compiles differently from the CLI — open investigation
+# `XtcEngine` compiles differently from the CLI — RESOLVED 2026-09-07
+
+**This no longer reproduces, and the regression test the document asks for is enabled and passing.**
+
+Measured while building the XDK in-process on one engine
+([the harness](plans/xdk-in-process-build-assessment.md)):
+
+- `XtcEngine.compile(lib_json/src/main/x/json.x)` — the exact reproducer below — now returns
+  **success, 0 diagnostics**, against the engine's own booted library.
+- `EngineCompilesLikeTheCliTest.theEngineCompilesLibJson` runs (not skipped) and **passes**. The
+  prose below still says it is `@Disabled` because it fails; only an unused `Disabled` import
+  remains in the file.
+- `lib_json` compiles clean as part of a full 22-module XDK build, twice on one warm engine.
+
+The document is kept for the narrowing it records, which was substantial, and because the "still
+open" suspicions below were never individually disproved — the symptom simply stopped occurring. If
+it returns, start from suspicion 2: what the compiler is handed for the library modules.
+
+**Do not treat the sections below as current.**
+
+---
+
+# Original writeup (symptom no longer reproduces)
 
 **Status: not root-caused.** This is the log of what has been tried, so nobody repeats it. Every
 row under "eliminated" was tested, not reasoned about.
