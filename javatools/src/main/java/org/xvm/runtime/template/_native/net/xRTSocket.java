@@ -452,5 +452,5 @@ public class xRTSocket
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private TypeConstant m_typeCanonical;
+    private volatile TypeConstant m_typeCanonical;
 }

@@ -600,5 +600,5 @@ public class xRTCertificateManager
 
     private static final Duration ACME_TIMEOUT = Duration.ofMinutes(2);
 
-    private TypeConstant m_typeCanonical;
+    private volatile TypeConstant m_typeCanonical;
 }

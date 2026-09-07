@@ -1043,5 +1043,5 @@ public class xRTServer
     /**
      * Cached canonical type.
      */
-    private TypeConstant m_typeCanonical;
+    private volatile TypeConstant m_typeCanonical;
 }

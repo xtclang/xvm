@@ -3527,6 +3527,40 @@ do not fail builds.
 **Order:** A before B. A is small, fixes a real footgun, and does not touch the
 signature; B is mechanical once A has settled which methods are even required.
 
+## E39 - Lazily cached handles are published through a data race
+
+**Status/category:** Enhancement, not a filed bug. The pattern is on master and on this branch; no
+reproduction exists, because the failure needs two threads racing the first use of a resource and
+the observable damage is a stale null or a default value that the next call recomputes correctly.
+**Fixed on `lagergren/lazy-instance` 2026-09-07**; not proposed for master separately.
+
+**What.** Six native templates cache a lazily built value in a plain field, read and written without
+synchronization. Because the templates on the native container serve the whole plane, the racing
+threads are real: any two containers injecting the same resource for the first time.
+
+**Found by** correcting the audit in [must-fix-races.md](../must-fix-races.md#manual-lazy-publication):
+the documented regex requires the null check to name the field, and these read the field into a
+local first, so they were reported as zero hits.
+
+**What was done here, and why each is what it is:**
+
+| site | verdict |
+| --- | --- |
+| `m_typeCanonical` in `xRTCertificateManager`, `xRTNetwork`, `xRTNetworkInterface`, `xRTSocket`, `xRTConnector`, `xRTServer` | now `volatile`. Idempotent value caches, so the race was benign in practice, but they sit on plane-wide templates and cost nothing to publish correctly |
+| `xString.StringHandle.m_sValue` | left alone, and correctly so. It caches a `String`, whose fields are final, so a racy publish still yields a fully constructed value - which is what the comment at `xString.java:326` claims |
+| **`xString.StringHandle.m_hash`** | **the comment's claim did NOT hold here.** It caches a `JavaLong`, and `JavaLong.m_lValue` was `protected long` - **not final** - so a reader observing the reference through the race could see `0` instead of the hash |
+| `xIntLiteral.m_hText`, `xFPLiteral.m_hText` | left alone: they cache a `StringHandle`, whose `m_achValue` **is** final, so the benign-race argument does hold |
+
+**The fix for the one that mattered is one word.** `JavaLong.m_lValue` is assigned only in the
+constructor, so making it `final` gives every `JavaLong` in the runtime final-field publication
+semantics - not just this cache. That is strictly better than making `m_hash` volatile, which would
+have put a barrier on a hot path to fix a property the value itself should have had.
+
+It also makes the existing comment true rather than approximately true, which is the point: the
+comment reasoned "these values are immutable, so a benign race can only compute the same value
+twice". That is sound reasoning applied to an object that was not actually immutable in the JMM
+sense.
+
 ## E38 - Give the console its sink instead of hard-wiring it to the terminal
 
 **IMPLEMENTED 2026-09-04** on `lagergren/console-sink` (off `origin/master` `443770bcc`), commit

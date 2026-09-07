@@ -385,7 +385,7 @@ public class xRTConnector
     /**
      * Cached canonical type.
      */
-    private TypeConstant m_typeCanonical;
+    private volatile TypeConstant m_typeCanonical;
 
     /**
      * Cached default headers.

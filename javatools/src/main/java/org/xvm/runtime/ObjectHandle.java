@@ -1039,7 +1039,13 @@ public abstract class ObjectHandle
     public static class JavaLong
             extends ObjectHandle
             implements IntegralValue {
-        protected long m_lValue;
+        /**
+         * Final so that a JavaLong is safely published through a data race. Several caches hand one
+         * out lazily without synchronization - {@code xString.StringHandle.m_hash} is the hot one -
+         * and without final-field semantics a reader that observes the reference may still see the
+         * default 0 rather than the value.
+         */
+        protected final long m_lValue;
 
         public JavaLong(TypeComposition clazz, long lValue) {
             super(clazz);
