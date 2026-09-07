@@ -702,10 +702,41 @@ So the retainer is neither `TypeSystemThread` nor `ConstantPool.ASSEMBLING`, whi
 obvious candidates and are both thread-local. Roughly 800 KB per compile is held by something that
 outlives the threads.
 
+### SUSPECT 1 CONFIRMED, 2026-09-07: `f_mapPreparedLibraries` retains one prepared library per compile
+
+Found with the [XDK build harness](xdk-in-process-build-assessment.md), which is a far cheaper
+reproducer than this soak: **44 compiles, not 5,300.**
+
+```
+prepared libraries retained: 44  (compiles performed: 44)
+```
+
+Exactly one per compile. `f_mapPreparedLibraries` is a `ConcurrentHashMap` **keyed by the input
+repository INSTANCE** (`XtcEngine.java:191`, `ensureLibraryPrepared` at `:223`) and never evicted.
+Each value is a linked, NakedRef-injected, root-warmed `BuildRepository` - about 16 MB.
+
+**Why it only bites some callers.** `compile(Path...)` passes the engine's own `repoLibrary` every
+time, so there is one entry and T1 works exactly as intended. But a caller that feeds outputs
+forward - which is what compiling a dependency graph requires - must pass a *composite* repository
+containing the library plus what it has built, and the natural way to write that is a fresh
+repository per compile. Every one of those gets its own prepared library, forever.
+
+So the mechanism is not broken; the **cache key is**. The contract is effectively "reuse your input
+repository object or leak", and nothing says so.
+
+**Confirmed by fixing the caller**: reusing one `LinkedRepository` over a mutable `BuildRepository`
+for the whole build took retained libraries from **44 to 2** (one per pass) and pass-1 heap from
+745 MB to 558 MB.
+
+**It is NOT the whole leak.** With the prepared-library cache down to 2 entries, heap still goes
+558 MB after pass 1 to 1073 MB after pass 2 - about 515 MB, or ~23 MB per compile, still retained by
+something else. Suspects 2 and 3 below stand, and the class histogram is still the right next step.
+
 Remaining suspects, in order:
 
-1. **Something reachable from the engine itself.** It is the only object that outlives a request by
-   design - `f_mapPreparedLibraries`, the runtime plane, the diagnostic sink.
+1. ~~**Something reachable from the engine itself.**~~ **CONFIRMED above for
+   `f_mapPreparedLibraries`, and it accounts for only part of the growth.** The runtime plane and
+   the diagnostic sink are still unexamined.
 2. **A static.** `POOLS_CREATED` is an int, but the locator tables and interning maps are worth
    confirming rather than assuming.
 3. **The JFR `CompileEvent`** committed per compile, if a recording is active.

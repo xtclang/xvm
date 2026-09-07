@@ -88,6 +88,15 @@ public class XdkBuildHarnessTest {
                         second.built(), second.failed(), second.skipped(), second.wall());
                 System.out.printf("heap after pass 1: %d MB, after pass 2: %d MB%n",
                         first.heapUsed() >> 20, second.heapUsed() >> 20);
+
+                // T15's retainer, if it is this one: the engine caches a fully prepared library
+                // per INPUT REPOSITORY INSTANCE and never evicts. Feeding outputs forward means a
+                // fresh repository per compile, so this should equal the number of compiles.
+                var field = XtcEngine.class.getDeclaredField("f_mapPreparedLibraries");
+                field.setAccessible(true);
+                var prepared = (java.util.Map<?, ?>) field.get(engine);
+                System.out.printf("prepared libraries retained: %d  (compiles performed: %d)%n",
+                        prepared.size(), nodes.size() * 2);
             }
         }
     }

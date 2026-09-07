@@ -122,7 +122,8 @@ public final class XdkBuildHarness {
      */
     public static Report build(XtcEngine engine, ModuleRepository repoLibrary,
                                List<Node> nodes, ExecutorService executor) {
-        var built    = new BuildRepository();          // guarded by itself; see compileOne
+        var built       = new BuildRepository();       // guarded by itself; see compileOne
+        var sharedInput = new LinkedRepository(true, built, repoLibrary);
         var outcomes = new ArrayList<Outcome>();       // guarded by itself
         var futures  = new LinkedHashMap<String, CompletableFuture<Boolean>>();
         var start    = Instant.now();
@@ -138,7 +139,7 @@ public final class XdkBuildHarness {
                             // a dependency's failure is not this module's failure to report
                             .handle((ignored, error) -> depsOk(node, futures))
                             .thenApplyAsync(depsOk -> depsOk
-                                    ? compileOne(engine, repoLibrary, built, node, outcomes)
+                                    ? compileOne(engine, sharedInput, built, node, outcomes)
                                     : skip(node, outcomes), executor));
         }
 
@@ -156,7 +157,7 @@ public final class XdkBuildHarness {
                 .allMatch(f -> f == null || (!f.isCompletedExceptionally() && f.join()));
     }
 
-    private static boolean compileOne(XtcEngine engine, ModuleRepository repoLibrary,
+    private static boolean compileOne(XtcEngine engine, ModuleRepository sharedInput,
                                       BuildRepository built, Node node, List<Outcome> outcomes) {
         var start = Instant.now();
 
@@ -164,14 +165,12 @@ public final class XdkBuildHarness {
         try {
             // A snapshot of what is built so far, taken under the lock: the compile itself must not
             // hold it, or a parallel run would serialize on the whole compile rather than the copy.
-            ModuleRepository input;
-            synchronized (built) {
-                var snapshot = new BuildRepository();
-                for (String name : built.getModuleNames()) {
-                    snapshot.storeModule(built.loadModule(name));
-                }
-                input = new LinkedRepository(true, snapshot, repoLibrary);
-            }
+            // ONE input repository object for the whole build, not a fresh snapshot per compile.
+            // The engine caches a fully prepared library per input-repository INSTANCE and never
+            // evicts, so a new repository per compile retains a prepared library per compile - the
+            // T15 leak. `built` is mutable and the LinkedRepository reads through, so later
+            // compiles still see earlier outputs.
+            ModuleRepository input = sharedInput;
             // diagnostics come back on the CompileResult, so no separate listener is needed
             result = engine.compile(input,
                     new ModuleSource(node.source(), node.resourceDirs()));
