@@ -123,6 +123,10 @@ public class XdkBuildHarnessTest {
     /**
      * Find every XDK library module and its declared imports.
      */
+    static List<XdkBuildHarness.Node> discoverForTest(Path root) throws IOException {
+        return discover(root);
+    }
+
     private static List<XdkBuildHarness.Node> discover(Path root) throws IOException {
         record Found(String moduleName, String label, Path source, List<File> resources,
                      Set<String> declared) {}

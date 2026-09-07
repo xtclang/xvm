@@ -134,3 +134,38 @@ because it is the kind of difference that would otherwise be read as a compiler 
    repeatable, realistic measurement.
 2. **Only then try the parallel executor.** One line in the test. Expect 1.32x; the value is that a
    dependency-ordered real workload is a far better race detector than a synthetic one.
+
+---
+
+# The platform, against a COMPLETE prebuilt XDK — 2026-09-07
+
+The XDK build is a poor proxy for what a warm engine is for, because `lib_ecstasy` is a serial
+prefix nothing can overlap. `PlatformBuildBenchmarkTest` runs the same harness over the **platform**
+(11 modules at `/Users/marcus/src/platform`) with a finished XDK on the module path, so nothing in
+the library is being rebuilt. That is the LSP-server / test-runner shape.
+
+| pass | executor | wall |
+| --- | --- | --- |
+| 1, cold | single thread | 6.78 s |
+| 2, warm | single thread | 3.98 s |
+| 3, warm | virtual thread per task | **2.02 s** |
+
+**Speedup 1.97x**, against 1.78x for the XDK build - and the platform's graph is not especially wide
+(`common` is a serial point that eight of eleven modules wait on). Heap 227 MB then 240 MB across
+the two sequential passes, so flat. Sampled allocation is 5.4 GB against the XDK build's 29.6 GB,
+which is the same observation from the other side: most of a from-source XDK build is `ecstasy`.
+
+## Two things this exposed, both mine rather than the compiler's
+
+**Resource roots are build configuration and cannot be discovered.** `platformUI` failed with
+`PARSER-24: Invalid path: "/spa"` until the harness was told about `platformUI/gui/dist`, which that
+module's `build.gradle.kts` adds as a resource `srcDir` for its `Directory:/spa` literal. The
+conventional `src/main/resources` is not enough, and the same class of failure hit `lib_ecstasy`
+earlier with `$/implicit.x`. **Anything embedding the engine has to be told its resource roots the
+way Gradle tells `xcc`** - the module path alone is not sufficient input to reproduce a build.
+
+**"Compiled without errors" is not "compiled correctly", and I had claimed too much.**
+`XdkBuildOutputVerifyTest` now compares the engine's output against the artifacts the Gradle build
+wrote: **21 modules, zero structural mismatches** in component-tree shape. That would catch a
+missing or truncated class, method or property. It would **not** catch wrong code inside a method
+body, so it is evidence, not proof of equivalence.

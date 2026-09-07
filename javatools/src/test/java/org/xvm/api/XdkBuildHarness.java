@@ -48,6 +48,16 @@ public final class XdkBuildHarness {
     private XdkBuildHarness() {}
 
     /**
+     * The modules the most recent {@link #build} produced, for a caller that wants to check them
+     * rather than trust that "compiled without errors" means "compiled correctly".
+     */
+    public static ConcurrentBuildRepository lastOutput() {
+        return s_lastOutput;
+    }
+
+    private static volatile ConcurrentBuildRepository s_lastOutput;
+
+    /**
      * One module to build.
      *
      * @param moduleName  the qualified module name, e.g. {@code json.xtclang.org}
@@ -144,6 +154,7 @@ public final class XdkBuildHarness {
         }
 
         CompletableFuture.allOf(futures.values().toArray(CompletableFuture[]::new)).join();
+        s_lastOutput = shared;
         var wall = Duration.between(start, Instant.now());
 
         System.gc();
