@@ -3527,6 +3527,42 @@ do not fail builds.
 **Order:** A before B. A is small, fixes a real footgun, and does not touch the
 signature; B is mechanical once A has settled which methods are even required.
 
+## E40 - `lib_ecstasy` has no ResourceProvider that is both complete and per-container
+
+**Status/category:** Enhancement against **master** (`lib_ecstasy`), documented rather than filed -
+no reproduction, because on master nothing hosts a container that needs both properties at once.
+The LSPAPI runner is what makes it bite, and this is the master-side root of H19.
+
+**What.** `lib_ecstasy/src/main/x/ecstasy/mgmt/` ships exactly two providers, and they are opposite
+extremes:
+
+| provider | complete resource set | per-container isolation |
+| --- | --- | --- |
+| `BasicResourceProvider` | **no** - its `getResource` switch handles `Console`, `Clock`, `Timer`, `Random`/`rnd`, `String`, `List<String>` and enum/`Destringable` string injections, and has **no case for `Directory` or `FileStore`** (grep for either: zero hits) | yes - it fabricates |
+| `PassThroughResourceProvider` | yes - it delegates to the parent's `Injector` | **no** - every child resolves to the parent's instances |
+
+Its own javadoc calls `BasicResourceProvider` "a minimal `ResourceProvider` implementation that is
+necessary to load an Ecstasy module dynamically into a lightweight container". Any such module that
+touches the file system - `@Inject("storage") FileStore`, `@Inject Directory curDir` - fails under
+it with `Invalid resource`. `manualTests/src/main/x/files.x` (`TestFiles`, in `testModuleNames`) is
+exactly that module.
+
+**Verified identical to master**: the file is byte-for-byte the same on `origin/master` and on this
+branch, so this is master's gap and not something a branch introduced.
+
+**What a host actually needs** is a third shape: fabricate the resources that must be per-run - a
+file system rooted somewhere the run owns, the run's own string injections, its own console - and
+delegate the rest. Neither stock provider expresses it, which is why a host has to choose between a
+run that cannot open a file and runs that share one file system.
+
+**Partially closed on `lagergren/lazy-instance` 2026-09-07, in the runner rather than in
+`lib_ecstasy`.** `runTask` now carries the run's string injections, and `TaskResourceProvider`
+fabricates them ahead of delegating, so a run's own values take precedence over the parent's -
+`PerRunInjectionTest` passes, with each of two runs seeing its own `label`. **The file-system half is
+not done**: `runTask` still has no root directory, so `curDir`/`storage` still resolve through
+pass-through to container zero. Closing that needs either this enhancement in `lib_ecstasy` or a
+rooted `FileStore` fabricated in the runner.
+
 ## E39 - Lazily cached handles are published through a data race
 
 **Status/category:** Enhancement, not a filed bug. The pattern is on master and on this branch; no

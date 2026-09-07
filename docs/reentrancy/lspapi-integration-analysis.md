@@ -1743,7 +1743,20 @@ composition. What the test reports is `WeakReference` targets inside `f_mapOpInf
 reachability from a shared cache is not ownership leakage. The test needs to distinguish strong from
 weak reachability - not to be relaxed until it passes.
 
-**M3 - per-run injections are unimplemented.** `XtcEngine.runFrom:983` throws
+**M3 - DONE 2026-09-07 for injections; the file-system half remains.** `runTask` now takes
+`injectionNames`/`injectionValues`, and `TaskResourceProvider` answers them before delegating, so a
+run's own string values take precedence over the parent's instead of resolving through pass-through
+against container zero. `PerRunInjectionTest` passes - two runs, `label=first` then `label=second`,
+each seeing its own. The engine flattens its `Map<String, List<String>>` and still refuses a
+multi-valued name, which would be a `String[]` injection that `runTask` cannot carry.
+
+Still open: **no root directory**, so `curDir` and `storage` continue to resolve through
+pass-through to container zero. The master-side root of that is [E40](plans/master-enhancement-submissions.md)
+- `lib_ecstasy` ships no provider that is both complete and per-container, and
+`BasicResourceProvider` is byte-for-byte identical to master's, so it is master's gap rather than
+one this branch or LSPAPI introduced.
+
+**M3 (original text) - per-run injections are unimplemented.** `XtcEngine.runFrom:983` throws
 `UnsupportedOperationException` for a non-empty injection map, which is why `PerRunInjectionTest`
 fails. H19 from the Java side: `runTask(template, repository, consoleId)` has nowhere to carry them.
 Fixing it is the `runTask` signature change, and it is upstream's call.

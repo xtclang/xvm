@@ -975,13 +975,23 @@ public final class XtcEngine
                     "module not found on the module path: " + sModuleName));
         }
 
-        if (!mapInjections.isEmpty()) {
-            // The runner app chooses a run's injector in Ecstasy (TaskResourceProvider), so
-            // per-run injections belong there rather than being registered from Java onto a
-            // container this side no longer creates. Failing loudly beats silently ignoring them.
-            return CompletableFuture.failedFuture(new UnsupportedOperationException(
-                    "per-run injections are not yet supported through the runner app: "
-                            + mapInjections.keySet()));
+        // Per-run injections are supplied to the runner, which fabricates them in the run's own
+        // provider rather than resolving them through pass-through against container zero - that
+        // is what stops two runs sharing one value. Only single-valued String injections are
+        // expressible today; a multi-valued name is a String[] injection, which runTask has no
+        // way to carry (see H19 in the LSPAPI analysis).
+        var listNames  = new ArrayList<String>(mapInjections.size());
+        var listValues = new ArrayList<String>(mapInjections.size());
+        for (var entry : mapInjections.entrySet()) {
+            List<String> listValue = entry.getValue();
+            if (listValue == null || listValue.size() != 1) {
+                return CompletableFuture.failedFuture(new UnsupportedOperationException(
+                        "only single-valued String injections are supported through the runner"
+                                + " app; \"" + entry.getKey() + "\" has "
+                                + (listValue == null ? 0 : listValue.size()) + " values"));
+            }
+            listNames.add(entry.getKey());
+            listValues.add(listValue.getFirst());
         }
         if (!"run".equals(sMethodName)) {
             // runTask invokes run(); an arbitrary entry point has no equivalent in the runner
@@ -1007,7 +1017,11 @@ public final class XtcEngine
 
         // No console for now: the runner's TaskResourceProvider takes a console id, and this
         // branch's redirectable console (E38) is the sink it should be given once wired.
-        return main.invokeAsync("runTask", hModule, hRepository, xNullable.makeHandle(main))
+        ObjectHandle hNames  = xString.makeArrayHandle(main, listNames.toArray(String[]::new));
+        ObjectHandle hValues = xString.makeArrayHandle(main, listValues.toArray(String[]::new));
+
+        return main.invokeAsync("runTask", hModule, hRepository, xNullable.makeHandle(main),
+                                hNames, hValues)
                 .thenCompose(hTaskId -> awaitTask(main, ((JavaLong) hTaskId).getValue()));
     }
 

@@ -56,11 +56,14 @@ module runner.xtclang.org {
      * @param template    the module to run
      * @param repository  the repository used to resolve the module's dependencies
      * @param consoleId   the optional ID of the named native console resource
+     * @param injectionNames   the names of the string resources this run is given
+     * @param injectionValues  the corresponding values, one per name
      *
      * @return the task identifier
      */
-    Int runTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId) =
-            TaskRegistry.runTask(template, repository, consoleId);
+    Int runTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
+                String[] injectionNames = [], String[] injectionValues = []) =
+            TaskRegistry.runTask(template, repository, consoleId, injectionNames, injectionValues);
 
     /**
      * @return True iff the identified task has not completed
@@ -106,9 +109,14 @@ module runner.xtclang.org {
 
         private Int nextTaskId;
 
-        Int runTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId) {
+        Int runTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
+                    String[] injectionNames = [], String[] injectionValues = []) {
+            assert injectionNames.size == injectionValues.size
+                    as $"{injectionNames.size} injection names for {injectionValues.size} values";
+
             Int  id   = allocateTaskId();
-            Task task = new Task(id, template, repository, consoleId);
+            Task task = new Task(id, template, repository, consoleId,
+                                 injectionNames, injectionValues);
             tasks[id] = task;
             task.start();
             return id;
@@ -153,7 +161,8 @@ module runner.xtclang.org {
     /**
      * State and control for one application container.
      */
-    service Task(Int id, ModuleTemplate template, ModuleRepository repository, Int? consoleId) {
+    service Task(Int id, ModuleTemplate template, ModuleRepository repository, Int? consoleId,
+                 String[] injectionNames = [], String[] injectionValues = []) {
         Boolean running;
 
         Int? result;
@@ -174,7 +183,9 @@ module runner.xtclang.org {
             ResourceProvider injector;
             if (Int consoleId ?= this.consoleId) {
                 @Inject(resourceName=$"console_{consoleId}") Console console;
-                injector = new TaskResourceProvider(console);
+                injector = new TaskResourceProvider(console, injectionNames, injectionValues);
+            } else if (!injectionNames.empty) {
+                injector = new TaskResourceProvider(Null, injectionNames, injectionValues);
             } else {
                 // PassThrough, not Basic. BasicResourceProvider is a minimal hand-written
                 // whitelist - HashCollector, Linker, nullable types - and supplies none of the
@@ -252,13 +263,27 @@ module runner.xtclang.org {
     /**
      * Provides an external console and delegates the remaining basic injections.
      */
-    service TaskResourceProvider(Console console)
+    service TaskResourceProvider(Console? console,
+                                 String[] injectionNames  = [],
+                                 String[] injectionValues = [])
             extends PassThroughResourceProvider {
         @Override
         Supplier getResource(Type type, String name) {
-            if (type == Console && name == "console") {
+            if (type == Console && name == "console", Console console ?= this.console) {
                 return console;
             }
+
+            // A string this run was given takes precedence over the parent's. That precedence is
+            // the point: pass-through would resolve the name against container zero, so two runs
+            // would see one value. Fabricating it here is what makes it the RUN's.
+            if (type == String) {
+                for (Int i : 0 ..< injectionNames.size) {
+                    if (injectionNames[i] == name) {
+                        return injectionValues[i];
+                    }
+                }
+            }
+
             return super(type, name);
         }
     }
