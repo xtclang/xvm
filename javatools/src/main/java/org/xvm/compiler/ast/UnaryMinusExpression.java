@@ -11,6 +11,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.GP_Neg;
 
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Compiler;
+import org.xvm.util.Severity;
 
 
 /**
@@ -70,7 +72,17 @@ public final class UnaryMinusExpression
         } else if (exprRight.isConstant()) {
             try {
                 constVal = exprRight.toConstant().apply(operator.getId(), null);
-            } catch (RuntimeException ignore) {}
+            } catch (RuntimeException e) {
+            // NOT narrowed, deliberately. Constant folding signals "cannot fold this" with
+            // ArithmeticException (overflow), UnsupportedOperationException (no such op for
+            // this constant) AND IllegalStateException (IntConstant uses it for out-of-range
+            // and format-mismatch), so the expected set is indistinguishable by TYPE from a
+            // defect. What was wrong was the SILENCE: falling back to run-time evaluation is
+            // correct, but doing it invisibly meant a genuine compiler bug here looked exactly
+            // like an unfoldable expression. Reported, so it is findable.
+                log(errs, Severity.INFO, Compiler.CONSTANT_FOLD_DEFERRED,
+                        toString(), e.getMessage());
+            }
         }
 
         return finishValidation(ctx, typeRequired, typeRight, fit, constVal, errs);

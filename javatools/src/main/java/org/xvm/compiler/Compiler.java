@@ -1393,6 +1393,11 @@ public class Compiler {
      */
     public static final String CONSTANT_CONVERSION_DEFERRED        = "COMPILER-209";
     /**
+     * The constant expression {0} could not be folded at compile time ({1}), so its evaluation is
+     * deferred to run time.
+     */
+    public static final String CONSTANT_FOLD_DEFERRED              = "COMPILER-210";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

@@ -578,7 +578,15 @@ public final class RelOpExpression
             } catch (ArithmeticException e) {
                 log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, typeRequired, this);
                 return null;
-            } catch (RuntimeException ignore) {}
+            } catch (RuntimeException e) {
+            // NOT narrowed, deliberately. ArithmeticException is handled above; what is left -
+            // UnsupportedOperationException for an op the constant does not have, and
+            // IllegalStateException, which IntConstant uses for out-of-range and format mismatch -
+            // is indistinguishable by TYPE from a defect. What was wrong was the SILENCE: falling
+            // back to run-time evaluation is correct, doing it invisibly is not.
+                log(errs, Severity.INFO, Compiler.CONSTANT_FOLD_DEFERRED,
+                        toString(), e.getMessage());
+            }
         }
 
         return finishValidations(ctx, atypeRequired, atypeResults, TypeFit.Fit, aconstResult, errs);

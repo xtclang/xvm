@@ -12,6 +12,8 @@ import org.xvm.asm.op.GP_Compl;
 
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Compiler;
+import org.xvm.util.Severity;
 
 
 /**
@@ -68,7 +70,12 @@ public final class UnaryComplementExpression
         } else if (exprRight.isConstant()) {
             try {
                 constVal = exprRight.toConstant().apply(operator.getId(), null);
-            } catch (RuntimeException ignore) {}
+            } catch (RuntimeException e) {
+                // see UnaryMinusExpression: the expected failures are not distinguishable by type
+                // from a defect, so the fix is to stop being silent rather than to narrow
+                log(errs, Severity.INFO, Compiler.CONSTANT_FOLD_DEFERRED,
+                        toString(), e.getMessage());
+            }
         }
 
         return finishValidation(ctx, typeRequired, typeRight, fit, constVal, errs);

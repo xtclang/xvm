@@ -20,6 +20,7 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.VersionConstant;
 
+import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
@@ -292,7 +293,14 @@ public class xModule
         TypeExpression expr   = null;
         try {
             expr = fClass ? parser.parseClassExpression() : parser.parseTypeExpression();
-        } catch (RuntimeException ignore) {}
+        } catch (CompilerException e) {
+            // Narrowed from RuntimeException, which this can prove: the Parser signals a failed
+            // parse by throwing CompilerException (expect() logs, then throws), and the errors it
+            // logged are already in errs. A bad name from reflection is an expected outcome here -
+            // the caller gets null - but anything OTHER than a parse failure is a defect and now
+            // propagates instead of being turned into "no such class".
+            expr = null;
+        }
 
         if (expr != null && errs.getSeriousErrorCount() == 0) {
             // create a TypeCompositionStatement parent or "expr"
@@ -302,7 +310,11 @@ public class xModule
                 TypeConstant typeClz = null;
                 try {
                     typeClz = expr.ensureTypeConstant();
-                } catch (RuntimeException ignore) {}
+                } catch (CompilerException e) {
+                    // same reasoning as the parse above: an unresolvable name is an expected answer
+                    // (the caller gets null); anything else is a defect and propagates
+                    typeClz = null;
+                }
 
                 if (typeClz != null && !typeClz.containsUnresolved()) {
                     return typeClz;

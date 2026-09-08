@@ -4515,10 +4515,8 @@ Deliberately NOT one change. Per area, smallest first, each independently review
    classification below.
 2. **The 12 swallowed `IOException`s.** Each is a yes/no question - did the caller want the thing
    that failed? - and the answer is usually in the method name.
-3. **The 6 swallowed `RuntimeException`s.** Highest risk of the three: swallowing a
-   `RuntimeException` hides defects rather than expected conditions, and this branch has already been
-   bitten once by exactly that (a catch-and-ignore cached a half-built `TypeInfo` and caused the
-   failure it was hiding).
+3. ~~**The 6 swallowed `RuntimeException`s.**~~ **DONE** - and the intended fix did not work. See
+   below.
 4. **`XtcEngine` boundary review.** For each failure an embedder could plausibly need to act on, is
    it reachable from `CompileResult` or the listener? Where it is not, decide between propagating and
    reporting.
@@ -4599,3 +4597,61 @@ Both overloads now share one `search(sModule, load)` plus a `cacheInFront`. That
 the reason one copy was right and the other wrong is that there were two copies.
 `LinkedRepositoryReadThroughTest` pins both halves and was verified to fail against each defect
 separately.
+
+
+### Step 3, done: narrowing was the wrong fix, for a reason worth recording
+
+The plan was to narrow each over-broad `catch` to what the callee actually throws, so expected
+failures stay quiet and defects propagate. That works for two of the six and is **impossible** for
+the other four, and the reason is a finding in its own right.
+
+**Four are constant folding** - `CmpExpression`, `RelOpExpression`, `UnaryMinusExpression`,
+`UnaryComplementExpression`, all inside `validate`:
+
+```java
+try {
+    constVal = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
+} catch (RuntimeException ignore) {}
+```
+
+The intent is right: try to fold at compile time, and fall back to run-time evaluation if it cannot
+be folded. But the expected failure set is `ArithmeticException` (overflow),
+`UnsupportedOperationException` (`Constant.apply`'s base implementation, for an op the constant does
+not have) **and `IllegalStateException`** - because `IntConstant` uses `IllegalStateException` for
+out-of-range values, format mismatches and unsupported formats. `IllegalStateException` is also
+exactly what a genuine defect throws. **The expected set is not distinguishable from a bug by type**,
+so narrowing cannot separate them.
+
+So the defect was never the width of the catch - it was the SILENCE. Falling back to run-time
+evaluation is correct; doing it invisibly meant a real compiler bug on that path looked identical to
+an unfoldable expression. All four now report `COMPILER-210` at INFO with the exception's message,
+through the `errs` that was already in scope. Behaviour is unchanged and a defect is findable.
+
+`RelOpExpression` already showed the way: it has a specific `catch (ArithmeticException)` that logs
+`VALUE_OUT_OF_RANGE` properly, with the catch-all sitting behind it.
+
+**Two are narrowable, provably.** `xModule.resolveClassOrType` parses a type name supplied through
+reflection. `Parser`'s contract is that a failed parse throws `CompilerException` (`expect` logs,
+then throws), so `catch (CompilerException)` is exact: a bad name is an expected answer and the
+caller gets null, while anything else is a defect and now propagates instead of being turned into
+"no such class".
+
+### `CompilerException` can now carry a cause, and one message was actively wrong without it
+
+`CompilerException(Throwable)` existed and was marked `@SuppressWarnings("unused")`; there was no
+`(message, cause)` constructor, so a caller holding both had to drop one - and dropping the cause is
+the easy choice. Added.
+
+The site that proves it matters is `Parser`'s include-file handling:
+
+```java
+try { abData = m_source.includeBinary(sFile); } catch (IOException ignore) {}
+if (abData == null) { fErr = true; }
+...
+if (fErr) throw new CompilerException("no such directory or file: " + sFile);
+```
+
+A file that **exists but cannot be read** - a permissions problem, a bad mount, a device error - was
+reported to the user as missing. The message was not merely incomplete, it was wrong, and the
+`IOException` that would have said so was discarded. It now retains the cause, reports
+`cannot read "<file>": <reason>` when there is one, and passes the cause through.

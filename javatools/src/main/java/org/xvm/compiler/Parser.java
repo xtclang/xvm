@@ -3660,14 +3660,21 @@ public class Parser {
             long    lEnd     = tokFile.getEndPosition();
             Object  resource = m_source.resolvePath(sFile);
 
-            Token   tokData = null;
-            boolean fErr    = false;
+            Token       tokData  = null;
+            boolean     fErr     = false;
+            // Retained rather than discarded. "Could not read it" and "it is not there" are
+            // different facts, and this used to report the second for both - so a file that existed
+            // but was unreadable was described to the user as missing, with the IOException that
+            // said otherwise thrown away.
+            IOException errCause = null;
             if (fContents || resource != null) {
                 if (fBin) {
                     byte[] abData = null;
                     try {
                         abData = m_source.includeBinary(sFile);
-                    } catch (IOException ignore) {}
+                    } catch (IOException e) {
+                        errCause = e;
+                    }
                     if (abData == null) {
                         abData = new byte[0];
                         fErr   = true;
@@ -3678,7 +3685,9 @@ public class Parser {
                     try {
                         Source source = m_source.includeString(sFile);
                         sData = source == null ? null : source.toRawString();
-                    } catch (IOException ignore) {}
+                    } catch (IOException e) {
+                        errCause = e;
+                    }
                     if (sData == null) {
                         sData = "";
                         fErr  = true;
@@ -3691,7 +3700,9 @@ public class Parser {
 
             if (fErr) {
                 log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
-                throw new CompilerException("no such directory or file: " + sFile);
+                throw new CompilerException(errCause == null
+                        ? "no such directory or file: " + sFile
+                        : "cannot read \"" + sFile + "\": " + errCause.getMessage(), errCause);
             }
 
             return fContents
