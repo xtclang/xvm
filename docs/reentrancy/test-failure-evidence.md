@@ -1,5 +1,25 @@
 # Test Failure Evidence For Reentrancy Work
 
+> ## ⚠ Six cited tests no longer exist — check before filing
+>
+> `AstCopyMigrationCensusTest`, `JsondbClientRollbackFailureTest`,
+> `NativeCallbackRegistrationTest`, `RuntimeFailurePropagationTest`,
+> `RuntimeThisEscapeConstructionTest` and `RefHandleConstructionTest` were **deleted deliberately**
+> in `54bcea306`, not lost. They read `.java` as text and asserted that particular strings were or
+> were not present, so they passed when the code happened to be spelled the expected way and proved
+> nothing about what it did.
+>
+> **The fixes they accompanied are unaffected; the PROOF is what is gone.** Any row below that cites
+> one of these as its red-on-master evidence has no evidence today. Before filing such a row, either
+> write a real test - the commit's own remedy is to read the compiled classes, "a getfield is the
+> defect whatever it looks like in text" - or file it with the reachability argument alone and say
+> that no regression test accompanies it.
+>
+> Found 2026-09-08 while checking an unrelated report. There are 60 citations of these six names
+> across 11 documents; the other nine are ledgers and audits where the name is a historical
+> reference rather than an actionable proof, so only the two filing documents carry this notice.
+
+
 This file records the known test failures that are relevant to the runtime
 ownership, reentrancy, and parallel-container hardening work. It exists so the
 evidence is not only in terminal logs or temporary audit output.
