@@ -94,7 +94,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 45 | `FileStructure.writeTo` assumes one registration pass is a fixed point; the pool can grow mid-write | loop to a fixed point | independent | a malformed `.xtc` is the worst case |
 | 46 | `ConsoleLog` is a shared unsynchronized ring buffer written on every console print | 1 class; synchronize or replace | independent | zero `synchronized`/`volatile`/`Atomic` in the whole file |
 | 47 | `ErrorInfo.genUID` drops the end position and hashes the parameters, so `ErrorList` deduplicates diagnostics that are not duplicates | 2 one-line edits | independent | silent loss of compiler errors; no concurrency needed to hit it |
-| 48 | **WITHDRAWN as a defect** - a `TypeInfo` build that throws leaves the place-holder set, but every reader of it has a recovery path | 2 lines; keep as hygiene | independent | filed twice with a failure mode that does not survive checking; kept as a record of what was ruled out |
+| 48 | **Not a defect; file as robustness.** A `TypeInfo` build that throws leaves the place-holder set. Every reader recovers, so nothing fails - but only because a second mechanism catches the lie | 2 lines, using a method that already exists | independent | fixed and gated here (`TypeInfoPlaceholderClearedTest`); worth upstreaming as hardening, not as a bug |
 | 49 | A failed read-through CACHE WRITE makes `LinkedRepository` report a module it found as not found | delete a `break`; then share one body between the two overloads | independent | a read-only front repository - a build output dir - triggers it every time |
 | 50 | `deleteKeyStoreEntry` swallows a failed delete, so `revokeCertificateImpl` leaves a REVOKED certificate in the keystore and reports success | delete a `catch`; callers already declare it | independent | the stated justification is already handled by two guards |
 | 51 | `xRTNameService` catches `Throwable` in a DNS continuation, so an `Error` is reported to XTC code as "host not found" | narrow to `ExecutionException`; restore the interrupt | independent | 2 sites; the sibling catches `Exception` for the same `.get()` |
@@ -3710,6 +3710,31 @@ authoritative - or removes the direct `buildTypeInfo` call from the deferred loo
 marker becomes a live defect immediately. That is the argument for clearing it now: not that it
 breaks today, but that its correctness currently depends on a second mechanism happening to paper
 over it.
+
+### Recommendation: file it as hardening, not as a bug
+
+Withdrawing it as a defect was right and left the wrong impression - that there is nothing to do.
+There is, and it is cheap:
+
+- **The fix is two calls** to `clearTypeInfoPlaceholder()`, a method that already exists and is
+  already called from the inner build paths. Nothing else changes, and there is no behavioural
+  difference to review.
+- **`TypeInfoPlaceholderClearedTest` gates it here**, verified by removing one of the two calls and
+  watching it fail. It is a source-shape gate on purpose: the invariant has no observable behaviour -
+  that is precisely why the row was withdrawn - so there are no wrong results to assert on.
+
+  It is also not reachable behaviourally without opening test hooks in two packages: seeding the
+  throw needs `Constant.addDeferredTypeInfo` (protected, `org.xvm.asm`), observing the strand needs
+  `TypeConstant.getTypeInfo` (protected, `org.xvm.asm.constants`), and nothing public reads a cached
+  `TypeInfo` without building one. Widening access in both packages to pin an invariant with no
+  behaviour is a worse trade than reading the source.
+- **Four throw paths leave the method after the marker is set**, not the two originally noted. Two
+  sit inside the guarding `try` and are covered by its catch; two are outside and need their own
+  clear. The gate encodes that distinction, so it does not merely count calls.
+
+Framed honestly on the PR - "no failure to demonstrate; this removes a marker that lies, so
+correctness stops depending on a second mechanism noticing" - this is a small, reviewable hardening
+change. Framed as a bug it would be rejected, correctly.
 
 
 ## 49. A failed read-through cache write makes `LinkedRepository` lose a module it already found
