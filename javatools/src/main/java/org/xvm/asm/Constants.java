@@ -714,6 +714,11 @@ public interface Constants {
      */
     String RT_CODE_GEN_SKIPPED                    = "RUNTIME-19";
 
+    /**
+     * An unexpected Java runtime failure occurred: {0}.
+     */
+    String RT_INTERNAL_FAILURE                    = "RUNTIME-20";
+
 
     // ----- miscellaneous -------------------------------------------------------------------------
 

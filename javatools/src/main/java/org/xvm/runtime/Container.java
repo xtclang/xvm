@@ -17,6 +17,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkerContext;
 import org.xvm.asm.MethodStructure;
@@ -771,7 +772,17 @@ public abstract class Container
     public void recordRuntimeFailure(String sMessage, Throwable e) {
         var failure = new IllegalStateException(sMessage, e);
         if (f_runtimeFailure.compareAndSet(null, failure)) {
-            System.err.println(sMessage);
+            // Report it, THEN print it. This used to go only to System.err, which meant a host
+            // embedding the runtime could not observe a VM defect at all: the failure was recorded
+            // for join() to rethrow, but nothing reached the listener the host configured, so a
+            // long-running host had no way to notice or correlate it. The container has owned a
+            // non-null listener since it started taking one at construction; this is one of the
+            // "nowhere to report" sites that existed only because there was nothing to report to.
+            //
+            // The stack trace still goes to stderr. A listener carries a message, not a Throwable,
+            // and for a VM defect the trace is the part worth keeping - so it is printed rather
+            // than summarised away.
+            f_errs.error(Constants.RT_INTERNAL_FAILURE, sMessage);
             e.printStackTrace(System.err);
             return;
         }
