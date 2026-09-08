@@ -87,7 +87,7 @@ surface graduate into individual rows on the bug list.
 | E32 | Thread one `ErrorListener`; stop null-defaulting and blackholing diagnostics | all 3 stages done; `PROBE` split from `BLACKHOLE` | independent | 149 sites classified; 135 -> `PROBE`, 12 kept, 1 deleted; a vacuous shape gate found and restored |
 | E33 | Census of every `Object` in the tree: 61 are `equals` and untouchable, ~132 are real | reference row; feeds E27/E28/E30/E32 | independent | 393 array initializers noted separately |
 | E34 | `ResolutionCollector.getErrorListener()` smuggles the error sink; pass it explicitly | 1 PR, ~60 mechanical sites | complements E32 | removes `NameResolver`'s un-cleaned stash |
-| E35 | Finish the listener: parallel gap, last 3 mutable fields, `withListener` | A-C one PR; D incremental; E one line | after E32/E34 | the parallel gap and the ambient default are one problem |
+| E35 | Finish the listener: parallel gap, last 3 mutable fields, `withListener` | **A-E all done** | after E32/E34 | D closed by classifying 34 sites, not by threading 46 parameters; E deleted the ambient overload |
 | E36 | The debugger reads another thread's fiber state; the monitor meant to stop that is only entered at breakpoints | 1 record + 1 volatile + 3 reads | independent | analysis only - no reproduction; publish a snapshot instead |
 | E37 | `Assignable[]` as an API, and the mutual-recursion bridge that let a subclass overriding neither method loop forever | 38 usages, 11 override points; the bridge fix is separate and small | independent; do NOT ride it on PR #585 | the bridge cost a `StackOverflowError` in the compiler |
 | E38 | Module output cannot be redirected: `xTerminalConsole`'s sink is a static, so hosting a run forces a second console template | 1 instance field + a registration helper | independent | deletes the need for `xExternalConsole` |
@@ -3589,8 +3589,31 @@ The first three are arguably `javajit`'s case wearing different clothes - a runt
 `RUNTIME` - and only `transformType` is the parameter-threading this row originally described. One
 site is not worth a cascade, so it stays.
 
-**E35-E** (delete the no-argument overload) is now within reach for the first time: 4 non-`javajit`
-callers rather than 56.
+**E35-E: done.** The no-argument `ensureTypeInfo()` overload is deleted. Every remaining caller was
+classified the same way rather than mechanically converted:
+
+| | n | |
+| --- | --- | --- |
+| questions → `typeInfo()` | 11 | `findConstructor`, `getMethodBySignature`, `findProperty(...) != null`, `getFormat() == CONST`, `getProperties()` |
+| the JIT asserting it can generate code → `ErrorListener.RUNTIME`, explicitly | 14 | `Builder`, `BuildContext`, `ArrayBuilder`, `CommonBuilder`, and `ClassStructure.ensureMethodDelegation` |
+| threaded from a caller that had a listener | 2 | `createInitializer` (from `ClassComposition`, which holds a container listener) |
+| a system-type lookup → `typeInfo()` | 1 | `AstNode.transformType` |
+
+**Why `RUNTIME` and not the ambient value for the JIT sites.** `ensureTypeInfo()` resolved
+`getConstantPool().getErrorListener()`, which for a module loaded at run time IS `RUNTIME` - so for
+those, naming it changes nothing and only stops the default being invisible. It is NOT identical for
+a module compiled in process: that pool holds the compilation's listener, so a JIT builder resolving
+one of its types used to report into a compile that had already finished. Naming `RUNTIME` fixes
+that, and is the reason this step is worth doing rather than merely tidy.
+
+**`ClassStructure.ensureMethodDelegation`** was the one site that resisted threading: its cascade runs
+through `MethodInfo.buildOptimizedMethodChain` into the public `TypeInfo.ensureOptimizedMethodChain`,
+which the runtime calls from `TypeInfoReal` and `PropertyComposition`. It takes `RUNTIME` explicitly
+for the same reason as the JIT sites - a runtime caller with no compile to report to.
+
+With the overload gone, `getConstantPool().getErrorListener()` survives only where something logs
+directly (15 sites, mostly `log(pool.getErrorListener(), WARNING, ...)`), and **no TypeInfo is built
+against a listener nobody chose.**
 
 ### C, done: `setErrorListener` is deleted, not merely unused
 

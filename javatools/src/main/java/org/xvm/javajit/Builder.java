@@ -14,6 +14,7 @@ import java.math.BigInteger;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
@@ -105,7 +106,7 @@ public abstract class Builder {
      */
     public ClassDesc getSuperCD() {
         TypeConstant thisType  = getThisType();
-        TypeInfo     typeInfo  = thisType.ensureTypeInfo();
+        TypeInfo     typeInfo  = thisType.ensureTypeInfo(ErrorListener.RUNTIME);
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
             ? thisType.isConst() ? CD_nConst : CD_nObject
@@ -541,7 +542,7 @@ public abstract class Builder {
             mapType = pool.ensureParameterizedTypeConstant(
                 pool.ensureEcstasyTypeConstant("maps.ListMap"), keyType, valType);
 
-            TypeInfo       typeInfo = mapType.ensureTypeInfo();
+            TypeInfo       typeInfo = mapType.ensureTypeInfo(ErrorListener.RUNTIME);
             MethodConstant ctorId   = typeInfo.findConstructor(keysType, valsType.freeze(), pool.typeBoolean());
             MethodInfo     ctorInfo = typeInfo.getMethodById(ctorId);
             JitCtorDesc    ctorJmd  = (JitCtorDesc) ctorInfo.getJitDesc(this, mapType);
@@ -766,7 +767,7 @@ public abstract class Builder {
         TypeConstant rangeType = rangeConst.getType();
         TypeConstant elType    = rangeType.getParamType(0);
         Constant[]   values    = rangeConst.getValue();
-        MethodConstant idCtor  = rangeType.ensureTypeInfo().findConstructor(
+        MethodConstant idCtor  = rangeType.typeInfo().findConstructor(
                 elType, elType, pool().typeBoolean(), pool().typeBoolean());
 
         bctx.buildNew(code, rangeType, idCtor, jmdNew -> {
@@ -1665,11 +1666,11 @@ public abstract class Builder {
             MethodConstant          idCtor,
             Consumer<JitMethodDesc> argsLoader,
             int                     ctxSlot) {
-        TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
+        TypeInfo   infoTarget = typeTarget.ensureTypeInfo(ErrorListener.RUNTIME);
         MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
 
         if (infoCtor == null) {
-            infoTarget = typeTarget.ensureAccess(Constants.Access.PRIVATE).ensureTypeInfo();
+            infoTarget = typeTarget.ensureAccess(Constants.Access.PRIVATE).ensureTypeInfo(ErrorListener.RUNTIME);
             infoCtor   = infoTarget.getMethodById(idCtor);
         }
 

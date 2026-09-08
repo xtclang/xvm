@@ -2869,7 +2869,7 @@ public sealed class ClassStructure
      * @return the [synthetic] MethodStructure for the corresponding default constructor
      */
     public MethodStructure createInitializer(ConstantPool pool, TypeConstant typeStruct,
-                                             Map<Nid, FieldInfo> mapFields) {
+                                             Map<Nid, FieldInfo> mapFields, ErrorListener errs) {
         int nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS | STATIC_BIT | SYNTHETIC_BIT;
 
         // create a transient MethodStructure (without an intermediate MultiMethodStructure)
@@ -2886,7 +2886,7 @@ public sealed class ClassStructure
 
         assert typeStruct.getAccess() == Access.STRUCT;
 
-        TypeInfo infoStruct = typeStruct.ensureTypeInfo();
+        TypeInfo infoStruct = typeStruct.ensureTypeInfo(errs);
         for (Map.Entry<Nid, FieldInfo> entry : mapFields.entrySet()) {
             Nid       nid      = entry.getKey();
             PropertyInfo infoProp = nid instanceof PropertyConstant idProp
@@ -3080,7 +3080,7 @@ public sealed class ClassStructure
             try (var _ = pool.openRuntimeSynthesisWindow("method delegation to " + sDelegate)) {
                 TypeConstant typeFormal   = getFormalType();
                 TypeConstant typePrivate  = typeFormal.ensureAccess(Access.PRIVATE);
-                TypeInfo     infoPrivate  = typePrivate.ensureTypeInfo();
+                TypeInfo     infoPrivate  = typePrivate.ensureTypeInfo(ErrorListener.RUNTIME);
                 PropertyInfo infoDelegate = infoPrivate.findProperty(sDelegate);
                 TypeConstant typeDelegate = infoDelegate.getType();
 
@@ -3092,7 +3092,7 @@ public sealed class ClassStructure
                 methodDelegate.setSynthetic(true);
 
                 Code           code       = methodDelegate.createCode();
-                MethodInfo     infoMethod = typeDelegate.ensureTypeInfo().getMethodBySignature(sig);
+                MethodInfo     infoMethod = typeDelegate.typeInfo().getMethodBySignature(sig);
                 MethodConstant idMethod   = infoMethod.getIdentity();
                 int            cParams    = method.getParamCount();
                 int            cReturns   = method.getReturnCount();

@@ -104,7 +104,7 @@ public class DisplayPurityRuntimeTest {
 
         // TypeInfos and the member objects a debugger expands into
         for (TypeConstant type : List.of(typeInt, typeString, pool.typeObject())) {
-            var info = type.ensureTypeInfo();
+            var info = type.typeInfo();
             list.add(info);
             list.addAll(info.getProperties().values());
             list.addAll(info.getMethods().values());

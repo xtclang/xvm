@@ -2364,7 +2364,7 @@ public class BuildContext {
      */
     public TypeInfo getTypeInfo(TypeConstant type) {
         if (type.isFormalType()) {
-            return type.ensureTypeInfo();
+            return type.ensureTypeInfo(ErrorListener.RUNTIME);
         }
 
         TypeConstant publicType = thisType.removeAccess();
@@ -2380,13 +2380,13 @@ public class BuildContext {
             IdentityConstant thatId = type.getSingleUnderlyingClass(true);
 
             if (thatId.isNestMateOf(thisId)) {
-                return type.adjustAccess(thisId).ensureTypeInfo();
+                return type.adjustAccess(thisId).ensureTypeInfo(ErrorListener.RUNTIME);
             }
         }
 
         return type.isEquivalent(publicType)
-                ? type.ensureAccess(Access.PROTECTED).ensureTypeInfo()
-                : type.ensureTypeInfo();
+                ? type.ensureAccess(Access.PROTECTED).ensureTypeInfo(ErrorListener.RUNTIME)
+                : type.ensureTypeInfo(ErrorListener.RUNTIME);
     }
 
     /**

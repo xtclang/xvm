@@ -464,7 +464,7 @@ public final class ClassComposition
     private MethodStructure buildAutoInitializer() {
         var pool = getContainer().getConstantPool();
         return f_template.getStructure().createInitializer(pool, f_typeStructure,
-                fieldLayout().fields());
+                fieldLayout().fields(), f_container.getErrorListener());
     }
 
     private StringHandle[] buildFieldNameArray() {

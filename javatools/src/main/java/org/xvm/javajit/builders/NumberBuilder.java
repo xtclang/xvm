@@ -103,7 +103,7 @@ public class NumberBuilder extends AugmentingBuilder {
     }
 
     protected Collection<PropertyInfo> getProperties() {
-        return pool().typeNumber().ensureTypeInfo().getProperties().values();
+        return pool().typeNumber().typeInfo().getProperties().values();
     }
 
     protected BiConsumer<CodeBuilder, JitMethodDesc> getCodeGenerator(String jitName) {

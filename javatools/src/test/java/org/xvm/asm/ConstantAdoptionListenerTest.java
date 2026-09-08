@@ -98,7 +98,7 @@ public class ConstantAdoptionListenerTest {
         assertSame(poolCompiling, adopted.getConstantPool(),
                 "so registering adopts it into the compiling pool");
         assertSame(compilingListener, adopted.getConstantPool().getErrorListener(),
-                "which is why ensureTypeInfo() resolves the COMPILE's listener for a library type");
+                "which is why typeInfo() resolves the COMPILE's listener for a library type");
         assertNotSame(libraryListener, adopted.getConstantPool().getErrorListener(),
                 "and why two parallel compiles do not report into each other's sink");
     }

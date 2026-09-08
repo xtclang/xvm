@@ -130,12 +130,12 @@ public class TypeComparisonCorpusTest {
     @Test
     public void typeInfoIsStable() {
         ConstantPool pool = pool();
-        var info1 = pool.typeInt64().ensureTypeInfo();
+        var info1 = pool.typeInt64().typeInfo();
         assertNotNull(info1, "Int64 TypeInfo must build");
         int members1 = info1.getMethods().size() + info1.getProperties().size();
         assertTrue(members1 > 0, "Int64 TypeInfo must have members");
         // a second request returns a stable TypeInfo with the same member count
-        var info2 = pool.typeInt64().ensureTypeInfo();
+        var info2 = pool.typeInt64().typeInfo();
         int members2 = info2.getMethods().size() + info2.getProperties().size();
         assertEquals(members1, members2, "TypeInfo member count must be stable across requests");
     }

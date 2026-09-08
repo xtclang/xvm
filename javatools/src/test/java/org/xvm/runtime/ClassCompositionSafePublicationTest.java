@@ -148,7 +148,7 @@ public class ClassCompositionSafePublicationTest {
             var container = NativeContainer.create(runtime, XdkOutputs.systemRepository(), ErrorListener.RUNTIME);
             var pool      = container.getConstantPool();
             var clzString = (ClassComposition) container.resolveClass(pool.typeString());
-            var infoSize  = pool.typeString().ensureTypeInfo().findProperty("size");
+            var infoSize  = pool.typeString().typeInfo().findProperty("size");
 
             assertNotNull(infoSize);
 

@@ -1422,7 +1422,12 @@ public abstract sealed class AstNode
         TypeConstant type = pool.typeType();
         Argument     arg  = exprName.resolveRawArgument(ctx, false, ErrorListener.PROBE);
         if (arg instanceof Register reg) {
-            PropertyConstant idProp   = type.ensureTypeInfo().findProperty("DataType").getIdentity();
+            // typeInfo(): "DataType" on pool.typeType() is a well-known member of a SYSTEM
+            // type, and the result is dereferenced without a null check because its absence
+            // means a broken library rather than a mistake in the source being compiled.
+            // Threading the compile's listener here would attribute a system fault to the
+            // user, at a source position that has nothing to do with it.
+            PropertyConstant idProp   = type.typeInfo().findProperty("DataType").getIdentity();
             FormalConstant   idFormal = pool.ensureDynamicFormal(
                 ctx.getMethod().getIdentityConstant(), reg, idProp, exprName.getName());
 

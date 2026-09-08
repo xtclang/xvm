@@ -33,7 +33,7 @@ public class FPNumberBuilder extends NumberBuilder {
     }
 
     protected Collection<PropertyInfo> getProperties() {
-        return pool().typeFPNumber().ensureTypeInfo().getProperties().values();
+        return pool().typeFPNumber().typeInfo().getProperties().values();
     }
 
     @Override

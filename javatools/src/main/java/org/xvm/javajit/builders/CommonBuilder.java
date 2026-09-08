@@ -107,8 +107,8 @@ public class CommonBuilder
         assert classStruct.isParameterized() == type.isParamsSpecified();
 
         this.thisType      = type.ensureAccess(Access.PRIVATE);
-        this.typeInfo      = thisType.ensureTypeInfo();
-        this.structInfo    = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
+        this.typeInfo      = thisType.ensureTypeInfo(ErrorListener.RUNTIME);
+        this.structInfo    = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo(ErrorListener.RUNTIME);
         this.thisId        = classStruct.getIdentityConstant();
         this.isInterface   = classStruct.getFormat() == Format.INTERFACE;
         this.jitType       = thisType.getCallableJitType();
@@ -730,7 +730,7 @@ public class CommonBuilder
                         // Java string from the LiteralConstant, and store into the static field
                         TypeConstant   type   = literal.getType();
                         ClassDesc      cd     = ensureClassDesc(type);
-                        MethodConstant ctorId = type.ensureTypeInfo().findConstructor(pool.typeString());
+                        MethodConstant ctorId = type.typeInfo().findConstructor(pool.typeString());
 
                         buildNew(null, code, type, ctorId,
                                 (_) -> loadString(code, literal.getValue(), ctxSlot), ctxSlot);
@@ -2168,7 +2168,7 @@ public class CommonBuilder
                     .ifne(returnFalse);
             } else {
                 // Object type: call static equals$p(Ctx, nType, T, T) -> boolean
-                MethodInfo    eqMethod = propType.ensureTypeInfo().getMethodBySignature(eqSig);
+                MethodInfo    eqMethod = propType.typeInfo().getMethodBySignature(eqSig);
                 JitMethodDesc eqJmd    = eqMethod.getJitDesc(this, propType);
                 ClassDesc     cdProp   = ensureClassDesc(propType);
 
@@ -2411,7 +2411,7 @@ public class CommonBuilder
                 convertIntToOrdered(code);
             } else {
                 // Object type: call static compare(Ctx, nType, T, T) -> Ordered
-                MethodInfo    cmpMethod = propType.ensureTypeInfo().getMethodBySignature(cmpSig);
+                MethodInfo    cmpMethod = propType.typeInfo().getMethodBySignature(cmpSig);
                 JitMethodDesc cmpJmd    = cmpMethod.getJitDesc(this, propType);
 
                 // load the context to the stack (compare param 0)
@@ -2681,7 +2681,7 @@ public class CommonBuilder
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
 
-                MethodInfo    hashMethod = propType.ensureTypeInfo().getMethodBySignature(hashSig);
+                MethodInfo    hashMethod = propType.typeInfo().getMethodBySignature(hashSig);
                 JitMethodDesc hashJmd    = hashMethod.getJitDesc(this, propType);
 
                 IdentityConstant idTarget = hashMethod.getIdentity().getClassIdentity();
@@ -3068,7 +3068,7 @@ public class CommonBuilder
                                            ClassDesc cdProp, SignatureConstant signature,
                                            String standardName, MethodTypeDesc mdStandard) {
         if (propType.isJitPrimitive()) {
-            MethodInfo    method = propType.ensureTypeInfo().getMethodBySignature(signature);
+            MethodInfo    method = propType.typeInfo().getMethodBySignature(signature);
             JitMethodDesc jmd    = method.getJitDesc(this, propType);
             assert jmd.isOptimizedStatic;
             code.invokestatic(cdProp, signature.getName() + OPT, jmd.optimizedMD);
@@ -3104,7 +3104,7 @@ public class CommonBuilder
     protected boolean isConstFormingProperty(PropertyInfo prop, TypeConstant baseType,
                                              boolean allowLazy) {
         PropertyConstant propId = prop.getIdentity();
-        if (baseType != null && baseType.ensureTypeInfo().findProperty(propId, true) != null) {
+        if (baseType != null && baseType.typeInfo().findProperty(propId, true) != null) {
             // we are only interested in properties not known to the base class
             return false;
         }
@@ -3143,12 +3143,12 @@ public class CommonBuilder
     protected TypeConstant getImplementationBase(SignatureConstant sig) {
         TypeConstant typeExtends = typeInfo.getExtends();
         while (typeExtends != null) {
-            if (typeExtends.ensureTypeInfo().getFormat() == Format.CONST) {
+            if (typeExtends.typeInfo().getFormat() == Format.CONST) {
                 return typeExtends;
             }
 
             // super class is not a const, so look for an implementation of the method
-            TypeInfo   info   = typeExtends.ensureTypeInfo();
+            TypeInfo   info   = typeExtends.ensureTypeInfo(ErrorListener.RUNTIME);
             MethodInfo method = info.getMethodBySignature(sig);
             if (method != null) {
                 if (method.getIdentity().getNamespace().equals(info.getIdentity())) {
@@ -3506,7 +3506,7 @@ public class CommonBuilder
         JitMethodDesc jmd       = srcMethod.getJitDesc(this);
         PropertyInfo  propInfo  = typeInfo.findProperty(propDelegate);
         TypeConstant  dstType   = propInfo.getType();
-        TypeInfo      dstInfo   = dstType.ensureTypeInfo();
+        TypeInfo      dstInfo   = dstType.ensureTypeInfo(ErrorListener.RUNTIME);
         MethodInfo    dstMethod = dstInfo.getMethodById(srcMethod.getIdentity());
         String        dstName   = dstMethod.ensureJitMethodName(typeSystem);
 

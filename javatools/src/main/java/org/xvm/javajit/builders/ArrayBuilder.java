@@ -7,6 +7,7 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -137,7 +138,7 @@ public class ArrayBuilder extends AugmentingBuilder {
         boolean           isStatic      = bctx.methodStruct.isFunction();
         ConstantPool      pool          = pool();
         TypeConstant      baseArrayType = pool.typeArray();
-        TypeInfo          baseArrayInfo = baseArrayType.ensureTypeInfo();
+        TypeInfo          baseArrayInfo = baseArrayType.ensureTypeInfo(ErrorListener.RUNTIME);
         SignatureConstant sig           = bctx.methodStruct.resolveSignature(pool, baseArrayType);
         MethodInfo        baseMethod    = baseArrayInfo.getMethodBySignature(sig, true);
 
