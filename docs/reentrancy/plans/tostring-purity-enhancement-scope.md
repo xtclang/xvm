@@ -69,10 +69,12 @@ full dump exactly available to code that asks for it.
    (`append(int)` and `append(String.valueOf(int))` render the same characters). Its `isOp()` interns
    the fixed system `clzOp` once (bounded, one-time) — the win is that the pure `TypeInfo.toString()`
    no longer reaches `MethodInfo` at all.
-4. **`xRTType.java`**: `Type.dump()` now calls `ensureTypeInfo().toString(false)` instead of the no-arg
+4. **`xRTType.java`**: `Type.dump()` now calls `ensureTypeInfo(...).toString(false)` instead of the no-arg
    `...toString()`. Old path: no-arg `toString()` → `toString(false)` (full dump). New path: explicit
    `toString(false)` (full dump). So **`Type.dump()`'s output is preserved byte-for-byte**; only the
-   *debugger's* implicit no-arg view changed (to the header).
+   *debugger's* implicit no-arg view changed (to the header). (The listener is now passed
+   explicitly - `frame.container().getErrorListener()` - since the no-argument `ensureTypeInfo()`
+   overload was deleted; that does not affect the output this item is about.)
 
 ## Production-safety analysis (the point of the exercise)
 

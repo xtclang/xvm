@@ -419,8 +419,10 @@ cost in the request.
 `LinkedRepository:119` says it plainly - *"create a copy, allowing the compiler to mutate the
 repos[0] contents"*. Three things mutate a library module during a compile:
 
-- `prelinkSystemLibraries` - `struct.getConstantPool().setErrorListener(...)` and
-  `struct.linkModules(repo, false)`;
+- `prelinkSystemLibraries` - `struct.linkModules(repo, false)`. (It also used to call
+  `struct.getConstantPool().setErrorListener(...)`, which was the more obviously wrong of the two:
+  the engine does not own that pool. That setter is since deleted outright - `ConstantPool` takes
+  its listener at construction - so this list is one mutation shorter than when it was written);
 - `injectNakedRefType` - sets the NakedRef type on the pool of **every** module in the build repo,
   which includes the cloned library modules;
 - `TypeInfo` population - validation builds and caches `TypeInfo` on library `TypeConstant`s.
