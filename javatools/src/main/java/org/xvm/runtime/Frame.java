@@ -88,6 +88,23 @@ public class Frame
     public final ServiceContext     f_context;      // same as f_fiber.f_context
     public final MethodStructure    f_function;
 
+    /**
+     * The listener runtime diagnostics from this frame report to, attributed to this frame's fiber.
+     *
+     * <p>The fiber is stamped HERE rather than read when the diagnostic is built, because the frame
+     * holds it explicitly and the alternative - asking which fiber is bound on the calling thread -
+     * is the ambient-ownership read this branch removed with {@code ServiceContext.getCurrentContext}.
+     * With several fibers interleaved on one carrier thread, the thread name alone does not say
+     * which one raised a diagnostic; this does.
+     *
+     * @return the container's listener, stamped with this frame's fiber
+     */
+    private ErrorListener errs() {
+        ErrorListener errs = container().getErrorListener();
+        return f_fiber == null ? errs : errs.onFiber(f_fiber.getId());
+    }
+
+
     protected final Op[]            f_aOp;          // the op-codes
     protected final ObjectHandle    f_hTarget;      // the passed in target
     protected final ObjectHandle    f_hThis;        // the "inception" view of the target
@@ -931,7 +948,7 @@ public class Frame
                     if (REPORT_WRAPPING) {
                         // INFO: this is emitted only under -DDEBUG=all. It is a developer asking to
                         // watch, not the runtime reporting that something is wrong.
-                        container().getErrorListener().log(Severity.INFO, RT_WRAPPING_REQUIRED,
+                        errs().log(Severity.INFO, RT_WRAPPING_REQUIRED,
                             ErrorListener.at(f_function), typeFrom.getValueString(), typeTo.getValueString());
                     }
                     break;
@@ -964,7 +981,7 @@ public class Frame
                         // arrays allow to delegate to instances of different types using views
                         break;
                     }
-                    container().getErrorListener().log(Severity.WARNING, RT_SUSPICIOUS_ASSIGNMENT,
+                    errs().log(Severity.WARNING, RT_SUSPICIOUS_ASSIGNMENT,
                         ErrorListener.at(f_function), this, typeFrom.getValueString(), typeTo.getValueString());
                     break;
                 }
@@ -1540,7 +1557,7 @@ public class Frame
                 // from inside log() at ERROR and above; it does not, so the severity can say what
                 // actually happened. Nothing at run time gates on hasSeriousErrors, so this
                 // informs a host without changing what the runtime does.
-                container().getErrorListener().log(Severity.ERROR, RT_TYPE_UNRESOLVED,
+                errs().log(Severity.ERROR, RT_TYPE_UNRESOLVED,
                     ErrorListener.at(f_function), type.getValueString());
             }
         }

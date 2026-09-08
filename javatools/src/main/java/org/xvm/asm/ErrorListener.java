@@ -189,6 +189,58 @@ public interface ErrorListener {
      *
      * @return a {@link Site} at that structure
      */
+    /**
+     * Where a diagnostic was raised FROM, as opposed to what it is about.
+     *
+     * <p>{@link Site} says which source or structure the diagnostic concerns. This says which thread
+     * - and, at run time, which fiber - was executing when it was raised. With parallel compiles
+     * teeing into one host sink, "which of the eight running compiles produced this" is otherwise
+     * unanswerable from the diagnostic alone.
+     *
+     * <p>The thread is captured automatically, because the executing thread is a FACT about the log
+     * call and claims nothing about ownership. The fiber is not: it must be supplied by code that
+     * holds a {@link org.xvm.runtime.Frame}, via {@link ErrorListener#onFiber}. Reading it ambiently
+     * would mean asking "which fiber happens to be bound on this thread", which is the
+     * hidden-ownership hazard this branch deleted along with {@code ServiceContext.getCurrentContext}
+     * and {@code ConstantPool.getCurrentPool} - and {@code DisplayPurityTest} bans the accessor by
+     * name so it cannot come back.
+     *
+     * <p><b>Never part of the deduplication key.</b> {@code genUID} must not include any of this: two
+     * threads reporting the same diagnostic are reporting the same diagnostic, and keying on origin
+     * would turn the fan-in case into duplicate output for every parallel compile.
+     *
+     * @param thread  the name of the thread that raised it
+     * @param fiber   the id of the XTC fiber that raised it, or {@link #NO_FIBER} outside one
+     */
+    record Origin(@NotNull String thread, long fiber) {
+        /**
+         * The fiber id used when there is no fiber - all compile-time diagnostics, and any runtime
+         * one raised outside fiber execution.
+         */
+        public static final long NO_FIBER = -1L;
+
+        /**
+         * @return the origin of a diagnostic raised on the calling thread, with no fiber
+         */
+        public static @NotNull Origin here() {
+            return new Origin(Thread.currentThread().getName(), NO_FIBER);
+        }
+
+        /**
+         * @param id  the fiber id
+         *
+         * @return this origin, attributed to the specified fiber
+         */
+        public @NotNull Origin withFiber(long id) {
+            return new Origin(thread, id);
+        }
+
+        @Override
+        public String toString() {
+            return fiber == NO_FIBER ? thread : thread + "/fiber:" + fiber;
+        }
+    }
+
     static Site at(XvmStructure structure) {
         return new Site.At(structure);
     }
@@ -279,6 +331,42 @@ public interface ErrorListener {
      *
      * @return true if the ErrorListener has decided to abort the process that reported the error
      */
+    /**
+     * Attribute everything logged through the returned listener to the specified fiber.
+     *
+     * <p>A decorator rather than a parameter, because {@link ErrorInfo} is built inside the severity
+     * aliases and there is no per-call hook - and because forwarding {@code log} is all a decorator
+     * has to do, which is the property that makes them safe to compose here.
+     *
+     * @param fiber  the fiber id to stamp on
+     *
+     * @return a listener that stamps the fiber and forwards to this one
+     */
+    default @NotNull ErrorListener onFiber(long fiber) {
+        ErrorListener delegate = this;
+        return new ErrorListener() {
+            @Override
+            public void log(ErrorInfo err) {
+                delegate.log(err.attributedTo(err.getOrigin().withFiber(fiber)));
+            }
+
+            @Override
+            public boolean isAbortDesired() {
+                return delegate.isAbortDesired();
+            }
+
+            @Override
+            public boolean isSilent() {
+                return delegate.isSilent();
+            }
+
+            @Override
+            public String toString() {
+                return delegate + "/fiber:" + fiber;
+            }
+        };
+    }
+
     default boolean isAbortDesired() {
         return false;
     }
@@ -406,6 +494,7 @@ public interface ErrorListener {
             m_severity   = severity;
             m_sCode      = sCode;
             m_aoParam    = aoParam == null ? NO_PARAMS : aoParam;
+            m_origin     = Origin.here();
             m_source     = source;
             m_lPosStart  = lPosStart;
             m_lPosEnd    = lPosEnd;
@@ -425,8 +514,40 @@ public interface ErrorListener {
             m_severity = severity;
             m_sCode    = sCode;
             m_aoParam  = aoParam == null ? NO_PARAMS : aoParam;
+            m_origin   = Origin.here();
             m_xs       = xs;
             // TODO need to be able to ask the XVM structure for the source & location
+        }
+
+        /**
+         * Copy this diagnostic with a different origin.
+         *
+         * <p>Copy rather than mutate: every other field is effectively final, and a diagnostic that
+         * changed identity after being logged would break the deduplication the {@link ErrorList}
+         * does on it. The origin is not part of that key, so the copy is equal to the original for
+         * deduplication purposes and only differs in what it says about where it came from.
+         *
+         * @param origin  the origin to attribute it to
+         *
+         * @return a copy attributed to that origin, or this one if it already is
+         */
+        public @NotNull ErrorInfo attributedTo(@NotNull Origin origin) {
+            if (origin.equals(m_origin)) {
+                return this;
+            }
+            ErrorInfo that = m_source == null
+                    ? new ErrorInfo(m_severity, m_sCode, m_aoParam, m_xs)
+                    : new ErrorInfo(m_severity, m_sCode, m_aoParam, m_source, m_lPosStart, m_lPosEnd);
+            that.m_xs     = m_xs;
+            that.m_origin = origin;
+            return that;
+        }
+
+        /**
+         * @return where this diagnostic was raised from; never null
+         */
+        public @NotNull Origin getOrigin() {
+            return m_origin;
         }
 
         /**
@@ -647,6 +768,12 @@ public interface ErrorListener {
          * empty array and can throw on a null one. Coerced once, at construction.
          */
         private final Object[]     m_aoParam;
+
+        /**
+         * Where this diagnostic was raised from. Captured at construction, replaceable only by
+         * {@link #attributedTo}, and deliberately absent from {@link #genUID} - see {@link Origin}.
+         */
+        private       Origin       m_origin;
         private       Source       m_source;
         private       long         m_lPosStart;
         private       long         m_lPosEnd;

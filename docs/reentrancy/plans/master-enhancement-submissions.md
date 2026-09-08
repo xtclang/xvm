@@ -91,6 +91,7 @@ surface graduate into individual rows on the bug list.
 | E36 | The debugger reads another thread's fiber state; the monitor meant to stop that is only entered at breakpoints | 1 record + 1 volatile + 3 reads | independent | analysis only - no reproduction; publish a snapshot instead |
 | E37 | `Assignable[]` as an API, and the mutual-recursion bridge that let a subclass overriding neither method loop forever | 38 usages, 11 override points; the bridge fix is separate and small | independent; do NOT ride it on PR #585 | the bridge cost a `StackOverflowError` in the compiler |
 | E38 | Module output cannot be redirected: `xTerminalConsole`'s sink is a static, so hosting a run forces a second console template | 1 instance field + a registration helper | independent | deletes the need for `xExternalConsole` |
+| E47 | Failures with nowhere to go: 22 `System.err.println`, 9 `printStackTrace`, 31 swallowed `catch` blocks - and an `XtcEngine` that cannot report any of them | incremental, per area | after E32/E35 (needs the listener to exist) | measured; the listener now exists, which is what makes these fixable rather than unavoidable |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
@@ -3496,6 +3497,41 @@ plausible and partly evidenced rather than as established. Nothing observed sugg
 no test fails, and parallel compiles do not cross-report - but the reason it holds is not the one
 written down.
 
+#### D, scoped: 56 sites, 46 methods, and a second ring of ~280
+
+Measured rather than estimated, so the queue has a real number:
+
+| | count |
+| --- | --- |
+| no-argument `ensureTypeInfo()` call sites | 56 |
+| ...of which have an `ErrorListener` already in scope | **0** |
+| distinct methods that would therefore grow a parameter | 46 |
+| call sites of those methods (17 of the 46 sampled) | 280 |
+
+The zero is the number that matters. Every one of the 56 sits in a method with no listener to pass,
+so this is not a conversion - it is a parameter added to 46 methods, whose own callers then mostly
+lack a listener too. Sampling 17 of the 46 already finds 280 call sites in the second ring; over all
+46 the total is plainly in the high hundreds. `getJitDesc` (59 callers), `getTypeInfo` (56),
+`getPropertyInfo` (42) and `isVar` (31) are ordinary accessors, and giving an accessor a diagnostic
+sink is how the parameter reaches everywhere.
+
+Where the 56 live changes the picture further:
+
+| area | sites | |
+| --- | --- | --- |
+| `javajit` | 23 | the JIT - runtime-side, where `RUNTIME` is the CORRECT answer, not a defect |
+| `asm` | 22 | the case the row is about |
+| `compiler` | 14 | the case the row is about |
+| `api` | 1 | |
+
+So **41% of the sites are not the problem this row describes.** A JIT builder resolving a type has no
+compile to report to and no source position to report against; `RUNTIME` is what it should get.
+
+**Queued, not scheduled.** If it is ever done it should start with `asm` + `compiler` (36 sites) and
+leave `javajit` alone, and it should be preceded by the audit above - because if adoption turns out
+to hold for the reason currently written down, most of the value is already there and the remaining
+work is a test rather than 400 signatures.
+
 ### C, done: `setErrorListener` is deleted, not merely unused
 
 `ConstantPool.m_errs` was the last mutable listener field, and its two callers are the argument for
@@ -4326,3 +4362,84 @@ one console implementation.
 
 **Dependencies/order:** Independent. Pairs naturally with row 46.
 
+
+---
+
+## E47 - Failures with nowhere to go: `System.err`, swallowed catches, and the exceptions that never reach the caller
+
+**Depends on:** E32 and E35, which are done. That order matters: most of these sites were not
+oversights, they were the only thing available. A diagnostic cannot be reported to a listener that
+does not exist, is nullable, or is a mutable field that might be pointing anywhere. Now that one
+non-null listener is threaded and owned, they become fixable.
+
+### The state
+
+| | count |
+| --- | --- |
+| `System.err.println` | 22 |
+| `printStackTrace` | 9 |
+| `catch` blocks that discard the exception entirely | 31 |
+| `throws IOException` declarations (the tree does NOT avoid checked exceptions) | 776 |
+
+The swallowed catches, by what they discard:
+
+| exception | n |
+| --- | --- |
+| `IOException` | 12 |
+| `RuntimeException` | 6 |
+| `Exception` | 4 |
+| `CompilerException` | 3 |
+| one each: `NameNotFoundException`, `KeyStoreException`, `IllegalStateException`, `WrapperException`, `CompilerException | IOException`, `ArithmeticException` | 6 |
+
+### Three different problems, and they want three different fixes
+
+**1. Trace output that is not a diagnostic.** A sample of the `System.err.println` sites is
+`xRTServer` handshake tracing and `DebugConsole` - developer output, gated on debug flags, going to a
+console on purpose. These are FINE and should be left alone, or moved to a logger. Counting them as
+"places with nowhere to report" overstates the problem, which the earlier E32 figure of 53 did.
+
+**2. A real diagnostic with no sink.** `Container.recordRuntimeFailure` was the archetype: a VM
+defect captured for `join()` to rethrow and printed to `stderr`, where an embedding host could not
+see it at all. Fixed - it now reports through the container's own listener. The remaining sites need
+classifying the same way, one at a time.
+
+**3. A failure the CALLER should have decided about.** This is the biggest one and the least
+mechanical. `catch (IOException ignore) {}` twelve times over is not a listener problem - it is a
+control-flow decision taken in the wrong place. `ModuleInfo.extractModuleName` swallowing
+`CompilerException | IOException` to answer `null` is defensible as a deliberate probe; a repository
+swallowing an `IOException` while loading a module is not, because the caller wanted the module.
+
+### The `XtcEngine` angle, which is the reason to care
+
+An embedding host gets a `CompileResult` and a listener. It has no way to learn that a module failed
+to load because a file was unreadable - that `IOException` was discarded three layers down, and the
+host sees only an absent module or an unresolved name. This is exactly the shape fixed in
+`prelinkSystemLibraries`, where `linkModules`' return value was dropped and a missing dependency
+surfaced later as an unresolved name in library code the user did not write.
+
+**The repo does not, in fact, avoid checked exceptions** - 776 `throws IOException` declarations say
+otherwise. What it avoids is *propagating them across subsystem boundaries*, so they get caught at an
+arbitrary depth and converted into `null`, a silent skip, or a print. The fix is not "use fewer
+checked exceptions"; it is to decide, per site, whether the caller or the callee owns the failure,
+and where the caller owns it, either let it propagate or report it through the listener that now
+exists.
+
+### Doing it incrementally
+
+Deliberately NOT one change. Per area, smallest first, each independently reviewable:
+
+1. **Classify the 22 `System.err.println` sites** into trace / diagnostic / caller's-decision. Cheap,
+   and it sizes everything else. Expect most to be category 1.
+2. **The 12 swallowed `IOException`s.** Each is a yes/no question - did the caller want the thing
+   that failed? - and the answer is usually in the method name.
+3. **The 6 swallowed `RuntimeException`s.** Highest risk of the three: swallowing a
+   `RuntimeException` hides defects rather than expected conditions, and this branch has already been
+   bitten once by exactly that (a catch-and-ignore cached a half-built `TypeInfo` and caused the
+   failure it was hiding).
+4. **`XtcEngine` boundary review.** For each failure an embedder could plausibly need to act on, is
+   it reachable from `CompileResult` or the listener? Where it is not, decide between propagating and
+   reporting.
+
+**Not urgent, and not one PR.** Nothing here is a live incorrectness the way the `genUID` dedup was.
+It is the difference between a runtime that can be embedded and one that can only be run from a
+terminal, and it gets there one site at a time.

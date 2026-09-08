@@ -1295,7 +1295,7 @@ public final class XtcEngine
         for (ErrorInfo err : errs.getErrors()) {
             Source source = err.getSource();
             list.add(new Diagnostic(err.getSeverity(), err.getCode(), err.getMessageText(),
-                    source == null ? null : source.getFileName(), err.getLine()));
+                    source == null ? null : source.getFileName(), err.getLine(), err.getOrigin()));
         }
         return List.copyOf(list);
     }
@@ -1443,7 +1443,14 @@ public final class XtcEngine
      * @param line      the 1-based line, or 0 if unknown
      */
     public record Diagnostic(@NotNull Severity severity, @NotNull String code, @NotNull String message,
-                            @Nullable String source, int line) {
+                            @Nullable String source, int line, @NotNull ErrorListener.Origin origin) {
+        /**
+         * @return a short description of where this diagnostic came from - the thread that raised it
+         *         and, at run time, the fiber
+         */
+        public @NotNull String originText() {
+            return origin.toString();
+        }
     }
 
     /**
