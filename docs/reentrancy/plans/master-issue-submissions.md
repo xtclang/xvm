@@ -96,6 +96,9 @@ Status is as of this file's last update; check the PR before re-filing.
 | 47 | `ErrorInfo.genUID` drops the end position and hashes the parameters, so `ErrorList` deduplicates diagnostics that are not duplicates | 2 one-line edits | independent | silent loss of compiler errors; no concurrency needed to hit it |
 | 48 | **WITHDRAWN as a defect** - a `TypeInfo` build that throws leaves the place-holder set, but every reader of it has a recovery path | 2 lines; keep as hygiene | independent | filed twice with a failure mode that does not survive checking; kept as a record of what was ruled out |
 | 49 | A failed read-through CACHE WRITE makes `LinkedRepository` report a module it found as not found | delete a `break`; then share one body between the two overloads | independent | a read-only front repository - a build output dir - triggers it every time |
+| 50 | `deleteKeyStoreEntry` swallows a failed delete, and the caller then CREATES the keystore fresh over the existing one | delete a `catch`; callers already declare it | independent | silent keystore loss on a wrong password; the stated justification is already handled by two guards |
+| 51 | `xRTNameService` catches `Throwable` in a DNS continuation, so an `Error` is reported to XTC code as "host not found" | narrow to `ExecutionException`; restore the interrupt | independent | 2 sites; the sibling catches `Exception` for the same `.get()` |
+| 52 | `Parser` reports "no such directory or file" for an include file that EXISTS and could not be read | retain the `IOException` as the cause | independent | the message is not incomplete, it is wrong |
 
 ### Filing a row as an issue or PR
 
@@ -3768,3 +3771,144 @@ pair, caused by the same duplication.
 Fixing only the `break` leaves two copies that will drift again. Extracting the shared body - a
 `search(sModule, load)` that takes how to ask each repository, plus a `cacheInFront` - fixes both
 defects at once and removes the mechanism that produced them.
+
+
+## 50. `deleteKeyStoreEntry` swallows a failed delete, and the caller then recreates the keystore over the top
+
+**FIXED 2026-09-08** on `lagergren/lazy-instance`: the `catch` is deleted and the method declares
+what it throws. No caller changed - they already declared or caught both types. Not pushed.
+
+**Issue title:** `KeyStoreOperations.deleteKeyStoreEntry` discards `GeneralSecurityException` and
+`IOException`, so a delete that failed reports success and the subsequent create replaces the
+keystore.
+
+**Status/category:** Real defect in current master source. Silent data loss, in a crypto path.
+
+**Explanation:**
+
+```java
+} catch (GeneralSecurityException | IOException ignore) {
+    // intentionally silent; enttry may not exist
+}
+```
+
+The stated justification does not match the code. The body already guards both halves of it:
+
+```java
+File file = new File(sPath);
+if (file.exists()) {                       // <- "the store may not exist"
+    ...
+    if (keyStore.containsAlias(sAlias)) {  // <- "the entry may not exist"
+```
+
+so what the catch silences is neither of those. It silences a keystore that could not be OPENED or
+WRITTEN: a wrong password (`UnrecoverableKeyException`), a corrupt PKCS12 file, a failed
+`saveKeyStore`.
+
+**Why that is worse than an ordinary swallow.** Every caller does delete-then-create, and the create
+path goes through `loadOrCreateKeyStore`:
+
+```java
+public static void createSymmetricKey(String sPath, char[] achPwd, String sName)
+        throws GeneralSecurityException, IOException {
+    deleteKeyStoreEntry(sPath, achPwd, sName);        // fails silently
+    ...
+    KeyStore keyStore = loadOrCreateKeyStore(sPath, achPwd);   // CREATES a new one
+```
+
+So a wrong password makes the delete a no-op that claims success, and the store is then created
+fresh - **discarding every existing entry in it**. The user asked to add one key and lost all of
+them, with nothing reported.
+
+**Master evidence:**
+`javatools/src/main/java/org/xvm/runtime/template/_native/crypto/KeyStoreOperations.java:94` (the
+catch), `:84-92` (the two guards that already cover the stated reason), `:138-140` and `:162-163`
+(the delete-then-create callers), and `loadOrCreateKeyStore` in the same file.
+
+**Reachability on master:** any `createSymmetricKey`, `createPassword` or certificate operation
+against an existing keystore with the wrong password, or on a file that is corrupt or unwritable.
+
+**Minimal master-portable fix strategy:** delete the `catch` and declare
+`throws GeneralSecurityException, IOException`. **No call site needs to change** - `createSymmetricKey`
+and `createPassword` already declare both, and `xRTCertificateManager` already catches them.
+
+**On the existing tests:** `KeyStoreOperationsTest` has two tests pinning this method, and both keep
+passing, because both assert the cases the GUARDS deliver - a missing file and a missing alias.
+Neither asserted the case the catch was hiding, which is the tell.
+
+---
+
+## 51. `xRTNameService` catches `Throwable`, so an `Error` becomes "host not found"
+
+**FIXED 2026-09-08** on `lagergren/lazy-instance`. Not pushed.
+
+**Issue title:** two DNS continuations catch `Throwable`/`Exception` around
+`CompletableFuture.get()`, converting any failure - including `Error` - into the conditional-False
+return, and discarding an interrupt without restoring the flag.
+
+**Status/category:** Real defect in current master source.
+
+**Explanation:** the XTC signature is a conditional return, so an exception meaning "False" is the
+design. `Throwable` is not:
+
+```java
+} catch (Throwable ignore) {
+    // REVIEW CP: do we want to report the reason somehow?
+}
+return frameCaller.assignValue(aiReturn[0], xBoolean.falseHandle(frameCaller));
+```
+
+`OutOfMemoryError`, `StackOverflowError` and `LinkageError` are all reported to XTC code as "the
+host could not be resolved". The `REVIEW CP` comment shows the width was never deliberate.
+
+The expected set from `.get()` is `InterruptedException` and `ExecutionException`. The first also
+needs the interrupt flag restored - swallowing it discards a cancellation request that the next
+blocking call on that thread will never see.
+
+**Master evidence:**
+`javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTNameService.java:156`
+(`catch (Throwable ignore)`) and `:181` (`catch (Exception ignore)` on the same shape).
+
+**Minimal master-portable fix strategy:** replace both with
+`catch (InterruptedException e) { Thread.currentThread().interrupt(); }` plus
+`catch (ExecutionException _) {}`. The conditional-False return is unchanged.
+
+---
+
+## 52. `Parser` reports "no such directory or file" for a file that exists and cannot be read
+
+**FIXED 2026-09-08** on `lagergren/lazy-instance`, together with a `CompilerException(String, Throwable)`
+constructor, which the class did not have. Not pushed.
+
+**Issue title:** the include-file path swallows the `IOException` and then throws a message-only
+`CompilerException` claiming the file does not exist.
+
+**Status/category:** Real defect in current master source. The diagnostic is not incomplete, it is
+wrong.
+
+**Explanation:**
+
+```java
+try {
+    abData = m_source.includeBinary(sFile);
+} catch (IOException ignore) {}
+if (abData == null) { abData = new byte[0]; fErr = true; }
+...
+if (fErr) {
+    log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
+    throw new CompilerException("no such directory or file: " + sFile);
+}
+```
+
+A permissions problem, a bad mount, a device error - all reported as "no such directory or file".
+The `IOException` that would have said otherwise is discarded, so the wrong conclusion cannot even
+be checked.
+
+**Master evidence:** `javatools/src/main/java/org/xvm/compiler/Parser.java:3650` and `:3661` (the two
+swallows, binary and string include), and the `CompilerException` throw below them.
+
+**Minimal master-portable fix strategy:** retain the exception, report `cannot read "<file>":
+<reason>` when there is one, and pass it as the cause. `CompilerException` needs a
+`(String message, Throwable cause)` constructor - `LauncherException` already accepts a cause, and
+`CompilerException(Throwable)` already exists (marked unused), but with no `(message, cause)` form a
+caller holding both had to drop one, and dropping the cause is the easy choice.
