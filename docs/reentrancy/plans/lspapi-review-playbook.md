@@ -34,18 +34,26 @@ and wrong there. The two are complementary.
 
 ### Gaps this audit found
 
-- **There is no test for any of it.** Nothing in the tree exercises per-run injections or transient
-  tasks. The PR comment on `runner.x:161` told Gene *"with a test that runs one module twice with
-  different values"* — that test does not exist here. Either it was never lifted in or it was lost;
-  either way the claim on the PR is currently unsupported, which matters if he takes the offer up.
+- **CORRECTION: the injections test did exist, and it could not fail.** This row first said no test
+  existed; that was wrong - `PerRunInjectionTest` was there, and my search missed it because I
+  grepped for `injectionNames`/`registerTransientTask` while it uses the public engine API. What it
+  actually asserted was worse than absent: it ran ONE module twice and checked
+  `label == "first" || label == "second"`, which passes when the second run sees the first's value.
+  It could not detect the leak it was named for.
+
+  The discriminator has to be outside the module - a module cannot tell which run it is - so the
+  expectation has to be compiled into the source. It now uses two modules, each asserting its own
+  value, plus a negative test proving a wrong value fails the run, which is what makes the positive
+  one capable of failing. Transient tasks remain untested.
 - **`registerTask`'s injection parameters are dead on this branch.** `XtcEngine` only ever calls
   `registerTransientTask`; nothing calls the five-argument `registerTask`. The surface is carried but
   unexercised, which is how it would rot.
-- **`XtcEngine.run(..., Map<String, List<String>> mapInjections)` takes a mutable collection**, which
-  is against this project's own API preference — the runner underneath takes two parallel
-  `String[]`s, and the map exists only to be unpacked into them at the boundary. An immutable value
-  record (name plus values) passed varargs would match both the preference and the shape it is
-  converted to anyway.
+- **`XtcEngine.run(..., Map<String, List<String>>)` - replaced by an `Injection` record.** The
+  mutable collection was the smaller half of the problem. The bigger one was that the TYPE advertised
+  something the runner cannot do: a `List` per name says multi-valued `String[]` injections are
+  expressible, so every call had to be validated at run time and rejected with an
+  `UnsupportedOperationException`. `Injection(String name, String value)` cannot express the
+  unsupported case, so the check is gone with it.
 
 ### Recommendation
 

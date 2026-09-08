@@ -965,24 +965,24 @@ public final class XtcEngine
             throw new IllegalArgumentException("module not in compile result: " + sModuleName);
         }
 
-        return run(result, sModuleName, Map.of());
+        return run(result, sModuleName, new Injection[0]);
     }
 
     /**
-     * Run a just-compiled module with its own {@code String}/{@code String[]} injections.
+     * Run a just-compiled module with injections granted to that run alone.
      *
      * @param result        a successful {@link #compile} result containing the module
      * @param sModuleName   the module to run
-     * @param mapInjections values granted to THIS run only; see
+     * @param injections    values granted to THIS run only; see
      *                      {@link #run(String, String, Map)}
      *
      * @return the run-completion future
      */
     public @NotNull CompletableFuture<ObjectHandle> run(@NotNull CompileResult result,
                                                         @NotNull String sModuleName,
-                                                        @NotNull Map<String, List<String>> mapInjections) {
+                                                        @NotNull Injection @NotNull... injections) {
         return runFrom(new LinkedRepository(result.buildRepository(), repoLibrary), sModuleName,
-                "run", Objects.requireNonNull(mapInjections, "mapInjections"));
+                "run", Objects.requireNonNull(injections, "injections"));
     }
 
     /**
@@ -1000,26 +1000,25 @@ public final class XtcEngine
      * @return the run-completion future
      */
     /**
-     * Run a module with its own {@code String}/{@code String[]} injections.
+     * Run a module with injections granted to that run alone.
      *
      * @param sModuleName   the module to run, resolved against the engine's module path
      * @param sMethodName   the module method to invoke (the CLI default is {@code "run"})
-     * @param mapInjections values granted to THIS run only, keyed by injection name; a single
-     *                      value satisfies a {@code String} injection and the whole list satisfies
-     *                      a {@code String[]} one
+     * @param injections    values granted to THIS run only, each naming one {@code String}
+     *                      injection
      *
      * @return the run-completion future
      */
     public @NotNull CompletableFuture<ObjectHandle> run(@NotNull String sModuleName,
                                                         @NotNull String sMethodName,
-                                                        @NotNull Map<String, List<String>> mapInjections) {
+                                                        @NotNull Injection @NotNull... injections) {
         return runFrom(repoLibrary, sModuleName, sMethodName,
-                Objects.requireNonNull(mapInjections, "mapInjections"));
+                Objects.requireNonNull(injections, "injections"));
     }
 
     public @NotNull CompletableFuture<ObjectHandle> run(@NotNull String sModuleName,
                                                         @NotNull String sMethodName) {
-        return runFrom(repoLibrary, sModuleName, sMethodName, Map.of());
+        return runFrom(repoLibrary, sModuleName, sMethodName);
     }
 
     /**
@@ -1033,7 +1032,7 @@ public final class XtcEngine
     private @NotNull CompletableFuture<ObjectHandle> runFrom(@NotNull ModuleRepository repoRun,
                                                              @NotNull String sModuleName,
                                                              @NotNull String sMethodName,
-                                                             @NotNull Map<String, List<String>> mapInjections) {
+                                                             @NotNull Injection @NotNull... injections) {
         ModuleStructure moduleApp = repoRun.loadModule(sModuleName);
         if (moduleApp == null) {
             return CompletableFuture.failedFuture(new IllegalArgumentException(
@@ -1045,18 +1044,11 @@ public final class XtcEngine
         // is what stops two runs sharing one value. Only single-valued String injections are
         // expressible today; a multi-valued name is a String[] injection, which runTask has no
         // way to carry (see H19 in the LSPAPI analysis).
-        var listNames  = new ArrayList<String>(mapInjections.size());
-        var listValues = new ArrayList<String>(mapInjections.size());
-        for (var entry : mapInjections.entrySet()) {
-            List<String> listValue = entry.getValue();
-            if (listValue == null || listValue.size() != 1) {
-                return CompletableFuture.failedFuture(new UnsupportedOperationException(
-                        "only single-valued String injections are supported through the runner"
-                                + " app; \"" + entry.getKey() + "\" has "
-                                + (listValue == null ? 0 : listValue.size()) + " values"));
-            }
-            listNames.add(entry.getKey());
-            listValues.add(listValue.getFirst());
+        var listNames  = new ArrayList<String>(injections.length);
+        var listValues = new ArrayList<String>(injections.length);
+        for (Injection injection : injections) {
+            listNames.add(injection.name());
+            listValues.add(injection.value());
         }
         if (!"run".equals(sMethodName)) {
             // runTask invokes run(); an arbitrary entry point has no equivalent in the runner
@@ -1452,6 +1444,29 @@ public final class XtcEngine
      * @param source    the source name/uri, or null
      * @param line      the 1-based line, or 0 if unknown
      */
+    /**
+     * One injection granted to a single run: a name and the value it resolves to.
+     *
+     * <p>Replaces a {@code Map<String, List<String>>}. That shape was wrong in two ways at once. It
+     * was a mutable collection in a public signature, which this project does not want; and more
+     * importantly its TYPE advertised something the runner cannot do - a {@code List} per name says
+     * multi-valued {@code String[]} injections are expressible, and they are not, so every call had
+     * to be checked at run time and rejected with an {@code UnsupportedOperationException}. A single
+     * value per name cannot express the unsupported case, so there is nothing left to check.
+     *
+     * <p>If {@code String[]} injections ever become carryable (see H19), they get their own factory
+     * rather than being smuggled back in as a collection nobody can validate at the call site.
+     *
+     * @param name   the injection name, as the module requests it with {@code @Inject}
+     * @param value  the value granted to THIS run
+     */
+    public record Injection(@NotNull String name, @NotNull String value) {
+        public Injection {
+            Objects.requireNonNull(name, "name");
+            Objects.requireNonNull(value, "value");
+        }
+    }
+
     public record Diagnostic(@NotNull Severity severity, @NotNull String code, @NotNull String message,
                             @Nullable String source, int line, @NotNull ErrorListener.Origin origin) {
         /**
