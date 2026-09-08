@@ -113,7 +113,11 @@ The one change that matters. Link and inject the system libraries **once per eng
 their pools, and serve them read-only to every compile.
 
 1. Hoist `prelinkSystemLibraries` out of `compileInternal` to a `Lazy.Bound` on the engine, so
-   `setErrorListener` and `linkModules(repo, false)` run once rather than per compile.
+   `linkModules(repo, false)` runs once rather than per compile. (Done. The step originally also
+   said "`setErrorListener` ... once rather than per compile"; that setter is since deleted -
+   `ConstantPool` takes its listener at construction and the field is final - so there is nothing
+   left to hoist. `prelinkSystemLibraries` now also REPORTS what `linkModules` returns, which it
+   used to discard; see master issue 49's neighbours in E47.)
 2. Hoist `injectNakedRefType` for the library modules the same way. It is idempotent - the same
    NakedRef type every time - so a library injected once satisfies every later compile.
 3. Stop read-through cloning for the shared library: the per-compile `BuildRepository` holds only
@@ -810,8 +814,13 @@ listener. That is not a bug in the trace - it is the documented state of `ensure
 own javadoc says **"the listener parameter is a mode flag in disguise"**: the method fuses COMPUTE
 (idempotent, cacheable, must never report) with VALIDATE (diagnostics owned by a source position),
 so every caller has to pick a mode, and speculative probes - `testFit`, `getImplicitType`,
-`getConverterTo` - pass `BLACKHOLE`. Whichever caller asks FIRST owns the diagnostics; the one that
-actually cared gets the memoized answer and hears nothing.
+`getConverterTo` - pass a silent listener. Whichever caller asks FIRST owns the diagnostics; the one
+that actually cared gets the memoized answer and hears nothing.
+
+**Resolved since.** Building a `TypeInfo` now records its diagnostics on the `TypeInfo`, and a later
+caller that IS asserting the type replays them - so "whoever asked first owns them" no longer means
+everyone after hears nothing. The speculative probes say `ErrorListener.PROBE` rather than
+`BLACKHOLE`, which names the intent instead of describing the sink.
 
 **Why this matters more for a host than for the CLI.** The CLI compiles one module and exits, so
 "the diagnostics went to the wrong listener" is invisible. A resident host serving concurrent
@@ -823,13 +832,17 @@ the measurement is usually nobody.
 `ErrorListener.isSilent()`. Either the flag is wrong for a Tee-rooted chain, or silence does not
 imply dropping. The contradiction is real and is not yet explained.
 
-**Scope.** The full repair is [E32](master-enhancement-submissions.md) (thread one listener; 665
-parameters, 87 `BLACKHOLE` sites) plus E34 and E35, and it is far larger than this branch. What
-belongs HERE is the part a parallel host cannot ship without: the isolation test above, and a
-decision on whether `ensureTypeInfo` gets split into `typeInfo()` (never reports, always caches)
-and `validate(errs)` (reports once, called by the stage that owns the source position). That split
-is described in `TypeConstant.ensureTypeInfo`'s own javadoc as "a project rather than a rename",
-with the staged migration in `docs/errorlistener/README.md` section 8.4.
+**Scope — and this paragraph is superseded.** It said the full repair was E32 plus E34 and E35, "far
+larger than this branch", and that what belonged here was a DECISION on whether `ensureTypeInfo`
+should be split into `typeInfo()` and `validate(errs)`.
+
+E32, E34, E35 (A-E) and E47 are all done on this branch. `typeInfo()` exists and is the idiom for the
+COMPUTE half; the no-argument `ensureTypeInfo()` is deleted; the listener is threaded, non-null and
+owned rather than ambient. The full `validate(errs)` half of the split is NOT done - that is still
+"a project rather than a rename", with the staged migration in
+`docs/errorlistener/README.md` section 8.4 - but the part a parallel host cannot ship without is in
+place, and the isolation test above exists (`SharedLibraryIsolationTest`), as does
+`BuildDriverBothModesTest`, which asserts sequential and parallel builds agree.
 
 ## T6 - Finish aligning the API with `LspSupport`
 
