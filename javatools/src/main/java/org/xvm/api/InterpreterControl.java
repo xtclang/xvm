@@ -34,7 +34,7 @@ import org.xvm.runtime.template._native.io.xExternalConsole;
 import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 
-import static org.xvm.api.LspSupport.ERR_UNHANDLED_EXCEPTION;
+import static org.xvm.api.EmbeddingSupport.ERR_UNHANDLED_EXCEPTION;
 
 import static org.xvm.util.Severity.ERROR;
 
@@ -42,7 +42,7 @@ import static org.xvm.util.Severity.ERROR;
  * Interpreter-backed management and monitoring for one runner task.
  */
 class InterpreterControl
-        implements LspSupport.Control {
+        implements EmbeddingSupport.Control {
     /**
      * Create and start the shared interpreter connector that hosts the runner module.
      */
@@ -57,9 +57,9 @@ class InterpreterControl
     /**
      * Create and start a control for the specified module.
      */
-    static LspSupport.Control create(Connector connector, ModuleStructure module,
-                                     ModuleRepository repository, PrintWriter console,
-                                     File rootDir, ErrorListener errs) {
+    static EmbeddingSupport.Control create(Connector connector, ModuleStructure module,
+                                           ModuleRepository repository, PrintWriter console,
+                                           File rootDir, ErrorListener errs) {
         if (!(connector instanceof InterpreterConnector interpreter)) {
             throw new IllegalArgumentException("An InterpreterConnector is required");
         }

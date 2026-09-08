@@ -18,8 +18,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.xvm.api.Connector;
 import org.xvm.api.InterpreterConnector;
-import org.xvm.api.LspSupport;
-import org.xvm.api.LspSupport.Control;
+import org.xvm.api.EmbeddingSupport;
+import org.xvm.api.EmbeddingSupport.Control;
 
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
@@ -51,7 +51,7 @@ public class LspTest {
 
         Path dirWork = Files.createTempDirectory("xvm-543-repro");
         dirOut       = Files.createDirectory(dirWork.resolve("lib"));
-        LspSupport.instance().configure(repo(), null);
+        EmbeddingSupport.instance().configure(repo(), null);
 
         testCompile();
         testRun();
@@ -64,13 +64,14 @@ public class LspTest {
 
     private static void testCompile() {
         ErrorList       errs   = new ErrorList(25);
-        ModuleStructure module = LspSupport.instance().compile(helloModule("Trivial"), repo(), errs);
+        ModuleStructure module = EmbeddingSupport.instance().compile(
+                helloModule("Trivial"), repo(), errs);
         if (module == null || errs.hasSeriousErrors()) {
             throw new IllegalStateException("compile of Trivial failed: " + errs.getErrors());
         }
 
         errs   = new ErrorList(25);
-        module = LspSupport.instance().compile("module Broken { void run( }", repo(), errs);
+        module = EmbeddingSupport.instance().compile("module Broken { void run( }", repo(), errs);
         if (module != null || !errs.hasSeriousErrors()) {
             throw new IllegalStateException(
                     "invalid source did not report an error: " + errs.getErrors());
@@ -79,13 +80,14 @@ public class LspTest {
 
     private static void testRun() {
         ErrorList       errs   = new ErrorList(25);
-        ModuleStructure module = LspSupport.instance().compile(helloModule("Hello"), repo(), errs);
+        ModuleStructure module = EmbeddingSupport.instance().compile(
+                helloModule("Hello"), repo(), errs);
         if (module == null || errs.hasSeriousErrors()) {
             throw new IllegalStateException("compile of Hello failed: " + errs.getErrors());
         }
 
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        Control control = LspSupport.instance().run(
+        Control control = EmbeddingSupport.instance().run(
                 module, new PrintWriter(bytes, true), null, null, errs);
         if (control == null || errs.hasSeriousErrors()) {
             throw new IllegalStateException("run of Hello failed to start: " + errs.getErrors());
@@ -101,7 +103,7 @@ public class LspTest {
 
     private static void testKillWaiting() throws Exception {
         ErrorList errs = new ErrorList(25);
-        ModuleStructure module = LspSupport.instance().compile("""
+        ModuleStructure module = EmbeddingSupport.instance().compile("""
                 module Waiting {
                     void run() {
                         @Inject Console console;
@@ -133,7 +135,7 @@ public class LspTest {
             }
         };
 
-        Control control = LspSupport.instance().run(module, console, null, null, errs);
+        Control control = EmbeddingSupport.instance().run(module, console, null, null, errs);
         if (control == null || errs.hasSeriousErrors()) {
             throw new IllegalStateException("run of Waiting failed to start: " + errs.getErrors());
         }
@@ -160,7 +162,7 @@ public class LspTest {
 
     private static void testFileSystem() throws Exception {
         ErrorList errs = new ErrorList(25);
-        ModuleStructure module = LspSupport.instance().compile("""
+        ModuleStructure module = EmbeddingSupport.instance().compile("""
                 module FileSystemTest {
                     void run() {
                         @Inject FileStore storage;
@@ -185,7 +187,7 @@ public class LspTest {
         }
 
         Path root = Files.createDirectory(dirOut.getParent().resolve("root"));
-        Control control = LspSupport.instance().run(module, null, root.toFile(), null, errs);
+        Control control = EmbeddingSupport.instance().run(module, null, root.toFile(), null, errs);
         if (control == null || errs.hasSeriousErrors()) {
             throw new IllegalStateException(
                     "run of FileSystemTest failed to start: " + errs.getErrors());
@@ -204,7 +206,7 @@ public class LspTest {
     private static void testRunException() {
         String message = "deliberate failure the host must learn about";
         ErrorList compileErrs = new ErrorList(25);
-        ModuleStructure module = LspSupport.instance().compile("""
+        ModuleStructure module = EmbeddingSupport.instance().compile("""
                 module Crasher {
                     void run() {
                         @Inject Console console;
@@ -219,7 +221,7 @@ public class LspTest {
 
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         ErrorList runErrs = new ErrorList(25);
-        Control control = LspSupport.instance().run(
+        Control control = EmbeddingSupport.instance().run(
                 module, new PrintWriter(bytes, true), null, null, runErrs);
         if (control == null) {
             throw new IllegalStateException("run of Crasher failed to start: " + runErrs.getErrors());
@@ -254,7 +256,7 @@ public class LspTest {
     private static void testRunLatency() throws Exception {
         compile("Quick", helloModule("Quick"));
 
-        LspSupport support = LspSupport.instance();
+        EmbeddingSupport support = EmbeddingSupport.instance();
         for (int run = 1; run <= 5; run++) {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             ErrorList errs = new ErrorList(25);
@@ -288,7 +290,7 @@ public class LspTest {
     // ----- check the shared native pool growth ---------------------------------------------------
 
     private static void testPoolGrows() throws Exception {
-        LspSupport support = LspSupport.instance();
+        EmbeddingSupport support = EmbeddingSupport.instance();
         ErrorList  errs    = new ErrorList(256);
 
         // each run uses a DISTINCT core parameterized-type combination, so each interns novel
@@ -353,7 +355,7 @@ public class LspTest {
 
     private static void compile(String moduleName, String source) throws Exception {
         ErrorList       errs   = new ErrorList(25);
-        ModuleStructure module = LspSupport.instance().compile(source, repo(), errs);
+        ModuleStructure module = EmbeddingSupport.instance().compile(source, repo(), errs);
         if (module == null || errs.hasSeriousErrors()) {
             throw new IllegalStateException("compile of " + moduleName + " failed: " + errs.getErrors());
         }

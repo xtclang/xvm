@@ -14,14 +14,14 @@ import org.xvm.asm.ModuleStructure;
  * JIT-backed management and monitoring for one runner task.
  */
 class JitControl
-        implements LspSupport.Control {
+        implements EmbeddingSupport.Control {
     static Connector createConnector(ModuleRepository repository) {
         throw unsupported();
     }
 
-    static LspSupport.Control create(Connector connector, ModuleStructure module,
-                                     ModuleRepository repository, PrintWriter console,
-                                     File rootDir, ErrorListener errs) {
+    static EmbeddingSupport.Control create(Connector connector, ModuleStructure module,
+                                           ModuleRepository repository, PrintWriter console,
+                                           File rootDir, ErrorListener errs) {
         throw unsupported();
     }
 

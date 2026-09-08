@@ -42,28 +42,28 @@ import static org.xvm.util.Handy.readFileChars;
 import static org.xvm.util.Severity.ERROR;
 
 /**
- * A class used to support LSP and other tool uses. This implementation uses the Connector API to
+ * A class used to support embedding Ecstasy tools. This implementation uses the Connector API to
  * run a long-running Ecstasy application (in "Container Zero") that is responsible for spinning up
- * any number of child containers to "run()" modules. The LspSupport is a singleton, but it does
+ * any number of child containers to "run()" modules. EmbeddingSupport is a singleton, but it does
  * require configuration; specifically, it requires a Module Repository from which to load the core
- * Ecstasy classes. Without configuration, the LspSupport will attempt to locate the core Ecstasy
+ * Ecstasy classes. Without configuration, EmbeddingSupport will attempt to locate the core Ecstasy
  * classes using the "XDK_HOME" OS property.
  *
- * The methods on the LspSupport itself can be assumed to be thread-safe and concurrent.
+ * The methods on EmbeddingSupport itself can be assumed to be thread-safe and concurrent.
  */
-public class LspSupport {
+public class EmbeddingSupport {
     // ----- internal (construction etc.) ----------------------------------------------------------
 
     /**
      * Internal constructor.
      */
-    LspSupport() {}
+    EmbeddingSupport() {}
 
     /**
      * Internal singleton implementation.
      */
     private static class Singleton {
-        static LspSupport instance = new LspSupport();
+        static EmbeddingSupport instance = new EmbeddingSupport();
     }
 
     private static final Object LOCK = new Object();
@@ -101,7 +101,7 @@ public class LspSupport {
             }
 
             if (!configured) {
-                throw new IllegalStateException("ToolConnect has not been configured, and the"
+                throw new IllegalStateException("EmbeddingSupport has not been configured, and the"
                         + " \"XDK_HOME\" environment variable is missing or invalid");
             }
         }
@@ -109,7 +109,7 @@ public class LspSupport {
     }
 
     /**
-     * @return true when the JIT implementation is complete and can be used by the ToolConnector
+     * @return true when the JIT implementation is complete and can be used by EmbeddingSupport
      */
     private boolean useJit() {
         return false;
@@ -121,10 +121,9 @@ public class LspSupport {
     public Connector ensureConnector() {
         synchronized (LOCK) {
             if (connector == null) {
-                Connector connector = useJit()
+                this.connector = useJit()
                         ? JitControl.createConnector(cfgRepo)
                         : InterpreterControl.createConnector(cfgRepo);
-                this.connector = connector;
             }
             return connector;
         }
@@ -133,9 +132,9 @@ public class LspSupport {
     // ----- API -----------------------------------------------------------------------------------
 
     /**
-     * @return the singleton ToolConnector instance
+     * @return the singleton EmbeddingSupport instance
      */
-    public static LspSupport instance() {
+    public static EmbeddingSupport instance() {
         return Singleton.instance;
     }
 
@@ -148,7 +147,7 @@ public class LspSupport {
      *                        use to provide injectable resources in lieu of the default injector
      *                        for this implementation
      */
-    public LspSupport configure(ModuleRepository coreRepo, String customInjector) {
+    public EmbeddingSupport configure(ModuleRepository coreRepo, String customInjector) {
         synchronized (LOCK) {
             if (configured) {
                 if (!(Objects.equals(coreRepo, cfgRepo) && Objects.equals(customInjector, cfgInjector))) {
@@ -164,14 +163,14 @@ public class LspSupport {
     }
 
     /**
-     * @return true iff the TooolConnector has been configured
+     * @return true iff EmbeddingSupport has been configured
      */
     public boolean isConfigured() {
         return configured;
     }
 
     /**
-     * @return the configured repository, or null if the ToolConnector has not been configured
+     * @return the configured repository, or null if EmbeddingSupport has not been configured
      */
     public ModuleRepository getConfiguredRepository() {
         return cfgRepo;
@@ -179,7 +178,7 @@ public class LspSupport {
 
     /**
      * @return the "modulename:classname" of the default injector to use for all "run()" containers,
-     *         or null to use the ToolConnector's built-in default injector
+     *         or null to use EmbeddingSupport's built-in default injector
      */
     public String getConfiguredInjector() {
         return cfgInjector;
@@ -187,7 +186,7 @@ public class LspSupport {
 
     /**
      * @return the ConstantPool of the core Ecstasy libraries used by the runtime Connector instance
-     *         that is instantiated by this ToolConnector
+     *         that is instantiated by EmbeddingSupport
      */
     public ConstantPool getConstantPool() {
         verifyConfigured();
@@ -208,7 +207,7 @@ public class LspSupport {
     public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
         verifyConfigured();
         try {
-            LspCompiler compiler = new LspCompiler(source, input, cfgRepo, errs);
+            EmbeddingCompiler compiler = new EmbeddingCompiler(source, input, cfgRepo, errs);
             return compiler.process() == 0
                     ? compiler.getModule()
                     : null;
@@ -268,15 +267,15 @@ public class LspSupport {
      * Adapter that supplies the source and repositories to the standard compiler pipeline and
      * captures its single compiled module instead of writing it to disk.
      */
-    private static class LspCompiler
+    private static class EmbeddingCompiler
             extends org.xvm.tool.Compiler {
         private final String           source;
         private final ModuleRepository inRepo;
         private final ModuleRepository coreRepo;
         private       ModuleStructure  module;
 
-        protected LspCompiler(String source, ModuleRepository input, ModuleRepository core,
-                              ErrorListener errs) {
+        protected EmbeddingCompiler(String source, ModuleRepository input, ModuleRepository core,
+                                    ErrorListener errs) {
             super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
 
             this.source   = source;
