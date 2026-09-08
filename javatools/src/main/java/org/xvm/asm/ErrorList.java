@@ -18,22 +18,36 @@ import org.jetbrains.annotations.NotNull;
  * Represents a list of errors collected from a process such as compilation, assembly, or the
  * verifier, with an option to abort the process should a maximum number of errors be exceeded.
  *
- * <p><b>Safe for concurrent use.</b> This is the listener a host naturally passes to
- * {@code XtcEngine.compile(errsCaller, ...)}, and that one object is then handed to every compile
- * thread the engine runs - so the shared terminal sink has to tolerate concurrent {@code log}. It
- * did not: {@code log} did an unguarded {@code HashSet.add}, a read-modify-write on the worst
- * severity, an {@code ArrayList.add} and a {@code ++}, and a caller iterating {@link #getErrors}
- * could take a {@code ConcurrentModificationException} from a sibling compile.
+ * <p><b>Safe for concurrent use, and the lock is only where it has to be.</b> A host may pass one
+ * of these to {@code XtcEngine.compile(errsCaller, ...)} and then run several compiles at once, so
+ * the sink has to tolerate concurrent {@code log}. It did not: {@code log} did an unguarded
+ * {@code HashSet.add}, a read-modify-write on the worst severity, an {@code ArrayList.add} and a
+ * {@code ++}, and {@link #getErrors} handed out the live list.
  *
- * <p>Locking rather than a rule, because a rule nobody enforces is the same failure as the mutable
- * listener field this framework spent its effort deleting - correct only for as long as everyone
- * remembers. Contention is not a concern: diagnostics are rare next to the work that produces them,
- * and each compile still collects into its own list, so this monitor is only ever contended on the
- * host's shared sink.
+ * <p>The fix is split along the way this class is actually used, because the write path and the read
+ * path have opposite profiles:
  *
- * <p>Speculative work does not need any of this. {@link #branch} still gives a private, unshared
- * listener, and {@link ErrorListener#merge} still promotes it at the end - merge-at-end remains the
- * idiom for "might fail", and this makes the terminal sink safe for the case where it cannot be.
+ * <ul>
+ * <li><b>Writing is cold.</b> {@code log} runs once per diagnostic, and a compile that succeeds
+ *     produces none. So {@code log} and {@code clear} take the monitor, which makes their compound
+ *     update - dedup, worst-severity, list, count - atomic, and costs nothing that matters.</li>
+ * <li><b>Reading the scalars is hot.</b> {@code StageMgr} polls {@link #isAbortDesired} inside its
+ *     per-node loops, and {@link #hasSeriousErrors} has call sites throughout the compiler. Those
+ *     read {@code m_severity} and {@code m_cErrors}, which are {@code volatile} for exactly that
+ *     reason: the hot path takes no lock, and a reader sees a recent value rather than a torn one.
+ *     An abort threshold observed a moment late is a heuristic arriving a moment late, which is what
+ *     it already was.</li>
+ * <li><b>Reading the collections is cold</b> - {@link #getErrors} at the end of a compile,
+ *     {@link #hasError} in tests - so those take the monitor and {@code getErrors} returns an
+ *     immutable snapshot.</li>
+ * </ul>
+ *
+ * <p>Synchronizing every method instead would have put the lock on the polled readers to protect a
+ * writer that is nearly never called - the wrong way round, and measurable in the wrong place.
+ *
+ * <p>Speculative work needs none of this. {@link #branch} gives a private, unshared listener and
+ * {@link ErrorListener#merge} promotes it at the end; merge-at-end remains the idiom for "might
+ * fail", and this makes the terminal sink safe for the one case where confinement is not available.
  */
 public class ErrorList
         implements ErrorListener {
@@ -110,7 +124,7 @@ public class ErrorList
     }
 
     @Override
-    public synchronized boolean isAbortDesired() {
+    public boolean isAbortDesired() {
         return m_severity == Severity.FATAL || f_cMaxErrors > 0 &&
                 m_severity.compareTo(Severity.ERROR) >= 0 && m_cErrors >= f_cMaxErrors;
     }
@@ -132,14 +146,14 @@ public class ErrorList
      * @return the severity of the ErrorList, which is the severity of the worst
      *         error encountered
      */
-    public synchronized Severity getSeverity() {
+    public Severity getSeverity() {
         return m_severity;
     }
 
     /**
      * @return the count of serious errors encountered
      */
-    public synchronized int getSeriousErrorCount() {
+    public int getSeriousErrorCount() {
         return m_cErrors;
     }
 
@@ -166,7 +180,7 @@ public class ErrorList
      *
      * @return true iff an error has been logged with at least the specified severity
      */
-    public synchronized boolean hasEncountered(Severity sev) {
+    public boolean hasEncountered(Severity sev) {
         return m_severity != null && m_severity.compareTo(sev) >= 0;
     }
 
@@ -283,12 +297,12 @@ public class ErrorList
     /**
      * The number of serious errors encountered.
      */
-    private int m_cErrors;
+    private volatile int m_cErrors;
 
     /**
      * The worst severity encountered.
      */
-    private Severity m_severity = Severity.NONE;
+    private volatile Severity m_severity = Severity.NONE;
 
     /**
      * The accumulated list of errors.

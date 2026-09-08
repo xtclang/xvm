@@ -3517,19 +3517,53 @@ siblings by answering `isAbortDesired()` on the shared listener). It also would 
 only move it to the merge point, where nothing enforces serialization.
 
 A rule nobody enforces is the same failure mode as the mutable field above: correct only while
-everyone remembers. So the implementation provides the property.
+everyone remembers. So the implementation provides the property - but **not by synchronizing
+everything**, which was the first attempt and was the wrong shape.
 
-- Every method touching mutable state is `synchronized`. Contention is a non-issue: diagnostics are
-  rare next to the work producing them, and each compile still collects into its own list, so the
-  monitor is only ever contended on the host's shared sink.
-- `getErrors()` returns `List.copyOf(...)` - an immutable snapshot. No caller mutated the returned
-  list, so this costs nothing and removes the escape.
+Measuring where the calls actually land inverts the obvious answer:
+
+| path | frequency | why |
+| --- | --- | --- |
+| `log` | **cold** | once per diagnostic; a compile that succeeds produces none |
+| `isAbortDesired`, `hasSeriousErrors` | **hot** | `StageMgr` polls the first inside its per-node loops; the second has call sites throughout the compiler |
+| `getErrors`, `hasError` | cold | end of a compile, and tests |
+
+Blanket `synchronized` therefore puts the lock on the polled readers in order to protect a writer
+that is nearly never called - the wrong way round. The split that matches the usage:
+
+- `log` and `clear` take the monitor. That makes their compound update - dedup, worst-severity,
+  list, count - atomic, at a cost that never shows up.
+- `m_severity` and `m_cErrors` are `volatile`, and the scalar readers take **no lock**. An abort
+  threshold seen a moment late is a heuristic arriving a moment late, which is all it ever was.
+- The collection readers keep the monitor, and `getErrors()` returns `List.copyOf(...)`. No caller
+  mutated the returned list, so the snapshot costs nothing and removes the escape.
 - `logTo` is deliberately **not** synchronized: it snapshots under the lock and iterates outside, so
   a foreign listener is never called while the monitor is held. Holding a lock across a call into
   somebody else's code is how two teed listeners deadlock.
 - `ErrorListener.log`'s contract now states that implementations must tolerate concurrent calls.
   Every implementation in the tree already does: the silent listeners and `RuntimeErrorListener` are
   stateless, `AbortableListener` holds an `AtomicBoolean`, `BranchedErrorListener` inherits the lock.
+
+**Worth recording, because it nearly justified doing nothing:** no in-tree caller shares a listener
+across threads today. `BuildDriver` builds a fresh `AbortableListener` per module - and its `log` is
+a no-op, because diagnostics come back on the `CompileResult` - a single `compile()` has no executor
+inside it, and the two parallel engine tests use one listener each. The hazard is real but latent:
+it is the documented `compile(errsCaller, ...)` streaming contract that invites a host to share one,
+and a host doing exactly what the javadoc suggests would have hit it.
+
+### Two smaller defects in the same area
+
+- **`genUID` keys on the start position twice.** It appends `m_lPosStart`, a colon, and then
+  `m_lPosStart` again where `m_lPosEnd` was meant, so two diagnostics that differ only in where they
+  end deduplicate into one.
+- **Parameters are compared by hash, not by value.** The UID embeds `Arrays.hashCode(m_aoParam)`, so
+  two unrelated diagnostics whose parameter arrays collide are silently merged.
+
+Both are cheap to fix and neither is urgent: `genUID` runs once per logged diagnostic, so this is a
+cold path, and the natural-looking "optimisation" - giving `ErrorInfo` `equals`/`hashCode` and
+deduplicating on the object - would have to call `XvmStructure.getDescription()`, which builds the
+same string the UID does. Left as a correctness fix to make deliberately rather than a performance
+one to make by accident.
 
 **A bug found while doing it.** `clear()` reset the list, the count and the severity but not
 `f_setUID`, so a cleared list silently dropped any diagnostic it had seen before. Reachable:

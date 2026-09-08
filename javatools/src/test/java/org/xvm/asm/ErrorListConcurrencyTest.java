@@ -22,6 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * <p>It did not. {@code log} did an unguarded {@code HashSet.add}, a read-modify-write on the worst
  * severity, an {@code ArrayList.add} and a {@code ++}, with no lock anywhere in the class.
  *
+ * <p>The lock is on {@code log} and {@code clear} only. The polled readers - {@code isAbortDesired},
+ * {@code hasSeriousErrors} - take none, because {@code StageMgr} calls them per node and the scalars
+ * they read are {@code volatile} instead. This test pins the write path, which is the one that
+ * needed guarding.
+ *
  * <p>The first test is the one that catches it, and it is not marginal: with the lock removed it
  * kept 2125 of 4000 diagnostics. The second pins deduplication under the same contention and passed
  * even unlocked - a {@code HashSet} race is real but far less likely to be observed - so it is here
