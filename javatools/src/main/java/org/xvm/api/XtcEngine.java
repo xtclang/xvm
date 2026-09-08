@@ -1086,10 +1086,20 @@ public final class XtcEngine
         ObjectHandle hValues = xString.makeArrayHandle(main, listValues.toArray(String[]::new));
 
         // registerTransientTask, not registerTask: the run's file-system root is deleted by the
-        // runner as soon as the run completes. The alternative upstream is to let the root outlive
-        // the task and be removed when a Cleaner notices the Control has become unreachable, which
-        // is not deterministic, is not guaranteed to happen at JVM exit, and can call back into
-        // container zero after this engine has closed its connector.
+        // runner as soon as the run completes.
+        //
+        // This used to be justified against the Cleaner that PR #545 registered on Control - not
+        // deterministic, not run at JVM exit, able to call back into container zero after this
+        // engine closed its connector. That Cleaner is gone: upstream now makes Control
+        // AutoCloseable and deletes the root in close(). So the old justification is spent, and the
+        // choice stands for a different and better reason.
+        //
+        // Upstream's is right for ITS caller and wrong for ours, and the distinction is who holds
+        // the files. A Control is handed to a caller who may want to inspect what the run produced,
+        // so deleting at completion would be too early - that is exactly why close() and not
+        // whenComplete. This engine hands out no Control and exposes no task directory: run()
+        // answers a result, and nothing can look at the root afterwards because nothing is given a
+        // way to name it. A root that no one can reach is one nobody has to remember to close.
         return main.invokeAsync("registerTransientTask", hModule, hRepository,
                                 xNullable.makeHandle(main), hNames, hValues)
                 .thenCompose(hTaskId -> main.invokeAsync("startTask", hTaskId))
