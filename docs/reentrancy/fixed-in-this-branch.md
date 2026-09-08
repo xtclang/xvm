@@ -3542,3 +3542,62 @@ defect and re-running - not assumed:
   deletion, and asks with `^`, so deletion is prompt and guaranteed but not ordered against the run.
 - `TypeInfoModeIsExplicitTest` — restored. It had lost its assertions and was passing green while
   guarding nothing, which is worse than absent.
+
+### Cross-reference: which of these actually bite master today
+
+The question this answers: for each item, does it hurt a **single-container, sequential, ordinary
+CLI** run on master with Gene's PR #545 work in place — or only under parallelism master does not yet
+support — or neither yet, being a design that will bite later?
+
+**Coverage, stated plainly.** This classifies the diagnostics wave (rows 47-52, E32/E34/E35/E47),
+because those were established here and the reasoning is checkable. It does NOT classify all 52 issue
+rows and 62 enhancement rows: only 9 of the issue rows carry an explicit reachability statement, and
+assigning the rest would mean re-deriving them from scratch. Those 9 are noted at the end.
+
+#### A — real on master today, no concurrency required
+
+These fire on one thread, one container, an ordinary `xcc`/`xec` invocation.
+
+| item | what a user sees | trigger |
+| --- | --- | --- |
+| **Row 47** `genUID` | a compile reports N-1 of N errors, silently. Presents as "the compiler reports errors one at a time" rather than as a bug | any compile logging two diagnostics that share a start offset, or whose parameters hash alike |
+| **Row 49** `LinkedRepository` | "module not found" for a module that is present on disk | a read-only front repository — a build output directory routinely is one — on **every** read-through load |
+| **Row 50** `deleteKeyStoreEntry` | `revokeCertificateImpl` returns success with the revoked certificate still in the keystore | any failure of the local delete: wrong password, corrupt store, unwritable file |
+| **Row 52** `Parser` include | "no such directory or file" for a file that exists and cannot be read | an unreadable file or a path resolving to a directory |
+| **Row 51** `xRTNameService` | an `OutOfMemoryError` reported to XTC code as "host not found" | any `Error` during DNS resolution |
+| **E47** three `System.err` sites | constant-folding notes and a per-occurrence TODO on the terminal, invisible to an embedder | ordinary compilation |
+
+**Row 49 is the one to file first** if only one goes. It needs no unusual state, no error in the
+user's code, and it makes a correct build fail.
+
+#### B — parallel only, and therefore latent on master
+
+Master's CLI compiles one module and exits, so these cannot fire there. They become live exactly when
+a resident host serves concurrent requests — which is what PR #545 exists to enable.
+
+| item | why master is safe | what makes it live |
+| --- | --- | --- |
+| `ErrorList` had no synchronization | one compile, one thread, one sink | a host passing one `ErrorList` to concurrent `compile` calls. Measured: 8 threads keeping **2125 of 4000** diagnostics |
+| `ConstantPool.setErrorListener` on a **shared library** pool | one engine, one repository | two engines over one repository, last writer winning, each hearing the other's library diagnostics |
+| The 9 rows that state their own reachability (rows 19, 25, 26 and neighbours) | all say "needs two threads" against a pool or component that outlives one operation | the runtime's service threads warming types on shared library structures |
+
+The distinction matters for filing: a maintainer running the CLI cannot reproduce any of these, so a
+report has to lead with the shape rather than a repro.
+
+#### C — not a bug yet; bad design, and what redesigning it buys
+
+| item | why it is not a bug today | what the redesign solves |
+| --- | --- | --- |
+| **E32/E34/E35** — the ambient, nullable listener | a CLI has exactly one caller, so "whose diagnostic is this" never needs answering | attribution. One owned, non-null listener is what lets a host say *which request* produced a diagnostic — the prerequisite for streaming, per-request isolation, and abort-on-first-error from outside |
+| `BLACKHOLE` meaning two things | behaviour identical either way | `grep PROBE` is now the list of the compiler's speculative paths; the tree previously recorded that nowhere, so nobody could review it |
+| `Map<String, List<String>>` injections | callers happened to pass single values | the type advertised multi-valued injections the runner cannot carry, so every call was validated at run time. `Injection(name, value)` cannot express the unsupported case — the check is deleted, not moved |
+| **Row 48** (withdrawn) — the stranded place-holder | every reader has a recovery path: `isComplete` is false so the outer path rebuilds, and the deferred loop calls `buildTypeInfo` directly | its harmlessness depends on a *second* mechanism papering over a marker that lies. Clearing it removes the dependency rather than the symptom |
+| Transient-task deletion ordering | the root is always deleted, promptly | the runner resolves the caller's future *before* asking for the deletion, and asks with `^`. Callers assuming "done" means "cleaned up" are wrong, and nothing said so until a test asserted it |
+| `checkReadable` conflating absent with unreadable | the message is merely wrong, not the behaviour | a diagnostic that misdescribes the failure sends the user to the wrong place — the same defect as row 52, one layer down, and still present in `Handy` |
+
+#### What this says about upstreaming
+
+The A items are ordinary bug reports and can go up on their own evidence. The B items need the
+parallel story to land first or they read as theoretical. The C items are the argument FOR that
+story: none of them is a defect a maintainer can be shown failing today, and all of them are the
+reason a resident host cannot be built on the current shape.
