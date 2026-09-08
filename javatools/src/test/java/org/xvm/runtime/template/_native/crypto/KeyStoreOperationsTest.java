@@ -195,6 +195,57 @@ public class KeyStoreOperationsTest {
         assertTrue(keyStore.containsAlias("exists"));
     }
 
+    /**
+     * The failure the old swallow was hiding, and the reason it mattered.
+     *
+     * <p>{@code deleteKeyStoreEntry} used to discard {@code GeneralSecurityException} and
+     * {@code IOException}, justified as "entry may not exist" - a case the {@code file.exists()} and
+     * {@code containsAlias} guards already handle. What it actually silenced was a keystore that
+     * could not be OPENED, and a wrong password is the ordinary way that happens.
+     *
+     * <p>That turned into data loss because every caller does delete-then-create through
+     * {@code loadOrCreateKeyStore}: the delete reported success, and the store was then created
+     * fresh over the top of the existing one. Master issue 50.
+     */
+    @Test
+    public void deletingWithTheWrongPasswordFailsRatherThanReportingSuccess() throws Exception {
+        var path = new File(tempDir, "wrongpass.p12").getAbsolutePath();
+        KeyStoreOperations.createSymmetricKey(path, PASSWORD, "keep-me");
+
+        char[] wrong = "notthepassword".toCharArray();
+        assertThrows(IOException.class,
+                () -> KeyStoreOperations.deleteKeyStoreEntry(path, wrong, "keep-me"),
+                "a keystore that cannot be opened is not a delete that succeeded");
+
+        // and the store is intact - nothing was silently replaced
+        var keyStore = KeyStoreOperations.loadOrCreateKeyStore(path, PASSWORD);
+        assertTrue(keyStore.containsAlias("keep-me"), "the existing entry survived");
+    }
+
+    /**
+     * Pins {@code loadOrCreateKeyStore}'s "create" half: it creates only when the file is ABSENT, so
+     * a wrong password against an existing store fails rather than replacing it.
+     *
+     * <p>Recorded because I first assumed the opposite when filing master issue 50 - that a silently
+     * failed delete would let the create clobber the store. It does not, and this is the test that
+     * says so. It passes with or without the {@code deleteKeyStoreEntry} fix, so it is a contract
+     * guard rather than a regression test for that issue.
+     */
+    @Test
+    public void creatingWithTheWrongPasswordDoesNotReplaceTheStore() throws Exception {
+        var path = new File(tempDir, "noclobber.p12").getAbsolutePath();
+        KeyStoreOperations.createSymmetricKey(path, PASSWORD, "original");
+
+        char[] wrong = "notthepassword".toCharArray();
+        assertThrows(IOException.class,
+                () -> KeyStoreOperations.createSymmetricKey(path, wrong, "intruder"));
+
+        var keyStore = KeyStoreOperations.loadOrCreateKeyStore(path, PASSWORD);
+        assertTrue(keyStore.containsAlias("original"),
+                "the original entry must still be there; it used to be wiped by the recreate");
+        assertFalse(keyStore.containsAlias("intruder"));
+    }
+
     @Test
     public void testDeleteKeyStoreEntryNonexistentFile() throws Exception {
         // Should not throw - and this is delivered by the file.exists() guard, not by a catch.

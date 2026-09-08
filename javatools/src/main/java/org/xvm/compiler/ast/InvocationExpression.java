@@ -2593,7 +2593,7 @@ public final class InvocationExpression
      * Find a named method or function that best matches the specified requirements.
      * </p>
      * Note: we need to pass both typeParent and infoParent, since in some context-sensitive cases
-     *  typeParent.ensureTypeInfo() != infoParent and infoParent.getType() != typeParent
+     *  typeParent.typeInfo() != infoParent and infoParent.getType() != typeParent
      *
      * @param ctx           the context
      * @param typeParent    the type to search the method or function for

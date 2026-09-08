@@ -14,10 +14,18 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 /**
  * The diagnostics design leans on one non-obvious invariant, so it is worth a test of its own.
  *
- * <p>{@code TypeConstant.ensureTypeInfo()} resolves its listener from the pool that owns the
- * constant. That is only correct because {@link ConstantPool#register} ADOPTS a foreign constant
- * into the registering pool, which makes "who owns it" and "who is asking" the same pool for
- * everything a compile actually touches.
+ * <p>Work reaches a listener by OWNERSHIP: a constant's diagnostics go to the pool that owns it.
+ * That is only correct because {@link ConstantPool#register} ADOPTS a foreign constant into the
+ * registering pool, which makes "who owns it" and "who is asking" the same pool for everything a
+ * compile actually touches.
+ *
+ * <p>The consumer of this invariant has changed and the invariant has not. It used to be a
+ * no-argument {@code ensureTypeInfo()} that resolved the pool's listener implicitly; that overload
+ * is deleted (E35 step E). What still rests on it are the sites that log through the owning pool
+ * directly - {@code log(pool.getErrorListener(), ...)} in {@code calculateRelation},
+ * {@code resolveTypedefs}, {@code chooseBest} and their neighbours. Those are soft asserts about
+ * the pool's own contents, so the owning pool is the right sink; adoption is what makes "the owning
+ * pool" and "the asking compile" the same pool.
  *
  * <p>If that ever stopped being true, parallel compiles would start reporting into each other's
  * listener - or into none - and nothing else in the codebase would fail first. Hence this.
@@ -48,8 +56,7 @@ public class ConstantAdoptionListenerTest {
     }
 
     /**
-     * The invariant the no-listener {@code ensureTypeInfo()} overload rests on, pinned for the case
-     * that actually matters: a TYPE, not a leaf constant.
+     * The invariant pinned for the case that actually matters: a TYPE, not a leaf constant.
      *
      * <p>The sibling test above uses a {@code StringConstant}, which never reaches the gate that
      * decides this and never has a {@code TypeInfo} either. For a {@code TypeConstant},

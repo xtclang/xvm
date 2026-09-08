@@ -96,9 +96,9 @@ Status is as of this file's last update; check the PR before re-filing.
 | 47 | `ErrorInfo.genUID` drops the end position and hashes the parameters, so `ErrorList` deduplicates diagnostics that are not duplicates | 2 one-line edits | independent | silent loss of compiler errors; no concurrency needed to hit it |
 | 48 | **WITHDRAWN as a defect** - a `TypeInfo` build that throws leaves the place-holder set, but every reader of it has a recovery path | 2 lines; keep as hygiene | independent | filed twice with a failure mode that does not survive checking; kept as a record of what was ruled out |
 | 49 | A failed read-through CACHE WRITE makes `LinkedRepository` report a module it found as not found | delete a `break`; then share one body between the two overloads | independent | a read-only front repository - a build output dir - triggers it every time |
-| 50 | `deleteKeyStoreEntry` swallows a failed delete, and the caller then CREATES the keystore fresh over the existing one | delete a `catch`; callers already declare it | independent | silent keystore loss on a wrong password; the stated justification is already handled by two guards |
+| 50 | `deleteKeyStoreEntry` swallows a failed delete, so `revokeCertificateImpl` leaves a REVOKED certificate in the keystore and reports success | delete a `catch`; callers already declare it | independent | the stated justification is already handled by two guards |
 | 51 | `xRTNameService` catches `Throwable` in a DNS continuation, so an `Error` is reported to XTC code as "host not found" | narrow to `ExecutionException`; restore the interrupt | independent | 2 sites; the sibling catches `Exception` for the same `.get()` |
-| 52 | `Parser` reports "no such directory or file" for an include file that EXISTS and could not be read | retain the `IOException` as the cause | independent | the message is not incomplete, it is wrong |
+| 52 | `Parser` reports "no such directory or file" for an include path that resolved and could not be READ | key the message off `resource`, not off an exception | independent | `checkReadable` answers false without throwing, so there is usually no exception to key on |
 
 ### Filing a row as an issue or PR
 
@@ -3805,28 +3805,38 @@ so what the catch silences is neither of those. It silences a keystore that coul
 WRITTEN: a wrong password (`UnrecoverableKeyException`), a corrupt PKCS12 file, a failed
 `saveKeyStore`.
 
-**Why that is worse than an ordinary swallow.** Every caller does delete-then-create, and the create
-path goes through `loadOrCreateKeyStore`:
+**CORRECTION.** This row first claimed the swallow caused data loss: that the delete failed
+silently and `loadOrCreateKeyStore` then recreated the store over the top, discarding every entry.
+**That is wrong.** `loadOrCreateKeyStore` calls `keyStore.load(null, achPwd)` only when the file does
+NOT exist; against an existing file it loads, and a wrong password throws from `load`. So the
+delete-then-create callers fail at the create, and nothing is clobbered. A test pins this
+(`creatingWithTheWrongPasswordDoesNotReplaceTheStore`), and it passes with or without the fix.
+
+**What the swallow actually costs is a revocation that did not happen.**
+`xRTCertificateManager.revokeCertificateImpl` revokes the certificate through ACME and then removes
+it from the local store:
 
 ```java
-public static void createSymmetricKey(String sPath, char[] achPwd, String sName)
-        throws GeneralSecurityException, IOException {
-    deleteKeyStoreEntry(sPath, achPwd, sName);        // fails silently
-    ...
-    KeyStore keyStore = loadOrCreateKeyStore(sPath, achPwd);   // CREATES a new one
+case "certbot" -> revokeWithAcme(sPath, achPwd, sName, false);
+...
+KeyStoreOperations.deleteKeyStoreEntry(sPath, achPwd, sName);
+return null;                    // null == success, to the XTC caller
 ```
 
-So a wrong password makes the delete a no-op that claims success, and the store is then created
-fresh - **discarding every existing entry in it**. The user asked to add one key and lost all of
-them, with nothing reported.
+If that delete fails for any reason the exception is discarded, `null` is returned, and the XTC
+caller is told the revocation succeeded - **with the revoked certificate still sitting in the
+keystore**. That is the shape that matters here: not lost data, but a security operation reporting
+success for work it did not do. It also does not need a wrong password; any
+`GeneralSecurityException` or `IOException` on the delete does it.
 
 **Master evidence:**
 `javatools/src/main/java/org/xvm/runtime/template/_native/crypto/KeyStoreOperations.java:94` (the
 catch), `:84-92` (the two guards that already cover the stated reason), `:138-140` and `:162-163`
 (the delete-then-create callers), and `loadOrCreateKeyStore` in the same file.
 
-**Reachability on master:** any `createSymmetricKey`, `createPassword` or certificate operation
-against an existing keystore with the wrong password, or on a file that is corrupt or unwritable.
+**Reachability on master:** any `revokeCertificateImpl` where the local delete fails - a corrupt or
+unwritable store, a permissions problem, a wrong password. The delete-then-create callers are
+covered by the create failing afterwards, so they are not the exposure.
 
 **Minimal master-portable fix strategy:** delete the `catch` and declare
 `throws GeneralSecurityException, IOException`. **No call site needs to change** - `createSymmetricKey`
@@ -3900,15 +3910,37 @@ if (fErr) {
 }
 ```
 
-A permissions problem, a bad mount, a device error - all reported as "no such directory or file".
-The `IOException` that would have said otherwise is discarded, so the wrong conclusion cannot even
-be checked.
+A permissions problem, a path that resolved to a directory, a device error - all reported as "no
+such directory or file".
 
 **Master evidence:** `javatools/src/main/java/org/xvm/compiler/Parser.java:3650` and `:3661` (the two
 swallows, binary and string include), and the `CompilerException` throw below them.
 
-**Minimal master-portable fix strategy:** retain the exception, report `cannot read "<file>":
-<reason>` when there is one, and pass it as the cause. `CompilerException` needs a
-`(String message, Throwable cause)` constructor - `LauncherException` already accepts a cause, and
-`CompilerException(Throwable)` already exists (marked unused), but with no `(message, cause)` form a
-caller holding both had to drop one, and dropping the cause is the easy choice.
+**CORRECTION - the mechanism is not the swallowed exception.** This row first said the `IOException`
+was discarded and that retaining it would fix the message. Retaining it is worth doing, but it does
+NOT fix the common case, because in the common case there is no exception at all:
+
+```java
+public static boolean checkReadable(File file) {
+    return file != null && file.exists() && !file.isDirectory() && file.canRead();
+}
+```
+
+`Source.includeBinary` gates on that and returns `null` when it answers false. So a file that exists
+with no read permission, or a path that resolved to a directory, produces `null` and no throw - and
+a message keyed off the exception would still have called it missing.
+
+**What actually distinguishes the cases is already in scope:** `resource`, from
+`m_source.resolvePath(sFile)`. If that resolved, the path exists, so a null result afterwards is a
+read failure rather than an absence.
+
+**Minimal master-portable fix strategy:** key the message off `resource`:
+
+- `resource == null` - "no such directory or file"
+- resolved, no exception - "cannot read \"<file>\" (not a readable file)"
+- resolved, with an exception - "cannot read \"<file>\": <reason>", and pass it as the cause
+
+The last of those needs a `CompilerException(String, Throwable)` constructor, which the class did not
+have: `LauncherException` accepts a cause and `CompilerException(Throwable)` exists (marked unused),
+but with no `(message, cause)` form a caller holding both had to drop one, and dropping the cause is
+the easy choice.

@@ -46,8 +46,10 @@ import org.jetbrains.annotations.NotNull;
  *       runtime work. So wrapping the listener handed to XtcEngine.compile captures everything
  *       owned by THAT pool - the module being compiled, its stages, its metadata. It does NOT
  *       capture work owned by a different pool. Every FileStructure builds its own ConstantPool,
- *       so resolving a LIBRARY type runs `libType.ensureTypeInfo()` -> the library's pool ->
- *       ErrorListener.RUNTIME, and the caller never hears it.
+ *       so work owned by a library pool reports through THAT pool -> ErrorListener.RUNTIME, and the
+ *       caller never hears it. (The no-argument `ensureTypeInfo()` that made this reachable from
+ *       ordinary compiler code is since deleted; what remains are the soft asserts that log through
+ *       the owning pool on purpose.)
  *
  *       That is a real hole for a host that wants every diagnostic, and the fix is not a shared
  *       library listener - that would put back the mutable shared state this replaced, and would

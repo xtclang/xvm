@@ -3662,10 +3662,6 @@ public class Parser {
 
             Token       tokData  = null;
             boolean     fErr     = false;
-            // Retained rather than discarded. "Could not read it" and "it is not there" are
-            // different facts, and this used to report the second for both - so a file that existed
-            // but was unreadable was described to the user as missing, with the IOException that
-            // said otherwise thrown away.
             IOException errCause = null;
             if (fContents || resource != null) {
                 if (fBin) {
@@ -3700,9 +3696,24 @@ public class Parser {
 
             if (fErr) {
                 log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
-                throw new CompilerException(errCause == null
+
+                // "It is not there" and "it is there and I could not read it" are different facts,
+                // and this reported the first for both. `resource` is what tells them apart:
+                // resolvePath already found something, so a null result after that is a read
+                // failure, not an absence.
+                //
+                // Note that an IOException is NOT the signal for it. Source.includeBinary gates on
+                // Handy.checkReadable, which answers false - without throwing - for a file that
+                // exists but is a directory or has no read permission. So the common unreadable
+                // case never produces an exception at all, and keying the message off errCause
+                // alone would still have reported those as missing. errCause covers the narrower
+                // case of a genuine I/O failure DURING the read, and adds its reason when present.
+                String sMessage = resource == null
                         ? "no such directory or file: " + sFile
-                        : "cannot read \"" + sFile + "\": " + errCause.getMessage(), errCause);
+                        : errCause == null
+                                ? "cannot read \"" + sFile + "\" (not a readable file)"
+                                : "cannot read \"" + sFile + "\": " + errCause.getMessage();
+                throw new CompilerException(sMessage, errCause);
             }
 
             return fContents
