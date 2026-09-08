@@ -1,20 +1,25 @@
 package org.xvm.asm;
 
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassModel;
+import java.lang.classfile.Opcode;
+import java.lang.classfile.instruction.InvokeInstruction;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.Test;
 
+import org.xvm.runtime.ObjectHandle;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 
 /**
  * Repo-wide orientation ratchet for the clone retirement campaign. The {@code Object.clone()}
@@ -40,9 +45,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * explicitly (see {@code Component.copyOf} and {@code Parameter.copyFor} for the pattern).
  */
 public class CloneCensusTest {
-    /** The only classes that may declare {@code Cloneable}. */
+    /**
+     * The only classes that may declare {@code Cloneable}.
+     *
+     * <p>Named as compiled classes, not source files: this reads the class files, so a nested or
+     * anonymous class that implemented {@code Cloneable} would be named here as itself rather than
+     * hiding inside its enclosing file's text.
+     */
     private static final Set<String> CLONEABLE_ISLANDS = Set.of(
-            "org/xvm/runtime/ObjectHandle.java");
+            "org/xvm/runtime/ObjectHandle");
 
     /**
      * The only files that may invoke {@code super.clone()}. Ratcheted DOWN 2026-08-25: the
@@ -51,21 +62,18 @@ public class CloneCensusTest {
      * hierarchy. {@code ObjectHandle} remains the one deliberate island (views by design).
      */
     private static final Set<String> SUPER_CLONE_ISLANDS = Set.of(
-            "org/xvm/runtime/ObjectHandle.java");
+            "org/xvm/runtime/ObjectHandle");
 
     @Test
-    public void cloneableIsConfinedToTheTwoDocumentedIslands() {
-        assertEquals(sorted(CLONEABLE_ISLANDS), mainSourcesMatching(
-                        source -> source.contains("implements Cloneable")
-                               || source.contains(", Cloneable")),
+    public void cloneableIsConfinedToTheTwoDocumentedIslands() throws Exception {
+        assertEquals(sorted(CLONEABLE_ISLANDS), classesImplementingCloneable(),
                 "a new Cloneable implementor must use a copy constructor instead;"
                         + " see the class javadoc for why and for the pattern to follow");
     }
 
     @Test
-    public void superCloneIsConfinedToTheIslandFiles() {
-        assertEquals(sorted(SUPER_CLONE_ISLANDS),
-                mainSourcesMatching(source -> source.contains("super.clone()")),
+    public void superCloneIsConfinedToTheIslandFiles() throws Exception {
+        assertEquals(sorted(SUPER_CLONE_ISLANDS), classesInvokingSuperClone(),
                 "a new super.clone() call re-introduces hidden shallow-copy semantics;"
                         + " use a copy constructor that re-binds owner state explicitly");
     }
@@ -74,35 +82,59 @@ public class CloneCensusTest {
         return expected.stream().sorted().toList();
     }
 
-    private static List<String> mainSourcesMatching(java.util.function.Predicate<String> test) {
-        Path sourceRoot = sourceRoot();
-        try (var files = Files.walk(sourceRoot.resolve("org/xvm"))) {
-            return files
-                    .filter(path -> path.toString().endsWith(".java"))
-                    .filter(path -> test.test(readSource(path)))
-                    .map(sourceRoot::relativize)
-                    .map(Path::toString)
-                    .map(name -> name.replace('\\', '/'))
-                    .sorted()
-                    .collect(Collectors.toList());
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+    /**
+     * @return every compiled class that declares {@code Cloneable} among its interfaces
+     */
+    private static List<String> classesImplementingCloneable() throws Exception {
+        return scan(model -> model.interfaces().stream()
+                .anyMatch(i -> "java/lang/Cloneable".equals(i.asInternalName())));
     }
 
-    private static String readSource(Path path) {
-        try {
-            return Files.readString(path);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+    /**
+     * @return every compiled class containing an {@code invokespecial} of {@code Object.clone}
+     *
+     * <p>{@code super.clone()} compiles to exactly that, and nothing else does - an ordinary
+     * {@code x.clone()} is {@code invokevirtual}. So this is the call, not a spelling of it.
+     */
+    private static List<String> classesInvokingSuperClone() throws Exception {
+        return scan(model -> model.methods().stream()
+                .anyMatch(method -> method.code()
+                        .map(code -> code.elementList().stream()
+                                .anyMatch(e -> e instanceof InvokeInstruction invoke
+                                        && invoke.opcode() == Opcode.INVOKESPECIAL
+                                        && "clone".equals(invoke.method().name().stringValue())
+                                        && "java/lang/Object".equals(invoke.owner().asInternalName())))
+                        .orElse(false)));
     }
 
-    private static Path sourceRoot() {
-        Path cwd = Path.of("").toAbsolutePath();
-        Path project = cwd.resolve("src/main/java");
-        return Files.exists(project.resolve("org/xvm/asm/ConstantPool.java"))
-                ? project
-                : cwd.resolve("javatools/src/main/java");
+    /**
+     * Walk the compiled classes rather than the sources. Reading `.java` as text is the pattern
+     * `54bcea306` deleted five tests for: it passes when the code is spelled the expected way,
+     * breaks on reformatting, and would miss `implements Foo, Cloneable` wrapped across lines while
+     * matching the same words inside a comment. An interface in the class file is the fact itself.
+     *
+     * @param test  what makes a class an offender
+     *
+     * @return the offending classes, as {@code package/Name}, sorted
+     */
+    private static List<String> scan(java.util.function.Predicate<ClassModel> test) throws Exception {
+        Path anchor = Path.of(ObjectHandle.class.getProtectionDomain()
+                .getCodeSource().getLocation().toURI());
+        assertTrue(Files.isDirectory(anchor),
+                "the tree must be scannable as exploded classes, but the code source is " + anchor);
+
+        var found = new ArrayList<String>();
+        try (var files = Files.walk(anchor.resolve("org/xvm"))) {
+            for (Path path : files.filter(f -> f.toString().endsWith(".class")).toList()) {
+                ClassModel model = ClassFile.of().parse(Files.readAllBytes(path));
+                if (test.test(model)) {
+                    String name = anchor.relativize(path).toString()
+                            .replace(".class", "").replace('\\', '/');
+                    // nested classes report as Outer$Inner; the island list names the outer class
+                    found.add(name.contains("$") ? name.substring(0, name.indexOf('$')) : name);
+                }
+            }
+        }
+        return found.stream().distinct().sorted().toList();
     }
 }
