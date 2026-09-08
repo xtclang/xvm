@@ -114,6 +114,37 @@ category below is marked `must audit`, it becomes `must fix` as soon as a test,
 diagnostic, or code inspection proves owner sharing, cross-request reuse, or
 runtime publication.
 
+### SHOULD-FIX: lift the real disassembler from the Kotlin research fork (added 2026-09-08)
+
+**What exists today.** `org.xvm.tool.Disassembler` is a *printer*: it walks a `FileStructure` and
+renders it for a human. It cannot be used to read a module into a form you can inspect
+programmatically, modify, and write back - so there is no round-trip.
+
+**Why it matters now, and it is not only a tooling nicety.** Two things in this session ran into the
+gap from opposite directions:
+
+- **Tests that assert on Java source text.** Six remain in the tree, and the branch already deleted
+  five more (`54bcea306`) for passing when the code is spelled the expected way. The stated remedy is
+  to read the compiled classes instead, which works for Java (`java.lang.classfile` is in the JDK and
+  `FreezeViewSharingTest` and the two `TypeInfo` gates now use it). There is **no equivalent for
+  `.xtc`** - an assertion about a compiled Ecstasy module has nothing to read but the printer's
+  output, which is exactly the text-matching trap one level down.
+- **Verifying compiler output.** `XdkBuildOutputVerifyTest` compares engine output against the built
+  XDK "structurally", and what it can compare is limited by what can be read back.
+
+**What to lift.** The experimental Kotlin stateless/Roslyn-style compiler research fork has a real
+disassembler written for this. Taking that as the reference is the point - it was written to read
+modules rather than to print them - rather than extending `tool/Disassembler`, whose shape is a
+renderer and would have to be inverted.
+
+**Scope: unmeasured.** Deliberately not estimated here; the Kotlin source has not been read against
+this tree, and the interesting cost is how much of the `.xtc` format the research version covers
+versus what a round-trip needs. Establish that before scheduling it.
+
+**What it buys.** A programmatic reader for compiled modules: structural assertions on `.xtc` output
+that do not match strings, a basis for module-level diffing, and the read half of read-modify-write
+tooling.
+
 ### 2026-08-28 sweep (post rebase-onto-master + display-purity campaign)
 
 Each claim below was re-verified against the tree, not carried over from the previous
