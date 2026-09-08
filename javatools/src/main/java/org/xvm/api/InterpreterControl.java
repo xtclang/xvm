@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.time.Instant;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
@@ -63,31 +64,16 @@ class InterpreterControl
         if (!(connector instanceof InterpreterConnector interpreter)) {
             throw new IllegalArgumentException("An InterpreterConnector is required");
         }
-        return new InterpreterControl(
-                interpreter, module, repository, console, rootDir, errs).start();
-    }
 
-    private InterpreterControl(InterpreterConnector connector, ModuleStructure module,
-                               ModuleRepository repository, PrintWriter console,
-                               File rootDir, ErrorListener errs) {
-        this.connector  = connector;
-        this.module     = module;
-        this.repository = repository;
-        this.console    = console;
-        this.rootDir    = rootDir;
-        this.errs       = errs;
-    }
-
-    private InterpreterControl start() {
-        started = Instant.now();
-        running = true;
+        Instant started   = Instant.now();
+        Long    consoleId = null;
 
         try {
-            FileStructure file = prepareModule();
-            MainContainer main = connector.getMainContainer();
+            FileStructure file = prepareModule(interpreter, module, repository);
+            MainContainer main = interpreter.getMainContainer();
 
             if (console != null) {
-                consoleId = xExternalConsole.register(connector.getNativeContainer(), console);
+                consoleId = xExternalConsole.register(interpreter.getNativeContainer(), console);
             }
 
             ObjectHandle hModule     = xRTModuleTemplate.makeHandle(main, file.getModule());
@@ -100,30 +86,39 @@ class InterpreterControl
                     : xString.makeHandle(rootDir.getAbsolutePath());
 
             ObjectHandle hTaskId = postRequest(
-                    "registerTask", hModule, hRepository, hConsoleId, hRootDir).join();
-            taskId = ((JavaLong) hTaskId).getValue();
+                    interpreter, "registerTask",
+                    hModule, hRepository, hConsoleId, hRootDir).join();
+            long taskId = ((JavaLong) hTaskId).getValue();
 
-            completion = postRequest("startTask", hTaskId).whenComplete((r, e) -> {
+            CompletableFuture<Void> completion = new CompletableFuture<>();
+            InterpreterControl      control    = new InterpreterControl(interpreter, module, rootDir,
+                    errs, taskId, consoleId, started, completion);
+
+            postRequest(interpreter, "startTask", hTaskId).whenComplete((r, e) -> {
                 if (e == null) {
                     TupleHandle tuple   = (TupleHandle) r;
                     long        result  = ((JavaLong) tuple.m_ahValue[0]).getValue();
                     String      failure = ((StringHandle) tuple.m_ahValue[1]).getStringValue();
-                    finish(result, failure);
+                    control.finish(result, failure);
                 } else {
-                    finish(-1, e.toString());
+                    control.finish(-1, e.toString());
+                }
+            }).whenComplete((r, e) -> {
+                if (e == null) {
+                    completion.complete(null);
+                } else {
+                    completion.completeExceptionally(e);
                 }
             });
+            return control;
         } catch (RuntimeException e) {
-            running = false;
-            stopped = Instant.now();
-            unregisterConsole();
+            unregisterConsole(interpreter, consoleId);
             throw e;
         }
-
-        return this;
     }
 
-    private FileStructure prepareModule() {
+    private static FileStructure prepareModule(InterpreterConnector connector, ModuleStructure module,
+                                               ModuleRepository repository) {
         FileStructure file;
         try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -142,16 +137,25 @@ class InterpreterControl
         return file;
     }
 
-    private CompletableFuture<ObjectHandle> postRequest(
-            String methodName, ObjectHandle... arguments) {
+    private static CompletableFuture<ObjectHandle> postRequest(
+            InterpreterConnector connector, String methodName, ObjectHandle... arguments) {
         return connector.getMainContainer().invokeAsync(methodName, arguments);
     }
 
-    private synchronized void finish(long result, String failure) {
-        if (!running) {
-            return;
-        }
+    private InterpreterControl(InterpreterConnector connector, ModuleStructure module,
+                               File rootDir, ErrorListener errs, long taskId, Long consoleId,
+                               Instant started, CompletableFuture<Void> completion) {
+        this.connector  = connector;
+        this.module     = module;
+        this.rootDir    = rootDir;
+        this.errs       = errs;
+        this.taskId     = taskId;
+        this.consoleId  = consoleId;
+        this.started    = started;
+        this.completion = completion;
+    }
 
+    private void finish(long result, String failure) {
         try {
             if (failure.isEmpty()) {
                 this.result = result;
@@ -162,17 +166,15 @@ class InterpreterControl
                 }
             }
         } finally {
-            this.running = false;
             this.stopped = Instant.now();
-            unregisterConsole();
+            this.running = false;
+            unregisterConsole(connector, consoleId);
         }
     }
 
-    private void unregisterConsole() {
-        Long consoleId = this.consoleId;
+    private static void unregisterConsole(InterpreterConnector connector, Long consoleId) {
         if (consoleId != null) {
             xExternalConsole.unregister(connector.getNativeContainer(), consoleId);
-            this.consoleId = null;
         }
     }
 
@@ -203,37 +205,32 @@ class InterpreterControl
 
     @Override
     public void close() {
-        synchronized (this) {
-            if (closed) {
-                return;
-            }
-            closed = true;
+        if (!closed.compareAndSet(false, true)) {
+            return;
         }
 
         if (running) {
-            postRequest("killTask", xInt64.makeHandle(taskId)).join();
+            postRequest(connector, "killTask", xInt64.makeHandle(taskId)).join();
         }
         completion.join();
+
         if (rootDir == null) {
-            postRequest("deleteTaskDirectory", xInt64.makeHandle(taskId),
+            postRequest(connector, "deleteTaskDirectory", xInt64.makeHandle(taskId),
                     xString.makeHandle(module.getSimpleName())).join();
         }
     }
 
-    private final InterpreterConnector connector;
-    private final ModuleStructure      module;
-    private final ModuleRepository     repository;
-    private final PrintWriter          console;
-    private final File                 rootDir;
-    private final ErrorListener        errs;
+    private final InterpreterConnector    connector;
+    private final ModuleStructure         module;
+    private final File                    rootDir;
+    private final ErrorListener           errs;
+    private final long                    taskId;
+    private final Long                    consoleId;
+    private final Instant                 started;
+    private final CompletableFuture<Void> completion;
+    private final AtomicBoolean           closed = new AtomicBoolean();
 
-    private CompletableFuture<ObjectHandle> completion;
-
-    private volatile boolean running;
-    private volatile Instant started;
+    private volatile boolean running = true;
     private volatile Instant stopped;
     private volatile Long    result;
-    private          long    taskId;
-    private          Long    consoleId;
-    private          boolean closed;
 }
