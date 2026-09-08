@@ -348,7 +348,7 @@ public sealed class PropertyConstant
             }
         }
 
-        PropertyInfo infoThis = typeTarget.ensureTypeInfo().findProperty(this, true);
+        PropertyInfo infoThis = typeTarget.typeInfo().findProperty(this, true);
         assert infoThis != null;
         return infoThis;
     }

@@ -1591,7 +1591,7 @@ public class MethodInfo
             TypeConstant typeBase = typeContainer.isA(pool.typeVar())
                     ? pool.typeVar()
                     : pool.typeRef();
-            TypeInfo   infoBase     = typeBase.ensureTypeInfo();
+            TypeInfo   infoBase     = typeBase.typeInfo();
             MethodInfo methodNative = infoBase.getMethodById(infoBase.findMethods(
                     getJitIdentity().getName(), getSignature().getParamCount(), MethodKind.Method).
                     iterator().next());

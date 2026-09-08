@@ -8148,7 +8148,7 @@ public abstract sealed class TypeConstant
      * @return the method structure for the function or null if none was found
      */
     public MethodStructure findCallable(SignatureConstant sig) {
-        TypeInfo   infoType = ensureTypeInfo();
+        TypeInfo   infoType = typeInfo();
         MethodInfo infoFn   = infoType.getMethodBySignature(sig, true);
         return infoFn == null || infoFn.isAbstract()
                 ? null
@@ -8163,7 +8163,7 @@ public abstract sealed class TypeConstant
      * @return the MethodInfo for the function or null if none was found
      */
     public MethodInfo findFunctionInfo(SignatureConstant sig) {
-        return ensureTypeInfo().getMethodBySignature(sig);
+        return typeInfo().getMethodBySignature(sig);
     }
 
 

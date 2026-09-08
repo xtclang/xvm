@@ -60,12 +60,12 @@ public abstract class OpRange
                                     RegisterInfo regTarget, int nArgValue) {
         TypeConstant        typeEl    = regTarget.type();
         TypeConstant        typeRange = bctx.pool().ensureRangeType(typeEl);
-        Set<MethodConstant> setCtors  = typeRange.ensureTypeInfo().
+        Set<MethodConstant> setCtors  = typeRange.typeInfo().
                     findMethods("construct", 4, MethodKind.Constructor);
         assert setCtors.size() == 1;
 
         MethodConstant idCtor = setCtors.iterator().next();
-        assert typeRange.ensureTypeInfo().getMethodById(idCtor) != null;
+        assert typeRange.typeInfo().getMethodById(idCtor) != null;
 
         bctx.buildNew(code, typeRange, idCtor, jmdNew -> {
             assert jmdNew.isOptimized;

@@ -226,7 +226,7 @@ public abstract class OpCallable extends Op {
                     return null;
                 }
                 TypeInfo infoTarget = clzChild.getFormalType().
-                        ensureAccess(Access.PROTECTED).ensureTypeInfo();
+                        ensureAccess(Access.PROTECTED).typeInfo();
                 MethodInfo infoConstr = infoTarget.getMethodBySignature(
                         constructor.getIdentityConstant().getSignature(), true);
                 if (infoConstr == null) {
@@ -270,7 +270,7 @@ public abstract class OpCallable extends Op {
         IdentityConstant idTargetC  = clzTargetC.getIdentityConstant();
 
         if (!idTargetR.equals(idTargetC)) {
-            TypeInfo infoTarget = typeR.ensureTypeInfo();
+            TypeInfo infoTarget = typeR.typeInfo();
 
             MethodInfo info = infoTarget.getMethodBySignature(
                                 constructor.getIdentityConstant().getSignature(), true);

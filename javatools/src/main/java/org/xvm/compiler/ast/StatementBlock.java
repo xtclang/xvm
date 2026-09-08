@@ -783,7 +783,7 @@ public final class StatementBlock
                 MethodConstant idMethod   = method.getIdentityConstant();
                 Access         access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
                 TypeConstant   typeCtx    = pool().ensureAccessTypeConstant(getThisClass().getFormalType(), access);
-                TypeInfo       info       = typeCtx.ensureTypeInfo();
+                TypeInfo       info       = typeCtx.typeInfo();
                 MethodInfo     infoMethod = info.getMethodById(idMethod);
                 return infoMethod != null && infoMethod.hasSuper(info);
             }

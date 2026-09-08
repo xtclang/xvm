@@ -440,7 +440,7 @@ public class TypeCollector {
         }
 
         // an enum value type is replaced with the type of the enum; see Op.selectCommonType()
-        TypeInfo info = typeCommon.ensureTypeInfo();
+        TypeInfo info = typeCommon.typeInfo();
         if (info.getFormat() == Format.ENUMVALUE) {
             typeCommon = info.getExtends();
             assert typeCommon != null;

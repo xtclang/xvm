@@ -1739,7 +1739,7 @@ public abstract sealed class Expression
     public boolean isAssignableTo(TypeConstant typeThat) {
         TypeConstant typeImplicit = getType();
         return typeImplicit.isA(typeThat)
-                || typeImplicit.ensureTypeInfo().findConversion(typeThat) != null;
+                || typeImplicit.typeInfo().findConversion(typeThat) != null;
     }
 
     /**

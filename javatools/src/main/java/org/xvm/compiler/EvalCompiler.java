@@ -284,14 +284,14 @@ public class EvalCompiler {
 
                 if (f_frame.getThis().ensureAccess(Access.PRIVATE) instanceof GenericHandle hThis) {
                     TypeConstant type = getThisType();
-                    PropertyInfo prop = type.ensureTypeInfo().findProperty(sName);
+                    PropertyInfo prop = type.typeInfo().findProperty(sName);
                     if (prop != null) {
                         ensureNameMap().put(sName, arg = prop.getIdentity());
                         return arg;
                     }
 
                     type = hThis.getType();
-                    prop = type.ensureTypeInfo().findProperty(sName);
+                    prop = type.typeInfo().findProperty(sName);
                     if (prop != null) {
                         ensureNameMap().put(sName, arg = prop.getIdentity());
                         return arg;

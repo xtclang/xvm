@@ -1293,7 +1293,7 @@ public final class TypeInfoReal
 
                 TypeConstant typeParent = origin.getType();
                 TypeInfo     infoParent = pool().ensureAccessTypeConstant(
-                                            typeParent, Access.PRIVATE).ensureTypeInfo();
+                                            typeParent, Access.PRIVATE).typeInfo();
                 return infoParent.findProperty(id);
             }
         }
@@ -1350,7 +1350,7 @@ public final class TypeInfoReal
         if (origin != null) {
             TypeConstant typeOrigin = origin.getType();
             TypeInfo     infoOrigin = pool().ensureAccessTypeConstant(typeOrigin, Access.PRIVATE).
-                                            ensureTypeInfo();
+                                            typeInfo();
             if (infoOrigin.findProperty(idProp, true) != null) {
                 return infoOrigin;
             }

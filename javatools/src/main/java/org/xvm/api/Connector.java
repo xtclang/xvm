@@ -69,7 +69,7 @@ public abstract class Connector {
      * Find an entry points for a given name in the specified module.
      */
     protected Set<MethodStructure> findMethods(ModuleConstant idModule, String sMethodName) {
-        TypeInfo             typeInfo    = idModule.getType().ensureTypeInfo();
+        TypeInfo             typeInfo    = idModule.getType().typeInfo();
         Set<MethodConstant>  setMethodId = typeInfo.findMethods(sMethodName, -1, TypeInfo.MethodKind.Any);
         Set<MethodStructure> setMethods  = new HashSet<>();
         for (MethodConstant idMethod : setMethodId) {

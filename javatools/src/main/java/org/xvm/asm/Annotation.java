@@ -232,7 +232,7 @@ public class Annotation
      */
     public boolean hasExplicitGetter() {
         ClassConstant       clzAnno  = (ClassConstant) getAnnotationClass();
-        TypeInfo            infoAnno = clzAnno.getType().ensureTypeInfo();
+        TypeInfo            infoAnno = clzAnno.getType().typeInfo();
         Set<MethodConstant> setImpls = infoAnno.findMethods("get", 0, MethodKind.Method);
 
         if (setImpls.isEmpty()) {

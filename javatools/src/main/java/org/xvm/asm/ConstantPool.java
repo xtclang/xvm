@@ -4245,7 +4245,7 @@ public class ConstantPool
                     + describeOwner() + "; referent=" + typeReferent);
         }
 
-        TypeInfo info = m_typeNakedRef.ensureTypeInfo();
+        TypeInfo info = m_typeNakedRef.typeInfo();
         return info.asNakedRef(this, typeReferent, resolver);
     }
 

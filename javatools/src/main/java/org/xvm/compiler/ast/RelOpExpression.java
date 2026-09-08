@@ -699,7 +699,7 @@ public final class RelOpExpression
             return null;
         }
 
-        Set<MethodConstant> setOps = typeLeft.ensureTypeInfo().findOpMethods(
+        Set<MethodConstant> setOps = typeLeft.typeInfo().findOpMethods(
                 getDefaultMethodName(), operator.getId().TEXT, 1);
         if (!setOps.isEmpty()) {
             TypeConstant typeBest = null;
@@ -730,7 +730,7 @@ public final class RelOpExpression
                     // both types fit the expression; go with a wider one
                     // (Note: for now we don't deal here with any ambiguity)
                     if (fit.isConverting()) {
-                        if (typeParam.ensureTypeInfo().findConversion(typeBest) != null) {
+                        if (typeParam.typeInfo().findConversion(typeBest) != null) {
                             typeBest = typeParam;
                         }
                     } else {

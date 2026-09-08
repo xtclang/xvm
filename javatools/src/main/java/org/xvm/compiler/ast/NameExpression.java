@@ -3175,7 +3175,7 @@ public sealed class NameExpression
         int                 cArgs      = typeArg == null ? 0 : 1;
         PropertyConstant    idProp     = (PropertyConstant) m_arg;
         TypeConstant        typeVar    = idProp.getRefType(typeTarget);
-        Set<MethodConstant> setMethods = typeVar.ensureTypeInfo().findOpMethods(sMethod, sOp, cArgs);
+        Set<MethodConstant> setMethods = typeVar.typeInfo().findOpMethods(sMethod, sOp, cArgs);
         return switch (setMethods.size()) {
             case 0  -> null;
             case 1  -> setMethods.iterator().next();

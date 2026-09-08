@@ -156,7 +156,7 @@ public final class ArrayAccessExpression
 
         // otherwise, the type comes from the return value from the op that is likely to be used to
         // access the "array" target
-        TypeInfo            infoTarget  = typeTarget.ensureTypeInfo();
+        TypeInfo            infoTarget  = typeTarget.typeInfo();
         int                 cIndexes    = indexes.size();
         Set<MethodConstant> setMethods  = findPotentialOps(infoTarget, cIndexes);
         for (MethodConstant idMethod : setMethods) {

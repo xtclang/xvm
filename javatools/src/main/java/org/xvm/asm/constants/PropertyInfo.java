@@ -877,7 +877,7 @@ public class PropertyInfo
             }
 
             if (body.getImplementation() == Implementation.Delegating) {
-                TypeInfo     typeThat = body.getDelegate().getType().ensureTypeInfo();
+                TypeInfo     typeThat = body.getDelegate().getType().typeInfo();
                 PropertyInfo propThat = typeThat.findProperty(getName());
                 return propThat != null && propThat.isVar();
             }
