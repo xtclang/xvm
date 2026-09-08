@@ -3456,6 +3456,46 @@ field and where threading a parameter through thousands of call sites is disprop
 added, its javadoc should say that explicitly, so the next person does not read it as an
 endorsement.
 
+### D stays declined - and the evidence for it is thinner than this row claims
+
+D ("convert the no-argument `ensureTypeInfo()` calls") remains declined, now with a count: **60
+callers**, none of which has a listener in scope. The enclosing methods are `calculateAssignability`,
+`calculateRelation`, `resolveTypedefs`, `findCallable`, `chooseBest`, `assemble` - deep, widely
+called, and threading a listener into them would route corrupt-library faults into user-facing
+diagnostics with no source position. That trade is still wrong.
+
+**But the argument that makes it safe is only half-evidenced, and this is worth flagging.** The
+argument is that `ConstantPool.register` adopts a foreign constant, so a compile referencing a
+library type asks its own pool holding its own listener. `ConstantAdoptionListenerTest` demonstrates
+that - on a `StringConstant`. A `StringConstant` never has a `TypeInfo`, and more importantly it
+never reaches the gate that applies to the case we actually depend on:
+
+```java
+// type constants that are "foreign" to this pool cannot be held by it
+if (constant instanceof TypeConstant type && !type.isShared(this)) {
+    return constant;                    // unchanged: still owned by the other pool
+}
+```
+
+The gate is `TypeConstant`-only. So the guarantee is "a **shared** type is adopted", not "a foreign
+type is adopted" - which is still sound for a compile, since a compile can only name types from
+modules it declares a dependency on. The point is that the row states the invariant more broadly
+than the test shows.
+
+**An attempt to close that gap failed and was backed out**, which is itself the useful result. A test
+registering a library-pool `TypeConstant` into an unrelated compiling pool does NOT behave the way
+either reading predicts: `isShared` is false, yet the constant that comes back is owned by the
+REGISTERING pool - because `register` finds an already-interned equal constant in the target and
+returns that, before adoption or the gate matter. So there are at least three paths through
+`register` for a type (already interned, shared and adopted, unshared and returned as-is) and the
+adoption argument only describes one.
+
+**Audit item, not a fix:** establish which of the three paths a real compile takes for a library
+type, and pin it. Until that is done, "adoption makes the asker the owner" should be read as
+plausible and partly evidenced rather than as established. Nothing observed suggests it is wrong -
+no test fails, and parallel compiles do not cross-report - but the reason it holds is not the one
+written down.
+
 ### C, done: `setErrorListener` is deleted, not merely unused
 
 `ConstantPool.m_errs` was the last mutable listener field, and its two callers are the argument for
