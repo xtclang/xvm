@@ -3483,19 +3483,36 @@ type is adopted" - which is still sound for a compile, since a compile can only 
 modules it declares a dependency on. The point is that the row states the invariant more broadly
 than the test shows.
 
-**An attempt to close that gap failed and was backed out**, which is itself the useful result. A test
-registering a library-pool `TypeConstant` into an unrelated compiling pool does NOT behave the way
-either reading predicts: `isShared` is false, yet the constant that comes back is owned by the
-REGISTERING pool - because `register` finds an already-interned equal constant in the target and
-returns that, before adoption or the gate matter. So there are at least three paths through
-`register` for a type (already interned, shared and adopted, unshared and returned as-is) and the
-adoption argument only describes one.
+**Closed - the invariant holds, for a sharper reason than was written down.** `isShared` bottoms out
+in `IdentityConstant.isShared`:
 
-**Audit item, not a fix:** establish which of the three paths a real compile takes for a library
-type, and pin it. Until that is done, "adoption makes the asker the owner" should be read as
-plausible and partly evidenced rather than as established. Nothing observed suggests it is wrong -
-no test fails, and parallel compiles do not cross-report - but the reason it holds is not the one
-written down.
+```java
+public boolean isShared(ConstantPool poolOther) {
+    if (poolOther == getConstantPool()) {
+        return true;
+    }
+    ModuleConstant idModule = getModuleConstant();
+    return idModule != null && poolOther.getFileStructure().getChild(idModule) != null;
+}
+```
+
+A type is shared with another pool **iff that pool's file structure has a child for the type's
+module** - and that child is the fingerprint a compiling module declares for every module it imports
+(`TypeCompositionStatement` calls `ensureModule(name).fingerprintRequired()` for exactly this).
+
+So the rule is not "adoption always happens". It is:
+
+> **A library type is adopted precisely when the compile can NAME it.**
+
+which is stronger and more obviously safe than the original claim, because the two conditions have
+the same cause. A type from a module the compile does not depend on is not adopted - and also cannot
+be referenced, so it never reaches `ensureTypeInfo` in the first place. The gate and the language
+rule are the same rule.
+
+`ConstantAdoptionListenerTest.aLibraryTypeIsAdoptedPreciselyWhenTheCompileCanNameIt` pins both
+halves: unshared before the fingerprint is declared, adopted and answering the compile's listener
+after. The first attempt at this test asserted the wrong thing and was backed out - it registered a
+type into a pool with no dependency on its module, which is a case a compile cannot produce.
 
 #### D, scoped: 56 sites, 46 methods, and a second ring of ~280
 

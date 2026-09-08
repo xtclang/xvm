@@ -3,6 +3,10 @@ package org.xvm.asm;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.constants.TypeConstant;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -41,6 +45,62 @@ public class ConstantAdoptionListenerTest {
                 "so its diagnostics resolve to the COMPILE's listener, not the library's");
         assertNotSame(libraryListener, adopted.getConstantPool().getErrorListener(),
                 "which is what keeps two parallel compiles from sharing a sink");
+    }
+
+    /**
+     * The invariant the no-listener {@code ensureTypeInfo()} overload rests on, pinned for the case
+     * that actually matters: a TYPE, not a leaf constant.
+     *
+     * <p>The sibling test above uses a {@code StringConstant}, which never reaches the gate that
+     * decides this and never has a {@code TypeInfo} either. For a {@code TypeConstant},
+     * {@code register} adopts CONDITIONALLY:
+     *
+     * <pre>{@code
+     * if (constant instanceof TypeConstant type && !type.isShared(this)) {
+     *     return constant;                       // unchanged: still the other pool's
+     * }
+     * }</pre>
+     *
+     * <p>and {@code isShared} bottoms out in {@code IdentityConstant.isShared}, which asks whether
+     * the OTHER pool's file structure has a child for this type's module. That child is the
+     * fingerprint a compiling module declares for every module it depends on - so a library type is
+     * adopted exactly when it is NAMEABLE, and a compile can only name types from modules it
+     * depends on. The guarantee is therefore not "adoption always happens"; it is "adoption happens
+     * wherever a compile could have referred to the type", which is what makes the overload safe.
+     */
+    @Test
+    public void aLibraryTypeIsAdoptedPreciselyWhenTheCompileCanNameIt() {
+        ErrorListener libraryListener   = err -> {};
+        ErrorListener compilingListener = err -> {};
+
+        var library   = new FileStructure("library", libraryListener);
+        var compiling = new FileStructure("compiling", compilingListener);
+
+        ConstantPool poolLibrary   = library.getConstantPool();
+        ConstantPool poolCompiling = compiling.getConstantPool();
+
+        TypeConstant typeLibrary = library.getModule().getIdentityConstant().getType();
+        assertSame(poolLibrary, typeLibrary.getConstantPool(),
+                "it starts out owned by the pool that created it");
+
+        // BEFORE the dependency is declared, the compile could not name this type at all
+        assertFalse(typeLibrary.isShared(poolCompiling),
+                "a module the compile does not depend on is not shared with it");
+
+        // declaring the dependency is what TypeCompositionStatement does for every imported module
+        compiling.ensureModule("library").fingerprintRequired();
+
+        assertTrue(typeLibrary.isShared(poolCompiling),
+                "the fingerprint is what makes the library's types nameable - and shared");
+
+        TypeConstant adopted = (TypeConstant) poolCompiling.register(typeLibrary);
+
+        assertSame(poolCompiling, adopted.getConstantPool(),
+                "so registering adopts it into the compiling pool");
+        assertSame(compilingListener, adopted.getConstantPool().getErrorListener(),
+                "which is why ensureTypeInfo() resolves the COMPILE's listener for a library type");
+        assertNotSame(libraryListener, adopted.getConstantPool().getErrorListener(),
+                "and why two parallel compiles do not report into each other's sink");
     }
 
     @Test

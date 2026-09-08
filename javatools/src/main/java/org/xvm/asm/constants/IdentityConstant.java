@@ -625,8 +625,8 @@ public abstract sealed class IdentityConstant
             return true;
         }
 
-        ModuleConstant idModule = getModuleConstant();
-        return idModule != null && poolOther.getFileStructure().getChild(idModule) != null;
+        return getModuleConstant() instanceof ModuleConstant idModule
+                && poolOther.getFileStructure().getChild(idModule) != null;
     }
 
     /**
