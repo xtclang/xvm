@@ -1721,7 +1721,7 @@ public class Parser {
                         attempt.keepResults();
                     }
                 }
-            } catch (CompilerException ignore) {}
+            } catch (CompilerException _) {}
 
             if (stmtAsn != null) {
                 stmtAsn.negate(tokNot, expect(Id.R_PAREN));
@@ -3093,7 +3093,7 @@ public class Parser {
                             } else {
                                 params = null;
                             }
-                        } catch (CompilerException ignore) {}
+                        } catch (CompilerException _) {}
                     }
 
                     if (expr instanceof NamedTypeExpression) {
@@ -3443,7 +3443,7 @@ public class Parser {
                     } else {
                         params = null;
                     }
-                } catch (CompilerException ignore) {}
+                } catch (CompilerException _) {}
             }
 
             // test to see if this is a tuple literal of the form "Tuple:(", or some other

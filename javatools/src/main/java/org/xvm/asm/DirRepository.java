@@ -338,7 +338,7 @@ public class DirRepository
                 Files.move(pathTemp, pathCache, StandardCopyOption.REPLACE_EXISTING);
             }
             pathTemp = null;
-        } catch (IOException | RuntimeException ignore) {
+        } catch (IOException | RuntimeException _) {
             // a persistent cache is only a performance aid
         } finally {
             if (pathTemp != null) {

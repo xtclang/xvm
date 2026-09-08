@@ -135,7 +135,7 @@ public final class JfrProfile implements AutoCloseable {
         f_recording.close();
         try {
             Files.deleteIfExists(f_file);
-        } catch (Exception ignore) {
+        } catch (Exception _) {
             // a temp file we could not remove is not worth failing a diagnostic over
         }
     }

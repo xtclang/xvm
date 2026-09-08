@@ -581,7 +581,14 @@ public class ModuleInfo {
                     binaryVersion = struct.getModule().getVersion();
                     binaryContent = Content.Module;
                     return true;
-                } catch (Exception ignore) {}
+                } catch (IOException | RuntimeException e) {
+                    // Deliberately still broad: a corrupt .xtc can fail as an IOException or from
+                    // anywhere inside disassembly, and this is a best-effort scan whose answer is
+                    // binaryContent == Invalid, set before the try. What it stopped doing is
+                    // discarding WHY - "Invalid" alone cannot distinguish a truncated file from an
+                    // unreadable one, and that is the first question anyone asks of it.
+                    binaryError = e;
+                }
             } else {
                 binaryStatus = Status.NotExists;
             }
@@ -1465,11 +1472,11 @@ public class ModuleInfo {
                     Source source = new Source(file);
                     Parser parser = new Parser(source, ErrorListener.PROBE);
                     return parser.parseModuleNameIgnoreEverythingElse();
-                } catch (CompilerException | IOException ignore) {}
+                } catch (CompilerException | IOException _) {}
             } else if (isExplicitCompiledFile(name)) {
                 try {
                     return new FileStructure(file).getModuleId().getName();
-                } catch (IOException ignore) {}
+                } catch (IOException _) {}
             }
         }
 
@@ -1738,5 +1745,15 @@ public class ModuleInfo {
     private File          binaryFile;
     private Version       binaryVersion;
     private Content       binaryContent = Content.Unknown;  // what is known about the compiled module file content
+
+    /**
+     * Why {@link #binaryContent} is {@link Content#Invalid}, when it is because reading the file
+     * failed. Null when the binary is fine, or when it was never examined.
+     *
+     * <p>"Invalid" on its own cannot tell a truncated module from an unreadable one, and that is the
+     * first question anyone asks of it. Retained rather than discarded, in the same shape as
+     * {@code DirRepository}'s {@code errCause}.
+     */
+    private Throwable     binaryError;
     private long          binaryTimestamp;
 }

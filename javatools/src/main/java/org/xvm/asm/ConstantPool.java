@@ -654,7 +654,7 @@ public class ConstantPool
         if (constant instanceof IdentityConstant idConstant) {
             try {
                 return sBase + " " + idConstant.getPathString();
-            } catch (RuntimeException ignore) {
+            } catch (RuntimeException _) {
             }
         }
         return sBase;

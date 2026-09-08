@@ -199,7 +199,7 @@ public class NativeTypeSystem
                 }
                 return augmentNativeClass(ClassFile.of().parse(classBytes), className, type);
             }
-        } catch (IOException ignore) {}
+        } catch (IOException _) {}
 
         // there is no native class, but there must be a corresponding Ecstasy component
         return super.genClass(moduleLoader, name);

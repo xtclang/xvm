@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.time.OffsetDateTime;
 
 import java.time.format.TextStyle;
@@ -282,9 +283,16 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         // date/time
         buf.append(' ');
         LocalDateTime time = null;
-        try {
-            time = OffsetDateTime.parse(fsNode.getModified()).toLocalDateTime();
-        } catch (Exception ignore) {}
+        String sModified = fsNode.getModified();
+        if (sModified != null) {
+            try {
+                time = OffsetDateTime.parse(sModified).toLocalDateTime();
+            } catch (DateTimeParseException _) {
+                // an unparseable timestamp renders as "??? ??  ????" below, which is the point of
+                // this listing; narrowed from Exception, which was also catching the NPE that an
+                // absent timestamp threw - now handled by the null check instead of by accident
+            }
+        }
         if (time == null) {
             buf.append("??? ??  ????");
         } else {
@@ -396,7 +404,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         String findString = null;
         try {
             findString = new String(readFileChars(target));
-        } catch (IOException ignore) {}
+        } catch (IOException _) {}
 
         // load the file metadata
         var    findName     = target.getName();

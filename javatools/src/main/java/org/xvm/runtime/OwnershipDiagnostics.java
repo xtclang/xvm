@@ -581,7 +581,7 @@ public final class OwnershipDiagnostics {
         Constant[] aconst;
         try {
             aconst = pool.getConstants();
-        } catch (RuntimeException ignore) {
+        } catch (RuntimeException _) {
             return;
         }
         for (int i = 0; i < aconst.length; ++i) {
@@ -629,7 +629,7 @@ public final class OwnershipDiagnostics {
     private static boolean isMutableSafe(ObjectHandle handle) {
         try {
             return handle.isMutable();
-        } catch (RuntimeException ignore) {
+        } catch (RuntimeException _) {
             // a handle that cannot even answer isMutable() is worth reporting
             return true;
         }
@@ -657,7 +657,7 @@ public final class OwnershipDiagnostics {
     private static List<Map.Entry<?, ?>> safeEntries(Map<?, ?> map) {
         try {
             return new ArrayList<>(map.entrySet());
-        } catch (RuntimeException ignore) {
+        } catch (RuntimeException _) {
             return List.of();
         }
     }
@@ -668,7 +668,7 @@ public final class OwnershipDiagnostics {
             for (Object element : iterable) {
                 list.add(element);
             }
-        } catch (RuntimeException ignore) {
+        } catch (RuntimeException _) {
             // concurrent mutation mid-iteration: report what was seen
         }
         return list;
@@ -677,7 +677,7 @@ public final class OwnershipDiagnostics {
     private static Object safeKey(Map.Entry<?, ?> entry) {
         try {
             return entry.getKey();
-        } catch (RuntimeException ignore) {
+        } catch (RuntimeException _) {
             return null;
         }
     }
@@ -685,7 +685,7 @@ public final class OwnershipDiagnostics {
     private static Object safeValue(Map.Entry<?, ?> entry) {
         try {
             return entry.getValue();
-        } catch (RuntimeException ignore) {
+        } catch (RuntimeException _) {
             return null;
         }
     }
@@ -1460,7 +1460,7 @@ public final class OwnershipDiagnostics {
                 if (value instanceof NativeTemplates templates) {
                     return (Container) readField(templates, "f_container");
                 }
-            } catch (RuntimeException ignore) {
+            } catch (RuntimeException _) {
                 return null;
             }
 
@@ -1537,7 +1537,7 @@ public final class OwnershipDiagnostics {
                 try {
                     Field field = clz.getDeclaredField(name);
                     return readField(target, field);
-                } catch (NoSuchFieldException ignore) {
+                } catch (NoSuchFieldException _) {
                     clz = clz.getSuperclass();
                 }
             }

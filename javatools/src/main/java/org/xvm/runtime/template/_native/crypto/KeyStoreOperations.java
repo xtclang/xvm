@@ -91,7 +91,7 @@ public class KeyStoreOperations {
                     saveKeyStore(keyStore, sPath, achPwd);
                 }
             }
-        } catch (GeneralSecurityException | IOException ignore) {
+        } catch (GeneralSecurityException | IOException _) {
             // intentionally silent; enttry may not exist
         }
     }

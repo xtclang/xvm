@@ -4655,3 +4655,34 @@ A file that **exists but cannot be read** - a permissions problem, a bad mount, 
 reported to the user as missing. The message was not merely incomplete, it was wrong, and the
 `IOException` that would have said so was discarded. It now retains the cause, reports
 `cannot read "<file>": <reason>` when there is one, and passes the cause through.
+
+### The four bare `catch (Exception)` blocks, and what each was hiding
+
+The widest catches left in the tree. Each turned out to be a different mistake, which is the argument
+for doing them one at a time rather than sweeping.
+
+- **`xFuture.getReferent`** - a swallowed `InterruptedException` that never restored the flag. That
+  is not a style point: discarding an interrupt throws away a cancellation request the next blocking
+  call in that thread will never see, and `catch (Exception)` was hiding that the branch existed at
+  all. Now restores the flag, and catches `ExecutionException | CancellationException` separately -
+  a future that completed exceptionally has no value to show a debugger, which is an answer.
+- **`Launcher.showSystemVersion`** - relied on catching an **NPE** to mean "the library is not in the
+  repository". It chained straight off `loadModule(...).getVersionString()`. An absent module is an
+  ordinary answer, not an exception; there is now a null check, and the catch is
+  `ModuleLoadException`.
+- **`Disassembler.printNode`** - caught `Exception` around `OffsetDateTime.parse`, which covered both
+  the parse failure it meant and the NPE from an absent timestamp. Null is now checked, and the catch
+  is `DateTimeParseException`. The `"??? ??  ????"` fallback was always the intent.
+- **`ModuleInfo.loadBinaryFile`** - genuinely best-effort, and stays broad
+  (`IOException | RuntimeException`): a corrupt `.xtc` can fail from anywhere inside disassembly.
+  What it stopped doing is discarding WHY. `binaryContent == Invalid` cannot distinguish a truncated
+  module from an unreadable one, which is the first question anyone asks of it, so the cause is
+  retained in a `binaryError` field - the same shape as `DirRepository`'s `errCause`.
+
+### `ignore` -> `_`
+
+53 catch parameters named `ignore`/`ignored` renamed to the unnamed variable `_`, which the tree
+already used in `BuildInfo` and in the `try (var _ = ...)` synthesis windows. Verified before
+renaming that no block actually referenced the variable (0 did). It makes a genuinely ignored
+exception visually distinct from one that is named because it gets used, which is the distinction
+this whole row is about.

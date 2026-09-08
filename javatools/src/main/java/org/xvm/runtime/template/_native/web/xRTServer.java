@@ -395,7 +395,7 @@ public class xRTServer
                             break;
                         }
                     }
-                } catch (KeyStoreException ignore) {}
+                } catch (KeyStoreException _) {}
 
                 if (sTlsKey == null) {
                     return frame.raiseException("The Tls key name must be specified");

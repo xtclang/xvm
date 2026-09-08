@@ -1,6 +1,7 @@
 package org.xvm.runtime.template.annotations;
 
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -800,7 +801,15 @@ public class xFuture
             if (future != null && future.isDone()) {
                 try {
                     return future.get();
-                } catch (Exception ignore) {}
+                } catch (InterruptedException e) {
+                    // Restore the flag. Swallowing an interrupt silently discards a cancellation
+                    // request that the next blocking call in this thread will then never see - and
+                    // `catch (Exception)` here was hiding that this branch existed at all.
+                    Thread.currentThread().interrupt();
+                } catch (ExecutionException | CancellationException _) {
+                    // the future completed exceptionally or was cancelled; the debugger asked what
+                    // the value is, and the answer is that there is not one
+                }
             }
 
             return null;

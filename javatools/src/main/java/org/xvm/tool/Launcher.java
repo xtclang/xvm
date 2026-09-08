@@ -13,6 +13,7 @@ import java.util.Objects;
 
 import java.util.stream.Stream;
 
+import org.xvm.asm.ModuleLoadException;
 import org.xvm.asm.BuildInfo;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
@@ -825,8 +826,15 @@ public abstract class Launcher<T extends LauncherOptions>
     protected void showSystemVersion(ModuleRepository reposLib) {
         String sVer = null;
         try {
-            sVer = reposLib.loadModule(ECSTASY_MODULE).getVersionString();
-        } catch (Exception ignore) {}
+            // The null check is the point: this used to chain straight off loadModule and rely on
+            // catching the resulting NPE to mean "the library is not in the repository". An absent
+            // module is an ordinary answer, not an exception, and catching Exception to discover it
+            // also swallowed everything else that could go wrong here.
+            ModuleStructure module = reposLib.loadModule(ECSTASY_MODULE);
+            sVer = module == null ? null : module.getVersionString();
+        } catch (ModuleLoadException _) {
+            // a broken or unreadable library still gets a version from BuildInfo below
+        }
 
         // Use version from a single source of truth if the module version is not available
         if (sVer == null) {
