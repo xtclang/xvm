@@ -1077,8 +1077,14 @@ public final class XtcEngine
         ObjectHandle hNames  = xString.makeArrayHandle(main, listNames.toArray(String[]::new));
         ObjectHandle hValues = xString.makeArrayHandle(main, listValues.toArray(String[]::new));
 
-        // registerTransientTask, not registerTask: the run's file-system root is deleted by the
-        // runner as soon as the run completes.
+        // registerTransientTask, not registerTask: the runner deletes the run's file-system root
+        // once the run completes.
+        //
+        // Precisely: the runner assigns `completion` - which is what resolves the future returned
+        // here - and only THEN asks for the deletion, with `^`. So the deletion is prompt and
+        // guaranteed, being a scheduled service call rather than anything GC-triggered, but it is
+        // not ordered against this future. A caller cannot assume the root is gone the instant the
+        // run resolves; TransientTaskDirectoryTest waits for it for that reason.
         //
         // This used to be justified against the Cleaner that PR #545 registered on Control - not
         // deterministic, not run at JVM exit, able to call back into container zero after this

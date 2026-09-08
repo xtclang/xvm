@@ -44,7 +44,27 @@ and wrong there. The two are complementary.
   The discriminator has to be outside the module - a module cannot tell which run it is - so the
   expectation has to be compiled into the source. It now uses two modules, each asserting its own
   value, plus a negative test proving a wrong value fails the run, which is what makes the positive
-  one capable of failing. Transient tasks remain untested.
+  one capable of failing.
+
+- **Transient tasks are now tested, and the test found a false claim in our own comment.**
+  `TransientTaskDirectoryTest` runs a module that touches its file system (the store is `@Lazy`, so a
+  run that never uses it leaves nothing and would pass vacuously) and then checks the working
+  directory for a leftover `{moduleName}_{id}` root. It failed on the first attempt. The runner
+  assigns `completion` - which resolves the caller's future - and only THEN asks for the deletion,
+  with `^`:
+
+  ```
+  completion = (result, failure);
+  TaskRegistry.unregisterTask^(id);
+  if (!retainStore) {
+      TaskRegistry.deleteTaskDirectory^(id, template.name);
+  }
+  ```
+
+  So deletion is prompt and guaranteed - a scheduled service call, not a GC-triggered Cleaner - but
+  it is **not ordered against the run's future**. Our comment claimed the root is deleted "as soon as
+  the run completes", which is near enough for intent and wrong as a guarantee; it now says what
+  actually holds. The test waits, and the wait is the point rather than a workaround.
 - **`registerTask`'s injection parameters are dead on this branch.** `XtcEngine` only ever calls
   `registerTransientTask`; nothing calls the five-argument `registerTask`. The surface is carried but
   unexercised, which is how it would rot.
