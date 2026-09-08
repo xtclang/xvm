@@ -3498,3 +3498,47 @@ No existing manual module was found that directly exercises `@Atomic`
 specialized numeric references; the atomic owner-scope wave is covered by Java
 compile/test verification and should get an explicit X-level test in a
 follow-up.
+
+## Diagnostics And Error-Handling Wave (2026-09-07/08)
+
+Recorded here as an index only. The substance lives in two documents, and duplicating it would create
+a second copy to drift:
+
+- **`plans/master-issue-submissions.md` rows 47, 49-52** — defects present on master verbatim, fixed
+  here, unfiled by instruction. Row 48 was filed and then withdrawn after checking.
+- **`plans/master-enhancement-submissions.md` E32, E34, E35 (A-E), E47** — the design work, all done.
+  `docs/errorlistener/README.md` is the design doc; its section 6 is the current-state summary.
+
+What a reader of this file most needs to know:
+
+| | |
+| --- | --- |
+| `ConstantPool`'s listener | final, injected at construction; `setErrorListener` deleted |
+| no-argument `ensureTypeInfo()` | deleted; `typeInfo()` is the COMPUTE idiom |
+| the silent listener | split into `PROBE` (asking) and `BLACKHOLE` (no sink) |
+| `ErrorList` | safe for concurrent `log`, with the lock on the cold writer and `volatile` scalars for the polled readers |
+| every diagnostic | carries the thread, and the fiber where a `Frame` supplied one |
+
+**Proof points added.** Each was verified to fail against the defect it pins, by reintroducing that
+defect and re-running - not assumed:
+
+- `ErrorDeduplicationTest` — two spans sharing a start, and two parameter arrays that hash alike, are
+  not duplicates; genuine duplicates still collapse.
+- `LinkedRepositoryReadThroughTest` — a failed cache write must not hide a module that was found, and
+  the caller gets the cached copy rather than the source repository's instance.
+- `IncludePathDiagnosticTest` — a path that resolves but cannot be read is not reported as missing;
+  one that does not resolve still is.
+- `KeyStoreOperationsTest` (two added) — a delete with the wrong password fails rather than reporting
+  success.
+- `ErrorListConcurrencyTest` — a shared sink keeps every diagnostic under contention (2125 of 4000
+  survived without the lock).
+- `ErrorOriginTest` — origin never enters the deduplication key, so eight threads logging one
+  diagnostic still produce one.
+- `PerRunInjectionTest` — rewritten: the previous version asserted `label == "first" || "second"`,
+  which passes when the second run sees the first's value and so could not detect the leak it was
+  named for.
+- `TransientTaskDirectoryTest` — a completed run leaves no file-system root. This one corrected a
+  claim in our own code comment: the runner resolves the caller's future *before* it asks for the
+  deletion, and asks with `^`, so deletion is prompt and guaranteed but not ordered against the run.
+- `TypeInfoModeIsExplicitTest` — restored. It had lost its assertions and was passing green while
+  guarding nothing, which is worse than absent.
