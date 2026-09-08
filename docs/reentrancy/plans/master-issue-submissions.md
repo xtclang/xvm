@@ -94,7 +94,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 45 | `FileStructure.writeTo` assumes one registration pass is a fixed point; the pool can grow mid-write | loop to a fixed point | independent | a malformed `.xtc` is the worst case |
 | 46 | `ConsoleLog` is a shared unsynchronized ring buffer written on every console print | 1 class; synchronize or replace | independent | zero `synchronized`/`volatile`/`Atomic` in the whole file |
 | 47 | `ErrorInfo.genUID` drops the end position and hashes the parameters, so `ErrorList` deduplicates diagnostics that are not duplicates | 2 one-line edits | independent | silent loss of compiler errors; no concurrency needed to hit it |
-| 48 | A `TypeInfo` build that THROWS leaves the "busy building" place-holder cached on the shared `TypeConstant`, permanently | 1-2 lines; the cleanup method already exists | independent | not a concurrency bug: one internal failure poisons the type for the life of the pool |
+| 48 | A `TypeInfo` build that THROWS leaves the "busy building" place-holder set, so later RECURSIVE requests defer to a build that is not happening | 1-2 lines; the cleanup method already exists | independent | master defers on the place-holder with no owner check; this branch's thread-owner marker already neutralises it |
 
 ### Filing a row as an issue or PR
 
@@ -3627,87 +3627,104 @@ safe direction to fail in, and the direction `hashCode` failed in is the other o
 so building a slightly longer string is not on any measured path.
 
 
-## 48. A `TypeInfo` build that throws leaves the "busy building" place-holder cached forever
+## 48. A `TypeInfo` build that throws leaves the "busy building" place-holder set
 
 **FIXED 2026-09-08** on `lagergren/lazy-instance`. Two calls to the existing
-`clearTypeInfoPlaceholder()`, on the two throw paths that lacked it. Not pushed.
+`clearTypeInfoPlaceholder()`, on the two throw paths that lacked it. Not pushed. **On this branch
+the fix is hygiene rather than a live bug fix** - see "Why this branch is already immune" below.
+
+**CORRECTION, same day.** This row was first filed claiming the type became *permanently* unusable.
+That is wrong and the correction matters, because it changes both the severity and who is affected.
+`isComplete(placeholder)` is false, so the memoized fast path in `ensureTypeInfo(ErrorListener)`
+does NOT short-circuit on a stranded place-holder - it falls through and rebuilds, overwriting it.
+An outside caller therefore recovers on the very next request. What follows is the real failure mode.
 
 **Issue title:** `TypeConstant.ensureTypeInfo` marks a type "busy building" before building it and
-does not clear that marker when the build throws, so the type is permanently unusable in any process
-that outlives the failure.
+does not clear the mark when the build throws, so later RECURSIVE requests for that type defer to a
+build that is not happening.
 
 **Status/category:** Real defect in current master source. **Not a concurrency bug** - a
-single-threaded compile hits it.
+single-threaded compile reaches it.
 
-**Explanation:** `ensureTypeInfo(ErrorListener)` marks the type before starting:
+**Explanation:** the outer entry point marks the type before starting:
 
 ```java
 // there is a place-holder that signifies that a type is busy building a TypeInfo;
-// mark the type as having its TypeInfo building "in progress"
 setTypeInfo(pool.infoPlaceholder());
 ```
 
-and cleans up on every path except the ones that throw:
+and cleans up on every path except the two that throw - the `catch (Exception | Error e)`, which
+cleans the deferred list and not the marker, and an `IllegalStateException` a few lines earlier that
+is thrown outside the `try` entirely.
+
+The place-holder is not merely a stale value; it is a SIGNAL, and master reads it with no owner
+check:
 
 ```java
-} catch (Exception | Error e) {
-    // clean up the deferred types
-    takeDeferredTypeInfo();
-    throw e;                      // <- the place-holder is still set
+if (info != null && info.isPlaceHolder()) {
+    // the TypeInfo is already being built, so we're in the catch-22 situation; ...
+    addDeferredTypeInfo(this);
+    return null;
 }
 ```
 
-The catch already knew cleanup was required; it cleaned the deferred list and not the marker. There
-is a second leak a few lines earlier, outside the `try` entirely:
+So after a throw, any *internal* request for that type - the recursive kind that arises while
+building a type that depends on it - is told "someone is building this, defer" and returns `null`.
+Nobody is building it. The dependent build proceeds without it, the deferred list is retried a
+couple of times, and then the loop gives up.
 
-```java
-if (hasDeferredTypeInfo()) {
-    throw new IllegalStateException("Infinite loop while producing a TypeInfo for " ...);
-}
-```
+**Master evidence:**
+`javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:1733` (the place-holder is set),
+`:1737-1741` (the un-guarded `IllegalStateException`), `:1814-1817` (the catch that cleans the
+deferred list only), `:1848-1858` (the unconditional defer), `:2010` (`clearTypeInfoPlaceholder`,
+which exists and is called from neither throw path), `:1864`/`:1906` (the two paths that DO call it).
 
-**The cleanup method already exists**, is named for precisely this, and is called from two *other*
-places (`ensureTypeInfoInternal`, and the root-Object path):
-
-```java
-protected void clearTypeInfoPlaceholder() {
-    s_typeinfo.compareAndSet(this, getConstantPool().infoPlaceholder(), null);
-}
-```
-
-so the asymmetry is between the inner build paths, which clean up, and the outer entry point, which
-does not. It is also a compare-and-set, so calling it on the throw path cannot clobber a `TypeInfo`
-some other path has since stored.
-
-Note that the ordinary failure path IS handled - `if (errs.hasSeriousErrors())` invalidates the cache
-so the next caller rebuilds and hears the diagnostics again. The gap is exactly that this mitigation
-covers **diagnostics** and not **exceptions**.
-
-**Master evidence:** `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:1733` (the
-place-holder is set), `:1737-1741` (the un-guarded `IllegalStateException`), `:1814-1817` (the catch
-that cleans the deferred list only), `:2010` (`clearTypeInfoPlaceholder`, which exists and is not
-called from either), and `:1864`/`:1906` (the two paths that DO call it).
-
-**Failure mode:** the `TypeConstant` is interned in a `ConstantPool`, so it outlives the request that
-failed. Every later `ensureTypeInfo` for that type sees the place-holder and treats the type as
-mid-build - it is never rebuilt, and never completes. One internal failure therefore removes that
-type from the type system for the remaining life of the pool.
+**Failure mode:** not a poisoned type - a dependent type built as though one of its dependencies did
+not exist. The visible outcomes are an incomplete `TypeInfo` for the DEPENDENT type, or the
+`IllegalStateException("Infinite loop while producing a TypeInfo")` guard tripping. Both surface far
+from the original throw and describe a symptom rather than a cause.
 
 **Reachability on master:** any exception escaping `buildTypeInfo` - an internal assertion, an
-`IllegalStateException`, an `OutOfMemoryError`. No concurrency required.
+`IllegalStateException`, an `OutOfMemoryError` - followed by a recursive request for the same type.
+No concurrency required. Its practical visibility still depends on the pool outliving the failure, so
+a CLI `xcc` invocation that exits takes the problem with it; a pool reused across requests (an LSP
+server, a build daemon, a test harness, an embedding engine) does not.
 
-Its *visibility* depends on whether the pool outlives the failure, which is why it has gone
-unnoticed: a CLI `xcc` invocation exits, and the poisoned pool dies with the process. It bites where
-a pool is reused across requests - an LSP server, a build daemon, a test harness, or an embedding
-engine - which is exactly the model `cpurdy/LSPAPI` introduces. Parallel compiles make it more likely
-to be hit, and are not required to hit it.
+**Why this branch is already immune, and master is not.** This branch added a thread-scoped owner
+marker, and the place-holder read consults it:
+
+```java
+if (isBuildingTypeInfo(this)) {
+    addDeferredTypeInfo(this);      // OURS: the genuine catch-22
+    return null;
+}
+info = null;                        // THEIRS: build our own copy instead
+```
+
+`markBuildingTypeInfo`/`unmarkBuildingTypeInfo` are paired in a `finally`, so a throw clears the
+owner even though it used to leave the place-holder. A later request therefore takes the "THEIRS"
+path and rebuilds. That check was added for the concurrent case - two threads, where deferring to a
+peer that can never drain your thread-local list is a bet that cannot pay - and it happens to close
+this single-threaded hole as a side effect. Master has no equivalent and defers unconditionally.
 
 **Minimal master-portable fix strategy:** call `clearTypeInfoPlaceholder()` on both throw paths -
 once in the `catch (Exception | Error)` before the rethrow, once before the `IllegalStateException`.
-No signature or call-site changes.
+No signature or call-site changes. It is worth doing on master independently of the owner marker,
+because it removes a marker that lies rather than relying on a second mechanism to detect the lie.
+
+**Relationship to the "half-built TypeInfo" incident (NOT the same bug).** That was branch-side: an
+`XtcEngine` step that warmed every library type, swallowing failures, so a type that could not build
+standalone left damage behind. It was removed - `warmRootObject` now warms exactly one type and lets
+failures propagate - and its real damage was a different mechanism again, `ensureObjectTypeInfo`
+discarding every other `TypeInfo` in the pool on success. The two share a family resemblance (bad
+state left on an interned, shared `TypeConstant` after a failure) but not a cause, a location, or a
+fix. Filing them together would attach a master issue to a branch incident that is already closed.
+
+**Also checked, and NOT a bug:** an *incomplete* `TypeInfo` cached without serious errors. The
+memoized path gates on `isComplete(info) && isUpToDate(info)`, so an incomplete one falls through and
+is rebuilt. Only a complete, up-to-date `TypeInfo` is ever served from cache.
 
 **Testing note, stated honestly:** the fix is verified by reading and by the suite staying green
 (789 tests). It is NOT covered by a regression test, because inducing a throw inside `buildTypeInfo`
-needs a fault-injection fixture that does not exist yet. A test would be worth adding with that
-fixture; a test that merely asserts the two calls are present would pin the implementation rather
-than the behaviour.
+needs a fault-injection fixture that does not exist yet - and on this branch such a test would pass
+before the fix, because the owner marker already recovers.
