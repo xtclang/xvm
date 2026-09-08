@@ -13,6 +13,9 @@ import java.time.Instant;
 
 import java.util.ArrayList;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import org.xvm.api.Connector;
 import org.xvm.api.InterpreterConnector;
 import org.xvm.api.LspSupport;
@@ -52,6 +55,7 @@ public class LspTest {
 
         testCompile();
         testRun();
+        testKillWaiting();
         testFileSystem();
         testRunException();
         testRunLatency();
@@ -92,6 +96,65 @@ public class LspTest {
         }
         if (!bytes.toString().contains("hello from Hello")) {
             throw new IllegalStateException("run of Hello produced unexpected output: " + bytes);
+        }
+    }
+
+    private static void testKillWaiting() throws Exception {
+        ErrorList errs = new ErrorList(25);
+        ModuleStructure module = LspSupport.instance().compile("""
+                module Waiting {
+                    void run() {
+                        @Inject Console console;
+                        @Inject Timer timer;
+                        try {
+                            @Future Tuple done;
+                            timer.schedule(Duration:1H, () -> {done = ();});
+                            console.print("waiting");
+                            return done;
+                        } catch (Exception e) {
+                            console.print("caught termination");
+                        }
+                    }
+                }
+                """, repo(), errs);
+        if (module == null || errs.hasSeriousErrors()) {
+            throw new IllegalStateException("compile of Waiting failed: " + errs.getErrors());
+        }
+
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        CountDownLatch waiting = new CountDownLatch(1);
+        PrintWriter console = new PrintWriter(bytes, true) {
+            @Override
+            public void println(char[] chars) {
+                super.println(chars);
+                if (new String(chars).contains("waiting")) {
+                    waiting.countDown();
+                }
+            }
+        };
+
+        Control control = LspSupport.instance().run(module, console, null, null, errs);
+        if (control == null || errs.hasSeriousErrors()) {
+            throw new IllegalStateException("run of Waiting failed to start: " + errs.getErrors());
+        }
+
+        try (control) {
+            if (!waiting.await(5, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Waiting did not reach its suspended state");
+            }
+
+            long started = System.nanoTime();
+            control.close();
+            long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
+            if (elapsedMillis > 1_000) {
+                throw new IllegalStateException(
+                        "terminating Waiting took " + elapsedMillis + "ms");
+            }
+        }
+
+        String output = bytes.toString();
+        if (!output.contains("Service terminated") || output.contains("caught termination")) {
+            throw new IllegalStateException("Waiting produced unexpected output: " + output);
         }
     }
 

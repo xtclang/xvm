@@ -117,8 +117,10 @@ module runner.xtclang.org {
         }
 
         /**
-         * Implementation of the `startTask` API.
+         * Implementation of the `startTask` API. It's marked as `@Concurrent` to allow [killTask()]
+         * to enter the registry service while waiting for the task's completion.
          */
+        @Concurrent
         Tuple<Int, String> startTask(Int id) = taskFor(id).start();
 
         /**
