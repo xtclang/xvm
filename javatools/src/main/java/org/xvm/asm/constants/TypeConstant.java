@@ -1906,6 +1906,9 @@ public abstract sealed class TypeConstant
         // since this can only be used "from the outside", there should be no deferred TypeInfo
         // objects at this point
         if (hasDeferredTypeInfo()) {
+            // same reasoning as the catch below: this throw is outside the try, so it has to undo
+            // the place-holder itself rather than leave the type marked "busy building" forever
+            clearTypeInfoPlaceholder();
             throw new IllegalStateException("Infinite loop while producing a TypeInfo for "
                     + this + "; deferred types=" + takeDeferredTypeInfo());
         }
@@ -2009,8 +2012,22 @@ public abstract sealed class TypeConstant
         } catch (Exception | Error e) {
             // clean up the deferred types
             takeDeferredTypeInfo();
+
+            // AND the place-holder. This method set one above to mean "busy building"; on the
+            // throw path it used to be left behind, permanently, on a TypeConstant interned in a
+            // pool that outlives the failure. Every later request for that type then saw "busy"
+            // forever - so one internal failure poisoned the type for the rest of the process.
+            //
+            // The asymmetry is what makes it easy to miss: the normal paths already clean up (the
+            // hasSeriousErrors branch below invalidates, and ensureTypeInfoInternal calls this same
+            // method), and the catch already knew cleanup was needed - it just cleaned the deferred
+            // list and not the marker. clearTypeInfoPlaceholder() exists for exactly this and is a
+            // compare-and-set, so it cannot clobber a TypeInfo some other path has since stored.
+            clearTypeInfoPlaceholder();
             throw e;
         } finally {
+            // NOTE: this clears the THREAD-scoped building marker only. It is not a substitute for
+            // the line above: the place-holder lives on the shared TypeConstant, not on the thread.
             unmarkBuildingTypeInfo(this);
         }
 

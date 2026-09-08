@@ -94,6 +94,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 45 | `FileStructure.writeTo` assumes one registration pass is a fixed point; the pool can grow mid-write | loop to a fixed point | independent | a malformed `.xtc` is the worst case |
 | 46 | `ConsoleLog` is a shared unsynchronized ring buffer written on every console print | 1 class; synchronize or replace | independent | zero `synchronized`/`volatile`/`Atomic` in the whole file |
 | 47 | `ErrorInfo.genUID` drops the end position and hashes the parameters, so `ErrorList` deduplicates diagnostics that are not duplicates | 2 one-line edits | independent | silent loss of compiler errors; no concurrency needed to hit it |
+| 48 | A `TypeInfo` build that THROWS leaves the "busy building" place-holder cached on the shared `TypeConstant`, permanently | 1-2 lines; the cleanup method already exists | independent | not a concurrency bug: one internal failure poisons the type for the life of the pool |
 
 ### Filing a row as an issue or PR
 
@@ -3624,3 +3625,89 @@ safe direction to fail in, and the direction `hashCode` failed in is the other o
 
 **Cost:** `genUID` runs once per diagnostic actually logged, and a compile that succeeds logs none,
 so building a slightly longer string is not on any measured path.
+
+
+## 48. A `TypeInfo` build that throws leaves the "busy building" place-holder cached forever
+
+**FIXED 2026-09-08** on `lagergren/lazy-instance`. Two calls to the existing
+`clearTypeInfoPlaceholder()`, on the two throw paths that lacked it. Not pushed.
+
+**Issue title:** `TypeConstant.ensureTypeInfo` marks a type "busy building" before building it and
+does not clear that marker when the build throws, so the type is permanently unusable in any process
+that outlives the failure.
+
+**Status/category:** Real defect in current master source. **Not a concurrency bug** - a
+single-threaded compile hits it.
+
+**Explanation:** `ensureTypeInfo(ErrorListener)` marks the type before starting:
+
+```java
+// there is a place-holder that signifies that a type is busy building a TypeInfo;
+// mark the type as having its TypeInfo building "in progress"
+setTypeInfo(pool.infoPlaceholder());
+```
+
+and cleans up on every path except the ones that throw:
+
+```java
+} catch (Exception | Error e) {
+    // clean up the deferred types
+    takeDeferredTypeInfo();
+    throw e;                      // <- the place-holder is still set
+}
+```
+
+The catch already knew cleanup was required; it cleaned the deferred list and not the marker. There
+is a second leak a few lines earlier, outside the `try` entirely:
+
+```java
+if (hasDeferredTypeInfo()) {
+    throw new IllegalStateException("Infinite loop while producing a TypeInfo for " ...);
+}
+```
+
+**The cleanup method already exists**, is named for precisely this, and is called from two *other*
+places (`ensureTypeInfoInternal`, and the root-Object path):
+
+```java
+protected void clearTypeInfoPlaceholder() {
+    s_typeinfo.compareAndSet(this, getConstantPool().infoPlaceholder(), null);
+}
+```
+
+so the asymmetry is between the inner build paths, which clean up, and the outer entry point, which
+does not. It is also a compare-and-set, so calling it on the throw path cannot clobber a `TypeInfo`
+some other path has since stored.
+
+Note that the ordinary failure path IS handled - `if (errs.hasSeriousErrors())` invalidates the cache
+so the next caller rebuilds and hears the diagnostics again. The gap is exactly that this mitigation
+covers **diagnostics** and not **exceptions**.
+
+**Master evidence:** `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:1733` (the
+place-holder is set), `:1737-1741` (the un-guarded `IllegalStateException`), `:1814-1817` (the catch
+that cleans the deferred list only), `:2010` (`clearTypeInfoPlaceholder`, which exists and is not
+called from either), and `:1864`/`:1906` (the two paths that DO call it).
+
+**Failure mode:** the `TypeConstant` is interned in a `ConstantPool`, so it outlives the request that
+failed. Every later `ensureTypeInfo` for that type sees the place-holder and treats the type as
+mid-build - it is never rebuilt, and never completes. One internal failure therefore removes that
+type from the type system for the remaining life of the pool.
+
+**Reachability on master:** any exception escaping `buildTypeInfo` - an internal assertion, an
+`IllegalStateException`, an `OutOfMemoryError`. No concurrency required.
+
+Its *visibility* depends on whether the pool outlives the failure, which is why it has gone
+unnoticed: a CLI `xcc` invocation exits, and the poisoned pool dies with the process. It bites where
+a pool is reused across requests - an LSP server, a build daemon, a test harness, or an embedding
+engine - which is exactly the model `cpurdy/LSPAPI` introduces. Parallel compiles make it more likely
+to be hit, and are not required to hit it.
+
+**Minimal master-portable fix strategy:** call `clearTypeInfoPlaceholder()` on both throw paths -
+once in the `catch (Exception | Error)` before the rethrow, once before the `IllegalStateException`.
+No signature or call-site changes.
+
+**Testing note, stated honestly:** the fix is verified by reading and by the suite staying green
+(789 tests). It is NOT covered by a regression test, because inducing a throw inside `buildTypeInfo`
+needs a fault-injection fixture that does not exist yet. A test would be worth adding with that
+fixture; a test that merely asserts the two calls are present would pin the implementation rather
+than the behaviour.
