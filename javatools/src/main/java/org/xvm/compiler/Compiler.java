@@ -1389,6 +1389,10 @@ public class Compiler {
      */
     public static final String EXPRESSION_UNREACHABLE              = "COMPILER-208";
     /**
+     * No compile-time conversion is available for {0}, so the conversion is deferred to run time.
+     */
+    public static final String CONSTANT_CONVERSION_DEFERRED        = "COMPILER-209";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

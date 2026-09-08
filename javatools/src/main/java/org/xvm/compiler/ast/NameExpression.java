@@ -1190,7 +1190,10 @@ public sealed class NameExpression
                 if (m_mapTypeParams != null) {
                     Register regFn = code.createRegister(argRaw.getType());
                     bindTypeParameters(ctx, code, argRaw, regFn, errs);
-                    System.err.println("TODO: AST for " + this);
+                    // Was a stderr print on every occurrence. COMPILER-NI already means "not yet
+                    // implemented", so a host is told the AST for this expression is incomplete
+                    // instead of the terminal being told, repeatedly.
+                    log(errs, Severity.INFO, Compiler.NOT_IMPLEMENTED, "AST for " + this);
                     // TODO GG: m_astResult =
                     return regFn;
                 }

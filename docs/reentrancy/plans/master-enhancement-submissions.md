@@ -4511,8 +4511,8 @@ exists.
 
 Deliberately NOT one change. Per area, smallest first, each independently reviewable:
 
-1. **Classify the 22 `System.err.println` sites** into trace / diagnostic / caller's-decision. Cheap,
-   and it sizes everything else. Expect most to be category 1.
+1. ~~**Classify the 22 `System.err.println` sites**~~ - **DONE, and the count was wrong.** See the
+   classification below.
 2. **The 12 swallowed `IOException`s.** Each is a yes/no question - did the caller want the thing
    that failed? - and the answer is usually in the method name.
 3. **The 6 swallowed `RuntimeException`s.** Highest risk of the three: swallowing a
@@ -4526,3 +4526,46 @@ Deliberately NOT one change. Per area, smallest first, each independently review
 **Not urgent, and not one PR.** Nothing here is a live incorrectness the way the `genUID` dedup was.
 It is the difference between a runtime that can be embedded and one that can only be run from a
 terminal, and it gets there one site at a time.
+
+### Step 1, done: the 22 classified, and 5 of them are not sites
+
+**First correction: 5 of the 22 are commented out.** `MethodStructure:2295`, `MethodInfo:1134`,
+`TypeConstant:4948`, `TypeInfoReal:1554` and `BuildContext:538` are all `// System.err.println(...)`
+- dead debugging left in place. The real population is **17**, which is the same over-count E32 made
+when it reported 53 "places with nowhere to report" and the tree had 23.
+
+| category | n | disposition |
+| --- | --- | --- |
+| commented out | 5 | not sites; delete whenever those files are next touched |
+| **legitimate console or trace output** | 8 | leave alone |
+| **a real diagnostic with a sink in scope** | 3 | **fixed** |
+| a failure the CALLER should decide about | 5 | the remaining work; see step 2 |
+| no owner to report to, documented | 1 | leave alone |
+
+**The 8 that are correct as they are.** `RuntimeErrorListener.log` (it IS the sink - printing is its
+entire job), `TypeInfoTrace` (opt-in under `-Dxvm.typeinfo.trace`), `xRTServer` x3 (handshake tracing,
+already flag-guarded), `Console.err` (the console's job), `Ctx.log` (a JIT debugging hook, filed under
+"debugging support"), and `DebugConsole` parsing a breakpoint string for a human at a debugger prompt.
+Counting these as defects is what inflates the headline number.
+
+**The 1 with genuinely nowhere to report** is `ConstantPool.optimize`, and it already says so: it runs
+in a static initializer, before any pool instance exists, so there is nothing to hand a list to. It
+throws with the evidence when the errors are serious. Correct.
+
+**The 3 that were fixed**, all of which had an `ErrorListener` in scope and a TODO asking for exactly
+this:
+
+- `Expression.finishValidations` and `ConvertExpression.create` both printed
+  `"No conversion found for " + constVal`. This is not an error at all - the comment on the line above
+  says "continue with run-time conversion", i.e. an expected outcome the compiler recovers from. It
+  went to stderr because there was no sink; now it is `COMPILER-209` at INFO, so a host that wants to
+  observe constant folding can, and the terminal stays quiet.
+- `NameExpression.generateArgument` printed `"TODO: AST for " + this` on **every occurrence**.
+  `COMPILER-NI` ("{0} is not yet implemented") already existed for this, so a host is now told the AST
+  is incomplete instead of the terminal being told, repeatedly.
+
+**What is left is step 2 and 3**, and the classification sharpens what they are: five sites where a
+repository or loader swallows an exception and prints it - `DirRepository.isCacheValid`,
+`LinkedRepository.loadModule` x2, `JitConnector.invoke0Impl`, `ModuleLoader.dump`. Every one is a
+caller-ownership question rather than a listener question: the caller asked for a module and got
+silence plus a line on stderr. That is the `XtcEngine` boundary case in miniature.

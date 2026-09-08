@@ -821,12 +821,13 @@ public abstract sealed class Expression
                     if (constVal != null) {
                         Constant constConv = convertConstant(constVal, typeRequired, errs);
                         if (constConv == null) {
-                            // there is no compile-time conversion available; continue with run-time
-                            // conversion
-                            // TODO: this stderr soft assert is not a compiler diagnostic. Replace
-                            //       it with structured compiler logging/diagnostics when the
-                            //       constant-folding conversion path is cleaned up.
-                            System.err.println("No conversion found for " + constVal);
+                            // There is no compile-time conversion available; continue with
+                            // run-time conversion. INFO, not an error: this is an expected outcome
+                            // that the compiler recovers from. It went to stderr because there was
+                            // no sink to report it to; there is one in scope, so a host that wants
+                            // to observe constant folding can, and stderr stays quiet.
+                            log(errs, Severity.INFO, Compiler.CONSTANT_CONVERSION_DEFERRED,
+                                    constVal.getValueString());
                         } else {
                             if (fCloneActual) {
                                 atypeActual  = copyOf(atypeActual);

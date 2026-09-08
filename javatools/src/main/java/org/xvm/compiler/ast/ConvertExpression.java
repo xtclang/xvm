@@ -28,6 +28,8 @@ import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Var;
 import static org.xvm.util.Handy.copyOf;
+import org.xvm.compiler.Compiler;
+import org.xvm.util.Severity;
 
 
 /**
@@ -95,14 +97,16 @@ public final class ConvertExpression
                     if (idConv != null) {
                         Constant constNew = convertConstantValue(aVal[i], aType[i]);
                         if (constNew == null) {
-                            // there is no compile-time conversion available; continue with run-time
-                            // conversion
-                            // TODO: this stderr soft assert is not a compiler diagnostic. Replace
-                            //       it with structured compiler logging/diagnostics when the
-                            //       constant-folding conversion path is cleaned up. This preserves
-                            //       the legacy partial Constant[] behavior; clearing aVal here is a
-                            //       separate compiler-semantics change that needs focused tests.
-                            System.err.println("No conversion found for " + aVal[i]);
+                            // There is no compile-time conversion available; continue with
+                            // run-time conversion. INFO for the same reason as the sibling site in
+                            // Expression.finishValidations: an expected outcome the compiler
+                            // recovers from, which had no sink and so went to stderr.
+                            //
+                            // NOTE: this still preserves the legacy partial Constant[] behavior.
+                            // Clearing aVal here is a separate compiler-semantics change that needs
+                            // focused tests, and reporting it does not make that change.
+                            expr.log(errs, Severity.INFO, Compiler.CONSTANT_CONVERSION_DEFERRED,
+                                    aVal[i].getValueString());
                         }
                         aVal[i] = constNew;
                     }
