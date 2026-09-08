@@ -4735,3 +4735,42 @@ existed.
   throw; a diagnostic helper that fails while describing a failure is worse than a missing detail.
 - `ModuleInfo.extractModuleName`, `BuildInfo.loadBuildInfo`, `ArrayAccessExpression.fromLiteral` are
   best-effort probes returning null/defaults.
+
+### The 15 `log(pool.getErrorListener(), ...)` sites: WITHDRAWN, they are already right
+
+I proposed treating these the way `TypeInfo` diagnostics are now treated - attach them to the result,
+let whoever asserts replay them - on the grounds that they are "warnings emitted from question-shaped
+methods". Reading them says otherwise, on two counts, and the row is withdrawn rather than
+implemented.
+
+**They cannot be attached to a result.** `calculateRelation` and `checkTupleCompatibility` return
+`Relation.INCOMPATIBLE`, an enum. There is nowhere to hang a diagnostic, and the comments say why
+that is deliberate: *"the answer is INCOMPATIBLE either way"*, *"methodBest is used either way"*,
+*"the caller cannot act on it, so this reports and carries on"*. `TypeInfo` could carry diagnostics
+because it is a rich object whose construction the caller asked for. These return a verdict.
+
+**They are soft asserts about the POOL, not diagnostics about a request.** Every one is labelled as
+such in place - *"Should never happen; a soft assert"*, *"the resolution is structurally
+inconsistent"*, *"A soft assert: methodBest is used either way"*. What they report is that the pool's
+own contents are inconsistent. The pool is therefore the correct owner, and threading a request's
+listener would be actively wrong: it would attribute a structural inconsistency in SHARED state to
+whichever compile happened to trip over it, at a source position that has nothing to do with it -
+precisely the failure mode E35 step D declines the bulk conversion to avoid.
+
+The severity choice is deliberate too, and documented at each site: WARNING rather than ERROR because
+these paths run at run time as well as compile time, and a run-time pool answers with
+`ErrorListener.RUNTIME`, which throws from inside `log()` at ERROR and above. Raising them would turn
+a soft assert into a crash.
+
+**And the earlier work is what makes them correct.** Before E35 step C, `pool.getErrorListener()`
+meant "whatever was last set on this pool", which is what made these sites look dubious. The listener
+is now final and injected at construction, so it names one fixed, known owner for the life of the
+pool. The same expression that was a smell is now a correct ownership statement - not because the
+call sites changed, but because what they resolve to did.
+
+`MethodStructure.assemble` is the one non-WARNING among them and is also correct: it reports at FATAL
+and then throws explicitly, with a comment noting that `log()`'s return value is deliberately not
+consulted so the decision to abort does not depend on which listener is installed.
+
+**Nothing to do here.** Recorded so the next reader does not re-propose it - the shape looks wrong
+and is not.
