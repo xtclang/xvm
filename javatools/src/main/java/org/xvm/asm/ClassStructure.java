@@ -16,6 +16,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import java.util.stream.Stream;
+
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
@@ -471,6 +473,34 @@ public class ClassStructure
     }
 
     /**
+     * Find the specified child classes
+     *
+     * @param fIncludeAnon    pass true to include anonymous child classes
+     * @param fIncludeIfaces  pass true to include child interfaces
+     * @param fIncludeStatic  pass true to include static child classes
+     *
+     * @return a List of matching classes; never null
+     */
+    public List<ClassStructure> getChildClasses(
+            boolean fIncludeAnon,
+            boolean fIncludeIfaces,
+            boolean fIncludeStatic) {
+        Stream<ClassStructure> stream = children().stream()
+                .filter(ClassStructure.class::isInstance)
+                .map(ClassStructure.class::cast);
+        if (!fIncludeAnon) {
+            stream = stream.filter(Predicate.not(ClassStructure::isAnonInnerClass));
+        }
+        if (!fIncludeIfaces) {
+            stream = stream.filter(c -> c.getFormat() != Format.INTERFACE);
+        }
+        if (!fIncludeStatic) {
+            stream = stream.filter(Predicate.not(ClassStructure::isStatic));
+        }
+        return stream.toList();
+    }
+
+    /**
      * Find a child with a given name in the class or any of its contributions.
      */
     public Component findChildDeep(String sName) {
@@ -761,6 +791,79 @@ public class ClassStructure
         }
         return typeCanonical;
     }
+
+    /**
+     * For a class that has type parameters and uses the "incorporates conditional" feature, there
+     * exists more than one canonical type, because the class composition is specialized for each
+     * conditional incorporation being incorporated vs not-incorporated. (For context, this
+     * specialization is referred to as "layer one specialization".) By way of example, the Range
+     * class implies two specializations: (0) when Element is NOT Sequential ("Range<Orderable>"),
+     * and (1) when Element IS Sequential ("Range<Sequential>"). Another example is ListMap, which
+     * has four specializations: (00) when Key is NOT immutable Hashable and Value is NOT Shareable
+     * ("ListMap<Object, Object>"), (01) when Key is NOT immutable Hashable but Key IS immutable
+     * Object and Value IS Shareable  ("ListMap<immutable Object, Shareable>"), (10) when Key IS
+     * immutable Hashable and Value is NOT Shareable ("ListMap<immutable Hashable, Object>"), and
+     * (11) when Key IS immutable Hashable and Value IS Shareable ("ListMap<immutable Hashable,
+     * Shareable>").
+     * <p/>
+     * With virtual child relationships, this is additionally complicated by the ability of a child
+     * class to (i) specify "incorporates conditional" clauses that reference a formal type
+     * parameter from a parent class, and (ii) specify formal type parameter constraints that are
+     * defined using a formal type parameter from a parent class. In these cases, the parent class
+     * canonical types must incorporate (no pun intended) the specializations that are specified
+     * by virtual child classes (and their virtual child classes, and so on).
+     *
+     * @return the
+     */
+    public List<TypeConstant> getCanonicalTypes() {
+        // check the cached result of any previous call to this method
+        List<TypeConstant> listResult = m_listCanonicalTypes;
+        if (listResult != null) {
+            return listResult;
+        }
+
+        // a class that is not parameterized
+        if (isParameterizedDeep()) {
+            boolean              fVirtualChild           = isVirtualChildClass();
+            List<ClassStructure> listVirtualChildClasses = getChildClasses(false, false, false);
+            List<Contribution>   listConditionalMixins   = getContributionsAsList().stream()
+                    .filter(c -> c.getComposition() == Composition.Incorporates && c.isConditional())
+                    .toList();
+            if ()
+
+            if (fVirtualChild) {
+                // TODO
+            }
+            // TODO
+
+            if (isVirtualChild()) {
+                List<TypeConstant> listOuter = getOuter().getCanonicalTypes();
+                // TODO
+            }
+
+            assert listResult.contains(getCanonicalType());
+        }
+
+        if (listResult == null) {
+            // the default list is the singular canonical type
+            listResult = List.of(getCanonicalType());
+        }
+
+        m_listCanonicalTypes = listResult;
+        return listResult;
+    }
+
+    /**
+     * Cached list of canonical types for this class.
+     *
+     * TODO override markModified to clear this?
+     *
+     * @see #getCanonicalTypes()
+     */
+    private List<TypeConstant> m_listCanonicalTypes;
+
+    // TODO
+//    public List<List<TypeConstant>> buildCanonicalParameterList()
 
     /**
      * Resolve the formal type for this class based on the specified list of actual types.
