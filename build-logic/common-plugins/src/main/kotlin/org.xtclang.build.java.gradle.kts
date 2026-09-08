@@ -10,6 +10,7 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.process.CommandLineArgumentProvider
 import java.nio.charset.StandardCharsets.UTF_8
+import org.gradle.api.tasks.testing.junitplatform.JUnitPlatformOptions
 
 plugins {
     id("org.xtclang.build.xdk.properties")
@@ -255,6 +256,22 @@ tasks.withType<Test>().configureEach {
     // Forward -Dxvm.* from the Gradle invocation into the forked test JVM, so opt-in diagnostics
     // (e.g. -Dxvm.typeinfo.trace) can be switched on for one run without editing the build.
     systemProperties(providers.systemPropertiesPrefixedBy("xvm.").get())
+    // The XDK-building tests are OPT-IN. They build the entire XDK in process, repeatedly, inside
+    // one test JVM - minutes of CPU and several GB of heap each - so running them as part of an
+    // ordinary `test` invocation makes every unrelated change cost a full XDK build, and forces the
+    // whole suite to be launched with -PtestMaxHeap=8g whether it needs it or not. Tag them
+    // "heavy", exclude them by default, and opt in with -PincludeHeavyTests (with the heap):
+    //
+    //     ./gradlew :javatools:test -PincludeHeavyTests -PtestMaxHeap=8g
+    //
+    // Configured through `options` rather than useJUnitPlatform(), because the test suite above
+    // already chose the framework and re-selecting it is an error.
+    val includeHeavyTests = providers.gradleProperty("includeHeavyTests").isPresent
+    inputs.property("includeHeavyTests", includeHeavyTests)
+    if (!includeHeavyTests) {
+        (options as? JUnitPlatformOptions)?.excludeTags("heavy")
+    }
+
     // Skip all tests when -PskipAllTests is set (configuration cache safe)
     onlyIf(SkipAllTestsSpec(project.hasProperty("skipAllTests")))
 }

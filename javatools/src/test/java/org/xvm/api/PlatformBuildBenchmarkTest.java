@@ -14,6 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.DirRepository;
@@ -33,6 +34,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * The platform has no such prefix: the library is already built and on the module path, so this
  * measures what a warm engine actually offers an LSP server or a test runner.</p>
  */
+@Tag("heavy")
 public class PlatformBuildBenchmarkTest {
     private static final Pattern MODULE =
             Pattern.compile("^\\s*(?:@\\w[\\w.]*\\s+)*module\\s+([\\w.]+)", Pattern.MULTILINE);
@@ -42,9 +44,17 @@ public class PlatformBuildBenchmarkTest {
     @Test
     public void buildThePlatformSeriallyAndInParallel() throws Exception {
         assumeTrue(XdkOutputs.systemModulesAvailable(), "compiled XDK system modules are required");
-        // These build the XDK from source, repeatedly, on one engine. Without the heap for it the
-        // failure is an OutOfMemoryError from inside a compile, which reads as a compiler defect
-        // rather than as "you did not give this enough memory". Skip, and say which flag.
+        // Belt and braces: the "heavy" tag keeps this out of an ordinary `test` run, and this
+        // guard catches the case where someone runs the class directly (an IDE, or --tests) without
+        // the heap. Without it the failure is an OutOfMemoryError from inside a compile, which
+        // reads as a compiler defect rather than as "you did not give this enough memory".
+        //
+        // WHY it needs the memory: each compile holds its module's ConstantPool and the TypeInfo it
+        // builds for every type it touches - and the XDK's own modules are the largest types in the
+        // system. These tests then do that repeatedly on ONE engine, so the built modules
+        // accumulate in a BuildRepository that is deliberately kept alive across compiles (that
+        // reuse is what is under test). Peak live set is therefore the whole XDK plus the working
+        // set of whichever compile is running, several times over in the parallel cases.
         assumeTrue(Runtime.getRuntime().maxMemory() > 4L << 30,
                 "needs a large heap; run with -PtestMaxHeap=8g");
 
