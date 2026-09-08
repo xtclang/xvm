@@ -396,7 +396,7 @@ public interface ErrorListener {
          *                    {@link Severity#INFO}, {@link Severity#WARNING,
          *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
          * @param sCode       the error code that identifies the error message
-         * @param aoParam     the parameters for the error message; may be null
+         * @param aoParam     the parameters for the error message; null is recorded as none
          * @param source      the source code
          * @param lPosStart   the starting position in the source code
          * @param lPosEnd     the ending position in the source code
@@ -405,7 +405,7 @@ public interface ErrorListener {
                 Source source, long lPosStart, long lPosEnd) {
             m_severity   = severity;
             m_sCode      = sCode;
-            m_aoParam    = aoParam;
+            m_aoParam    = aoParam == null ? NO_PARAMS : aoParam;
             m_source     = source;
             m_lPosStart  = lPosStart;
             m_lPosEnd    = lPosEnd;
@@ -418,13 +418,13 @@ public interface ErrorListener {
          *                    {@link Severity#INFO}, {@link Severity#WARNING,
          *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
          * @param sCode       the error code that identifies the error message
-         * @param aoParam     the parameters for the error message; may be null
+         * @param aoParam     the parameters for the error message; null is recorded as none
          * @param xs
          */
         public ErrorInfo(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
             m_severity = severity;
             m_sCode    = sCode;
-            m_aoParam  = aoParam;
+            m_aoParam  = aoParam == null ? NO_PARAMS : aoParam;
             m_xs       = xs;
             // TODO need to be able to ask the XVM structure for the source & location
         }
@@ -447,7 +447,7 @@ public interface ErrorListener {
          * @return the error message parameters
          */
         public Object[] getParams() {
-            return m_aoParam == null ? null : copyOf(m_aoParam);
+            return copyOf(m_aoParam);
         }
 
         /**
@@ -511,6 +511,28 @@ public interface ErrorListener {
         }
 
         /**
+         * The key {@link ErrorList} deduplicates on: two diagnostics with the same UID are the same
+         * diagnostic, and the second is dropped.
+         *
+         * <p>That makes precision here a correctness property, not a nicety - anything this merges
+         * wrongly is a real diagnostic the user never sees. Two ways it used to merge wrongly:
+         *
+         * <ul>
+         * <li>the end position was never part of the key. It appended {@code m_lPosStart} twice,
+         *     where the second was meant to be {@code m_lPosEnd}, so two diagnostics that start at
+         *     the same place and cover different spans collapsed into one;</li>
+         * <li>parameters were compared by {@code Arrays.hashCode}, so two unrelated diagnostics
+         *     whose parameter arrays happened to collide collapsed too. It now keys on the values,
+         *     which is also the right semantic: parameters that render identically produce an
+         *     identical message. {@code Arrays.toString} rather than {@code deepToString} because
+         *     the array is one-dimensional and no call site passes an array as a parameter - and if
+         *     one ever did, an identity hash in the key would only ever UNDER-merge, showing a
+         *     duplicate rather than losing a diagnostic.</li>
+         * </ul>
+         *
+         * <p>Building a string per call is affordable because this is a cold path: it runs once per
+         * diagnostic actually logged, and a compile that succeeds logs none.
+         *
          * @return an ID that allows redundant errors to be filtered out
          */
         public String genUID() {
@@ -519,9 +541,9 @@ public interface ErrorListener {
                     .append(':')
                     .append(m_sCode);
 
-            if (m_aoParam != null) {
+            if (m_aoParam.length > 0) {
                 sb.append('#')
-                  .append(Arrays.hashCode(m_aoParam));
+                  .append(Arrays.toString(m_aoParam));
             }
 
             if (!m_sCode.startsWith("VERIFY")) {
@@ -531,7 +553,7 @@ public interface ErrorListener {
                       .append(':')
                       .append(m_lPosStart)
                       .append(':')
-                      .append(m_lPosStart);
+                      .append(m_lPosEnd);
                 }
                 if (m_xs != null) {
                     sb.append(':')
@@ -614,6 +636,16 @@ public interface ErrorListener {
 
         private final Severity     m_severity;
         private final String       m_sCode;
+        private static final Object[] NO_PARAMS = new Object[0];
+
+        /**
+         * The message parameters; never null, empty when there are none.
+         *
+         * <p>Nullable was a third state that meant the same as empty and had to be decoded at every
+         * use - {@code genUID}, {@code toString} and {@code getParams} each carried a branch for it,
+         * and {@code getParams} handed the null onward to {@code MessageFormat}, which accepts an
+         * empty array and can throw on a null one. Coerced once, at construction.
+         */
         private final Object[]     m_aoParam;
         private       Source       m_source;
         private       long         m_lPosStart;

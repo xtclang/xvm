@@ -3551,19 +3551,33 @@ inside it, and the two parallel engine tests use one listener each. The hazard i
 it is the documented `compile(errsCaller, ...)` streaming contract that invites a host to share one,
 and a host doing exactly what the javadoc suggests would have hit it.
 
-### Two smaller defects in the same area
+### Two smaller defects in the same area - fixed
 
-- **`genUID` keys on the start position twice.** It appends `m_lPosStart`, a colon, and then
-  `m_lPosStart` again where `m_lPosEnd` was meant, so two diagnostics that differ only in where they
-  end deduplicate into one.
-- **Parameters are compared by hash, not by value.** The UID embeds `Arrays.hashCode(m_aoParam)`, so
-  two unrelated diagnostics whose parameter arrays collide are silently merged.
+`genUID` is the key `ErrorList` deduplicates on, so anything it merges wrongly is a real diagnostic
+the user never sees. It merged wrongly two ways:
 
-Both are cheap to fix and neither is urgent: `genUID` runs once per logged diagnostic, so this is a
-cold path, and the natural-looking "optimisation" - giving `ErrorInfo` `equals`/`hashCode` and
-deduplicating on the object - would have to call `XvmStructure.getDescription()`, which builds the
-same string the UID does. Left as a correctness fix to make deliberately rather than a performance
-one to make by accident.
+- **The end position was never in the key.** It appended `m_lPosStart`, a colon, and then
+  `m_lPosStart` again where `m_lPosEnd` was meant, so two diagnostics starting at the same place and
+  covering different spans collapsed into one.
+- **Parameters were compared by hash.** The UID embedded `Arrays.hashCode(m_aoParam)`, so two
+  unrelated diagnostics whose parameter arrays collided collapsed too.
+
+Both fixed. Parameters now key on their values via `Arrays.toString`, which is also the right
+semantic - parameters that render identically produce an identical message. Not `deepToString`: the
+array is one-dimensional and no call site passes an array as a parameter, and if one ever did, an
+identity hash in the key would only ever *under*-merge, showing a duplicate rather than losing a
+diagnostic. That is the safe direction, which is precisely what `hashCode` was not.
+
+Affordable because it is a cold path: `genUID` runs once per diagnostic actually logged, and a
+compile that succeeds logs none. The natural-looking alternative - `equals`/`hashCode` on
+`ErrorInfo`, deduplicating on the object - was rejected for the same reason it looked attractive: it
+would have to call `XvmStructure.getDescription()`, which builds the same string the UID does.
+
+**`ErrorInfo.m_aoParam` is no longer nullable.** Null was a third state meaning the same as empty,
+decoded at every use: `genUID`, `toString` and `getParams` each carried a branch for it, and
+`getParams` handed the null onward to `MessageFormat`, which accepts an empty array and can throw on
+a null one. Coerced once, at construction. The field was already `final`, and the getter already
+returned a copy, so there was no mutable escape to close.
 
 **A bug found while doing it.** `clear()` reset the list, the count and the severity but not
 `f_setUID`, so a cleared list silently dropped any diagnostic it had seen before. Reachable:

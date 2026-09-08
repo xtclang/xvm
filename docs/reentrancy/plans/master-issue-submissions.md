@@ -93,6 +93,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 44 | `UnresolvedTypeConstant.compareDetails` dereferences an `m_constId` the codebase itself sets to null | 3-line guard | independent | plain unguarded NPE, not only a concurrency issue |
 | 45 | `FileStructure.writeTo` assumes one registration pass is a fixed point; the pool can grow mid-write | loop to a fixed point | independent | a malformed `.xtc` is the worst case |
 | 46 | `ConsoleLog` is a shared unsynchronized ring buffer written on every console print | 1 class; synchronize or replace | independent | zero `synchronized`/`volatile`/`Atomic` in the whole file |
+| 47 | `ErrorInfo.genUID` drops the end position and hashes the parameters, so `ErrorList` deduplicates diagnostics that are not duplicates | 2 one-line edits | independent | silent loss of compiler errors; no concurrency needed to hit it |
 
 ### Filing a row as an issue or PR
 
@@ -3548,3 +3549,78 @@ with no synchronization - rather than by reproduction.
 
 **Dependencies/order:** Independent.
 
+
+## 47. `ErrorInfo.genUID` silently merges distinct diagnostics, so real errors are never reported
+
+**FIXED 2026-09-08** on `lagergren/lazy-instance`. Two one-line corrections in
+`ErrorListener.ErrorInfo.genUID`. Not pushed.
+
+**Issue title:** `ErrorInfo.genUID` omits the end position and hashes the message parameters, so
+`ErrorList` deduplicates diagnostics that are not duplicates and the user never sees them.
+
+**Status/category:** Real defect in current master source. Silent loss of compiler diagnostics -
+the one thing this subsystem exists to prevent.
+
+**Explanation:** `ErrorList.log` treats the UID as identity, and drops anything whose UID it has
+already seen:
+
+```java
+String uid = err.genUID();
+if (f_setUID.add(uid)) {
+    ...                        // record it
+}                              // else: discarded, with no trace
+```
+
+So `genUID` deciding two diagnostics are the same *is* the decision to throw one away. It gets that
+wrong two ways.
+
+**(a) The end position is not in the key.** The source-location clause appends the START position
+twice, where the second was plainly meant to be the end:
+
+```java
+sb.append(':')
+  .append(m_source.getFileName())
+  .append(':')
+  .append(m_lPosStart)
+  .append(':')
+  .append(m_lPosStart);       // <- m_lPosEnd
+```
+
+Two diagnostics that begin at the same offset but cover different spans therefore collide. That is
+not a contrived shape: an expression and the larger expression containing it start at the same
+character, so a diagnostic about each is exactly this case.
+
+**(b) Parameters are compared by hash, not by value.**
+
+```java
+sb.append('#').append(Arrays.hashCode(m_aoParam));
+```
+
+`Arrays.hashCode` is a 32-bit digest of the parameter values, so any two parameter arrays that
+collide make two unrelated diagnostics - different types, different names, different messages -
+indistinguishable to the deduplicator. Nothing detects it; the second diagnostic is simply gone.
+
+**Master evidence:** `javatools/src/main/java/org/xvm/asm/ErrorListener.java:315` (`genUID`), lines
+321-324 for the hashed parameters and 331-333 for the doubled start position;
+`javatools/src/main/java/org/xvm/asm/ErrorList.java:35-36` for the consumer that turns a UID
+collision into a dropped diagnostic, and `:233` for the `HashSet<String>` it dedupes against.
+
+**Failure mode:** a compile reports N-1 of N errors, with nothing indicating that anything was
+suppressed. The user fixes the reported error, recompiles, and is shown the next one - so it
+presents as a compiler that reports errors one at a time rather than as a bug. For (b) the loss is
+rare and arbitrary; for (a) it is systematic wherever nested constructs share a start offset.
+
+**Reachability on master:** any compilation that logs more than one diagnostic. No concurrency, no
+unusual configuration, no LSP involvement.
+
+**Minimal master-portable fix strategy:** change `m_lPosStart` to `m_lPosEnd` on the second append,
+and replace `Arrays.hashCode(m_aoParam)` with `Arrays.toString(m_aoParam)`. Both are one-line edits
+in `genUID` with no signature or call-site change.
+
+`Arrays.toString` rather than `deepToString`: the array is one-dimensional and no call site passes an
+array as a message parameter. If one ever did, its element would render as an identity hash, which
+makes the key *more* unique - it would show a duplicate rather than lose a diagnostic. That is the
+safe direction to fail in, and the direction `hashCode` failed in is the other one.
+
+**Cost:** `genUID` runs once per diagnostic actually logged, and a compile that succeeds logs none,
+so building a slightly longer string is not on any measured path.
