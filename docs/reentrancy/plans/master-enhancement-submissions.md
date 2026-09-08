@@ -80,7 +80,7 @@ surface graduate into individual rows on the bug list.
 | E23 | Bind natives to typed handlers instead of String dispatch (744 labels) | framework is 1 PR; then per-template | Medium | `ClassTemplate`, every template | (this file) |
 | E24 | `null` as an absent argument (60% of 392 sites); asking callers to restate resolved data | one small record + binder change | Low | `ClassTemplate.markNativeMethod` | (this file) |
 | E25 | Generify the delegate hierarchy — 134 casts, BLOCKED on splitting `xRTDelegate`'s dual role | split first, then mechanical | Medium | `xRTDelegate` and 20 implementations | (this file) |
-| E26 | What is left of `unchecked`/`rawtypes` — 92 + 59, and why most are not trivial | trivial part 1 PR; two hierarchy changes separate | Low / Medium | `ServiceContext` message hierarchy | (this file) |
+| E26 | **Mostly done.** `rawtypes` is 0 and fatal since 2026-09-03; 15 `unchecked` remain in 6 files | one small PR, or leave | Low | `ServiceContext` message hierarchy | (this file) |
 | E27 | Op-info cache: raw `EnumMap` whose key silently names the value type | 1 PR, per-op-class migration | independent | `OpInfoKey<V>` + generic get/set |
 | E30 | Storage operations belong on the handle; the `<H>` parameter is the symptom | per-handle, then one deleting commit | supersedes E25's parameter | measured: 105/132 bodies need only the handle |
 | E31 | 42 cache-if-null getters that could be final `Lazy` fields; 7 need a resettable variant | 2 PRs (35 sites, then API + 7) | independent | measured, not estimated |
@@ -1874,6 +1874,54 @@ Attempting step 2 alone gets roughly two thirds of the way and then stalls on th
 ---
 
 ## E26 — What is left of `unchecked` and `rawtypes`, and why
+
+> **Re-measured 2026-09-08, and the numbers below the line are obsolete.** This row said "92
+> `unchecked` and 59 `rawtypes`". Compiling `javatools` with `-Xlint:all` today
+> (`-Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false --no-configuration-cache`)
+> gives:
+>
+> | category | count | state |
+> | --- | --- | --- |
+> | `rawtypes` | **0** | **fatal** since 2026-09-03 |
+> | `unchecked` | **15** | the only real generics debt left |
+> | `dangling-doc-comments` | 10 | cosmetic |
+> | `classfile` | 3 | about dependencies, not this source |
+> | `cast` | 1 | |
+>
+> **The `rawtypes` work is finished and gated.** The build convention records the history in place:
+> the estimate had been "~40 sites remain", the real count was 54, cleared as omitted diamonds, a
+> record replacing `Parser`'s raw `List[]` pair, wildcards where nothing mutates through the pattern,
+> and `Utils.any()` replacing a raw `ANY` constant. Four documented suppressions remain because Java
+> cannot express them - the two `NativeTemplateRef` keys whose class literal is raw in its own type
+> argument, and the two `Entry[]` creations in `TypeInfoReal`, since generic array creation is
+> illegal. `serial`, `this-escape`, `fallthrough`, `lossy-conversions`, `synchronization` and
+> `output-file-clash` are fatal too.
+>
+> **The 15 `unchecked` are clustered in six files**, and four of them are generic utility containers
+> where the cast is the ordinary unavoidable kind:
+>
+> | file | n | shape |
+> | --- | --- | --- |
+> | `util/TransientThreadLocal.java` | 4 | `:43`, `:72`, `:94`, `:117` - casts out of a type-erased holder |
+> | `util/ListMap.java` | 4 | `:48`, `:99` x2, `:151` - one is `Collections.unmodifiableList` applied to a raw list |
+> | `runtime/template/annotations/xFuture.java` | 2 | `:535` - `makeHandle` on a raw receiver |
+> | `asm/ast/BinaryAST.java` | 2 | `:300`, `:302` |
+> | `util/ListSet.java` | 1 | `:291` |
+> | `asm/constants/IdentityConstant.java` | 1 | `:523` - `compareTo(T)` on a raw `Comparable` |
+> | `runtime/.../arrays/xRTSlicingDelegate.java` | 1 | `:93` - `createCopyImpl` on a raw `H`; this one is **E25's** delegate hierarchy, not an independent fix |
+>
+> **Recommendation: correct the row, do not schedule work against it.** Twelve of the fifteen are in
+> `javatools_utils` containers and `BinaryAST`, where an `@SuppressWarnings` with a reason is the
+> honest answer rather than a type-system contortion. `xRTSlicingDelegate:93` belongs to E25 and
+> moves when that does. That leaves `IdentityConstant:523`'s raw `Comparable`, which is the only one
+> that looks like a genuine typing bug worth its own look.
+>
+> Everything below this line is the original analysis. Its *reasoning* about why raw types are
+> symptoms rather than defects still reads well - the `CompletableFuture` argument in particular is
+> what the message-hierarchy work later confirmed - but its counts are wrong and its two headline
+> cases (`CompletableFuture`, `EnumMap`) have since been dealt with.
+
+---
 
 The build now makes fifteen javac lint categories fatal. Two remain off because they are not clean:
 **92 `unchecked`** and **59 `rawtypes`** in `javatools`.
