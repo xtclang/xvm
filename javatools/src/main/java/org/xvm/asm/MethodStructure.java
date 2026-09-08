@@ -2717,11 +2717,11 @@ public class MethodStructure
             // are redundant
             addressAndSimulateOps();
 
-            // next, scan for additional redundant ops
+            // next, scan for additional redundant ops; include those marked during simulation
             Op[]    aop  = ensureOps();
             boolean fMod = false;
             for (Op op : aop) {
-                fMod |= op.checkRedundant(aop);
+                fMod |= op.checkRedundant(aop) || op.isRedundant();
             }
 
             if (!fMod) {
