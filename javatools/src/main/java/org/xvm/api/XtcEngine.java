@@ -863,22 +863,35 @@ public final class XtcEngine
     private void prelinkSystemLibraries(ModuleRepository repo) {
         for (var sModule : List.of(Constants.ECSTASY_MODULE, Constants.TURTLE_MODULE)) {
             ModuleStructure module = repo.loadModule(sModule);
-            if (module != null) {
-                FileStructure struct = module.getFileStructure();
-                if (struct != null) {
-                    // The library's pool reports to RUNTIME and is left that way. This used to
-                    // redirect it at the engine's own sink, which was wrong in two directions: the
-                    // engine does not own this pool - it comes out of the caller's repository, so
-                    // two engines over one repository would fight over it, last writer winning and
-                    // each then hearing the other's library diagnostics - and it was not needed,
-                    // because a compile's own diagnostics never resolve through here. Constants are
-                    // adopted by the pool that registers them (ConstantPool.register calls
-                    // adoptedBy), so a compile referencing a library type asks ITS pool, holding ITS
-                    // listener. What stays library-owned is work done entirely inside the library,
-                    // and a failure there is a broken library - a system fault, which is what
-                    // RUNTIME is for - rather than a diagnostic about anybody's source.
-                    struct.linkModules(repo, false);
-                }
+            if (module == null) {
+                diagnosticSink.error(Compiler.MODULE_MISSING, sModule);
+                continue;
+            }
+
+            FileStructure struct = module.getFileStructure();
+            if (struct == null) {
+                continue;
+            }
+
+            // The library's pool reports to RUNTIME and is left that way. This used to redirect it
+            // at the engine's own sink, which was wrong in two directions: the engine does not own
+            // this pool - it comes out of the caller's repository, so two engines over one
+            // repository would fight over it, last writer winning and each then hearing the other's
+            // library diagnostics - and it did not do what it looked like it did, because a
+            // compile's own diagnostics never resolve through here. Constants are adopted by the
+            // pool that registers them (ConstantPool.register calls adoptedBy), so a compile
+            // referencing a library type asks ITS pool, holding ITS listener.
+            //
+            // What the redirect DID cover is this: linkModules reports by RETURN VALUE, naming the
+            // module it could not find, and that value was discarded. A module path missing a
+            // dependency therefore prepared "successfully" and failed later, during a compile,
+            // as an unresolved name in library code that the user did not write. The engine's own
+            // sink is the right place for that, and passing it the outcome of an operation the
+            // engine invoked is the shape this framework wants - who asks, hears - rather than
+            // reaching into a structure the engine does not own.
+            ModuleConstant idMissing = struct.linkModules(repo, false);
+            if (idMissing != null) {
+                diagnosticSink.error(Compiler.MODULE_MISSING, idMissing.getName());
             }
         }
     }
@@ -1509,21 +1522,26 @@ public final class XtcEngine
          * receives the diagnostics of one compile, and two compiles running at once each keep their
          * own. This one is engine-scoped and reaches the {@code InterpreterConnector}'s container.
          *
-         * <p><b>It does not cover the shared library pools</b>, and cannot without reintroducing
-         * shared mutable state. This used to redirect each library pool here, by calling a setter on
-         * a {@code ConstantPool} the engine does not own - the library {@code FileStructure} comes
-         * out of the CALLER's repository, so two engines over one repository fought over it, last
-         * writer winning, and each then heard the other's library diagnostics. The pool's listener
-         * is now fixed at construction, and nothing constructs a library structure on the engine's
-         * behalf: {@code injectNakedRefIntoLibrary} deliberately retains the caller's instances.
+         * <p>It also receives <b>library preparation</b> failures: a system library that cannot be
+         * loaded, or that links against a module the configured path does not contain. Those are
+         * reported because the engine invoked the operation and read its result, not because
+         * anything redirected a pool.
+         *
+         * <p><b>It does not cover diagnostics raised inside the library pools themselves</b>, and
+         * cannot without reintroducing shared mutable state. This used to redirect each library pool
+         * here, by calling a setter on a {@code ConstantPool} the engine does not own - the library
+         * {@code FileStructure} comes out of the CALLER's repository, so two engines over one
+         * repository fought over it, last writer winning, and each then heard the other's library
+         * diagnostics. The pool's listener is now fixed at construction, and nothing constructs a
+         * library structure on the engine's behalf: {@code injectNakedRefIntoLibrary} deliberately
+         * retains the caller's instances.
          *
          * <p>What that costs is small and bounded. A compile's own diagnostics are unaffected -
          * {@code ConstantPool.register} adopts foreign constants, so a compile referencing a library
-         * type asks its own pool, holding its own listener. What stays library-owned is work done
-         * entirely inside the library, and a failure there means a broken or corrupt library: a
-         * system fault, reported through {@link ErrorListener#RUNTIME}, not a diagnostic about
-         * anybody's source. Capturing those too would need the engine to own library COPIES,
-         * constructed with this sink - a real change to preparation, not a listener change.
+         * type asks its own pool, holding its own listener. What remains is work done entirely
+         * inside the library, which means a broken or corrupt library: a system fault, reported
+         * through {@link ErrorListener#RUNTIME}. Capturing those too would need the engine to own
+         * library COPIES constructed with this sink - a change to preparation, not to listeners.
          *
          * @param diagnosticSink  the engine-lifetime sink; defaults to {@link ErrorListener#RUNTIME}
          */
