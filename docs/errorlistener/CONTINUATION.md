@@ -5,9 +5,13 @@ Paste everything below the line into a fresh session.
 ---
 
 Continue the **ErrorListener threading campaign** in `/Users/marcus/src/xtclang0`, branch
-`lagergren/lazy-instance`. Tree is clean at `01cdacc23` (the listener work ends at `9653e8c7d`; later commits are docs and
-unrelated PR maintenance). Last full run was **791 tests, 0 failures**; xdk builds; `array.x`
-and `numbers.x` clean.
+`lagergren/lazy-instance`. Tree is clean at `ca1b63d9a`. Last full run was **799 tests, 0 failures**; the four XDK-building tests
+are `@Tag("heavy")` and opt-in (`-PincludeHeavyTests -PtestMaxHeap=8g`), all four verified passing
+2026-09-08.
+
+**This campaign is finished.** E32, E34, E35 A-E and E47 are all done. What follows is kept as the
+record of what was established, so it is not re-derived; the "Next task" section says what is
+actually left.
 
 ## Read these first
 
@@ -79,15 +83,17 @@ and `numbers.x` clean.
 | --- | --- |
 | `ErrorListener` fields | 14, **12 final** |
 | null-guard sites (`errs == null`) | **0** (was 28, then 12) |
-| `System.err` / `printStackTrace` | **25** (was 53); a grep finds 26 - the extra is `RuntimeErrorListener`'s own output |
+| `System.err` | **17**, of which **5 are commented out** - so 12 live, and 8 of those are correct (console, opt-in trace, the debug hook). Earlier counts were inflated by dead code and legitimate console output |
 | sites reading `log()` as control flow | **0** (`log` is `void`) |
-| no-arg `ensureTypeInfo()` | **60**, and **0** of them in a method that has a listener in scope |
+| no-arg `ensureTypeInfo()` | **0** - the overload is deleted (E35 step E) |
 | `ErrorListener` params never used | 11, all base implementations of virtual methods (7 dead ones removed) |
-| `BLACKHOLE` uses | rose again, deliberately: explicit beats implicit |
+| silent-listener uses | **136 `PROBE`** (asking) + **13 `BLACKHOLE`** (no sink attached), split from one constant |
+| empty `catch` blocks | **19**, each audited and recorded as correct; parameters are `_`, not `ignore` |
 
-Verified after every change below: `./gradlew build` green; **796 tests, 0 failures** (63 skipped are
-the standing `@Disabled` set); `xdk:installDist --rerun-tasks --no-build-cache` green with 22
-`compileXtc` tasks and **no** `VERIFY-9x` / `RUNTIME-nn` diagnostic emitted.
+Verified 2026-09-08: **799 tests, 0 failures**, and the heavy set run separately -
+`BuildDriverBothModesTest` (sequential and parallel builds agree) and `XdkBuildOutputVerifyTest`
+(engine output matches the built XDK structurally) both pass, which is what makes the parallel claims
+current rather than remembered.
 
 ## What was just done - do not redo
 
@@ -170,8 +176,13 @@ replacing the abort condition with `false` makes it fail.
   method that has a listener in scope. The rule for picking them is README §8.4's: *is this call
   asserting the type is valid, or asking whether it is?* Two got the caller's listener
   (`CmpExpression.checkConstType`, `ArrayAccessExpression.validate` - both run from `validate`); the
-  other thirteen got an explicit `BLACKHOLE`. The remaining 60 stay: adoption makes the asker the
-  owner (§2.3), and E35 D's argument is unchanged.
+  other thirteen got an explicit silent listener.
+
+  **Superseded 2026-09-08.** The remaining 60 did *not* stay. E35 D's argument was right that
+  threading a listener into them would be wrong, and wrong that the alternative was leaving them:
+  "asking" has a spelling that needs no listener - `typeInfo()` - so 27 of the 34 non-`javajit` sites
+  became one-line changes with no cascade, 3 were threaded from callers that already had a listener,
+  and the `javajit` ones name `RUNTIME` explicitly. The overload is now deleted.
 
   Note the first scan for this was **wrong** - a line-based regex for the enclosing method missed
   multi-line signatures and reported 5 candidates when there were more. The brace-aware scan found
@@ -239,29 +250,52 @@ reintroduce one `ensureTypeInfo(BLACKHOLE)` and `TypeInfoModeIsExplicitTest` fai
 
 ## Next task
 
-Nothing in this campaign is unfinished. One honest gap remains, recorded at the end of README §8.4:
-a type built *only* through `typeInfo()` has its diagnostics recorded but unread, because no caller
-asked to hear them. That is right for a fit test and would be wrong if some type were never reached
-by an asserting caller. Nothing observed does that, and the record makes it recoverable where it used
-to be lost - but it is why §8.4 claims a better model rather than a finished one.
+**Nothing in this campaign is unfinished.** E32, E34, E35 A-E and E47 are done. What is left is
+listed here so a fresh session does not go looking.
 
-## Watch out for## Watch out for
+Open, and each is a decision rather than work in progress:
+
+- **The `heavy` tag is too coarse.** Four tests are tagged; two are correctness
+  (`BuildDriverBothModesTest` 33s, `XdkBuildOutputVerifyTest` 19s) and two are benchmarks
+  (`XdkBuildHarnessTest` 50s, `PlatformBuildBenchmarkTest` 14s). Excluding correctness to fix a cost
+  problem caused by benchmarks is the wrong split. Untagging the two costs ~52s per build; the catch
+  is the `>4GB` heap guard, which skips silently on a machine with under 16GB.
+- **Nothing triggers the heavy tests.** CI (`commit.yml`) runs on push/PR to master with no
+  `schedule:`. There is a `workflow_dispatch` inputs block already carrying `skip-manual-tests`, so
+  there is an established place for an `include-heavy-tests` toggle, and a nightly is the natural
+  home for the benchmarks. Until then the throughput figures have nothing keeping them true.
+- **Master issues 47 and 49-52 are unfiled** by explicit instruction - fixed here, recorded there.
+  48 was withdrawn after checking.
+- **`xRTNameService` (row 51) has no test, deliberately.** The narrowing changes behaviour only for
+  `Error`; for an ordinary DNS failure old and new both return False, so a test of that path would
+  pass against the unfixed code. Provoking an `Error` inside a live container needs fault injection
+  into `scheduleIO`, a harness likelier to be wrong than the two lines it tests.
+
+One honest gap in the model itself, recorded at the end of README §8.4: a type built *only* through
+`typeInfo()` has its diagnostics recorded but unread, because no caller asked to hear them. That is
+right for a fit test and would be wrong if some type were never reached by an asserting caller.
+Nothing observed does that, and the record makes it recoverable where it used to be lost - but it is
+why §8.4 claims a better model rather than a finished one.
+
+## Watch out for
 
 - `./gradlew build --rerun-tasks` races `:javatools:test` against `:xdk:installDist` and fails
   `TypeComparisonCorpusTest` with an `EOFException` on a half-written `.xtc`. That is the documented
   race, not a regression - run them separately to confirm. Plain `./gradlew build` is fine.
 
-## Master-bug PR status (verified against GitHub 2026-09-01)
+## Master-bug PR status (re-verified against GitHub 2026-09-08)
 
 - **Merged:** #547 (row 27), #548 (29), #550 (30), #556 (31), #558 (33), #560 (35), #563 (36),
-  #564 (37+38), plus #561 and #562.
-- **Open:** **#549** (row 28, `MethodStructure` volatile publication), **#559** (row 32,
-  `Format.TimeZone` end to end) and **#566** (row 19, implicit-identity cache concurrency).
-  Nothing is blocked on any of them.
+  #564 (37+38), plus #561 and #562. **#559** (row 32, `Format.TimeZone`) and **#566** (row 19,
+  implicit-identity cache) have merged since the 2026-09-01 check.
+- **Open:** **#549** only (row 28, `MethodStructure` volatile publication). Nothing is blocked on it.
 - **#557 (row 34) was CLOSED unmerged** - and the fix is on master anyway, because the maintainer
   applied it directly: *"I don't think there is a reason to clutter the repo with such a trivial
   typo fix. I pushed it as a minimal change."* Treat that as filing guidance: **a one-word fix on
   its own is not worth a PR here.** Bundle by theme.
+- **Rows 47 and 49-52 were added 2026-09-08** and are fixed on this branch but unfiled, by explicit
+  instruction. Row 48 was filed and then withdrawn - the place-holder it described has a recovery
+  path on both readers, which is recorded in the row so it is not re-derived.
 - **Rows 1-26 are all still unfiled.** `plans/master-issue-submissions.md` carries the per-row
   readiness; the nine marked "Ready after manual review" (source-only clean, red-on-master test
   already written) are rows 1, 2, 3, 4, 7, 8, 14, 15 and 19.
