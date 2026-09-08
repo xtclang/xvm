@@ -86,12 +86,12 @@ surface graduate into individual rows on the bug list.
 | E31 | 42 cache-if-null getters that could be final `Lazy` fields; 7 need a resettable variant | 2 PRs (35 sites, then API + 7) | independent | measured, not estimated |
 | E32 | Thread one `ErrorListener`; stop null-defaulting and blackholing diagnostics | all 3 stages done; `PROBE` split from `BLACKHOLE` | independent | 149 sites classified; 135 -> `PROBE`, 12 kept, 1 deleted; a vacuous shape gate found and restored |
 | E33 | Census of every `Object` in the tree: 61 are `equals` and untouchable, ~132 are real | reference row; feeds E27/E28/E30/E32 | independent | 393 array initializers noted separately |
-| E34 | `ResolutionCollector.getErrorListener()` smuggles the error sink; pass it explicitly | 1 PR, ~60 mechanical sites | complements E32 | removes `NameResolver`'s un-cleaned stash |
+| E34 | `ResolutionCollector.getErrorListener()` smuggles the error sink; pass it explicitly | **done** | complements E32 | both collector methods now take `@NotNull ErrorListener errs` |
 | E35 | Finish the listener: parallel gap, last 3 mutable fields, `withListener` | **A-E all done** | after E32/E34 | D closed by classifying 34 sites, not by threading 46 parameters; E deleted the ambient overload |
 | E36 | The debugger reads another thread's fiber state; the monitor meant to stop that is only entered at breakpoints | 1 record + 1 volatile + 3 reads | independent | analysis only - no reproduction; publish a snapshot instead |
 | E37 | `Assignable[]` as an API, and the mutual-recursion bridge that let a subclass overriding neither method loop forever | 38 usages, 11 override points; the bridge fix is separate and small | independent; do NOT ride it on PR #585 | the bridge cost a `StackOverflowError` in the compiler |
 | E38 | Module output cannot be redirected: `xTerminalConsole`'s sink is a static, so hosting a run forces a second console template | 1 instance field + a registration helper | independent | deletes the need for `xExternalConsole` |
-| E47 | Failures with nowhere to go: 22 `System.err.println`, 9 `printStackTrace`, 31 swallowed `catch` blocks - and an `XtcEngine` that cannot report any of them | incremental, per area | after E32/E35 (needs the listener to exist) | measured; the listener now exists, which is what makes these fixable rather than unavoidable |
+| E47 | Failures with nowhere to go: `System.err`, swallowed catches, exceptions that never reach the caller | steps 1-4 done; ~14 `IOException`/`Exception` swallows remain | after E32/E35 | 5 of 22 `System.err` sites were commented out; narrowing proved impossible for constant folding |
 
 Recommended landing order: **E12 → E9/E10 → E5 → E1 → E4 → E2/E11 → E3 → E6/E7 → E8.**
 
