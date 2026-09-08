@@ -95,6 +95,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 46 | `ConsoleLog` is a shared unsynchronized ring buffer written on every console print | 1 class; synchronize or replace | independent | zero `synchronized`/`volatile`/`Atomic` in the whole file |
 | 47 | `ErrorInfo.genUID` drops the end position and hashes the parameters, so `ErrorList` deduplicates diagnostics that are not duplicates | 2 one-line edits | independent | silent loss of compiler errors; no concurrency needed to hit it |
 | 48 | **WITHDRAWN as a defect** - a `TypeInfo` build that throws leaves the place-holder set, but every reader of it has a recovery path | 2 lines; keep as hygiene | independent | filed twice with a failure mode that does not survive checking; kept as a record of what was ruled out |
+| 49 | A failed read-through CACHE WRITE makes `LinkedRepository` report a module it found as not found | delete a `break`; then share one body between the two overloads | independent | a read-only front repository - a build output dir - triggers it every time |
 
 ### Filing a row as an issue or PR
 
@@ -3706,3 +3707,64 @@ authoritative - or removes the direct `buildTypeInfo` call from the deferred loo
 marker becomes a live defect immediately. That is the argument for clearing it now: not that it
 breaks today, but that its correctness currently depends on a second mechanism happening to paper
 over it.
+
+
+## 49. A failed read-through cache write makes `LinkedRepository` lose a module it already found
+
+**FIXED 2026-09-08** on `lagergren/lazy-instance`. The two `loadModule` overloads now share one
+body, which is the actual fix. Regression test `LinkedRepositoryReadThroughTest`, verified to fail
+without it. Not pushed.
+
+**Issue title:** `LinkedRepository.loadModule` treats a failure to populate its front (cache)
+repository as a failure of the lookup, returning null for a module that was found.
+
+**Status/category:** Real defect in current master source. No concurrency required, and it fires on
+an ordinary configuration.
+
+**Explanation:** a read-through `LinkedRepository` serves the first repository in the chain that has
+the module, and copies it forward into `repos[0]` so the next lookup is cheap. Both overloads do
+this, and both get it wrong the same way:
+
+```java
+if (i > 0 && readThrough) {
+    try {
+        repos[0].storeModule(module);
+    } catch (IOException e) {
+        System.err.println(e.getMessage());
+        break;                     // <- abandons the search
+    }
+}
+
+return module;                     // <- never reached
+```
+
+`break` leaves the loop, so the `return module` below is skipped and the method falls through to
+`return null`. **The module was found. The caller is told it does not exist.** The only trace is one
+line on stderr, which says nothing about a module having been dropped.
+
+**Master evidence:** `javatools/src/main/java/org/xvm/asm/LinkedRepository.java:109-110` (unversioned
+overload) and `:130-131` (versioned overload) - the same two lines, twice.
+
+**Failure mode:** "module not found" for a module that is present, at whatever depth that surfaces -
+an unresolved import, a missing dependency during linking, a compile that fails naming a module the
+user can see on disk.
+
+**Reachability on master:** whenever `repos[0]` cannot be written. **A read-only front repository
+does it on every single read-through load** - and a build output directory is routinely read-only, or
+absent, or owned by another process. It needs no unusual state, no concurrency, and no error in the
+user's code.
+
+**Minimal master-portable fix strategy:** delete the two `break` statements. The write is a cache
+write; failing it says nothing about whether the lookup succeeded, and the module should be served
+with the cache left cold.
+
+**Do the deduplication as well, and this is the more important half.** The two overloads are copies
+of each other, and the copies had already drifted - the unversioned one takes a defensive copy before
+caching ("create a copy, allowing the compiler to mutate the repos[0] contents"), and the versioned
+one stores the module INSTANCE, so the cached entry and the source repository's entry are the same
+object and a compiler mutating one mutates the other. That is a second defect, in the same method
+pair, caused by the same duplication.
+
+Fixing only the `break` leaves two copies that will drift again. Extracting the shared body - a
+`search(sModule, load)` that takes how to ask each repository, plus a `cacheInFront` - fixes both
+defects at once and removes the mechanism that produced them.

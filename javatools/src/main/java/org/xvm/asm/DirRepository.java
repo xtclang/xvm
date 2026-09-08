@@ -437,8 +437,11 @@ public class DirRepository
                 // scanning stays best-effort, but the cause is retained so a requested load of
                 // this file's module can fail with evidence instead of reporting "module not
                 // found"
+                // Retained, not printed. A requested load of this file's module fails with this
+                // as the cause (see ensureModule), so printing it here reported the same failure
+                // twice - once to a terminal nobody may be watching, and once properly - while a
+                // scan that legitimately skips a broken file stayed noisy.
                 errCause = e;
-                System.err.println("Error loading module from file: " + file + "; " + e.getMessage());
             }
 
             return null;

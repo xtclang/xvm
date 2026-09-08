@@ -4564,8 +4564,38 @@ this:
   `COMPILER-NI` ("{0} is not yet implemented") already existed for this, so a host is now told the AST
   is incomplete instead of the terminal being told, repeatedly.
 
-**What is left is step 2 and 3**, and the classification sharpens what they are: five sites where a
-repository or loader swallows an exception and prints it - `DirRepository.isCacheValid`,
-`LinkedRepository.loadModule` x2, `JitConnector.invoke0Impl`, `ModuleLoader.dump`. Every one is a
-caller-ownership question rather than a listener question: the caller asked for a module and got
-silence plus a line on stderr. That is the `XtcEngine` boundary case in miniature.
+### Steps 2 and 4, done - and one of the five was a live defect
+
+The five swallow-and-print sites were all caller-ownership questions rather than listener questions,
+and asking "did the caller want the thing that failed?" answered each of them:
+
+| site | answer |
+| --- | --- |
+| `LinkedRepository.loadModule` (versioned) | **a real defect** - filed as master issue row 49, see below |
+| `DirRepository.isCacheValid` | the cause was already retained in `errCause` and re-thrown with evidence, so the print reported the same failure twice. Removed. |
+| `JitConnector.invoke0Impl`, `ModuleLoader.dump` | both inside the `jasm` debug-dump path, writing developer output. Console output is correct there; left alone. |
+| `LinkedRepository.loadModule` (unversioned) | already correct - it serves what it found. The print is the only trace a repository can produce, and repositories have no listener. Left. |
+
+**The defect.** A read-through `LinkedRepository` copies a module forward into `repos[0]` so the next
+lookup is cheap. On a failed write it did this:
+
+```java
+} catch (IOException e) {
+    System.err.println(e.getMessage());
+    break;                     // <- abandons the search; `return module` below is skipped
+}
+```
+
+so **a module that was found is reported as not found**, and a read-only front repository - a build
+output directory routinely is one - triggers it on every read-through load.
+
+**Why it survived: there were two copies of the method.** The unversioned overload had already been
+fixed on this branch; the versioned one was a copy that had not been. The copies had drifted a second
+way too - the unversioned one takes a defensive copy before caching ("allowing the compiler to mutate
+the repos[0] contents"), the versioned one stored the instance, so the cached entry and the source
+repository's entry were the same object.
+
+Both overloads now share one `search(sModule, load)` plus a `cacheInFront`. That is the actual fix:
+the reason one copy was right and the other wrong is that there were two copies.
+`LinkedRepositoryReadThroughTest` pins both halves and was verified to fail against each defect
+separately.
