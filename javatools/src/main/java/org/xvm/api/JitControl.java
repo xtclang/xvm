@@ -1,5 +1,6 @@
 package org.xvm.api;
 
+import java.io.File;
 import java.io.PrintWriter;
 
 import java.time.Instant;
@@ -20,7 +21,7 @@ class JitControl
 
     static LspSupport.Control create(Connector connector, ModuleStructure module,
                                      ModuleRepository repository, PrintWriter console,
-                                     ErrorListener errs) {
+                                     File rootDir, ErrorListener errs) {
         throw unsupported();
     }
 

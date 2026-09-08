@@ -405,8 +405,10 @@ public class LspSupport {
      *
      * @param module      the module to execute
      * @param console     (optional) the PrintWriter for the executing application
-     * @param rootDir     (optional) the root directory for the application's file system; null
-     *                    indicates a temporary (e.g. in-memory) file system only
+     * @param rootDir     (optional) the root directory for the application's file system; supplied
+     *                    directories are caller-owned and are not deleted; null selects a
+     *                    task-specific directory under "./.runner" that is deleted when the
+     *                    returned Control is closed
      * @param injections  (optional) additional "String" and "String[]" injections
      * @param errs        (optional) a means for the container to report uncaught exceptions and
      *                    other errors
@@ -436,8 +438,10 @@ public class LspSupport {
      * @param moduleName      the module name to execute; must be loadable from "input"
      * @param version         (optional) the version of the module to load
      * @param console         (optional) the PrintWriter for the executing application
-     * @param rootDir         (optional) the root directory for the application's file system; null
-     *                        indicates a temporary (e.g. in-memory) file system only
+     * @param rootDir         (optional) the root directory for the application's file system;
+     *                        supplied directories are caller-owned and are not deleted; null
+     *                        selects a task-specific directory under "./.runner" that is deleted
+     *                        when the returned Control is closed
      * @param injections      (optional) additional "String" and "String[]" injections
      * @param customInjector  (optional) "module:class" name of a custom injector implementation to
      *                        use to provide injectable resources; when used, the "rootDir" value is
@@ -472,17 +476,17 @@ public class LspSupport {
             return null;
         }
 
-        if (rootDir != null || injections != null && !injections.isEmpty()
+        if (injections != null && !injections.isEmpty()
                 || customInjector != null || cfgInjector != null) {
             throw new UnsupportedOperationException(
-                    "Custom file systems and injectors are not implemented yet");
+                    "Custom injectors are not implemented yet");
         }
 
         try {
             Connector connector = ensureConnector();
             return useJit()
-                    ? JitControl.create(connector, module, repository, console, errs)
-                    : InterpreterControl.create(connector, module, repository, console, errs);
+                    ? JitControl.create(connector, module, repository, console, rootDir, errs)
+                    : InterpreterControl.create(connector, module, repository, console, rootDir, errs);
         } catch (RuntimeException e) {
             if (errs != null) {
                 errs.log(ERROR, ERR_CREATE_APP_CONTAINER,

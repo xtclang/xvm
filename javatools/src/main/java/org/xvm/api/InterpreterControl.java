@@ -2,6 +2,7 @@ package org.xvm.api;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -58,20 +59,22 @@ class InterpreterControl
      */
     static LspSupport.Control create(Connector connector, ModuleStructure module,
                                      ModuleRepository repository, PrintWriter console,
-                                     ErrorListener errs) {
+                                     File rootDir, ErrorListener errs) {
         if (!(connector instanceof InterpreterConnector interpreter)) {
             throw new IllegalArgumentException("An InterpreterConnector is required");
         }
-        return new InterpreterControl(interpreter, module, repository, console, errs).start();
+        return new InterpreterControl(
+                interpreter, module, repository, console, rootDir, errs).start();
     }
 
     private InterpreterControl(InterpreterConnector connector, ModuleStructure module,
                                ModuleRepository repository, PrintWriter console,
-                               ErrorListener errs) {
+                               File rootDir, ErrorListener errs) {
         this.connector  = connector;
         this.module     = module;
         this.repository = repository;
         this.console    = console;
+        this.rootDir    = rootDir;
         this.errs       = errs;
     }
 
@@ -92,8 +95,12 @@ class InterpreterControl
             ObjectHandle hConsoleId  = consoleId == null
                     ? xNullable.NULL
                     : xInt64.makeHandle(consoleId);
+            ObjectHandle hRootDir = rootDir == null
+                    ? xNullable.NULL
+                    : xString.makeHandle(rootDir.getAbsolutePath());
 
-            ObjectHandle hTaskId = postRequest("registerTask", hModule, hRepository, hConsoleId).join();
+            ObjectHandle hTaskId = postRequest(
+                    "registerTask", hModule, hRepository, hConsoleId, hRootDir).join();
             taskId = ((JavaLong) hTaskId).getValue();
 
             completion = postRequest("startTask", hTaskId).whenComplete((r, e) -> {
@@ -207,14 +214,17 @@ class InterpreterControl
             postRequest("killTask", xInt64.makeHandle(taskId)).join();
         }
         completion.join();
-        postRequest("deleteTaskDirectory", xInt64.makeHandle(taskId),
-                xString.makeHandle(module.getSimpleName())).join();
+        if (rootDir == null) {
+            postRequest("deleteTaskDirectory", xInt64.makeHandle(taskId),
+                    xString.makeHandle(module.getSimpleName())).join();
+        }
     }
 
     private final InterpreterConnector connector;
     private final ModuleStructure      module;
     private final ModuleRepository     repository;
     private final PrintWriter          console;
+    private final File                 rootDir;
     private final ErrorListener        errs;
 
     private CompletableFuture<ObjectHandle> completion;

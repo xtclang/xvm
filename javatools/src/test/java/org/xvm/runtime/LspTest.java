@@ -73,7 +73,7 @@ public class LspTest {
         }
     }
 
-    private static void testRun() throws Exception {
+    private static void testRun() {
         ErrorList       errs   = new ErrorList(25);
         ModuleStructure module = LspSupport.instance().compile(helloModule("Hello"), repo(), errs);
         if (module == null || errs.hasSeriousErrors()) {
@@ -121,7 +121,8 @@ public class LspTest {
                     "compile of FileSystemTest failed: " + errs.getErrors());
         }
 
-        Control control = LspSupport.instance().run(module, null, null, null, errs);
+        Path root = Files.createDirectory(dirOut.getParent().resolve("root"));
+        Control control = LspSupport.instance().run(module, null, root.toFile(), null, errs);
         if (control == null || errs.hasSeriousErrors()) {
             throw new IllegalStateException(
                     "run of FileSystemTest failed to start: " + errs.getErrors());
@@ -129,11 +130,15 @@ public class LspTest {
         try (control) {
             await(control, "FileSystemTest");
         }
+        if (!Files.isRegularFile(root.resolve("root.txt"))
+                || !Files.isRegularFile(root.resolve(".temp/temporary.txt"))) {
+            throw new IllegalStateException("FileSystemTest did not use " + root);
+        }
     }
 
     // ----- a failed run reports its exception through the supplied console ----------------------
 
-    private static void testRunException() throws Exception {
+    private static void testRunException() {
         String message = "deliberate failure the host must learn about";
         ErrorList compileErrs = new ErrorList(25);
         ModuleStructure module = LspSupport.instance().compile("""
