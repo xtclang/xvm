@@ -5,8 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import java.lang.ref.Cleaner;
-
 import java.time.Instant;
 
 import java.util.concurrent.CompletableFuture;
@@ -98,8 +96,6 @@ class InterpreterControl
             ObjectHandle hTaskId = postRequest("registerTask", hModule, hRepository, hConsoleId).join();
             taskId = ((JavaLong) hTaskId).getValue();
 
-            CLEANER.register(this, new TaskCleanup(connector, module.getSimpleName(), taskId));
-
             completion = postRequest("startTask", hTaskId).whenComplete((r, e) -> {
                 if (e == null) {
                     TupleHandle tuple   = (TupleHandle) r;
@@ -173,18 +169,6 @@ class InterpreterControl
         }
     }
 
-    /**
-     * A task's that deletes a task's file-system root after its Control becomes phantom reachable.
-     */
-    private record TaskCleanup(InterpreterConnector connector, String moduleName, long taskId)
-            implements Runnable {
-        @Override
-        public void run() {
-            connector.getMainContainer().invokeAsync("deleteTaskDirectory",
-                    xInt64.makeHandle(taskId), xString.makeHandle(moduleName)).join();
-        }
-    }
-
     @Override
     public boolean running() {
         return running;
@@ -206,15 +190,25 @@ class InterpreterControl
     }
 
     @Override
-    public void kill() {
-        if (running) {
-            postRequest("killTask", xInt64.makeHandle(taskId)).join();
-        }
+    public Long result() {
+        return result;
     }
 
     @Override
-    public Long result() {
-        return result;
+    public void close() {
+        synchronized (this) {
+            if (closed) {
+                return;
+            }
+            closed = true;
+        }
+
+        if (running) {
+            postRequest("killTask", xInt64.makeHandle(taskId)).join();
+        }
+        completion.join();
+        postRequest("deleteTaskDirectory", xInt64.makeHandle(taskId),
+                xString.makeHandle(module.getSimpleName())).join();
     }
 
     private final InterpreterConnector connector;
@@ -231,6 +225,5 @@ class InterpreterControl
     private volatile Long    result;
     private          long    taskId;
     private          Long    consoleId;
-
-    private static final Cleaner CLEANER = Cleaner.create();
+    private          boolean closed;
 }

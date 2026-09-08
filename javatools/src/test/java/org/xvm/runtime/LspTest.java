@@ -87,7 +87,9 @@ public class LspTest {
             throw new IllegalStateException("run of Hello failed to start: " + errs.getErrors());
         }
 
-        await(control, "Hello");
+        try (control) {
+            await(control, "Hello");
+        }
         if (!bytes.toString().contains("hello from Hello")) {
             throw new IllegalStateException("run of Hello produced unexpected output: " + bytes);
         }
@@ -124,7 +126,9 @@ public class LspTest {
             throw new IllegalStateException(
                     "run of FileSystemTest failed to start: " + errs.getErrors());
         }
-        await(control, "FileSystemTest");
+        try (control) {
+            await(control, "FileSystemTest");
+        }
     }
 
     // ----- a failed run reports its exception through the supplied console ----------------------
@@ -153,7 +157,9 @@ public class LspTest {
             throw new IllegalStateException("run of Crasher failed to start: " + runErrs.getErrors());
         }
 
-        await(control, "Crasher");
+        try (control) {
+            await(control, "Crasher");
+        }
         String output = bytes.toString();
         if (!output.contains(message)) {
             throw new IllegalStateException("run of Crasher did not report its exception: " + output);
@@ -191,9 +197,12 @@ public class LspTest {
                         "run " + run + " of Quick failed to start: " + errs.getErrors());
             }
 
-            long t0 = System.nanoTime();
-            await(control, "Quick " + run);
-            long elapsedMillis = (System.nanoTime() - t0) / 1_000_000;
+            long elapsedMillis;
+            try (control) {
+                long t0 = System.nanoTime();
+                await(control, "Quick " + run);
+                elapsedMillis = (System.nanoTime() - t0) / 1_000_000;
+            }
 
             if (errs.hasSeriousErrors()) {
                 throw new IllegalStateException(
@@ -220,7 +229,15 @@ public class LspTest {
         for (int i = 0; i <= 12; i++) {
             compile("Grow" + i, growthModule("Grow" + i, ELEM_TYPES[i % ELEM_TYPES.length]));
 
-            support.run(repo(), "Grow" + i, null, null, null, null, null, errs);
+            Control control =
+                    support.run(repo(), "Grow" + i, null, null, null, null, null, errs);
+            if (control == null) {
+                throw new IllegalStateException(
+                        "run of Grow" + i + " failed to start: " + errs.getErrors());
+            }
+            try (control) {
+                await(control, "Grow" + i);
+            }
 
             int size = nativePoolSize(support.ensureConnector());
             System.out.println("testPoolGrows run " + i + ": ConstantPool size = " + size);

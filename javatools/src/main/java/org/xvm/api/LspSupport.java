@@ -358,7 +358,8 @@ public class LspSupport {
     /**
      * Represents management and monitoring information about a running Ecstasy module.
      */
-    public interface Control {
+    public interface Control
+            extends AutoCloseable {
         /**
          * @return true if the module is still running
          */
@@ -381,16 +382,16 @@ public class LspSupport {
         Instant whenStopped();
 
         /**
-         * Stop the app as quickly as possible, and release all of its resources where possible.
-         */
-        void kill();
-
-        /**
          * @return the Ecstasy Int exit code from the module's run() method, provided as a Java
          *         "Long"; null otherwise
          */
         Long result();
 
+        /**
+         * Stop the app if necessary, wait for it to terminate, and release all of its resources.
+         */
+        @Override
+        void close();
     }
 
     // ----- run support ---------------------------------------------------------------------------

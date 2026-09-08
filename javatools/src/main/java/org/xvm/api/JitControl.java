@@ -45,12 +45,12 @@ class JitControl
     }
 
     @Override
-    public void kill() {
+    public Long result() {
         throw unsupported();
     }
 
     @Override
-    public Long result() {
+    public void close() {
         throw unsupported();
     }
 
