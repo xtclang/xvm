@@ -92,8 +92,10 @@ public class ErrorListConcurrencyTest {
     /**
      * @param n  a value unique to this diagnostic
      *
-     * @return an ErrorInfo whose UID is unique to {@code n}; {@code genUID} hashes the parameter
-     *         array, and a single int keeps that hash collision-free
+     * @return an ErrorInfo whose UID is unique to {@code n}. {@code genUID} keys on the parameter
+     *         VALUES, so a single distinct int is enough. It used to key on
+     *         {@code Arrays.hashCode}, where a single int also avoided collisions - by luck rather
+     *         than by contract, which is the defect master issue 47 records.
      */
     private static ErrorListener.ErrorInfo distinct(int n) {
         return new ErrorListener.ErrorInfo(
