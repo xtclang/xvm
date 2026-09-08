@@ -4686,3 +4686,52 @@ already used in `BuildInfo` and in the `try (var _ = ...)` synthesis windows. Ve
 renaming that no block actually referenced the variable (0 did). It makes a genuinely ignored
 exception visually distinct from one that is named because it gets used, which is the distinction
 this whole row is about.
+
+### The remaining 30, audited one at a time
+
+Auditing rather than declaring diminishing returns was the right call: it found two defects that the
+earlier sweeps missed, one of them in a crypto path.
+
+**Missed by the earlier scan entirely.** `xRTNameService.invokeNativeNN` caught **`Throwable`**, which
+is wider than the `catch (Exception)` the scan was looking for. It sits in a DNS-resolution
+continuation whose XTC contract is a conditional return, so an exception meaning "False" is by
+design - but an `Error` meaning False is not: an `OutOfMemoryError` was reported to XTC code as "host
+not found". Its sibling a few lines below caught `Exception` for the same `.get()`. Both are now
+`InterruptedException` (restoring the flag) and `ExecutionException`, the same treatment
+`xFuture.getReferent` needed.
+
+**`KeyStoreOperations.deleteKeyStoreEntry`, and this one is worth reading carefully.** It swallowed
+`GeneralSecurityException | IOException`, justified in a comment as "intentionally silent; entry may
+not exist". But the method already guards `file.exists()` and `containsAlias(sAlias)` - the stated
+reason was **already handled**. What the catch actually silenced was a keystore that could not be
+opened or written: a wrong password, a corrupt file, a full disk.
+
+That matters more than the size of the swallow suggests, because every caller does
+delete-then-create and the create path goes through `loadOrCreateKeyStore`. A delete that failed on a
+wrong password reported success, and the keystore was then **created fresh over the top of the
+existing one**. Silently discarding a keystore is not a recoverable outcome.
+
+Nothing had to change to let it propagate - `createSymmetricKey` and `createPassword` already declare
+both exception types, and `xRTCertificateManager` already catches them. And the two existing tests
+pin exactly the cases the guards deliver ("missing file must not throw", "missing alias must not
+throw"); both still pass. Neither ever asserted the case the catch was hiding.
+
+**`xRTServer.invokeAddRoute`** reported its failure but described the wrong problem: a
+`KeyStoreException` while searching for a TLS key left `sTlsKey` null, and the next line said "The
+Tls key name must be specified" - telling someone to specify a name they had specified. It now says
+the keystore could not be searched, and why. Same family as `Parser`'s "no such file" for a file that
+existed.
+
+**The rest are correct, and worth recording as correct so nobody re-audits them:**
+
+- `Parser`'s three `CompilerException` catches are speculative parsing done properly - each sits in
+  `try (SafeLookAhead attempt = ...)`, so position restore is the resource's job and a failed parse
+  genuinely is the answer.
+- `closeQuietly` in `xRTSocket` and `xRTServer` do what their names say.
+- `xBit.construct` catches `IllegalStateException` from an out-of-range literal and falls through to
+  `raiseException(illegalArgument(...))` - the failure IS reported.
+- `xTerminalConsole` degrades to basic IO when JLine cannot build a `LineReader`.
+- `ConstantPool.describeConstantForDiagnostics` and `OwnershipDiagnostics.safeElements` must not
+  throw; a diagnostic helper that fails while describing a failure is worse than a missing detail.
+- `ModuleInfo.extractModuleName`, `BuildInfo.loadBuildInfo`, `ArrayAccessExpression.fromLiteral` are
+  best-effort probes returning null/defaults.

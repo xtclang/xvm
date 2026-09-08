@@ -387,6 +387,7 @@ public class xRTServer
 
             if (sTlsKey == null && router.mapRoutes.isEmpty()) {
                 // find a public/private key pair that could be used to encrypt tls communications
+                KeyStoreException errKeystore = null;
                 try {
                     for (Enumeration<String> it = keystore.aliases(); it.hasMoreElements();) {
                         String sName = it.nextElement();
@@ -395,10 +396,19 @@ public class xRTServer
                             break;
                         }
                     }
-                } catch (KeyStoreException _) {}
+                } catch (KeyStoreException e) {
+                    // Retained. The failure IS reported below - sTlsKey stays null - but "the Tls
+                    // key name must be specified" describes the wrong problem when the real one is
+                    // that the keystore could not be read. Telling someone to specify a name they
+                    // did specify sends them to the wrong place.
+                    errKeystore = e;
+                }
 
                 if (sTlsKey == null) {
-                    return frame.raiseException("The Tls key name must be specified");
+                    return frame.raiseException(errKeystore == null
+                            ? "The Tls key name must be specified"
+                            : "The keystore could not be searched for a Tls key: "
+                                    + errKeystore.getMessage());
                 }
             }
         }

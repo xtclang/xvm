@@ -196,8 +196,13 @@ public class KeyStoreOperationsTest {
     }
 
     @Test
-    public void testDeleteKeyStoreEntryNonexistentFile() {
-        // should not throw
+    public void testDeleteKeyStoreEntryNonexistentFile() throws Exception {
+        // Should not throw - and this is delivered by the file.exists() guard, not by a catch.
+        // deleteKeyStoreEntry used to swallow GeneralSecurityException and IOException outright,
+        // justified as "entry may not exist"; this test and its sibling above pin that case, and
+        // both still pass now that the method propagates. What the catch actually silenced was an
+        // unreadable or unwritable keystore - a wrong password, a corrupt file - which no test
+        // asserted and which callers do want to hear about.
         KeyStoreOperations.deleteKeyStoreEntry("/nonexistent/path.p12", PASSWORD, "alias");
     }
 

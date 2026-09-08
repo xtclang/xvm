@@ -78,21 +78,31 @@ public class KeyStoreOperations {
      * Delete an entry from a keystore, silently ignoring errors (e.g. if the alias
      * does not exist or the keystore file does not exist).
      */
-    public static void deleteKeyStoreEntry(String sPath, char[] achPwd, String sAlias) {
-        try {
-            File file = new File(sPath);
-            if (file.exists()) {
-                KeyStore keyStore = KeyStore.getInstance("PKCS12");
-                try (FileInputStream in = new FileInputStream(file)) {
-                    keyStore.load(in, achPwd);
-                }
-                if (keyStore.containsAlias(sAlias)) {
-                    keyStore.deleteEntry(sAlias);
-                    saveKeyStore(keyStore, sPath, achPwd);
-                }
+    public static void deleteKeyStoreEntry(String sPath, char[] achPwd, String sAlias)
+            throws GeneralSecurityException, IOException {
+        // This used to swallow both exception types, justified as "intentionally silent; entry may
+        // not exist". The two guards below ALREADY handle a missing store and a missing entry, so
+        // what the catch actually silenced was a keystore that could not be opened or written: a
+        // wrong password, a corrupt file, a full disk.
+        //
+        // That matters more here than the swallow's size suggests. Every caller does
+        // delete-then-create, and the create path goes through loadOrCreateKeyStore - so a delete
+        // that failed on a wrong password reported success, and the store was then CREATED fresh
+        // over the top of the existing one. Silently discarding a keystore is not a recoverable
+        // outcome, and it is not one the caller should have to guess at.
+        //
+        // Nothing had to change to let it propagate: createSymmetricKey and createPassword both
+        // already declare these, and xRTCertificateManager already catches them.
+        File file = new File(sPath);
+        if (file.exists()) {
+            KeyStore keyStore = KeyStore.getInstance("PKCS12");
+            try (FileInputStream in = new FileInputStream(file)) {
+                keyStore.load(in, achPwd);
             }
-        } catch (GeneralSecurityException | IOException _) {
-            // intentionally silent; enttry may not exist
+            if (keyStore.containsAlias(sAlias)) {
+                keyStore.deleteEntry(sAlias);
+                saveKeyStore(keyStore, sPath, achPwd);
+            }
         }
     }
 

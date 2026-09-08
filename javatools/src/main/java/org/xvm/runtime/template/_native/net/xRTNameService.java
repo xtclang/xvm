@@ -153,9 +153,15 @@ public class xRTNameService
                         return frameCaller.assignValues(aiReturn,
                                 xBoolean.trueHandle(frame), xArray.createImmutableArray(clz, ah));
                     }
-                } catch (Throwable _) {
-                    // REVIEW CP: do we want to report the reason somehow?
-                    // return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+                } catch (InterruptedException e) {
+                    // Restore the flag rather than discard the cancellation request; the XTC-level
+                    // answer is still False, but the thread's interrupt is not this method's to
+                    // throw away.
+                    Thread.currentThread().interrupt();
+                } catch (ExecutionException _) {
+                    // resolution failed, which is what the conditional return says: False.
+                    // Narrowed from `catch (Throwable)` - which also swallowed Error, so an
+                    // OutOfMemoryError here was reported to XTC code as "host not found".
                 }
                 return frameCaller.assignValue(aiReturn[0], xBoolean.falseHandle(frameCaller));
             };
@@ -178,9 +184,15 @@ public class xRTNameService
                         return frameCaller.assignValues(aiReturn,
                                 xBoolean.trueHandle(frame), xString.makeHandle(frameCaller, sName));
                     }
-                } catch (Exception _) {
-                    // REVIEW CP: do we want to report the reason somehow?
-                    // return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+                } catch (InterruptedException e) {
+                    // Restore the flag rather than discard the cancellation request; the XTC-level
+                    // answer is still False, but the thread's interrupt is not this method's to
+                    // throw away.
+                    Thread.currentThread().interrupt();
+                } catch (ExecutionException _) {
+                    // resolution failed, which is what the conditional return says: False.
+                    // Narrowed from `catch (Exception)` - which also swallowed every unrelated runtime failure, so an
+                    // OutOfMemoryError here was reported to XTC code as "host not found".
                 }
                 return frameCaller.assignValue(aiReturn[0], xBoolean.falseHandle(frameCaller));
             };
