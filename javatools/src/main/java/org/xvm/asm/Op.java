@@ -922,7 +922,7 @@ public abstract class Op {
                     MethodConstant    idMethod   = f_method.getIdentityConstant();
                     Access            access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
                     TypeConstant      typeCtx    = f_pool.ensureAccessTypeConstant(typeThis, access);
-                    TypeInfo          infoType   = typeCtx.ensureTypeInfo();
+                    TypeInfo          infoType   = typeCtx.typeInfo();
                     MethodInfo        infoMethod = infoType.getMethodById(idMethod);
                     SignatureConstant sigSuper   = infoMethod == null ? null : infoMethod.getSuper(infoType);
 

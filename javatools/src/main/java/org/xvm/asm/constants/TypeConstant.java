@@ -2512,7 +2512,7 @@ public abstract sealed class TypeConstant
                 fComplete && !errs.hasSeriousErrors() ? errs : ErrorListener.PROBE);
 
         Annotation[] aAnnoMixin = fComplete
-                ? collectMixinAnnotations(listProcess)
+                ? collectMixinAnnotations(listProcess, errs)
                 : Annotation.NO_ANNOTATIONS;
 
         TypeInfo info = new TypeInfoReal(this, cInvalidations, struct, 0, false, mapTypeParams,
@@ -2727,7 +2727,8 @@ public abstract sealed class TypeConstant
      * Recursively collect all the annotations for the contributions in the specified list.
      * Note: the annotations must be collected in the inverse order.
      */
-    private Annotation[] collectMixinAnnotations(List<Contribution> listContrib) {
+    private Annotation[] collectMixinAnnotations(List<Contribution> listContrib,
+                                                 ErrorListener errs) {
         List<Annotation> listAnnos = null;
         for (int c = listContrib.size(), i = c - 1; i >= 0; i--) {
             Contribution contrib = listContrib.get(i);
@@ -2743,7 +2744,7 @@ public abstract sealed class TypeConstant
             }
 
             case Extends: {
-                TypeInfo     infoExtend  = contrib.getTypeConstant().ensureTypeInfo();
+                TypeInfo     infoExtend  = contrib.getTypeConstant().ensureTypeInfo(errs);
                 Annotation[] aAnnoExtend = infoExtend.getMixinAnnotations();
                 if (aAnnoExtend.length > 0) {
                     listAnnos = lazyAddAll(listAnnos, aAnnoExtend);
@@ -6052,7 +6053,7 @@ public abstract sealed class TypeConstant
             listProcess.add(structBase.new Contribution(annotation, typeMixin));
         }
 
-        Annotation[] aAnnoMixin = collectMixinAnnotations(listProcess);
+        Annotation[] aAnnoMixin = collectMixinAnnotations(listProcess, errs);
 
         return new TypeInfoReal(typeTarget, cInvalidations, structBase, 0, false, mapTypeParams,
                 aAnnoClass, aAnnoMixin,

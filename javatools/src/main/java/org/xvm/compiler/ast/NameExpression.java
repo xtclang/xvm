@@ -1135,7 +1135,7 @@ public sealed class NameExpression
                 } else {
                     Register regFn = code.createRegister(pool().typeFunction());
                     code.add(new MBind(argTarget, idMethod, regFn));
-                    bindTypeParameters(ctx, code, regFn, argLVal);
+                    bindTypeParameters(ctx, code, regFn, argLVal, errs);
                 }
                 m_astResult = new BindMethodAST(astTarget, idMethod, getType());
                 return;
@@ -1189,7 +1189,7 @@ public sealed class NameExpression
 
                 if (m_mapTypeParams != null) {
                     Register regFn = code.createRegister(argRaw.getType());
-                    bindTypeParameters(ctx, code, argRaw, regFn);
+                    bindTypeParameters(ctx, code, argRaw, regFn, errs);
                     System.err.println("TODO: AST for " + this);
                     // TODO GG: m_astResult =
                     return regFn;
@@ -1431,7 +1431,7 @@ public sealed class NameExpression
             } else {
                 Register regFn0 = code.createRegister(pool().typeFunction());
                 code.add(new MBind(argTarget, idMethod, regFn0));
-                bindTypeParameters(ctx, code, regFn0, regFn);
+                bindTypeParameters(ctx, code, regFn0, regFn, errs);
             }
             m_astResult = new BindMethodAST(astTarget, idMethod, getType());
             return regFn;
@@ -1676,7 +1676,8 @@ public sealed class NameExpression
         }
     }
 
-    private void bindTypeParameters(Context ctx, Code code, Argument argFnOrig, Argument argFnResult) {
+    private void bindTypeParameters(Context ctx, Code code, Argument argFnOrig,
+                                    Argument argFnResult, ErrorListener errs) {
         List<Map.Entry<FormalConstant, TypeConstant>> list = m_mapTypeParams.asList();
 
         int        cParams  = list.size();
@@ -1691,7 +1692,7 @@ public sealed class NameExpression
 
             anBindIx[i] = i;
             if (type.isGenericType()) {
-                TypeInfo infoThis = ctx.getThisType().ensureTypeInfo();
+                TypeInfo infoThis = ctx.getThisType().ensureTypeInfo(errs);
 
                 // first type goes on stack
                 Register regType = code.createRegister(pool().typeType());

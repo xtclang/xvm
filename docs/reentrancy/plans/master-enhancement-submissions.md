@@ -3544,10 +3544,53 @@ Where the 56 live changes the picture further:
 So **41% of the sites are not the problem this row describes.** A JIT builder resolving a type has no
 compile to report to and no source position to report against; `RUNTIME` is what it should get.
 
-**Queued, not scheduled.** If it is ever done it should start with `asm` + `compiler` (36 sites) and
-leave `javajit` alone, and it should be preceded by the audit above - because if adoption turns out
-to hold for the reason currently written down, most of the value is already there and the remaining
-work is a test rather than 400 signatures.
+#### D, done for the part that was ever the problem
+
+Not by threading 46 parameters. The scoping above asked the wrong question - it counted how many
+methods would need a listener, when `TypeConstant`'s own documented rule says most of them should not
+have one:
+
+> Ask whether the call is ASSERTING that this type is valid or ASKING whether it is. Assertions pass
+> the caller's listener. Questions - fit tests, searches, guesses, and any accessor that memoizes -
+> pass a silent listener, with the reason at the call site.
+
+And a question already has a zero-cascade spelling: `typeInfo()`, the no-listener overload, which is
+where that idiom lives. So the work was to classify, not to plumb.
+
+| outcome | n | |
+| --- | --- | --- |
+| **questions → `typeInfo()`** | 27 | one line each; no parameter, no cascade, no caller touched |
+| **assertions → listener threaded** | 3 | `collectMixinAnnotations`, `bindTypeParameters`, `resolveConditionalMixin` - every caller already had `errs` |
+| **left: genuine cascade** | 4 | see below |
+| **left: `javajit`** | 21 | deliberate; `RUNTIME` is the correct answer there |
+
+The 27 span predicates (`hasExplicitGetter`, `isVar`, `isAssignableTo`), finds (`findCallable`,
+`findFunctionInfo`, `findProperty`, `findPropertyOrigin`, `findAtomicInPlaceAssignMethod`,
+`findMethods`, `getChildConstructor`, `getTypeConstructor`, `getArgs`), guesses
+(`selectRightType`, documented as a guess), queries (`getImplicitType`, `inferFrom`,
+`getChildStructure`), memoizing accessors (`computeNakedRefInfo`, `getPropertyInfo`, `getJitDesc`),
+null-handled super/property lookups, and one `toString`.
+
+**Nothing is lost by those 27 not reporting.** Diagnostics found while building are recorded on the
+`TypeInfo` and replayed to whoever later ASSERTS the type, so a question that stays quiet does not
+cost the assertion its diagnostic. That replay is what makes `typeInfo()` honest rather than a silent
+discard - and it is why this row could be closed by classification instead of by plumbing.
+
+**The 4 that remain** are the only ones where the enclosing method genuinely asserts and no caller
+has a listener:
+
+| site | why it is stuck |
+| --- | --- |
+| `ClassStructure.createInitializer` | called from `ClassComposition` at run time, which has no compile to report to |
+| `ClassStructure.ensureMethodDelegation` (x2) | called from `MethodInfo`, same shape |
+| `AstNode.transformType` | its caller `transformTypeArguments` has no `errs` either, so this one is a real cascade |
+
+The first three are arguably `javajit`'s case wearing different clothes - a runtime caller wanting
+`RUNTIME` - and only `transformType` is the parameter-threading this row originally described. One
+site is not worth a cascade, so it stays.
+
+**E35-E** (delete the no-argument overload) is now within reach for the first time: 4 non-`javajit`
+callers rather than 56.
 
 ### C, done: `setErrorListener` is deleted, not merely unused
 

@@ -2474,7 +2474,7 @@ public final class TypeCompositionStatement
                     assert args == null; // no "incorporates" for anonymous classes or enums
 
                     typeSuper = (contrib.isConditional()
-                            ? resolveConditionalMixin(ctx, contrib)
+                            ? resolveConditionalMixin(ctx, contrib, errs)
                             : contrib.getTypeConstant()).
                                 adjustAccess(component.getIdentityConstant());
                     listSuperArgs = entry.getValue();
@@ -2610,7 +2610,8 @@ public final class TypeCompositionStatement
     * make the conditional incorporation applicable. Additionally, make the specified context aware
     * of the narrowed generic types, so it can be used for argument validation.
     */
-    private TypeConstant resolveConditionalMixin(Context ctx, Contribution contrib) {
+    private TypeConstant resolveConditionalMixin(Context ctx, Contribution contrib,
+                                                 ErrorListener errs) {
         Map<StringConstant, TypeConstant> mapConstraints = contrib.getTypeParams();
         assert mapConstraints != null;
 
@@ -2625,7 +2626,7 @@ public final class TypeCompositionStatement
 
         // this method is only called when the TypeInfo already fully computable
         ConstantPool pool     = pool();
-        TypeInfo     infoThis = ctx.getThisClass().getFormalType().ensureTypeInfo();
+        TypeInfo     infoThis = ctx.getThisClass().getFormalType().ensureTypeInfo(errs);
 
         TypeConstant[] atypeResolved = new TypeConstant[clzContrib.getTypeParamCount()];
         int            ix            = 0;

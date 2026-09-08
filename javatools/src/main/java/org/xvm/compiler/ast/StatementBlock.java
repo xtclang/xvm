@@ -1236,7 +1236,7 @@ public final class StatementBlock
                 MethodConstant    idMethod   = method.getIdentityConstant();
                 Access            access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
                 TypeConstant      typeCtx    = pool.ensureAccessTypeConstant(typeThis, access);
-                TypeInfo          infoType   = typeCtx.ensureTypeInfo();
+                TypeInfo          infoType   = typeCtx.typeInfo();
                 MethodInfo        infoMethod = infoType.getMethodById(idMethod);
                 SignatureConstant sigSuper   = infoMethod == null ? null : infoMethod.getSuper(infoType);
 
@@ -1549,7 +1549,7 @@ public final class StatementBlock
             this.stepsOut   = stepsOut;
             this.type       = switch (id) {
                 case PropertyConstant idProp -> {
-                    PropertyInfo infoProp = typeTarget.ensureTypeInfo().findProperty(idProp);
+                    PropertyInfo infoProp = typeTarget.typeInfo().findProperty(idProp);
 
                     yield infoProp == null
                             ? idProp.isFormalType()
