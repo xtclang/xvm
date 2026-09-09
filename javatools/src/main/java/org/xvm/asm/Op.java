@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Stack;
@@ -126,6 +127,21 @@ public abstract class Op {
      */
     public int getAddress() {
         return (int) (m_lStruct & POSITION_BITS);
+    }
+
+    /**
+     * This op's operands, decoded - what it reads, what it writes, and what constants it names.
+     *
+     * <p>Answers empty when this op class does not model its operands, which is NOT the same as
+     * an op that has none: that answers a present but empty list. The distinction matters because
+     * the wire format is positional and untyped - a non-negative int is a register in one op and a
+     * count or a jump offset in another - so a uniform decode would have to guess, and a wrong
+     * operand is worse than an absent one. Modeling is added per op class; see {@link OpOperand}.</p>
+     *
+     * @return the operands, or empty if this op class does not model them
+     */
+    public Optional<List<OpOperand>> operands() {
+        return Optional.empty();
     }
 
     /**

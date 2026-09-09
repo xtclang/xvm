@@ -1,12 +1,14 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 import java.lang.constant.MethodTypeDesc;
+
+import java.util.List;
+import java.util.Optional;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -294,6 +296,13 @@ public abstract class OpVar
         }
         reg.store(bctx, code, type);
         return -1;
+    }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        // OpVar declares a variable of a given type; subclasses that also carry a name id model
+        // that themselves rather than have this guess at an operand it cannot see
+        return Optional.of(List.of(OpOperand.decode("type", m_nType)));
     }
 
     // ----- fields --------------------------------------------------------------------------------

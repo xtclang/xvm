@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import org.xvm.asm.constants.MethodConstant;
+
 import org.xvm.test.XdkOutputs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -138,5 +140,76 @@ public class ModuleViewTest {
         Path path = XdkOutputs.root().resolve("lib_ecstasy/build/xtc/main/lib/ecstasy.xtc");
         assumeTrue(Files.isRegularFile(path), "compiled ecstasy.xtc is required: " + path);
         return path;
+    }
+
+    /**
+     * The point of the operand model: answer "what does this call target" as an object, not by
+     * matching {@code Op.toString()}. An assertion that reads text passes when the code happens to
+     * be rendered the expected way, which is the trap the deleted source-comparison tests fell
+     * into; this one reads the MethodConstant the op actually names.
+     */
+    @Test
+    public void anInvokeOpNamesItsTargetMethodAsAConstant() throws Exception {
+        ModuleView view = ModuleView.open(ecstasy());
+
+        var targets = view.methods()
+                .flatMap(method -> view.decode(method).stream())
+                .filter(ModuleView.Resolved::modeled)
+                .flatMap(resolved -> resolved.operands().stream())
+                .filter(operand -> "method".equals(operand.role()))
+                .map(ModuleView.Referent::constant)
+                .filter(MethodConstant.class::isInstance)
+                .limit(50)
+                .toList();
+
+        assertFalse(targets.isEmpty(),
+                "invoke ops in the core library should name their target method as a constant");
+    }
+
+    /**
+     * Registers, constants and pseudo-registers are told apart by the model rather than by the
+     * caller re-implementing the sign convention.
+     */
+    @Test
+    public void operandsAreClassifiedRatherThanRendered() throws Exception {
+        ModuleView view = ModuleView.open(ecstasy());
+
+        var operands = view.methods()
+                .flatMap(method -> view.decode(method).stream())
+                .filter(ModuleView.Resolved::modeled)
+                .flatMap(resolved -> resolved.operands().stream())
+                .limit(5000)
+                .toList();
+
+        assertFalse(operands.isEmpty(), "the core library should have modeled ops");
+        assertTrue(operands.stream().anyMatch(operand -> operand.constant() != null),
+                "some operands should resolve to a real constant");
+        assertTrue(operands.stream().allMatch(operand -> !operand.role().isEmpty()),
+                "every operand should say what it is for");
+        assertTrue(operands.stream().noneMatch(operand -> operand.display().contains("UNRESOLVED")),
+                "no operand should reference a constant index outside the method's own pool");
+    }
+
+    /**
+     * An op class that does not model its operands must SAY so rather than be indistinguishable
+     * from one that has none. The wire format is positional and untyped, so guessing would produce
+     * confidently wrong operands, which is worse than absent ones.
+     */
+    @Test
+    public void unmodeledOpsAreReportedAsUnmodeledRatherThanEmpty() throws Exception {
+        ModuleView view = ModuleView.open(ecstasy());
+
+        var decoded = view.methods()
+                .flatMap(method -> view.decode(method).stream())
+                .limit(20000)
+                .toList();
+
+        assertTrue(decoded.stream().anyMatch(ModuleView.Resolved::modeled),
+                "some ops model their operands");
+        assertTrue(decoded.stream().anyMatch(resolved -> !resolved.modeled()),
+                "and coverage is partial, which the model reports rather than hides");
+        assertTrue(decoded.stream().filter(resolved -> !resolved.modeled())
+                        .allMatch(resolved -> resolved.operands().isEmpty()),
+                "an unmodeled op carries no operands, rather than guessed ones");
     }
 }

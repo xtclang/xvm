@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -10,6 +9,10 @@ import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constants.Access;
@@ -989,6 +992,18 @@ public abstract class OpCallable extends Op {
         bctx.loadCallArguments(code, jmdCtor, anArgValue);
         code.invokestatic(cdTarget, sJitCtor, md);
         return -1;
+    }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        var list = new ArrayList<OpOperand>(2);
+        list.add(OpOperand.decode("function", m_nFunctionId));
+        if (m_anRetValue == null) {
+            list.add(OpOperand.decode("return", m_nRetValue));
+        } else {
+            list.addAll(OpOperand.decodeAll("return", m_anRetValue));
+        }
+        return Optional.of(List.copyOf(list));
     }
 
     // ----- fields --------------------------------------------------------------------------------

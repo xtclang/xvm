@@ -115,47 +115,39 @@ category below is marked `must audit`, it becomes `must fix` as soon as a test,
 diagnostic, or code inspection proves owner sharing, cross-request reuse, or
 runtime publication.
 
-### SHOULD-FIX: finish the programmatic module reader (rewritten 2026-09-09)
+### PARTLY DONE: programmatic module reader, operands modeled to ~43% (updated 2026-09-09)
 
-> **Corrected.** This row previously said there was "no equivalent for `.xtc`" and prescribed
-> lifting the disassembler from the Kotlin research fork. That is no longer accurate, and following
-> it would have meant porting something the tree now has. `org.xvm.api.ModuleView` (`f71f3a128`)
-> supplies the reader: `walk()`, `methods()`, `ops(method)`, `constants()`, `signature()`,
-> `digest()`, `compareWith()`, `writeTo()`. The remaining gap is narrower and is stated below.
+> **History.** This row first said to lift a disassembler from the Kotlin research fork. That became
+> wrong when `ModuleView` landed (`f71f3a128`) - the tree already had the reader. It was then
+> rewritten around the gap that actually remained, operands, and that gap is now largely closed.
 
-**What now exists.** `ModuleView` opens a `.xtc` lazily and exposes its structure as objects rather
-than as text: the component tree, methods, each method's ops, the constant pool, a timestamp-free
-`digest()` for "did this rebuild change anything", and a `compareWith` returning added/removed
-members. `org.xvm.tool.Disassembler` remains a *printer* and was deliberately not extended - its
-shape is a renderer and would have to be inverted.
+**Done.** `org.xvm.api.ModuleView` reads a `.xtc` without linking or a repository and exposes it as
+objects: component tree, methods, ops, constants, a timestamp-free `digest()`, `compareWith()` and
+`writeTo()`. On top of that, ops now answer what they operate on:
 
-**The gap that is left: operands.** `Op` exposes `getOpCode()`, `getAddress()`, `getDepth()`,
-`getGuardDepth()` and `getGuardAllDepth()` - position and structure - but nothing that says what an
-op *operates on*. The operands live in per-subclass protected fields (`m_nTarget`, `m_nIndex`,
-`m_nRetValue`, ...) with no uniform accessor. So `ModuleView.disassemble()` renders each op with
-`.append(op)`, i.e. `Op.toString()`, and any assertion about an op's arguments still has to parse
-that string. That is the same text-matching trap the deleted source-comparison tests fell into, one
-level down.
+- `org.xvm.asm.OpOperand` - a sealed `Reg`/`Const`/`Special` model plus the decoder for the sign
+  convention (`>= 0` register, `<= CONSTANT_OFFSET` constant, between them a pseudo-register).
+- `Op.operands()` returns `Optional<List<OpOperand>>`, modeled per op class.
+- `ModuleView.decode(method)` resolves each operand against the method's local constants, so
+  "what method does this op call" is a `MethodConstant`, not a substring of `toString()`.
+- `ModuleView.disassemble()` renders from the model where one exists and falls back to `toString`
+  where it does not, rather than pretending.
 
-**Why it still matters.**
+**Coverage: 93 of 215 op classes (~43%)**, via the shared bases - `OpCallable` (38), `OpInvocable`
+(17), `OpVar` (16), `OpTest` (14), `OpIndex` (8). Verified against the real compiled `ecstasy.xtc`:
+every constant index resolved inside its method's own pool, with no `UNRESOLVED` operand.
 
-- **Tests that assert on `.xtc` structure.** Reading ops as objects is enough to assert on opcode
-  sequences and scope depth; it is not enough to assert "this call targets that method" or "this
-  jump lands there" without string matching.
-- **Module-level diffing.** `compareWith` compares member names and `digest()` compares op bytes.
-  Neither can say *how* two versions of a method differ.
-- **Read-modify-write tooling.** The read half is object-level for structure but text-level for
-  operands, so there is no basis for a rewrite.
+**Why coverage is partial by design, and must stay honest.** The wire format is positional and
+untyped: a non-negative int is a register in one op and a count or jump offset in another, and only
+the op class knows which. A uniform decode would therefore have to guess, and a confidently wrong
+operand is worse than an absent one. So an unmodeled class answers `Optional.empty()` - which is
+distinct from an op that genuinely has no operands, and `ModuleViewTest` asserts that distinction
+holds rather than letting coverage silently look total.
 
-**Scope: still unmeasured, but the shape is now known.** A uniform operand accessor across ~200 op
-classes is the naive reading and is not the only option; the shared bases (`OpInvocable`,
-`OpIndex`, `OpCallable`, `OpVar`, `OpTest`, `OpCondJump`) already hold the fields for most ops, and
-a default that reports "not modeled" is honest where a guess would not be. Establish coverage
-against the bases before scheduling.
-
-**Cross-reference:** the interpreter profile that drove much of this is
-`../interpreter-jfr-profile.md`; the two op-cache defects it turned up are rows 55-57 of
-`master-issue-submissions.md`.
+**Remaining, in order of size.** `OpCondJump` (17 classes) is the largest uncovered base and needs a
+decision first: its jump offset is a raw displacement, not an encoded argument, so it needs either a
+fourth `OpOperand` kind or deliberate omission. `OpVar` subclasses that carry a name id model it
+themselves. The rest are one-off classes.
 
 ### SHOULD-FIX: the equality path has no inline cache, and one obstacle must be settled first (added 2026-09-09)
 

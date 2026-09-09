@@ -10,6 +10,10 @@ import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.CastTypeConstant;
@@ -532,6 +536,19 @@ public abstract class OpInvocable extends Op {
             assert infoMethod != null;
         }
         return infoMethod;
+    }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        var list = new ArrayList<OpOperand>(3);
+        list.add(OpOperand.decode("target", m_nTarget));
+        list.add(OpOperand.decode("method", m_nMethodId));
+        if (m_anRetValue == null) {
+            list.add(OpOperand.decode("return", m_nRetValue));
+        } else {
+            list.addAll(OpOperand.decodeAll("return", m_anRetValue));
+        }
+        return Optional.of(List.copyOf(list));
     }
 
     // ----- fields --------------------------------------------------------------------------------

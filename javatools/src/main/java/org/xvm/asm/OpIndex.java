@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -10,6 +9,8 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -595,6 +596,16 @@ public abstract class OpIndex
         System.arraycopy(prepend, 0, cdArgs, 0, prepend.length);
         System.arraycopy(cds, 0, cdArgs, prepend.length, cds.length);
         return cdArgs;
+    }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(isAssignOp()
+                ? List.of(OpOperand.decode("target", m_nTarget),
+                          OpOperand.decode("index",  m_nIndex),
+                          OpOperand.decode("return", m_nRetValue))
+                : List.of(OpOperand.decode("target", m_nTarget),
+                          OpOperand.decode("index",  m_nIndex)));
     }
 
     // ----- fields --------------------------------------------------------------------------------

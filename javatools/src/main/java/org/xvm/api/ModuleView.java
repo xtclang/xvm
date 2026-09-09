@@ -32,6 +32,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpOperand;
 import org.xvm.asm.Version;
 
 
@@ -205,6 +206,68 @@ public final class ModuleView {
 
 
     /**
+     * A method's ops with their operands decoded - what each op reads, what it writes, and which
+     * constants it names, as objects rather than as rendered text.
+     *
+     * <p>This is what makes an assertion about a compiled module structural. Without it a caller
+     * asking "does this op call that method" has only {@link Op#toString} to match on, which is
+     * the string-matching trap one level below source text.</p>
+     *
+     * <p>An op whose class does not model its operands yields {@link Resolved#operands()} empty
+     * and {@link Resolved#modeled()} false, and is never guessed at - see {@link OpOperand} for
+     * why a uniform decode cannot be correct.</p>
+     *
+     * @param method  the method to decode
+     *
+     * @return one entry per op, in address order
+     */
+    public @NotNull List<Resolved> decode(@NotNull MethodStructure method) {
+        Constant[] aconst = method.getLocalConstants();
+        return ops(method).stream()
+                .map(op -> op.operands()
+                        .map(list -> new Resolved(op, true, list.stream()
+                                .map(operand -> resolve(operand, aconst))
+                                .toList()))
+                        .orElseGet(() -> new Resolved(op, false, List.of())))
+                .toList();
+    }
+
+    private static Referent resolve(OpOperand operand, Constant[] aconst) {
+        return switch (operand) {
+            case OpOperand.Reg r -> new Referent(r.role(), "register #" + r.index(), null);
+            case OpOperand.Special sp -> new Referent(sp.role(), sp.name(), null);
+            case OpOperand.Const c -> {
+                // a local-constant index out of range means the op and the method disagree about
+                // the pool, which is a real defect worth surfacing rather than an AIOOBE
+                Constant value = aconst != null && c.index() < aconst.length ? aconst[c.index()] : null;
+                yield new Referent(c.role(), value == null
+                        ? "const:#" + c.index() + " (UNRESOLVED)"
+                        : value.getValueString(), value);
+            }
+        };
+    }
+
+    /**
+     * One op, with its operands resolved against the method's constants.
+     *
+     * @param op        the op
+     * @param modeled   false when the op's class does not model its operands, in which case
+     *                  {@code operands} is empty because nothing is known, not because there are none
+     * @param operands  the resolved operands
+     */
+    public record Resolved(@NotNull Op op, boolean modeled, @NotNull List<Referent> operands) {}
+
+    /**
+     * What one operand refers to.
+     *
+     * @param role      what the operand is for in its op - "target", "method", "return"
+     * @param display   a rendering of the referent
+     * @param constant  the constant referred to, or null when the operand is a register, a
+     *                  pseudo-register, or an unresolvable constant index
+     */
+    public record Referent(@NotNull String role, @NotNull String display, Constant constant) {}
+
+    /**
      * Every constant in the module's pool, in index order.
      *
      * <p>Index order matters: a constant's position IS its identity in the binary, so two modules
@@ -262,13 +325,25 @@ public final class ModuleView {
                 if (method.hasCode()) {
                     sb.append("    vars ").append(method.getMaxVars()).append('\n');
                     int i = 0;
-                    for (Op op : ops(method)) {
+                    for (Resolved decoded : decode(method)) {
+                        Op op = decoded.op();
                         // depth is the op's scope nesting; ENTER/EXIT are what move it, and showing
                         // it inline is what makes a scope bug visible in a diff rather than implied
                         sb.append("    ").append(String.format("%4d", i++))
                           .append("  d").append(op.getDepth())
                           .append(op.isEnter() ? " {" : op.isExit() ? " }" : "  ")
-                          .append(' ').append(op).append('\n');
+                          .append(' ').append(Op.toName(op.getOpCode()));
+                        // operands from the model where the op class has one; ops that do not model
+                        // theirs fall back to toString rather than pretending to know
+                        if (decoded.modeled()) {
+                            for (Referent operand : decoded.operands()) {
+                                sb.append(' ').append(operand.role()).append('=')
+                                  .append(operand.display());
+                            }
+                        } else {
+                            sb.append(' ').append(op);
+                        }
+                        sb.append('\n');
                     }
                 }
             }

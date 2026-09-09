@@ -1,12 +1,14 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
+
+import java.util.List;
+import java.util.Optional;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -495,6 +497,15 @@ public abstract class OpTest
         if (getOpCode() == OP_IS_NTYPE) {
             code.iconst_m1().ixor(); // "not"
         }
+    }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(List.of(
+                OpOperand.decode("type",   m_nType),
+                OpOperand.decode("value1", m_nValue1),
+                OpOperand.decode("value2", m_nValue2),
+                OpOperand.decode("return", m_nRetValue)));
     }
 
     // ----- fields --------------------------------------------------------------------------------
