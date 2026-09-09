@@ -345,12 +345,7 @@ public abstract class OpInvocable extends Op {
 
         TypeConstant[] atypeResult = sig.getRawReturns();
         if (isMultiReturn()) {
-            for (int i = 0, c = m_anRetValue.length; i < c; i++) {
-                int nRetVal = m_anRetValue[i];
-                if (nRetVal != A_IGNORE) {
-                    tmx.assign(getAddress(), nRetVal, atypeResult[i]);
-                }
-            }
+            tmx.assignAll(getAddress(), m_anRetValue, atypeResult);
         } else {
             TypeConstant typeResult = isTupleReturn()
                     ? pool.ensureTupleType(atypeResult)

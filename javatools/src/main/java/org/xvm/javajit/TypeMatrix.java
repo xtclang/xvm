@@ -8,6 +8,7 @@ import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -136,53 +137,60 @@ public class TypeMatrix {
             return;
         }
 
-        OpView currView = views[currAddr];
-        if (currView.types.get(regId) instanceof UnassignedTypeConstant unassigned) {
-            // this assignment makes the register assigned on the incoming op; preserve its
-            // declared type while removing the synthetic marker before merging
-            currView = currView.copy();
-            currView.types.put(regId, unassigned.getUnderlyingType());
-        }
+        OpView       currView     = views[currAddr];
+        OpView       incomingView = views[nextAddr];
+        TypeConstant currType     = unwrap(currView.types.get(regId));
+        TypeConstant incomingType = incomingView == null
+                ? null
+                : incomingView.types.get(regId);
 
-        follow(currView, nextAddr, -1);
+        // the assigned register replaces its previous value on this path; all other registers flow
+        // through unchanged
+        follow(currView, nextAddr, regId);
 
-        OpView       nextView = ensureMutableView(nextAddr);
-        TypeConstant nextType = nextView.types.get(regId);
-
-        // an UnassignedTypeConstant must've been merged by now
-        assert !(nextType instanceof UnassignedTypeConstant);
-
-        ComputeType:
-        if (nextType == null) {
+        if (currType == null) {
             if (regId >= 0) {
                 bctx.scope.declareRegister(regId);
             }
-        } else {
-            if (type.equals(nextType)) {
-                return;
-            }
-
-            if (nextType instanceof CastTypeConstant inferredType) {
-                nextType = inferredType.getBaseType();
-            }
-
-            // use CastTypeConstant to remember the original type
-            assert type.isA(nextType) ||
-                type.containsFormalType(true) || nextType.containsFormalType(true);
-
-            if (!type.equals(nextType)) {
-                if (type instanceof CastTypeConstant inferredType) {
-                    TypeConstant baseType = inferredType.getBaseType();
-                    if (baseType.equals(nextType)) {
-                        // take as is
-                        break ComputeType;
-                    }
-                    type = inferredType.getUnderlyingType2();
-                }
-                type = new CastTypeConstant(bctx.pool(), nextType, type);
-            }
         }
-        nextView.types.put(regId, type);
+        type = computeAssignmentType(currType, type);
+
+        OpView nextView = ensureMutableView(nextAddr);
+        if (incomingType == null) {
+            nextView.types.put(regId, type);
+        } else {
+            if (incomingType instanceof UnassignedTypeConstant unassigned) {
+                bctx.registerConditionalAssignment(regId);
+                incomingType = unassigned.getUnderlyingType();
+            }
+            mergeType(nextView.types, regId, type, incomingType);
+        }
+    }
+
+    /**
+     * Propagate all register types from the current op to the next op and atomically assign the
+     * specified register types.
+     */
+    public void assignAll(int currAddr, int[] regIds, TypeConstant[] types) {
+        assert currAddr >= 0 && regIds.length == types.length;
+
+        // TODO: avoid copying the entire view by allowing follow() to exclude all assigned registers
+        OpView currView     = views[currAddr];
+        OpView outgoingView = currView.copy();
+        for (int i = 0, c = regIds.length; i < c; i++) {
+            int regId = regIds[i];
+            if (regId == Op.A_IGNORE || regId == Op.A_IGNORE_ASYNC || bctx.isProperty(regId)) {
+                // no impact on the register type flow
+                continue;
+            }
+
+            TypeConstant currType = unwrap(currView.types.get(regId));
+            if (currType == null) {
+                bctx.scope.declareRegister(regId);
+            }
+            outgoingView.types.put(regId, computeAssignmentType(currType, types[i]));
+        }
+        follow(outgoingView, currAddr + 1, -1);
     }
 
     /**
@@ -233,6 +241,41 @@ public class TypeMatrix {
             : view.isImmutable
                 ? views[addr] = view.copy()
                 : view;
+    }
+
+    /**
+     * Compute the type of a register after assigning a value of the specified type.
+     *
+     * This is not a symmetric control-flow merge; it preserves the register's original base type
+     * while recording the narrower assigned type. For example, assigning {@code Derived} to
+     * {@code Base} produces {@code Cast(Base, Derived)}, while merging those path types produces
+     * {@code Base}.
+     */
+    private TypeConstant computeAssignmentType(TypeConstant currType, TypeConstant assignType) {
+        if (currType == null || assignType.equals(currType)) {
+            return assignType;
+        }
+
+        if (currType instanceof CastTypeConstant inferredType) {
+            currType = inferredType.getBaseType();
+        }
+
+        // use CastTypeConstant to remember the original type
+        assert assignType.isA(currType) ||
+            assignType.containsFormalType(true) || currType.containsFormalType(true);
+
+        if (assignType.equals(currType)) {
+            return assignType;
+        }
+
+        if (assignType instanceof CastTypeConstant inferredType) {
+            TypeConstant baseType = inferredType.getBaseType();
+            if (baseType.equals(currType)) {
+                return assignType;
+            }
+            assignType = inferredType.getUnderlyingType2();
+        }
+        return new CastTypeConstant(bctx.pool(), currType, assignType);
     }
 
     /**
@@ -304,7 +347,7 @@ public class TypeMatrix {
      * @return true iff the register type has been widened
      */
     private boolean mergeType(Map<Integer, TypeConstant> types, Integer regId,
-                           TypeConstant currType, TypeConstant mergeType) {
+                              TypeConstant currType, TypeConstant mergeType) {
         if (mergeType == null) {
             types.put(regId, currType);
         } else if (!mergeType.equals(currType)) {
