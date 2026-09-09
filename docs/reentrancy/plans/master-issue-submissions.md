@@ -119,6 +119,8 @@ Status is as of this file's last update; check the PR before re-filing.
 | 50 | `deleteKeyStoreEntry` swallows a failed delete, so `revokeCertificateImpl` leaves a REVOKED certificate in the keystore and reports success | delete a `catch`; callers already declare it | independent | the stated justification is already handled by two guards |
 | 51 | `xRTNameService` catches `Throwable` in a DNS continuation, so an `Error` is reported to XTC code as "host not found" | narrow to `ExecutionException`; restore the interrupt | independent | 2 sites; the sibling catches `Exception` for the same `.get()` |
 | 52 | `Parser` reports "no such directory or file" for an include path that resolved and could not be READ | key the message off `resource`, not off an exception | independent | `checkReadable` answers false without throwing, so there is usually no exception to key on |
+| 53 | `MethodStructure.assemble` catches an op-assembly failure, prints to stderr and writes the method anyway - producing a loadable `.xtc` whose body is empty | delete the catch; rethrow with context | independent | a corrupt artifact, not a bad message |
+| 54 | `OpJump.toString()` recurses through jump targets and overflows the stack on a module read back from disk | render the target's opcode name, not the target | independent | only reachable after reading a `.xtc`, which is why nothing hit it |
 
 ### Filing a row as an issue or PR
 
@@ -3989,3 +3991,72 @@ The last of those needs a `CompilerException(String, Throwable)` constructor, wh
 have: `LauncherException` accepts a cause and `CompilerException(Throwable)` exists (marked unused),
 but with no `(message, cause)` form a caller holding both had to drop one, and dropping the cause is
 the easy choice.
+
+
+## 53. `MethodStructure.assemble` writes a method with no op bytes after an assembly failure
+
+**FIXED** on `lagergren/lazy-instance`. Not pushed.
+
+**Status/category:** Real defect in current master source. Produces a **corrupt artifact**, not a bad
+message.
+
+**Explanation:** master catches the failure, prints, and falls through to serialize anyway:
+
+```java
+try {
+    m_code.ensureAssembled(m_registry);
+} catch (UnsupportedOperationException e) {
+    System.err.println("Error in MethodStructure.assemble() of ops for " ...);
+}
+// write out the op bytes (if there are any)
+byte[] abOps = m_abOps;
+int    cbOps = abOps == null ? 0 : abOps.length;
+```
+
+`m_abOps` is still null, so `cbOps` is 0 and the method is written with **no body**. The `.xtc` is
+structurally valid and loads; the method simply does nothing where its code should be. The only
+trace is a line on stderr during a build.
+
+**Master evidence:** `javatools/src/main/java/org/xvm/asm/MethodStructure.java:2036-2041` (the catch)
+and `:2043-2045` (the fall-through that writes `cbOps == 0`).
+
+**Reachability:** any op that reaches final assembly without an encoding - the shape
+`MethodStructureAssemblyFailureTest` builds deliberately with a pseudo-op.
+
+**Fix:** rethrow with artifact context and the original cause, which is what this branch does. There
+is already a behavioural test for it in that file.
+
+---
+
+## 54. `OpJump.toString()` overflows the stack on a module read back from disk
+
+**FIXED** on `lagergren/lazy-instance`. One line. Not pushed.
+
+**Status/category:** Real defect in current master source. Found by disassembling a compiled module.
+
+**Explanation:**
+
+```java
+public static String getLabelDesc(Op opDest, int ofJmp) {
+    if (opDest instanceof Label)  { return ((Label) opDest).getName(); }
+    else if (ofJmp != 0)          { return (ofJmp > 0 ? "+" : "") + ofJmp; }
+    else if (opDest != null)      { return "-> " + opDest; }   // renders the TARGET
+    else                          { return "???"; }
+}
+```
+
+`"-> " + opDest` calls the target's `toString()`, which for another jump renders ITS target, and so
+on. A jump chain that loops - which is what a loop compiles to - recurses until the stack is gone.
+
+**Why nothing hit it:** while compiling, a jump's destination is a `Label` and takes the first
+branch. The third branch is only reachable once ops have been READ BACK from a compiled module, with
+destinations resolved to real ops. Nothing in the tree disassembled a `.xtc` until now, so the path
+had no callers.
+
+**Master evidence:** `javatools/src/main/java/org/xvm/asm/OpJump.java:107-108`.
+
+**Failure mode:** `StackOverflowError` from `toString()`. That is the worst place for one - a
+debugger rendering a frame, a log line, or a diagnostic describing another failure, all of which are
+meant to be the thing that tells you what went wrong.
+
+**Fix:** render the target's opcode name rather than the target: `"-> " + toName(opDest.getOpCode())`.

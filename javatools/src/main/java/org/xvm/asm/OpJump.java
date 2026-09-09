@@ -113,7 +113,16 @@ public abstract class OpJump
         } else if (ofJmp != 0) {
             return (ofJmp > 0 ? "+" : "") + ofJmp;
         } else if (opDest != null) {
-            return "-> " + opDest;
+            // The DESTINATION'S NAME, not the destination. This used to render `"-> " + opDest`,
+            // which calls the target's toString() - and when the target is itself a jump, that
+            // renders ITS target, and so on. A jump whose chain loops back, which is what a loop
+            // compiles to, therefore overflowed the stack on toString().
+            //
+            // Only reachable once ops are READ back from a compiled module: while compiling, a
+            // destination is a Label and takes the first branch. So nothing hit it until something
+            // disassembled a .xtc - and then it is any debugger, log line or diagnostic that renders
+            // an op, which is the worst place to find a StackOverflowError.
+            return "-> " + toName(opDest.getOpCode());
         } else {
             return "???";
         }
