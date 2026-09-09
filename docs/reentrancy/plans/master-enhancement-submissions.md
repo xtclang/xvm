@@ -5020,3 +5020,80 @@ Self-contained: new types plus a `fields()` override per op class, and no behavi
 anything that existed. The op overrides mirror each `write()` exactly, including its conditionals,
 which is the property the completeness test enforces. Ready for review as one PR; the completeness
 test should land with it, because without the oracle the coverage claim is not checkable.
+
+## E49 - The equality path re-derives its dispatch target on every comparison
+
+**Status:** measured, not built. Full method and counts in `../iseq-identity-hit-rate.md`.
+An enhancement, not a bug: nothing on master is wrong, the work is simply repeated.
+
+### What happens now
+
+`TypeConstant.callEquals` picks the composition to compare through on every call:
+
+```java
+TypeComposition clz = clz1.getType().equals(this) ? clz1
+                    : clz2.getType().equals(this) ? clz2
+                    : ensureClass(frame);
+```
+
+Nothing caches the answer. `OpInvocable` has had a per-op-site inline cache for its call chains for
+years; the equality path, which is comparably hot, has none.
+
+### The measurement, and the thing it overturned
+
+Of 5,383,867 base-implementation entries from op sites:
+
+| | share |
+| --- | ---: |
+| `hValue1 == hValue2`, exits before selection | 0.32 % |
+| identity hit - a cache would buy nothing | **0.20 %** |
+| equal but not identical, full `compareDetails` | 9.71 % |
+| both miss, `ensureClass` runs | **89.77 %** |
+
+The plan of record was to check the identity hit rate first and drop the idea if identity already
+dominated. **It does not: it is 0.20 %, and it cannot be otherwise.** The counters recorded
+`differentPool = 120,005,949` against `samePool = 0` - 100 %, in both workloads, in every phase. The
+op's type comes from the module's `ConstantPool` and the composition's from the container's, so the
+two are always equal and never identical, and `TypeConstant.equals`'s `obj == this` short-circuit is
+**dead code on this path by construction**.
+
+So 99.48 % of calls take a path a cache would eliminate, dominated by the most expensive one, and
+the earlier ~10 % estimate holds - 14.3-15.2 % of interpreter CPU in the module sweep, ~10 % in a
+tight arithmetic loop. A one-entry per-site cache would hit 99.87 %, and 100 % inside hot loops.
+
+### Two constraints that are not optional
+
+- **A composition-pair key would be a correctness bug, not a weak optimization.** Keyed on
+  `(clz1, clz2)` alone it would have returned a *stale* composition 0.045 % of the time - a
+  wrong-template dispatch. The key must include the frame-resolved type and the container, because
+  `Frame.resolveType` depends on `getGenericsResolver` and `f_hThis` and so varies per frame. The
+  shared `org.xvm.runtime.InlineCache` already carries three shape parts for this reason.
+- **Overrides need a guard**, though the exposure is narrower than expected. 99.92 % of op-site
+  calls reach the base implementation; `UnionTypeConstant` (0.076 %) is the only one of the six
+  overriding classes ever entered from an op site. The other five - `Annotated`, `Intersection`,
+  `Difference`, `Recursive`, `Relational` - were never reached in any run, but a guard is still
+  required, since "never observed" is not "cannot happen".
+
+### Price the cheaper fix first
+
+Because the equal-but-not-identical case is **100 %** cross-pool, and the both-miss case ends in
+`pool.register` anyway, canonicalizing the op's type into the container's pool once at resolution
+would make the existing identity check fire - **no cache, no key, no override hazard, no new state
+on a shared op**. That certainly collapses the 9.71 %. Whether it also collapses the 89.77 % was not
+measured, and that single number decides which of the two designs to build. Measure it before
+writing either.
+
+### Confidence
+
+High on the counts: exact `LongAdder`s, compile phases correctly recording zero, two runs agreeing
+within 4 %, and two structurally opposite workloads reaching the same verdict. Medium on the CPU
+percentages - they come from JFR runs carrying the instrumentation itself (1.5 % of samples in the
+sweep, 12.6 % in the arithmetic loop), which dilutes every share and likely explains that workload
+reading 15.1 % here against 21.3 % clean. The selection-to-comparison ratio the verdict rests on is
+much more robust than the absolute shares.
+
+### Filing notes
+
+Not ready to file as a PR - this is the evidence that the work is worth doing and the constraints it
+must respect. The next step is a measurement, not an implementation: does canonicalizing the type at
+resolution collapse the 89.77 %?

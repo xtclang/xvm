@@ -57,6 +57,7 @@ Document roles:
 | Proof/evidence ledger | `test-failure-evidence.md`, `runtime-ownership-hardening-ledger.md`, `fixed-in-this-branch.md` | A test proves red/green behavior, a fix lands, or evidence changes. |
 | Topic audits | `*-audit.md`, `plans/*.md` | The underlying site census, analysis, or design detail changes. |
 | Presentation | `presentation.md` | The sales narrative, click-through demo, or teleprompter script changes. |
+| Equality-path measurement | `iseq-identity-hit-rate.md` | The equality inline cache is measured again, or the canonicalization alternative below is priced. Added 2026-09-09. |
 | Runtime performance profile | `interpreter-jfr-profile.md` | A JFR pass re-measures the interpreter, or a listed cheap win is taken. Added 2026-09-09; W1 there is superseded (it was a branch regression, not a master win - fixed in `de4abe4a8`), and W6/W7 are now rows 55-57 of `plans/master-issue-submissions.md`. |
 
 ## Current Wide Scans
@@ -145,35 +146,54 @@ its own reminder not to trust a grep as a census.
 **Evidence.** Whole tree: 726 modules, 5,394,089 ops, 8,818,893 operands, 391 MB of disassembly,
 with 0 read failures, 0 unmodeled ops, 0 unresolved operands and 0 completeness mismatches.
 
-### SHOULD-FIX: the equality path has no inline cache, and one obstacle must be settled first (added 2026-09-09)
+### MEASURED, ready to build: the equality path has no inline cache (updated 2026-09-09)
 
-**Not a bug.** `OpInvocable` and `OpIndex` had caches that were *broken* (rows 55-56 of
-`plans/master-issue-submissions.md`). `IsEq` has **no** cache at all, so nothing there is wrong -
-it is simply unoptimized, and it does not belong on a master bug list.
+**Still not a bug.** `OpInvocable` and `OpIndex` had caches that were broken (rows 55-56 of
+`plans/master-issue-submissions.md`); `IsEq` has none, so nothing there is wrong - it is
+unoptimized. This stays an enhancement.
 
-**Size.** `TypeConstant.callEquals` measured 21.33% inclusive on an arithmetic workload and 21.59%
-in the warm module sweep, with `Constant.compareTo` the single hottest self frame at 10.7-11.0% and
-98.5% of it arriving through this path. The profile's estimate was ~10% recoverable
-(`../interpreter-jfr-profile.md`, W6).
+**Measured rather than argued.** Full method, counts and exclusions in
+`../iseq-identity-hit-rate.md`. Of 5,383,867 base-implementation entries from op sites:
 
-**The obstacle, and it is not the cache shape.** The shared `org.xvm.runtime.InlineCache` already
-carries three shape parts, which is exactly what this site needs - the key must include the
-frame-resolved type, because `Frame.resolveType` depends on `getGenericsResolver` and `f_hThis` and
-so varies per frame. The real problem is that `callEquals` is **virtual with six overrides**
-(`Annotated`, `Intersection`, `Difference`, `Recursive`, `Union`, `Relational`), and two of them do
-not select a composition at all: `AnnotatedTypeConstant` runs a *sequence* of equality calls through
-`Utils.callEqualsSequence`, and `UnionTypeConstant` recurses on `isA` tests against its member
-types. Memoizing "the composition to compare on" would be **wrong** there, not merely suboptimal.
+| | share |
+| --- | ---: |
+| `hValue1 == hValue2`, exits before selection | 0.32 % |
+| **identity hit - a cache would buy nothing** | **0.20 %** |
+| equal but not identical - full `compareDetails` | 9.71 % |
+| **both miss, `ensureClass` runs** | **89.77 %** |
 
-**A sound design exists.** Extract `selectEqualsComposition` from the base implementation so
-existing callers are unaffected; add a virtual predicate (default true, overridden false by the six)
-by which each type declares whether its selection is stable; cache only for types that say yes.
+**The prior guess was wrong, and in the direction that mattered.** The advice on this row used to be
+"measure the identity hit rate first; if identity already dominates, this is not worth touching the
+equality path for". It does not dominate - it is 0.20 % - and there is a structural reason it cannot:
+`differentPool = 120,005,949, samePool = 0`. The op's type comes from the module's `ConstantPool`
+and the composition's from the container's, so they are always equal and never identical, and the
+`obj == this` short-circuit in `TypeConstant.equals` is dead code on this path by construction. So
+**99.48 % of calls take a path a cache would eliminate**, dominated by the most expensive one, and
+the ~10 % estimate is real - 14.3-15.2 % of interpreter CPU in the module sweep.
 
-**Measure before building.** `TypeConstant.equals` short-circuits on `obj == this`, so the two
-comparisons in the base `callEquals` are nearly free whenever the composition's type is the *same
-instance* as the resolved type, and only cost a full `compareDetails` when it is equal-but-not-
-identical. The whole estimate depends on how often that second case occurs. Count the identity hit
-rate first; if identity already dominates, this is not worth touching the equality path for.
+**Two constraints the measurement produced, both load-bearing.**
+
+- A composition-pair key would be **wrong**, not merely weak: it would have returned a stale
+  composition 0.045 % of the time, which is a wrong-template dispatch. The key must include the
+  frame-resolved type and the container. The shared `org.xvm.runtime.InlineCache` already carries
+  three shape parts for exactly this reason.
+- Override receivers still need a guard, though the exposure is smaller than feared: 99.92 % of
+  op-site calls reach the base implementation, and `UnionTypeConstant` at 0.076 % is the only
+  override ever entered from one.
+
+A one-entry per-site cache would hit **99.87 %**, and 100 % in hot loops.
+
+**Price the cheaper alternative first.** Because (b) is 100 % cross-pool and (c) ends in
+`pool.register` anyway, canonicalizing the op's type into the container's pool once at resolution
+would make the EXISTING identity check fire - no cache, no key, no override hazard. It certainly
+collapses the 9.71 %. Whether it also collapses the 89.77 % was not measured, and that is the number
+that decides which of the two to build.
+
+**Confidence.** High on the counts: exact `LongAdder`s, compile phases correctly recorded zero, two
+runs agreeing within 4 %, and two structurally opposite workloads reaching the same verdict. Medium
+on the CPU percentages - they come from JFR runs carrying the instrumentation itself, which dilutes
+every share; the selection-to-comparison ratio the verdict rests on is far more robust than the
+absolute numbers.
 
 ### 2026-08-28 sweep (post rebase-onto-master + display-purity campaign)
 
