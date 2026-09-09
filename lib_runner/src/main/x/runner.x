@@ -65,13 +65,16 @@ module runner.xtclang.org {
      * @param template    the module to run
      * @param repository  the repository used to resolve the module's dependencies
      * @param consoleId   the optional ID of the named native console resource
+     * @param rootDir      the optional file-system root for the task; when absent the task gets a
+     *                     generated directory of its own
      *
      * @return the task identifier
      */
     Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                     String[] injectionNames = [], String[] injectionValues = []) =
+                     String[] injectionNames = [], String[] injectionValues = [],
+                     String? rootDir = Null) =
             TaskRegistry.registerTask(template, repository, consoleId, True,
-                                      injectionNames, injectionValues);
+                                      injectionNames, injectionValues, rootDir);
 
     /**
      * Register a task whose file-system root is deleted as soon as it completes.
@@ -80,9 +83,10 @@ module runner.xtclang.org {
      * over, so there is nothing left to read from it.
      */
     Int registerTransientTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                              String[] injectionNames = [], String[] injectionValues = []) =
+                              String[] injectionNames = [], String[] injectionValues = [],
+                              String? rootDir = Null) =
             TaskRegistry.registerTask(template, repository, consoleId, False,
-                                      injectionNames, injectionValues);
+                                      injectionNames, injectionValues, rootDir);
 
     /**
      * Start the identified task.
@@ -121,13 +125,14 @@ module runner.xtclang.org {
          */
         Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
                          Boolean retainStore = True,
-                         String[] injectionNames = [], String[] injectionValues = []) {
+                         String[] injectionNames = [], String[] injectionValues = [],
+                         String? rootDir = Null) {
             assert injectionNames.size == injectionValues.size
                     as $"{injectionNames.size} injection names for {injectionValues.size} values";
 
             Int  id   = nextTaskId++;
             Task task = new Task(id, template, repository, consoleId, retainStore,
-                                 injectionNames, injectionValues);
+                                 injectionNames, injectionValues, rootDir);
             tasks[id] = task;
             return id;
         }
@@ -228,7 +233,8 @@ module runner.xtclang.org {
      */
     service Task(Int id, ModuleTemplate template, ModuleRepository repository, Int? consoleId,
                  Boolean retainStore,
-                 String[] injectionNames = [], String[] injectionValues = []) {
+                 String[] injectionNames = [], String[] injectionValues = [],
+                 String? rootDir = Null) {
         private Container? container;
 
         private Time? started;
@@ -265,7 +271,8 @@ module runner.xtclang.org {
                 taskConsole = &bufferedConsole.maskAs(Console);
             }
             ResourceProvider injector = new TaskResourceProvider(id, template, taskConsole,
-                                                                injectionNames, injectionValues);
+                                                                injectionNames, injectionValues,
+                                                                rootDir);
 
             container = new Container(template, Lightweight, repository, injector);
             running   = True;
@@ -381,11 +388,26 @@ module runner.xtclang.org {
      */
     service TaskResourceProvider(Int id, ModuleTemplate template, Console console,
                                  String[] injectionNames  = [],
-                                 String[] injectionValues = [])
+                                 String[] injectionValues = [],
+                                 String?  rootDir         = Null)
             extends BasicResourceProvider {
+        /**
+         * The task's file store.
+         *
+         * A caller-supplied `rootDir` roots the store where the caller says; otherwise the task
+         * gets a generated directory of its own. This is deliberately NOT expressible through
+         * `injectionNames`/`injectionValues`: those are resolved when a resource is asked for, and
+         * this decides how the store is BUILT, which happens first.
+         */
         @Lazy FileStore store.calc() {
-            @Inject Directory curDir;
-            Directory taskDir = curDir.dirFor(taskDirectoryName(template.name, id)).ensure();
+            Directory taskDir;
+            if (String path ?= rootDir) {
+                @Inject FileStore storage;
+                taskDir = storage.dirFor(new Path(path)).ensure();
+            } else {
+                @Inject Directory curDir;
+                taskDir = curDir.dirFor(taskDirectoryName(template.name, id)).ensure();
+            }
             return new ecstasy.fs.DirectoryFileStore(taskDir);
         }
 

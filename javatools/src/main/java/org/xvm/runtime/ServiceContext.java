@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.TimerTask;
 import java.util.WeakHashMap;
 
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -984,7 +985,7 @@ public class ServiceContext {
         assert setFibers.isEmpty();
 
         f_container.terminate(this);
-        m_futureShutdown.complete(null);
+        f_futureShutdown.get().complete(null);
     }
 
     /**
@@ -993,7 +994,16 @@ public class ServiceContext {
      * @return a future that completes when all of the service's fibers have terminated
      */
     public CompletableFuture<Void> requestShutdown() {
-        CompletableFuture<Void> future = m_futureShutdown = new CompletableFuture<>();
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        if (!f_futureShutdown.compareAndSet(null, future)) {
+            // already requested: join the first sweep rather than starting a competing one. A
+            // plain assignment here would orphan the FIRST future - nothing would ever complete it,
+            // so its holder would wait forever, which is the failure this whole path exists to end.
+            return f_futureShutdown.get();
+        }
+
+        // the volatile write publishes the future set above: a run-loop thread that observes this
+        // flag is guaranteed to see it, which is what lets terminate() complete it without a null
         m_fShutdownRequested = true;
         ensureScheduled(true);
         return future;
@@ -2305,9 +2315,9 @@ public class ServiceContext {
     private ServiceHandle m_hService;
 
     /**
-     * Completion of this service's shutdown.
+     * Completion of this service's shutdown, set exactly once by {@link #requestShutdown}.
      */
-    private CompletableFuture<Void> m_futureShutdown;
+    private final AtomicReference<CompletableFuture<Void>> f_futureShutdown = new AtomicReference<>();
 
     /**
      * True once this service has been asked to shut down.
