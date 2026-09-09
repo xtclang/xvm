@@ -31,6 +31,7 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
 
+import org.xvm.runtime.InlineCache;
 import org.xvm.runtime.OpInfoKey;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.CallChain.VirtualConstructorChain;
@@ -128,38 +129,21 @@ public abstract class OpInvocable extends Op {
     }
 
     // helper methods
-    /**
-     * The number of misses after which this call site stops writing back. A monomorphic cache that
-     * rewrites on every call is worse than no cache at all: at a site alternating between two
-     * compositions it never once hits, yet still pays a map write per call and re-resolves the
-     * chain regardless. Past this many misses the resolution still happens, but silently, so the
-     * degenerate case costs no more than not caching.
-     */
-    private static final int MEGAMORPHIC_THRESHOLD = 8;
-
     protected CallChain getCallChain(Frame frame, ObjectHandle hTarget) {
         ServiceContext  context = frame.f_context;
         TypeComposition clazz   = hTarget.getComposition();
 
-        // one probe for both halves of the cache. The previous shape asked the map for the chain
-        // and for the composition separately, so a hit cost two lookups and a miss cost two more
-        // to write them back - four map operations per call at a site that never hits.
-        InlineCache cache = context.getOpInfo(this, INFO_INLINE_CACHE);
+        // one probe for the whole entry. Keying the chain and the composition separately meant a
+        // hit cost two map lookups and a miss cost two more to write them back - four map
+        // operations per call at a site that never hits.
+        InlineCache<CallChain> cache = context.getOpInfo(this, INFO_INLINE_CACHE);
         if (cache != null) {
-            if (cache.composition() == clazz) {
-                // a hit clears the miss count, so only *consecutive* misses drive the site
-                // megamorphic. A site that is 99% one composition would otherwise accumulate its
-                // way to the threshold over a long enough run and deoptimize itself for good,
-                // which would be a regression for precisely the sites the cache serves best.
-                // The steady monomorphic path has a zero count already and writes nothing.
-                if (cache.misses() != 0) {
-                    context.setOpInfo(this, INFO_INLINE_CACHE,
-                            new InlineCache(clazz, cache.chain(), 0));
-                }
-                return cache.chain();
+            CallChain cached = cache.match(clazz);
+            if (cached != null) {
+                InlineCache.recordHit(context, this, INFO_INLINE_CACHE, cache);
+                return cached;
             }
-            if (cache.misses() >= MEGAMORPHIC_THRESHOLD) {
-                // this site has stopped being predictable; resolve without writing back
+            if (cache.isMegamorphic()) {
                 return resolveCallChain(frame, hTarget, clazz);
             }
         }
@@ -168,8 +152,7 @@ public abstract class OpInvocable extends Op {
 
         // an ExceptionChain carries a frame-specific exception handle and must never be cached
         if (!(chain instanceof CallChain.ExceptionChain)) {
-            context.setOpInfo(this, INFO_INLINE_CACHE,
-                    new InlineCache(clazz, chain, cache == null ? 0 : cache.misses() + 1));
+            InlineCache.recordMiss(context, this, INFO_INLINE_CACHE, cache, clazz, null, null, chain);
         }
         return chain;
     }
@@ -564,20 +547,9 @@ public abstract class OpInvocable extends Op {
     protected Argument[]     m_aArgReturn; // optional
 
     // categories for cached info
-    protected enum Category {InlineCache}
+    protected enum Category {Chain}
 
     /** The value each {@link Category} caches, declared once so the pairing cannot drift. */
-    protected static final OpInfoKey<InlineCache> INFO_INLINE_CACHE =
-            OpInfoKey.of(Category.InlineCache, InlineCache.class);
-
-    /**
-     * This op's monomorphic inline cache: the composition it last dispatched on, the chain it
-     * resolved for that composition, and how many times in a row the composition has since
-     * differed.
-     *
-     * <p>Held as one value so the pair is read and written in a single map operation, and so the
-     * two can never disagree - the previous two-key shape could in principle be read between the
-     * composition write and the chain write.</p>
-     */
-    protected record InlineCache(TypeComposition composition, CallChain chain, int misses) {}
+    protected static final OpInfoKey<InlineCache<CallChain>> INFO_INLINE_CACHE =
+            OpInfoKey.ofGeneric(Category.Chain, InlineCache.class);
 }

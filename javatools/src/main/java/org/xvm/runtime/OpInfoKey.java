@@ -42,4 +42,21 @@ public record OpInfoKey<T>(Enum<?> category, Class<T> type) {
     public static <T> OpInfoKey<T> of(Enum<?> category, Class<T> type) {
         return new OpInfoKey<>(category, type);
     }
+
+    /**
+     * A key whose value type is generic, where a {@link Class} literal cannot carry the type
+     * argument - {@code InlineCache.class} is a {@code Class<InlineCache>}, never a
+     * {@code Class<InlineCache<CallChain>>}. The cast checks the erasure, which is the same
+     * guarantee the raw literal would give; the value's own type argument is enforced by the
+     * declaring site, which is the only thing that can reach the entry.
+     *
+     * @param category  the op-specific category
+     * @param raw       the erasure of the value cached under it
+     *
+     * @return a key binding that category to that type
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> OpInfoKey<T> ofGeneric(Enum<?> category, Class<?> raw) {
+        return new OpInfoKey<>(category, (Class<T>) raw);
+    }
 }

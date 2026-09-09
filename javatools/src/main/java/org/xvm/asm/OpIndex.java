@@ -31,6 +31,7 @@ import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.MultiSlot;
 import org.xvm.javajit.SingleSlot;
 
+import org.xvm.runtime.InlineCache;
 import org.xvm.runtime.OpInfoKey;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -170,15 +171,19 @@ public abstract class OpIndex
      * Retrieve cached call chain.
      */
     protected CallChain getOpChain(Frame frame, TypeConstant typeTarget) {
-        ServiceContext ctx   = frame.f_context;
-        CallChain      chain = ctx.getOpInfo(this, INFO_CHAIN);
-        if (chain != null) {
-            TypeConstant typePrevTarget = ctx.getOpInfo(this, INFO_TYPE);
-            if (typeTarget.equals(typePrevTarget)) {
-                return chain;
-            }
+        ServiceContext         ctx   = frame.f_context;
+        InlineCache<CallChain> cache = ctx.getOpInfo(this, INFO_INLINE_CACHE);
+        if (cache == null) {
+            return null;
         }
-        return null;
+
+        // by equality rather than identity: an equal TypeConstant from another pool describes the
+        // same target, and the chain resolved for it is reusable
+        CallChain cached = cache.matchEqual(typeTarget);
+        if (cached != null) {
+            InlineCache.recordHit(ctx, this, INFO_INLINE_CACHE, cache);
+        }
+        return cached;
     }
 
     /**
@@ -186,8 +191,13 @@ public abstract class OpIndex
      */
     protected void saveOpChain(Frame frame, TypeConstant typeTarget, CallChain chain) {
         ServiceContext ctx = frame.f_context;
-        ctx.setOpInfo(this, INFO_CHAIN, chain);
-        ctx.setOpInfo(this, INFO_TYPE, typeTarget);
+
+        // re-read to carry the consecutive-miss count forward. This is the miss path, which is by
+        // definition the rare one, and paying the extra probe here keeps the hit path at one.
+        InlineCache<CallChain> cache = ctx.getOpInfo(this, INFO_INLINE_CACHE);
+        if (cache == null || !cache.isMegamorphic()) {
+            InlineCache.recordMiss(ctx, this, INFO_INLINE_CACHE, cache, typeTarget, null, null, chain);
+        }
     }
 
     @Override
@@ -598,11 +608,9 @@ public abstract class OpIndex
     private Argument m_argReturn;
 
     // categories for cached info
-    enum Category {Chain, Type}
+    enum Category {Chain}
 
     /** The value each {@link Category} caches, declared once so the pairing cannot drift. */
-    static final OpInfoKey<CallChain> INFO_CHAIN =
-            OpInfoKey.of(Category.Chain, CallChain.class);
-    static final OpInfoKey<TypeConstant> INFO_TYPE =
-            OpInfoKey.of(Category.Type, TypeConstant.class);
+    static final OpInfoKey<InlineCache<CallChain>> INFO_INLINE_CACHE =
+            OpInfoKey.ofGeneric(Category.Chain, InlineCache.class);
 }
