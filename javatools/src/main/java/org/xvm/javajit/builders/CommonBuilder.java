@@ -462,11 +462,9 @@ public class CommonBuilder
         }
         TypeConstant type = prop.getType();
         ClassDesc    cd   = JitTypeDesc.getPrimitiveFieldClass(type);
-
         return cd == null
             ? ShallowSizeOf.fieldOf(Object.class)
             : ShallowSizeOf.fieldOf(cd);
-
     }
 
     /**
