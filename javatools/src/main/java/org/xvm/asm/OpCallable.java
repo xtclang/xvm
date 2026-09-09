@@ -10,7 +10,6 @@ import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -996,14 +995,11 @@ public abstract class OpCallable extends Op {
 
     @Override
     public Optional<List<OpOperand>> operands() {
-        var list = new ArrayList<OpOperand>(2);
-        list.add(OpOperand.decode("function", m_nFunctionId));
-        if (m_anRetValue == null) {
-            list.add(OpOperand.decode("return", m_nRetValue));
-        } else {
-            list.addAll(OpOperand.decodeAll("return", m_anRetValue));
-        }
-        return Optional.of(List.copyOf(list));
+        return Optional.of(OpOperand.concat(
+                List.of(OpOperand.decode("function", m_nFunctionId)),
+                m_anRetValue == null
+                        ? List.of(OpOperand.decode("return", m_nRetValue))
+                        : OpOperand.decodeAll("return", m_anRetValue)));
     }
 
     // ----- fields --------------------------------------------------------------------------------

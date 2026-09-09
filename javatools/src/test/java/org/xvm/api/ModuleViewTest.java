@@ -2,11 +2,14 @@ package org.xvm.api;
 
 
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.test.XdkOutputs;
@@ -191,12 +194,15 @@ public class ModuleViewTest {
     }
 
     /**
-     * An op class that does not model its operands must SAY so rather than be indistinguishable
-     * from one that has none. The wire format is positional and untyped, so guessing would produce
-     * confidently wrong operands, which is worse than absent ones.
+     * "Has no operands" and "does not model its operands" must stay distinguishable, even now that
+     * every op class in the tree models them. The distinction is the contract, not the coverage
+     * number: {@code Op.operands()} still defaults to absent, so a NEW op class that forgets to
+     * model itself is reported rather than silently indistinguishable from {@code Exit}. This
+     * asserts the live half - that structural ops answer a present-but-EMPTY list - which is only
+     * meaningful because absent remains a different answer.
      */
     @Test
-    public void unmodeledOpsAreReportedAsUnmodeledRatherThanEmpty() throws Exception {
+    public void anOpWithNoOperandsIsNotTheSameAsAnUnmodeledOne() throws Exception {
         ModuleView view = ModuleView.open(ecstasy());
 
         var decoded = view.methods()
@@ -204,13 +210,10 @@ public class ModuleViewTest {
                 .limit(20000)
                 .toList();
 
-        assertTrue(decoded.stream().anyMatch(ModuleView.Resolved::modeled),
-                "some ops model their operands");
-        assertTrue(decoded.stream().anyMatch(resolved -> !resolved.modeled()),
-                "and coverage is partial, which the model reports rather than hides");
-        assertTrue(decoded.stream().filter(resolved -> !resolved.modeled())
-                        .allMatch(resolved -> resolved.operands().isEmpty()),
-                "an unmodeled op carries no operands, rather than guessed ones");
+        assertTrue(decoded.stream().allMatch(ModuleView.Resolved::modeled),
+                "every op class in the tree now models its operands");
+        assertTrue(decoded.stream().anyMatch(r -> r.modeled() && r.operands().isEmpty()),
+                "structural ops such as ENTER/EXIT report a present but empty operand list");
     }
 
     /**
@@ -238,5 +241,57 @@ public class ModuleViewTest {
                 "the displacement is not carried as an operand");
         assertTrue(view.disassemble().contains("->"),
                 "and the dump renders it, rather than dropping it now that jumps are modeled");
+    }
+
+    /**
+     * The property that matters for a reader meant to survive real input: every compiled module the
+     * build produces decodes end to end - every op modeled, every constant index resolving inside
+     * its own method's pool - without throwing. Coverage claims are cheap; this is what makes them
+     * checkable, and it is what would catch a new op class landing unmodeled.
+     */
+    @Test
+    public void everyShippedModuleDisassemblesCompletely() throws Exception {
+        Path lib = XdkOutputs.root().resolve("xdk/build/install/xdk/lib");
+        assumeTrue(Files.isDirectory(lib), "compiled XDK lib is required: " + lib);
+
+        List<Path> modules;
+        try (var paths = Files.list(lib)) {
+            modules = paths.filter(p -> p.toString().endsWith(".xtc")).sorted().toList();
+        }
+        assumeTrue(!modules.isEmpty(), "no compiled modules found in " + lib);
+
+        var failures = new ArrayList<String>();
+        long ops = 0, operands = 0;
+        for (Path path : modules) {
+            try {
+                ModuleView view = ModuleView.open(path);
+                for (MethodStructure method : view.methods().toList()) {
+                    for (ModuleView.Resolved decoded : view.decode(method)) {
+                        ops++;
+                        if (!decoded.modeled()) {
+                            failures.add(path.getFileName() + ": unmodeled op "
+                                    + decoded.op().getClass().getSimpleName());
+                        }
+                        for (ModuleView.Referent operand : decoded.operands()) {
+                            operands++;
+                            if (operand.display().contains("UNRESOLVED")) {
+                                failures.add(path.getFileName() + ": unresolved " + operand.role());
+                            }
+                        }
+                    }
+                }
+                view.disassemble();
+                view.digest();
+            } catch (RuntimeException | Error e) {
+                failures.add(path.getFileName() + ": " + e);
+            }
+        }
+
+        assertTrue(failures.isEmpty(),
+                () -> "modules failed to decode: " + failures.stream().distinct().limit(10).toList());
+        long totalOps = ops, totalOperands = operands;
+        assertTrue(totalOps > 10_000, () -> "expected a substantial op count, got " + totalOps);
+        assertTrue(totalOperands > 10_000,
+                () -> "expected a substantial operand count, got " + totalOperands);
     }
 }

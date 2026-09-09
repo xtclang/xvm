@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -10,12 +9,16 @@ import java.lang.classfile.Label;
 import java.lang.classfile.instruction.SwitchCase;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.OptionalInt;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
+import org.xvm.asm.OpOperand;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.RegisterInfo;
@@ -261,4 +264,20 @@ public class JumpInt
 
     private transient int[] m_acExits;
     private transient int   m_cDefaultExits;
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(List.of(OpOperand.decode("condition", m_nArg)));
+    }
+
+    @Override
+    public List<Integer> jumpTable() {
+        return m_aofCase == null ? List.of() : Arrays.stream(m_aofCase).boxed().toList();
+    }
+
+    @Override
+    public OptionalInt jumpDisplacement() {
+        return OptionalInt.of(m_ofDefault);
+    }
+
 }

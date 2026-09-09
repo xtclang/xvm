@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -10,9 +9,13 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpOperand;
 import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.MethodInfo;
@@ -263,4 +266,14 @@ public class GP_DivRem
     private Argument   m_argTarget;
     private Argument   m_argValue;
     private Argument[] m_aargReturn;
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        // its own write(), not OpGeneral's: two values in and an ARRAY of returns out
+        return Optional.of(OpOperand.concat(
+                List.of(OpOperand.decode("target", m_nTarget),
+                        OpOperand.decode("value",  m_nArgValue)),
+                OpOperand.decodeAll("return", m_anRetValue)));
+    }
+
 }

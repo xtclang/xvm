@@ -1,12 +1,14 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 import java.lang.constant.MethodTypeDesc;
+
+import java.util.List;
+import java.util.Optional;
 
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
@@ -240,6 +242,13 @@ public abstract class OpInPlaceAssign
         return super.toString()
                 + ", " + Argument.toIdString(m_argTarget, m_nTarget)
                 + ", " + Argument.toIdString(m_argValue, m_nArgValue);
+    }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(List.of(
+                OpOperand.decode("target", m_nTarget),
+                OpOperand.decode("value",  m_nArgValue)));
     }
 
     protected int m_nTarget;

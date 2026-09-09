@@ -4,6 +4,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.Frame;
@@ -113,6 +116,13 @@ public abstract class OpPropInPlaceAssign
 
 
     // ----- data fields ---------------------------------------------------------------------------
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(OpOperand.concat(super.operands(),
+                OpOperand.decode("target", m_nTarget),
+                OpOperand.decode("value",  m_nValue)));
+    }
 
     protected int m_nTarget;
     protected int m_nValue;

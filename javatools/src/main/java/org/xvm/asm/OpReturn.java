@@ -7,6 +7,9 @@ import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.op.GuardAll;
 
 import org.xvm.javajit.BuildContext;
@@ -378,6 +381,13 @@ public abstract class OpReturn
     }
 
     // ----- fields --------------------------------------------------------------------------------
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        // nothing at this level - the transient guard fields are control-flow bookkeeping, not
+        // operands. Subclasses that return a value append it.
+        return Optional.of(List.of());
+    }
 
     protected transient int     m_ixAllGuard;
     protected transient boolean m_fCallFinally;

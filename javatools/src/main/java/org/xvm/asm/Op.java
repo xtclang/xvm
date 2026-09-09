@@ -160,6 +160,19 @@ public abstract class Op {
     }
 
     /**
+     * A table switch's branch table: the displacement of each case, in case order.
+     *
+     * <p>The sibling of {@link #jumpDisplacement()} for ops that branch many ways, and excluded
+     * from {@link #operands()} for the same reason - these are raw counts, not encoded arguments.
+     * The case VALUES are operands and appear there; this is where they land.</p>
+     *
+     * @return the per-case displacements, or empty if this op is not a table switch
+     */
+    public List<Integer> jumpTable() {
+        return List.of();
+    }
+
+    /**
      * @return the scope depth of the op (one-based)
      */
     public int getDepth() {

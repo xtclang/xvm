@@ -2,7 +2,11 @@ package org.xvm.asm.op;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.Op;
+import org.xvm.asm.OpOperand;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Scope;
@@ -56,4 +60,12 @@ public class Guarded
      * The JIT scope guarded by the underlying {@link CatchStart}.
      */
     private Scope m_scope;
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        // structural: this op writes nothing beyond its opcode, so the answer is a present but
+        // EMPTY list - it has no operands - rather than the absent answer meaning "not modeled"
+        return Optional.of(List.of());
+    }
+
 }

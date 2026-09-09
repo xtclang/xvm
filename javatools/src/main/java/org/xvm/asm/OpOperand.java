@@ -1,9 +1,12 @@
 package org.xvm.asm;
 
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 
 /**
@@ -91,14 +94,68 @@ public sealed interface OpOperand {
      * @return the decoded operands, empty if {@code anArg} is null
      */
     static List<OpOperand> decodeAll(String role, int[] anArg) {
-        if (anArg == null) {
-            return List.of();
-        }
-        var list = new ArrayList<OpOperand>(anArg.length);
-        for (int i = 0; i < anArg.length; i++) {
-            list.add(decode(role + '[' + i + ']', anArg[i]));
-        }
-        return List.copyOf(list);
+        return anArg == null
+                ? List.of()
+                : IntStream.range(0, anArg.length)
+                        .mapToObj(i -> decode(role + '[' + i + ']', anArg[i]))
+                        .toList();
+    }
+
+    /**
+     * Build an operand list from what a superclass contributed plus this level's own, which is the
+     * shape almost every override has: {@code super.operands()} then a fixed few more.
+     *
+     * <p>Java has no {@code buildList}, and the alternative - a local {@code ArrayList} then
+     * {@code List.copyOf} - spends four lines saying something structural in a mutable idiom. The
+     * result is unmodifiable either way ({@link Stream#toList()}), so this is about the reading,
+     * not the safety.</p>
+     *
+     * @param inherited  the superclass's operands, possibly absent
+     * @param added      this level's operands, in wire order
+     *
+     * @return the combined, unmodifiable list
+     */
+    static List<OpOperand> concat(Optional<List<OpOperand>> inherited, OpOperand... added) {
+        return Stream.concat(inherited.stream().flatMap(List::stream), Arrays.stream(added))
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    /**
+     * Join two operand runs, for the "fixed head then a variable tail" shape.
+     *
+     * @param head  the leading operands
+     * @param tail  the trailing operands
+     *
+     * @return the combined, unmodifiable list
+     */
+    static List<OpOperand> concat(List<OpOperand> head, List<OpOperand> tail) {
+        return Stream.concat(head.stream(), tail.stream()).toList();
+    }
+
+    /**
+     * Build a fixed operand list in which absent positions are passed as null - a conditional
+     * operand can then be written as an inline ternary instead of driving a mutable builder.
+     *
+     * @param maybeNull  the operands, in wire order, with null for any that this op omits
+     *
+     * @return the present operands, unmodifiable
+     */
+    static List<OpOperand> of(OpOperand... maybeNull) {
+        return Arrays.stream(maybeNull).filter(Objects::nonNull).toList();
+    }
+
+    /**
+     * As {@link #concat(Optional, OpOperand...)}, for a variable-length tail such as an argument
+     * array.
+     *
+     * @param inherited  the superclass's operands, possibly absent
+     * @param added      this level's operands
+     *
+     * @return the combined, unmodifiable list
+     */
+    static List<OpOperand> concat(Optional<List<OpOperand>> inherited, List<OpOperand> added) {
+        return Stream.concat(inherited.stream().flatMap(List::stream), added.stream()).toList();
     }
 
     private static String specialName(int nArg) {

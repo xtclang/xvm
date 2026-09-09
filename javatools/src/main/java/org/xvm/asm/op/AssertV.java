@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -10,9 +9,13 @@ import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpOperand;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -400,4 +403,10 @@ public class AssertV
     private Argument[] m_aArgValue;
 
     private transient volatile String[] m_asParts;
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(OpOperand.concat(super.operands(), OpOperand.decodeAll("value", m_anValue)));
+    }
+
 }

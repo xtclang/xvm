@@ -1,8 +1,11 @@
 package org.xvm.asm.op;
 
+import java.util.List;
+import java.util.Optional;
 
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpOperand;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -34,4 +37,12 @@ public class SynInit
                 ? iPC + 1
                 : frame.call1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
     }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        // structural: this op writes nothing beyond its opcode, so the answer is a present but
+        // EMPTY list - it has no operands - rather than the absent answer meaning "not modeled"
+        return Optional.of(List.of());
+    }
+
 }

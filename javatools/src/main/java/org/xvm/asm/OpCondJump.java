@@ -9,7 +9,6 @@ import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -743,15 +742,10 @@ public abstract class OpCondJump
     public Optional<List<OpOperand>> operands() {
         // mirrors write() exactly: the type is present only for a binary op, the second value only
         // when there is one, and m_ofJmp is NOT here - it is a displacement, see jumpDisplacement()
-        var list = new ArrayList<OpOperand>(3);
-        if (isBinaryOp()) {
-            list.add(OpOperand.decode("type", m_nType));
-        }
-        list.add(OpOperand.decode("value", m_nArg));
-        if (hasSecondArgument()) {
-            list.add(OpOperand.decode("value2", m_nArg2));
-        }
-        return Optional.of(List.copyOf(list));
+        return Optional.of(OpOperand.of(
+                isBinaryOp()        ? OpOperand.decode("type",   m_nType)  : null,
+                                      OpOperand.decode("value",  m_nArg),
+                hasSecondArgument() ? OpOperand.decode("value2", m_nArg2)  : null));
     }
 
     @Override

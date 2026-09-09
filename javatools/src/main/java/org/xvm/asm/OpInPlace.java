@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -10,6 +9,9 @@ import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
+
+import java.util.List;
+import java.util.Optional;
 
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
@@ -466,6 +468,13 @@ public abstract class OpInPlace
      */
     protected JitMethodDesc buildOpCallProperty(BuildContext bctx, CodeBuilder code) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(OpOperand.of(
+                               OpOperand.decode("target", m_nTarget),
+                isAssignOp() ? OpOperand.decode("return", m_nRetValue) : null));
     }
 
     // ----- fields --------------------------------------------------------------------------------

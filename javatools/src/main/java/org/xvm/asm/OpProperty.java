@@ -1,9 +1,11 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import java.util.List;
+import java.util.Optional;
 
 import org.xvm.asm.constants.PropertyConstant;
 
@@ -54,6 +56,12 @@ public abstract class OpProperty extends Op {
     @Override
     public String toString() {
         return super.toString() + ' ' + Argument.toIdString(m_idProp, m_nPropId);
+    }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        // the property this op names; subclasses append their own operands to this
+        return Optional.of(List.of(OpOperand.decode("property", m_nPropId)));
     }
 
     protected int m_nPropId;

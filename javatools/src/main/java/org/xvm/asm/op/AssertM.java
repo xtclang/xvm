@@ -1,14 +1,17 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.OpOperand;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -96,4 +99,10 @@ public class AssertM
     protected int m_nMsgConstId;
 
     private StringConstant m_constMsg;
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(OpOperand.concat(super.operands(), OpOperand.decode("message", m_nMsgConstId)));
+    }
+
 }

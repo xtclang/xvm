@@ -5,6 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+import java.util.Optional;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -79,6 +82,13 @@ public abstract class OpMove
      */
     public int getRegisterId() {
         return m_nFromValue >= 0 ? m_nFromValue : -1;
+    }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(List.of(
+                OpOperand.decode("from", m_nFromValue),
+                OpOperand.decode("to",   m_nToValue)));
     }
 
     protected int m_nFromValue;

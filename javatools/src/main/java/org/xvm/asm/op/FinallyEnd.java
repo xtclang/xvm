@@ -1,12 +1,15 @@
 package org.xvm.asm.op;
 
-
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.Op;
+import org.xvm.asm.OpOperand;
 import org.xvm.asm.Scope;
 
 import org.xvm.javajit.BuildContext;
@@ -255,4 +258,12 @@ public class FinallyEnd
 
     private transient boolean m_fAdvances    = true;
     private transient int     m_nFinallyAddr = -1;
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        // structural: this op writes nothing beyond its opcode, so the answer is a present but
+        // EMPTY list - it has no operands - rather than the absent answer meaning "not modeled"
+        return Optional.of(List.of());
+    }
+
 }

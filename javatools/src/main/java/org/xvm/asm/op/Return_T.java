@@ -1,12 +1,15 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.OpOperand;
 import org.xvm.asm.OpReturn;
 
 import org.xvm.runtime.Frame;
@@ -105,6 +108,11 @@ public class Return_T
         }
 
         private final TupleHandle m_hValue;
+    }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(List.of(OpOperand.decode("value", m_nArg)));
     }
 
     private int      m_nArg;

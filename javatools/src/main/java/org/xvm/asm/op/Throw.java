@@ -1,15 +1,18 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpOperand;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.RegisterInfo;
@@ -114,4 +117,10 @@ public class Throw
     private int m_nArgValue;
 
     private Argument m_argValue; // never a Constant
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(List.of(OpOperand.decode("value", m_nArgValue)));
+    }
+
 }

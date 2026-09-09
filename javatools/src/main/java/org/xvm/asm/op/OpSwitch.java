@@ -7,12 +7,16 @@ import java.io.IOException;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.OptionalInt;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
+import org.xvm.asm.OpOperand;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ArrayConstant;
@@ -479,4 +483,20 @@ public abstract class OpSwitch
             return this.compareTo(that) <= 0 ? that : this;
         }
     }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(OpOperand.decodeAll("case", m_anConstCase));
+    }
+
+    @Override
+    public List<Integer> jumpTable() {
+        return m_aofCase == null ? List.of() : Arrays.stream(m_aofCase).boxed().toList();
+    }
+
+    @Override
+    public OptionalInt jumpDisplacement() {
+        return OptionalInt.of(m_ofDefault);
+    }
+
 }

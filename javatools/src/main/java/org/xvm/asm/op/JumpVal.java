@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -16,12 +15,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpOperand;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ByteConstant;
@@ -761,4 +762,10 @@ public class JumpVal
     private static final int EXCLUDE_MASK = 0xC000_0000;
     private static final int LO_EX        = 0x8000_0000;
     private static final int HI_EX        = 0x4000_0000;
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(OpOperand.concat(super.operands(), OpOperand.decode("condition", m_nArgCond)));
+    }
+
 }

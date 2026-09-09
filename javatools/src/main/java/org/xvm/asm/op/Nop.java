@@ -1,14 +1,17 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpOperand;
 
 import org.xvm.javajit.BuildContext;
 
@@ -154,4 +157,12 @@ public class Nop extends Op {
 
     private int m_nOp;
     private int m_cLines;
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        // no operands: LINE_N writes a line COUNT, which is a raw value and not something the op
+        // operates on, so it is deliberately absent rather than dressed up as a register
+        return Optional.of(List.of());
+    }
+
 }

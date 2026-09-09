@@ -1,11 +1,13 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
+
+import java.util.List;
+import java.util.Optional;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -122,6 +124,12 @@ public abstract class OpIndexInPlace
 
         regElement.store(bctx, code, typeEl);
         storeArrayElement(bctx, code, regArray, regElement);
+    }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        // OpIndex supplies target and index; this level adds the value written through them
+        return Optional.of(OpOperand.concat(super.operands(), OpOperand.decode("value", m_nValue)));
     }
 
     // ----- fields --------------------------------------------------------------------------------

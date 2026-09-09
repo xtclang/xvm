@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -9,6 +8,9 @@ import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
+
+import java.util.List;
+import java.util.Optional;
 
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -360,6 +362,15 @@ public abstract class OpGeneral
             throw new UnsupportedOperationException(toName(getOpCode())
                     + " operation on multi-slot");
         }
+    }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        // mirrors write(): the value operand exists only for a binary op
+        return Optional.of(OpOperand.of(
+                              OpOperand.decode("target", m_nTarget),
+                isBinaryOp() ? OpOperand.decode("value",  m_nArgValue) : null,
+                              OpOperand.decode("return", m_nRetValue)));
     }
 
     // ----- fields --------------------------------------------------------------------------------

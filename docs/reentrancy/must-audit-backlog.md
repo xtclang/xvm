@@ -115,7 +115,7 @@ category below is marked `must audit`, it becomes `must fix` as soon as a test,
 diagnostic, or code inspection proves owner sharing, cross-request reuse, or
 runtime publication.
 
-### PARTLY DONE: programmatic module reader, operands modeled to ~53% (updated 2026-09-09)
+### DONE: programmatic module reader, all 215 op classes modeled (updated 2026-09-09)
 
 > **History.** This row first said to lift a disassembler from the Kotlin research fork. That became
 > wrong when `ModuleView` landed (`f71f3a128`) - the tree already had the reader. It was then
@@ -133,18 +133,17 @@ objects: component tree, methods, ops, constants, a timestamp-free `digest()`, `
 - `ModuleView.disassemble()` renders from the model where one exists and falls back to `toString`
   where it does not, rather than pretending.
 
-**Coverage: 115 of 215 op classes (~53%)**, via the shared bases - `OpCallable` (38),
-`OpInvocable` (17), `OpCondJump` (17), `OpVar` (16), `OpTest` (14), `OpIndex` (8), `OpJump` (5).
-Verified against the real compiled `ecstasy.xtc`: every constant index resolved inside its method's
-own pool with no `UNRESOLVED` operand, and all 7887 jump ops decode with both their operands and
-their displacement.
+**Coverage: 215 of 215 op classes.** Swept over every `.xtc` in the tree - 726 modules,
+5,394,089 ops, 6,669,554 operands - with **0 failures, 0 unmodeled ops and 0 unresolved operands**,
+producing 357 MB of disassembly. `ModuleViewTest.everyShippedModuleDisassemblesCompletely` keeps
+that checkable against the built XDK, so a new op class landing unmodeled is a test failure rather
+than a silent hole.
 
-**Why coverage is partial by design, and must stay honest.** The wire format is positional and
-untyped: a non-negative int is a register in one op and a count or jump offset in another, and only
-the op class knows which. A uniform decode would therefore have to guess, and a confidently wrong
-operand is worse than an absent one. So an unmodeled class answers `Optional.empty()` - which is
-distinct from an op that genuinely has no operands, and `ModuleViewTest` asserts that distinction
-holds rather than letting coverage silently look total.
+**Absent still differs from empty.** Full coverage did not remove the distinction, it just made
+one side currently unoccupied: `Op.operands()` still defaults to `Optional.empty()`, so a NEW op
+class that forgets to model itself is reported rather than being indistinguishable from `Exit`,
+which answers a present but EMPTY list. Nothing guesses - the wire format is positional and untyped,
+so a uniform decode could not be correct.
 
 **A displacement is not an operand.** `OpCondJump`'s jump offset was the open question here, and
 the answer was already in the tree: both `OpJump` and `OpCondJump` have had `getRelativeAddress()`
@@ -157,9 +156,11 @@ would make a caller reading "register #3" and one reading "jump forward 3" indis
 > its target **silently missing**. The dump asks for the displacement separately, and a test asserts
 > the rendering still contains it.
 
-**Remaining, in order of size.** `OpGeneral` (14), `OpPropInPlaceAssign` (11), `OpProperty` (6),
-`OpMove` (5), `OpReturn` (4), plus 15 classes extending `Op` directly. `OpVar` subclasses that carry
-a name id model it themselves.
+**Raw values stayed out of the operand model**, consistently: a jump displacement
+(`Op.jumpDisplacement()`), a switch's branch table (`Op.jumpTable()`), `Nop`'s line count and
+`GuardStart`'s catch offsets are counts, not encoded arguments. `MoveThis`'s access field went the
+other way on inspection - it holds `A_PUBLIC`/`A_PROTECTED`/`A_PRIVATE`/`A_STRUCT`, which really are
+pseudo-register encodings, so it decodes as a `Special`.
 
 ### SHOULD-FIX: the equality path has no inline cache, and one obstacle must be settled first (added 2026-09-09)
 

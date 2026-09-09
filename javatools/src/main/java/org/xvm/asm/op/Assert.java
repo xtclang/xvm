@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -9,11 +8,14 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpOperand;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -237,4 +239,12 @@ public class Assert
 
     private Argument       m_argTest;
     private MethodConstant m_idConstruct;
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(List.of(
+                OpOperand.decode("test",        m_nTest),
+                OpOperand.decode("constructor", m_nConstructor)));
+    }
+
 }

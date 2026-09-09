@@ -1,14 +1,17 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.OpOperand;
 import org.xvm.asm.OpProperty;
 import org.xvm.asm.Scope;
 
@@ -125,6 +128,11 @@ public class L_Get
     }
 
     // ----- fields --------------------------------------------------------------------------------
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(OpOperand.concat(super.operands(), OpOperand.decode("return", m_nRetValue)));
+    }
 
     private int m_nRetValue;
 

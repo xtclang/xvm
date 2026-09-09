@@ -1,6 +1,5 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -13,11 +12,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpOperand;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ArrayConstant;
@@ -616,4 +617,10 @@ public class JumpVal_N
     private record RangeMatch(ObjectHandle lower, ObjectHandle upper, long caseBits) {}
 
     private enum CacheCategory {SWITCH}
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        return Optional.of(OpOperand.concat(super.operands(), OpOperand.decodeAll("condition", m_anArgCond)));
+    }
+
 }

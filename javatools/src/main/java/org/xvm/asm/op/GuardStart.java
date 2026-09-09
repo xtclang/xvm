@@ -1,15 +1,19 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.util.Arrays;
+import java.util.stream.Stream;
+import java.util.stream.IntStream;
 import java.util.List;
+import java.util.Optional;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.OpOperand;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
@@ -233,4 +237,22 @@ public class GuardStart
     private int m_nNextVar;
 
     private transient MultiGuard m_guard; // cached struct
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        // one type/name pair per catch clause; the catch displacements are branch targets and
+        // belong to jumpTable(), not here
+        return Optional.of(IntStream.range(0, m_anTypeId.length)
+                .boxed()
+                .flatMap(i -> Stream.of(
+                        OpOperand.decode("catchType[" + i + ']', m_anTypeId[i]),
+                        OpOperand.decode("catchName[" + i + ']', m_anNameId[i])))
+                .toList());
+    }
+
+    @Override
+    public List<Integer> jumpTable() {
+        return Arrays.stream(m_aofCatch).boxed().toList();
+    }
+
 }
