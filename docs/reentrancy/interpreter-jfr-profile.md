@@ -322,6 +322,12 @@ spliterator per node, purely to answer "is my cached copy stale" — for a quest
 
 **W1. `MethodStructure.getOps()` does a system-property lookup on every frame creation.**
 
+> **Provenance correction (2026-09-09).** This was filed here as a master-side cheap win. It is
+> not: master's `getOps` has no such lookup. The call was introduced on this branch by
+> `e46b2c4f7` "Harden runtime op publication", so it is a self-inflicted regression, and it is
+> fixed in `de4abe4a8`. Recorded rather than deleted because the measurement below is sound and
+> the misattribution is the kind that quietly turns into a wrong bug report.
+
 ```java
 var ops = code.getAssembledOps();
 if (Boolean.getBoolean(VALIDATE_RUNTIME_CODE_PROPERTY)) {   // ← every call

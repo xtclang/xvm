@@ -57,6 +57,7 @@ Document roles:
 | Proof/evidence ledger | `test-failure-evidence.md`, `runtime-ownership-hardening-ledger.md`, `fixed-in-this-branch.md` | A test proves red/green behavior, a fix lands, or evidence changes. |
 | Topic audits | `*-audit.md`, `plans/*.md` | The underlying site census, analysis, or design detail changes. |
 | Presentation | `presentation.md` | The sales narrative, click-through demo, or teleprompter script changes. |
+| Runtime performance profile | `interpreter-jfr-profile.md` | A JFR pass re-measures the interpreter, or a listed cheap win is taken. Added 2026-09-09; W1 there is superseded (it was a branch regression, not a master win - fixed in `de4abe4a8`), and W6/W7 are now rows 55-57 of `plans/master-issue-submissions.md`. |
 
 ## Current Wide Scans
 
@@ -114,36 +115,77 @@ category below is marked `must audit`, it becomes `must fix` as soon as a test,
 diagnostic, or code inspection proves owner sharing, cross-request reuse, or
 runtime publication.
 
-### SHOULD-FIX: lift the real disassembler from the Kotlin research fork (added 2026-09-08)
+### SHOULD-FIX: finish the programmatic module reader (rewritten 2026-09-09)
 
-**What exists today.** `org.xvm.tool.Disassembler` is a *printer*: it walks a `FileStructure` and
-renders it for a human. It cannot be used to read a module into a form you can inspect
-programmatically, modify, and write back - so there is no round-trip.
+> **Corrected.** This row previously said there was "no equivalent for `.xtc`" and prescribed
+> lifting the disassembler from the Kotlin research fork. That is no longer accurate, and following
+> it would have meant porting something the tree now has. `org.xvm.api.ModuleView` (`f71f3a128`)
+> supplies the reader: `walk()`, `methods()`, `ops(method)`, `constants()`, `signature()`,
+> `digest()`, `compareWith()`, `writeTo()`. The remaining gap is narrower and is stated below.
 
-**Why it matters now, and it is not only a tooling nicety.** Two things in this session ran into the
-gap from opposite directions:
+**What now exists.** `ModuleView` opens a `.xtc` lazily and exposes its structure as objects rather
+than as text: the component tree, methods, each method's ops, the constant pool, a timestamp-free
+`digest()` for "did this rebuild change anything", and a `compareWith` returning added/removed
+members. `org.xvm.tool.Disassembler` remains a *printer* and was deliberately not extended - its
+shape is a renderer and would have to be inverted.
 
-- **Tests that assert on Java source text.** Six remain in the tree, and the branch already deleted
-  five more (`54bcea306`) for passing when the code is spelled the expected way. The stated remedy is
-  to read the compiled classes instead, which works for Java (`java.lang.classfile` is in the JDK and
-  `FreezeViewSharingTest` and the two `TypeInfo` gates now use it). There is **no equivalent for
-  `.xtc`** - an assertion about a compiled Ecstasy module has nothing to read but the printer's
-  output, which is exactly the text-matching trap one level down.
-- **Verifying compiler output.** `XdkBuildOutputVerifyTest` compares engine output against the built
-  XDK "structurally", and what it can compare is limited by what can be read back.
+**The gap that is left: operands.** `Op` exposes `getOpCode()`, `getAddress()`, `getDepth()`,
+`getGuardDepth()` and `getGuardAllDepth()` - position and structure - but nothing that says what an
+op *operates on*. The operands live in per-subclass protected fields (`m_nTarget`, `m_nIndex`,
+`m_nRetValue`, ...) with no uniform accessor. So `ModuleView.disassemble()` renders each op with
+`.append(op)`, i.e. `Op.toString()`, and any assertion about an op's arguments still has to parse
+that string. That is the same text-matching trap the deleted source-comparison tests fell into, one
+level down.
 
-**What to lift.** The experimental Kotlin stateless/Roslyn-style compiler research fork has a real
-disassembler written for this. Taking that as the reference is the point - it was written to read
-modules rather than to print them - rather than extending `tool/Disassembler`, whose shape is a
-renderer and would have to be inverted.
+**Why it still matters.**
 
-**Scope: unmeasured.** Deliberately not estimated here; the Kotlin source has not been read against
-this tree, and the interesting cost is how much of the `.xtc` format the research version covers
-versus what a round-trip needs. Establish that before scheduling it.
+- **Tests that assert on `.xtc` structure.** Reading ops as objects is enough to assert on opcode
+  sequences and scope depth; it is not enough to assert "this call targets that method" or "this
+  jump lands there" without string matching.
+- **Module-level diffing.** `compareWith` compares member names and `digest()` compares op bytes.
+  Neither can say *how* two versions of a method differ.
+- **Read-modify-write tooling.** The read half is object-level for structure but text-level for
+  operands, so there is no basis for a rewrite.
 
-**What it buys.** A programmatic reader for compiled modules: structural assertions on `.xtc` output
-that do not match strings, a basis for module-level diffing, and the read half of read-modify-write
-tooling.
+**Scope: still unmeasured, but the shape is now known.** A uniform operand accessor across ~200 op
+classes is the naive reading and is not the only option; the shared bases (`OpInvocable`,
+`OpIndex`, `OpCallable`, `OpVar`, `OpTest`, `OpCondJump`) already hold the fields for most ops, and
+a default that reports "not modeled" is honest where a guess would not be. Establish coverage
+against the bases before scheduling.
+
+**Cross-reference:** the interpreter profile that drove much of this is
+`../interpreter-jfr-profile.md`; the two op-cache defects it turned up are rows 55-57 of
+`master-issue-submissions.md`.
+
+### SHOULD-FIX: the equality path has no inline cache, and one obstacle must be settled first (added 2026-09-09)
+
+**Not a bug.** `OpInvocable` and `OpIndex` had caches that were *broken* (rows 55-56 of
+`plans/master-issue-submissions.md`). `IsEq` has **no** cache at all, so nothing there is wrong -
+it is simply unoptimized, and it does not belong on a master bug list.
+
+**Size.** `TypeConstant.callEquals` measured 21.33% inclusive on an arithmetic workload and 21.59%
+in the warm module sweep, with `Constant.compareTo` the single hottest self frame at 10.7-11.0% and
+98.5% of it arriving through this path. The profile's estimate was ~10% recoverable
+(`../interpreter-jfr-profile.md`, W6).
+
+**The obstacle, and it is not the cache shape.** The shared `org.xvm.runtime.InlineCache` already
+carries three shape parts, which is exactly what this site needs - the key must include the
+frame-resolved type, because `Frame.resolveType` depends on `getGenericsResolver` and `f_hThis` and
+so varies per frame. The real problem is that `callEquals` is **virtual with six overrides**
+(`Annotated`, `Intersection`, `Difference`, `Recursive`, `Union`, `Relational`), and two of them do
+not select a composition at all: `AnnotatedTypeConstant` runs a *sequence* of equality calls through
+`Utils.callEqualsSequence`, and `UnionTypeConstant` recurses on `isA` tests against its member
+types. Memoizing "the composition to compare on" would be **wrong** there, not merely suboptimal.
+
+**A sound design exists.** Extract `selectEqualsComposition` from the base implementation so
+existing callers are unaffected; add a virtual predicate (default true, overridden false by the six)
+by which each type declares whether its selection is stable; cache only for types that say yes.
+
+**Measure before building.** `TypeConstant.equals` short-circuits on `obj == this`, so the two
+comparisons in the base `callEquals` are nearly free whenever the composition's type is the *same
+instance* as the resolved type, and only cost a full `compareDetails` when it is equal-but-not-
+identical. The whole estimate depends on how often that second case occurs. Count the identity hit
+rate first; if identity already dominates, this is not worth touching the equality path for.
 
 ### 2026-08-28 sweep (post rebase-onto-master + display-purity campaign)
 

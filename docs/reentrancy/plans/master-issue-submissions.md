@@ -121,6 +121,9 @@ Status is as of this file's last update; check the PR before re-filing.
 | 52 | `Parser` reports "no such directory or file" for an include path that resolved and could not be READ | key the message off `resource`, not off an exception | independent | `checkReadable` answers false without throwing, so there is usually no exception to key on |
 | 53 | `MethodStructure.assemble` catches an op-assembly failure, prints to stderr and writes the method anyway - producing a loadable `.xtc` whose body is empty | delete the catch; rethrow with context | independent | a corrupt artifact, not a bad message |
 | 54 | `OpJump.toString()` recurses through jump targets and overflows the stack on a module read back from disk | render the target's opcode name, not the target | independent | only reachable after reading a `.xtc`, which is why nothing hit it |
+| 55 | `OpInvocable.getCallChain`'s inline cache rewrites on every miss and probes twice, so a bimorphic call site pays four map operations per call and never hits - strictly worse than no cache | stop writing back after N consecutive misses; read both halves as one entry | independent | perf only; no behaviour change, no red test |
+| 56 | `OpIndex.getOpChain`/`saveOpChain` has the identical shape - two lookups, two writes, no deopt | same fix; share the policy with row 55 | shares a fix with 55 | perf only |
+| 57 | `ServiceContext.f_mapOpInfo` is a `WeakHashMap` whose weak keys protect nothing, and whose weak VALUES can collect a live cache entry | identity-keyed strong map | independent | the weak-value half is a correctness wart, not only perf |
 
 ### Filing a row as an issue or PR
 
@@ -217,6 +220,9 @@ without its listed dependency.
 | 35 | Source-only; two methods, three lines each. Fixed in-branch, verified end to end. | `org.xvm.runtime.IndexNarrowingTest.noIndexedMethodRangeChecksANarrowedIndex` fails on the unfixed source naming both sites; at run time `"abcdefgh"[4294967300]` answers `'e'` where the same index on an `Int[]` raises. | Ready after manual review. |
 | 36 | Source-only; one offset and one missing override. Fixed in PR #563 with tests. | `TestArray.testDeleteRange` fails on master: `Int8[1,2,3,4,5].deleteAll(1..2)` answers `[1, 3, 4]` where `[1, 4, 5]` is required, and `String[...].deleteAll(1..2)` throws `ClassCastException: StringArrayHandle cannot be cast to GenericArrayDelegate`. | Filed as PR #563. |
 | 37 | Source-only; two added overrides, no change to existing code. Fixed on `lagergren/fix-slice-compare-identity`, verified red-on-master and green-after. | `TestArray.testSliceIdentity` dies on clean master `145f12f51` at `array.x:84` with `ClassCastException: SliceHandle cannot be cast to GenericArrayDelegate`; the view case dies the same way with `ByteBasedBitView$ViewHandle`. Both answer `True` after the fix, and the full `array.x` suite runs with 0 unhandled exceptions. | Filed as PR #564. |
+| 55 | Source-only; `OpInvocable.getCallChain` plus a shared `InlineCache` type. Fixed in-branch. | **No red test, and none is honest here** - the defect is cost, not behaviour. Evidence is the code shape (unconditional `setOpInfo` on every miss, two `getOpInfo` calls per hit) plus JFR: `getOpInfo` 4.78% self and `setOpInfo` 2.63% self of interpreter CPU on a virtual-dispatch workload, both 100% leaf. | Needs a benchmark before filing. |
+| 56 | Source-only; `OpIndex.getOpChain`/`saveOpChain`. Fixed in-branch on the shared cache. | Same: shape-based, no red test. Verified identical on `master:javatools/src/main/java/org/xvm/asm/OpIndex.java`. | Needs a benchmark before filing. |
+| 57 | Source-only; one field type and two method bodies in `ServiceContext`. Fixed in-branch. | Weak keys: shape argument, no red test. Weak values: a `CallChain` built for a private method is reachable ONLY through the `WeakReference`, so a GC between two calls at that site silently turns every later call into a miss. Reproducing it needs a forced GC between calls at a private-method site. | Needs a benchmark before filing. |
 
 ## Reuse Exposure Categories
 
@@ -4060,3 +4066,115 @@ debugger rendering a frame, a log line, or a diagnostic describing another failu
 meant to be the thing that tells you what went wrong.
 
 **Fix:** render the target's opcode name rather than the target: `"-> " + toName(opDest.getOpCode())`.
+
+
+## 55. `OpInvocable.getCallChain`'s inline cache costs more than having no cache
+
+**FIXED** on `lagergren/lazy-instance` (`776557fba`, `d7b2f2d6c`). Not pushed.
+
+**Status/category:** Real defect in current master source. Performance, not behaviour. Found by
+profiling, not by a failing test.
+
+**Explanation.** The cache is monomorphic, keyed on the target's `TypeComposition`, and it rewrites
+unconditionally on every miss:
+
+```java
+CallChain       chain     = context.getOpInfo(this, Category.Chain);        // probe 1
+TypeComposition clazzPrev = context.getOpInfo(this, Category.Composition);  // probe 2
+TypeComposition clazz     = hTarget.getComposition();
+if (chain != null && clazz == clazzPrev) { return chain; }
+context.setOpInfo(this, Category.Composition, clazz);                       // write 1
+...
+context.setOpInfo(this, Category.Chain, chain);                             // write 2
+```
+
+At a site that alternates between two compositions the guard never holds, so every call performs
+**four** `WeakHashMap` operations, allocates two `WeakReference`s, and then resolves the chain from
+scratch exactly as it would with no cache at all. The cache is pure overhead there.
+
+Two separate problems are stacked: the **policy** (no deoptimization, so a thrashing site keeps
+paying) and the **shape** (chain and composition keyed separately, so both the hit and the miss
+path cost two map operations where one would do).
+
+**Master evidence:** `javatools/src/main/java/org/xvm/asm/OpInvocable.java`, `getCallChain`.
+
+**Measurement:** on a virtual-dispatch workload, `getOpInfo` is 4.78% self and `setOpInfo` 2.63%
+self of interpreter CPU, both 100% leaf. The `setOpInfo` share is the megamorphic case rewriting the
+cache every iteration. See `../interpreter-jfr-profile.md`, W7.
+
+**Fix:** read and write the two halves as one entry, and stop writing back after N consecutive
+misses. The count must be of *consecutive* misses, cleared on a hit: counting total misses lets a
+site that is overwhelmingly one composition accumulate to the threshold over a long run and
+deoptimize permanently, which is a regression for exactly the sites the cache serves best.
+
+**No red test, and inventing one would be dishonest.** Nothing about the answer changes; only its
+cost does. Filing should carry a benchmark instead.
+
+## 56. `OpIndex.getOpChain`/`saveOpChain` repeats the same defect
+
+**FIXED** on `lagergren/lazy-instance` (`d7b2f2d6c`). Not pushed.
+
+**Status/category:** Real defect in current master source. Performance. Same shape as row 55.
+
+**Explanation.** `getOpChain` probes twice on a hit and `saveOpChain` writes twice, with no
+deoptimization path:
+
+```java
+CallChain chain = ctx.getOpInfo(this, Category.Chain);
+if (chain != null) {
+    TypeConstant typePrevTarget = ctx.getOpInfo(this, Category.Type);
+    if (typeTarget.equals(typePrevTarget)) { return chain; }
+}
+return null;
+```
+
+Verified identical on master. Note this site compares by `equals` rather than identity, which is
+correct and must be preserved - an equal `TypeConstant` from another pool describes the same target
+and its chain is reusable.
+
+**Master evidence:** `git show master:javatools/src/main/java/org/xvm/asm/OpIndex.java`, the
+`getOpChain`/`saveOpChain` pair.
+
+**Fix:** the same shared cache as row 55, which is why these two should be filed together.
+
+## 57. `ServiceContext.f_mapOpInfo`'s weak keys buy nothing, and its weak values can disable the cache
+
+**FIXED** on `lagergren/lazy-instance` (`776557fba`). Not pushed.
+
+**Status/category:** Real defect in current master source. The key half is performance; the value
+half is a correctness wart.
+
+**The keys.** `private final Map<Op, EnumMap> f_mapOpInfo = new WeakHashMap<>();` - every `get`
+polls the reference queue through `getTable()`. The weakness cannot protect anything, because a live
+`ServiceContext` already retains, strongly, every op it is capable of keying:
+
+- it holds `f_container`; a `Container` holds `f_idModule`; a `ModuleConstant` reaches its
+  `ConstantPool` and thence the component tree the ops belong to;
+- it cannot acquire a *foreign* container's ops either - `validatePassThrough` wraps a
+  boundary-crossing `FunctionHandle` in a `FunctionProxyHandle` whose `call1` compares
+  `frame.f_context == f_ctx` and posts the call back to the owning context, so ops only ever
+  execute on the context of the container that owns their code;
+- and the map dies with the service anyway: `Container.terminate` drops the context, and the
+  container holds its services weakly.
+
+So the keys were weak references to objects the referent's own holder kept alive. No `Op` overrides
+`equals`, so identity was already the lookup semantics and an `IdentityHashMap` is a drop-in.
+
+**The values are the more interesting half.** They are `WeakReference`s too. Most cached chains come
+from `ClassComposition.f_mapMethods` and are strongly held there, but two are built fresh at the
+call site - `new CallChain(method)` for a private method, and `VirtualConstructorChain` - and those
+are reachable *only* through the weak reference. A GC between two calls at such a site collects the
+entry and silently turns every later call into a miss. A cache that stops working under memory
+pressure is a defect in its own right.
+
+Holding values strongly retains nothing new: every cached kind is a type-system artifact the
+container retains regardless, and none reaches an `ObjectHandle` - `VirtualConstructorChain` keeps
+its target's *composition* rather than the handle, and `ExceptionChain`, the one chain kind that
+does hold a handle, is deliberately never cached.
+
+**Master evidence:** `git show master:javatools/src/main/java/org/xvm/runtime/ServiceContext.java`,
+the `f_mapOpInfo` field and the `getOpInfo`/`setOpInfo` pair.
+
+**Fix:** `IdentityHashMap`, values held directly. The lifetime argument above is written into the
+`ServiceContext` class javadoc in-branch, because it is a property of the class rather than of the
+one field.
