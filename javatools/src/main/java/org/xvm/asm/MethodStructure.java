@@ -87,6 +87,15 @@ public final class MethodStructure
      */
     public static final String VALIDATE_RUNTIME_CODE_PROPERTY = "xvm.asm.validateRuntimeCode";
 
+    /**
+     * Read once, deliberately: {@link #getOps} runs per frame creation, i.e. per Ecstasy method
+     * call, and {@code Boolean.getBoolean} is a {@link java.util.Properties Properties} lookup plus
+     * a case-insensitive compare every time. Profiling put that re-read at roughly 1-2% of
+     * interpreter CPU. Nothing sets this property after start-up, and a diagnostics switch has no
+     * business being togglable mid-run anyway.
+     */
+    private static final boolean VALIDATE_RUNTIME_CODE = Boolean.getBoolean(VALIDATE_RUNTIME_CODE_PROPERTY);
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -676,7 +685,7 @@ public final class MethodStructure
         }
 
         var ops = code.getAssembledOps();
-        if (Boolean.getBoolean(VALIDATE_RUNTIME_CODE_PROPERTY)) {
+        if (VALIDATE_RUNTIME_CODE) {
             code.assertRuntimeReadyForDiagnostics();
         }
         return ops;
