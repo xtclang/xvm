@@ -1043,10 +1043,6 @@ public final class OwnershipDiagnostics {
                     container, 2, true, templates);
         }
 
-        private void dumpLazyFields(Object owner, Container expected, int indent) {
-            dumpLazyFields(owner, expected, indent, false);
-        }
-
         private void dumpLazyFields(Object owner, Container expected, int indent,
                                     boolean allowNativeOwner) {
             List<Field> fields = lazyFields(owner.getClass());
@@ -1057,18 +1053,14 @@ public final class OwnershipDiagnostics {
             line(indent, "lazyFields:");
             for (Field field : fields) {
                 Object value = readField(owner, field);
+                String label = fieldLabel(field);
                 if (value instanceof Lazy<?> lazy) {
-                    dumpLazy(field.getDeclaringClass().getSimpleName() + "." + field.getName(),
-                            lazy, expected, indent + 1, allowNativeOwner);
+                    dumpLazy(label, lazy, expected, indent + 1, allowNativeOwner);
                 } else if (value instanceof Lazy.Bound<?, ?> lazy) {
-                    dumpOwnerLazy(field.getDeclaringClass().getSimpleName() + "." + field.getName(),
-                            lazy, lazyOwner(owner, field), expected, indent + 1, allowNativeOwner);
+                    dumpOwnerLazy(label, lazy, lazyOwner(owner, field), expected, indent + 1,
+                            allowNativeOwner);
                 }
             }
-        }
-
-        private void dumpLazy(String label, Lazy<?> lazy, Container expected, int indent) {
-            dumpLazy(label, lazy, expected, indent, false);
         }
 
         private void dumpLazy(String label, Lazy<?> lazy, Container expected, int indent,
@@ -1111,10 +1103,6 @@ public final class OwnershipDiagnostics {
             return ((Lazy.Bound<Object, Object>) bound).get(owner);
         }
 
-        private void dumpMap(String label, Object value, Container expected, int indent) {
-            dumpMap(label, value, expected, indent, false);
-        }
-
         private void dumpMap(String label, Object value, Container expected, int indent,
                              boolean allowNativeOwner) {
             dumpMap(label, value, expected, indent, allowNativeOwner, null);
@@ -1132,10 +1120,6 @@ public final class OwnershipDiagnostics {
                     .sorted(Comparator.comparing(entry -> String.valueOf(entry.getKey())))
                     .forEach(entry -> dumpMapEntry(entry, expected, indent + 1,
                             allowNativeOwner, lazyOwner));
-        }
-
-        private void dumpMapEntry(Map.Entry<?, ?> entry, Container expected, int indent) {
-            dumpMapEntry(entry, expected, indent, false);
         }
 
         private void dumpMapEntry(Map.Entry<?, ?> entry, Container expected, int indent,
@@ -1283,7 +1267,7 @@ public final class OwnershipDiagnostics {
             Occurrence previous = seen.putIfAbsent(value,
                     new Occurrence(path, effectiveExpected, actual));
             if (previous != null && previous.expected != effectiveExpected
-                    && !isLegitimateSharedCurrency(value, previous.expected, effectiveExpected)) {
+                    && !isLegitimateSharedCurrency(value, previous.expected)) {
                 crossShares.add(previous.path + " and " + path
                         + " share " + identity(value)
                         + " previousExpected=" + containerName(previous.expected)
@@ -1305,14 +1289,9 @@ public final class OwnershipDiagnostics {
          * flagging is MUTABLE state observed from more than one container - and it does,
          * regardless of how the observers are related.
          */
-        private static boolean isLegitimateSharedCurrency(Object value, Container previous,
-                                                          Container current) {
+        private static boolean isLegitimateSharedCurrency(Object value, Container previous) {
             return value instanceof ObjectHandle handle
                     && !isMutableSafe(handle);
-        }
-
-        private void recordConstantPool(String path, Constant constant, Container expected) {
-            recordConstantPool(path, constant, expected, false);
         }
 
         private void recordConstantPool(String path, Constant constant, Container expected,
@@ -1321,7 +1300,7 @@ public final class OwnershipDiagnostics {
                 return;
             }
 
-            ConstantPool actual = safe(() -> constant.getConstantPool());
+            ConstantPool actual = safe(constant::getConstantPool);
             Container expectedPoolOwner = effectivePoolOwner(expected, actual, allowNativeOwner);
             if (actual != null && actual != expectedPoolOwner.getConstantPool()) {
                 poolMismatches.add(path + " expected=" + containerName(expectedPoolOwner)
@@ -1372,7 +1351,7 @@ public final class OwnershipDiagnostics {
             }
 
             if (value instanceof Constant constant) {
-                ConstantPool pool = safe(() -> constant.getConstantPool());
+                ConstantPool pool = safe(constant::getConstantPool);
                 Container expectedPoolOwner = expected == null || pool == null
                         ? expected
                         : effectivePoolOwner(expected, pool, allowNativeOwner);
@@ -1473,6 +1452,15 @@ public final class OwnershipDiagnostics {
                     || value instanceof ObjectHandle
                     || value instanceof ServiceContext
                     || value instanceof NativeTemplates;
+        }
+
+        /**
+         * @param field  the field being reported
+         *
+         * @return how the field is named in a dump, as {@code DeclaringClass.fieldName}
+         */
+        private static String fieldLabel(Field field) {
+            return field.getDeclaringClass().getSimpleName() + '.' + field.getName();
         }
 
         private static Object lazyOwner(Object owner, Field field) {
