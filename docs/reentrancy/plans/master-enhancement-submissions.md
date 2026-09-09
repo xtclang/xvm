@@ -5007,12 +5007,18 @@ drift apart.
   read-modify-write; the write half does not exist yet.
 - **The completeness oracle checks counts, not meaning.** It proves no field is missing or invented.
   It would not catch a register labelled as a constant.
-- **The `Var` family is unverified.** `Var`, `Var_N`, `Var_IN`, `Var_D`, `Var_M`, `Var_S`, `Var_T`
-  and `GuardStart` cannot be re-serialized from a disk-read module - their `write` reaches through a
-  `Register` that only exists while compiling - so the oracle skips them, which is ~18% of ops. The
-  test pins that set by name so it cannot silently widen, but `OpVar`'s `isTypeAware()` conditional
-  is currently checked by nothing. Closing it wants a different oracle: compare against the original
-  bytes in the file rather than re-serializing.
+- **One op class stays unverified, down from twelve.** `GuardStart` cannot be re-serialized from a
+  disk-read module, because `resolveAddresses` repopulates `m_aOpCatch` and its `write` then takes
+  the compile-time branch, which needs a real `ConstantRegistry`. That is a limit of the oracle, not
+  a defect. The test pins the set by name so a class joining it fails visibly.
+
+  > **Updated 2026-09-09.** This limitation used to read "the `Var` family is unverified, ~18 % of
+  > ops". Chasing it found the cause was a master bug, not a property of the oracle: `OpVar.write`
+  > dereferenced a `Register` that only exists at compile time, so re-serializing any `Var` op read
+  > from a module threw NPE (row 58 of `master-issue-submissions.md`). Fixing it took unverifiable
+  > ops from 92,149 to 845 - and the newly checkable ones immediately exposed **eleven `Var` classes
+  > whose field models were incomplete**, which is precisely what the blind spot had been hiding.
+  > Verified ops rose from 429,445 to 520,749, and the full-tree sweep gained 329,098 operands.
 
 ### Filing notes
 

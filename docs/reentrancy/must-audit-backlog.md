@@ -143,8 +143,17 @@ zero moved the operand count on a full sweep from 6.67M to 8.82M. Three of those
 brittle regexes in my own analysis scripts (one space vs several, a space before a paren), which is
 its own reminder not to trust a grep as a census.
 
-**Evidence.** Whole tree: 726 modules, 5,394,089 ops, 8,818,893 operands, 391 MB of disassembly,
-with 0 read failures, 0 unmodeled ops, 0 unresolved operands and 0 completeness mismatches.
+**Evidence.** Whole tree: 726 modules, 5,394,089 ops, **9,147,991 operands**, 399 MB of
+disassembly, with 0 read failures, 0 unmodeled ops, 0 unresolved operands and 0 completeness
+mismatches over **520,749** verified ops.
+
+**The oracle found a master bug, which is the point of having one.** It could originally not
+re-serialize 92,149 ops (~18 %) and merely skipped them - the whole `Var` family, under a headline
+of "0 mismatches". The cause was `OpVar.write` dereferencing a compile-time `Register`, so any `Var`
+op read back from a module threw NPE; filed as row 58 of `plans/master-issue-submissions.md`. Fixing
+it dropped unverifiable ops to 845 and immediately exposed **eleven `Var` classes with incomplete
+field models**. Coverage claims are worth exactly as much as the oracle behind them, and an oracle
+that skips what it cannot check is how "complete" stops meaning anything.
 
 ### MEASURED, ready to build: the equality path has no inline cache (updated 2026-09-09)
 
