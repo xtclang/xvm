@@ -85,10 +85,10 @@ public abstract class OpMove
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
+    public Optional<List<OpField>> fields() {
         return Optional.of(List.of(
-                OpOperand.decode("from", m_nFromValue),
-                OpOperand.decode("to",   m_nToValue)));
+                OpField.arg("from", m_nFromValue),
+                OpField.arg("to",   m_nToValue)));
     }
 
     protected int m_nFromValue;

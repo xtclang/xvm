@@ -1,6 +1,8 @@
 package org.xvm.asm.op;
 
 
+import java.util.Optional;
+import java.util.List;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -8,6 +10,7 @@ import java.io.IOException;
 import java.lang.classfile.CodeBuilder;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.OpField;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -138,4 +141,13 @@ public class Invoke_N1
     private int[] m_anArgValue;
 
     private Argument[] m_aArgValue;
+
+    @Override
+    public Optional<List<OpField>> fields() {
+        // mirrors this op's own write(), on top of what the base class emits
+        return Optional.of(OpField.concat(
+                OpField.concat(super.fields(), OpField.args("value", m_anArgValue)),
+                List.of(OpField.arg("return", m_nRetValue))));
+    }
+
 }

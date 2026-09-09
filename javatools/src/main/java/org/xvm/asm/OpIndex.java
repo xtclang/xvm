@@ -599,13 +599,13 @@ public abstract class OpIndex
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
+    public Optional<List<OpField>> fields() {
         return Optional.of(isAssignOp()
-                ? List.of(OpOperand.decode("target", m_nTarget),
-                          OpOperand.decode("index",  m_nIndex),
-                          OpOperand.decode("return", m_nRetValue))
-                : List.of(OpOperand.decode("target", m_nTarget),
-                          OpOperand.decode("index",  m_nIndex)));
+                ? List.of(OpField.arg("target", m_nTarget),
+                          OpField.arg("index",  m_nIndex),
+                          OpField.arg("return", m_nRetValue))
+                : List.of(OpField.arg("target", m_nTarget),
+                          OpField.arg("index",  m_nIndex)));
     }
 
     // ----- fields --------------------------------------------------------------------------------

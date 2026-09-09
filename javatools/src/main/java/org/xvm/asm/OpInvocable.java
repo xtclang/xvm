@@ -538,13 +538,12 @@ public abstract class OpInvocable extends Op {
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(OpOperand.concat(
-                List.of(OpOperand.decode("target", m_nTarget),
-                        OpOperand.decode("method", m_nMethodId)),
-                m_anRetValue == null
-                        ? List.of(OpOperand.decode("return", m_nRetValue))
-                        : OpOperand.decodeAll("return", m_anRetValue)));
+    public Optional<List<OpField>> fields() {
+        // exactly what OpInvocable.write emits, and no more: the arguments and returns are
+        // written by the concrete Invoke_* class, which models them itself
+        return Optional.of(List.of(
+                OpField.arg("target", m_nTarget),
+                OpField.arg("method", m_nMethodId)));
     }
 
     // ----- fields --------------------------------------------------------------------------------

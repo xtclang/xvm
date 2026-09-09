@@ -32,6 +32,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpField;
 import org.xvm.asm.OpOperand;
 import org.xvm.asm.Version;
 
@@ -213,9 +214,10 @@ public final class ModuleView {
      * asking "does this op call that method" has only {@link Op#toString} to match on, which is
      * the string-matching trap one level below source text.</p>
      *
-     * <p>An op whose class does not model its operands yields {@link Resolved#operands()} empty
-     * and {@link Resolved#modeled()} false, and is never guessed at - see {@link OpOperand} for
-     * why a uniform decode cannot be correct.</p>
+     * <p>Every field the op encodes appears here, in wire order - arguments, branch targets and
+     * raw literals alike - so a rendering that walks this list cannot silently drop part of an op.
+     * An op whose class does not model its fields yields {@link Resolved#operands()} empty and
+     * {@link Resolved#modeled()} false, and is never guessed at; see {@link OpField}.</p>
      *
      * @param method  the method to decode
      *
@@ -224,26 +226,32 @@ public final class ModuleView {
     public @NotNull List<Resolved> decode(@NotNull MethodStructure method) {
         Constant[] aconst = method.getLocalConstants();
         return ops(method).stream()
-                .map(op -> op.operands()
+                .map(op -> op.fields()
                         .map(list -> new Resolved(op, true, list.stream()
-                                .map(operand -> resolve(operand, aconst))
+                                .map(field -> resolve(field, aconst))
                                 .toList()))
                         .orElseGet(() -> new Resolved(op, false, List.of())))
                 .toList();
     }
 
-    private static Referent resolve(OpOperand operand, Constant[] aconst) {
-        return switch (operand) {
-            case OpOperand.Reg r -> new Referent(r.role(), "register #" + r.index(), null);
-            case OpOperand.Special sp -> new Referent(sp.role(), sp.name(), null);
-            case OpOperand.Const c -> {
-                // a local-constant index out of range means the op and the method disagree about
-                // the pool, which is a real defect worth surfacing rather than an AIOOBE
-                Constant value = aconst != null && c.index() < aconst.length ? aconst[c.index()] : null;
-                yield new Referent(c.role(), value == null
-                        ? "const:#" + c.index() + " (UNRESOLVED)"
-                        : value.getValueString(), value);
-            }
+    private static Referent resolve(OpField field, Constant[] aconst) {
+        return switch (field) {
+            case OpField.Branch b -> new Referent(b.role(),
+                    (b.displacement() > 0 ? "->+" : "->") + b.displacement(), null);
+            case OpField.Literal l -> new Referent(l.role(), Long.toString(l.value()), null);
+            case OpField.Arg a -> switch (a.operand()) {
+                case OpOperand.Reg r -> new Referent(r.role(), "register #" + r.index(), null);
+                case OpOperand.Special sp -> new Referent(sp.role(), sp.name(), null);
+                case OpOperand.Const c -> {
+                    // a local-constant index out of range means the op and the method disagree
+                    // about the pool, which is worth surfacing rather than an AIOOBE
+                    Constant value = aconst != null && c.index() < aconst.length
+                            ? aconst[c.index()] : null;
+                    yield new Referent(c.role(), value == null
+                            ? "const:#" + c.index() + " (UNRESOLVED)"
+                            : value.getValueString(), value);
+                }
+            };
         };
     }
 
@@ -253,7 +261,7 @@ public final class ModuleView {
      * @param op        the op
      * @param modeled   false when the op's class does not model its operands, in which case
      *                  {@code operands} is empty because nothing is known, not because there are none
-     * @param operands  the resolved operands
+     * @param operands  the resolved fields, in wire order
      */
     public record Resolved(@NotNull Op op, boolean modeled, @NotNull List<Referent> operands) {}
 
@@ -335,16 +343,13 @@ public final class ModuleView {
                           .append(' ').append(Op.toName(op.getOpCode()));
                         // operands from the model where the op class has one; ops that do not model
                         // theirs fall back to toString rather than pretending to know
+                        // one walk covers arguments, branch targets and literals, so nothing can
+                        // go missing the way a separately-asked-for displacement could
                         if (decoded.modeled()) {
-                            for (Referent operand : decoded.operands()) {
-                                sb.append(' ').append(operand.role()).append('=')
-                                  .append(operand.display());
+                            for (Referent field : decoded.operands()) {
+                                sb.append(' ').append(field.role()).append('=')
+                                  .append(field.display());
                             }
-                            // a displacement is not an operand, so it has to be asked for
-                            // separately - without this a modeled jump would render with its
-                            // target silently missing, which the toString fallback used to carry
-                            op.jumpDisplacement().ifPresent(offset ->
-                                    sb.append(" ->").append(offset > 0 ? "+" : "").append(offset));
                         } else {
                             sb.append(' ').append(op);
                         }

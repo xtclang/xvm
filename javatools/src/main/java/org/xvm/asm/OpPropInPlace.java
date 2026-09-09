@@ -176,10 +176,10 @@ public abstract class OpPropInPlace
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(OpOperand.concat(super.operands(),
-                               OpOperand.decode("target", m_nTarget),
-                isAssignOp() ? OpOperand.decode("return", m_nRetValue) : null));
+    public Optional<List<OpField>> fields() {
+        return Optional.of(OpField.concat(super.fields(),
+                               OpField.arg("target", m_nTarget),
+                isAssignOp() ? OpField.arg("return", m_nRetValue) : null));
     }
 
     protected int m_nTarget;

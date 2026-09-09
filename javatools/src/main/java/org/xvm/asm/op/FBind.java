@@ -1,6 +1,9 @@
 package org.xvm.asm.op;
 
 
+import java.util.Optional;
+import java.util.List;
+import java.util.stream.IntStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -16,6 +19,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
+import org.xvm.asm.OpField;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -473,4 +477,20 @@ public class FBind
     private       int[] m_anParamValue;
 
     private Argument[] m_aArgParam;
+
+    @Override
+    public Optional<List<OpField>> fields() {
+        // a count, then one (parameter index, bound value) pair per binding, then the result.
+        // The index is a positional number rather than an encoded argument, so it is a literal.
+        return Optional.of(OpField.concat(
+                OpField.concat(
+                        OpField.concat(super.fields(),
+                                OpField.literal("param.count", m_anParamIx.length)),
+                        IntStream.range(0, m_anParamIx.length).boxed().<OpField>mapMulti((i, sink) -> {
+                            sink.accept(OpField.literal("paramIx[" + i + ']', m_anParamIx[i]));
+                            sink.accept(OpField.arg("param[" + i + ']', m_anParamValue[i]));
+                        }).toList()),
+                List.of(OpField.arg("return", m_nRetValue))));
+    }
+
 }

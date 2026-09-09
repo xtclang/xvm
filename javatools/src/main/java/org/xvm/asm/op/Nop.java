@@ -11,7 +11,7 @@ import java.util.Optional;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 
 import org.xvm.javajit.BuildContext;
 
@@ -159,10 +159,13 @@ public class Nop extends Op {
     private int m_cLines;
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        // no operands: LINE_N writes a line COUNT, which is a raw value and not something the op
-        // operates on, so it is deliberately absent rather than dressed up as a register
-        return Optional.of(List.of());
+    public Optional<List<OpField>> fields() {
+        // LINE_N writes a line COUNT: a raw value, not something the op operates on. It has a home
+        // now - modeling it as "no fields" silently dropped it from the dump, which toString had
+        // been carrying.
+        return Optional.of(getOpCode() == OP_LINE_N
+                ? List.of(OpField.literal("lines", m_cLines))
+                : List.of());
     }
 
 }

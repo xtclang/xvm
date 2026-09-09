@@ -365,12 +365,12 @@ public abstract class OpGeneral
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
+    public Optional<List<OpField>> fields() {
         // mirrors write(): the value operand exists only for a binary op
-        return Optional.of(OpOperand.of(
-                              OpOperand.decode("target", m_nTarget),
-                isBinaryOp() ? OpOperand.decode("value",  m_nArgValue) : null,
-                              OpOperand.decode("return", m_nRetValue)));
+        return Optional.of(OpField.of(
+                              OpField.arg("target", m_nTarget),
+                isBinaryOp() ? OpField.arg("value",  m_nArgValue) : null,
+                              OpField.arg("return", m_nRetValue)));
     }
 
     // ----- fields --------------------------------------------------------------------------------

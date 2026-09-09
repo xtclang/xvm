@@ -1,6 +1,8 @@
 package org.xvm.asm.op;
 
 
+import java.util.Optional;
+import java.util.List;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -9,6 +11,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
+import org.xvm.asm.OpField;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -117,4 +120,14 @@ public class NewCG_0
 
     private Argument m_argParent;
     private Argument m_argType;
+
+    @Override
+    public Optional<List<OpField>> fields() {
+        // mirrors this op's own write(), on top of what the base class emits
+        return Optional.of(OpField.concat(super.fields(),
+                OpField.arg("parent", m_nParentValue),
+                OpField.arg("typeValue", m_nTypeValue),
+                OpField.arg("return", m_nRetValue)));
+    }
+
 }

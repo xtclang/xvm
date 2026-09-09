@@ -127,9 +127,9 @@ public abstract class OpIndexInPlace
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
+    public Optional<List<OpField>> fields() {
         // OpIndex supplies target and index; this level adds the value written through them
-        return Optional.of(OpOperand.concat(super.operands(), OpOperand.decode("value", m_nValue)));
+        return Optional.of(OpField.concat(super.fields(), OpField.arg("value", m_nValue)));
     }
 
     // ----- fields --------------------------------------------------------------------------------

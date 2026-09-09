@@ -739,19 +739,16 @@ public abstract class OpCondJump
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
+    public Optional<List<OpField>> fields() {
         // mirrors write() exactly: the type is present only for a binary op, the second value only
         // when there is one, and m_ofJmp is NOT here - it is a displacement, see jumpDisplacement()
-        return Optional.of(OpOperand.of(
-                isBinaryOp()        ? OpOperand.decode("type",   m_nType)  : null,
-                                      OpOperand.decode("value",  m_nArg),
-                hasSecondArgument() ? OpOperand.decode("value2", m_nArg2)  : null));
+        return Optional.of(OpField.of(
+                isBinaryOp()        ? OpField.arg("type",   m_nType)  : null,
+                                      OpField.arg("value",  m_nArg),
+                hasSecondArgument() ? OpField.arg("value2", m_nArg2)  : null,
+                                      OpField.branch("target", m_ofJmp)));
     }
 
-    @Override
-    public OptionalInt jumpDisplacement() {
-        return OptionalInt.of(getRelativeAddress());
-    }
 
     // ----- fields --------------------------------------------------------------------------------
 

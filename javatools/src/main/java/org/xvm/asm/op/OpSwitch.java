@@ -11,12 +11,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.stream.Stream;
+import java.util.stream.IntStream;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ArrayConstant;
@@ -485,18 +487,17 @@ public abstract class OpSwitch
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(OpOperand.decodeAll("case", m_anConstCase));
+    public Optional<List<OpField>> fields() {
+        // wire order interleaves them: each case value is followed by where that case goes
+        return Optional.of(Stream.concat(
+                Stream.concat(
+                        Stream.of(OpField.literal("case.count", m_anConstCase.length)),
+                        IntStream.range(0, m_anConstCase.length).boxed().flatMap(i -> Stream.of(
+                        OpField.arg("case[" + i + ']', m_anConstCase[i]),
+                        OpField.branch("case[" + i + ']', m_aofCase[i])))),
+                Stream.of(OpField.branch("default", m_ofDefault))).toList());
     }
 
-    @Override
-    public List<Integer> jumpTable() {
-        return m_aofCase == null ? List.of() : Arrays.stream(m_aofCase).boxed().toList();
-    }
 
-    @Override
-    public OptionalInt jumpDisplacement() {
-        return OptionalInt.of(m_ofDefault);
-    }
 
 }

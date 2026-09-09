@@ -130,46 +130,70 @@ public abstract class Op {
     }
 
     /**
-     * This op's operands, decoded - what it reads, what it writes, and what constants it names.
+     * Everything this op encodes beyond its opcode, in wire order: arguments, branch targets and
+     * raw literals, each saying which it is.
      *
-     * <p>Answers empty when this op class does not model its operands, which is NOT the same as
-     * an op that has none: that answers a present but empty list. The distinction matters because
-     * the wire format is positional and untyped - a non-negative int is a register in one op and a
-     * count or a jump offset in another - so a uniform decode would have to guess, and a wrong
-     * operand is worse than an absent one. Modeling is added per op class; see {@link OpOperand}.</p>
+     * <p>Answers empty when this op class does not model its fields, which is NOT the same as an
+     * op that genuinely encodes nothing: that answers a present but empty list. The distinction is
+     * the contract - a new op class that forgets to model itself is reported rather than being
+     * indistinguishable from {@code Exit}. Nothing guesses: the wire format is positional and
+     * untyped, so a uniform decode could not be correct, and a confidently wrong field is worse
+     * than an absent one.</p>
      *
-     * @return the operands, or empty if this op class does not model them
+     * <p>Implementations mirror {@code write} exactly, including its conditionals, so the model
+     * cannot drift from the format. See {@link OpField}.</p>
+     *
+     * @return this op's fields, or empty if this op class does not model them
      */
-    public Optional<List<OpOperand>> operands() {
+    public Optional<List<OpField>> fields() {
         return Optional.empty();
     }
 
     /**
-     * A jump's displacement: how far from this op the branch lands, in ops.
+     * The arguments among this op's {@link #fields()} - what it reads and writes, with branch
+     * targets and literals filtered out.
      *
-     * <p>Deliberately NOT an {@link OpOperand}. An operand is an encoded argument - a register, a
-     * constant, or a pseudo-register - and a displacement is none of those; it is a raw signed
-     * count that happens to share the wire representation. Folding it into the operand list would
-     * make a caller decoding "register #3" and a caller reading "jump forward 3" look identical,
-     * which is exactly the confusion the sign convention already causes elsewhere.</p>
+     * <p>Derived rather than separately implemented, and final, so it cannot disagree with
+     * {@code fields()}. Implement {@code fields()}.</p>
      *
-     * @return the displacement, or empty if this op is not a jump
+     * @return the operands, or empty if this op class does not model its fields
      */
-    public OptionalInt jumpDisplacement() {
-        return OptionalInt.empty();
+    public final Optional<List<OpOperand>> operands() {
+        return fields().map(list -> list.stream()
+                .filter(OpField.Arg.class::isInstance)
+                .map(field -> ((OpField.Arg) field).operand())
+                .toList());
     }
 
     /**
-     * A table switch's branch table: the displacement of each case, in case order.
+     * This op's sole branch target, for the ops that have exactly one.
      *
-     * <p>The sibling of {@link #jumpDisplacement()} for ops that branch many ways, and excluded
-     * from {@link #operands()} for the same reason - these are raw counts, not encoded arguments.
-     * The case VALUES are operands and appear there; this is where they land.</p>
+     * <p>Derived from {@link #fields()}: the single {@link OpField.Branch} if there is exactly one,
+     * otherwise empty - a table switch has many, and {@link #jumpTable()} is the accessor for
+     * those.</p>
      *
-     * @return the per-case displacements, or empty if this op is not a table switch
+     * @return the displacement, or empty if this op does not have exactly one branch
      */
-    public List<Integer> jumpTable() {
-        return List.of();
+    public final OptionalInt jumpDisplacement() {
+        var branches = fields().stream().flatMap(List::stream)
+                .filter(OpField.Branch.class::isInstance)
+                .map(OpField.Branch.class::cast)
+                .toList();
+        return branches.size() == 1
+                ? OptionalInt.of(branches.getFirst().displacement())
+                : OptionalInt.empty();
+    }
+
+    /**
+     * Every branch target this op encodes, in wire order.
+     *
+     * @return the displacements, empty if this op does not branch
+     */
+    public final List<Integer> jumpTable() {
+        return fields().stream().flatMap(List::stream)
+                .filter(OpField.Branch.class::isInstance)
+                .map(field -> ((OpField.Branch) field).displacement())
+                .toList();
     }
 
     /**

@@ -22,7 +22,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ByteConstant;
@@ -764,8 +764,8 @@ public class JumpVal
     private static final int HI_EX        = 0x4000_0000;
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(OpOperand.concat(super.operands(), OpOperand.decode("condition", m_nArgCond)));
+    public Optional<List<OpField>> fields() {
+        return Optional.of(OpField.concat(super.fields(), OpField.arg("condition", m_nArgCond)));
     }
 
 }

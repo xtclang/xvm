@@ -4822,3 +4822,163 @@ consulted so the decision to abort does not depend on which listener is installe
 
 **Nothing to do here.** Recorded so the next reader does not re-propose it - the shape looks wrong
 and is not.
+## E48 - A programmatic reader for compiled modules: `ModuleView`, `OpField`, `OpOperand`
+
+**Status:** implemented on `lagergren/lazy-instance`. New capability, not a bug fix - nothing on
+master is wrong, there is simply no way to do this.
+
+### The gap
+
+`org.xvm.tool.Disassembler` is a *printer*: it walks a `FileStructure` and renders it for a human.
+There has never been a way to read a compiled module into a form a program can inspect, compare, or
+modify, so anything that needed to reason about `.xtc` output had two options - re-derive it from
+the compiler's own in-memory state, or match strings against printed text.
+
+The second is not hypothetical. Six tests were deleted in `54bcea306` for asserting that Java source
+contained particular substrings: they passed when the code happened to be spelled the expected way
+and proved nothing about what it did. The stated remedy was to read compiled classes instead, which
+works for Java because `java.lang.classfile` ships with the JDK. **There was no equivalent for
+`.xtc`**, so an assertion about a compiled Ecstasy module had nothing to read but the printer's
+output - the same trap, one level down.
+
+### What it is
+
+Three types, layered, in `org.xvm.api` and `org.xvm.asm`:
+
+| type | role |
+| --- | --- |
+| `ModuleView` | opens a `.xtc` and exposes it as objects: components, methods, ops, constants, digest, diff, write-back |
+| `Op.fields()` | what an op encodes: arguments, branch targets and literals, in wire order |
+| `OpField` / `OpOperand` | the field and argument models, and the decoder for the wire encoding |
+
+Note that the *parsing* is not new. `FileStructure` and `ConstantPool` have always deserialized the
+container, the pool and the component tree, and constants have always arrived as 82 typed
+subclasses with a `Format` enum and `forEachUnderlying` for graph traversal. What was missing was a
+façade over that, and - the real gap - any way to read an op's operands, which lived in per-subclass
+protected fields with no accessor.
+
+### Using it
+
+Open a module without a repository, a linker, or a container:
+
+```java
+ModuleView view = ModuleView.open(Path.of("build/xtc/main/lib/ecstasy.xtc"));
+
+view.name();            // "ecstasy.xtclang.org"
+view.version();         // 0.4.4+SNAPSHOT
+view.compiledAt();      // Optional<Instant>
+view.dependencies();    // from the module's own fingerprint children, no module path consulted
+view.walk();            // Stream<Component> - the whole tree
+view.methods();         // Stream<MethodStructure>
+view.constants();       // List<Constant>, in pool-index order
+```
+
+Ask what an op operates on, as objects rather than as text:
+
+```java
+for (ModuleView.Resolved decoded : view.decode(method)) {
+    if (!decoded.modeled()) { continue; }              // this op class does not model its fields
+    for (ModuleView.Referent field : decoded.operands()) {
+        field.role();       // "target", "method", "return", "case[2]", "default"
+        field.display();    // rendered form
+        field.constant();   // the actual Constant, or null for a register/literal/branch
+    }
+}
+```
+
+So "does this op call that method" is a `MethodConstant` identity test, not a substring match. The
+constant it hands back is a live pool object, so it composes with everything already there -
+`MethodConstant.getName()`, `getRawParams()`, `forEachUnderlying()` for the transitive graph.
+
+Compare, fingerprint, and write back:
+
+```java
+view.digest();            // structure-only hash: stable across rebuilds, excludes the timestamp
+view.compareWith(other);  // Difference(added, removed, changed) by member identity
+view.disassemble();       // deterministic text dump, ordered by identity rather than pool position
+view.writeTo(path);
+```
+
+`digest()` is the one to reach for when asking "did this rebuild change anything", because a byte
+comparison of two `.xtc` files answers no - the compile timestamp differs every time.
+
+### The design decision that matters: kinds are not interchangeable
+
+An op's persistent form is a flat run of packed ints whose meaning is *positional*. A register
+index, a branch displacement and a bare count are indistinguishable on the wire. So `fields()`
+returns a sealed union and never a bare number:
+
+```java
+sealed interface OpField {
+    record Arg    (OpOperand operand)              // register, constant, or pseudo-register
+    record Branch (String role, int displacement)  // where a jump lands
+    record Literal(String role, long value)        // a count, a flag word, a line number
+}
+```
+
+A reader can therefore never mistake `register #3` for `jump forward 3`. Within `Arg`, `OpOperand`
+decodes the sign convention: `>= 0` is a register, `<= CONSTANT_OFFSET` indexes the method's local
+constants, and the values between are the `A_*` pseudo-registers. `A_LABEL` collides with
+`CONSTANT_OFFSET` (both -16); this reads -16 as constant #0, which is what `Argument.toIdString` and
+`Frame.getConstant` already do.
+
+**One accessor, not several.** This started as three - operands, then a jump displacement, then a
+branch table - and each addition left the previous rendering silently incomplete, because a caller
+had to know to ask for the new thing. Modeling `Nop` as having no operands dropped the line count
+that `toString` had been carrying. `operands()`, `jumpDisplacement()` and `jumpTable()` still exist
+but are **final and derived** from `fields()`, so they cannot drift from it.
+
+**Absent is not empty.** `fields()` answers `Optional.empty()` for an op class that does not model
+itself, which is a different answer from the present-but-empty list `Exit` gives. Nothing guesses:
+a confidently wrong operand is worse than an absent one.
+
+### Why the completeness test is the important part
+
+Every op class answering `fields()` says nothing about whether it answers *completely*. When the
+check below was first run against a model that reported 215/215 coverage, **48 op classes were
+silently wrong**: `OpInvocable` modeled a return that its `write` does not emit, while every
+concrete `Invoke_*` omitted the arguments it does. An invoke rendered with its arguments missing and
+nothing looked amiss.
+
+`OpFieldCompletenessTest` serializes each op, counts the packed values, and requires the same number
+of fields. It is deliberately crude, and therefore hard to fool - it does not check that a field
+*means* the right thing, only that none is missing or invented. Getting it to zero is what moved the
+operand count on a full-tree sweep from 6.67M to 8.82M.
+
+### Evidence
+
+Swept every `.xtc` in the tree - 726 modules, 5,394,089 ops, 8,818,893 operands:
+
+| | |
+| --- | --- |
+| modules that failed to read | 0 |
+| ops whose class does not model its fields | 0 |
+| operands referencing a constant outside their method's pool | 0 |
+| op classes whose model disagrees with `write()` | 0 |
+| disassembly produced | 391 MB |
+
+### What it enables
+
+- **Structural assertions on compiled output** that do not match strings, which is the missing half
+  of the source-comparison-test remedy.
+- **Module diffing** at member and op level, rather than "the bytes differ".
+- **Staleness checks** for an incremental compiler or a module path: `digest()` answers "did this
+  rebuild change anything" where a file comparison cannot.
+- **The read half of read-modify-write tooling** - an LSP, a module updater, a rewriter.
+
+### Two bugs it exposed while being built
+
+Both are filed separately, and both were only reachable by reading a module back from disk, which
+nothing in the tree did until now:
+
+- `OpJump.toString()` recursed through jump targets and overflowed the stack on a real module
+  (row 54 of `master-issue-submissions.md`).
+- `MethodStructure.assemble` wrote a method with no op bytes after an assembly failure, producing a
+  loadable `.xtc` with an empty body (row 53).
+
+### Filing notes
+
+Self-contained: new types plus a `fields()` override per op class, and no behaviour change to
+anything that existed. The op overrides mirror each `write()` exactly, including its conditionals,
+which is the property the completeness test enforces. Ready for review as one PR; the completeness
+test should land with it, because without the oracle the coverage claim is not checkable.

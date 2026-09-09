@@ -15,7 +15,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -241,10 +241,10 @@ public class Assert
     private MethodConstant m_idConstruct;
 
     @Override
-    public Optional<List<OpOperand>> operands() {
+    public Optional<List<OpField>> fields() {
         return Optional.of(List.of(
-                OpOperand.decode("test",        m_nTest),
-                OpOperand.decode("constructor", m_nConstructor)));
+                OpField.arg("test",        m_nTest),
+                OpField.arg("constructor", m_nConstructor)));
     }
 
 }

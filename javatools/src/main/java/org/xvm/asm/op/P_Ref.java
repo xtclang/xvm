@@ -11,7 +11,7 @@ import java.util.Optional;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 import org.xvm.asm.OpProperty;
 import org.xvm.asm.Scope;
 
@@ -151,10 +151,10 @@ public class P_Ref
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(OpOperand.concat(super.operands(),
-                OpOperand.decode("target", m_nTarget),
-                OpOperand.decode("return", m_nRetValue)));
+    public Optional<List<OpField>> fields() {
+        return Optional.of(OpField.concat(super.fields(),
+                OpField.arg("target", m_nTarget),
+                OpField.arg("return", m_nRetValue)));
     }
 
     private int m_nTarget;

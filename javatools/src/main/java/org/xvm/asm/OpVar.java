@@ -299,10 +299,12 @@ public abstract class OpVar
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        // OpVar declares a variable of a given type; subclasses that also carry a name id model
-        // that themselves rather than have this guess at an operand it cannot see
-        return Optional.of(List.of(OpOperand.decode("type", m_nType)));
+    public Optional<List<OpField>> fields() {
+        // mirrors write(): the type is emitted only by a type-aware var op. Subclasses carrying a
+        // name id model it themselves rather than have this guess at a field it cannot see.
+        return Optional.of(isTypeAware()
+                ? List.of(OpField.arg("type", m_nType))
+                : List.of());
     }
 
     // ----- fields --------------------------------------------------------------------------------

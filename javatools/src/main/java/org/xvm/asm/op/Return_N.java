@@ -11,7 +11,7 @@ import java.util.Optional;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 import org.xvm.asm.OpReturn;
 import org.xvm.asm.Register;
 
@@ -178,8 +178,8 @@ public class Return_N
     // ----- fields --------------------------------------------------------------------------------
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(OpOperand.decodeAll("value", m_anArg));
+    public Optional<List<OpField>> fields() {
+        return Optional.of(OpField.args("value", m_anArg));
     }
 
     private int[]      m_anArg;

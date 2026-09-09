@@ -59,9 +59,9 @@ public abstract class OpProperty extends Op {
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
+    public Optional<List<OpField>> fields() {
         // the property this op names; subclasses append their own operands to this
-        return Optional.of(List.of(OpOperand.decode("property", m_nPropId)));
+        return Optional.of(List.of(OpField.arg("property", m_nPropId)));
     }
 
     protected int m_nPropId;

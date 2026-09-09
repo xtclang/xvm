@@ -471,10 +471,10 @@ public abstract class OpInPlace
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(OpOperand.of(
-                               OpOperand.decode("target", m_nTarget),
-                isAssignOp() ? OpOperand.decode("return", m_nRetValue) : null));
+    public Optional<List<OpField>> fields() {
+        return Optional.of(OpField.of(
+                               OpField.arg("target", m_nTarget),
+                isAssignOp() ? OpField.arg("return", m_nRetValue) : null));
     }
 
     // ----- fields --------------------------------------------------------------------------------

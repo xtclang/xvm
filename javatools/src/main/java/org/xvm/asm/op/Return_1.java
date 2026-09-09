@@ -11,7 +11,7 @@ import java.util.Optional;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 import org.xvm.asm.OpReturn;
 
 import org.xvm.javajit.BuildContext;
@@ -123,8 +123,8 @@ public class Return_1
     // ----- fields --------------------------------------------------------------------------------
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(List.of(OpOperand.decode("value", m_nArg)));
+    public Optional<List<OpField>> fields() {
+        return Optional.of(List.of(OpField.arg("value", m_nArg)));
     }
 
     private int      m_nArg;

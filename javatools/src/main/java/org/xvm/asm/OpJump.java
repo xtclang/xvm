@@ -135,16 +135,11 @@ public abstract class OpJump
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        // genuinely none: an unconditional jump carries only its displacement, which is reported
-        // by jumpDisplacement(). This is the case the empty-list/absent distinction exists for.
-        return Optional.of(List.of());
+    public Optional<List<OpField>> fields() {
+        // an unconditional jump encodes exactly one thing: where it goes
+        return Optional.of(List.of(OpField.branch("target", getRelativeAddress())));
     }
 
-    @Override
-    public OptionalInt jumpDisplacement() {
-        return OptionalInt.of(getRelativeAddress());
-    }
 
     // ----- fields --------------------------------------------------------------------------------
 

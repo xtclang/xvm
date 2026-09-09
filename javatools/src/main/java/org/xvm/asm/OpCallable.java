@@ -994,12 +994,10 @@ public abstract class OpCallable extends Op {
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(OpOperand.concat(
-                List.of(OpOperand.decode("function", m_nFunctionId)),
-                m_anRetValue == null
-                        ? List.of(OpOperand.decode("return", m_nRetValue))
-                        : OpOperand.decodeAll("return", m_anRetValue)));
+    public Optional<List<OpField>> fields() {
+        // OpCallable.write emits the function id alone; the concrete Call_*/Construct_* class
+        // writes its own arguments and returns and models them itself
+        return Optional.of(List.of(OpField.arg("function", m_nFunctionId)));
     }
 
     // ----- fields --------------------------------------------------------------------------------

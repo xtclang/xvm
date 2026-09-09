@@ -18,7 +18,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ArrayConstant;
@@ -619,8 +619,10 @@ public class JumpVal_N
     private enum CacheCategory {SWITCH}
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(OpOperand.concat(super.operands(), OpOperand.decodeAll("condition", m_anArgCond)));
+    public Optional<List<OpField>> fields() {
+        return Optional.of(OpField.concat(
+                List.of(OpField.literal("isSwitch", m_afIsSwitch)),
+                OpField.concat(super.fields(), OpField.args("condition", m_anArgCond))));
     }
 
 }

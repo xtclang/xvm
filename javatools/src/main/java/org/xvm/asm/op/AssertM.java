@@ -11,7 +11,7 @@ import java.util.Optional;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -101,8 +101,8 @@ public class AssertM
     private StringConstant m_constMsg;
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(OpOperand.concat(super.operands(), OpOperand.decode("message", m_nMsgConstId)));
+    public Optional<List<OpField>> fields() {
+        return Optional.of(OpField.concat(super.fields(), OpField.arg("message", m_nMsgConstId)));
     }
 
 }

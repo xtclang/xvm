@@ -383,7 +383,7 @@ public abstract class OpReturn
     // ----- fields --------------------------------------------------------------------------------
 
     @Override
-    public Optional<List<OpOperand>> operands() {
+    public Optional<List<OpField>> fields() {
         // nothing at this level - the transient guard fields are control-flow bookkeeping, not
         // operands. Subclasses that return a value append it.
         return Optional.of(List.of());

@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
@@ -239,20 +239,19 @@ public class GuardStart
     private transient MultiGuard m_guard; // cached struct
 
     @Override
-    public Optional<List<OpOperand>> operands() {
+    public Optional<List<OpField>> fields() {
         // one type/name pair per catch clause; the catch displacements are branch targets and
         // belong to jumpTable(), not here
+        // wire order is a triple per catch clause: the exception type, the variable name it binds,
+        // and where that handler starts
         return Optional.of(IntStream.range(0, m_anTypeId.length)
                 .boxed()
                 .flatMap(i -> Stream.of(
-                        OpOperand.decode("catchType[" + i + ']', m_anTypeId[i]),
-                        OpOperand.decode("catchName[" + i + ']', m_anNameId[i])))
+                        OpField.arg("catchType[" + i + ']', m_anTypeId[i]),
+                        OpField.arg("catchName[" + i + ']', m_anNameId[i]),
+                        OpField.branch("catch[" + i + ']', m_aofCatch[i])))
                 .toList());
     }
 
-    @Override
-    public List<Integer> jumpTable() {
-        return Arrays.stream(m_aofCatch).boxed().toList();
-    }
 
 }

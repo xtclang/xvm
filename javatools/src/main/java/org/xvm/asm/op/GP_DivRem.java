@@ -15,7 +15,7 @@ import java.util.Optional;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.MethodInfo;
@@ -268,12 +268,12 @@ public class GP_DivRem
     private Argument[] m_aargReturn;
 
     @Override
-    public Optional<List<OpOperand>> operands() {
+    public Optional<List<OpField>> fields() {
         // its own write(), not OpGeneral's: two values in and an ARRAY of returns out
-        return Optional.of(OpOperand.concat(
-                List.of(OpOperand.decode("target", m_nTarget),
-                        OpOperand.decode("value",  m_nArgValue)),
-                OpOperand.decodeAll("return", m_anRetValue)));
+        return Optional.of(OpField.concat(
+                List.of(OpField.arg("target", m_nTarget),
+                        OpField.arg("value",  m_nArgValue)),
+                OpField.args("return", m_anRetValue)));
     }
 
 }

@@ -9,7 +9,7 @@ import java.util.Optional;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
@@ -176,13 +176,17 @@ public class MoveThis
     private Argument m_argTo;
 
     @Override
-    public Optional<List<OpOperand>> operands() {
+    public Optional<List<OpField>> fields() {
         // m_nAccess holds A_PUBLIC/A_PROTECTED/A_PRIVATE/A_STRUCT, i.e. genuine pseudo-register
         // encodings, so it decodes as a Special rather than being a raw value. write() omits it
         // when zero, and so does this.
-        return Optional.of(OpOperand.of(
-                                  OpOperand.decode("to",     m_nToValue),
-                m_nAccess != 0 ? OpOperand.decode("access", m_nAccess) : null));
+        // m_cSteps is written as a raw byte, so it is a literal; m_nAccess holds
+        // A_PUBLIC/A_PROTECTED/A_PRIVATE/A_STRUCT, which really are pseudo-register encodings, and
+        // write() omits it when zero
+        return Optional.of(OpField.of(
+                                 OpField.literal("steps", m_cSteps),
+                                 OpField.arg("to", m_nToValue),
+                m_nAccess != 0 ? OpField.arg("access", m_nAccess) : null));
     }
 
 }

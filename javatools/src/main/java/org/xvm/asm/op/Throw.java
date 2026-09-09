@@ -12,7 +12,7 @@ import java.util.Optional;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.RegisterInfo;
@@ -119,8 +119,8 @@ public class Throw
     private Argument m_argValue; // never a Constant
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(List.of(OpOperand.decode("value", m_nArgValue)));
+    public Optional<List<OpField>> fields() {
+        return Optional.of(List.of(OpField.arg("value", m_nArgValue)));
     }
 
 }

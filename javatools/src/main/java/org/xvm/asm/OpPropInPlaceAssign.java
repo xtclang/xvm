@@ -118,10 +118,10 @@ public abstract class OpPropInPlaceAssign
     // ----- data fields ---------------------------------------------------------------------------
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(OpOperand.concat(super.operands(),
-                OpOperand.decode("target", m_nTarget),
-                OpOperand.decode("value",  m_nValue)));
+    public Optional<List<OpField>> fields() {
+        return Optional.of(OpField.concat(super.fields(),
+                OpField.arg("target", m_nTarget),
+                OpField.arg("value",  m_nValue)));
     }
 
     protected int m_nTarget;

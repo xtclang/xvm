@@ -115,52 +115,35 @@ category below is marked `must audit`, it becomes `must fix` as soon as a test,
 diagnostic, or code inspection proves owner sharing, cross-request reuse, or
 runtime publication.
 
-### DONE: programmatic module reader, all 215 op classes modeled (updated 2026-09-09)
+### DONE: programmatic module reader, filed as E48 (updated 2026-09-09)
 
-> **History.** This row first said to lift a disassembler from the Kotlin research fork. That became
-> wrong when `ModuleView` landed (`f71f3a128`) - the tree already had the reader. It was then
-> rewritten around the gap that actually remained, operands, and that gap is now largely closed.
+> **History.** This row first said to lift a disassembler from the Kotlin research fork; that became
+> wrong when `ModuleView` landed. It was then rewritten around the operand gap, and that gap is now
+> closed. Full write-up: **E48** in `plans/master-enhancement-submissions.md` - an enhancement, not
+> a bug: nothing on master is wrong, there was simply no way to do this.
 
-**Done.** `org.xvm.api.ModuleView` reads a `.xtc` without linking or a repository and exposes it as
-objects: component tree, methods, ops, constants, a timestamp-free `digest()`, `compareWith()` and
-`writeTo()`. On top of that, ops now answer what they operate on:
+**What exists.** `ModuleView` opens a `.xtc` with no repository, linker or container and exposes it
+as objects - components, methods, ops, constants, `digest()`, `compareWith()`, `writeTo()`. On top
+of it, `Op.fields()` says what each op encodes, and `ModuleView.decode(method)` resolves those
+against the method's local constants, so "does this op call that method" is a `MethodConstant`
+identity test rather than a substring match.
 
-- `org.xvm.asm.OpOperand` - a sealed `Reg`/`Const`/`Special` model plus the decoder for the sign
-  convention (`>= 0` register, `<= CONSTANT_OFFSET` constant, between them a pseudo-register).
-- `Op.operands()` returns `Optional<List<OpOperand>>`, modeled per op class.
-- `ModuleView.decode(method)` resolves each operand against the method's local constants, so
-  "what method does this op call" is a `MethodConstant`, not a substring of `toString()`.
-- `ModuleView.disassemble()` renders from the model where one exists and falls back to `toString`
-  where it does not, rather than pretending.
+**One accessor, three kinds.** `OpField` is a sealed `Arg`/`Branch`/`Literal`, because the wire
+format is positional and a register index, a branch displacement and a bare count are
+indistinguishable in it. `operands()`, `jumpDisplacement()` and `jumpTable()` remain as **final,
+derived** views so they cannot drift. An op class that does not model itself answers
+`Optional.empty()`, which stays distinct from the present-but-empty list `Exit` gives.
 
-**Coverage: 215 of 215 op classes.** Swept over every `.xtc` in the tree - 726 modules,
-5,394,089 ops, 6,669,554 operands - with **0 failures, 0 unmodeled ops and 0 unresolved operands**,
-producing 357 MB of disassembly. `ModuleViewTest.everyShippedModuleDisassemblesCompletely` keeps
-that checkable against the built XDK, so a new op class landing unmodeled is a test failure rather
-than a silent hole.
+**The lesson worth keeping: coverage is not completeness.** A model where all 215 classes answered
+`fields()` still had **48 classes silently wrong** - `OpInvocable` modeled a return its `write` does
+not emit while every concrete `Invoke_*` omitted the arguments it does. `OpFieldCompletenessTest`
+serializes each op, counts the packed values and requires the same number of fields; getting it to
+zero moved the operand count on a full sweep from 6.67M to 8.82M. Three of those misses came from
+brittle regexes in my own analysis scripts (one space vs several, a space before a paren), which is
+its own reminder not to trust a grep as a census.
 
-**Absent still differs from empty.** Full coverage did not remove the distinction, it just made
-one side currently unoccupied: `Op.operands()` still defaults to `Optional.empty()`, so a NEW op
-class that forgets to model itself is reported rather than being indistinguishable from `Exit`,
-which answers a present but EMPTY list. Nothing guesses - the wire format is positional and untyped,
-so a uniform decode could not be correct.
-
-**A displacement is not an operand.** `OpCondJump`'s jump offset was the open question here, and
-the answer was already in the tree: both `OpJump` and `OpCondJump` have had `getRelativeAddress()`
-all along. So no fourth `OpOperand` kind was added. `Op.jumpDisplacement()` returns an
-`OptionalInt` and the operand list carries only encoded arguments, because folding the two together
-would make a caller reading "register #3" and one reading "jump forward 3" indistinguishable.
-
-> Modeling the jumps had a trap worth recording: once an op class models its operands,
-> `disassemble()` stops falling back to `Op.toString()`, so a modeled jump would have rendered with
-> its target **silently missing**. The dump asks for the displacement separately, and a test asserts
-> the rendering still contains it.
-
-**Raw values stayed out of the operand model**, consistently: a jump displacement
-(`Op.jumpDisplacement()`), a switch's branch table (`Op.jumpTable()`), `Nop`'s line count and
-`GuardStart`'s catch offsets are counts, not encoded arguments. `MoveThis`'s access field went the
-other way on inspection - it holds `A_PUBLIC`/`A_PROTECTED`/`A_PRIVATE`/`A_STRUCT`, which really are
-pseudo-register encodings, so it decodes as a `Special`.
+**Evidence.** Whole tree: 726 modules, 5,394,089 ops, 8,818,893 operands, 391 MB of disassembly,
+with 0 read failures, 0 unmodeled ops, 0 unresolved operands and 0 completeness mismatches.
 
 ### SHOULD-FIX: the equality path has no inline cache, and one obstacle must be settled first (added 2026-09-09)
 

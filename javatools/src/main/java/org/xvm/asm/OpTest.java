@@ -500,12 +500,13 @@ public abstract class OpTest
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(List.of(
-                OpOperand.decode("type",   m_nType),
-                OpOperand.decode("value1", m_nValue1),
-                OpOperand.decode("value2", m_nValue2),
-                OpOperand.decode("return", m_nRetValue)));
+    public Optional<List<OpField>> fields() {
+        // mirrors write(): the type only for a binary op, the second value only when there is one
+        return Optional.of(OpField.of(
+                isBinaryOp()        ? OpField.arg("type",   m_nType)   : null,
+                                      OpField.arg("value1", m_nValue1),
+                hasSecondArgument() ? OpField.arg("value2", m_nValue2) : null,
+                                      OpField.arg("return", m_nRetValue)));
     }
 
     // ----- fields --------------------------------------------------------------------------------

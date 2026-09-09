@@ -13,7 +13,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpMove;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -147,8 +147,8 @@ public class MoveCast
     // ----- fields --------------------------------------------------------------------------------
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(OpOperand.concat(super.operands(), OpOperand.decode("toType", m_nToType)));
+    public Optional<List<OpField>> fields() {
+        return Optional.of(OpField.concat(super.fields(), OpField.arg("toType", m_nToType)));
     }
 
     protected int m_nToType;

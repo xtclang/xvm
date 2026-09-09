@@ -18,7 +18,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
-import org.xvm.asm.OpOperand;
+import org.xvm.asm.OpField;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.RegisterInfo;
@@ -266,18 +266,13 @@ public class JumpInt
     private transient int   m_cDefaultExits;
 
     @Override
-    public Optional<List<OpOperand>> operands() {
-        return Optional.of(List.of(OpOperand.decode("condition", m_nArg)));
+    public Optional<List<OpField>> fields() {
+        return Optional.of(OpField.concat(
+                List.of(OpField.arg("condition", m_nArg)),
+                OpField.concat(OpField.branches("case", m_aofCase),
+                        List.of(OpField.branch("default", m_ofDefault)))));
     }
 
-    @Override
-    public List<Integer> jumpTable() {
-        return m_aofCase == null ? List.of() : Arrays.stream(m_aofCase).boxed().toList();
-    }
 
-    @Override
-    public OptionalInt jumpDisplacement() {
-        return OptionalInt.of(m_ofDefault);
-    }
 
 }

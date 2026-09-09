@@ -245,10 +245,10 @@ public abstract class OpInPlaceAssign
     }
 
     @Override
-    public Optional<List<OpOperand>> operands() {
+    public Optional<List<OpField>> fields() {
         return Optional.of(List.of(
-                OpOperand.decode("target", m_nTarget),
-                OpOperand.decode("value",  m_nArgValue)));
+                OpField.arg("target", m_nTarget),
+                OpField.arg("value",  m_nArgValue)));
     }
 
     protected int m_nTarget;
