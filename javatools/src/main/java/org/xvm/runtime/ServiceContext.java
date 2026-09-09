@@ -926,10 +926,13 @@ public class ServiceContext {
      *
      * @return a future that completes when all of the service's fibers have terminated
      */
-    public CompletableFuture<Void> requestShutdown() {
-        CompletableFuture<Void> future = m_futureShutdown = new CompletableFuture<>();
-        m_fShutdownRequested = true;
-        ensureScheduled(true);
+    public synchronized CompletableFuture<Void> requestShutdown() {
+        CompletableFuture<Void> future = m_futureShutdown;
+        if (future == null) {
+            m_futureShutdown     = future = new CompletableFuture<>();
+            m_fShutdownRequested = true;
+            ensureScheduled(true);
+        }
         return future;
     }
 

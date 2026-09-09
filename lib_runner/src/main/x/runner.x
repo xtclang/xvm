@@ -209,7 +209,7 @@ module runner.xtclang.org {
 
         private Time? started;
 
-        Boolean running;
+        private Boolean running;
 
         String status.get() = running ? "running" : "stopped";
 

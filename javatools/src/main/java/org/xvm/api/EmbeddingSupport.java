@@ -63,7 +63,7 @@ public class EmbeddingSupport {
      * Internal singleton implementation.
      */
     private static class Singleton {
-        static EmbeddingSupport instance = new EmbeddingSupport();
+        static final EmbeddingSupport instance = new EmbeddingSupport();
     }
 
     private static final Object LOCK = new Object();
@@ -80,7 +80,7 @@ public class EmbeddingSupport {
         }
     };
 
-    private boolean          configured;
+    private volatile boolean configured;
     private ModuleRepository cfgRepo;
     private String           cfgInjector;
     private Connector        connector;
@@ -173,7 +173,7 @@ public class EmbeddingSupport {
      * @return the configured repository, or null if EmbeddingSupport has not been configured
      */
     public ModuleRepository getConfiguredRepository() {
-        return cfgRepo;
+        return configured ? cfgRepo : null;
     }
 
     /**
@@ -181,7 +181,7 @@ public class EmbeddingSupport {
      *         or null to use EmbeddingSupport's built-in default injector
      */
     public String getConfiguredInjector() {
-        return cfgInjector;
+        return configured ? cfgInjector : null;
     }
 
     /**

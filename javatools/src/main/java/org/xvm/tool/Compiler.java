@@ -604,13 +604,9 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         if (cErrs > 0) {
             // if there are any COMPILER errors, suppress all VERIFY errors except the first three
-            boolean fSuppressVerify = false;
-            for (ErrorInfo err : listErrs) {
-                if (err.getCode().startsWith("COMPILER")) {
-                    fSuppressVerify = true;
-                    break;
-                }
-            }
+            boolean fSuppressVerify = listErrs.stream().
+                    anyMatch(err -> err.getCode().startsWith("COMPILER"));
+
             int cVerify = 0;
             for (ErrorInfo err : listErrs) {
                 if (fSuppressVerify && err.getCode().startsWith("VERIFY") && ++cVerify > 3) {
