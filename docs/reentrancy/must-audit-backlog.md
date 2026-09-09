@@ -115,7 +115,7 @@ category below is marked `must audit`, it becomes `must fix` as soon as a test,
 diagnostic, or code inspection proves owner sharing, cross-request reuse, or
 runtime publication.
 
-### PARTLY DONE: programmatic module reader, operands modeled to ~43% (updated 2026-09-09)
+### PARTLY DONE: programmatic module reader, operands modeled to ~53% (updated 2026-09-09)
 
 > **History.** This row first said to lift a disassembler from the Kotlin research fork. That became
 > wrong when `ModuleView` landed (`f71f3a128`) - the tree already had the reader. It was then
@@ -133,9 +133,11 @@ objects: component tree, methods, ops, constants, a timestamp-free `digest()`, `
 - `ModuleView.disassemble()` renders from the model where one exists and falls back to `toString`
   where it does not, rather than pretending.
 
-**Coverage: 93 of 215 op classes (~43%)**, via the shared bases - `OpCallable` (38), `OpInvocable`
-(17), `OpVar` (16), `OpTest` (14), `OpIndex` (8). Verified against the real compiled `ecstasy.xtc`:
-every constant index resolved inside its method's own pool, with no `UNRESOLVED` operand.
+**Coverage: 115 of 215 op classes (~53%)**, via the shared bases - `OpCallable` (38),
+`OpInvocable` (17), `OpCondJump` (17), `OpVar` (16), `OpTest` (14), `OpIndex` (8), `OpJump` (5).
+Verified against the real compiled `ecstasy.xtc`: every constant index resolved inside its method's
+own pool with no `UNRESOLVED` operand, and all 7887 jump ops decode with both their operands and
+their displacement.
 
 **Why coverage is partial by design, and must stay honest.** The wire format is positional and
 untyped: a non-negative int is a register in one op and a count or jump offset in another, and only
@@ -144,10 +146,20 @@ operand is worse than an absent one. So an unmodeled class answers `Optional.emp
 distinct from an op that genuinely has no operands, and `ModuleViewTest` asserts that distinction
 holds rather than letting coverage silently look total.
 
-**Remaining, in order of size.** `OpCondJump` (17 classes) is the largest uncovered base and needs a
-decision first: its jump offset is a raw displacement, not an encoded argument, so it needs either a
-fourth `OpOperand` kind or deliberate omission. `OpVar` subclasses that carry a name id model it
-themselves. The rest are one-off classes.
+**A displacement is not an operand.** `OpCondJump`'s jump offset was the open question here, and
+the answer was already in the tree: both `OpJump` and `OpCondJump` have had `getRelativeAddress()`
+all along. So no fourth `OpOperand` kind was added. `Op.jumpDisplacement()` returns an
+`OptionalInt` and the operand list carries only encoded arguments, because folding the two together
+would make a caller reading "register #3" and one reading "jump forward 3" indistinguishable.
+
+> Modeling the jumps had a trap worth recording: once an op class models its operands,
+> `disassemble()` stops falling back to `Op.toString()`, so a modeled jump would have rendered with
+> its target **silently missing**. The dump asks for the displacement separately, and a test asserts
+> the rendering still contains it.
+
+**Remaining, in order of size.** `OpGeneral` (14), `OpPropInPlaceAssign` (11), `OpProperty` (6),
+`OpMove` (5), `OpReturn` (4), plus 15 classes extending `Op` directly. `OpVar` subclasses that carry
+a name id model it themselves.
 
 ### SHOULD-FIX: the equality path has no inline cache, and one obstacle must be settled first (added 2026-09-09)
 

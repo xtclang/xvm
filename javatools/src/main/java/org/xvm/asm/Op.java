@@ -1,23 +1,23 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Stack;
-
-import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constants.Access;
@@ -142,6 +142,21 @@ public abstract class Op {
      */
     public Optional<List<OpOperand>> operands() {
         return Optional.empty();
+    }
+
+    /**
+     * A jump's displacement: how far from this op the branch lands, in ops.
+     *
+     * <p>Deliberately NOT an {@link OpOperand}. An operand is an encoded argument - a register, a
+     * constant, or a pseudo-register - and a displacement is none of those; it is a raw signed
+     * count that happens to share the wire representation. Folding it into the operand list would
+     * make a caller decoding "register #3" and a caller reading "jump forward 3" look identical,
+     * which is exactly the confusion the sign convention already causes elsewhere.</p>
+     *
+     * @return the displacement, or empty if this op is not a jump
+     */
+    public OptionalInt jumpDisplacement() {
+        return OptionalInt.empty();
     }
 
     /**

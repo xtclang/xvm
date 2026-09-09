@@ -1,11 +1,12 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.OptionalInt;
 
 import org.xvm.asm.op.Label;
 
@@ -131,6 +132,18 @@ public abstract class OpJump
     @Override
     public String toString() {
         return toName(getOpCode()) + ' ' + getLabelDesc();
+    }
+
+    @Override
+    public Optional<List<OpOperand>> operands() {
+        // genuinely none: an unconditional jump carries only its displacement, which is reported
+        // by jumpDisplacement(). This is the case the empty-list/absent distinction exists for.
+        return Optional.of(List.of());
+    }
+
+    @Override
+    public OptionalInt jumpDisplacement() {
+        return OptionalInt.of(getRelativeAddress());
     }
 
     // ----- fields --------------------------------------------------------------------------------

@@ -340,6 +340,11 @@ public final class ModuleView {
                                 sb.append(' ').append(operand.role()).append('=')
                                   .append(operand.display());
                             }
+                            // a displacement is not an operand, so it has to be asked for
+                            // separately - without this a modeled jump would render with its
+                            // target silently missing, which the toString fallback used to carry
+                            op.jumpDisplacement().ifPresent(offset ->
+                                    sb.append(" ->").append(offset > 0 ? "+" : "").append(offset));
                         } else {
                             sb.append(' ').append(op);
                         }

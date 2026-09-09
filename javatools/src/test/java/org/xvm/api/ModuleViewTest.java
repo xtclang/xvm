@@ -212,4 +212,31 @@ public class ModuleViewTest {
                         .allMatch(resolved -> resolved.operands().isEmpty()),
                 "an unmodeled op carries no operands, rather than guessed ones");
     }
+
+    /**
+     * A jump's displacement is reported by {@code Op.jumpDisplacement()} and is deliberately NOT an
+     * operand: an operand is an encoded argument - register, constant, or pseudo-register - and a
+     * displacement is a raw signed count that merely shares the wire representation. Folding it in
+     * would make "register #3" and "jump forward 3" indistinguishable to a caller.
+     */
+    @Test
+    public void aJumpReportsItsDisplacementSeparatelyFromItsOperands() throws Exception {
+        ModuleView view = ModuleView.open(ecstasy());
+
+        var jumps = view.methods()
+                .flatMap(method -> view.decode(method).stream())
+                .filter(resolved -> resolved.op().jumpDisplacement().isPresent())
+                .limit(2000)
+                .toList();
+
+        assertFalse(jumps.isEmpty(), "the core library should contain jumps");
+        assertTrue(jumps.stream().allMatch(ModuleView.Resolved::modeled),
+                "every jump models its operands");
+        // the displacement must not also appear as an operand pretending to be a register
+        assertTrue(jumps.stream().flatMap(resolved -> resolved.operands().stream())
+                        .noneMatch(operand -> "displacement".equals(operand.role())),
+                "the displacement is not carried as an operand");
+        assertTrue(view.disassemble().contains("->"),
+                "and the dump renders it, rather than dropping it now that jumps are modeled");
+    }
 }
