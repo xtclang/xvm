@@ -1,12 +1,15 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.OpField;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
@@ -123,4 +126,11 @@ public class Var_TN
 
     private StringConstant m_constName;
     private Argument[]     m_aArgValue;
+    @Override
+    public Optional<List<OpField>> fields() {
+        return Optional.of(OpField.concat(
+                OpField.concat(super.fields(), OpField.arg("name", m_nNameId)),
+                OpField.args("value", m_anArgValue)));
+    }
+
 }

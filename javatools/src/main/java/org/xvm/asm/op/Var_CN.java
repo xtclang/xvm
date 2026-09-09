@@ -1,13 +1,13 @@
 package org.xvm.asm.op;
 
-
-import java.util.Optional;
-import java.util.List;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
+
+import java.util.List;
+import java.util.Optional;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -158,7 +158,7 @@ public class Var_CN
 
     @Override
     public Optional<List<OpField>> fields() {
-        // mirrors this op's own write(), on top of what the base class emits
+        // mirrors this op's own write(), on top of what OpVar emits
         return Optional.of(OpField.concat(super.fields(),
                 OpField.arg("name", m_nNameId),
                 OpField.arg("value", m_nArgValue)));

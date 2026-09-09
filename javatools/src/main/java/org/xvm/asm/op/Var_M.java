@@ -1,12 +1,15 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.OpField;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
@@ -128,4 +131,15 @@ public class Var_M
 
     private Argument[] m_aArgKey;
     private Argument[] m_aArgVal;
+    @Override
+    public Optional<List<OpField>> fields() {
+        // a count, then every key, then every value - two runs sharing one length prefix, which is
+        // why this cannot go through OpField.args (that emits a prefix per run)
+        return Optional.of(OpField.concat(
+                OpField.concat(super.fields(),
+                        OpField.literal("entry.count", m_anArgKey.length)),
+                OpField.concat(OpField.argsUncounted("key", m_anArgKey),
+                        OpField.argsUncounted("value", m_anArgVal))));
+    }
+
 }

@@ -90,12 +90,19 @@ public class OpFieldCompletenessTest {
         assertEquals(Map.of(), mismatches,
                 () -> "op classes whose field model disagrees with write(): " + mismatches);
 
-        // the blind spot, pinned. These op classes cannot be re-serialized from a disk-read module,
-        // so this oracle says nothing about them; naming them here means a NEW class joining that
-        // set is a visible failure rather than a silent reduction in what is actually checked.
-        assertEquals(Set.of("GuardStart", "Var", "Var_D", "Var_DN", "Var_I", "Var_IN", "Var_M",
-                        "Var_N", "Var_S", "Var_SN", "Var_T"),
-                unverifiable.keySet(),
+        // The blind spot, pinned - now a single class. It was eleven: the whole Var family was
+        // unverifiable because OpVar.write dereferenced a Register that only exists at compile
+        // time, so re-serializing any Var op read from disk threw NPE. Fixing that (a master bug,
+        // and the blocker for an op-level round-trip) immediately exposed eleven Var classes whose
+        // field models were INCOMPLETE, which is exactly what the blind spot had been hiding.
+        //
+        // GuardStart is a limitation of this oracle rather than a defect: resolveAddresses
+        // repopulates m_aOpCatch, so its write() takes the compile-time branch and needs a real
+        // ConstantRegistry, which a re-serialization check cannot supply.
+        //
+        // Pinning the set by name means a class JOINING it fails visibly, instead of silently
+        // shrinking what is actually checked.
+        assertEquals(Set.of("GuardStart"), unverifiable.keySet(),
                 () -> "op classes this oracle cannot verify: " + unverifiable);
     }
 

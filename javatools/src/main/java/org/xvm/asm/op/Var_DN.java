@@ -1,13 +1,16 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.xvm.asm.Constant;
+import org.xvm.asm.OpField;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
@@ -107,4 +110,10 @@ public class Var_DN
     private int m_nNameId;
 
     private StringConstant m_constName;
+    @Override
+    public Optional<List<OpField>> fields() {
+        // mirrors this op's own write(), on top of what OpVar emits
+        return Optional.of(OpField.concat(super.fields(), OpField.arg("name", m_nNameId)));
+    }
+
 }

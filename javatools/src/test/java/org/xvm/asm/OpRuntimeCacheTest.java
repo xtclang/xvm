@@ -1,6 +1,11 @@
 package org.xvm.asm;
 
 
+import java.lang.classfile.instruction.FieldInstruction;
+import java.lang.classfile.Opcode;
+import java.lang.classfile.ClassFile;
+import java.util.ArrayList;
+import java.net.URISyntaxException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -69,9 +74,6 @@ import static org.xvm.util.Handy.writePackedLong;
  * constant pool when a decoded op graph is reused.
  */
 public class OpRuntimeCacheTest {
-    private static final Pattern RUNTIME_COMMON_TYPE_WRITE = Pattern.compile(
-            "m_typeCommon\\s*=\\s*typeCommon\\s*=\\s*frame\\.getConstant");
-    private static final Pattern RUNTIME_GUARD_WRITE = Pattern.compile("m_guard\\s*=");
 
     /**
      * Conditional jump ops are shared decoded method state. They must not cache frame-owned
@@ -89,9 +91,9 @@ public class OpRuntimeCacheTest {
      */
     @Test
     public void commonTypeCalculationDoesNotWriteFrameConstantsBackToOps()
-            throws IOException {
-        assertNoRuntimeCommonTypeWrite("org/xvm/asm/OpTest.java");
-        assertNoRuntimeCommonTypeWrite("org/xvm/asm/OpCondJump.java");
+            throws IOException, URISyntaxException {
+        assertNoFieldWriteIn(OpTest.class,     "calculateCommonType", "m_typeCommon");
+        assertNoFieldWriteIn(OpCondJump.class, "calculateCommonType", "m_typeCommon");
     }
 
     /**
@@ -210,8 +212,8 @@ public class OpRuntimeCacheTest {
         assertDoesNotThrow(guard::assertReadyForRuntime);
         assertNotNull(fieldObject(guard, "m_guard"));
 
-        assertNoRuntimeGuardWrite("org/xvm/asm/op/GuardStart.java");
-        assertNoRuntimeGuardWrite("org/xvm/asm/op/GuardAll.java");
+        assertNoFieldWriteIn(GuardStart.class, "process", "m_guard");
+        assertNoFieldWriteIn(GuardAll.class,   "process", "m_guard");
     }
 
     /**
@@ -279,21 +281,74 @@ public class OpRuntimeCacheTest {
         assertEquals(List.of(), fields, clazz.getName() + " must resolve conditions from Frame");
     }
 
-    private static void assertNoRuntimeCommonTypeWrite(String source)
-            throws IOException {
-        String text = Files.readString(sourcePath(source));
-
-        assertFalse(RUNTIME_COMMON_TYPE_WRITE.matcher(text).find(),
-                source + " must not cache frame constants on runtime Op instances");
+    /**
+     * Asserts that {@code sField} is never written by {@code sMethod} in the COMPILED class.
+     *
+     * <p>This replaces a regex over the .java file. Reading source proves only that the code is
+     * spelled a particular way: it passes if the same field is written through a differently named
+     * local, and fails on a harmless reformat. A {@code putfield} in the compiled method is the
+     * defect whatever the source looks like, which is why the tree reads compiled classes elsewhere
+     * - see {@code FreezeViewSharingTest}.</p>
+     *
+     * @param clazz    the class to scan
+     * @param sMethod  the method that must not write the field
+     * @param sField   the field that must not be written there
+     */
+    private static void assertNoFieldWriteIn(Class<?> clazz, String sMethod, String sField)
+            throws IOException, URISyntaxException {
+        assertEquals(List.of(), fieldWritesIn(clazz, sMethod, sField),
+                () -> sField + " is frame-derived, so caching it on a decoded Op publishes one"
+                        + " frame's value to every frame sharing that op");
     }
 
-    private static void assertNoRuntimeGuardWrite(String source)
-            throws IOException {
-        var text = Files.readString(sourcePath(source));
-        var body = methodBody(text, "public int process(Frame frame, int iPC)");
+    /**
+     * @return one entry per {@code putfield} of {@code sField} in {@code sMethod}
+     */
+    private static List<String> fieldWritesIn(Class<?> clazz, String sMethod, String sField)
+            throws IOException, URISyntaxException {
+        Path pathAnchor = Path.of(clazz.getProtectionDomain().getCodeSource().getLocation().toURI());
+        assertTrue(Files.isDirectory(pathAnchor),
+                "javatools must be scannable as exploded classes, but the code source is "
+                        + pathAnchor);
 
-        assertFalse(RUNTIME_GUARD_WRITE.matcher(body).find(),
-                source + " must not publish guard descriptors during runtime process()");
+        Path pathClass = pathAnchor.resolve(clazz.getName().replace('.', '/') + ".class");
+        assertTrue(Files.isRegularFile(pathClass), "no compiled class at " + pathClass);
+
+        var offenders = new ArrayList<String>();
+        var cMethods  = new int[1];
+        for (var method : ClassFile.of().parse(Files.readAllBytes(pathClass)).methods()) {
+            if (!sMethod.equals(method.methodName().stringValue())) {
+                continue;
+            }
+            cMethods[0]++;
+            method.code().ifPresent(code -> code.elementList().stream()
+                    .filter(FieldInstruction.class::isInstance)
+                    .map(FieldInstruction.class::cast)
+                    .filter(field -> sField.equals(field.name().stringValue())
+                            && field.opcode() == Opcode.PUTFIELD)
+                    .forEach(field -> offenders.add(
+                            clazz.getSimpleName() + '.' + sMethod + " writes " + sField)));
+        }
+
+        assertTrue(cMethods[0] > 0,
+                () -> "expected " + clazz.getSimpleName() + " to declare " + sMethod
+                        + "; the check would otherwise pass vacuously");
+        return List.copyOf(offenders);
+    }
+
+    /**
+     * The detector must be able to fail. A scanner that silently matches nothing would let every
+     * assertion above pass while proving nothing, which is precisely how the source-text checks
+     * these replaced could go stale unnoticed - so point it at a write that is KNOWN to exist.
+     *
+     * <p>{@code OpTest.write} legitimately assigns {@code m_typeCommon} (it discards the
+     * assembly-time type so the runtime re-derives it from the correct pool). If that stops being
+     * found, the checks above have gone blind rather than clean.</p>
+     */
+    @Test
+    public void theFieldWriteDetectorActuallyDetects() throws IOException, URISyntaxException {
+        assertFalse(fieldWritesIn(OpTest.class, "write", "m_typeCommon").isEmpty(),
+                "OpTest.write assigns m_typeCommon, so the scanner must report it");
     }
 
     private static void assertNoOwnerBearingRuntimeCacheFields(Class<?> clazz) {

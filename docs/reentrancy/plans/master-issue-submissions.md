@@ -124,6 +124,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 55 | `OpInvocable.getCallChain`'s inline cache rewrites on every miss and probes twice, so a bimorphic call site pays four map operations per call and never hits - strictly worse than no cache | stop writing back after N consecutive misses; read both halves as one entry | independent | perf only; no behaviour change, no red test |
 | 56 | `OpIndex.getOpChain`/`saveOpChain` has the identical shape - two lookups, two writes, no deopt | same fix; share the policy with row 55 | shares a fix with 55 | perf only |
 | 57 | `ServiceContext.f_mapOpInfo` is a `WeakHashMap` whose weak keys protect nothing, and whose weak VALUES can collect a live cache entry | identity-keyed strong map | independent | the weak-value half is a correctness wart, not only perf |
+| 58 | `OpVar.write` dereferences a compile-time `Register`, so any `Var` op READ BACK from a compiled module throws NPE when re-serialized | guard on `m_reg != null`, as the same class already does in `getType(Constant[])` | independent | blocks an op-level round-trip for the whole `Var` family |
 
 ### Filing a row as an issue or PR
 
@@ -223,6 +224,7 @@ without its listed dependency.
 | 55 | Source-only; `OpInvocable.getCallChain` plus a shared `InlineCache` type. Fixed in-branch. | **No red test, and none is honest here** - the defect is cost, not behaviour. Evidence is the code shape (unconditional `setOpInfo` on every miss, two `getOpInfo` calls per hit) plus JFR: `getOpInfo` 4.78% self and `setOpInfo` 2.63% self of interpreter CPU on a virtual-dispatch workload, both 100% leaf. | Needs a benchmark before filing. |
 | 56 | Source-only; `OpIndex.getOpChain`/`saveOpChain`. Fixed in-branch on the shared cache. | Same: shape-based, no red test. Verified identical on `master:javatools/src/main/java/org/xvm/asm/OpIndex.java`. | Needs a benchmark before filing. |
 | 57 | Source-only; one field type and two method bodies in `ServiceContext`. Fixed in-branch. | Weak keys: shape argument, no red test. Weak values: a `CallChain` built for a private method is reachable ONLY through the `WeakReference`, so a GC between two calls at that site silently turns every later call into a miss. Reproducing it needs a forced GC between calls at a private-method site. | Needs a benchmark before filing. |
+| 58 | Source-only; one `if` in `OpVar.write`. Fixed in-branch. | `OpVar.write(out, null)` on a `Var` op read from a compiled module throws `NullPointerException: Cannot invoke "org.xvm.asm.Register.isVar()" because "this.m_reg" is null`. Measured across the tree's modules: 92,149 ops could not be re-serialized before the fix, 845 after - and the 91,304 that became verifiable immediately exposed 11 `Var` classes with incomplete field models. | Ready after manual review. |
 
 ## Reuse Exposure Categories
 
@@ -4178,3 +4180,65 @@ the `f_mapOpInfo` field and the `getOpInfo`/`setOpInfo` pair.
 **Fix:** `IdentityHashMap`, values held directly. The lifetime argument above is written into the
 `ServiceContext` class javadoc in-branch, because it is a property of the class rather than of the
 one field.
+
+
+## 58. `OpVar.write` cannot re-serialize a Var op that was read from a compiled module
+
+**FIXED** on `lagergren/lazy-instance`. One `if`. Not pushed.
+
+**Status/category:** Real defect in current master source, verified identical there. Found by
+building an oracle that re-serializes each op and compares against its field model.
+
+**Explanation.**
+
+```java
+if (isTypeAware()) {
+    m_nType = encodeArgument(getRegisterType(), registry);   // getRegisterType() derefs m_reg
+    writePackedLong(out, m_nType);
+}
+```
+
+`getRegisterType()` is `m_reg.isVar() ? ... : m_reg.getType()`, and `m_reg` is assigned only by the
+compile-time constructor. An op deserialized from a `.xtc` has `m_reg == null` and carries its type
+as the already-encoded `m_nType`, so `write` throws.
+
+**The same class already knows this.** `OpVar.getType(Constant[] aconst)` guards the identical
+field:
+
+```java
+return m_reg == null
+        ? (TypeConstant) aconst[convertId(m_nType)]
+        : m_reg.getType();
+```
+
+and every other op's `write` uses the same shape - `if (m_argX != null) { encode }` then write the
+id unconditionally. `OpVar` is the one that re-encodes without asking whether there is anything to
+re-encode from.
+
+**Why nothing hit it:** `FileStructure` writes a module by copying `m_abOps` when it does not need
+to reassemble, so `Op.write` is not called on the normal path. It is reached when a module that was
+read from disk is reassembled - which is exactly what a module updater, an incremental compiler or
+any read-modify-write tool does, and nothing in the tree did that until now.
+
+**Master evidence:** `git show master:javatools/src/main/java/org/xvm/asm/OpVar.java`, the
+`getRegisterType` and `write` pair - byte-identical to the branch's pre-fix form.
+
+**Failure mode:** `NullPointerException: Cannot invoke "org.xvm.asm.Register.isVar()" because
+"this.m_reg" is null`, from `write`. Blast radius is the whole `Var` family, 16 op classes.
+
+**Fix:** re-encode only when there is a Register to encode from; otherwise pass the decoded id
+through.
+
+```java
+if (isTypeAware()) {
+    if (m_reg != null) {
+        m_nType = encodeArgument(getRegisterType(), registry);
+    }
+    writePackedLong(out, m_nType);
+}
+```
+
+**Measurement:** across every `.xtc` in the tree, ops that could not be re-serialized fell from
+**92,149 to 845** (the remainder is `GuardStart`, which needs a real `ConstantRegistry` rather than
+being defective). The 91,304 newly verifiable ops immediately exposed **11 `Var` classes whose
+operand models were incomplete** - a hole the NPE had been hiding.

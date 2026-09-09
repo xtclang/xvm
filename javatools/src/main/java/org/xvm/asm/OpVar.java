@@ -85,8 +85,17 @@ public abstract class OpVar
         super.write(out, registry);
 
         if (isTypeAware()) {
-            m_nType = encodeArgument(getRegisterType(), registry);
-
+            // Only re-encode when there is a compile-time Register to encode FROM. An op read back
+            // from a compiled module has no Register - m_reg is set by the compile-time
+            // constructor only - and already carries the encoded id in m_nType, so writing it back
+            // out is just passing that id through. This mirrors what every other op's write does
+            // with its `if (m_argX != null)` guard, and what getType(Constant[]) in this very class
+            // already does with the same field. Without the guard, re-serializing any Var op read
+            // from disk throws NPE from getRegisterType, which makes an op-level round-trip
+            // impossible for the whole Var family.
+            if (m_reg != null) {
+                m_nType = encodeArgument(getRegisterType(), registry);
+            }
             writePackedLong(out, m_nType);
         }
     }
