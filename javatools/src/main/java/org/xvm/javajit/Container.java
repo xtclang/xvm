@@ -147,17 +147,47 @@ public class Container
     /**
      * Obtain the value produced by the specified computation handle, computing it at most once for
      * this container. Every container uses the same handle to obtain and cache its own value.
+     *
+     * @param computation  MethodHandle that should be used to compute the result; must never
+     *                     produce "null"
      */
     public Object computeStatic(MethodHandle computation) {
-        return staticValues.computeIfAbsent(computation, handle -> {
+        // since staticValues itself can never be the result, we use it to prevent circular
+        // initialization
+        var    values = staticValues;
+        Object result = values.get(computation);
+        return result != null && result != values
+                ? result
+                : computeStaticInternal(computation);
+    }
+
+    private Object computeStaticInternal(MethodHandle computation) {
+        Object inProgress = staticValues;
+        synchronized (inProgress) {
+            Object result = staticValues.get(computation);
+            if (result == inProgress) {
+                throw new ClassCircularityError("Static computation has circular dependency");
+            }
+            if (result != null) {
+                return result;
+            }
+
             try {
-                return handle.invokeExact(this);
+                staticValues.put(computation, inProgress);
+                result = computation.invokeExact(this);
+                if (result == null) {
+                    throw new IllegalStateException("Static computation returned null");
+                }
+                staticValues.put(computation, result);
+                return result;
             } catch (RuntimeException | Error e) {
                 throw e;
             } catch (Throwable e) {
                 throw new IllegalStateException(e);
+            } finally {
+                staticValues.remove(computation, inProgress);
             }
-        });
+        }
     }
 
     /**
