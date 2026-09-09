@@ -5097,3 +5097,65 @@ much more robust than the absolute shares.
 Not ready to file as a PR - this is the evidence that the work is worth doing and the constraints it
 must respect. The next step is a measurement, not an implementation: does canonicalizing the type at
 resolution collapse the 89.77 %?
+
+## E50 - The cross-pool sharing contract is load-bearing and undocumented
+
+**Status:** implemented on `lagergren/lazy-instance`. Documentation only - no behaviour change.
+An enhancement, not a bug: the rule is correct and enforced, it is simply not written down where
+anyone reading the code would find it.
+
+### The state before
+
+`ConstantPool`'s class documentation was one line - *"A shared pool of all Constant objects used in
+a particular FileStructure."* The rule that actually governs how constants move between pools lived
+in three unconnected places:
+
+- the body of `IdentityConstant.isShared`, whose own javadoc restated the signature rather than the
+  rule;
+- an unexplained early return inside `ConstantPool.register`;
+- a runtime guard in `Container.ensureTypeHandle` that throws.
+
+Nothing tied them together, and nothing said that cross-pool references are the ORDINARY case.
+
+### Why that costs something, with evidence
+
+It reads like an anomaly, so people reason as though same-pool identity were the normal case. That
+is not hypothetical - it happened in this session, to the author of E49. The plan of record for the
+equality-path cache was "measure the identity hit rate first; if identity already dominates, drop
+the idea". Identity does not dominate and **cannot**: measurement returned 0.20%, with
+`differentPool = 120,005,949` against `samePool = 0`. An op's constants come from the module they
+were compiled into, the handles carry compositions from the executing container's pool, so the two
+are always equal and never identical, and the `obj == this` short-circuit in `TypeConstant.equals`
+is dead code on that path by construction.
+
+A whole design was scoped against an assumption the code already contradicted, and no comment
+anywhere would have corrected it. The same misreading in the other direction is worse: a cache keyed
+on compositions alone looks obviously sound and would return a stale composition - a wrong-template
+dispatch - 0.045% of the time.
+
+### The change
+
+`ConstantPool`'s class javadoc now states: one pool per module; a container's pool IS its module's
+pool; cross-pool references are normal because almost all code calls into a dependency; and the
+sharing rule itself, quoted from the code that defines it -
+
+```java
+poolOther == getConstantPool()
+    || poolOther.getFileStructure().getChild(getModuleConstant()) != null
+```
+
+- that is, a library type is adoptable precisely when the adopting module can name it. It records
+that `register` returns a non-shared TypeConstant as-is rather than adopting it, that
+`Container.ensureTypeHandle` refuses a foreign type at run time, and the consequence for anyone
+caching across the boundary: a composition-only key is unsound and must also carry the
+frame-resolved type and owning container.
+
+`IdentityConstant.isShared` now documents the rule it defines rather than paraphrasing its own
+signature, and points at the class documentation for the context.
+
+### Filing notes
+
+Self-contained and low risk - two javadoc blocks, no code. Applies cleanly to master; the rule
+documented is master's own behaviour, verified by reading `Container.getConstantPool`,
+`IdentityConstant.isShared`, `ConstantPool.register` and `Container.ensureTypeHandle`. Worth filing
+ahead of E49, since E49's design constraints only make sense once this is written down.

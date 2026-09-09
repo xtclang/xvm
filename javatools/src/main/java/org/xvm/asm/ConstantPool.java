@@ -66,6 +66,43 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * A shared pool of all Constant objects used in a particular FileStructure.
+ *
+ * <h2>There is one pool per module, and constants cross between them constantly</h2>
+ *
+ * <p>Each {@link FileStructure} owns a pool, so each module has its own, and a running
+ * {@code Container}'s pool IS its module's pool - {@code Container.getConstantPool()} returns
+ * {@code f_idModule.getConstantPool()}. A constant therefore belongs to the module it was compiled
+ * into, not to whoever is executing it.</p>
+ *
+ * <p>That makes cross-pool references the NORMAL case rather than an anomaly, which is easy to
+ * misread as a bug. Whenever a container runs code defined in a dependency - and almost all code
+ * calls into {@code ecstasy.xtclang.org} - the op's constants come from the dependency's pool while
+ * the handles it operates on carry compositions from the container's own. The two are then equal
+ * and never identical, so an {@code ==} test between them fails by construction, not by accident.
+ * Measured over an interpreter workload, the equal-but-not-identical case was 100%: 120,005,949
+ * cross-pool against 0 same-pool (see {@code docs/reentrancy/iseq-identity-hit-rate.md}).</p>
+ *
+ * <h2>The sharing contract</h2>
+ *
+ * <p>Pools do not read each other freely. A constant may be adopted into another pool exactly when
+ * that pool's file declares its module as a dependency, which
+ * {@link org.xvm.asm.constants.IdentityConstant#isShared} states as:</p>
+ *
+ * <pre>{@code
+ * poolOther == getConstantPool()
+ *     || poolOther.getFileStructure().getChild(getModuleConstant()) != null
+ * }</pre>
+ *
+ * <p>In other words a library type is adoptable precisely when the adopting module can name it.
+ * {@link #register} enforces this: a {@code TypeConstant} that is not shared with this pool is
+ * returned AS-IS rather than adopted, because adopting it would claim this pool owns a type graph
+ * that is not visible from it. The boundary is enforced at run time too - {@code
+ * Container.ensureTypeHandle} throws rather than cache a type belonging to a foreign pool.</p>
+ *
+ * <p>The practical consequence for anyone caching across this boundary: a cache keyed on
+ * compositions alone is unsound, because the same composition pair can correspond to different
+ * resolved types in different frames. Such a key must also carry the frame-resolved type and the
+ * owning container.</p>
  */
 public class ConstantPool
         extends XvmStructure {

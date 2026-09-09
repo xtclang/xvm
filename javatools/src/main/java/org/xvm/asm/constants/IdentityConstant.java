@@ -615,6 +615,15 @@ public abstract sealed class IdentityConstant
      * Determine if this IdentityConstant references a structure that is shared between its pool
      * and the specified pool.
      *
+     * <p>This is the whole cross-pool contract, and it is deliberately narrow: sharing is allowed
+     * along a DECLARED dependency edge and nowhere else. A constant is shared with another pool
+     * when that pool's {@link org.xvm.asm.FileStructure} has a child for this constant's module -
+     * that is, when the adopting module can name the module being adopted from. Everything about
+     * adoption follows from this: {@code ConstantPool.register} returns a non-shared TypeConstant
+     * as-is instead of adopting it, and {@code Container.ensureTypeHandle} refuses a type from a
+     * foreign pool outright. See the {@link org.xvm.asm.ConstantPool} class documentation for why
+     * cross-pool references are the ordinary case rather than a defect.</p>
+     *
      * @param poolOther  the constant pool to check
      *
      * @return true iff this IdentityConstant references a structure that is shared with the
