@@ -3,11 +3,11 @@ package org.xvm.runtime;
 
 import java.lang.invoke.VarHandle;
 
-import java.lang.ref.WeakReference;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.IdentityHashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +74,27 @@ import static org.xvm.asm.Constants.RT_DEBUGGER_RESULT_UNSUPPORTED;
 
 /**
  * The service context.
+ *
+ * <h2>Lifetime</h2>
+ *
+ * <p>A ServiceContext cannot outlive the modules whose ops it ran, because it keeps them alive
+ * itself. The context holds {@link #f_container}; a {@link Container} holds its {@code f_idModule};
+ * and a ModuleConstant reaches its ConstantPool and thence the whole component tree that the
+ * MethodStructures, their Code, and their {@link Op} instances belong to. Every op a context has
+ * executed is therefore strongly reachable <em>from</em> that context for as long as it lives.</p>
+ *
+ * <p>Nor can a context come to hold a foreign container's ops. {@link #validatePassThrough} wraps
+ * any FunctionHandle crossing a container boundary in a FunctionProxyHandle, whose {@code call1}
+ * compares the calling frame's context with the owning one and posts a request back to the owner
+ * when they differ. Ops only ever execute on the context of the container that owns their code.</p>
+ *
+ * <p>In the other direction the context is bounded by its container: it is created only by
+ * {@link Container#createServiceContext}, {@code Container.terminate} drops it, and the container
+ * holds its services weakly.</p>
+ *
+ * <p>Together these are what let a per-op runtime cache hold its keys and values strongly rather
+ * than weakly - see {@link #f_mapOpInfo}, where weak referencing was buying nothing because the
+ * referents' own holder kept them alive regardless.</p>
  */
 public class ServiceContext {
     ServiceContext(Container container, String sName, long lId) {
@@ -233,14 +254,13 @@ public class ServiceContext {
      * @return the op info for the specified category
      */
     public <T> T getOpInfo(Op op, OpInfoKey<T> key) {
-        Map<Enum<?>, WeakReference<?>> mapByCategory = f_mapOpInfo.get(op);
+        Map<Enum<?>, Object> mapByCategory = f_mapOpInfo.get(op);
         if (mapByCategory == null) {
             return null;
         }
-        WeakReference<?> ref = mapByCategory.get(key.category());
         // the key carries the type the category was declared with, so this is a real check at the
         // cache boundary - the call sites no longer each cast on trust
-        return ref == null ? null : key.type().cast(ref.get());
+        return key.type().cast(mapByCategory.get(key.category()));
     }
 
     /**
@@ -253,7 +273,7 @@ public class ServiceContext {
     public <T> void setOpInfo(Op op, OpInfoKey<T> key, T info) {
         Enum<?> category = key.category();
         f_mapOpInfo.computeIfAbsent(op, op_ -> newCategoryMap(category))
-                   .put(category, new WeakReference<>(info));
+                   .put(category, info);
     }
 
     /**
@@ -263,7 +283,7 @@ public class ServiceContext {
      * insertion, so the key side stays enforced at run time.
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static Map<Enum<?>, WeakReference<?>> newCategoryMap(Enum<?> category) {
+    private static Map<Enum<?>, Object> newCategoryMap(Enum<?> category) {
         return new EnumMap(category.getClass());
     }
 
@@ -2305,10 +2325,25 @@ public class ServiceContext {
 
     /**
      * A "service-local" cache for run-time information that needs to be calculated by various ops.
-     * Since only one fiber can access the service context at any time, a simple HashMap is used.
-     * To prevent leaks, the values in the EnumMap are WekRef objects.
+     * Since only one fiber can access the service context at any time, a simple map is used.
+     *
+     * <p>Identity-keyed and strongly held, both deliberately, on the lifetime grounds set out in
+     * this class's documentation. No {@link Op} overrides {@code equals}, so identity was already
+     * the lookup semantics; what an {@link IdentityHashMap} buys is not a cheaper probe but the
+     * absence of {@code WeakHashMap}'s stale-entry expunge, which ran on every single {@code get}.
+     * Profiling put {@code getOpInfo} at 4.78% and {@code setOpInfo} at 2.63% of interpreter CPU,
+     * all of it self time.</p>
+     *
+     * <p>Values are strong for the same reason: every cached kind - CallChain, TypeComposition,
+     * MethodStructure, ClassTemplate, IdentityConstant, TypeConstant - is a type-system artifact
+     * the container retains regardless, and none of them reaches an ObjectHandle.
+     * VirtualConstructorChain keeps its target's composition rather than the handle, and
+     * ExceptionChain, the one chain kind that does hold a handle, is deliberately never cached.
+     * Weak values also had a defect of their own: a chain with no other referent, such as the one
+     * built for a private method, could be collected at the next GC and quietly turn every
+     * subsequent call into a miss.</p>
      */
-    private final Map<Op, Map<Enum<?>, WeakReference<?>>> f_mapOpInfo = new WeakHashMap<>();
+    private final Map<Op, Map<Enum<?>, Object>> f_mapOpInfo = new IdentityHashMap<>();
 
     /**
      * A "service-local" cache for transient field values.
