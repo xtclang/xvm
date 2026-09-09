@@ -43,7 +43,7 @@ public interface InPlaceSupport
             } else {
                 reg.markChanged();
             }
-        } else if (reg.type().isXvmPrimitive()) {
+        } else if (reg.flavor() == JitFlavor.XvmPrimitive) {
             buildXvmPrimitiveLocal(bctx, code, reg);
             if (assign) {
                 bctx.storeValue(code, resultId, reg.type());
@@ -54,6 +54,9 @@ public interface InPlaceSupport
             // this can only be non-primitive Sequential, i.e. IntNumber, IntN or UIntN
             buildSequentialLocal(bctx, code, reg);
             if (assign) {
+                if (!reg.flavor().isOptimized && reg.type().isJitPrimitive()) {
+                    Builder.unbox(code, reg.type());
+                }
                 bctx.storeValue(code, resultId, reg.type());
             } else {
                 reg.markChanged();
@@ -432,37 +435,37 @@ public interface InPlaceSupport
         MethodTypeDesc md       = MethodTypeDesc.of(cd, CD_Ctx);
         switch (getOpCode()) {
             case OP_IP_DEC, OP_IIP_DEC, OP_PIP_DEC:
-                code.aload(slot);
+                reg.load(code);
                 bctx.loadCtx(code);
                 code.invokevirtual(cd, "prevValue", md)
                     .astore(slot);
                 break;
 
             case OP_IP_INC, OP_IIP_INC, OP_PIP_INC:
-                code.aload(slot);
+                reg.load(code);
                 bctx.loadCtx(code);
                 code.invokevirtual(cd, "nextValue", md)
                     .astore(slot);
                 break;
 
             case OP_IP_DECA, OP_IIP_DECA, OP_PIP_DECA:
-                code.aload(slot)
-                    .dup();
+                reg.load(code);
+                code.dup();
                 bctx.loadCtx(code);
                 code.invokevirtual(cd, "prevValue", md)
                     .astore(slot);
                 break;
 
             case OP_IP_INCA, OP_IIP_INCA, OP_PIP_INCA:
-                code.aload(slot)
-                    .dup();
+                reg.load(code);
+                code.dup();
                 bctx.loadCtx(code);
                 code.invokevirtual(cd, "nextValue", md)
                     .astore(slot);
                 break;
 
             case OP_IP_DECB, OP_IIP_DECB, OP_PIP_DECB:
-                code.aload(slot);
+                reg.load(code);
                 bctx.loadCtx(code);
                 code.invokevirtual(cd, "prevValue", md)
                     .dup()
@@ -470,7 +473,7 @@ public interface InPlaceSupport
                 break;
 
             case OP_IP_INCB, OP_IIP_INCB, OP_PIP_INCB:
-                code.aload(slot);
+                reg.load(code);
                 bctx.loadCtx(code);
                 code.invokevirtual(cd, "nextValue", md)
                     .dup()

@@ -12,6 +12,7 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -1090,7 +1091,7 @@ public class BuildContext {
     public RegisterInfo loadThis(CodeBuilder code) {
         assert isConstructor || !isStatic;
 
-        RegisterInfo reg = getRegisterInfo(code, Op.A_THIS);
+        RegisterInfo reg = adjustRegister(code, getRegisterInfo(code, Op.A_THIS));
         return reg.load(code);
     }
 
@@ -1206,53 +1207,62 @@ public class BuildContext {
             return reg;
         }
 
-        if (reg instanceof Ref ref) {
-            TypeConstant regType = ref.referentType();
-            TypeConstant mtxType = typeMatrix.getType(ref.regId(), currOpAddr);
+        // obtain the semantic type for this register at the current op
+        TypeConstant mtxType = typeMatrix.getType(reg.regId(), currOpAddr);
+        if (mtxType == null) {
+            return reg;
+        }
 
-            return mtxType.isEquivalent(regType)
-                    ? ref
-                    : ref.narrow(mtxType, scope.depth);
+        // refs always retain their nRef storage; adjust only the referent type view
+        if (reg instanceof Ref ref) {
+            if (mtxType.equals(ref.referentType())) {
+                return ref;
+            }
+
+            return ref.narrow(mtxType, scope.depth);
+        }
+
+        // retain a matching view, including a native-class view installed during method entry
+        if (mtxType.equals(reg.type())) {
+            return reg;
+        }
+
+        // discard stale flow views until finding the matrix type or reaching the register's
+        // canonical representation
+        while (reg instanceof Narrowed narrowedReg) {
+            reg = narrowedReg.origReg();
+            if (mtxType.equals(reg.type())) {
+                return reg;
+            }
         }
 
         TypeConstant regType  = reg.type();
         TypeConstant baseType = regType.removeNullable();
         if (baseType.isJitPrimitive()) {
-            TypeConstant mtxType = typeMatrix.getType(reg.regId(), currOpAddr);
-            if (mtxType != null && !mtxType.equals(regType) && // this check simply an optimization
-                    !mtxType.isEquivalent(regType) && mtxType.isEquivalent(baseType)) {
+            // primitive narrowing may require a different physical representation
+            if (mtxType.containsAutoNarrowing(true)) {
+                mtxType = mtxType.resolveAutoNarrowing(pool(), false, baseType, null);
+            }
+            if (!mtxType.equals(regType) &&
+                    (mtxType.isOnlyNullable() || mtxType.isEquivalent(baseType))) {
                 return narrowRegister(code, reg, currOpAddr, mtxType);
             }
         } else {
-            int          regId   = reg.regId();
-            TypeConstant mtxType = typeMatrix.getType(regId, currOpAddr);
-
-            // the types could be equivalent, but not equal
-            if (!mtxType.isEquivalent(regType)) {
-                int depth = scope.depth;
-                if (reg instanceof Narrowed narrowedReg) {
-                    reg     = narrowedReg.origReg();
-                    regType = reg.type();
-                    depth   = narrowedReg.scopeDepth();
-                    if (mtxType.isEquivalent(regType)) {
-                        return reg;
-                    }
-                } else if (reg.cd().isPrimitive()) {
-                    assert reg.flavor() == NullablePrimitive &&
-                        (mtxType.isJavaPrimitive() || mtxType.isTypeParameter());
-                    return reg;
-                }
-
-                assert mtxType.isA(regType);
-
-                // narrow, but stay boxed for primitive types
-                ClassDesc narrowedCD = builder.ensureClassDesc(mtxType);
-                JitFlavor flavor     = regType.getJitDesc(builder).flavor;
-
-                reg = new Narrowed(regId, reg.slots(), mtxType, flavor, narrowedCD, reg.slotCds(),
-                        reg.name(), depth, reg);
-                registerInfos.put(regId, reg);
+            if (reg.cd().isPrimitive()) {
+                assert reg.flavor() == NullablePrimitive &&
+                    (mtxType.isJavaPrimitive() || mtxType.isTypeParameter());
+                return reg;
             }
+
+            assert mtxType.isA(regType);
+
+            // keep the register's canonical representation; the narrowed view is only used by the
+            // current op to select and invoke the appropriate boxed implementation
+            ClassDesc narrowedCD = builder.ensureClassDesc(mtxType);
+            JitFlavor flavor     = regType.getJitDesc(builder).flavor;
+
+            return new Narrowed(reg.regId(), reg.slots(), mtxType, flavor, narrowedCD,
+                    reg.slotCds(), reg.name(), scope.depth, reg);
         }
         return reg;
     }
@@ -1272,7 +1282,7 @@ public class BuildContext {
         }
 
         if (argId == Op.A_THIS) {
-            return getRegisterInfo(code, Op.A_THIS);
+            return adjustRegister(code, getRegisterInfo(code, Op.A_THIS));
         }
 
         RegisterInfo reg = argId <= Op.CONSTANT_OFFSET
@@ -1624,7 +1634,7 @@ public class BuildContext {
             // the register represents a property that the value(s) on the stack must be stored into
             buildSetPropertyFromStack(code, regId, type, jitDesc.flavor);
         } else {
-            RegisterInfo reg = ensureRegister(regId, type);
+            RegisterInfo reg = adjustRegister(code, ensureRegister(regId, type));
             reg.store(this, code, type);
             ensureRegisterScope(code, reg);
         }
@@ -1834,7 +1844,9 @@ public class BuildContext {
 
             switch (srcFlavor.name() + "->" + dstFlavor.name()) {
             case "Specific->Primitive",
-                 "Specific->XvmPrimitive":
+                 "Specific->XvmPrimitive",
+                 "Widened->Primitive",
+                 "Widened->XvmPrimitive":
                 Builder.unbox(code, typeTo);
                 break;
 
@@ -2276,7 +2288,7 @@ public class BuildContext {
             JitFlavor   narrowedFlavor = narrowedDesc.flavor;
                         narrowedCD     = narrowedDesc.cd;
             if (narrowingType.isJavaPrimitive()) {
-                if (origReg.flavor() == NullablePrimitive) {
+                if (origReg.cd().equals(narrowedCD) || origReg.flavor() == NullablePrimitive) {
                     narrowedSlots   = origReg.slots();
                     narrowedSlotCds = origReg.slotCds();
                 } else {
@@ -2284,11 +2296,12 @@ public class BuildContext {
                     narrowedSlotCds = new ClassDesc[] {narrowedCD};
                 }
             } else if (narrowingType.isXvmPrimitive()) {
-                if (origReg.flavor() == NullableXvmPrimitive) {
+                ClassDesc[] xvmCds = JitTypeDesc.getXvmPrimitiveClasses(narrowingType);
+                if (Arrays.equals(origReg.slotCds(), xvmCds) || origReg.flavor() == NullableXvmPrimitive) {
                     narrowedSlots   = origReg.slots();
                     narrowedSlotCds = origReg.slotCds();
                 } else {
-                    narrowedSlotCds = JitTypeDesc.getXvmPrimitiveClasses(narrowingType);
+                    narrowedSlotCds = xvmCds;
                     narrowedSlots   = new int[narrowedSlotCds.length];
                     for (int i = 0; i < narrowedSlotCds.length; i++) {
                         narrowedSlots[i] = scope.allocateJavaSlot(narrowedSlotCds[i]);
