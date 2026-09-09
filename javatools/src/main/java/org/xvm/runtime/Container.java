@@ -261,9 +261,37 @@ public abstract class Container
      * @return the new service context
      */
     public ServiceContext createServiceContext(String sName) {
-        ServiceContext service = new ServiceContext(this, sName, f_runtime.makeUniqueId());
-        f_setServices.add(service);
-        return service;
+        synchronized (this) {
+            if (m_futureTermination != null) {
+                throw new IllegalStateException("Container is terminating: " + this);
+            }
+
+            ServiceContext service = new ServiceContext(this, sName, f_runtime.makeUniqueId());
+            f_setServices.add(service);
+            return service;
+        }
+    }
+
+    /**
+     * Terminate every service that belongs to this container.
+     *
+     * <p>Idempotent by memoizing the future: a second caller joins the first termination rather
+     * than starting a competing one, and {@link #createServiceContext} refuses once this has begun,
+     * so the service set cannot grow underneath the sweep.</p>
+     *
+     * @return a future that completes when all of the services have terminated
+     */
+    public CompletableFuture<Void> terminateServices() {
+        synchronized (this) {
+            CompletableFuture<Void> future = m_futureTermination;
+            if (future == null) {
+                m_futureTermination = future = CompletableFuture.allOf(
+                        f_setServices.stream()
+                                .map(ServiceContext::requestShutdown)
+                                .toArray(CompletableFuture<?>[]::new));
+            }
+            return future;
+        }
     }
 
     /**
@@ -1056,6 +1084,11 @@ public abstract class Container
     /**
      * The main module id.
      */
+    /**
+     * Completion of this container's termination; non-null once termination has begun.
+     */
+    private CompletableFuture<Void> m_futureTermination;
+
     protected final ModuleConstant f_idModule;
 
     /**

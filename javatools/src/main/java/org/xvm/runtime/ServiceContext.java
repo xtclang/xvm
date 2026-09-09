@@ -125,8 +125,14 @@ public class ServiceContext {
     }
 
     public void setService(ServiceHandle hService) {
-        assert m_hService == null || m_hService.isStruct() && !hService.isStruct();
-        m_hService = hService;
+        synchronized (this) {
+            if (m_fShutdownRequested) {
+                throw new IllegalStateException("Service is terminating: " + f_sName);
+            }
+
+            assert m_hService == null || m_hService.isStruct() && !hService.isStruct();
+            m_hService = hService;
+        }
     }
 
     /**
@@ -345,6 +351,11 @@ public class ServiceContext {
         // frozen-pool snapshot remains the long-term closure for the latter
         try (var _ = f_pool.openRuntimeSynthesisWindow("fiber execution")) {
             while (true) {
+                if (m_fShutdownRequested) {
+                    terminate();
+                    return true;
+                }
+
                 frame = nextFiber();
                 if (frame == null) {
                     return true; // nothing to do here
@@ -455,6 +466,14 @@ public class ServiceContext {
      */
     public boolean addRequest(Message<?> msg) {
         f_queueMsg.add(msg);
+
+        // if shutdown has claimed the message (f_queueMsg.remove(msg) returns "false"),
+        // it will reject it; otherwise reject it right here
+        if (m_fShutdownRequested && f_queueMsg.remove(msg)) {
+            msg.f_future.completeExceptionally(
+                    xException.serviceTerminated(null, f_sName).getException());
+            return false;
+        }
         ensureScheduled(msg.isAsync());
         return isOverwhelmed();
     }
@@ -678,7 +697,8 @@ public class ServiceContext {
                 ExceptionHandle hException = frame.m_hException;
                 assert hException != null;
 
-                boolean fDebugger = isDebuggerActive();
+                boolean fTerminating = fiber.getStatus() == FiberStatus.Terminating;
+                boolean fDebugger    = !fTerminating && isDebuggerActive();
 
                 while (true) {
                     if (fDebugger) {
@@ -712,7 +732,7 @@ public class ServiceContext {
                         }
                     }
 
-                    iPC = frame.findGuard(hException);
+                    iPC = fTerminating ? Op.R_EXCEPTION : frame.findGuard(hException);
                     if (iPC >= 0) {
                         // handled exception; go to the handler
                         m_frameCurrent = frame;
@@ -886,7 +906,7 @@ public class ServiceContext {
         if (m_hService != null) {
             // TODO: fire every registered ShuttingDownNotification
 
-            // TODO MF: need a better lock to avoid messages getting into the queue after this point
+            // TODO: reject requests that race with the final request-queue drain
             m_hService = null;
 
             FiberQueue qFiber = f_queueSuspended;
@@ -898,7 +918,7 @@ public class ServiceContext {
             }
 
             Set<Fiber> setFibers = f_setFibers;
-            Fiber      fiberThis = frame == null ? null : frame.f_fiber;
+            Fiber      fiberThis = frame.f_fiber;
 
             while (!qFiber.isEmpty()) {
                 Frame frameNext = qFiber.getAny();
@@ -923,6 +943,61 @@ public class ServiceContext {
         return Op.R_NEXT;
     }
 
+
+    /**
+     * Terminate all existing fibers and reject all queued requests.
+     *
+     * <p>Distinct from {@link #shutdown}, which is the natural Ecstasy path and lets fibers finish:
+     * this is the forced one, reached from {@link #requestShutdown} through the run loop, so it
+     * runs ON the service thread and needs no lock against the fibers it is tearing down.</p>
+     */
+    private void terminate() {
+        m_hService = null;
+
+        WrapperException exception = xException.serviceTerminated(null, f_sName).getException();
+        // Message is generified on this branch, so the upstream raw declaration does not compile
+        // under -Werror; the wildcard is the local equivalent
+        Message<?> message;
+        while ((message = f_queueMsg.poll()) != null) {
+            message.f_future.completeExceptionally(exception);
+        }
+
+        FiberQueue qFiber = f_queueSuspended;
+        if (m_frameCurrent != null) {
+            qFiber.add(m_frameCurrent);
+            m_frameCurrent = null;
+        }
+
+        Set<Fiber> setFibers = f_setFibers;
+        while (!qFiber.isEmpty()) {
+            Frame frame = qFiber.getAny();
+            Fiber fiber = frame.f_fiber;
+
+            fiber.setStatus(FiberStatus.Terminating, 0);
+
+            // this will respond immediately with an exception from "Fiber.prepareRun()"
+            execute(frame);
+
+            setFibers.remove(fiber);
+        }
+
+        assert setFibers.isEmpty();
+
+        f_container.terminate(this);
+        m_futureShutdown.complete(null);
+    }
+
+    /**
+     * Request an asynchronous shutdown of this service.
+     *
+     * @return a future that completes when all of the service's fibers have terminated
+     */
+    public CompletableFuture<Void> requestShutdown() {
+        CompletableFuture<Void> future = m_futureShutdown = new CompletableFuture<>();
+        m_fShutdownRequested = true;
+        ensureScheduled(true);
+        return future;
+    }
 
     // ----- x:Service methods ---------------------------------------------------------------------
 
@@ -965,7 +1040,7 @@ public class ServiceContext {
      * @return true iff the service is contended
      */
     public boolean isContended() {
-        return m_frameCurrent != null || !f_queueResponse.isEmpty() ||
+        return m_fShutdownRequested || m_frameCurrent != null || !f_queueResponse.isEmpty() ||
                 !f_queueMsg.isEmpty() || f_queueSuspended.isReady();
     }
 
@@ -980,7 +1055,7 @@ public class ServiceContext {
      * @return true iff the service is terminated
      */
     public boolean isTerminated() {
-        return m_hService == null && m_iFrameCounter > 0;
+        return m_hService == null && (m_fShutdownRequested || m_iFrameCounter > 0);
     }
 
 
@@ -2228,6 +2303,16 @@ public class ServiceContext {
      * The service handle.
      */
     private ServiceHandle m_hService;
+
+    /**
+     * Completion of this service's shutdown.
+     */
+    private CompletableFuture<Void> m_futureShutdown;
+
+    /**
+     * True once this service has been asked to shut down.
+     */
+    private volatile boolean m_fShutdownRequested;
 
     /**
      * The unhandled exception notification.

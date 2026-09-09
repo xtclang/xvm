@@ -133,8 +133,16 @@ module runner.xtclang.org {
         }
 
         /**
-         * Implementation of the `startTask` API.
+         * Implementation of the `startTask` API. It's marked as `@Concurrent` to allow [killTask()]
+         * to enter the registry service while waiting for the task's completion.
+         *
+         * Without it the registry is held for the whole duration of a run, because `TaskRegistry`
+         * is a singleton service and this is a blocking call: a module that never finishes wedges
+         * every later `startTask` behind it, and `killTask` cannot get in to stop the one that is
+         * stuck. Profiling this branch hit exactly that - one hung module took out every subsequent
+         * run through the same engine (`docs/reentrancy/interpreter-jfr-profile.md`).
          */
+        @Concurrent
         Tuple<Int, String> startTask(Int id) = taskFor(id).start();
 
         /**

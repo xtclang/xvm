@@ -1,6 +1,8 @@
 package org.xvm.runtime.template._native.mgmt;
 
 
+import java.util.concurrent.CompletableFuture;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -155,23 +157,46 @@ public class xContainerControl
      */
     protected int invokeKill(Frame frame, ControlHandle hCtrl, int iReturn) {
         if (hCtrl.f_container instanceof NestedContainer container) {
-            switch (closeResourceProvider(frame, container.f_hProvider)) {
-            case Op.R_NEXT:
-                return completeKill(frame, iReturn);
+            // terminate the container's services BEFORE closing the resource provider, so a fiber
+            // still running cannot observe a half-closed provider. Killing used to close the
+            // provider and return, leaving pending fibers to finish on their own - which is why a
+            // caller waiting on the task could wait forever.
+            //
+            // NOTE: the completion value is owner-scoped rather than xTuple.H_VOID as upstream has
+            // it. This branch deleted that shared handle in 5fef0d149 precisely because one Tuple()
+            // served every container and could leak across the boundary; A_IGNORE discards the
+            // value here, but reintroducing the shared handle is not worth the saving.
+            CompletableFuture<ObjectHandle> future = container.terminateServices()
+                    .thenApply(_ -> xTuple.ensureEmptyTuple(frame.container()));
 
-            case Op.R_CALL:
-                frame.m_frameNext.addContinuation(
-                    frameCaller -> completeKill(frameCaller, iReturn));
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
-            default:
-                throw new IllegalStateException();
-            }
+            return frame.waitForExternalCompletion(future, Op.A_IGNORE,
+                    frameCaller -> closeResourceProvider(frameCaller, container.f_hProvider, iReturn));
         }
         return frame.raiseException("Main container cannot be killed");
+    }
+
+    /**
+     * Close the container's resource provider and complete the kill.
+     *
+     * @return one of {@code Op.R_NEXT}, {@code Op.R_CALL} or {@code Op.R_EXCEPTION}
+     */
+    private int closeResourceProvider(Frame frame, ObjectHandle hProvider, int iReturn) {
+        // Note: the caller is async; we must return the Tuple()
+        switch (closeResourceProvider(frame, hProvider)) {
+        case Op.R_NEXT:
+            return completeKill(frame, iReturn);
+
+        case Op.R_CALL:
+            frame.m_frameNext.addContinuation(
+                frameCaller -> completeKill(frameCaller, iReturn));
+            return Op.R_CALL;
+
+        case Op.R_EXCEPTION:
+            return Op.R_EXCEPTION;
+
+        default:
+            throw new IllegalStateException();
+        }
     }
 
     private int closeResourceProvider(Frame frame, ObjectHandle hProvider) {
