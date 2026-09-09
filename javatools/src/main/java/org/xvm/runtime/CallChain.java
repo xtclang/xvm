@@ -94,8 +94,11 @@ public class CallChain {
      * @return true iff the top body of this chain is a delegating method for an atomic property
      */
     public boolean isAtomic() {
-        if (m_FAtomic != null) {
-            return m_FAtomic.booleanValue();
+        // read the cached answer ONCE: testing the field and then returning it reads it twice, so a
+        // concurrent publication between the two could hand back a null to unbox
+        Boolean atomic = m_FAtomic;
+        if (atomic != null) {
+            return atomic;
         }
 
         MethodBody bodyHead = head();
@@ -297,64 +300,89 @@ public class CallChain {
     }
 
     /**
+     * How a {@code Delegating} super-invocation finishes once the delegate target is in hand. The
+     * four {@code callSuper*} methods differ only here, in the arity they forward.
+     */
+    @FunctionalInterface
+    private interface DelegateStep {
+        int complete(Frame frame, ObjectHandle hTarget, SignatureConstant sig);
+    }
+
+    /**
+     * The shape every {@code Delegating} super-invocation shares: read the delegate target out of
+     * its property, then finish the call against it - immediately when the read completed, or from
+     * a continuation when it went asynchronous.
+     *
+     * <p>Extracted because all four {@code callSuper*} methods carried this switch verbatim, so a
+     * fix to one of them left the other three behind. The completing step allocates a lambda, which
+     * the previous shape only did on the asynchronous branch; that is confined to delegating
+     * properties, which are not the common super-call.</p>
+     *
+     * @param frame      the current frame
+     * @param hThis      the target of the super-invocation
+     * @param bodySuper  the delegating method body
+     * @param step       how to finish once the delegate target has been read
+     *
+     * @return one of {@code Op.R_NEXT}, {@code Op.R_CALL} or {@code Op.R_EXCEPTION}
+     */
+    private int callDelegating(Frame frame, ObjectHandle hThis, MethodBody bodySuper,
+                               DelegateStep step) {
+        SignatureConstant sig    = bodySuper.getSignature();
+        PropertyConstant  idProp = bodySuper.getPropertyConstant();
+
+        return switch (hThis.getTemplate().getPropertyValue(frame, hThis, idProp, Op.A_STACK)) {
+            case Op.R_NEXT -> step.complete(frame, frame.popStack(), sig);
+
+            case Op.R_CALL -> {
+                frame.m_frameNext.addContinuation(frameCaller ->
+                        step.complete(frameCaller, frameCaller.popStack(), sig));
+                yield Op.R_CALL;
+            }
+
+            case Op.R_EXCEPTION -> Op.R_EXCEPTION;
+
+            default -> throw new IllegalStateException();
+        };
+    }
+
+    /**
      * Super invocation with no arguments and a single return (A_IGNORE for void).
      */
     public int callSuper01(Frame frame, int iReturn) {
-        int nDepth = frame.m_nChainDepth + 1;
-        MethodBody bodySuperCheck = bodyAt(nDepth);
-        if (bodySuperCheck == null) {
+        int        nDepth    = frame.m_nChainDepth + 1;
+        MethodBody bodySuper = bodyAt(nDepth);
+        if (bodySuper == null) {
             return missingSuper(frame);
         }
 
-        ObjectHandle hThis     = frame.getThis();
-        MethodBody   bodySuper = bodySuperCheck;
+        ObjectHandle hThis = frame.getThis();
 
-        switch (bodySuper.getImplementation()) {
-        case Field:
-            return hThis.getComposition().getFieldValue(frame,
-                hThis, bodySuper.getPropertyConstant(), iReturn);
+        return switch (bodySuper.getImplementation()) {
+            case Field -> hThis.getComposition().getFieldValue(frame,
+                    hThis, bodySuper.getPropertyConstant(), iReturn);
 
-        case Native: {
-            ClassTemplate   template  = hThis.getTemplate();
-            MethodStructure method    = bodySuper.getMethodStructure();
-            Component       container = method.getParent().getParent();
+            case Native -> {
+                ClassTemplate   template  = hThis.getTemplate();
+                MethodStructure method    = bodySuper.getMethodStructure();
+                Component       container = method.getParent().getParent();
 
-            return container instanceof PropertyStructure
-                ? template.invokeNativeGet(frame, container.getName(), hThis, iReturn)
-                : template.invokeNativeN(frame, method, hThis, Utils.OBJECTS_NONE, iReturn);
-        }
-
-        case Default, Explicit: {
-            MethodStructure methodSuper = bodySuper.getMethodStructure();
-
-            ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getMaxVars()];
-            return frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
-        }
-
-        case Delegating: {
-            SignatureConstant sig    = bodySuper.getSignature();
-            PropertyConstant  idProp = bodySuper.getPropertyConstant();
-
-            switch (hThis.getTemplate().getPropertyValue(frame, hThis, idProp, Op.A_STACK)) {
-            case Op.R_NEXT:
-                return completeDelegate(frame, frame.popStack(), sig, iReturn);
-
-            case Op.R_CALL:
-                frame.m_frameNext.addContinuation(frameCaller ->
-                    completeDelegate(frameCaller, frameCaller.popStack(), sig, iReturn));
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
-            default:
-                throw new IllegalStateException();
+                yield container instanceof PropertyStructure
+                        ? template.invokeNativeGet(frame, container.getName(), hThis, iReturn)
+                        : template.invokeNativeN(frame, method, hThis, Utils.OBJECTS_NONE, iReturn);
             }
-        }
 
-        default:
-            throw new IllegalStateException();
-        }
+            case Default, Explicit -> {
+                MethodStructure methodSuper = bodySuper.getMethodStructure();
+                ObjectHandle[]  ahVar       = new ObjectHandle[methodSuper.getMaxVars()];
+                yield frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
+            }
+
+            case Delegating -> callDelegating(frame, hThis, bodySuper,
+                    (frameDelegate, hTarget, sig) ->
+                            completeDelegate(frameDelegate, hTarget, sig, iReturn));
+
+            default -> throw new IllegalStateException();
+        };
     }
 
     private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig, int iReturn) {
@@ -368,56 +396,35 @@ public class CallChain {
      * Super invocation with a single arguments and a single return (A_IGNORE for void).
      */
     public int callSuper11(Frame frame, ObjectHandle hArg, int iReturn) {
-        int nDepth = frame.m_nChainDepth + 1;
-        MethodBody bodySuperCheck = bodyAt(nDepth);
-        if (bodySuperCheck == null) {
+        int        nDepth    = frame.m_nChainDepth + 1;
+        MethodBody bodySuper = bodyAt(nDepth);
+        if (bodySuper == null) {
             return missingSuper(frame);
         }
 
-        ObjectHandle hThis     = frame.getThis();
-        MethodBody   bodySuper = bodySuperCheck;
+        ObjectHandle hThis = frame.getThis();
 
-        switch (bodySuper.getImplementation()) {
-        case Field:
-            return hThis.getComposition().setFieldValue(frame,
-                hThis, bodySuper.getPropertyConstant(), hArg);
+        return switch (bodySuper.getImplementation()) {
+            case Field -> hThis.getComposition().setFieldValue(frame,
+                    hThis, bodySuper.getPropertyConstant(), hArg);
 
-        case Native:
-            return hThis.getTemplate().invokeNative1(frame, bodySuper.getMethodStructure(),
-                hThis, hArg, iReturn);
+            case Native -> hThis.getTemplate().invokeNative1(frame,
+                    bodySuper.getMethodStructure(), hThis, hArg, iReturn);
 
-        case Default, Explicit: {
-            MethodStructure methodSuper = bodySuper.getMethodStructure();
-            ObjectHandle[]  ahVar       = new ObjectHandle[Math.max(methodSuper.getMaxVars(), 1)];
-            ahVar[0] = hArg;
-
-            return frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
-        }
-
-        case Delegating: {
-            SignatureConstant sig    = bodySuper.getSignature();
-            PropertyConstant  idProp = bodySuper.getPropertyConstant();
-
-            switch (hThis.getTemplate().getPropertyValue(frame, hThis, idProp, Op.A_STACK)) {
-            case Op.R_NEXT:
-                return completeDelegate(frame, frame.popStack(), sig, hArg, iReturn);
-
-            case Op.R_CALL:
-                frame.m_frameNext.addContinuation(frameCaller ->
-                    completeDelegate(frameCaller, frameCaller.popStack(), sig, hArg, iReturn));
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
-            default:
-                throw new IllegalStateException();
+            case Default, Explicit -> {
+                MethodStructure methodSuper = bodySuper.getMethodStructure();
+                ObjectHandle[]  ahVar       =
+                        new ObjectHandle[Math.max(methodSuper.getMaxVars(), 1)];
+                ahVar[0] = hArg;
+                yield frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
             }
-        }
 
-        default:
-            throw new IllegalStateException();
-        }
+            case Delegating -> callDelegating(frame, hThis, bodySuper,
+                    (frameDelegate, hTarget, sig) ->
+                            completeDelegate(frameDelegate, hTarget, sig, hArg, iReturn));
+
+            default -> throw new IllegalStateException();
+        };
     }
 
     private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig,
@@ -432,59 +439,38 @@ public class CallChain {
      * Super invocation with multiple arguments and a single return.
      */
     public int callSuperN1(Frame frame, ObjectHandle[] ahArg, int iReturn, boolean fReturnTuple) {
-        int nDepth = frame.m_nChainDepth + 1;
-        MethodBody bodySuperCheck = bodyAt(nDepth);
-        if (bodySuperCheck == null) {
+        int        nDepth    = frame.m_nChainDepth + 1;
+        MethodBody bodySuper = bodyAt(nDepth);
+        if (bodySuper == null) {
             return missingSuper(frame);
         }
 
         ObjectHandle    hThis       = frame.getThis();
-        MethodBody      bodySuper   = bodySuperCheck;
         MethodStructure methodSuper = bodySuper.getMethodStructure();
 
-        switch (bodySuper.getImplementation()) {
-        case Native: {
-            ClassTemplate template = hThis.getTemplate();
-            return fReturnTuple
-                ? template.invokeNativeT(frame, methodSuper, hThis, ahArg, iReturn)
-                : ahArg.length == 1
-                    ? template.invokeNative1(frame, methodSuper, hThis, ahArg[0], iReturn)
-                    : template.invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn);
-        }
-
-        case Default, Explicit: {
-            ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
-            return fReturnTuple
-                    ? frame.invokeT(this, nDepth, hThis, ahVar, iReturn)
-                    : frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
-        }
-
-        case Delegating: {
-            SignatureConstant sig    = bodySuper.getSignature();
-            PropertyConstant  idProp = bodySuper.getPropertyConstant();
-
-            switch (hThis.getTemplate().getPropertyValue(frame, hThis, idProp, Op.A_STACK)) {
-            case Op.R_NEXT:
-                return completeDelegate(frame, frame.popStack(),
-                    sig, ahArg, iReturn, fReturnTuple);
-
-            case Op.R_CALL:
-                frame.m_frameNext.addContinuation(frameCaller ->
-                    completeDelegate(frameCaller, frameCaller.popStack(),
-                        sig, ahArg, iReturn, fReturnTuple));
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
-            default:
-                throw new IllegalStateException();
+        return switch (bodySuper.getImplementation()) {
+            case Native -> {
+                ClassTemplate template = hThis.getTemplate();
+                yield fReturnTuple
+                        ? template.invokeNativeT(frame, methodSuper, hThis, ahArg, iReturn)
+                        : ahArg.length == 1
+                                ? template.invokeNative1(frame, methodSuper, hThis, ahArg[0], iReturn)
+                                : template.invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn);
             }
-        }
 
-        default:
-            throw new IllegalStateException();
-        }
+            case Default, Explicit -> {
+                ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
+                yield fReturnTuple
+                        ? frame.invokeT(this, nDepth, hThis, ahVar, iReturn)
+                        : frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
+            }
+
+            case Delegating -> callDelegating(frame, hThis, bodySuper,
+                    (frameDelegate, hTarget, sig) -> completeDelegate(frameDelegate, hTarget, sig,
+                            ahArg, iReturn, fReturnTuple));
+
+            default -> throw new IllegalStateException();
+        };
     }
 
     private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig,
@@ -501,48 +487,28 @@ public class CallChain {
      * Super invocation with multiple arguments and multiple returns.
      */
     public int callSuperNN(Frame frame, ObjectHandle[] ahArg, int[] aiReturn) {
-        int nDepth = frame.m_nChainDepth + 1;
-        MethodBody bodySuperCheck = bodyAt(nDepth);
-        if (bodySuperCheck == null) {
+        int        nDepth    = frame.m_nChainDepth + 1;
+        MethodBody bodySuper = bodyAt(nDepth);
+        if (bodySuper == null) {
             return missingSuper(frame);
         }
 
         ObjectHandle    hThis       = frame.getThis();
-        MethodBody      bodySuper   = bodySuperCheck;
         MethodStructure methodSuper = bodySuper.getMethodStructure();
 
-        switch (bodySuper.getImplementation()) {
-        case Native:
-            return hThis.getTemplate().invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
+        return switch (bodySuper.getImplementation()) {
+            case Native ->
+                    hThis.getTemplate().invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
 
-        case Default, Explicit:
-            return frame.invokeN(this, nDepth, hThis,
+            case Default, Explicit -> frame.invokeN(this, nDepth, hThis,
                     Utils.ensureSize(ahArg, methodSuper.getMaxVars()), aiReturn);
 
-        case Delegating: {
-            SignatureConstant sig    = bodySuper.getSignature();
-            PropertyConstant  idProp = bodySuper.getPropertyConstant();
+            case Delegating -> callDelegating(frame, hThis, bodySuper,
+                    (frameDelegate, hTarget, sig) ->
+                            completeDelegate(frameDelegate, hTarget, sig, ahArg, aiReturn));
 
-            switch (hThis.getTemplate().getPropertyValue(frame, hThis, idProp, Op.A_STACK)) {
-            case Op.R_NEXT:
-                return completeDelegate(frame, frame.popStack(), sig, ahArg, aiReturn);
-
-            case Op.R_CALL:
-                frame.m_frameNext.addContinuation(frameCaller ->
-                    completeDelegate(frameCaller, frameCaller.popStack(), sig, ahArg, aiReturn));
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
-            default:
-                throw new IllegalStateException();
-            }
-        }
-
-        default:
-            throw new IllegalStateException();
-        }
+            default -> throw new IllegalStateException();
+        };
     }
 
     private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig,

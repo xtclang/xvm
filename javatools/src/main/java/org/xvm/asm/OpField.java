@@ -66,28 +66,28 @@ public sealed interface OpField {
 
     /**
      * @param role  what the argument is for
-     * @param nArg  the encoded argument
+     * @param encoded  the encoded argument
      *
      * @return the argument field
      */
-    static OpField arg(String role, int nArg) {
-        return new Arg(OpOperand.decode(role, nArg));
+    static OpField arg(String role, int encoded) {
+        return new Arg(OpOperand.decode(role, encoded));
     }
 
     /**
      * @param role   the shared role, suffixed with each index
-     * @param anArg  the encoded arguments, possibly null
+     * @param encoded  the encoded arguments, possibly null
      *
-     * @return the argument fields, empty if {@code anArg} is null
+     * @return the argument fields, empty if {@code encoded} is null
      */
-    static List<OpField> args(String role, int[] anArg) {
+    static List<OpField> args(String role, int[] encoded) {
         // the length prefix is encoded too. It is redundant with the element count, but this list
         // claims to be everything the op writes in wire order, and leaving it out is what made the
         // completeness check inexact and would block a round-trip.
-        return anArg == null
+        return encoded == null
                 ? List.of()
-                : concat(List.of(literal(role + ".count", anArg.length)),
-                         OpOperand.decodeAll(role, anArg).stream().<OpField>map(Arg::new).toList());
+                : concat(List.of(literal(role + ".count", encoded.length)),
+                         OpOperand.decodeAll(role, encoded).stream().<OpField>map(Arg::new).toList());
     }
 
     /**
@@ -95,12 +95,12 @@ public sealed interface OpField {
      * writes itself or does not write at all.
      *
      * @param role   the shared role, suffixed with each index
-     * @param anArg  the encoded arguments, possibly null
+     * @param encoded  the encoded arguments, possibly null
      *
      * @return the argument fields
      */
-    static List<OpField> argsUncounted(String role, int[] anArg) {
-        return OpOperand.decodeAll(role, anArg).stream().<OpField>map(Arg::new).toList();
+    static List<OpField> argsUncounted(String role, int[] encoded) {
+        return OpOperand.decodeAll(role, encoded).stream().<OpField>map(Arg::new).toList();
     }
 
     /**
@@ -115,29 +115,29 @@ public sealed interface OpField {
 
     /**
      * @param role  the shared role, suffixed with each index
-     * @param aof   the displacements, possibly null
+     * @param displacements   the displacements, possibly null
      *
-     * @return the branch fields, empty if {@code aof} is null
+     * @return the branch fields, empty if {@code displacements} is null
      */
-    static List<OpField> branches(String role, int[] aof) {
-        return aof == null
+    static List<OpField> branches(String role, int[] displacements) {
+        return displacements == null
                 ? List.of()
-                : concat(List.of(literal(role + ".count", aof.length)), branchesUncounted(role, aof));
+                : concat(List.of(literal(role + ".count", displacements.length)), branchesUncounted(role, displacements));
     }
 
     /**
      * As {@link #branches(String, int[])}, without the length prefix.
      *
      * @param role  the shared role, suffixed with each index
-     * @param aof   the displacements, possibly null
+     * @param displacements   the displacements, possibly null
      *
      * @return the branch fields
      */
-    static List<OpField> branchesUncounted(String role, int[] aof) {
-        return aof == null
+    static List<OpField> branchesUncounted(String role, int[] displacements) {
+        return displacements == null
                 ? List.of()
-                : IntStream.range(0, aof.length)
-                        .mapToObj(i -> branch(role + '[' + i + ']', aof[i]))
+                : IntStream.range(0, displacements.length)
+                        .mapToObj(i -> branch(role + '[' + i + ']', displacements[i]))
                         .toList();
     }
 

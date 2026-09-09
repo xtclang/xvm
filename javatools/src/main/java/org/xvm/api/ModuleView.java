@@ -96,7 +96,7 @@ public final class ModuleView {
      */
     public static @NotNull ModuleView open(@NotNull Path path)
             throws IOException {
-        return new ModuleView(new FileStructure(path.toFile(), /*fLazy*/ true));
+        return new ModuleView(new FileStructure(path.toFile(), /*lazy*/ true));
     }
 
     /**
@@ -224,17 +224,17 @@ public final class ModuleView {
      * @return one entry per op, in address order
      */
     public @NotNull List<Resolved> decode(@NotNull MethodStructure method) {
-        Constant[] aconst = method.getLocalConstants();
+        Constant[] constants = method.getLocalConstants();
         return ops(method).stream()
                 .map(op -> op.fields()
                         .map(list -> new Resolved(op, true, list.stream()
-                                .map(field -> resolve(field, aconst, op.getAddress()))
+                                .map(field -> resolve(field, constants, op.getAddress()))
                                 .toList()))
                         .orElseGet(() -> new Resolved(op, false, List.of())))
                 .toList();
     }
 
-    private static Referent resolve(OpField field, Constant[] aconst, int address) {
+    private static Referent resolve(OpField field, Constant[] constants, int address) {
         return switch (field) {
             case OpField.Branch b -> new Referent(b,
                     (b.displacement() > 0 ? "->+" : "->") + b.displacement()
@@ -246,8 +246,8 @@ public final class ModuleView {
                 case OpOperand.Const c -> {
                     // a local-constant index out of range means the op and the method disagree
                     // about the pool, which is worth surfacing rather than an AIOOBE
-                    Constant value = aconst != null && c.index() < aconst.length
-                            ? aconst[c.index()] : null;
+                    Constant value = constants != null && c.index() < constants.length
+                            ? constants[c.index()] : null;
                     yield new Referent(a, value == null
                             ? "const:#" + c.index() + " (UNRESOLVED)"
                             : value.getValueString(), value);
@@ -302,8 +302,8 @@ public final class ModuleView {
      * @return its local constants, empty if it has no body
      */
     public @NotNull List<Constant> constants(@NotNull MethodStructure method) {
-        Constant[] aconst = method.hasCode() ? method.getLocalConstants() : null;
-        return aconst == null ? List.of() : List.of(aconst);
+        Constant[] local = method.hasCode() ? method.getLocalConstants() : null;
+        return local == null ? List.of() : List.of(local);
     }
 
     /**

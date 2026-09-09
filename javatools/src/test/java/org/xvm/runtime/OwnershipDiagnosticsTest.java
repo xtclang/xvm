@@ -1,7 +1,6 @@
 package org.xvm.runtime;
 
 
-import java.lang.reflect.Field;
 
 import java.util.Map;
 
@@ -40,11 +39,10 @@ public class OwnershipDiagnosticsTest {
      */
     @Test
     public void cleanSyntheticContainersValidate() {
-        TestContainer containerA = newContainer("DiagA");
-        TestContainer containerB = newContainer("DiagB");
+        var containerA = newContainer("DiagA");
+        var containerB = newContainer("DiagB");
 
-        OwnershipDiagnostics.Validation validation =
-                OwnershipDiagnostics.validate(containerA, containerB);
+        var validation = OwnershipDiagnostics.validate(containerA, containerB);
 
         assertTrue(validation.isValid(), validation::message);
         assertDoesNotThrow(() -> OwnershipDiagnostics.assertValid(containerA, containerB));
@@ -79,15 +77,14 @@ public class OwnershipDiagnosticsTest {
      */
     @Test
     public void validatorRejectsForeignTemplateInOwnerCache() throws Exception {
-        TestContainer containerA = newContainer("DiagA");
-        TestContainer containerB = newContainer("DiagB");
+        var containerA = newContainer("DiagA");
+        var containerB = newContainer("DiagB");
 
-        TestTemplate templateFromB = new TestTemplate(containerB,
+        var templateFromB = new TestTemplate(containerB,
                 createClass(containerB.file, "ForeignTemplate"));
         cacheTemplate(containerA, templateFromB);
 
-        OwnershipDiagnostics.Validation validation =
-                OwnershipDiagnostics.validate(containerA, containerB);
+        var validation = OwnershipDiagnostics.validate(containerA, containerB);
 
         assertFalse(validation.isValid());
         assertFalse(validation.ownerMismatches().isEmpty());
@@ -101,11 +98,11 @@ public class OwnershipDiagnosticsTest {
      */
     @Test
     public void validatorRejectsForeignRootHandle() {
-        TestContainer containerA = newContainer("DiagA");
-        TestContainer containerB = newContainer("DiagB");
-        GenericHandle handleB = newHandle(containerB, "ForeignHandle");
+        var containerA = newContainer("DiagA");
+        var containerB = newContainer("DiagB");
+        var handleB = newHandle(containerB, "ForeignHandle");
 
-        OwnershipDiagnostics.Validation validation =
+        var validation =
                 OwnershipDiagnostics.validateHandle(containerA, "root", handleB);
 
         assertFalse(validation.isValid());
@@ -120,14 +117,14 @@ public class OwnershipDiagnosticsTest {
      */
     @Test
     public void validatorWalksHandleFieldGraph() throws Exception {
-        TestContainer containerA = newContainer("DiagA");
-        TestContainer containerB = newContainer("DiagB");
-        GenericHandle handleA = newHandle(containerA, "RootHandle");
-        GenericHandle handleB = newHandle(containerB, "LeakedHandle");
+        var containerA = newContainer("DiagA");
+        var containerB = newContainer("DiagB");
+        var handleA = newHandle(containerA, "RootHandle");
+        var handleB = newHandle(containerB, "LeakedHandle");
 
         setFields(handleA, handleB);
 
-        OwnershipDiagnostics.Validation validation =
+        var validation =
                 OwnershipDiagnostics.validateHandle(containerA, "root", handleA);
 
         assertFalse(validation.isValid());
@@ -144,8 +141,8 @@ public class OwnershipDiagnosticsTest {
      */
     @Test
     public void crossOwnerMaskRejectsNonSharedHandleBeforeClone() {
-        TestContainer target = newContainer("MaskTarget");
-        TestContainer source = newContainer("MaskSource");
+        var target = newContainer("MaskTarget");
+        var source = newContainer("MaskSource");
 
         var clzTarget = new TestComposition(target);
         var clzSource = new TestComposition(source, clzTarget);
@@ -155,19 +152,19 @@ public class OwnershipDiagnosticsTest {
         assertTrue(handle.wasSharedChecked());
     }
 
-    @SuppressWarnings("unchecked")
-    private static void cacheTemplate(Container container, ClassTemplate template)
-            throws Exception {
-        Field field = Container.class.getDeclaredField("f_mapTemplatesByType");
-        field.setAccessible(true);
-
-        Map<TypeConstant, ClassTemplate> templates =
-                (Map<TypeConstant, ClassTemplate>) field.get(container);
-        templates.put(template.getStructure().getIdentityConstant().getType(), template);
+    /**
+     * No reflection needed: {@code f_mapTemplatesByType} is protected and this test lives in
+     * {@code org.xvm.runtime}, so the field is simply in scope. Reaching it through
+     * {@code getDeclaredField} bought nothing and cost an unchecked cast, because {@code Field.get}
+     * erases to {@code Object} and no cast can then check the type arguments.
+     */
+    private static void cacheTemplate(Container container, ClassTemplate template) {
+        container.f_mapTemplatesByType.put(
+                template.getStructure().getIdentityConstant().getType(), template);
     }
 
     private static TestContainer newContainer(String moduleName) {
-        FileStructure file = new FileStructure(moduleName);
+        var file = new FileStructure(moduleName);
         return new TestContainer(new Runtime(), file);
     }
 
@@ -175,9 +172,14 @@ public class OwnershipDiagnosticsTest {
         return new GenericHandle(new TestComposition(container));
     }
 
+    /**
+     * This one DOES need reflection: {@code GenericHandle.m_aFields} is private and final, so
+     * unlike {@code cacheTemplate} above there is no in-scope path to it, and the test needs to
+     * plant a handle owned by a foreign container to give the validator something to catch.
+     */
     private static void setFields(GenericHandle handle, ObjectHandle... fields)
             throws Exception {
-        Field field = GenericHandle.class.getDeclaredField("m_aFields");
+        var field = GenericHandle.class.getDeclaredField("m_aFields");
         field.setAccessible(true);
         field.set(handle, fields);
     }
@@ -399,5 +401,58 @@ public class OwnershipDiagnosticsTest {
         }
 
         private boolean checked;
+    }
+
+    /**
+     * Exercises the runtime-scoped half of the API. These read as dead code to a static analyser
+     * because nothing in the tree calls them - they exist to be called from a host or a debugger -
+     * so covering them here is what distinguishes "unused" from "unusable", and keeps the
+     * validate/assert pairing symmetric with the container-scoped methods above.
+     */
+    @Test
+    public void runtimeScopedHelpersWalkTheWholeRuntime() {
+        var runtime = new Runtime();
+        try {
+            var container = runtime.registerContainer(
+                    new TestContainer(runtime, new FileStructure("DiagRuntimeScope")));
+
+            assertTrue(OwnershipDiagnostics.runtimeContainers(container).contains(container),
+                    "the walk should reach the container it started from");
+            assertTrue(OwnershipDiagnostics.validateRuntime(container).isValid(),
+                    "a freshly registered container is clean");
+            assertDoesNotThrow(() -> OwnershipDiagnostics.assertRuntimeValid(container));
+
+            var dump = OwnershipDiagnostics.dumpRuntime(container);
+            // the render names each container by its module and closes with a checks section;
+            // "container[" belongs to the VALIDATION path, not to this one
+            assertTrue(dump.contains("DiagRuntimeScope"),
+                    () -> "expected the module to be named:\n" + dump);
+            assertTrue(dump.contains("checks:"),
+                    () -> "expected the findings section:\n" + dump);
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    /**
+     * A clean sweep must both report itself clean and let {@code assertClean} pass. The two can
+     * disagree only if the report's own emptiness test and its assertion drift apart, which is
+     * exactly what an untested assertion invites.
+     */
+    @Test
+    public void aCleanSweepReportPassesItsOwnAssertion() {
+        var runtime = new Runtime();
+        try {
+            var container = runtime.registerContainer(
+                    new TestContainer(runtime, new FileStructure("DiagSweep")));
+
+            var report = OwnershipDiagnostics.sweepForeignReferences(container);
+
+            assertTrue(report.isClean(), () -> "unexpected foreign references:\n" + report.render());
+            assertDoesNotThrow(report::assertClean);
+            assertTrue(report.objectsVisited() > 0, "the sweep should have visited something");
+        } finally {
+            runtime.shutdownXVM();
+        }
     }
 }

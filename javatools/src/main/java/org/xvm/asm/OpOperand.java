@@ -71,33 +71,33 @@ public sealed interface OpOperand {
      * Decode one encoded argument.
      *
      * @param role  what the operand is for
-     * @param nArg  the encoded argument, as written to the op's persistent form
+     * @param encoded  the encoded argument, as written to the op's persistent form
      *
      * @return the decoded operand
      */
-    static OpOperand decode(String role, int nArg) {
-        if (nArg >= 0) {
-            return new Reg(role, nArg);
+    static OpOperand decode(String role, int encoded) {
+        if (encoded >= 0) {
+            return new Reg(role, encoded);
         }
-        if (nArg <= Op.CONSTANT_OFFSET) {
-            return new Const(role, Op.CONSTANT_OFFSET - nArg);
+        if (encoded <= Op.CONSTANT_OFFSET) {
+            return new Const(role, Op.CONSTANT_OFFSET - encoded);
         }
-        return new Special(role, nArg, specialName(nArg));
+        return new Special(role, encoded, specialName(encoded));
     }
 
     /**
      * Decode a run of encoded arguments sharing a role, numbered from zero.
      *
      * @param role   the shared role, suffixed with each index
-     * @param anArg  the encoded arguments, possibly null
+     * @param encoded  the encoded arguments, possibly null
      *
-     * @return the decoded operands, empty if {@code anArg} is null
+     * @return the decoded operands, empty if {@code encoded} is null
      */
-    static List<OpOperand> decodeAll(String role, int[] anArg) {
-        return anArg == null
+    static List<OpOperand> decodeAll(String role, int[] encoded) {
+        return encoded == null
                 ? List.of()
-                : IntStream.range(0, anArg.length)
-                        .mapToObj(i -> decode(role + '[' + i + ']', anArg[i]))
+                : IntStream.range(0, encoded.length)
+                        .mapToObj(i -> decode(role + '[' + i + ']', encoded[i]))
                         .toList();
     }
 
@@ -158,8 +158,8 @@ public sealed interface OpOperand {
         return Stream.concat(inherited.stream().flatMap(List::stream), added.stream()).toList();
     }
 
-    private static String specialName(int nArg) {
-        return switch (nArg) {
+    private static String specialName(int encoded) {
+        return switch (encoded) {
             case Op.A_STACK        -> "stack";
             case Op.A_IGNORE       -> "ignore";
             case Op.A_IGNORE_ASYNC -> "ignore-async";
@@ -175,7 +175,7 @@ public sealed interface OpOperand {
             case Op.A_SUPER        -> "super";
             case Op.A_MULTI        -> "multi";
             case Op.A_TUPLE        -> "tuple";
-            default                -> "?" + nArg;
+            default                -> "?" + encoded;
         };
     }
 }
