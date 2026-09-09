@@ -501,24 +501,24 @@ public class EmbeddingSupport {
      * "%1" - name of missing app module
      * "%2" - version of missing app module
      */
-    public static final String ERR_NO_APP_MODULE        = "LSP-1";
+    public static final String ERR_NO_APP_MODULE        = "EMB-1";
     /**
      * "%1" - name of missing app module
      * "%2" - version of missing app module
      */
-    public static final String ERR_NO_APP_MODULE_VER    = "LSP-2";
+    public static final String ERR_NO_APP_MODULE_VER    = "EMB-2";
     /**
      * "%1" - exception (may be null)
      * "%2" - additional description (may be null)
      */
-    public static final String ERR_CREATE_APP_CONTAINER = "LSP-3";
+    public static final String ERR_CREATE_APP_CONTAINER = "EMB-3";
     /**
      * "%1" - exception
      */
-    public static final String ERR_UNHANDLED_EXCEPTION  = "LSP-4";
+    public static final String ERR_UNHANDLED_EXCEPTION  = "EMB-4";
     /**
      * "%1" - exception (may be null)
      * "%2" - additional description (may be null)
      */
-    public static final String ERR_INTERNAL             = "LSP-5";
+    public static final String ERR_INTERNAL             = "EMB-5";
 }
