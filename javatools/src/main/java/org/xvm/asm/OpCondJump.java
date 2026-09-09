@@ -499,14 +499,10 @@ public abstract class OpCondJump
             switch (op) {
             case OP_JMP_NULL:
                 code.ifne(lblJump);
-                bctx.narrowRegister(code, reg, reg.type().removeNullable());
-                bctx.narrowRegister(code, reg, nAddrJump, bctx.pool().typeNullable());
                 break;
 
             case OP_JMP_NNULL:
                 code.ifeq(lblJump);
-                bctx.narrowRegister(code, reg, bctx.pool().typeNullable());
-                bctx.narrowRegister(code, reg, nAddrJump, reg.type().removeNullable());
                 break;
 
             default:
@@ -533,15 +529,11 @@ public abstract class OpCondJump
             case OP_JMP_NULL:
                 Builder.loadNull(code);
                 code.if_acmpeq(lblJump);
-                bctx.narrowRegister(code, reg, reg.type().removeNullable());
-                bctx.narrowRegister(code, reg, nAddrJump, bctx.pool().typeNullable());
                 break;
 
             case OP_JMP_NNULL:
                 Builder.loadNull(code);
                 code.if_acmpne(lblJump);
-                bctx.narrowRegister(code, reg, bctx.pool().typeNullable());
-                bctx.narrowRegister(code, reg, nAddrJump, reg.type().removeNullable());
                 break;
 
             default:
@@ -660,24 +652,18 @@ public abstract class OpCondJump
                 code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
             }
 
-            TypeConstant typeIs    = bctx.combine(typeTarget, typeTest);
-            TypeConstant typeIsNot = bctx.andNot(typeTarget, typeTest);
             if (getOpCode() == OP_JMP_TYPE) {
-                bctx.narrowRegister(code, regTarget, nAddrJump, typeIs);
                 if (fInvert) {
                     code.ifeq(lblJump);
                 } else {
                     code.ifne(lblJump);
                 }
-                bctx.narrowRegister(code, regTarget, typeIsNot);
             } else {
-                bctx.narrowRegister(code, regTarget, nAddrJump, typeIsNot);
                 if (fInvert) {
                     code.ifne(lblJump);
                 } else {
                     code.ifeq(lblJump);
                 }
-                bctx.narrowRegister(code, regTarget, typeIs);
             }
         } else {
             // dynamic types
