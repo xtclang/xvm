@@ -378,7 +378,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
         // at this point, only Completed and Abandoned statuses remain, and they are both treated
-        // the same, since we we are scheduling the next repetition of the processing
+        // the same, since we are scheduling the next repetition of the processing
         assert (Duration repeatInterval, Policy repeatPolicy) := schedule.isRepeating();
 
         // previous run

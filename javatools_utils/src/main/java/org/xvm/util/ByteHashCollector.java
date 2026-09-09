@@ -22,7 +22,7 @@ public interface ByteHashCollector {
     ByteHashCollector addByte(byte value);
 
     /**
-     * Add the least significant byte of an {@code int} to the hash code compuation.
+     * Add the least significant byte of an {@code int} to the hash code computation.
      *
      * @param value  the {@code int} to add
      *
@@ -31,7 +31,7 @@ public interface ByteHashCollector {
     ByteHashCollector addInt8(int value);
 
     /**
-     * Add the least significant two bytes of an {@code int} to the hash code compuation.
+     * Add the least significant two bytes of an {@code int} to the hash code computation.
      *
      * @param value  the {@code int} to add
      *
@@ -40,7 +40,7 @@ public interface ByteHashCollector {
     ByteHashCollector addInt16(int value);
 
     /**
-     * Add an {@code int} to the hash code compuation.
+     * Add an {@code int} to the hash code computation.
      *
      * @param value  the {@code int} to add
      *
@@ -49,7 +49,7 @@ public interface ByteHashCollector {
     ByteHashCollector addInt32(int value);
 
     /**
-     * Add a {@code long} to the hash code compuation.
+     * Add a {@code long} to the hash code computation.
      *
      * @param value  the {@code long} to add
      *

@@ -64,7 +64,7 @@ public class Fiber
     }
 
     /**
-     * @retutn the caller's fiber
+     * @return the caller's fiber
      */
     protected Fiber getCaller() {
         return f_refCaller == null ? null : f_refCaller.get();

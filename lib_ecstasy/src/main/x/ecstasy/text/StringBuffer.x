@@ -446,7 +446,7 @@ class StringBuffer
             Char[] each = bufs[i];
             Int    next = total + each.size;
             if (index < next) {
-                // note: going back and modifying an earlier buffer is quites expensive, because
+                // note: going back and modifying an earlier buffer is quite expensive, because
                 //       buffers can be frozen once they've been "committed", which happens as they
                 //       fill up
                 bufs[i] = bufs[i].reify(Mutable).replace(index-total, value);

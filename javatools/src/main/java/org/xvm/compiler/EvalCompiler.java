@@ -180,7 +180,7 @@ public class EvalCompiler {
             }
 
             // The type of "this" is possibly narrower than the level of the contributing class
-            // teh current frame belongs to
+            // the current frame belongs to
             ClassStructure clz  = function.getContainingClass();
             TypeConstant   type = clz.getFormalType().resolveGenerics(pool, f_frame.getThis().getType());
             return pool.ensureAccessTypeConstant(type, Access.PRIVATE);

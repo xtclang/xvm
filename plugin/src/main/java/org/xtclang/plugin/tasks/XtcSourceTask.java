@@ -114,7 +114,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     }
 
     @Override
-    @SuppressWarnings({"rawtypes", "RedundantSuppression"}) // NOTE: IntelliJ says "rawtypes" is unncessary, it is wrong.
+    @SuppressWarnings({"rawtypes", "RedundantSuppression"}) // NOTE: IntelliJ says "rawtypes" is unnecessary, it is wrong.
     public @NotNull XtcSourceTask include(final @NotNull Closure includeSpec) {
         patternSet.include(includeSpec);
         return this;
@@ -139,7 +139,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     }
 
     @Override
-    @SuppressWarnings({"rawtypes", "RedundantSuppression"}) // NOTE: IntelliJ says "rawtypes" is unncessary, it is wrong.
+    @SuppressWarnings({"rawtypes", "RedundantSuppression"}) // NOTE: IntelliJ says "rawtypes" is unnecessary, it is wrong.
     public @NotNull XtcSourceTask exclude(final @NotNull Closure excludeSpec) {
         patternSet.exclude(excludeSpec);
         return this;

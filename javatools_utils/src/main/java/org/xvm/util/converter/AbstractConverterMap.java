@@ -52,14 +52,14 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
     }
 
     /**
-     * @return return {@link #storage} for use in read operations.
+     * @return {@link #storage} for use in read operations.
      */
     protected Map<SK, SV> read() {
         return storage;
     }
 
     /**
-     * @return return {@link #storage} for use in write operations.
+     * @return {@link #storage} for use in write operations.
      */
     protected Map<SK, SV> write() {
         return storage;

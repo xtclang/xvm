@@ -1,5 +1,5 @@
 /**
- * Regression test (curtesy of Michael Raasch) for an ambient Timeout bounding a blocking socket
+ * Regression test (courtesy of Michael Raasch) for an ambient Timeout bounding a blocking socket
  * read. The short repeated timeouts exercise the race between a due wake-up and its replacement.
  *
  * Start a peer in another terminal; each connection stays silent for 250ms:

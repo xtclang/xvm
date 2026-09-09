@@ -1518,7 +1518,7 @@ public class ClassStructure
     /**
      * Recursive implementation of containsGenericParamType method.
      *
-     * @param sName       teh formal type name
+     * @param sName       the formal type name
      * @param fAllowInto  specifies whether the "Into" contribution is to be skipped
      *
      * @return the corresponding actual type or null if there is no matching formal type

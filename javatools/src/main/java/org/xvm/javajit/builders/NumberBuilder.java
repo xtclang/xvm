@@ -501,7 +501,7 @@ public class NumberBuilder extends AugmentingBuilder {
             // duplicate the array on the stack and load the index to the stack
             code.dup()
                 .loadConstant(i);
-            // loat the parameter, converting to a primitive long
+            // load the parameter, converting to a primitive long
             // optimized multi-segment values are low-first; array storage is high-first
             int       paramIndex = size == 1 ? i : size - i - 1;
             int       slot       = code.parameterSlot(paramIndex);

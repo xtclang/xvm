@@ -326,7 +326,7 @@ public abstract class XvmStructure
      *
      * @param cConditions  the number of conditions present further down in the tree
      *
-     * @return an array of conditions, or nullif the XVM Structure is not conditional
+     * @return an array of conditions, or null if the XVM Structure is not conditional
      */
     protected ConditionalConstant[] aggregateConditions(int cConditions) {
         ConditionalConstant[] conds  = null;

@@ -1051,7 +1051,7 @@ public abstract class Expression
     }
 
     /**
-     * Obtain a {@link ExprAST binady expression expression} that represents this AST node and can
+     * Obtain a {@link ExprAST binary expression} that represents this AST node and can
      * be used to serialize the AST.
      * <p/>
      * This method must not be called until after the expression has been validated.
@@ -1823,7 +1823,7 @@ public abstract class Expression
      * Obtain a TypeInfo for the specified type in the specified class context.
      *
      * Note: unless this method returns a "private" access TypeInfo, the caller **must** always
-     *       check teh visibility of properties or methods retrieved using that info.
+     *       check the visibility of properties or methods retrieved using that info.
      *
      * @param type  the type to get the TypeInfo for; if null - use the context's type
      */

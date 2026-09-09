@@ -566,7 +566,7 @@ public interface NumberSupportInt128 {
             .lushr()          // shift the low long value by the arg
             .lload(slotHigh)  // load the high long value
             .bipush(64)    // load 64
-            .iload(slotArg)   // load the rgument
+            .iload(slotArg)   // load the argument
             .isub()           // top of stack is (64 - arg)
             .lshl().lor()     // or the shifted low by the shifted high
             // the new low is on the stack [new_low, new_low2]

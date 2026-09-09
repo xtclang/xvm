@@ -313,7 +313,7 @@ service DigestAuthenticator
      * @return (conditional) responseHash - the response digest that includes password proof
      * @return (conditional) hasher - the [hasher](Signer) to use
      * @return (conditional) opaque - the opaque string previously sent by this authenticator
-     * @return (conditional) nonce - the nonce string previous sent by this authenticator
+     * @return (conditional) nonce - the nonce string previously sent by this authenticator
      * @return (conditional) uri - the URI being accessed by the client
      * @return (conditional) cnonce - the nonce created by the client
      * @return (conditional) ncText - the `nc` value before it is parsed

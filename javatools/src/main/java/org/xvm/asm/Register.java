@@ -734,7 +734,7 @@ public class Register
             if (isInPlace()) {
                 return Register.this.getRegAllocAST();
             }
-            // shadow doens't have an "alloc" register
+            // shadow doesn't have an "alloc" register
             throw new IllegalStateException();
         }
 

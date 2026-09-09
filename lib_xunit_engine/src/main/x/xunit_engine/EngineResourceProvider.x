@@ -13,7 +13,7 @@ service EngineResourceProvider(Directory curDir, Directory outDir, ModuleReposit
         extends BaseResourceProvider(curDir, repository) {
 
     /**
-     * The test output root directory directory.
+     * The test output root directory.
      */
     @Lazy Directory testOutputRootDir.calc() = outDir.dirFor(TestOutputRootDir);
 

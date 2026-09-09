@@ -507,7 +507,7 @@ interface Iterator<Element> {
      * @param interval  the indexes of the elements from this iterator to include in the resulting
      *                  iterator
      *
-     * @return a new iterator that only includes the the elements whose position in this iterator
+     * @return a new iterator that only includes the elements whose position in this iterator
      *         correspond to the specified range of indexes
      */
     Iterator! extract(Interval<Int> interval) { // REVIEW why not "slice"?

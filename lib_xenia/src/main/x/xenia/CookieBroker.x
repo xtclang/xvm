@@ -537,7 +537,7 @@ service CookieBroker
                         suspectCookie(request, sessionNoTls, cookie  , WrongSession);
                         suspectCookie(request, session     , txtTemp?, WrongSession);
                     } else {
-                        // report to the session (from the illegal cookie) that that cookie was
+                        // report to the session (from the illegal cookie) that cookie was
                         // unexpected
                         suspectCookie(request, session, cookie, Unexpected);
                     }

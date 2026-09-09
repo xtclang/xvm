@@ -60,7 +60,7 @@ const Float128
         construct Float128(new FPLiteral(text).toFloat128().bits);
     }
 
-    // ----- Numberic interface --------------------------------------------------------------------
+    // ----- Numeric interface ---------------------------------------------------------------------
 
     @Override
     static conditional Int fixedBitLength() {

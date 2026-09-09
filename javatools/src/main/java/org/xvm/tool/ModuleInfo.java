@@ -524,7 +524,7 @@ public class ModuleInfo {
     }
 
     /**
-     * @return return the version of the compiled module, or null if either the compiled module
+     * @return the version of the compiled module, or null if either the compiled module
      *         does not exist or if it has no version
      */
     public Version getModuleVersion() {

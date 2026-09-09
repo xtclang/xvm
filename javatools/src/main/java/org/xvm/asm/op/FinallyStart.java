@@ -29,7 +29,7 @@ import static org.xvm.javajit.Builder.CD_nException;
  * <p/>
  * The FINALLY op indicates the beginning of the "finally" block. If the block is executed at the
  * normal conclusion of the "try" block, then the variable is null; if the block is executed due
- * to an exception within the "try" block, the the variable holds that exception. The finally block
+ * to an exception within the "try" block, the variable holds that exception. The finally block
  * concludes with a matching FINALLY_END op.
  */
 public class FinallyStart

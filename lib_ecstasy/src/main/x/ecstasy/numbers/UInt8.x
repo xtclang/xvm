@@ -244,7 +244,7 @@ const UInt8
      * Convert this UInt8 to an Nibble.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 4 bits bits of this UInt8.
+     * 4 bits of this UInt8.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of a Nibble
      *

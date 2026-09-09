@@ -40,8 +40,8 @@ interface Aggregator<Element, Result> {
      * Extract the aggregated result from the passed `Accumulator`, which must be an `Accumulator`
      * that was previously created by this Aggregator.
      *
-     * @param accumulator  the `Accumulator`, previous provided by this Aggregator, that the resul
-     *                     will be extracted from
+     * @param accumulator  the `Accumulator`, previously provided by this Aggregator, that the
+     *                     result will be extracted from
      *
      * @return the result of the aggregation process
      */

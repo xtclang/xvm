@@ -230,7 +230,7 @@ public class FinallyEnd
                 code.labelBinding(labelSkip);
             }
         } else if (m_nFinallyAddr != -1) {
-            // check if the "return" has beed encountered and if so, jump to the next "finally"
+            // check if the "return" has been encountered and if so, jump to the next "finally"
             slotRet = scopeGuard.getSynthetic(GuardAll.DO_RETURN_SLOT_NAME, true);
             assert slotRet >= 0;
 

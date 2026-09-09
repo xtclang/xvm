@@ -48,7 +48,7 @@ import reflect.TypeTemplate;
  *
  * The form of the type provides information related to the origin of how the type came to be, such
  * as (i) from a class, (ii) as an intersection of two types, (iii) as an explicitly immutable form
- * of another type, and so so. In each case, the form implies additional information, such as (i)
+ * of another type, and so on. In each case, the form implies additional information, such as (i)
  * what class the type represents, (ii) what the two types were that formed the intersection, and
  * (iii) what the underlying type was for which the explicitly-immutable form of the type was
  * created.

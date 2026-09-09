@@ -492,7 +492,7 @@ interface DBObject {
          * DBObjects.
          *
          * This method **must** not attempt to make changes to either (i) this DBObject, or (ii)
-         * any transactional DBObject that was already modified withing the current transaction,
+         * any transactional DBObject that was already modified within the current transaction,
          * with the explicit exception being that a Distributor may **add** to a [DBLog], [DBQueue],
          * or [DBProcessor]..
          *

@@ -358,7 +358,7 @@ const Duration(Int128 picoseconds)
      *   microsecondsPart / 1000
      *
      * This property represents the fractional portion of a second, with a significant portion of
-     * the Duration's precision thrown away. As such, it can be useful for rending human-readable
+     * the Duration's precision thrown away. As such, it can be useful for rendering human-readable
      * information when higher precision is not required.
      */
     UInt16 millisecondsPart.get() = (picosecondsPart.abs() / PicosPerMilli).toUInt16();
@@ -370,7 +370,7 @@ const Duration(Int128 picoseconds)
      *   nanosecondsPart / 1000
      *
      * This property represents the fractional portion of a second, with a significant portion of
-     * the Duration's precision thrown away. As such, it can be useful for rending human-readable
+     * the Duration's precision thrown away. As such, it can be useful for rendering human-readable
      * information when higher precision is not required.
      */
     UInt32 microsecondsPart.get() = (picosecondsPart.abs() / PicosPerMicro).toUInt32();
@@ -382,7 +382,7 @@ const Duration(Int128 picoseconds)
      *   picosecondsPart / 1000
      *
      * This property represents the fractional portion of a second, with a significant portion of
-     * the Duration's precision thrown away. As such, it can be useful for rending human-readable
+     * the Duration's precision thrown away. As such, it can be useful for rendering human-readable
      * information when higher precision is not required.
      */
     UInt32 nanosecondsPart.get()= (picosecondsPart.abs() / PicosPerNano).toUInt32();

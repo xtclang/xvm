@@ -25,7 +25,7 @@ const Match(RegEx regEx, String text, Range<Int>?[] groups) {
      *
      * @param  index  the index of a capturing group in this matcher's pattern
      *
-     * @return True iff the group at the given index index matched part of the input String
+     * @return True iff the group at the given index matched part of the input String
      * @return (conditional) the substring of the input String matched by the group
      * @return (conditional) the Range containing the start and end index the input text of the
      *         specified capturing group

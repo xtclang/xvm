@@ -337,7 +337,7 @@ class CharArrayReader(immutable Char[] chars)
     protected Boolean hasLineInfo.get() = lineNumber_ >= 0;
 
     /**
-     * Ensure the the [lineNumber_] and [lineStartOffset] properties are set.
+     * Ensure the [lineNumber_] and [lineStartOffset] properties are set.
      */
     protected void ensureLineInfo() {
         if (lineNumber_ < 0) {
@@ -359,7 +359,7 @@ class CharArrayReader(immutable Char[] chars)
     }
 
     /**
-     * Ensure the the [lineNumber_] and [lineStartOffset] properties are obviously invalid.
+     * Ensure the [lineNumber_] and [lineStartOffset] properties are obviously invalid.
      */
     protected void clearLineInfo() {
         // these values are illegal, and indicate that the line info is not being actively tracked

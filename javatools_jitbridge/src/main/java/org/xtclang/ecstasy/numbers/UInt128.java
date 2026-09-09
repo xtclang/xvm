@@ -123,7 +123,7 @@ public class UInt128 extends UIntNumber {
     }
 
     /**
-     * This method is called at the end of a JIT prmitive method to return the value of a
+     * This method is called at the end of a JIT primitive method to return the value of a
      * {@link BigInteger}.
      * <p>
      * The high 64 bits of the value will be set into the {@link Ctx#i0} field and the low 64

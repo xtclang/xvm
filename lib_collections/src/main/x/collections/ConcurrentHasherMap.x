@@ -400,7 +400,7 @@ const ConcurrentHasherMap<Key extends immutable, Value extends AutoPassable>
          * @param valueOld the required old value
          * @param valueNew the new value
          *
-         * @return this if the the replace occurred
+         * @return this if the replace occurred
          */
         @Concurrent
         protected <P> conditional P replaceOrdered(P parent, Key key, Value valueOld, Value valueNew) {

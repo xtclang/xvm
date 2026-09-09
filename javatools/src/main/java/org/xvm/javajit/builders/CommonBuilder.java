@@ -540,7 +540,7 @@ public class CommonBuilder
 
     /**
      * @return true iff we should add the specified type to the list of interfaces
-     *         implemented/exteneded by this class
+     *         implemented/extended by this class
      */
     protected boolean shouldAddInterface(TypeConstant type) {
         // ignore "implements Object" for classes and "implements Comparable" for everyone

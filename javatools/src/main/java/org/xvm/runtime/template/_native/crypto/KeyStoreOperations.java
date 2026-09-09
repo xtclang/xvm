@@ -90,7 +90,7 @@ public class KeyStoreOperations {
                 }
             }
         } catch (GeneralSecurityException | IOException ignore) {
-            // intentionally silent; enttry may not exist
+            // intentionally silent; entry may not exist
         }
     }
 

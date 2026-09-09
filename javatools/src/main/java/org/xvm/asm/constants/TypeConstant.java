@@ -608,7 +608,7 @@ public abstract class TypeConstant
     }
 
     /**
-     * @return return the virtual child type's or anonymous class type's parent type
+     * @return the virtual child type's or anonymous class type's parent type
      */
     public TypeConstant getParentType() {
         assert isVirtualChild() || isInnerChildClass() || isAnonymousClass();
@@ -618,7 +618,7 @@ public abstract class TypeConstant
     /**
      * A VirtualChildType may have its parent type being different from its origin parent type.
      *
-     * @return return the origin parent type for this virtual child type
+     * @return the origin parent type for this virtual child type
      */
     public TypeConstant getOriginParentType() {
         assert isVirtualChild();
@@ -1346,7 +1346,7 @@ public abstract class TypeConstant
     }
 
     /**
-     * If this type has {@link #isExplicitClassIdentity an explicity class identity}, create an
+     * If this type has {@link #isExplicitClassIdentity an explicit class identity}, create an
      * "equivalent" type that has an {@link #isAutoNarrowing auto-narrowing base}.
      *
      * @return the TypeConstant that has an auto-narrowing base and the same class identity
@@ -7329,9 +7329,9 @@ public abstract class TypeConstant
     /**
      * Callable JIT type for an arbitrary Ecstasy type represents a type that JIT compiler uses for
      * Java variables and properties that hold non-primitive instances of the corresponding type.
-     * It's the mininal (the widest) type that produces the same "JIT Call Class Name' CC(T).
+     * It's the minimal (the widest) type that produces the same "JIT Call Class Name' CC(T).
      *
-     * The cannonical type C(T) is always a {@link #isSingleUnderlyingClass single underlying class}
+     * The canonical type C(T) is always a {@link #isSingleUnderlyingClass single underlying class}
      * that could parameterized by non-parameterized callable JIT types as parameters.
      * <p/>
      * The following should hold :
@@ -7369,7 +7369,7 @@ public abstract class TypeConstant
 
     /**
      * Instance JIT type for a "newable" Ecstasy type represents a type that JIT compiler uses to
-     * create an instance of the corresponding type. It's the mininal (the widest) type that
+     * create an instance of the corresponding type. It's the minimal (the widest) type that
      * produces the same "JIT Instance Class Name' IC(T).
      *
      * @see doc/jit_class_names.txt

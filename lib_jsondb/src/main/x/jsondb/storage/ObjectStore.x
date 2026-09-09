@@ -136,7 +136,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * * Small - The amount of data can be easily loaded into, manipulated in, and even held (if
      *   necessary and/or desirable) in memory.
      * * Medium - The amount of data is such that it can be managed in memory when necessary.
-     * * Large - The amount of data is large enough that it should paged into memory only in
+     * * Large - The amount of data is large enough that it should be paged into memory only in
      *           portions at any given time.
      */
     enum StorageModel {Empty, Small, Medium, Large}
@@ -473,11 +473,11 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * the `prepareId`, and that is the transaction against which the prepare processing works to
      * check that no changes have occurred in the meantime that would invalidate the transaction.
      *
-     * If the the result of the `prepare()` operation is `FailedRolledBack` or `CommittedNoChanges`,
+     * If the result of the `prepare()` operation is `FailedRolledBack` or `CommittedNoChanges`,
      * then the ``ObjectStore`` will have forgotten its `Changes` (the `writeId`) by the time that
      * this method returns, and nothing will be associated with the `prepareId`.
      *
-     * If the the result of the `prepare()` operation is `Prepared`, then all of the `Changes` data
+     * If the result of the `prepare()` operation is `Prepared`, then all of the `Changes` data
      * will now be associated with the `prepareId`, and the `writeId` will be associated with an
      * empty set of changes.
      *

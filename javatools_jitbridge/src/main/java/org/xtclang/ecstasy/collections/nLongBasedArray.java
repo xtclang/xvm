@@ -26,7 +26,7 @@ import static java.lang.System.arraycopy;
  * <p>
  * Array elements are mapped to long values in the {@link #$storage} array depending on their
  * size, for example, eight 8-bit values can be packed into each {@code long} value in the
- * {@link #$storage} array, wheras storing a 128-bit value will require two {@code long} values.
+ * {@link #$storage} array, whereas storing a 128-bit value will require two {@code long} values.
  * <p>
  * Object header
  * xObj - 64 bits of flags
@@ -285,7 +285,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
      * Subclasses should override this method to correctly unpack the required element from the
      * underlying {@link #$storage} array.
      * <p>
-     * This method is not required to check for a {@link #$delegate} or perform a range chec as
+     * This method is not required to check for a {@link #$delegate} or perform a range check as
      * this will have been done by the caller.
      * <p>
      * For subclasses that are storing values that are less than 64-bits, the return value should

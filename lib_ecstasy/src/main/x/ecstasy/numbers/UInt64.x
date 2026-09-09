@@ -147,7 +147,7 @@ const UInt64
      * Convert this UInt64 to an Int8.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 8 bits bits of this UInt64. The high-order bit becomes the sign bit.
+     * 8 bits of this UInt64. The high-order bit becomes the sign bit.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of an Int8
      *
@@ -165,7 +165,7 @@ const UInt64
      * Convert this UInt64 to an Int16.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 16 bits bits of this UInt64. The high-order bit becomes the sign bit.
+     * 16 bits of this UInt64. The high-order bit becomes the sign bit.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of an Int16
      *
@@ -183,7 +183,7 @@ const UInt64
      * Convert this UInt64 to an Int32.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 32 bits bits of this UInt64. The high-order bit becomes the sign bit.
+     * 32 bits of this UInt64. The high-order bit becomes the sign bit.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of an Int32
      *
@@ -231,7 +231,7 @@ const UInt64
      * Convert this UInt64 to an Nibble.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 4 bits bits of this UInt64.
+     * 4 bits of this UInt64.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of a Nibble
      *
@@ -249,7 +249,7 @@ const UInt64
      * Convert this UInt64 to an UInt8.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 8 bits bits of this UInt64.
+     * 8 bits of this UInt64.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of a UInt8
      *
@@ -267,7 +267,7 @@ const UInt64
      * Convert this UInt64 to an UInt16.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 16 bits bits of this UInt64.
+     * 16 bits of this UInt64.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of a UInt16
      *
@@ -285,7 +285,7 @@ const UInt64
      * Convert this UInt64 to an UInt32.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 32 bits bits of this UInt64.
+     * 32 bits of this UInt64.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of a UInt32
      *

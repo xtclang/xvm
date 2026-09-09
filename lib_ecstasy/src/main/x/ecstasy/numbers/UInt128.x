@@ -147,7 +147,7 @@ const UInt128
      * Convert this UInt128 to an Int8.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 8 bits bits of this UInt128. The high-order bit becomes the sign bit.
+     * 8 bits of this UInt128. The high-order bit becomes the sign bit.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of an Int8
      *
@@ -165,7 +165,7 @@ const UInt128
      * Convert this UInt128 to an Int16.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 16 bits bits of this UInt128. The high-order bit becomes the sign bit.
+     * 16 bits of this UInt128. The high-order bit becomes the sign bit.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of an Int16
      *
@@ -183,7 +183,7 @@ const UInt128
      * Convert this UInt128 to an Int32.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 32 bits bits of this UInt128. The high-order bit becomes the sign bit.
+     * 32 bits of this UInt128. The high-order bit becomes the sign bit.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of an Int32
      *
@@ -201,7 +201,7 @@ const UInt128
      * Convert this UInt128 to an Int64.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 64 bits bits of this UInt128. The high-order bit becomes the sign bit.
+     * 64 bits of this UInt128. The high-order bit becomes the sign bit.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of an Int64
      *
@@ -235,7 +235,7 @@ const UInt128
      * Convert this UInt128 to an Nibble.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 4 bits bits of this UInt128.
+     * 4 bits of this UInt128.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of a Nibble
      *
@@ -253,7 +253,7 @@ const UInt128
      * Convert this UInt128 to an UInt8.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 8 bits bits of this UInt128.
+     * 8 bits of this UInt128.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of a UInt8
      *
@@ -271,7 +271,7 @@ const UInt128
      * Convert this UInt128 to an UInt16.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 16 bits bits of this UInt128.
+     * 16 bits of this UInt128.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of a UInt16
      *
@@ -289,7 +289,7 @@ const UInt128
      * Convert this UInt128 to an UInt32.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 32 bits bits of this UInt128.
+     * 32 bits of this UInt128.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of a UInt32
      *
@@ -307,7 +307,7 @@ const UInt128
      * Convert this UInt128 to an UInt64.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 64 bits bits of this UInt128.
+     * 64 bits of this UInt128.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of a UInt64
      *

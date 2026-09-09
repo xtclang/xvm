@@ -2,7 +2,7 @@
  * An annotation to indicate the lifecycle of a test fixture.
  *
  * The default behaviour is to create a new instance of a test fixture for every test method. This
- * allows tests to be executed without side-affects due to left over state from previous tests. To
+ * allows tests to be executed without side-effects due to leftover state from previous tests. To
  * change this behaviour so that all tests execute on a single instance of the fixture, annotate the
  * fixture class with `@TestFixture` with a `lifecycle` value of `Singleton`.
  *

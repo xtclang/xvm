@@ -348,7 +348,7 @@ public interface InPlaceSupport
      *
      * @param bctx  the current BuildContext
      * @param code  the CodeBuilder to use to generate the operation byte codes
-     * @param reg   the register containing the XVM prmitive value the operation is performed on
+     * @param reg   the register containing the XVM primitive value the operation is performed on
      */
     default void buildXvmPrimitiveLocal(BuildContext bctx, CodeBuilder code, RegisterInfo reg) {
         TypeConstant baseType = reg.type().removeNullable();

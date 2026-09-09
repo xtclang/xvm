@@ -431,7 +431,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
     }
 
     /**
-     * Extract a [WebService] path from teh specified template.
+     * Extract a [WebService] path from the specified template.
      */
     private static String extractPath(AnnotationTemplate webServiceAnno) {
         Argument[] args = webServiceAnno.arguments;

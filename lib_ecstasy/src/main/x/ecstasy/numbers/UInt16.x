@@ -310,7 +310,7 @@ const UInt16
      * Convert this UInt16 to an Int8.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 8 bits bits of this UInt16. The high-order bit becomes the sign bit.
+     * 8 bits of this UInt16. The high-order bit becomes the sign bit.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of an Int8
      *
@@ -386,7 +386,7 @@ const UInt16
      * Convert this UInt16 to an Nibble.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 4 bits bits of this UInt16.
+     * 4 bits of this UInt16.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of a Nibble
      *
@@ -404,7 +404,7 @@ const UInt16
      * Convert this UInt16 to an UInt8.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order
-     * 8 bits bits of this UInt16.
+     * 8 bits of this UInt16.
      *
      * @param checkBounds  whether to check whether the result fits within the bounds of a UInt8
      *

@@ -243,7 +243,7 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
 
     /**
      * Get the log message describing this strategy.
-     * TODO: Change to execution mode and have excution mode provide toString dsscs and its name()
+     * TODO: Move the descriptions to ExecutionMode, along with its name
      */
     protected abstract String getDesc();
 

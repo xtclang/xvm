@@ -266,7 +266,7 @@ public class PropertyStructure
     }
 
     /**
-     * @return return true iff this property is marked as "Unassigned" and has no other annotations
+     * @return true iff this property is marked as "Unassigned" and has no other annotations
      */
     public boolean isSimpleUnassigned() {
         Annotation[] aAnnos = getRefAnnotations();

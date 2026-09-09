@@ -2067,7 +2067,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 // should have already been "pretend-committed" if it had nothing enlisted; now
                 // we have no choice but to go through with it, and file an "empty transaction",
                 // because otherwise there will be a gap in the numbering
-                log($"Error: An empty transaction transaction {idString} was sealed");
+                log($"Error: An empty transaction {idString} was sealed");
             }
 
             // bundle the results of "sealPrepare()" into a transaction log entry; this is the

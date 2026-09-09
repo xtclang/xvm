@@ -231,7 +231,7 @@ public class xRTNameService
             // Note: the JNDI DNS provider discards the TTL value before it reaches our code;
             //       if that ever becomes an issue we should use a real DNS library, e.g.
             //       (https://github.com/dnsjava/dnsjava), which exposes tbe TTL;
-            //       the "netClass" attribute for all practocal purposes is always "Internet"
+            //       the "netClass" attribute for all practical purposes is always "Internet"
             try {
                 while (valueEnum.hasMore()) {
                     String sData = valueEnum.next().toString();

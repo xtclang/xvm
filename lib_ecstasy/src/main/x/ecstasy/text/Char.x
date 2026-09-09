@@ -786,7 +786,7 @@ const Char(UInt32 codepoint)
      * > DFFF16. They are called surrogates, since they do not represent characters directly, but
      * > only as a pair.
      *
-     * @return True if this this Char has a surrogate codepoint, and is a leading (first) value of
+     * @return True if this Char has a surrogate codepoint, and is a leading (first) value of
      *         a surrogate pair
      *
      * @throws IllegalUTF if this Char has a surrogate codepoint, but is not a valid **leading**

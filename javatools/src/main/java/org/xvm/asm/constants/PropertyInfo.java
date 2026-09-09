@@ -1141,7 +1141,7 @@ public class PropertyInfo
     }
 
     /**
-     * @return return true iff this property is marked as "Unassigned", has no other annotations
+     * @return true iff this property is marked as "Unassigned", has no other annotations
      *                and no getter or setter
      */
     public boolean isSimpleUnassigned() {
@@ -1155,7 +1155,7 @@ public class PropertyInfo
      * Check if this property has any Ref annotations that explicitly implement the property getter
      * and therefore doesn't have to be implicitly initialized.
      *
-     * @return return true iff this property doesn't need to be implicitly initialized
+     * @return true iff this property doesn't need to be implicitly initialized
      */
     public boolean isImplicitlyAssigned() {
         if (m_FImplicitlyAssigned != null) {

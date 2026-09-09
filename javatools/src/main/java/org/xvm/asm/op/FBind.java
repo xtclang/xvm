@@ -331,7 +331,7 @@ public class FBind
                     .astore(slotOpt);
 
                 // all JIT primitives are immutable, so we can only become mutable after binding to
-                // a non-primitve mutable value
+                // a non-primitive mutable value
                 if (!argType.isJitPrimitive()) {
                     computeImmutable(code, slotImm, regArg);
                 }

@@ -1161,7 +1161,7 @@ public abstract class LauncherOptions {
              * @param methodArgs the arguments to pass to the executed method
              */
             public Builder setTarget(final File target, final List<String> methodArgs) {
-                // TODO This shold be relativized and we should check that getPath doesn't mess up the cache again.
+                // TODO: This should be relativized and we should check that getPath doesn't mess up the cache again.
                 args.add(target.getPath());
                 args.addAll(methodArgs);
                 return this;
