@@ -15,6 +15,8 @@ import java.util.Locale;
 
 import org.jetbrains.annotations.NotNull;
 
+import org.xvm.api.ModuleView;
+
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
@@ -159,7 +161,9 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
             final var id = method.getIdentityConstant();
             if (method.hasCode() && method.ensureCode() != null && !method.isNative()) {
                 out("** code for " + id);
-                out(method.ensureCode().toString());
+                out(options().isVerbose()
+                        ? ModuleView.of(method.getFileStructure()).disassemble(method)
+                        : method.ensureCode().toString());
                 out("");
             } else {
                 out("** no code for " + id);

@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.junit.jupiter.api.Test;
@@ -51,7 +52,8 @@ public class OpFieldCompletenessTest {
         assumeTrue(!modules.isEmpty(), "no compiled modules found in " + lib);
 
         var mismatches = new TreeMap<String, String>();
-        long checked = 0, unwritable = 0;
+        var unverifiable = new TreeMap<String, Integer>();
+        long checked = 0;
         for (Path path : modules) {
             ModuleView view = ModuleView.open(path);
             for (MethodStructure method : view.methods().toList()) {
@@ -65,9 +67,13 @@ public class OpFieldCompletenessTest {
                     try {
                         written = countWrittenValues(op);
                     } catch (RuntimeException | Error e) {
-                        // an op still holding compile-time Arguments needs a ConstantRegistry to
-                        // serialize; those are skipped rather than counted wrongly
-                        unwritable++;
+                        // Some ops cannot be re-serialized from a module read off disk: the Var
+                        // family's write() reaches through a Register that only exists while
+                        // compiling, and NPEs. Those are recorded BY CLASS rather than merely
+                        // counted, so the blind spot is explicit and cannot quietly widen - the
+                        // first version of this test just skipped them, which meant a headline of
+                        // "0 mismatches" over a sample that silently excluded whole op families.
+                        unverifiable.merge(op.getClass().getSimpleName(), 1, Integer::sum);
                         continue;
                     }
                     checked++;
@@ -83,6 +89,14 @@ public class OpFieldCompletenessTest {
         assertTrue(sampled > 10_000, () -> "expected a substantial sample, checked " + sampled);
         assertEquals(Map.of(), mismatches,
                 () -> "op classes whose field model disagrees with write(): " + mismatches);
+
+        // the blind spot, pinned. These op classes cannot be re-serialized from a disk-read module,
+        // so this oracle says nothing about them; naming them here means a NEW class joining that
+        // set is a visible failure rather than a silent reduction in what is actually checked.
+        assertEquals(Set.of("GuardStart", "Var", "Var_D", "Var_DN", "Var_I", "Var_IN", "Var_M",
+                        "Var_N", "Var_S", "Var_SN", "Var_T"),
+                unverifiable.keySet(),
+                () -> "op classes this oracle cannot verify: " + unverifiable);
     }
 
     /**

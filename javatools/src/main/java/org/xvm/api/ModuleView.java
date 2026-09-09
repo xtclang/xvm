@@ -228,26 +228,27 @@ public final class ModuleView {
         return ops(method).stream()
                 .map(op -> op.fields()
                         .map(list -> new Resolved(op, true, list.stream()
-                                .map(field -> resolve(field, aconst))
+                                .map(field -> resolve(field, aconst, op.getAddress()))
                                 .toList()))
                         .orElseGet(() -> new Resolved(op, false, List.of())))
                 .toList();
     }
 
-    private static Referent resolve(OpField field, Constant[] aconst) {
+    private static Referent resolve(OpField field, Constant[] aconst, int address) {
         return switch (field) {
-            case OpField.Branch b -> new Referent(b.role(),
-                    (b.displacement() > 0 ? "->+" : "->") + b.displacement(), null);
-            case OpField.Literal l -> new Referent(l.role(), Long.toString(l.value()), null);
+            case OpField.Branch b -> new Referent(b,
+                    (b.displacement() > 0 ? "->+" : "->") + b.displacement()
+                            + " @" + (address + b.displacement()), null);
+            case OpField.Literal l -> new Referent(l, Long.toString(l.value()), null);
             case OpField.Arg a -> switch (a.operand()) {
-                case OpOperand.Reg r -> new Referent(r.role(), "register #" + r.index(), null);
-                case OpOperand.Special sp -> new Referent(sp.role(), sp.name(), null);
+                case OpOperand.Reg r -> new Referent(a, "register #" + r.index(), null);
+                case OpOperand.Special sp -> new Referent(a, sp.name(), null);
                 case OpOperand.Const c -> {
                     // a local-constant index out of range means the op and the method disagree
                     // about the pool, which is worth surfacing rather than an AIOOBE
                     Constant value = aconst != null && c.index() < aconst.length
                             ? aconst[c.index()] : null;
-                    yield new Referent(c.role(), value == null
+                    yield new Referent(a, value == null
                             ? "const:#" + c.index() + " (UNRESOLVED)"
                             : value.getValueString(), value);
                 }
@@ -266,14 +267,44 @@ public final class ModuleView {
     public record Resolved(@NotNull Op op, boolean modeled, @NotNull List<Referent> operands) {}
 
     /**
-     * What one operand refers to.
+     * One resolved field of an op: the field itself, how it renders, and what it refers to.
      *
-     * @param role      what the operand is for in its op - "target", "method", "return"
+     * <p>The {@link OpField} is carried rather than flattened away, because the kinds are the
+     * point: a caller that wants every branch target, or wants to be sure a value is a literal
+     * count and not a register index, switches on {@link #field()}. An earlier shape kept only the
+     * role and the rendering, which erased exactly the distinction the field model exists to
+     * make.</p>
+     *
+     * @param field     the field, as one of {@link OpField.Arg}, {@link OpField.Branch} or
+     *                  {@link OpField.Literal}
      * @param display   a rendering of the referent
-     * @param constant  the constant referred to, or null when the operand is a register, a
-     *                  pseudo-register, or an unresolvable constant index
+     * @param constant  the constant referred to, or null unless this is an {@link OpField.Arg}
+     *                  naming a constant that resolved
      */
-    public record Referent(@NotNull String role, @NotNull String display, Constant constant) {}
+    public record Referent(@NotNull OpField field, @NotNull String display, Constant constant) {
+        /**
+         * @return what this field is for in its op - "target", "method", "return", "default"
+         */
+        public @NotNull String role() {
+            return field.role();
+        }
+    }
+
+    /**
+     * The constants a method's ops index into, in local order.
+     *
+     * <p>An op's constant operand is an index into THIS array, not into the module pool, so a
+     * caller resolving operands itself needs it. {@link #decode} already resolves against it; this
+     * exposes it for callers doing their own decoding.</p>
+     *
+     * @param method  the method
+     *
+     * @return its local constants, empty if it has no body
+     */
+    public @NotNull List<Constant> constants(@NotNull MethodStructure method) {
+        Constant[] aconst = method.hasCode() ? method.getLocalConstants() : null;
+        return aconst == null ? List.of() : List.of(aconst);
+    }
 
     /**
      * Every constant in the module's pool, in index order.
@@ -329,35 +360,50 @@ public final class ModuleView {
             sb.append(component.getFormat()).append(' ')
               .append(component.getIdentityConstant().getValueString()).append('\n');
             if (component instanceof MethodStructure method) {
-                sb.append("    sig  ").append(signature(method)).append('\n');
-                if (method.hasCode()) {
-                    sb.append("    vars ").append(method.getMaxVars()).append('\n');
-                    int i = 0;
-                    for (Resolved decoded : decode(method)) {
-                        Op op = decoded.op();
-                        // depth is the op's scope nesting; ENTER/EXIT are what move it, and showing
-                        // it inline is what makes a scope bug visible in a diff rather than implied
-                        sb.append("    ").append(String.format("%4d", i++))
-                          .append("  d").append(op.getDepth())
-                          .append(op.isEnter() ? " {" : op.isExit() ? " }" : "  ")
-                          .append(' ').append(Op.toName(op.getOpCode()));
-                        // operands from the model where the op class has one; ops that do not model
-                        // theirs fall back to toString rather than pretending to know
-                        // one walk covers arguments, branch targets and literals, so nothing can
-                        // go missing the way a separately-asked-for displacement could
-                        if (decoded.modeled()) {
-                            for (Referent field : decoded.operands()) {
-                                sb.append(' ').append(field.role()).append('=')
-                                  .append(field.display());
-                            }
-                        } else {
-                            sb.append(' ').append(op);
-                        }
-                        sb.append('\n');
-                    }
-                }
+                sb.append(disassemble(method));
             }
         });
+        return sb.toString();
+    }
+
+    /**
+     * One method's body, rendered from the field model.
+     *
+     * <p>Every field an op encodes appears - arguments, branch targets and literals - so this
+     * cannot silently drop part of an op the way asking for one kind at a time could. An op whose
+     * class does not model its fields falls back to {@link Op#toString}, marked as such rather
+     * than quietly rendered as if it were understood.</p>
+     *
+     * @param method  the method to render
+     *
+     * @return the listing, including the signature and scope depths
+     */
+    public @NotNull String disassemble(@NotNull MethodStructure method) {
+        var sb = new StringBuilder();
+        sb.append("    sig  ").append(signature(method)).append('\n');
+        if (!method.hasCode()) {
+            return sb.toString();
+        }
+
+        sb.append("    vars ").append(method.getMaxVars()).append('\n');
+        int i = 0;
+        for (Resolved decoded : decode(method)) {
+            Op op = decoded.op();
+            // depth is the op's scope nesting; ENTER/EXIT are what move it, and showing it inline
+            // is what makes a scope bug visible in a diff rather than implied
+            sb.append("    ").append(String.format("%4d", i++))
+              .append("  d").append(op.getDepth())
+              .append(op.isEnter() ? " {" : op.isExit() ? " }" : "  ")
+              .append(' ').append(Op.toName(op.getOpCode()));
+            if (decoded.modeled()) {
+                for (Referent field : decoded.operands()) {
+                    sb.append(' ').append(field.role()).append('=').append(field.display());
+                }
+            } else {
+                sb.append(" (unmodeled) ").append(op);
+            }
+            sb.append('\n');
+        }
         return sb.toString();
     }
 

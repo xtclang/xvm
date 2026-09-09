@@ -4880,10 +4880,26 @@ for (ModuleView.Resolved decoded : view.decode(method)) {
     if (!decoded.modeled()) { continue; }              // this op class does not model its fields
     for (ModuleView.Referent field : decoded.operands()) {
         field.role();       // "target", "method", "return", "case[2]", "default"
-        field.display();    // rendered form
-        field.constant();   // the actual Constant, or null for a register/literal/branch
+        field.display();    // rendered form, e.g. "register #3" or "->+5 @8"
+        field.constant();   // the actual Constant, or null unless this names one
+        switch (field.field()) {                       // the KIND is preserved, not flattened
+            case OpField.Arg a     -> ...              // register, constant or pseudo-register
+            case OpField.Branch b  -> b.displacement(); // relative; display() also gives absolute
+            case OpField.Literal l -> l.value();        // a count, a flag word, a line number
+        }
     }
 }
+```
+
+An earlier shape kept only the role and the rendering, which erased exactly the distinction the
+sealed field model exists to make - a caller could not ask "give me every branch target" without
+going back to the op. Carrying the `OpField` fixes that.
+
+Other entry points worth knowing:
+
+```java
+view.constants(method);      // the LOCAL constants an op's operands index into, not the module pool
+view.disassemble(method);    // render one method; the whole-module dump is built from this
 ```
 
 So "does this op call that method" is a `MethodConstant` identity test, not a substring match. The
@@ -4975,6 +4991,28 @@ nothing in the tree did until now:
   (row 54 of `master-issue-submissions.md`).
 - `MethodStructure.assemble` wrote a method with no op bytes after an assembly failure, producing a
   loadable `.xtc` with an empty body (row 53).
+
+### The existing tool
+
+`org.xvm.tool.Disassembler` was a printer whose `dump` was a single line -
+`method.ensureCode().toString()`. It now renders through the field model when `--verbose` is set (a
+flag `LauncherOptions` already had), and keeps its previous output by default so anything parsing it
+is unaffected. Both paths call `ModuleView.disassemble(method)`, so the tool and the API cannot
+drift apart.
+
+### Known limitations, stated rather than discovered later
+
+- **No write-back.** `writeTo` writes a `FileStructure`, but an op cannot be built from fields and
+  re-encoded, and the constant pool is read-only through this API. This is the read half of
+  read-modify-write; the write half does not exist yet.
+- **The completeness oracle checks counts, not meaning.** It proves no field is missing or invented.
+  It would not catch a register labelled as a constant.
+- **The `Var` family is unverified.** `Var`, `Var_N`, `Var_IN`, `Var_D`, `Var_M`, `Var_S`, `Var_T`
+  and `GuardStart` cannot be re-serialized from a disk-read module - their `write` reaches through a
+  `Register` that only exists while compiling - so the oracle skips them, which is ~18% of ops. The
+  test pins that set by name so it cannot silently widen, but `OpVar`'s `isTypeAware()` conditional
+  is currently checked by nothing. Closing it wants a different oracle: compare against the original
+  bytes in the file rather than re-serializing.
 
 ### Filing notes
 
