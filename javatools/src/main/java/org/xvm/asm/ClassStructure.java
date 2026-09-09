@@ -822,26 +822,54 @@ public class ClassStructure
             return listResult;
         }
 
-        // a class that is not parameterized
+        // a class must be parameterized in order to have more than the singular canonical type
         if (isParameterizedDeep()) {
-            boolean              fVirtualChild           = isVirtualChildClass();
-            List<ClassStructure> listVirtualChildClasses = getChildClasses(false, false, false);
-            List<Contribution>   listConditionalMixins   = getContributionsAsList().stream()
+            // for each virtual parent canonical type, at least one child canonical type exists
+            boolean              fVirtualChild        = isVirtualChildClass();
+            List<TypeConstant>   listParentCanonicals = List.of();
+            if (fVirtualChild) {
+                listParentCanonicals = getOuter().getCanonicalTypes();
+            }
+
+            // any conditional mixins on this class create multiple canonical types
+            List<Contribution> listConditionalMixins = getContributionsAsList().stream()
                     .filter(c -> c.getComposition() == Composition.Incorporates && c.isConditional())
                     .toList();
-            if ()
 
-            if (fVirtualChild) {
-                // TODO
+            // virtual child classes can declare their own conditional mixins that are conditional
+            // on this class' formal types; when this happens, this class must add the canonical
+            // types that cover the child class' differentiation
+            List<Contribution>   listChildConditionalMixins = new ArrayList<>();
+            List<ClassStructure> listVirtualChildClasses    = getChildClasses(false, false, false);
+            if (!listVirtualChildClasses.isEmpty()) {
+                listVirtualChildClasses.forEach(
+                        c -> c.recurseCollectConditionalMixins(listChildConditionalMixins));
             }
-            // TODO
 
-            if (isVirtualChild()) {
-                List<TypeConstant> listOuter = getOuter().getCanonicalTypes();
+            // if any of the above exists, full evaluation is required
+            if (listParentCanonicals.size() > 1
+                    || !listConditionalMixins.isEmpty()
+                    || !listChildConditionalMixins.isEmpty()) {
+                if (isParameterized()) {
+                    // build the list of the parameters declared on this class
+                    // TODO
+
+                    // evaluate each conditional mixin on this class to verify that it is based on
+                    // at least one parameter declared on this class, and if so, add that constraint
+                    // TODO
+
+                    // evaluate each conditional mixin collected from virtual child classes to
+                    // determine if any is based on
+
+                    // at least one parameter declared on this class, and if so, add that constraint
+                    // TODO
+                }
+
+                // apply parent canonical types (1 or more)
                 // TODO
-            }
 
-            assert listResult.contains(getCanonicalType());
+                assert listResult.contains(getCanonicalType());
+            }
         }
 
         if (listResult == null) {
@@ -854,16 +882,25 @@ public class ClassStructure
     }
 
     /**
-     * Cached list of canonical types for this class.
+     * Recursively walk through all virtual children, collecting conditional mixins into the passed
+     * list.
      *
-     * TODO override markModified to clear this?
+     * @param listContrib  a mutable list of conditional mixins
+     */
+    private void recurseCollectConditionalMixins(final List<Contribution> listContrib) {
+        getContributionsAsList().stream()
+                .filter(c -> c.getComposition() == Composition.Incorporates && c.isConditional())
+                .forEach(listContrib::add);
+        getChildClasses(false, false, false).forEach(
+                c -> c.recurseCollectConditionalMixins(listContrib));
+    }
+
+    /**
+     * Cached list of canonical types for this class.
      *
      * @see #getCanonicalTypes()
      */
     private List<TypeConstant> m_listCanonicalTypes;
-
-    // TODO
-//    public List<List<TypeConstant>> buildCanonicalParameterList()
 
     /**
      * Resolve the formal type for this class based on the specified list of actual types.
@@ -3441,6 +3478,12 @@ public class ClassStructure
             }
             super.markReadOnly();
         }
+    }
+
+    @Override
+    protected void markModified() {
+        m_listCanonicalTypes = null;
+        super.markModified();
     }
 
     @Override
