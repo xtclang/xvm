@@ -58,7 +58,7 @@ Document roles:
 | Topic audits | `*-audit.md`, `plans/*.md` | The underlying site census, analysis, or design detail changes. |
 | Presentation | `presentation.md` | The sales narrative, click-through demo, or teleprompter script changes. |
 | Equality-path measurement | `iseq-identity-hit-rate.md` | The equality inline cache is measured again, or the canonicalization alternative below is priced. Added 2026-09-09. |
-| Runtime performance profile | `interpreter-jfr-profile.md` | A JFR pass re-measures the interpreter, or a listed cheap win is taken. Added 2026-09-09; W1 there is superseded (it was a branch regression, not a master win - fixed in `de4abe4a8`), and W6/W7 are now rows 55-57 of `plans/master-issue-submissions.md`. |
+| Runtime performance profile | `interpreter-jfr-profile.md` | A JFR pass re-measures the interpreter, or a listed cheap win is taken. Added 2026-09-09; W1 there is superseded (it was a branch regression, not a master win - fixed in `de4abe4a8`), and W6/W7 are now rows 55-57 of `plans/master-issue-submissions.md`, and W2/W5 are taken (E51). |
 
 ## Current Wide Scans
 

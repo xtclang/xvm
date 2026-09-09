@@ -10,6 +10,25 @@ how wide it is, and — the point of this document — **exactly what is require
 reimplement it on master, reusing the master subsystems we did NOT refactor away
 in this branch.**
 
+## Performance evidence behind the entries below
+
+Any entry here that claims a percentage takes it from one of two measurement passes rather than
+from inspection. Both cover the compiler AND the runtime, and both record their own error bars.
+
+| source | what it measures | entries that rest on it |
+| --- | --- | --- |
+| [`../interpreter-jfr-profile.md`](../interpreter-jfr-profile.md) | JFR over the manualTests suite through one warm engine, with **compile and run recorded separately** - warm compile 2.0 s against warm run 26.3 s, so compile is ~7 % of the total and dispatch is not the bottleneck. Also allocation, calibrated against GC heap deltas because JFR's sampler over-attributes 1.5x-8.2x here. | **E51** (W2, W5), rows **55-57** of the issue list (W6, W7) |
+| [`../iseq-identity-hit-rate.md`](../iseq-identity-hit-rate.md) | Exact `LongAdder` counts on the equality path over two structurally opposite workloads, plus a JFR split of selection from comparison. | **E49**, and the correction recorded in **E50** |
+
+Two things worth carrying over from both, because they change how the numbers should be read:
+
+- **The compile side is measured and is not where the time goes.** Anyone reaching for a compiler
+  optimisation on the strength of these documents should note that the same pass found compile at
+  ~7 % of a warm run, and that its own W1 was a branch regression rather than a master win.
+- **CPU shares are softer than counts.** The equality measurement's percentages come from runs
+  carrying their own instrumentation, which dilutes every share; its verdict rests on a ratio, not
+  on an absolute. Where an entry says "measured", check which of the two it means.
+
 This is a planning document only. Nothing here is filed; nothing is pushed. Each
 enhancement lands as its own reviewed slice (or sequence of slices), independent
 of adopting the whole branch.
@@ -5165,3 +5184,71 @@ Self-contained and low risk - two javadoc blocks, no code. Applies cleanly to ma
 documented is master's own behaviour, verified by reading `Container.getConstantPool`,
 `IdentityConstant.isShared`, `ConstantPool.register` and `Container.ensureTypeHandle`. Worth filing
 ahead of E49, since E49's design constraints only make sense once this is written down.
+
+## E51 - Two measured interpreter wins: a re-derived category, and a Stream per tree node
+
+**Status:** implemented on `lagergren/lazy-instance`. Both are W2 and W5 of
+`../interpreter-jfr-profile.md`, taken as filed. Enhancements, not bugs - the answers were always
+correct, they were just recomputed.
+
+### W2: `TerminalTypeConstant` re-derives its category on every call
+
+`Frame.resolveType` calls `containsFormalType(true)` on every binary conditional jump, which for a
+terminal type reaches `isFormalType()` -> `getCategory()` -> `isSingleDefiningConstant()` ->
+`ensureResolvedConstant()` -> a switch over the defining constant that reads a component's format.
+The class cached nothing: it had exactly two fields, a transient disassembly index and the defining
+constant.
+
+*Measured (arithmetic-heavy workload):* `Frame.resolveType` 5.56% inclusive,
+`containsFormalType` -> `isFormalType` 4.24% inclusive, `isFormalType` 1.76% self,
+`ensureResolvedConstant` 1.28% self - all of it re-deriving an answer that cannot change.
+
+**The gate matters more than the cache.** The category is a pure function of the RESOLVED defining
+constant, so it is only stable once resolution is done. Memoizing earlier would pin an answer taken
+mid-resolution, which is exactly how this codebase previously cached a half-built `TypeInfo` and
+then hit the very failure that caching was meant to avoid. So the write happens only when
+`containsUnresolved()` is false.
+
+The field is transient and unsynchronized deliberately - a benign race in the `String.hashCode`
+sense. Every thread computes the same value, and an enum reference cannot be observed partly
+constructed, so a racing reader sees either null or the finished answer.
+
+**Why not `org.xvm.util.Lazy`,** whose own documentation says to use it instead of exactly this
+`if (field == null) { field = compute(); }` shape: `Lazy` memoizes UNCONDITIONALLY on first
+`get()`, so it would store whatever the first call produced - including a category derived while the
+defining constant was still unresolved, which is precisely what the guard refuses. There is no way
+to tell a `Lazy` "not yet". It would also cost a holder, an `AtomicReference` and a capturing
+supplier per constant to cache one enum reference on a class that otherwise carries two fields. Were
+this value unconditionally cacheable, `Lazy` would be the correct answer and a bare field the wrong
+one; the conditionality is the whole point.
+
+### W5: `XvmStructure.isModified` allocated a Stream per node
+
+```java
+return stream(getContained()).anyMatch(XvmStructure::isModified);
+```
+
+This recurses over the entire component tree, and `DirRepository$ModuleInfo.ensureModule` asks it on
+every `loadModule` to answer "is my cached module stale". So the Stream and its spliterator were
+allocated once per NODE of the tree, per query.
+
+*Measured:* 2.94 GB of sampled allocation in a cold run, 99.3% of everything attributed to
+`Handy.stream`, against 0.74% of CPU. It is engine and run setup rather than interpreter time, but
+every `engine.run(...)` pays it, and a sweep pays it once per module per pass.
+
+Replaced with a plain loop, which short-circuits identically - `anyMatch` bought nothing that
+`return true` does not. The profile also suggested a modification counter maintained on mutation as
+the better long-term fix; that is a larger change and is deliberately not taken here.
+
+### What is NOT claimed
+
+Neither has been re-profiled after the change. The numbers above are the measurements that
+identified them, not measurements of the improvement, and the two should not be confused. Both are
+justified on shape as well - a constant recomputed per call, and an allocation per tree node - but
+the honest statement is that the win is predicted, not yet demonstrated.
+
+### Filing notes
+
+Two small, independent changes: one memoized field with a resolution guard, and one loop replacing
+a stream. Both apply cleanly to master. Worth filing together since they come from the same
+profiling pass, but they share no code and can be reviewed separately.

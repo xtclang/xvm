@@ -1079,6 +1079,48 @@ public sealed class TerminalTypeConstant
 
     @Override
     public Category getCategory() {
+        Category category = m_category;
+        if (category != null) {
+            return category;
+        }
+
+        category = computeCategory();
+
+        // Memoize only once nothing it derives from can still change. The category is a pure
+        // function of the RESOLVED defining constant - a module or package is a class, a rebase is
+        // an interface, a ClassConstant is whichever its component's format says - so once the
+        // constant resolves the answer is fixed. While anything is still unresolved it is not, and
+        // caching early is how this codebase previously pinned a half-built TypeInfo.
+        //
+        // The write is a benign race in the String.hashCode sense: every thread computes the same
+        // value, and an enum reference cannot be seen partly constructed, so a racing reader sees
+        // either null or the finished answer. No volatile needed.
+        //
+        // Deliberately NOT org.xvm.util.Lazy, whose javadoc otherwise tells you to replace exactly
+        // this shape. Lazy memoizes UNCONDITIONALLY on first get(): it would store whatever the
+        // first call computed, including a category derived while the defining constant was still
+        // unresolved, which is the case this guard exists to refuse. Lazy has no way to decline to
+        // cache. It also costs a holder plus an AtomicReference plus a capturing supplier per
+        // constant, to cache one enum reference on a class that otherwise has two fields. If this
+        // value were unconditionally cacheable, Lazy would be the right answer and this would be
+        // the wrong one.
+        if (!containsUnresolved()) {
+            m_category = category;
+        }
+        return category;
+    }
+
+    /**
+     * Work out this type's category from its defining constant, with no caching.
+     *
+     * <p>Called on the hot path through {@code Frame.resolveType} -> {@code containsFormalType} ->
+     * {@code isFormalType}, which is why {@link #getCategory} memoizes it: profiling put this
+     * chain at 4.24% inclusive of interpreter CPU on a conditional-jump-heavy workload, all of it
+     * re-deriving a constant answer.
+     *
+     * @return the category
+     */
+    private Category computeCategory() {
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = ensureResolvedTypedef();
@@ -2086,6 +2128,12 @@ public sealed class TerminalTypeConstant
     /**
      * During disassembly, this holds the index of the constant that defines this type.
      */
+    /**
+     * Cached {@link #getCategory} result, populated only once {@link #containsUnresolved} is false.
+     * Transient and unsynchronized on purpose - see {@link #getCategory}.
+     */
+    private transient Category m_category;
+
     private transient int m_iDef;
 
     /**

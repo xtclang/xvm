@@ -171,7 +171,18 @@ public abstract class XvmStructure
      *         {@link #resetModified()}
      */
     public boolean isModified() {
-        return stream(getContained()).anyMatch(XvmStructure::isModified);
+        // A plain loop, not stream().anyMatch(). This runs once per node of the whole component
+        // tree on every staleness check - DirRepository asks it on each loadModule - so the Stream
+        // and its spliterator were being allocated per NODE, not per query. Profiling attributed
+        // 2.94 GB of sampled allocation in a cold run to this one call, 99.3% of everything under
+        // Handy.stream. The loop short-circuits identically; anyMatch bought nothing here that
+        // `return true` does not.
+        for (XvmStructure structure : getContained()) {
+            if (structure.isModified()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
