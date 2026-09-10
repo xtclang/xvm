@@ -321,6 +321,74 @@ override a method that does not exist, and an `@Override` on it will not compile
 Native property reads go through `markNativeProperty(name, HandleClass.class, getter)` - the bound
 form `xOSStorage` already uses and `xRegEx` now uses - which is the API that is actually dispatched.
 
+### ROOT OF THE ROOT 2026-09-10: `register` declines a foreign type and returns it, and the caller keeps it
+
+The measurement that three earlier instruments failed to get, finally obtained by reporting at the
+THROW rather than from a report (a report that reads constants dies on the very constant it is
+describing):
+
+```
+total violation events: 3
+distinct constants: 1
+  3x  TerminalTypeConstant TerminalType{type=String} -> TestArray@56004c80
+```
+
+ONE constant, three times, and the same POOL identity each time - across three iterations that each
+compile `TestArray` into a NEW pool. The same pool object recurring is the leak seen from the other
+side: it is retained, so it is re-encountered.
+
+**The mechanism, and it is explicit in the source.** `ConstantPool.register` has two early returns
+that hand a foreign constant straight back:
+
+```java
+if (constantOld == null) {
+    if (constant.containsUnresolved()) {
+        return constant;                                     // (1)
+    }
+    // type constants that are "foreign" to this pool cannot be held by it
+    if (constant instanceof TypeConstant type && !type.isShared(this)) {
+        return constant;                                     // (2)
+    }
+```
+
+(2) is deliberate and, on its own terms, right: the pool refuses to intern a type it is not allowed
+to hold. But it returns the ORIGINAL, and its caller does this:
+
+```java
+T constNew = pool.register(constOld);
+if (constOld != constNew) { ...replace... }                  // no change -> keeps the foreign one
+```
+
+So the pool declines to hold the type, and the caller embeds it in a constant that IS pool-owned.
+`TestArray` is not a child of `ecstasy`'s FileStructure, so `isShared` is false, so `String` from
+`TestArray` is declined and kept - which is exactly the constant the instrument named.
+
+**The decline is silent, and that is the defect.** The caller has no way to learn that the constant
+it got back is foreign, and the rule "foreign type constants cannot be held by this pool" is enforced
+against the POOL while nothing enforces it against the constants the pool stores.
+
+**Chain, complete.** register declines and returns a foreign type -> a pool-owned SignatureConstant
+keeps it -> `checkValidPools` would catch that, but never runs for library pools (its valid-pool set
+is never built) -> the foreign reference is permanent -> it pins the whole compile's ConstantPool
+(the retention leak) and becomes a position valid only in another pool at assembly (the corruption).
+
+**On master.** Both early returns are master code (`ConstantPool.java:186` and the `isShared` guard).
+`checkValidPools`'s self-disabling escape is master code. So the whole chain exists on master and is
+bounded there only because no library outlives a compile - which is precisely the assumption a warm
+engine removes.
+
+**STOP: this is a design decision, not a patch.** Three shapes, none obviously right:
+
+1. make the decline LOUD - a foreign type reaching `register` is a caller bug, so say so rather than
+   returning it silently. Risk: it is a designed path and may fire widely.
+2. make the CALLER responsible - `registerConstants(pool, atype)` refuses to build a constant whose
+   components could not be adopted. Risk: what should it do instead?
+3. adopt anyway when the type is foreign-but-referenced. Risk: `isShared` exists to prevent exactly
+   that, so this reverses a deliberate rule.
+
+Not chosen here. `-Dxvm.library.checkPools=true` plus the violation counter at the throw is the
+harness for whichever is picked: a correct fix makes that run clean.
+
 ### PATTERN 2026-09-10: seven diagnostics failed in one day, each differently, all reassuringly
 
 Not a bug row - a row about the instruments, because the failures were more expensive than any single

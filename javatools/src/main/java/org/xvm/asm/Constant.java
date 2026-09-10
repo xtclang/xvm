@@ -382,6 +382,24 @@ public abstract class Constant
                 return;
             }
 
+            if (ConstantPool.TRACK_POOL_LIFETIMES) {
+                // Reported HERE, at the detection point, and to stderr. Three previous attempts to
+                // count these from a report failed: cacheReport reads constants, reading one whose
+                // registration failed rethrows, so the report died before printing the line that
+                // would have explained it. A diagnostic must not depend on the health of the thing
+                // it is diagnosing.
+                //
+                // The count per key is the question: ONE constant appearing many times means it is
+                // stuck in the pool - published before its children were adopted and never removed,
+                // so every later equals-lookup finds the dirty instance. Many distinct constants
+                // appearing once each means nothing is stuck and the fix belongs where they are
+                // created, not in register's failure path.
+                String sKey = getClass().getSimpleName() + " " + this;
+                System.err.println("VALIDPOOL-VIOLATION #"
+                        + VALID_POOL_VIOLATIONS.merge(sKey, 1, Integer::sum) + " " + sKey
+                        + " -> " + getConstantPool().describeOwner());
+            }
+
             // TODO explanatory error message should go here
             throw new IllegalStateException("attempt to register a constant that refers to an " +
                     "unknown upstream constant pool: " + getConstantPool());
@@ -1070,6 +1088,13 @@ public abstract class Constant
     /**
      * A cached index of the location of the Constant in the pool.
      */
+    /**
+     * Counts, per constant, how often it tripped the valid-pool check; see the use site.
+     * Diagnostic only, and only populated when {@code ConstantPool.TRACK_POOL_LIFETIMES} is on.
+     */
+    private static final java.util.Map<String, Integer> VALID_POOL_VIOLATIONS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     private transient int m_iPos = -1;
 
     /**
