@@ -1884,19 +1884,30 @@ public abstract sealed class Component
      */
     protected void assembleChildren(DataOutput out)
             throws IOException {
-        int cKids = getChildrenCount();
-        writePackedLong(out, cKids);
+        // ONE collection decides both the count and the content. They used to come from two calls -
+        // getChildrenCount() and children() - which is a count/content divergence waiting to happen,
+        // guarded only by an assert that evaporates under -da and would then write a malformed file.
+        // The two are not interchangeable either: children() materializes a lazily-deserialized
+        // component and getChildrenCount() does not, so on a component that had not been touched yet
+        // the old pair could write "0 children" and silently drop every one of them.
+        Collection<? extends Component> kids = childrenToAssemble();
 
-        if (cKids > 0) {
-            int cActual = 0;
-
-            for (Component child : children()) {
-                assembleChild(out, child);
-                ++cActual;
-            }
-
-            assert cActual == cKids;
+        writePackedLong(out, kids.size());
+        for (Component child : kids) {
+            assembleChild(out, child);
         }
+    }
+
+    /**
+     * @return the children to write when this component is assembled - normally just
+     *         {@link #children()}
+     *
+     * <p>The seam exists so a component can assemble a subset of its children WITHOUT making
+     * {@code children()} answer differently depending on who is asking. See
+     * {@link MultiMethodStructure}, which is the one component that writes a subset.</p>
+     */
+    protected Collection<? extends Component> childrenToAssemble() {
+        return children();
     }
 
     /**

@@ -1,9 +1,6 @@
 package org.xvm.asm;
 
 
-import java.io.DataOutput;
-import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -11,7 +8,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import java.util.stream.Collectors;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -55,23 +51,12 @@ public final class MultiMethodStructure
         return (MultiMethodConstant) super.getIdentityConstant();
     }
 
-    protected void assembleChildren(DataOutput out)
-            throws IOException {
-        if (getParent().getFormat() == Format.CONST && !s_tloIgnoreNative.get()) {
-            // ensure we don't persist the (funky) Const interface functions created by
-            // ClassStructure.synthesizeConstInterface();
-            // note that the super.assembleChildren() method uses just two virtual methods:
-            //      getChildrenCount(), and children()
-            // hence we only need to override those two and ignore native methods when necessary
-            s_tloIgnoreNative.set(true);
-            try {
-                super.assembleChildren(out);
-            } finally {
-                s_tloIgnoreNative.set(false);
-            }
-        } else {
-            super.assembleChildren(out);
-        }
+    protected Collection<? extends Component> childrenToAssemble() {
+        // don't persist the (funky) Const interface functions created by
+        // ClassStructure.synthesizeConstInterface()
+        return getParent().getFormat() == Format.CONST
+                ? methods().stream().filter(method -> !method.isTransient()).toList()
+                : methods();
     }
 
 
@@ -82,9 +67,7 @@ public final class MultiMethodStructure
         ensureChildren();
 
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;
-        return  map == null             ? 0
-              : s_tloIgnoreNative.get() ? (int) map.values().stream().filter(m -> !m.isTransient()).count()
-              : map.size();
+        return map == null ? 0 : map.size();
     }
 
     @Override
@@ -183,10 +166,7 @@ public final class MultiMethodStructure
 
     @Override
     public Collection<? extends Component> children() {
-        return s_tloIgnoreNative.get()
-                ? methods().stream().
-                    filter(method -> !method.isTransient()).collect(Collectors.toList())
-                : methods();
+        return methods();
     }
 
     @Override
@@ -493,9 +473,4 @@ public final class MultiMethodStructure
      */
     private volatile Map<MethodConstant, MethodStructure> m_methodByConstant;
 
-    /**
-     * The flag used by the serialization logic.
-     */
-    private static final ThreadLocal<Boolean> s_tloIgnoreNative =
-            ThreadLocal.withInitial(() -> Boolean.FALSE);
 }
