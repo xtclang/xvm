@@ -310,6 +310,42 @@ the GET asymmetry exists there. Nothing to file.
 override compiles, sits next to sibling overrides that now all work, and silently never runs.
 `xRegEx` was the only template with one; nothing prevents the next.
 
+### PATTERN 2026-09-10: seven diagnostics failed in one day, each differently, all reassuringly
+
+Not a bug row - a row about the instruments, because the failures were more expensive than any single
+defect they were meant to catch, and they share a shape.
+
+| diagnostic | how it failed | who wrote it |
+| --- | --- | --- |
+| `checkAssemblyOwnership` | detected the violation, then died building its own error message - `getPosition()` inside the message re-entered the check. Reported `StackOverflowError`, named nothing | branch |
+| `outsideLib=0` columns | walks `getMethods()` and `getProperties()` key sets ONLY - two caches out of ~15 on a TypeInfo. Read as "the library holds nothing foreign" for hours while three other caches were dirty | branch |
+| `checkValidPools` | disables itself entirely when the valid-pool set is empty, and nothing ensures the set is built. Silently off for every library pool, forever | **master** |
+| pool-owner capture | recorded `null` for every pool - captured the module id during `FileStructure` construction, before it exists | this session |
+| sampled cache audit | budget spent on types that never built a TypeInfo, so it examined nothing and reported CLEAN while a known-dirty cache was live | this session |
+| `ForeignCacheAudit` | breadth-first with a node budget; the needle sits five hops down behind a map with thousands of entries, so the budget went on width. Deleted | this session |
+| registration-failure histogram | printed after the throw it was explaining - `cacheReport` reads constants, and reading a failed one rethrows, so the report died first | this session |
+
+**The shape.** Every one reported REASSURINGLY while the thing it guarded was broken. None reported
+"I could not check this". A diagnostic that says nothing is indistinguishable from a system that is
+fine, and that is what ends investigations - `outsideLib=0` cost hours of looking in the wrong place,
+and the sampled audit was caught ONLY because a known-positive existed to check it against.
+
+**What actually worked, and why.** `RetainerPath` answers one narrow question exactly - "who holds
+THIS object" - and found four retainers at one run each, after five wrong guesses from reading code
+that looked conclusive. The enumerators, which tried to answer "where are ALL the problems", failed
+every time. Narrow and exact beat broad and approximate, repeatedly.
+
+**Rules worth keeping:**
+
+- a diagnostic needs a KNOWN POSITIVE before its negative result means anything;
+- prefer "who holds this" over "find all of these";
+- an instrument that cannot check something must SAY SO, never return clean;
+- put a diagnostic ahead of what it diagnoses, not downstream of it;
+- when an instrument fails three times on one datum, the approach is wrong, not the bug.
+
+**Filed for master as E57**: `checkValidPools` is the one item here that is master's own code, and it
+is the most consequential - an assertion that turns itself off.
+
 ### ROOT CAUSE 2026-09-10: `checkValidPools` never runs for the shared library, and that is BOTH bugs
 
 The retention hunt and the corruption hunt converge on one defect.

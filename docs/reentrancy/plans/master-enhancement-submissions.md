@@ -5709,3 +5709,77 @@ deliberate - they stand on their own, and the fourth needs a design decision rat
 
 Three guards and one helper, all in `TypeInfoReal`. The `isLocallyOwned` one deserves real review:
 the naive version of it (compare the key's pool) is what I wrote first, and it does not work.
+
+## E57 - `checkValidPools` silently disables itself, and nothing ensures it is ever enabled
+
+**NOT fixed.** Filed because it is the assertion that should have caught two separate defects and did
+not, and because the reason is structural rather than incidental.
+
+### The escape
+
+```java
+// master: javatools/src/main/java/org/xvm/asm/Constant.java
+private void checkValidPools(Set<ConstantPool> setValidPools, int depth) {
+    if (!setValidPools.contains(getConstantPool())) {
+        if (setValidPools.isEmpty()) {
+            // the modules are not yet linked
+            return;
+        }
+        throw new IllegalStateException("attempt to register a constant that refers to an " +
+                "unknown upstream constant pool: " + getConstantPool());
+    }
+    ...
+```
+
+The check is wired into `ConstantPool.register`, runs on every recursive registration, and does
+exactly the right thing: it forbids a constant that reaches into a pool this one is not allowed to
+depend on.
+
+Unless the set is empty, in which case it returns - **for the whole constant graph, not just this
+node**.
+
+### Why the set can be empty forever
+
+`buildValidPoolSet()` has exactly ONE caller on master: `TypeCompositionStatement`, on
+`component.getConstantPool()` - the pool of the component being compiled. Nothing builds the set for
+any other pool. A pool that is never the subject of a compile therefore has an empty set for its
+entire life, and every `checkValidPools` call against it is a no-op.
+
+The comment says "the modules are not yet linked", which describes an EARLY call. For a pool nobody
+compiles into, it is not early - it is permanent, and the wording is what makes that hard to see.
+
+### Why it matters, with evidence
+
+On `lagergren/lazy-instance`, where one prepared library is shared across compiles, this single gap
+produced two separate long-running bugs:
+
+- constants referencing a compile's pool registered into the LIBRARY pool unchecked, keeping those
+  compiles' entire `ConstantPool`s alive - a retention leak that survived three targeted cache fixes,
+  because those fixes were treating symptoms downstream of an assertion that never ran;
+- the same unchecked references became positions valid only in another pool when a module was
+  assembled, producing intermittently unreadable compiled modules.
+
+Building the valid-pool sets for the library makes it fire immediately, on the first compile:
+
+```
+attempt to register a constant that refers to an unknown upstream constant pool:
+ConstantPool{module=TestArray, size=1664}
+  at Constant.checkValidPools -> SignatureConstant.forEachUnderlying
+  at ConstantPool.register -> ensureMethodConstant -> appendNestedIdentity
+  -> layerOnMethods -> buildTypeInfo        (a library type, during a compile)
+```
+
+### Not claimed
+
+That this is a live defect on master. Master has no library shared across compiles, so a pool with an
+empty valid set is bounded by the process. What is claimed is narrower: **an assertion that silently
+disables itself, with no way for a caller to learn that it did.** That is a hazard independent of who
+trips over it, and it is exactly what a long-lived process - a warm engine, a language server - would
+trip over first.
+
+### Shape of a fix
+
+Either populate the valid-pool set wherever a pool becomes a linkable dependency, so the check is
+live for every pool that can be registered into, or distinguish "not linked yet" from "no set was
+ever built" and make the latter loud. The one thing not to keep is a check that returns silently and
+looks like a pass.
