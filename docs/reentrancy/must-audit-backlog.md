@@ -431,10 +431,30 @@ readers but does not remove it from `f_listConst`. Every later equals-based look
 dirty instance, and the foreign reference is permanent. That matches what `RetainerPath` reports:
 a foreign type reachable from `ecstasy`'s `f_listConst[38371]`.
 
-**NOT yet verified**, and it should be before anything is changed - the obvious-and-wrong answer has
-come up six times on this bug. The cheap test: with `-Dxvm.library.checkPools=true`, does the SAME
-constant fail repeatedly (stuck in the pool) or once (transient)? Repeated failure on one constant
-confirms it is published and never removed.
+**NOT verified, and the attempt to verify it FAILED THREE TIMES.** The test is cheap to state - with
+`-Dxvm.library.checkPools=true`, does the SAME constant fail repeatedly (stuck in the pool) or once
+(transient)? - and it has not been obtained:
+
+1. a histogram in `register`'s catch printed nothing, because it was appended near the END of
+   `cacheReport`, and `cacheReport` reads constants, and reading one whose registration failed
+   rethrows that failure - so the report died before reaching the line explaining why;
+2. moved ahead of every throwing read, it still printed nothing;
+3. the flag forwarding is intact and the deferred rethrow proves a registration DID fail, so the
+   counter should have incremented and did not. Unexplained.
+
+Stopped there rather than debug the instrument a fourth time. Three failures measuring one datum is
+a signal about the approach, not the bug.
+
+**So the mechanism behind the dirty constant is an open question, and the hypothesis above must not
+be treated as a finding.** What IS established and verified is everything above it: the check is
+disabled for library pools, turning it on fires immediately, and it names the same constant shape
+that `RetainerPath` traced independently.
+
+**Whoever picks this up:** `-Dxvm.library.checkPools=true` is the harness. It converts the silent
+contamination into a named failure, so a correct fix is one that makes that run clean. Getting the
+per-constant failure histogram working is probably a matter of instrumenting `checkValidPools`
+itself rather than `register`'s catch - closer to the throw, and it cannot be outrun by a report that
+dies early.
 
 **If confirmed, the fix has a shape**: adopt children BEFORE publishing, or remove the constant from
 `f_listConst`/`mapConstants` when recursive registration fails. The second is smaller; the first is

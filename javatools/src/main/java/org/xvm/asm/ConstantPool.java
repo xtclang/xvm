@@ -443,6 +443,14 @@ public class ConstantPool
             }
         } catch (RuntimeException | Error e) {
             failure = e;
+            if (TRACK_POOL_LIFETIMES) {
+                // Is it ONE constant failing over and over - stuck in the pool because nothing
+                // removes it - or a new one each time? That distinguishes "published before its
+                // children were adopted, and left there" from "a fresh dirty constant per compile",
+                // and the two want different fixes.
+                REGISTRATION_FAILURES.merge(
+                        constant.getClass().getSimpleName() + " " + constant, 1, Integer::sum);
+            }
             throw e;
         } finally {
             if (fPublishedIncomplete) {
@@ -3817,6 +3825,25 @@ public class ConstantPool
     }
 
     private static final Map<String, Integer> INVALIDATIONS_ACROSS_POOLS = new ConcurrentHashMap<>();
+
+    /**
+     * @return a histogram of constants whose registration FAILED, most-repeated first
+     *
+     * <p>A constant that appears many times is stuck: `register` publishes into `f_listConst` and
+     * `mapConstants` BEFORE adopting children, and nothing removes it when the recursive step
+     * throws - so later equals-based lookups keep finding the dirty instance.</p>
+     */
+    public static String getRegistrationFailures() {
+        return REGISTRATION_FAILURES.isEmpty()
+                ? ""
+                : REGISTRATION_FAILURES.entrySet().stream()
+                        .sorted(Entry.<String, Integer>comparingByValue().reversed())
+                        .limit(6)
+                        .map(e -> e.getValue() + "x " + e.getKey())
+                        .collect(Collectors.joining(" | "));
+    }
+
+    private static final Map<String, Integer> REGISTRATION_FAILURES = new ConcurrentHashMap<>();
 
     /**
      * Cause all TypeInfos that are built from the specified TypeInfo to re-build.

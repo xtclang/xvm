@@ -387,6 +387,15 @@ public final class XtcEngine
         int  cInfoTotal = 0;
         int  cRelTotal  = 0;
 
+        // FIRST, before anything that can throw. This histogram was previously appended near the
+        // end of the report and never printed: cacheReport reads constants, and reading one whose
+        // registration failed rethrows that failure, so the report died before reaching the line
+        // that would have explained why.
+        String sFail = ConstantPool.getRegistrationFailures();
+        if (!sFail.isEmpty()) {
+            sb.append("  REGISTRATION FAILURES: ").append(sFail).append('\n');
+        }
+
         // Report the HELD instances. Asking repoLibrary again would re-read any module a compile
         // had modified, so every figure would describe a structure nothing is using - which is
         // exactly how this report once showed a library module with zero cached TypeInfos while a
