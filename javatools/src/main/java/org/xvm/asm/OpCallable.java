@@ -26,6 +26,7 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
@@ -951,8 +952,42 @@ public abstract class OpCallable extends Op {
      * Support for NEW_V ops.
      */
     protected int buildNewV(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
-        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()),
-                bctx.ctxSlot(code));
+        // find the virtual origin of the concrete constructor recorded by the op, then invoke the
+        // corresponding "$new" method on the runtime class-of-class through that origin interface
+        MethodConstant idCtor        = bctx.getConstant(m_nFunctionId, MethodConstant.class);
+        TypeConstant   typeTarget    = idCtor.getNamespace().getType();
+        TypeInfo       infoTarget    = bctx.getTypeInfo(typeTarget);
+        MethodInfo     infoCtor      = infoTarget.findVirtualConstructor(idCtor.getSignature());
+        MethodBody     bodyCtor      = infoCtor.getVirtualConstructor();
+        TypeConstant   typeInterface = bodyCtor.getIdentity().getNamespace().getType();
+        TypeInfo       infoInterface = bctx.getTypeInfo(typeInterface);
+        ClassDesc      cdInterface   = bctx.builder.ensureClassDesc(typeInterface);
+
+        JitMethodDesc jmdNew = Builder.convertConstructToNew(infoInterface, cdInterface,
+                (JitCtorDesc) bodyCtor.getJitDesc(bctx.builder, typeInterface));
+        String jitName = bodyCtor.getIdentity().ensureJitMethodName(bctx.typeSystem).
+                replace("construct", Builder.NEW);
+
+        MethodTypeDesc mdNew;
+        if (jmdNew.isOptimized) {
+            jitName += Builder.OPT;
+            mdNew    = jmdNew.optimizedMD;
+        } else {
+            mdNew = jmdNew.standardMD;
+        }
+
+        RegisterInfo regType = bctx.loadArgument(code, nTypeArg);
+        assert regType.type().isTypeOfType();
+
+        // generated class-of-class must implement the virtual constructor interface
+        bctx.loadCtx(code);
+        code.invokevirtual(CD_nType, "$xvmClass", MethodTypeDesc.of(CD_Class, CD_Ctx))
+            .checkcast(cdInterface);
+        bctx.loadCtx(code);
+        bctx.loadCallArguments(code, jmdNew, anArgValue);
+        code.invokeinterface(cdInterface, jitName, mdNew);
+
+        bctx.assignReturns(code, jmdNew, 1, new int[] {m_nRetValue});
         return -1;
     }
 

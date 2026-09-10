@@ -1783,17 +1783,15 @@ public abstract class Builder {
      * Convert the "void construct$17(...)" specified by jmdCtor to a new MethodDesc for
      * "This new$17(...)".
      */
-    public static JitMethodDesc convertConstructToNew(
-            TypeInfo    typeInfo,
-            ClassDesc   cd,
-            JitCtorDesc jmdCtor) {
+    public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, ClassDesc cd,
+                                                      JitCtorDesc jmdCtor) {
         JitParamDesc retDesc = new JitParamDesc(typeInfo.getType(), Specific, cd, 0, -1, false);
 
         JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
         return typeInfo.hasGenericTypes()
             ? new JitCtorDesc(typeInfo.getType(),
-                    /*add implicit CD_Target arg*/ null, /*addCtorCtx*/ false, /*addType*/ true,
+                    /*targetCD*/ null, /*addCtorCtx*/ false, /*addType*/ true,
                     standardReturns,  jmdCtor.standardParams,
                     optimizedReturns, jmdCtor.optimizedParams)
             : new JitMethodDesc(typeInfo.getType(),
@@ -1804,17 +1802,12 @@ public abstract class Builder {
     /**
      * Call the "new$" [static] method.
      *
-     * @param bctx       optional BuildContext
      * @param argsLoader the function (consumer) that is responsible for loading the arguments
      *                   on the Java stack
      */
-    public JitMethodDesc buildNew(
-            BuildContext            bctx,
-            CodeBuilder             code,
-            TypeConstant            typeTarget,
-            MethodConstant          idCtor,
-            Consumer<JitMethodDesc> argsLoader,
-            int                     ctxSlot) {
+    public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant typeTarget,
+                                  MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader,
+                                  int ctxSlot) {
         TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
         MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
 

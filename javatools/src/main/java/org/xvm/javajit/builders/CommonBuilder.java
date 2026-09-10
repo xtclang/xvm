@@ -173,13 +173,20 @@ public class CommonBuilder
         classBuilder.withSuperclass(CD_Class);
 
         // the only reason we would build a class of Class is if the original class implements
-        // any funky interfaces in which case we need to generate corresponding routing methods
+        // any funky interfaces, in which case we need to generate corresponding routing methods
 
         Set<ClassDesc>   interfaces = new HashSet<>();
-        List<MethodInfo> virtCtors  = new ArrayList<>();
+        Set<MethodInfo>  virtCtors  = new HashSet<>();
         List<MethodInfo> funkyImpls = new ArrayList<>();
         for (MethodInfo method : typeInfo.getMethods().values()) {
             if (method.getVirtualConstructor() instanceof MethodBody virtCtor) {
+                // the cache contains both a capped declaration and its narrowing implementation
+                if (method.isCapped()) {
+                    method = typeInfo.getNarrowingMethod(method);
+                    assert method != null;
+                    virtCtor = method.getVirtualConstructor();
+                    assert virtCtor != null;
+                }
                 IdentityConstant ifaceId = virtCtor.getIdentity().getNamespace();
                 interfaces.add(ensureClassDesc(ifaceId.getType()));
                 virtCtors.add(method);
@@ -211,58 +218,60 @@ public class CommonBuilder
             // method contains an implementation of an abstract static (funky) declaration;
             // the class of class needs to create a method with that declaration signature
             // and route it to the "head" of the call chain
-            MethodBody    funkyBody = method.getAbstractFunction();
-            JitMethodDesc funkyJmd  = funkyBody.getJitDesc(this, null);
-            JitMethodDesc targetJmd = method.getJitDesc(this, targetType);
-            String        jitName   = method.ensureJitMethodName(typeSystem);
+            MethodBody     funkyBody = method.getAbstractFunction();
+            MethodConstant funkyId   = funkyBody.getIdentity();
+            TypeConstant   ifaceType = funkyId.getNamespace().getType();
 
-            assembleFunkyRouting(classBuilder, jitName, funkyJmd, targetCD, targetJmd, false);
+            String        funkyName = funkyId.ensureJitMethodName(typeSystem);
+            JitMethodDesc funkyJmd  = funkyBody.getJitDesc(this, ifaceType);
+
+            String        targetName = method.ensureJitMethodName(typeSystem);
+            JitMethodDesc targetJmd  = method.getJitDesc(this, targetType);
+
+            assembleFunkyRouting(
+                    classBuilder, funkyName, funkyJmd.standardMD, funkyJmd.standardParams,
+                    targetCD, targetName, targetJmd.standardMD, targetJmd.standardParams,
+                    targetJmd.standardReturns, funkyJmd.standardCtx());
+
             if (funkyJmd.isOptimized) {
                 assert targetJmd.isOptimized;
                 assembleFunkyRouting(
-                        classBuilder, jitName + OPT, funkyJmd, targetCD, targetJmd, true);
+                        classBuilder, funkyName + OPT, funkyJmd.optimizedMD, funkyJmd.optimizedParams,
+                        targetCD, targetName + OPT, targetJmd.optimizedMD, targetJmd.optimizedParams,
+                        targetJmd.optimizedReturns, funkyJmd.optimizedCtx());
             }
         }
 
         for (MethodInfo method : virtCtors) {
-            MethodBody virtCtor = method.getVirtualConstructor();
-
             // generate a routing implementation; for example for a "Person" class:
             //      class Person implements Replicable {}
             // we need to add a method on "cPerson" class:
             //      Person $new() {return new Person();}
+            MethodBody     ctorBody  = method.getVirtualConstructor();
+            MethodConstant ctorId    = ctorBody.getIdentity();
+            TypeConstant   ifaceType = ctorId.getNamespace().getType();
+            ClassDesc      cdIface   = ensureClassDesc(ifaceType);
 
-            if (method.isCapped()) {
-                String     name1   = method.ensureJitMethodName(typeSystem);
-                MethodInfo method2 = typeInfo.getNarrowingMethod(method);
-                String     name2   = method2.ensureJitMethodName(typeSystem);
+            String        ctorName = ctorId.ensureJitMethodName(typeSystem).replace("construct", NEW);
+            JitMethodDesc ctorJmd  = Builder.convertConstructToNew(ifaceType.ensureTypeInfo(), cdIface,
+                    (JitCtorDesc) ctorBody.getJitDesc(this, ifaceType));
 
-                System.err.println("TODO: capped virtual constructor");
-            }
-            String jitName = virtCtor.getIdentity().
-                    ensureJitMethodName(typeSystem).replace("construct", NEW);
-            JitMethodDesc jmd = Builder.convertConstructToNew(typeInfo, targetCD,
+            String        targetName = method.ensureJitMethodName(typeSystem).replace("construct", NEW);
+            JitMethodDesc targetJmd  = Builder.convertConstructToNew(typeInfo, targetCD,
                     (JitCtorDesc) method.getJitDesc(this, targetType));
 
-            MethodTypeDesc md;
-            int            count;
-            if (jmd.isOptimized) {
-                jitName += OPT;
-                md    = jmd.optimizedMD;
-                count = jmd.getImplicitParamCount() + jmd.optimizedParams.length;
-            } else {
-                md    = jmd.standardMD;
-                count = jmd.getImplicitParamCount() + jmd.standardParams.length;
-            }
+            assembleVirtualConstructorRouting(
+                    classBuilder, ctorName, ctorJmd.standardMD, ctorJmd.standardParams,
+                    targetCD, targetName, targetJmd.standardMD, targetJmd.standardParams,
+                    ctorJmd.standardCtx());
 
-            final String _jitName = jitName;
-            classBuilder.withMethodBody(jitName, md, ClassFile.ACC_PUBLIC, code -> {
-                for (int i = 0; i < count; i++) {
-                    load(code, md.parameterType(i), code.parameterSlot(i));
-                }
-                code.invokestatic(targetCD, _jitName, md)
-                    .areturn();
-            });
+            if (ctorJmd.isOptimized) {
+                assert targetJmd.isOptimized;
+                assembleVirtualConstructorRouting(
+                        classBuilder, ctorName + OPT, ctorJmd.optimizedMD, ctorJmd.optimizedParams,
+                        targetCD, targetName + OPT, targetJmd.optimizedMD, targetJmd.optimizedParams,
+                        ctorJmd.optimizedCtx());
+            }
         }
     }
 
@@ -274,28 +283,23 @@ public class CommonBuilder
      * while the class of class cString has:
      *      hashCode$p(Ctx, nType, Hashable) -> long
      */
-    private void assembleFunkyRouting(ClassBuilder classBuilder, String jitName,
-                                      JitMethodDesc funkyJmd,
-                                      ClassDesc targetCD, JitMethodDesc targetJmd,
-                                      boolean isOptimized) {
-        MethodTypeDesc funkyMd  = isOptimized ? funkyJmd.optimizedMD  : funkyJmd.standardMD;
-        MethodTypeDesc targetMd = isOptimized ? targetJmd.optimizedMD : targetJmd.standardMD;
-        JitParamDesc[] funkyParams = isOptimized
-                ? funkyJmd.optimizedParams
-                : funkyJmd.standardParams;
-        JitParamDesc[] targetParams = isOptimized
-                ? targetJmd.optimizedParams
-                : targetJmd.standardParams;
+    private void assembleFunkyRouting(ClassBuilder classBuilder,
+                String funkyName, MethodTypeDesc funkyMD, JitParamDesc[] funkyParams,
+                ClassDesc targetCD, String targetName, MethodTypeDesc targetMD,
+                JitParamDesc[] targetParams, JitParamDesc[] targetReturns, int ctxIndex) {
 
-        classBuilder.withMethodBody(jitName, funkyMd, ClassFile.ACC_PUBLIC, code -> {
-            int extraCount = funkyJmd.getImplicitParamCount();
-            assert extraCount == targetJmd.getImplicitParamCount();
+        int extraCount = funkyMD.parameterCount() - funkyParams.length;
+        assert extraCount == targetMD.parameterCount() - targetParams.length;
+
+        classBuilder.withMethodBody(funkyName, funkyMD, ClassFile.ACC_PUBLIC, code -> {
             for (int i = 0; i < extraCount; i++) {
-                load(code, funkyMd.parameterType(i), code.parameterSlot(i));
+                load(code, funkyMD.parameterType(i), code.parameterSlot(i));
             }
 
-            int funkyIndex  = isOptimized ? funkyJmd.optimizedCtx()  : 0;
-            int targetIndex = isOptimized ? targetJmd.optimizedCtx() : 0;
+            int funkyIndex  = 0;
+            int targetIndex = 0;
+            int ctxSlot     = code.parameterSlot(ctxIndex);
+
             while (funkyIndex < funkyParams.length) {
                 JitParamDesc funkyParam  = funkyParams[funkyIndex];
                 JitParamDesc targetParam = targetParams[targetIndex];
@@ -305,8 +309,7 @@ public class CommonBuilder
                     load(code, funkyParam.cd, funkySlot);
                     if (!funkyParam.type.equals(targetParam.type) &&
                             !targetParam.cd.isPrimitive()) {
-                        generateCheckCast(code, targetParam.type,
-                                code.parameterSlot(funkyJmd.standardCtx()));
+                        generateCheckCast(code, targetParam.type, ctxSlot);
                     }
                     funkyIndex++;
                     targetIndex++;
@@ -315,8 +318,7 @@ public class CommonBuilder
                     case "Specific->Primitive",
                          "Specific->XvmPrimitive":
                         code.aload(funkySlot);
-                        generateCheckCast(code, targetParam.type,
-                                code.parameterSlot(funkyJmd.standardCtx()));
+                        generateCheckCast(code, targetParam.type, ctxSlot);
                         unbox(code, targetParam.type);
 
                         int paramIndex = funkyParam.index;
@@ -338,22 +340,61 @@ public class CommonBuilder
                 }
             }
 
-            code.invokestatic(targetCD, jitName, targetMd);
+            code.invokestatic(targetCD, targetName, targetMD);
 
-            ClassDesc funkyRetCD  = funkyMd.returnType();
-            ClassDesc targetRetCD = targetMd.returnType();
+            ClassDesc funkyRetCD  = funkyMD.returnType();
+            ClassDesc targetRetCD = targetMD.returnType();
             if (funkyRetCD.equals(targetRetCD)) {
                 addReturn(code, funkyRetCD);
             } else if (!funkyRetCD.isPrimitive()) {
                 // the concrete implementation may have a covariant return type
                 if (targetRetCD.isPrimitive()) {
-                    box(code, targetJmd.optimizedReturns[0].type);
+                    box(code, targetReturns[0].type);
                 }
                 code.areturn();
             } else {
                 throw new UnsupportedOperationException(
                         "Unsupported funky return conversion: " + targetRetCD + "->" + funkyRetCD);
             }
+        });
+    }
+
+    /**
+     * Assemble an instance method on the class-of-class that implements a virtual constructor.
+     */
+    private void assembleVirtualConstructorRouting(ClassBuilder classBuilder,
+            String ctorName, MethodTypeDesc ctorMD, JitParamDesc[] ctorParams,
+            ClassDesc targetCD, String targetName, MethodTypeDesc targetMD,
+            JitParamDesc[] targetParams, int ctxIndex) {
+
+        int     ctorExtra = ctorMD.parameterCount() - ctorParams.length;
+        boolean hasType   = typeInfo.hasGenericTypes();
+
+        assert ctorParams.length == targetParams.length;
+        assert targetMD.parameterCount() - targetParams.length == (hasType ? 2 : 1);
+
+        classBuilder.withMethodBody(ctorName, ctorMD, ClassFile.ACC_PUBLIC, code -> {
+            int ctxSlot = code.parameterSlot(ctxIndex);
+            code.aload(ctxSlot);
+            if (hasType) {
+                // generic constructors receive the runtime target type held by the class-of-class
+                code.aload(0)
+                    .getfield(CD_Class, "$publicType", CD_TypeConstant);
+            }
+
+            for (int i = 0, count = ctorParams.length; i < count; i++) {
+                JitParamDesc ctorParam   = ctorParams[i];
+                JitParamDesc targetParam = targetParams[i];
+
+                load(code, ctorParam.cd, code.parameterSlot(ctorExtra + i));
+                if (!ctorParam.cd.equals(targetParam.cd)) {
+                    assert !targetParam.cd.isPrimitive();
+                    generateCheckCast(code, targetParam.type, ctxSlot);
+                }
+            }
+
+            code.invokestatic(targetCD, targetName, targetMD)
+                .areturn();
         });
     }
 
@@ -4325,8 +4366,6 @@ public class CommonBuilder
     private static final Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
         Map.entry("org.xtclang.ecstasy.collections.UniformIndexed",
             Set.of("elementAt")), // TODO: NEWCG_N is not implemented
-        Map.entry("org.xtclang.ecstasy.collections.Set",
-            Set.of("symmetricDifference")), // TODO: MOV_TYPE for the Replicable virtual constructor
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
             Set.of("construct")),  // TODO: specialized return is incompatible with a conditional mixin
         Map.entry("org.xtclang.ecstasy.maps.Map",
