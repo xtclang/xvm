@@ -215,6 +215,9 @@ public class xRTNameService
 
     static String[] getAllRecords(String sName)
             throws NamingException {
+        // Hashtable, and it has to be: InitialDirContext's constructor takes one by API contract
+        // (javax.naming), so this is not a legacy collection that survived a cleanup - it is the
+        // type the JDK demands. Leave it.
         Hashtable<String, String> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.dns.DnsContextFactory");
 

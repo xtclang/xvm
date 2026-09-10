@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.Vector;
 import java.util.stream.Stream;
 import java.util.stream.IntStream;
 
@@ -3812,9 +3811,18 @@ public class ConstantPool
 
         assert cNew > cOld;
 
+        // Read under the same monitor the write takes. This used to be an unsynchronized indexed
+        // read over a Vector, and the Vector was load-bearing for a reason that is easy to misread:
+        // VISIBILITY was already handled by the volatile m_cInvalidated: reading it happens-after
+        // the write that follows the add. What Vector actually bought was protecting this reader
+        // from a concurrent RESIZE - a plain ArrayList reader can hold a stale backing array and
+        // index past its end. Invalidation is a cold path, so taking the lock is cheaper than
+        // keeping a legacy collection whose necessity nothing here explains.
         HashSet<IdentityConstant> set = new HashSet<>();
-        for (int i = cOld; i < cNew; ++i) {
-            set.add(f_listInvalidated.get(i));
+        synchronized (f_listInvalidated) {
+            for (int i = cOld; i < cNew; ++i) {
+                set.add(f_listInvalidated.get(i));
+            }
         }
 
         return set;
@@ -4777,7 +4785,7 @@ public class ConstantPool
     /**
      * A list of classes that cause any derived TypeInfos to be invalidated.
      */
-    private final List<IdentityConstant> f_listInvalidated = new Vector<>();
+    private final List<IdentityConstant> f_listInvalidated = new ArrayList<>();
 
     /**
      * Cached size of {@link #f_listInvalidated}.
