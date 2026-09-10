@@ -50,7 +50,13 @@ public class xRegEx
 
     @Override
     public void initNative() {
-        markNativeProperty("pattern");
+        // A bound getter, NOT a handle-level invokeNativeGet override. Native method calls
+        // reach the handle (CallChain's five invoke overloads all dispatch through the
+        // receiver), but property reads do not: ClassTemplate's get path calls the TEMPLATE's
+        // invokeNativeGet directly, so an override on RegExHandle would never run. This is the
+        // form that is actually dispatched - see xOSStorage for the same pattern.
+        markNativeProperty("pattern", RegExHandle.class, (frame, hRegEx, iReturn) ->
+            frame.assignValue(iReturn, xString.makeHandle(frame, hRegEx.getRegex())));
 
         markNativeMethod("construct",   new String[] {"text.String", "numbers.Int64"}, VOID);
         markNativeMethod("find",        new String[] {"text.String", "numbers.Int64"}, null);
@@ -224,15 +230,6 @@ public class xRegEx
             }
             }
             return super.invokeNativeNN(frame, method, ahArg, aiReturn);
-        }
-
-        @Override
-        public int invokeNativeGet(Frame frame, String sPropName, int iReturn) {
-            if ("pattern".equals(sPropName)) {
-                return frame.assignValue(iReturn, xString.makeHandle(frame, f_regex));
-            }
-
-            return super.invokeNativeGet(frame, sPropName, iReturn);
         }
 
         @Override
