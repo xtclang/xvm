@@ -402,10 +402,19 @@ public final class XtcEngine
         // healthy against a 8GB ceiling and terminal against Gradle's 512m default for test
         // workers, and the difference between those two readings was several hours.
         long cMax = jvm.maxMemory();
-        sb.append(String.format("  TOTAL typeInfos=%d relations=%d | poolsCreated=%d "
+        // poolsLive is -1 unless -Dxvm.pool.trackLifetimes=true. It is the number that decides
+        // whether "per-compile pools are retained" is true: heap growing with poolsCreated is a
+        // correlation, live-tracking-created is the claim itself.
+        int cLive = ConstantPool.getPoolsLive();
+        sb.append(String.format("  TOTAL typeInfos=%d relations=%d | poolsCreated=%d%s "
                         + "| heap=%dMB of %dMB (%d%%)%n",
                 cInfoTotal, cRelTotal, ConstantPool.getPoolsCreated(),
+                cLive < 0 ? "" : " poolsLive=" + cLive,
                 cHeap / (1024 * 1024), cMax / (1024 * 1024), cHeap * 100 / cMax));
+        String sLive = ConstantPool.getLivePoolHistogram();
+        if (!sLive.isEmpty()) {
+            sb.append("  LIVE POOLS BY OWNER: ").append(sLive).append('\n');
+        }
         return sb.toString();
     }
 

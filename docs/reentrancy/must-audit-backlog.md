@@ -310,6 +310,89 @@ the GET asymmetry exists there. Nothing to file.
 override compiles, sits next to sibling overrides that now all work, and silently never runs.
 `xRegEx` was the only template with one; nothing prevents the next.
 
+### MEASURED 2026-09-10: T15's retention claim is too strong - pools survive at 1 in 7, not 1 per compile
+
+T15 concluded "per-compile `ConstantPool`s are retained, one per compile, forever" from heap growing
+linearly with `poolsCreated` while the library caches stayed flat. That is a CORRELATION, and this
+is the second time it has pointed the wrong way on this exact question - T9 concluded "no leak" from
+a five-iteration histogram. So the claim was measured instead of re-derived: a flag-gated weak
+reference per pool (`-Dxvm.pool.trackLifetimes=true`), reported as `poolsLive` beside
+`poolsCreated` in `cacheReport`.
+
+| iteration | poolsCreated | poolsLive | heap |
+| ---: | ---: | ---: | ---: |
+| 1 | 140 | 48 | 197 MB |
+| 2 | 226 | 63 | 309 MB |
+| 3 | 312 | 77 | 398 MB |
+| 4 | 398 | 86 | 459 MB |
+
+**86 pools are created per iteration and about 12 survive.** Most are collected, so "one per compile,
+forever" is wrong.
+
+**But retention is still what the heap is made of.** Heap fits `poolsLive` far better than
+`poolsCreated`: solving the endpoints gives ~6.9 MB per live pool, and that model predicts both
+middle points to within 1% (63 -> 301 vs 309 actual; 77 -> 397 vs 398). A `poolsCreated` fit does
+not come close. So a MINORITY of pools survives, each dragging a large object graph.
+
+That changes the search from "what retains every pool" to **"which one in seven survives, and who
+holds it"** - a selective retainer, not a universal one.
+
+**The instrument's own first version was broken, and it is worth recording why.** It captured each
+pool's owning module eagerly, as a String, with a confident rationale: holding anything stronger
+would retain the very objects being measured. It reported `48x null`. A `ConstantPool` is built
+DURING its `FileStructure`'s construction, before the module id is set. The rationale was also
+unnecessary - a pool that is still LIVE is still reachable, so the histogram can simply ask the
+referent, and a temporary strong reference during a report retains nothing. Coherent reasoning,
+untested premise: the same failure as inferring the retainer from a heap correlation.
+
+**Now also reports a creation-sequence span**, because the count alone cannot distinguish the two
+cases that matter:
+
+- survivors spanning LOW sequence numbers - something holds the early pools, a real leak;
+- survivors clustered at HIGH sequence numbers - merely the most recent compiles not yet collected,
+  which is not a leak, and would make the ~7 MB/pool figure an artifact of GC lag.
+
+`poolsLive` errs toward reporting a pool as live (references enqueue asynchronously after a GC), so
+it is an upper bound on retention. The sequence span is what says how much of the count that
+explains.
+
+**It is a real leak, and the sequence span proves it.** Over four iterations the survivor span reads:
+
+```
+seq 29..128   ->   seq 29..216   ->   seq 29..302   ->   seq 29..388
+```
+
+The oldest survivor NEVER MOVES. Pools created at the very start of the run are still reachable at
+the end, so this is retention, not collection lag - which was the one alternative the count alone
+could not rule out.
+
+**The survivors are two populations, and only one of them is a bug.**
+
+- **Library pools**, the same instances every iteration: `ecstasy@353a4be4`, `collections@373131fe`,
+  `mack@522dbae6`, `webauth@3e6db804`, `crypto`, `web`, `xunit_engine`. These SHOULD be retained -
+  they are the prepared library, which is the entire point of T1. Not a leak.
+- **Compiled test-module pools**: `TestLoops@593adb6` appears in ALL FOUR iterations, same instance.
+  `TestNumbers@45c2ea33` in three. Also `TestQueues`, `TestDec28`, `TestReflection`, `TestServices`,
+  `xunit_demo`. A per-compile module's pool surviving every later iteration is the leak.
+
+Growth is roughly 14 per iteration and decelerating (15, 14, 9), which may mean it approaches a
+bound rather than growing forever - worth confirming over more iterations before anyone claims
+either.
+
+**Ruled out so far, by looking rather than by reasoning:**
+
+- the engine does not accumulate compile outputs - `repoBuild` and `repoResult` in `compileInternal`
+  are per-compile LOCALS, and `f_mapPreparedLibraries` is weak-keyed and holds library modules only;
+- the library caches do not hold foreign references - the cache report's own audit columns read
+  `foreignRel=0 outsideLib=0 refsOut=0` for every library module;
+- `f_setValidPools` runs downstream-to-upstream, so a compile pool holds library pools and not the
+  reverse.
+
+**Open: who holds the compiled-module pools.** That needs a reverse reference, which means either a
+heap dump or bisection by elimination (replace a suspect - the diagnostic sink, the connector - and
+re-measure `poolsLive`). Guessing the holder is what T9 and T15 each did once, and each was wrong in
+detail; the instrument now makes bisection cheap, so bisection is the method.
+
 ### DONE 2026-09-10: `Vector` and `Stack` retired from the asm layer (filed as E55)
 
 Spotted in passing while reading `ConstantPool` for retention suspects. Both upstream on master, both

@@ -6,6 +6,10 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
+
 import java.nio.file.attribute.FileTime;
 
 import java.time.Instant;
@@ -22,10 +26,13 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Stream;
 import java.util.stream.IntStream;
+
+import java.util.stream.Collectors;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -149,10 +156,19 @@ public class ConstantPool
      *                       {@link ErrorListener#RUNTIME} for a pool that no compilation owns,
      *                       which is every pool but the one being compiled
      */
+    @SuppressWarnings("this-escape") // see the weak registration at the end of this constructor
     public ConstantPool(FileStructure fileStructure, @NotNull ErrorListener errs) {
         super(fileStructure);
         f_errs = requireNonNull(errs, "errs");
         POOLS_CREATED.incrementAndGet();
+        if (TRACK_POOL_LIFETIMES) {
+            // A `this` escape, and a benign one: the reference is stored WEAKLY, and the only
+            // dereference (getLivePoolHistogram, asking a survivor to describe itself) happens at
+            // report time, long after this constructor returns - so nothing can observe a half-built
+            // pool through it. Registering here rather than at the three FileStructure call sites so
+            // a fourth one cannot silently go untracked.
+            POOL_REFS.add(new PoolRef(this, POOLS_CREATED.get()));
+        }
     }
 
 
@@ -4648,9 +4664,108 @@ public class ConstantPool
     private static final AtomicInteger POOLS_CREATED = new AtomicInteger();
 
     /**
+     * True iff every pool created should be tracked by a weak reference, so that
+     * {@link #getPoolsLive} can say how many are still reachable. Off by default;
+     * {@code -Dxvm.pool.trackLifetimes=true} turns it on.
+     *
+     * <p>This exists because "pools are retained" has so far been INFERRED, from heap growing
+     * linearly with {@link #POOLS_CREATED} while the library caches stayed flat. That is a
+     * correlation. A weak reference answers the question directly, and repeatably, which a one-off
+     * {@code jcmd GC.class_histogram} against a live pid does not.</p>
+     */
+    public static final boolean TRACK_POOL_LIFETIMES =
+            Boolean.getBoolean("xvm.pool.trackLifetimes");
+
+    private static final ReferenceQueue<ConstantPool> POOL_QUEUE = new ReferenceQueue<>();
+    private static final Set<PoolRef>                 POOL_REFS  = ConcurrentHashMap.newKeySet();
+
+    /**
+     * A weak reference to a pool, tagged with when it was created.
+     *
+     * <p>The owner is NOT captured here. The first version of this did capture it, eagerly, and
+     * recorded {@code null} for every pool - a ConstantPool is built DURING its FileStructure's
+     * construction, before the module id exists. It is also unnecessary: a pool that is still LIVE
+     * is by definition still reachable, so the histogram can just ask the referent. Only a
+     * collected pool would need a captured name, and a collected pool is not the thing being
+     * hunted.</p>
+     */
+    private static final class PoolRef
+            extends WeakReference<ConstantPool> {
+        private PoolRef(ConstantPool pool, int nSeq) {
+            super(pool, POOL_QUEUE);
+            f_nSeq = nSeq;
+        }
+
+        private final int f_nSeq;
+    }
+
+    /**
      * The pool this thread is currently assembling, for {@link Constant#getPosition} to check
      * against; see {@link #checkAssemblyOwnership}.
      */
+    /**
+     * @return how many created ConstantPools are still reachable, or -1 when
+     *         {@link #TRACK_POOL_LIFETIMES} is off
+     *
+     * <p>Compare against {@link #getPoolsCreated}. Measured, this said 86 pools created per
+     * iteration and about 12 surviving - so pools are retained, but at roughly one in seven, not the
+     * one-per-compile that a heap-versus-created correlation had suggested. The count can LAG by a
+     * collection cycle - references are enqueued asynchronously after a GC - so it errs toward
+     * reporting a pool as live, never toward hiding one; {@link #getLivePoolHistogram}'s sequence
+     * span is what says how much of the count that lag explains.</p>
+     */
+    public static int getPoolsLive() {
+        if (!TRACK_POOL_LIFETIMES) {
+            return -1;
+        }
+        drainCollectedPools();
+        return POOL_REFS.size();
+    }
+
+    /**
+     * @return a histogram of the still-reachable pools by owning module, busiest first, or an empty
+     *         string when {@link #TRACK_POOL_LIFETIMES} is off
+     *
+     * <p>This is the question that matters once {@link #getPoolsLive} shows that only a FRACTION of
+     * pools survive: not "are pools retained" but WHICH ones.</p>
+     */
+    public static String getLivePoolHistogram() {
+        if (!TRACK_POOL_LIFETIMES) {
+            return "";
+        }
+        drainCollectedPools();
+
+        Map<String, Integer> mapByOwner = new HashMap<>();
+        int nOldest = Integer.MAX_VALUE;
+        int nNewest = Integer.MIN_VALUE;
+        for (PoolRef ref : POOL_REFS) {
+            ConstantPool pool = ref.get();
+            if (pool != null) {
+                mapByOwner.merge(pool.describeOwner(), 1, Integer::sum);
+                nOldest = Math.min(nOldest, ref.f_nSeq);
+                nNewest = Math.max(nNewest, ref.f_nSeq);
+            }
+        }
+        if (mapByOwner.isEmpty()) {
+            return "";
+        }
+        // the creation-order span says whether survivors are OLD (something holds the early ones)
+        // or merely RECENT (the last compiles, not yet collected - which is not a leak at all)
+        return "seq " + nOldest + ".." + nNewest + " | "
+                + mapByOwner.entrySet().stream()
+                        .sorted(Entry.<String, Integer>comparingByValue().reversed())
+                        .limit(10)
+                        .map(e -> e.getValue() + "x " + e.getKey())
+                        .collect(Collectors.joining(", "));
+    }
+
+    private static void drainCollectedPools() {
+        for (Reference<? extends ConstantPool> ref; (ref = POOL_QUEUE.poll()) != null; ) {
+            //noinspection SuspiciousMethodCalls
+            POOL_REFS.remove(ref);
+        }
+    }
+
     private static final ThreadLocal<ConstantPool> ASSEMBLING = new ThreadLocal<>();
 
     /**

@@ -252,6 +252,10 @@ val checkAssemblyOwnership = providers.systemProperty("xvm.assembly.checkOwnersh
 // later at the read. It enumerates rather than throws - see ConstantPool.checkRegistrationOwnership.
 val checkRegistrationOwnership = providers.systemProperty("xvm.registration.checkOwnership")
 
+// Weak-tracks every ConstantPool so cacheReport can print poolsLive next to poolsCreated - the
+// number that turns "per-compile pools are retained" from an inference into a measurement.
+val trackPoolLifetimes = providers.systemProperty("xvm.pool.trackLifetimes")
+
 tasks.withType<Test>().configureEach {
     systemProperty("xvm.checkout.root", rootDir.parentFile.absolutePath)
     if (checkAssemblyOwnership.isPresent) {
@@ -259,5 +263,8 @@ tasks.withType<Test>().configureEach {
     }
     if (checkRegistrationOwnership.isPresent) {
         systemProperty("xvm.registration.checkOwnership", checkRegistrationOwnership.get())
+    }
+    if (trackPoolLifetimes.isPresent) {
+        systemProperty("xvm.pool.trackLifetimes", trackPoolLifetimes.get())
     }
 }
