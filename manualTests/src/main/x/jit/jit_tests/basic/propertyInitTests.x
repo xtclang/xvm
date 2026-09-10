@@ -9,6 +9,7 @@ package propertyInitTests {
         testSimple();
         testConstructor();
         testMethodProperty();
+        testMethodStaticProperties();
         testMethodResultProperty();
         testDefaultProperty();
         testNullablePropertyTarget();
@@ -60,6 +61,27 @@ package propertyInitTests {
                 return False;
             }
         }
+    }
+
+    void testMethodStaticProperties() {
+        // method-local static properties share the containing JVM class and require unique fields
+        interface Values {
+            Int first() {
+                static Int value = 1;
+                return value;
+            }
+
+            Int second() {
+                static Int value = 2;
+                return value;
+            }
+        }
+
+        class Test implements Values {}
+
+        Values values = new Test();
+        assert values.first()  == 1;
+        assert values.second() == 2;
     }
 
     void testMethodResultProperty() {
