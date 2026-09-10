@@ -18,6 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
@@ -104,8 +105,21 @@ public class EngineParallelCompileTest {
                         }
                     }));
                 }
+                // A hang here used to report a bare TimeoutException, which names nothing: it says
+                // a compile did not finish, not where it is stuck. For a deadlock the stacks ARE the
+                // finding, and they are gone by the time the build fails. Dump every thread before
+                // rethrowing, the same way -Dxvm.assembly.checkOwnership turns a corrupt module into
+                // an attributable one. Lower the budget with -Dxvm.parallel.futureTimeout while
+                // chasing; the 300s default keeps a slow machine from failing a healthy run.
+                int cSecs = Integer.getInteger("xvm.parallel.futureTimeout", 300);
                 for (var fut : futures) {
-                    fut.get(300, TimeUnit.SECONDS);
+                    try {
+                        fut.get(cSecs, TimeUnit.SECONDS);
+                    } catch (TimeoutException e) {
+                        System.out.println(dumpThreads("iteration " + iter + ", seed=" + seed
+                                + ": a compile did not finish within " + cSecs + "s"));
+                        throw e;
+                    }
                 }
                 // shutdown() only STOPS ACCEPTING work; it does not wait, and
                 // Executors.newFixedThreadPool creates NON-DAEMON threads. A soak creates one pool
@@ -143,5 +157,28 @@ public class EngineParallelCompileTest {
         // iterations of 42 modules on 8 threads, 1680 compiles, zero failures - so anything here
         // is a regression, and a distribution printed above says exactly which class came back.
         assertEquals(Map.of(), failures, "concurrent compiles did not match the sequential result");
+    }
+
+    /**
+     * @param sWhy  what prompted the dump
+     *
+     * @return every live thread's stack, deadlock-relevant frames included
+     *
+     * <p>Deliberately dumps ALL threads rather than only the pool's: a compile thread blocked on a
+     * monitor is only half the picture, and the holder is usually some other thread.</p>
+     */
+    private static String dumpThreads(String sWhy) {
+        var sb = new StringBuilder("\n===== PAR THREAD DUMP (").append(sWhy).append(") =====\n");
+        Thread.getAllStackTraces().entrySet().stream()
+                .sorted(Comparator.comparing(e -> e.getKey().getName()))
+                .forEach(e -> {
+                    Thread t = e.getKey();
+                    sb.append('"').append(t.getName()).append("\" ").append(t.getState()).append('\n');
+                    for (StackTraceElement f : e.getValue()) {
+                        sb.append("\tat ").append(f).append('\n');
+                    }
+                    sb.append('\n');
+                });
+        return sb.append("===== end thread dump =====").toString();
     }
 }

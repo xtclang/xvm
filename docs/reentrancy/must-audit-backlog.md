@@ -310,6 +310,59 @@ the GET asymmetry exists there. Nothing to file.
 override compiles, sits next to sibling overrides that now all work, and silently never runs.
 `xRegEx` was the only template with one; nothing prevents the next.
 
+### ROOT-CAUSED 2026-09-10: mode 2 is a deadlock - `reserveUsage` waits while holding type monitors
+
+Caught with a thread dump added to `EngineParallelCompileTest` on the `fut.get` timeout (a bare
+`TimeoutException` names nothing; for a deadlock the stacks ARE the finding). Eight worker threads:
+**six BLOCKED, two WAITING**, none progressing.
+
+**The cycle.** `TypeConstant.ensureUsage` publishes a `PendingUsage` for a key, computes the value
+OUTSIDE the map monitor, then completes and notifies. A second thread that finds someone else's
+`PendingUsage` calls `mapUsage.wait()`. The waiter's stack shows what makes that fatal:
+
+```
+ensureTypeInfo:1803              <- private synchronized: HOLDS the root Object TypeConstant monitor
+  ensureTypeInfoInternal:2087    <- synchronized:         HOLDS a SECOND TypeConstant monitor
+    ... collectMemberInfo -> layerOnMethods -> collectCoveredMethods
+        -> isSubstitutableFor -> isA -> calculateRelation... -> producesFormalType
+          -> ensureUsage:8454 -> reserveUsage:8501 -> mapUsage.wait()
+```
+
+`Object.wait()` releases ONLY the monitor it waits on. Both TypeConstant monitors stay held across
+the wait. So:
+
+| threads | state | where |
+| ---: | --- | --- |
+| 2, 6 | WAITING | `reserveUsage` - waiting for another thread's `PendingUsage`, holding two type monitors each |
+| 3, 4, 5, 7, 8 | BLOCKED | `ensureTypeInfo:1823` - want the root Object monitor the waiters hold |
+| 1 | BLOCKED | `ensureProducesMap:8439` - wants a `synchronized(this)` on a type monitor a waiter holds |
+
+Nobody can complete the pending entry, because completing it needs a monitor that a waiter is
+holding while it waits. The `pending.isOwner(currentThread)` guard breaks SAME-thread recursion and
+does nothing for a cross-thread cycle.
+
+**Attribution: this is mine, and branch-local.** `reserveUsage`/`PendingUsage` came in with
+`e65c71460 "Fix TypeConstant metadata cache keys"`, on this branch only - master has no such
+protocol (`git show master:...TypeConstant.java | grep -c reserveUsage` is 0). Master DOES have
+`private synchronized ensureTypeInfo` (master:1688), but never contends on it, because master does
+not compile in parallel. So: a branch-local regression, made reachable by the parallel work.
+
+**The design error, stated generally.** The usage map is doing two jobs with one entry: it is a
+CACHE of computed usages (rightly shared), and it is a RECURSION GUARD for the computation in
+flight (which is per-thread state). Conflating them turns a cache miss into a cross-thread
+dependency, and a cache has no business making one thread wait for another.
+
+**Fix direction.** Never wait on another thread's in-flight entry. The value is a pure function of
+the type graph, so a duplicate computation under contention is harmless - far cheaper than a
+deadlock, and it is the "reentrant by construction" principle this plan already states. That means
+splitting the two roles: the shared map holds only `CompleteUsage`, and in-flight keys are tracked
+per-thread for cycle breaking. Care needed on the guard's identity - a `UsageKey` is
+`(typeName, access)` and is only unique WITHIN one TypeConstant's map, so per-thread tracking has to
+be keyed by map identity too, not by key alone.
+
+**Not yet fixed.** This is a hot, subtle path in the type system and the change is a real design
+change, not a patch.
+
 ### MUST-FIX (pre-existing, NOT from today): parallel compilation is unstable, two failure modes
 
 **Measured, both directions.** `EngineParallelCompileTest` asserts that concurrent compilation of 42
