@@ -357,11 +357,33 @@ introduced without closing the contamination - and it wants a decision, not anot
 **Tooling.** `RetainerPath` (walk forward from a root, print the reference chain to a leaked object)
 found all four retainers, one run each, after FIVE wrong guesses from reading the code
 (`CompileResult`/`repoResult`, `repoBuild`, `ErrorListener.RUNTIME`, fingerprint origins, a
-dependency cascade). `ForeignCacheAudit` is committed and DOES NOT WORK: it walks breadth-first with
-a node budget, and the leak sits five hops down behind a map with thousands of entries, so the
-budget is spent on width before it descends. Kept only because the idea is right and the defect is
-diagnosed - it needs a depth-first walk. A broken diagnostic in the tree is worse than none, so
-either fix it or delete it.
+dependency cascade). `ForeignCacheAudit` was written, failed four times, and is DELETED.
+
+Its job was to enumerate every TypeInfo cache field holding a foreign constant, so the remaining
+leaks could be fixed in one pass instead of one per run. It never worked:
+
+1. counted every foreign constant with a 4000-node budget per field per TypeInfo across ~1000
+   TypeInfos - turned a 25-second test into minutes;
+2. still walked every TypeInfo after being made to short-circuit;
+3. sampled 120 TYPES, but most types have never built a TypeInfo, so the budget went on nulls and it
+   reported CLEAN while a known-dirty cache was live - caught only because there WAS a known
+   positive to check it against;
+4. with sampling fixed, still reported clean: it walks breadth-first with a node budget, and the
+   leak sits five hops down behind a map with thousands of entries, so the budget is spent on width
+   before it ever descends.
+
+Depth-first does not rescue it either - it would burn the same budget descending the first few of
+thousands of map entries. "Does this field REACH anything foreign" is an expensive query over a
+large graph, and a cheap approximation of it answers wrongly in both traversal orders.
+
+**Deleted rather than kept**, because a diagnostic that reports "clean" while a leak is live is
+worse than no diagnostic: it ends investigations. That is the same failure as
+`checkAssemblyOwnership` reporting `StackOverflowError` and the `outsideLib=0` columns reading as
+coverage of caches they never visit - the pattern this file has recorded five times today. Keeping a
+known-broken instance of it in the tree would have been the sixth.
+
+`RetainerPath` stays, and covers the need: it answers "who holds THIS object" exactly, in one run,
+which is how all four retainers were found.
 
 ### MEASURED 2026-09-10: T15's retention claim is too strong - pools survive at 1 in 7, not 1 per compile
 

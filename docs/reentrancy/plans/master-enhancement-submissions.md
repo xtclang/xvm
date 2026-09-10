@@ -5617,3 +5617,95 @@ COMMENTS describing generated Ecstasy code, not Java.
 Two field declarations, one import each, and one read wrapped in the lock it should always have
 taken. The `Vector` half is worth reviewing carefully despite its size: it is the one change here
 that is wrong if done the obvious way.
+
+## E56 - `TypeInfo` caches keep the CALLER's constants, which is what stops a library being reused
+
+**BUILT** on `lagergren/lazy-instance` 2026-09-10 (three of four). Not pushed. All the code is on
+master unchanged.
+
+### Not a master bug, and why
+
+The caches below behave identically on master, but the LEAK needs a library that outlives a compile.
+Master has none: `XtcEngine` is branch-local, the CLI builds a repository per invocation, and the
+process exits. A library `TypeInfo` holding a compile's constant dies with the JVM; within a single
+run the pinning is real but bounded. So this is filed as an enhancement, on the same reasoning as
+E54.
+
+**But it is a load-bearing one.** These caches are precisely WHY a library cannot be reused across
+compiles. Anything wanting a warm engine - this branch, or a language server, which master is
+heading toward - hits this first. It is not "tidy this up"; it is the thing standing between master
+and a shareable library.
+
+### The shape
+
+A memo on a `TypeInfo` stores whatever the CALLER asked about. A constant reaches its `ConstantPool`
+through its parent, so one cached foreign constant pins an entire compile:
+
+```java
+// TypeInfoReal.findConversion - master:2068
+m_typeAuto   = typeDesired;      // the type the caller wanted to convert TO
+m_methodAuto = methodMatch;
+
+// TypeInfoReal.getMethodBySignature - four sites on master
+mapBySig.putIfAbsent(sig, ...);  // the signature the caller looked up
+
+// TypeInfoReal.getMethodById - master:1507
+f_cacheById.put(id, infoMethod); // the id the caller passed
+```
+
+The DIRECTION is the bug: a compile's TypeInfo caching a library constant is harmless, because the
+compile dies first. A library's TypeInfo caching a compile's constant is the leak.
+
+### The fix, and the part that is not obvious
+
+Memoize only what the TypeInfo's own pool owns. Two of the three are a one-line pool comparison.
+
+The third is not, and this is the part worth reviewing: **a constant interned in the library's pool
+can still hold sub-constants owned by another pool.** The leaking key was a library `MethodConstant`
+whose SIGNATURE's return type belonged to a compiling module, so `id.getConstantPool() == pool()`
+passed it straight through. The guard has to check the reachable set:
+
+```java
+private boolean isLocallyOwned(MethodConstant id) {
+    ConstantPool pool = pool();
+    if (id.getConstantPool() != pool)               { return false; }
+    SignatureConstant sig = id.getSignature();
+    if (sig.getConstantPool() != pool)              { return false; }
+    for (TypeConstant type : sig.getRawParams())  { if (type.getConstantPool() != pool) return false; }
+    for (TypeConstant type : sig.getRawReturns()) { if (type.getConstantPool() != pool) return false; }
+    return true;
+}
+```
+
+Bounded on purpose - namespace, signature, parameter and return types. That is where the leak was,
+and a cache-insertion path can afford a handful of pointer compares but not a transitive walk.
+
+### Measured
+
+On the branch, where a warm engine makes the leak unbounded:
+
+| `EngineParallelCompileTest`, iteration 4 | live pools | heap |
+| --- | ---: | ---: |
+| before | 84 | 447 MB |
+| after | **55** | **206 MB** |
+
+Five iterations now run at 50% heap; the tree previously sat at 87% by iteration 4 and exhausted a
+512 MB test heap at 8.
+
+### A FOURTH retainer is not fixed, and is not a caching bug
+
+`populateCache` inserts a `MethodInfo`'s own head identity, and the constructor seeds `f_cacheById`
+from `f_mapMethods`, so the foreign entry never arrives through a cache write - it is in the library
+TypeInfo's own method map. Building that TypeInfo during library preparation does NOT help
+(measured: no effect, reverted), because `TypeConstant:2297` rebuilds a TypeInfo when invalidations
+have occurred, and the rebuild happens during a compile and captures that compile's types.
+
+That one is architectural and is NOT part of this submission: a library TypeInfo's rebuild must see
+only library types, or per-compile invalidations must not rebuild a shared TypeInfo, or a shared
+TypeInfo must not be retained across compiles. Filing three fixes while a fourth is open is
+deliberate - they stand on their own, and the fourth needs a design decision rather than a guard.
+
+### Filing notes
+
+Three guards and one helper, all in `TypeInfoReal`. The `isLocallyOwned` one deserves real review:
+the naive version of it (compare the key's pool) is what I wrote first, and it does not work.

@@ -422,35 +422,6 @@ public final class XtcEngine
             // held by something. Walk from this engine and print the chain.
             // Enumerate every TypeInfo cache field holding a foreign constant, across the library.
             // Three of these were found one run at a time; this lists them all at once.
-            // SAMPLED, not exhaustive. The job is to name FIELDS - there are about fifteen
-            // candidates - not to count occurrences, so a sample answers it. Auditing every TypeInfo
-            // in the library means reflection over ~15 fields x a few hundred graph nodes x a
-            // thousand TypeInfos, which turned a 25-second test into minutes when first tried.
-            var mapFields  = new java.util.TreeMap<String, Integer>();
-            int cAudited   = 0;
-            int cMaxAudits = Integer.getInteger("xvm.pool.auditSample", 120);
-            outer:
-            for (var sModule : repoReport.getModuleNames()) {
-                ModuleStructure moduleLib = repoReport.loadModule(sModule);
-                if (moduleLib == null) {
-                    continue;
-                }
-                for (var type : moduleLib.getConstantPool().types().toList()) {
-                    var mapAudit = type.auditForeignTypeInfoCaches(isLibrary);
-                    if (mapAudit == null) {
-                        continue;   // no TypeInfo built; does not count toward the sample
-                    }
-                    if (cAudited++ >= cMaxAudits) {
-                        break outer;
-                    }
-                    mapAudit.forEach((sField, c) -> mapFields.merge(sField, c, Integer::sum));
-                }
-            }
-            if (!mapFields.isEmpty()) {
-                sb.append("  TYPEINFO CACHES HOLDING FOREIGN CONSTANTS: ")
-                  .append(mapFields).append('\n');
-            }
-
             var listOld = ConstantPool.getLivePoolsCreatedAt("FileStructure:122");
             if (!listOld.isEmpty()) {
                 ConstantPool poolOldest = listOld.get(0);
