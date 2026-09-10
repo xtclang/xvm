@@ -9,7 +9,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
-
 /**
  * JIT-backed management and monitoring for one runner task.
  */
