@@ -96,7 +96,7 @@ public class IIP_Mod
     }
 
     @Override
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder  code,
+    protected TypeConstant buildOptimizedNumber(BuildContext bctx, CodeBuilder  code,
                                                    RegisterInfo regTarget, int nArgValue) {
         buildXvmPrimitiveMod(bctx, code, regTarget, nArgValue);
         return regTarget.type();

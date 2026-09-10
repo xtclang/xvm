@@ -2139,7 +2139,8 @@ public class ConstantPool
                 typeFloat64(),
                 typeDec32(),
                 typeDec64(),
-                typeDec128()
+                typeDec128(),
+                typeDuration()
             };
 
             setTypes = new HashSet<>(atype.length*2);

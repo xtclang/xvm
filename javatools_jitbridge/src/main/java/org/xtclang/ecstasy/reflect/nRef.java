@@ -10,6 +10,9 @@ import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.numbers.*;
 
+import org.xtclang.ecstasy.temporal.Date;
+import org.xtclang.ecstasy.temporal.Duration;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -166,7 +169,16 @@ public class nRef
                     default -> throw new UnsupportedOperationException(ref1.$referentType.getValueString());
                 };
             }
-            throw new UnsupportedOperationException("TODO " + ref1.$referentType);
+            // else non-number JIT primitive
+            return switch (ref1.$referent) {
+                case Date     dt -> Date.$equals(dt.epochDay, ((Date) ref2.$referent).epochDay);
+                case Duration d1 -> {
+                    Duration d2 = (Duration) ref2.$referent;
+                    yield Duration.$equals(d1.picoseconds$0, d1.picoseconds$1,
+                                           d2.picoseconds$0, d2.picoseconds$1);
+                }
+                default -> throw new UnsupportedOperationException("TODO " + ref1.$referentType);
+            };
         }
         return ref1.$referent == ref2.$referent;
     }

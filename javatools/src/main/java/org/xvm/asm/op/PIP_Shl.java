@@ -66,7 +66,7 @@ public class PIP_Shl
     }
 
     @Override
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+    protected TypeConstant buildOptimizedNumber(BuildContext bctx, CodeBuilder code,
                                                    RegisterInfo regTarget, int argValue) {
         buildXvmPrimitiveShl(bctx, code, regTarget, argValue);
         return regTarget.type();

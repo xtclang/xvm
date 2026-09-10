@@ -842,6 +842,18 @@ public abstract class Builder {
                 mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
                 break;
 
+            case "Date":
+                // array = ArrayᐸDateᐳ.$new$p(ctx, type, capacity, false);
+                cdArray = CD_ArrayDate;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "Duration":
+                // array = ArrayᐸDurationᐳ.$new$p(ctx, type, capacity, false);
+                cdArray = CD_ArrayDuration;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
+                break;
+
             default:
                 throw new UnsupportedOperationException("TODO");
             }
@@ -1417,6 +1429,18 @@ public abstract class Builder {
                 code.getfield(CD_UInt128, "$highValue", CD_long);
                 // stack is long, long_2
             }
+            case "Date"     -> code.getfield(CD_Date,   "epochDay", CD_int);
+            case "Duration" -> {
+                // stack is Duration
+                code.dup();
+                // stack is Duration Duration
+                code.getfield(CD_Duration, "picoseconds$0", CD_long);
+                // stack is Duration long
+                code.dup2_x1().pop2();
+                // stack is long Duration
+                code.getfield(CD_Duration, "picoseconds$1", CD_long);
+                // stack is long long_2
+            }
             default -> throw new UnsupportedOperationException("Cannot unbox " + name);
         }
     }
@@ -1469,6 +1493,8 @@ public abstract class Builder {
             case "UInt32"  -> code.invokestatic(CD_UInt32,  "$box", MD_UInt32_box);
             case "UInt64"  -> code.invokestatic(CD_UInt64,  "$box", MD_UInt64_box);
             case "UInt128" -> code.invokestatic(CD_UInt128, "$box", MD_UInt128_box);
+            case "Date"    -> code.invokestatic(CD_Date,    "$box", MD_Date_box);
+            case "Duration" -> code.invokestatic(CD_Duration, "$box", MD_Duration_box);
             default        -> throw new UnsupportedOperationException("Cannot box " + name);
         }
     }
@@ -1950,6 +1976,9 @@ public abstract class Builder {
     public static final String N_ArrayUInt32  = "org.xtclang.ecstasy.collections.ArrayᐸUInt32ᐳ";
     public static final String N_ArrayUInt64  = "org.xtclang.ecstasy.collections.ArrayᐸUInt64ᐳ";
     public static final String N_ArrayUInt128 = "org.xtclang.ecstasy.collections.ArrayᐸUInt128ᐳ";
+    public static final String N_ArrayDate    = "org.xtclang.ecstasy.collections.ArrayᐸDateᐳ";
+    public static final String N_ArrayDuration =
+            "org.xtclang.ecstasy.collections.ArrayᐸDurationᐳ";
     public static final String N_ArrayObj     = "org.xtclang.ecstasy.collections.ArrayᐸObjectᐳ";
     public static final String N_Bit          = "org.xtclang.ecstasy.numbers.Bit";
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
@@ -1991,6 +2020,8 @@ public abstract class Builder {
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
     public static final String N_UInt128      = "org.xtclang.ecstasy.numbers.UInt128";
     public static final String N_UIntN        = "org.xtclang.ecstasy.numbers.UIntN";
+    public static final String N_Date         = "org.xtclang.ecstasy.temporal.Date";
+    public static final String N_Duration     = "org.xtclang.ecstasy.temporal.Duration";
     public static final String N_AppenderChar = "org.xtclang.ecstasy.AppenderᐸCharᐳ";
 
     public static final String N_nConst       = "org.xtclang.ecstasy.nConst";
@@ -2074,6 +2105,8 @@ public abstract class Builder {
     public static final ClassDesc CD_ArrayUInt32         = ClassDesc.of(N_ArrayUInt32);
     public static final ClassDesc CD_ArrayUInt64         = ClassDesc.of(N_ArrayUInt64);
     public static final ClassDesc CD_ArrayUInt128        = ClassDesc.of(N_ArrayUInt128);
+    public static final ClassDesc CD_ArrayDate           = ClassDesc.of(N_ArrayDate);
+    public static final ClassDesc CD_ArrayDuration       = ClassDesc.of(N_ArrayDuration);
     public static final ClassDesc CD_ArrayObj            = ClassDesc.of(N_ArrayObj);
     public static final ClassDesc CD_Class               = ClassDesc.of(N_Class);
     public static final ClassDesc CD_Enumeration         = ClassDesc.of(N_Enumeration);
@@ -2122,6 +2155,8 @@ public abstract class Builder {
     public static final ClassDesc CD_UInt64              = ClassDesc.of(N_UInt64);
     public static final ClassDesc CD_UInt128             = ClassDesc.of(N_UInt128);
     public static final ClassDesc CD_UIntN               = ClassDesc.of(N_UIntN);
+    public static final ClassDesc CD_Date                = ClassDesc.of(N_Date);
+    public static final ClassDesc CD_Duration            = ClassDesc.of(N_Duration);
     public static final ClassDesc CD_AppenderChar        = ClassDesc.of(N_AppenderChar);
 
     public static final ClassDesc CD_Container           = ClassDesc.of(Container.class.getName());
@@ -2186,6 +2221,9 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_UInt32_box  = MethodTypeDesc.of(CD_UInt32,  CD_int);
     public static final MethodTypeDesc MD_UInt64_box  = MethodTypeDesc.of(CD_UInt64,  CD_long);
     public static final MethodTypeDesc MD_UInt128_box = MethodTypeDesc.of(CD_UInt128, CD_long, CD_long);
+    public static final MethodTypeDesc MD_Date_box    = MethodTypeDesc.of(CD_Date, CD_int);
+    public static final MethodTypeDesc MD_Duration_box =
+            MethodTypeDesc.of(CD_Duration, CD_long, CD_long);
     public static final MethodTypeDesc MD_StringOf    = MethodTypeDesc.of(CD_String,  CD_Ctx, CD_JavaString);
     public static final MethodTypeDesc MD_TypeIsA     = MethodTypeDesc.of(CD_boolean, CD_TypeConstant);
     public static final MethodTypeDesc MD_FloorModI   = MethodTypeDesc.of(CD_int, CD_int, CD_int);

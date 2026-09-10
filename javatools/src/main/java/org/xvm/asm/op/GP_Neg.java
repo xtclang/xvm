@@ -68,7 +68,7 @@ public class GP_Neg
     }
 
     @Override
-    protected void buildXvmOptimizedUnary(BuildContext bctx,
+    protected void buildOptimizedNumber(BuildContext bctx,
                                        CodeBuilder  code,
                                        RegisterInfo regTarget) {
         buildXvmPrimitiveNeg(bctx, code, regTarget);

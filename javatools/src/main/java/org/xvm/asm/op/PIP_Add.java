@@ -76,7 +76,7 @@ public class PIP_Add
     }
 
     @Override
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+    protected TypeConstant buildOptimizedNumber(BuildContext bctx, CodeBuilder code,
                                                    RegisterInfo regTarget, int argValue) {
         buildXvmPrimitiveAdd(bctx, code, regTarget, argValue);
         return regTarget.type();

@@ -402,13 +402,23 @@ public class CommonBuilder
         // is not present on Builder; TODO address this in a subsequent change
         switch (constant) {
         case LiteralConstant literal
-                when literal.getFormat() == Constant.Format.IntLiteral ||
-                     literal.getFormat() == Constant.Format.Duration: {
+                when literal.getFormat() == Constant.Format.IntLiteral: {
             Integer      index = constants.computeIfAbsent(literal, _ -> constants.size());
             TypeConstant type  = literal.getType();
             ClassDesc    cd    = ensureClassDesc(type);
             code.getstatic(art.CD(), CONST_PROP + index, cd);
             return new SingleSlot(type, JitFlavor.Specific, cd, "");
+        }
+
+        case LiteralConstant literal
+                when literal.getFormat() == Constant.Format.Duration: {
+            Integer      index = constants.computeIfAbsent(literal, _ -> constants.size());
+            TypeConstant type  = literal.getType();
+            ClassDesc    cd    = ensureClassDesc(type);
+            ClassDesc[]  cds   = JitTypeDesc.getXvmPrimitiveClasses(type);
+            code.getstatic(art.CD(), CONST_PROP + index, cd);
+            unbox(code, type);
+            return new MultiSlot(bctx, JitFlavor.XvmPrimitive, type, cd, cds);
         }
 
         default:
@@ -4294,7 +4304,12 @@ public class CommonBuilder
             "org.xtclang.ecstasy.text.StringBuffer",
 
             // temporal
+            "org.xtclang.ecstasy.temporal.Date",
+            "org.xtclang.ecstasy.temporal.Date$DayOfWeek",
+            "org.xtclang.ecstasy.temporal.Date$MonthOfYear",
             "org.xtclang.ecstasy.temporal.Duration",
+            "org.xtclang.ecstasy.temporal.Time",
+            "org.xtclang.ecstasy.temporal.TimeZone",
 
             // _native.io
             "_native.io.TerminalConsole",

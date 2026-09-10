@@ -74,6 +74,14 @@ public class NumberBuilder extends AugmentingBuilder {
     }
 
     @Override
+    protected void assembleMethods(ClassBuilder classBuilder) {
+        super.assembleMethods(classBuilder);
+        if (thisType.isJitPrimitive()) {
+            generateCompare(classBuilder);
+        }
+    }
+
+    @Override
     protected void assembleProperties(ClassBuilder classBuilder) {
         if (thisType.isJitPrimitive()) {
             // for JIT primitives, we generate code for static primitive property accessor
@@ -1092,5 +1100,80 @@ public class NumberBuilder extends AugmentingBuilder {
         code.invokestatic(arrayCD, "$fromLongs",
                         MethodTypeDesc.of(arrayCD, CD_Ctx, mutabilityCD, CD_long, CD_long.arrayType()))
                 .areturn();
+    }
+
+    protected void generateCompare(ClassBuilder classBuilder) {
+//        public static Ordered compare(Ctx ctx, nType type, Int64 value1, Int64 value2) {
+
+        ClassDesc      thisCD  = art.CD();
+        MethodTypeDesc md      = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, thisCD, thisCD);
+        int            flags   = ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC;
+        String         jitName = "compare";
+
+        if (findMethod(jitName, md) != null) {
+            return;
+        }
+
+        classBuilder.withMethodBody(jitName, md, flags, code -> {
+            code.aload(code.parameterSlot(2));
+            unbox(code, thisType);
+            code.aload(code.parameterSlot(3));
+            unbox(code, thisType);
+
+            String    name      = thisType.getSingleUnderlyingClass(false).getName();
+            switch (name) {
+            case "Bit", "Nibble", "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32":
+                code.isub();
+                break;
+
+            case "Int64", "UInt64":
+                code.lsub()
+                    .l2i();
+                break;
+
+            case "Float16", "Float32":
+                MethodTypeDesc fCmp = MethodTypeDesc.of(CD_int, CD_float, CD_float);
+                code.invokestatic(CD_Float, "compare", fCmp);
+                break;
+
+            case "Float64":
+                MethodTypeDesc dCmp = MethodTypeDesc.of(CD_int, CD_double, CD_double);
+                code.invokestatic(CD_Double, "compare", dCmp);
+                break;
+
+            case "Dec32":
+                MethodTypeDesc d32Cmp = MethodTypeDesc.of(CD_int, CD_int, CD_int);
+                code.invokestatic(CD_Dec32, "$compare", d32Cmp);
+                break;
+
+            case "Dec64":
+                MethodTypeDesc d64Cmp = MethodTypeDesc.of(CD_int, CD_long, CD_long);
+                code.invokestatic(CD_Dec64, "$compare", d64Cmp);
+                break;
+
+            case "Dec128":
+                MethodTypeDesc d128Cmp = MethodTypeDesc.of(CD_int, CD_long, CD_long, CD_long, CD_long);
+                code.invokestatic(CD_Dec128, "$compare", d128Cmp);
+                break;
+
+            case "Int128":
+                MethodTypeDesc i128Cmp = MethodTypeDesc.of(CD_int, CD_long, CD_long, CD_long, CD_long);
+                code.invokestatic(CD_Int128, "$compare", i128Cmp);
+                break;
+
+            case "UInt128":
+                MethodTypeDesc u128Cmp = MethodTypeDesc.of(CD_int, CD_long, CD_long, CD_long, CD_long);
+                code.invokestatic(CD_UInt128, "$compare", u128Cmp);
+                break;
+
+            default:
+                throw new UnsupportedOperationException("Unsupported number type " + name);
+            }
+
+            convertIntToOrdered(code);
+            // the previous method would have coded an areturn if not equal
+            loadConstant(code, pool().valEqual());
+            code.areturn();
+        });
     }
 }
