@@ -310,6 +310,59 @@ the GET asymmetry exists there. Nothing to file.
 override compiles, sits next to sibling overrides that now all work, and silently never runs.
 `xRegEx` was the only template with one; nothing prevents the next.
 
+### PARTLY FIXED 2026-09-10: library TypeInfo caches pinned per-compile pools; a fourth resists
+
+Three memos on a long-lived `TypeInfo` stored whatever the CALLER asked about. A constant reaches
+its `ConstantPool` through its parent, so one cached foreign constant pinned a whole compile for the
+engine's lifetime. Fixed: `findConversion`'s `m_typeAuto`, `getMethodBySignature`'s four
+`putIfAbsent(sig, ...)` sites, and `getMethodById`'s `f_cacheById.put`.
+
+| `EngineParallelCompileTest`, iteration 4 | live pools | heap |
+| --- | ---: | ---: |
+| before | 84 | 447 MB |
+| after the three fixes | **55** | **206 MB** |
+
+The `:122` sequence floor moved 59 -> 77, so compiles pinned for the whole run are released now, and
+five iterations run at 50% heap where the tree previously sat at 87% by iteration 4 and OOMed at 8.
+
+**The third fix needed more than a pool check on the key**, and that is a finding in itself: a
+constant interned in the library's pool can still hold sub-constants owned by ANOTHER pool. The
+leaking key was a library `MethodConstant` whose signature's RETURN TYPE belonged to a compiling
+module, so `id.getConstantPool() == pool()` passed it straight through. `isLocallyOwned` checks the
+namespace, the signature, and the signature's parameter and return types - bounded deliberately,
+because that is where the leak was and a cache-insertion path can afford a handful of pointer
+compares but not a transitive walk.
+
+**The fourth retainer is NOT a caching bug, and three attempts at it failed.** `populateCache`
+inserts a `MethodInfo`'s OWN head identity, and the constructor seeds `f_cacheById` from
+`f_mapMethods` - so the foreign entry never arrives through a cache write. It is in the library
+TypeInfo's own method map.
+
+Attempt: build `PreparedLibrary.typeNakedRef`'s TypeInfo during library preparation, the way
+`warmRootObject` already does for `Object` ("the types it validates are owned by no particular
+request"). **Measured: no effect** - 54 live pools against 55, inside noise. REVERTED rather than
+left in as a no-op.
+
+**Why it cannot work, found while reverting:** `TypeConstant:2297` -
+`if (info.needsRebuild(pool.invalidationsSince(cOldInvals)))`. Library TypeInfos are REBUILT when
+invalidations occur, so a TypeInfo warmed against library-only types is rebuilt later, during a
+compile, capturing that compile's types. Warming closes a window that reopens.
+
+So the remaining fix is architectural: either a library TypeInfo's rebuild must see only library
+types, or per-compile invalidations must not trigger a rebuild of a shared TypeInfo, or the shared
+TypeInfo must not be retained across compiles. That is the same shape as the corruption bug fixed
+earlier today - shared library state contaminated by per-compile data, because the sharing was
+introduced without closing the contamination - and it wants a decision, not another guard.
+
+**Tooling.** `RetainerPath` (walk forward from a root, print the reference chain to a leaked object)
+found all four retainers, one run each, after FIVE wrong guesses from reading the code
+(`CompileResult`/`repoResult`, `repoBuild`, `ErrorListener.RUNTIME`, fingerprint origins, a
+dependency cascade). `ForeignCacheAudit` is committed and DOES NOT WORK: it walks breadth-first with
+a node budget, and the leak sits five hops down behind a map with thousands of entries, so the
+budget is spent on width before it descends. Kept only because the idea is right and the defect is
+diagnosed - it needs a depth-first walk. A broken diagnostic in the tree is worse than none, so
+either fix it or delete it.
+
 ### MEASURED 2026-09-10: T15's retention claim is too strong - pools survive at 1 in 7, not 1 per compile
 
 T15 concluded "per-compile `ConstantPool`s are retained, one per compile, forever" from heap growing
