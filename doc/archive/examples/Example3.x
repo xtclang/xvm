@@ -50,7 +50,6 @@ void intLogger(Logger<int> logger)
 stringLogger(lo); // would be an error today ..
 intLogger(lo);    // would be an error today ..
 
-
 //
 
 List<Object>
@@ -64,7 +63,6 @@ List<String>
 List<int>
   void add(int)
   int get(int)
-
 
 //
 
@@ -190,8 +188,6 @@ class Box<T>
       this.Box.T foo();
       }
 
-
-
     Box.T foo1(); // error: need a ref to Box
     SomeOtherInner.T; // error: need a ref to SomeOtherInner
 
@@ -202,7 +198,6 @@ class Box<T>
     }
 
   }
-
 
 // --- structs
 
@@ -292,7 +287,6 @@ Orphan     o5 = BaseParent.Orphan.findConstructor(Void)();
 
 // question is "how do you de-serialize an orphan?" if you can't "new" the
 // orphan by its class?
-
 
 // ---- what is a "static final" constant field and a "static method" in ecstasy?
 

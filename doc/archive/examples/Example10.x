@@ -9,7 +9,6 @@ interface ConsoleApp
     @ro Console console;
     }
 
-
 // client application
 module MyApp
         implements ConsoleApp
@@ -37,7 +36,6 @@ module MyApp
         console.result = 1;
         }
     }
-
 
 // object as function
 
@@ -191,7 +189,6 @@ Kernel
    - Cust2
    - ...
 
-
 // -- more assignability
 
 interface Bag<Element>
@@ -231,7 +228,6 @@ Summer      s1 = bs.as(Summer); // compile-time warning, run-time error
 Summer      s2 = bi;            // ok (type of bi is SimpleBag<Int>, which implies Summer<Int>)
 Summer<Int> s3 = bi;            // ok (same as above)
 
-
 // short-circuiting expressions
 
 Int x = a?.b?.c : -1;
@@ -256,10 +252,8 @@ foo(a?.b?.c);
 // NVOK_10 "foo" #7
 // EXIT:
 
-
 // assignable
 a[6].b(c[d, foo(e)]).f.g = foo()
-
 
 // while vs. do..while with conditional statement decl+asn
 
@@ -286,7 +280,6 @@ for (Int n : list)
     sum += n;
     }
 
-
 // why condition is at the bottom:
 
 // while(cond)              do-while(cond)              do-while(declAndOrAssign)
@@ -309,7 +302,6 @@ for (Int n : list)
 //   Continue:
 //   JMP Repeat
 //   Break:
-
 
 // for persistent operations
 
@@ -377,7 +369,6 @@ a?.b = c;
 
 // is this an l-value?
 (a?.b : c) = d;
-
 
 // String building
 Int i = 7;

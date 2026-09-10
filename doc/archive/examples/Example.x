@@ -90,7 +90,6 @@ public class TraitExample
     S.O.print(v); // 2
     }
 
-
 value String(@ro char[] Chars)
     {
     foo
@@ -107,8 +106,6 @@ value String(@ro char[] Chars)
         int get() {...}
         }
     }
-
-
 
 -- this --
 
@@ -133,7 +130,6 @@ Point p = ...
 Property prop = p.&x;
 Method mGet = p.&x.&get;
 
-
 public class Whatever { void foo(); int foo(int x); void foo(String s); }
 Method m = Whatever.foo(int)!;
 
@@ -146,7 +142,6 @@ Function f = w.foo; // ??? overloaded
 &(x.y)  x.y!
 x.&y    x.y!
 
-
 class Person {
   int age;
   boolean oldEnough();
@@ -157,7 +152,6 @@ class Person {
   }
   static int add(int a, int b) -> a + b;
   }
-
 
 class Map<K,V>
   {
@@ -242,7 +236,6 @@ module M2 {
   }
 }
 
-
 module M3 {
   package P3 {
     class C3 {
@@ -254,7 +247,6 @@ module M3 {
     }
   }
 }
-
 
 #ifdef A
   ...
@@ -678,7 +670,6 @@ class MyFunction<P1, P2, R>
     R foo(P1 p1, P2 p2) {...}
     }
 
-
 Class clz = MyFunction;
 
 ...
@@ -796,7 +787,6 @@ int x;
 int y;
 z = x.max(y);
 
-
 // ---
 
 Array<Element> : List<..>
@@ -851,7 +841,6 @@ Set<V>
   boolean contains(V value) {...} else {return false;}
   // this would have been the shim provided by the runtime if we didn't have a "!V":
   // boolean contains(Object value) {if value instanceof V return contains((V) value) else throw RTE}
-
 
   boolean add(V value) {...}
   // shim:
@@ -999,7 +988,6 @@ Int test2 = fn4.invoke((1,2))
 function Void (Int) consumer = ...
 function Void consumer(Int) {...}
 
-
 foo(function Void consumer1(Int), function Void consumer2(Int))
 
 // ---
@@ -1092,7 +1080,6 @@ if:test
 if:debug
 if:present
 
-
 assert:once ->
     {
     Boolean f = ...
@@ -1143,7 +1130,6 @@ interface PropertiesStore {
     Void put(Key key, Key.ValType value);
     Key.ValType get(Key key);
 }
-
 
 //
 
@@ -1455,7 +1441,6 @@ const Employee(String name, Date dob, String taxid)
 
     }
 
-
 // mutable capture of lvar ref
 
 // stupid example
@@ -1654,7 +1639,6 @@ Point(Int x, Int y)
         }
     }
 
-
 // weak / soft prop
 class C
     {
@@ -1667,7 +1651,6 @@ const Movie
 
     private Byte[] decompress() {...}
     }
-
 
 class WHM<K,V>
     {
@@ -1718,7 +1701,6 @@ class WHM<K,V>
         // ...
         }
 
-
     }
 
 // lambda
@@ -1742,7 +1724,6 @@ function Int(Int) foo(Int i)
     {
     // the "this" is a C<D>
     }
-
 
 // conditional type composition
 
@@ -1810,7 +1791,6 @@ Void foo()
     printPi(console);
     this:service.popSLA()
     }
-
 
 // --- atomic
 
@@ -1924,8 +1904,6 @@ public interface Future<T>
     public <U> CompletionStage<U> handle
         (BiFunction<? super T, Throwable, ? extends U> fn);
     }
-
-
 
 service s
 
@@ -2052,7 +2030,6 @@ x = a?.b ?: c;
 // translates to:
 x = a != null && a.b != null ? a.b : c;
 
-
 // -- enums
 
 interface Enum
@@ -2100,7 +2077,6 @@ Enumeration(2)  Enum
 (1) class
 (2) mixin
 
-
 static Void foo() {...}
 function Void () f = foo;
 Function<Void, Void> f = foo;
@@ -2112,7 +2088,6 @@ String s = "world";
 function Void () f = () -> print "hello " + s;   // not actually how it compiles ...
 // function Void (String s) fHidden = s -> print "hello " + s;
 // function Void () f = fHidden.bind(0, s);     // TODO figure out API for Function
-
 
 Class
   Class   parentClass
@@ -2137,7 +2112,6 @@ ultimately the question is: what is the class of a function?
 - doc
 - file name
 - starting line of code / length in lines of code
-
 
 class Class<Nullable> incorporates Enumeration ...
 
@@ -2391,7 +2365,6 @@ if (people1 == people2) {...}
 // compiler knows that the compile-time-type is Array<Person>
 // so the "last line of code" that the compiler generates is the call to the function equals(v1,v2)
 
-
 // --- gene's for loop
 
 for (Person person : people, Int i : 0) //  (but also give me "i", "first", "last"))
@@ -2429,7 +2402,6 @@ Float f = new IntLiteral("123454");
 Float fl = 0;
 Float fl2 = 0.0;
 Dec d = 0.0;
-
 
 // ----- Type
 
@@ -2520,7 +2492,6 @@ Type t = C.Type;
 //  Type TypeParams             what are the type params (as a tuple) for the class?
 //
 
-
 Type t = HashMap.Type;              // compile time error .. requires the k & v to be provided      TODO disagree?
 Type t = HashMap<String, Int>.Type; // compile time error .. requires the k & v to be provided
 print t.class.name;                 // "NativeConstantPoolType"
@@ -2531,7 +2502,6 @@ print t3.class.name;                // "OrType"
 
 // back to the Type t of HashMap
 Type k = t.Key;             // exception!
-
 
 // ----- parameterized types
 
@@ -2554,7 +2524,6 @@ Class c2 = Runnable;
 // 2) you can get a class from loading a module
 Class c3 = magicalInjectedContainerCreator.defineModule(...).giveMeAClass(...)
 
-
 // ---- classes and types
 
 Class c = HashMap;          // is that legal?
@@ -2567,7 +2536,6 @@ Class c = HashMap;          // is that legal?
 Class c2 = HashMap<K,V>.Entry<K,V>;
 
 Class pkg = x.collections;
-
 
 //
 interface Array<Element>
@@ -2583,7 +2551,6 @@ interface Array<Element>
     // instead consider the use of "bang" to say "no, not this:type, but actually use (any) Array!"
     Array!<Element> ensureMutable();
     }
-
 
 // discussion of const/immutable params / requiring immutable value
 
@@ -2617,7 +2584,6 @@ class Test
         map.put(o, 1);
         }
     }
-
 
 // ---
 
@@ -2662,7 +2628,6 @@ Void foo2(Runnable runnable)
     my.foo((ImmutableRunnable) runnable);
     }
 
-
 // ----- assignability / instanceof / successfully castable rules
 
 T2 v2 = ...
@@ -2689,7 +2654,6 @@ T2 is assignable to T1 iff
 T2<TP21, TP22, ..., TP2N> is assignable to T1<TP11, TP12, ..., TP1N> iff both of the following are true
   - TP2i is assignable to TP1i
   - the fully resolved T2 is assignable to the fully resolved T1
-
 
 --
 
@@ -2773,7 +2737,6 @@ Type T2 is assignable to a Type T1 iff both of the following hold true:
 // ----------------    ----------------------    -------------------------
 // !(C consumes T1)    ok                        Compile Time Error
 // !(C produces T1)    possible RTE              ok
-
 
 // example covariance testing
 
@@ -2867,7 +2830,6 @@ pco = pc;   // ok; requires "wrapping" of consumption methods
 // how does auto-mixin work with class -> formal type -> resolved type if the mixin mixes in
 // because of the information in the resolved type?
 
-
 // --- new
 
 how does new work?
@@ -2909,7 +2871,6 @@ IVAR Function temp
 BIND construct _ n -> temp
 IVAR C c
 NEW  C temp -> c
-
 
 class Class<ClassType>
     {

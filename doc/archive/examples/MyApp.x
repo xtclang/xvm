@@ -28,7 +28,6 @@ module MyApp
                 implements Externalizable
             { SAD, MEDIOCRE, HAPPY, ECSTATIC }
 
-
         if (Hibernate.present)
             {
             class Bob implements Runnable {}

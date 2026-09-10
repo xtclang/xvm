@@ -452,7 +452,6 @@ module Test
 //        Int foo() {return 4;}
 //        }
 
-
 //    // type info for nested children
 //    class C
 //        {
@@ -492,7 +491,6 @@ module Test
 //                }
 //            }
 //        }
-
 
 //    class C
 //        {

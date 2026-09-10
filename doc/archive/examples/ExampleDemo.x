@@ -12,8 +12,6 @@ Void foo(Beep beeper)
     @Inject Panel panel;
     panel.draw(bmpChart);
 
-
-
     // calculate pi to a billion places ....
 
     console.println("beep #" + result + " (" + beeper.count + ")");
@@ -66,7 +64,6 @@ new HashMap().foo();
 new SDHashMap().foo();
 
 mapSD.format().format1();
-
 
 // ----
 

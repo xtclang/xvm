@@ -480,7 +480,6 @@ module TestNumbers {
         }
     }
 
-
 /**
  * Implementation details:
  *

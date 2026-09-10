@@ -75,7 +75,6 @@ class FileObjectStream
     // ...
     }
 
-
 // can't super to a method that isn't guaranteed to already be in the composition in the layer BEFORE the incorporates
 // (compiler/verifier would have to figure this out.)
 
@@ -113,7 +112,6 @@ class ValidExample
         }
     }
 
-
 // but ***can*** assume that the method is present on "this" (because the mixin knows that the
 // type of "this" is Object+Runnable)
 
@@ -150,7 +148,6 @@ class ValidExample
         // ...
         }
     }
-
 
 // call chains
 
@@ -238,7 +235,6 @@ mixin DerivedMixin
 //      2.3 default methods on the interfaces that are declared by all other contributions (recursively)
 //      ... followed by the "default" chain on the super class all the way down to Object (excluding)
 
-
 // ---- subtraction of interface
 
 interface SqlDriver
@@ -266,14 +262,12 @@ class Derived
         }
     }
 
-
 // parameterized types
 
 interface Map<Key, Element>
     {
     Key first();        // return value type constant is Terminal(Property(ThisClass, "Key"))
     }
-
 
 // X atomic impl in Java
 boolean replace(AtomicRef ref, GeneClass clz, ObjectHandle expected, ObjectHandle newval)
@@ -292,7 +286,6 @@ boolean replace(AtomicRef ref, GeneClass clz, ObjectHandle expected, ObjectHandl
             }
         }
     }
-
 
 // ----- type resolution challenges
 

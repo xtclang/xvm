@@ -134,8 +134,6 @@ class C<T1, T2>
 // need to keep track of all of the constituent pieces, and some sort of lineage, kind of like what
 // was done for formal params in isA()
 
-
-
 interface I1<T extends Number> {T foo();}
 
 interface I2<T extends IntNumber> {T bar();}
@@ -151,7 +149,6 @@ class B<T>
 class D<T extends IntNumber>
     extends B<T>
     implements I1<T>, I2<T>
-
 
 // so ...
 C<Int> c1; // type of C here is parameterized, T is Int, which "isA" IntNumber and "isA" Number

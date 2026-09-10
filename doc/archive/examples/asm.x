@@ -20,8 +20,6 @@ Void foo()
     return;                 // RETURN_0
     }
 
-
-
 // a specific "Int64" constant type in the constant pool
 Int foo()
     {

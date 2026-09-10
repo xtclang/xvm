@@ -71,9 +71,7 @@ static Builder<Element> builderOf(Type A, A a)
     return new StreamBuilder<Element>();
     }
 
-
 Stream<Int> s2 = builder(Int.Type);
-
 
 **** Stream
 
@@ -263,7 +261,6 @@ if (s : iter.next())
    Int i = s.length();
    }
 
-
 function Int (Int) sq = n -> n*n;
 print(sq(5));
 print((function Int (Int)) (n -> n*n) (5));
@@ -276,7 +273,6 @@ X? a = foo();
 x = a;    // compiler error
 x = a?;
 
-
 class T { void foo(); }
 T? x = ...
 
@@ -287,7 +283,6 @@ conditional T y = @auto(x?);
 
 y?.foo();
 
-
 for (x : y)
 a?[1];
 
@@ -295,7 +290,6 @@ Object p;
 
 Person p = new Person();
 Child c = p.new Child();
-
 
 // java
 if (o1 .instanceof (Person))
@@ -385,7 +379,6 @@ svc.prop = 5;
 
 // to get a future for it
 @future Tuple<> result = (&svc.prop).set<Tuple>(5);
-
 
 // assignment of dynamic ref into a standard
 @future Int fi;
@@ -478,7 +471,6 @@ class D2
 
 ===============
 
-
 class C<T>
     {
     T prop1; // produces(T) ALWAYS
@@ -512,7 +504,6 @@ Proof:
 2. A produces A_Type, B consumes B_Type -> C consumes T
 3. A consumes A_Type, B produces B_Type -> C consumes T
 4. A consumes A_Type, B consumes B_Type -> C produces T
-
 
 +++++++++++++++++
 
@@ -619,7 +610,6 @@ class C2 implements I2
     void foo(I1 c) { ... }
     }
 
-
 interface I<T, U> {void foo(T); Void bar(U);}
 class C<U, T> {void foo(T) {...} Void bar(U) {...}}
 
@@ -653,11 +643,9 @@ class MyClass
         }
     }
 
-
     CALL_0T  rvalue-fn, lvalue-treturn
     CALL_OT: ...        a) +N - register N (type is Tuple) -> into special
                         b) -P - local property (type is Tuple)
-
 
 // CALL_?T      is generated when the caller expects a Tuple back,
 //              but the callee provides a single or multi-return
@@ -781,7 +769,6 @@ class D extends C
     @Override
     void foo(); // does not need a pointless "{ super(); }"
     }
-
 
 // instance child
 

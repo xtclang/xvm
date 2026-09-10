@@ -28,7 +28,6 @@ class B2 incorporates M
     {
     }
 
-
 // so why not allow:
 interface I
     {
@@ -108,7 +107,6 @@ const Point(Int x, Int y) {}
 // alternatively, it's just names i.e. there is a property x, a property y
 // (so reflection is easy enough)
 
-
 // ----- funky -----
 
 interface Hashable
@@ -158,7 +156,6 @@ foo()
     // what hash does it use? B1.hash() is all we have ...
     }
 
-
 // ----- rotational operators ----
 
 x |<< 3
@@ -200,7 +197,6 @@ Object <-> Protobuf <-> DataInput/DataOutput <-> byte[]
 
 ObjectOutput = Format.createOutput(???) // DataOutput? BinaryOutput? Writer? StringBuffer?
 
-
 // ----- JSON default schema .. what can it do??
 
 // assume ...
@@ -225,11 +221,9 @@ out.write(False);
 out.write(Null);
 // truefalsenull            <--- obviously this is shit
 
-
 // ----- circular typedefs
 
 typedef Int | Array<X> X;
-
 
 // ----- modules and packages and classes (oh my!)
 
@@ -321,7 +315,6 @@ String?         <-- this has two (!!!) origin classes, but it should still be de
 static (Int, String) foo();         // Function<<>, <Int, String>>
 static Tuple<Int, String> foo();    // Function<<>, <Tuple<Int, String>>>
 
-
 // ----- children
 
 interface I1
@@ -399,7 +392,6 @@ mixin M1b
 
 // also note that typedef names will be in this same namespace
 
-
 // ----- JSON DOMish parsing
 
 p = new Point(doc.find("x").expect<Int>(0), doc.find("y").expect<Int>(0));
@@ -413,7 +405,6 @@ p = new Person(doc.require<String?>("name"), doc.require<Int?>("age"));
 // sub-record read
 p = new Person(doc.require<String?>("name"), doc.require<Int?>("age"), doc.require<Dog?>("dog"));
 p = new Person(doc.require<String?>("name"), doc.require<Int?>("age"), doc.require<Dog[]>("dogs"));
-
 
 out.write(person);
 // ...
@@ -430,7 +421,6 @@ DogMapping.write(out, Dog d)
     // ...
     }
 
-
 Person p = in.read<Person>();
 // ...
 PersonMapping.read<Person>(in)
@@ -440,7 +430,6 @@ PersonMapping.read<Person>(in)
     p.age  = in.readInt("age");
     p.dog  = in.readObject<Dog>("dog");
     p.dogs = in.readArray<Dog>("dogs");   // or readIterator() to get an iterator instead
-
 
     Map<String, Doc>? remainder = Null;
     in.anyExtraShitGoesHere((name, value) -> {if remainder == null remainder = new Map(); remainder.put(name, value);})
@@ -613,7 +602,6 @@ finally
         exists = True;
         }
     }
-
 
 static const Singleton
     {

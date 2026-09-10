@@ -410,8 +410,6 @@ ecommerce.tableFor(Item).add(new Item(456, "AM-G7-XYZ", "Best whoozymawhatzit ev
 // how to search?
 // how to do "operations" i.e. processors?
 
-
-
 /**
  * User identity. TODO
  */
@@ -444,8 +442,6 @@ ecommerce.tableFor(Item).add(new Item(456, "AM-G7-XYZ", "Best whoozymawhatzit ev
  * Some retention policies are not fixed, per se; they are reactive: "Keep on XXXgb of this stuff"
  *
  */
-
-
 
 --
 
@@ -523,7 +519,6 @@ module Petstore
         }
     }
 
-
     {
     Account acct1 = ...
     Account acct2
@@ -574,7 +569,6 @@ accts.do(a -> a.needsInterestToBeApplied(), a -> a.applyInterest());
 
 // maybe..
 accts.filterByValue(a -> a.needsInterestToBeApplied()).processAll(a -> a.applyInterest());
-
 
 Condition
 Predicate
@@ -668,7 +662,6 @@ Transaction
   State (Active, Committing, Committed, RolledBack)
   Conditions
   Contents
-
 
 module ContactsDB
     {
@@ -812,7 +805,6 @@ Int count = db.tableFor("names").get("Sue").as(Int);
 @Inject Table<String, Int> names;
 Int count = names.get("Sue");
 
-
 //
 
 List<CustId>
@@ -822,7 +814,6 @@ List<Customer>
 List<CustId>
 List<@ByRef Customer>
 List<Customer>
-
 
 // ---
 
@@ -869,7 +860,6 @@ interface ContactsDB
     @RO Contacts contacts;
     }
 
-
 const ContactsDBSchemaClientImpl // or service
         implements ContactsDB
     {
@@ -887,7 +877,6 @@ const ContactsClientImpl // or service
         return result[0].as(Contact);
         }
     }
-
 
 // --
 
