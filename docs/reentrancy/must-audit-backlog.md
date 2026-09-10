@@ -321,6 +321,60 @@ override a method that does not exist, and an `@Override` on it will not compile
 Native property reads go through `markNativeProperty(name, HandleClass.class, getter)` - the bound
 form `xOSStorage` already uses and `xRegEx` now uses - which is the API that is actually dispatched.
 
+### TIERED MODEL 2026-09-10: step 1 shipped, step 2 scoped (and it is bigger than a retarget)
+
+The design the day converged on: a prepared library is an IMMUTABLE UPPER TIER; every compile gets a
+request tier that reads through to it and never writes into it. Parallel then becomes safe by
+CONSTRUCTION rather than by locking - nothing shared is written - and sequential is parallelism of
+one, so there stops being two answers.
+
+**Step 1, SHIPPED.** "Never built" and "empty" are now distinct states for a pool's valid-pool set.
+`checkValidPools`'s self-disabling escape is gone; `register` consults the set only when it is
+meaningful; `buildValidPoolSet` records that it ran. That is the one change that would have caught
+both of the day's bugs at their source. No behaviour change with the flag off (712 + 107 green).
+
+Building the library pools' sets - the actual tier boundary - stays behind
+`-Dxvm.library.checkPools` while the violation below is outstanding. **That flag running clean is the
+acceptance test for the tier.**
+
+**Step 2, SCOPED NOT STARTED.** The single remaining violation is `ecstasy` holding `TestArray`'s
+`String`. Its origin is exact:
+
+```java
+// TypeConstant:4445, inside layerOnMethods
+ConstantPool pool = getConstantPool();       // the TYPE's own pool - the LIBRARY's
+...
+// :4924
+MethodConstant id = (MethodConstant) constId.appendNestedIdentity(pool, nid);
+```
+
+Building a library type's TypeInfo during a compile derives new MethodConstants into the LIBRARY
+pool. Under the tiered rule - derived data belongs to its most-downstream input - those belong to the
+request tier, because the signature mentions a request type.
+
+**Why it is not just "pass a different pool".** The derived TypeInfo is cached on the TypeConstant
+itself (`m_typeinfo`), and that TypeConstant is library-owned. Retargeting the pool would fix where
+the constants live and leave the CACHE hanging off a library type, still keyed by nothing that
+distinguishes one request from another. The real shape is:
+
+- a TypeInfo for a library type that mentions request types is a REQUEST artifact;
+- it must be keyed by (type, requesting tier), not stored on the type;
+- so the library's own `m_typeinfo` slot holds only the library-pure TypeInfo, built once at
+  preparation, and never rebuilt by a compile.
+
+That last clause also closes the invalidation path measured above (`TypeConstant:2297` rebuilds a
+TypeInfo when invalidations occurred, and a rebuild during a compile captures that compile's types) -
+a library-pure TypeInfo has nothing to rebuild against.
+
+**Size, honestly.** ~34 `pool.` uses across the TypeInfo construction range, plus the call chain
+`ensureTypeInfo -> buildTypeInfo -> buildTypeInfoImpl -> buildBaseTypeInfoImpl -> collectMemberInfo
+-> layerOnMethods`, plus a keyed cache to replace a field. That is a refactor, not an edit, and it
+should be started fresh rather than tacked onto the end of a long session.
+
+**Do NOT start it by threading a pool parameter.** That is the obvious move and it fixes the smaller
+half - constants land in the right tier - while leaving request-derived TypeInfos cached on library
+types, which is the half that actually leaks. Decide the cache keying first.
+
 ### ROOT OF THE ROOT 2026-09-10: `register` declines a foreign type and returns it, and the caller keeps it
 
 The measurement that three earlier instruments failed to get, finally obtained by reporting at the
