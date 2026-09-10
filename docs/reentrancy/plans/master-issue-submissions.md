@@ -4227,7 +4227,32 @@ any read-modify-write tool does, and nothing in the tree did that until now.
 "this.m_reg" is null`, from `write`. Blast radius is the whole `Var` family, 16 op classes.
 
 **Fix:** re-encode only when there is a Register to encode from; otherwise pass the decoded id
-through.
+through. **Two sites, not one** - `CatchStart.preWrite` calls `getRegisterType()` directly and so
+bypasses a guard placed only in `OpVar.write`:
+
+```java
+// OpVar.write
+if (isTypeAware()) {
+    if (m_reg != null) {
+        m_nType = encodeArgument(getRegisterType(), registry);
+    }
+    writePackedLong(out, m_nType);
+}
+
+// CatchStart.preWrite - the same dereference, reached through a different path
+if (m_reg != null) {
+    m_nType = encodeArgument(getRegisterType(), registry);
+}
+```
+
+> **Correction (2026-09-09).** This row was first filed with only the `OpVar.write` site, and the
+> residue - `GuardStart`, 845 ops - was written off as "a limitation of the oracle, it needs a real
+> `ConstantRegistry`". That was wrong, and the question that exposed it was a good one: why would
+> decompiling serialized bytecode need a registry at all? It does not. A registry is only needed to
+> encode a compile-time `Argument`; serialized ops already carry their encoded ids and just pass
+> them through. The registry requirement was a symptom of the same NPE reached via
+> `CatchStart.preWrite`. With both sites guarded, ops that cannot be re-serialized went from 845 to
+> **zero**.
 
 ```java
 if (isTypeAware()) {
@@ -4239,6 +4264,6 @@ if (isTypeAware()) {
 ```
 
 **Measurement:** across every `.xtc` in the tree, ops that could not be re-serialized fell from
-**92,149 to 845** (the remainder is `GuardStart`, which needs a real `ConstantRegistry` rather than
-being defective). The 91,304 newly verifiable ops immediately exposed **11 `Var` classes whose
+**92,149 to 0** (845 after the first site was guarded, zero after the second) (the intermediate 845 were `GuardStart`, which turned out to be the same
+defect through `CatchStart.preWrite` rather than a registry requirement). The 91,304 newly verifiable ops immediately exposed **11 `Var` classes whose
 operand models were incomplete** - a hole the NPE had been hiding.

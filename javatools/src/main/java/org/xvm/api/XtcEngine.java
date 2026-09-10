@@ -1100,7 +1100,7 @@ public final class XtcEngine
         // way to name it. A root that no one can reach is one nobody has to remember to close.
         return main.invokeAsync("registerTransientTask", hModule, hRepository,
                                 xNullable.makeHandle(main), hNames, hValues)
-                .thenCompose(hTaskId -> main.invokeAsync("startTask", hTaskId))
+                .thenCompose(hTaskId -> main.invokeAsync("startTask", TupleHandle.class, hTaskId))
                 .thenApply(XtcEngine::resultOf);
     }
 
@@ -1110,14 +1110,14 @@ public final class XtcEngine
      * <p>One future for the whole run: the runner completes it once, after it has recorded the
      * outcome, so there is nothing to poll and no window in which the result is not yet readable.
      *
-     * @param hTuple  the completion tuple
+     * @param hTuple  the completion tuple, typed by the invokeAsync boundary rather than cast here
      *
      * @return the run's result handle
      *
      * @throws IllegalStateException if the run completed exceptionally
      */
-    private static @NotNull ObjectHandle resultOf(@NotNull ObjectHandle hTuple) {
-        ObjectHandle[] ahOutcome = ((TupleHandle) hTuple).m_ahValue;
+    private static @NotNull ObjectHandle resultOf(@NotNull TupleHandle hTuple) {
+        ObjectHandle[] ahOutcome = hTuple.m_ahValue;
         String         sFailure  = ((StringHandle) ahOutcome[1]).getStringValue();
         if (!sFailure.isEmpty()) {
             throw new IllegalStateException(sFailure);

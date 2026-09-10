@@ -5247,6 +5247,16 @@ identified them, not measurements of the improvement, and the two should not be 
 justified on shape as well - a constant recomputed per call, and an allocation per tree node - but
 the honest statement is that the win is predicted, not yet demonstrated.
 
+> **A cautionary note worth keeping, 2026-09-10.** W2 was briefly reverted on the strength of a
+> "measurement" that was nothing of the kind. One test class appeared to take 1h 6m against a
+> 3m 17s whole-suite baseline, and disabling W2's cache appeared to cut it to 24m - a tidy story
+> about a gate added to a hot path. It was wrong. The machine was at **load average 145** (a
+> security scanner and a mail client, not this work), and the giveaway had already been visible and
+> ignored: the slowness MOVED BETWEEN TESTS between runs, which no code regression does. On a quiet
+> machine the same suite runs in 3m 23s with W2 in place, slowest class 25s. The lesson is not
+> about W2: single wall-clock samples on an unquiesced shared machine are not measurements, and
+> `uptime` costs nothing to check FIRST.
+
 ### Filing notes
 
 Two small, independent changes: one memoized field with a resolution guard, and one loop replacing

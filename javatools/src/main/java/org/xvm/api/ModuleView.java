@@ -467,6 +467,18 @@ public final class ModuleView {
      */
     public void writeTo(@NotNull Path path)
             throws IOException {
+        // Two modes, and which one runs depends on whether anything has read the ops. Untouched,
+        // the module's assembled op bytes are still held and are copied straight out. Once
+        // something has decoded them - ops(), decode(), disassemble() - those bytes are discarded
+        // and this REASSEMBLES, re-running every op's write() and re-registering the constants they
+        // reach. That second path is the one a read-modify-write tool needs, and it was unusable
+        // until recently: OpVar.write and CatchStart.preWrite both dereferenced a Register that
+        // exists only at compile time, so re-serializing a Var op or a guard read from disk threw
+        // NPE.
+        //
+        // A reassembled module is structurally identical but not byte-identical: the pool is
+        // rebuilt from what is actually reachable, so it usually comes out smaller. Compare with
+        // digest(), never with file size or bytes.
         var bytes = new ByteArrayOutputStream();
         f_file.writeTo(bytes);
         Files.write(path, bytes.toByteArray());

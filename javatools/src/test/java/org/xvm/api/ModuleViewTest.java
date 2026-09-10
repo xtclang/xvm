@@ -92,6 +92,42 @@ public class ModuleViewTest {
      * Read-modify-write: the updater path. Writing a module back and reading it again must produce
      * the same structure.
      */
+    /**
+     * The round trip that a read-modify-write tool actually needs: not the byte copy, but the
+     * REASSEMBLY. Reading a method's ops discards the module's stored op bytes, so writeTo has to
+     * re-run every op's write() and rebuild the pool from what those ops reach.
+     *
+     * <p>That path was unusable until recently - {@code OpVar.write} and {@code CatchStart.preWrite}
+     * both dereferenced a compile-time Register, so re-serializing a Var op or a guard read from
+     * disk threw NPE. The plain round-trip test below never noticed, because it never read an op
+     * and so never left the byte-copy path.</p>
+     *
+     * <p>Compares digest and disassembly rather than bytes: a reassembled module is structurally
+     * identical but usually SMALLER, since the pool is rebuilt from what is actually reachable.</p>
+     */
+    @Test
+    public void aModuleSurvivesAReassemblingRoundTrip() throws Exception {
+        ModuleView original = ModuleView.open(ecstasy());
+
+        long ops = original.methods().mapToLong(method -> original.ops(method).size()).sum();
+        assertTrue(ops > 10_000, () -> "expected a substantial module, got " + ops + " ops");
+
+        String digestBefore = original.digest();
+        String dumpBefore   = original.disassemble();
+
+        Path copy = tempDir.resolve("reassembled.xtc");
+        original.writeTo(copy);
+
+        ModuleView reassembled = ModuleView.open(copy);
+        long opsBack = reassembled.methods().mapToLong(m -> reassembled.ops(m).size()).sum();
+
+        assertEquals(ops, opsBack, "every op must survive reassembly");
+        assertEquals(digestBefore, reassembled.digest(),
+                "a reassembled module must be structurally what it was");
+        assertEquals(dumpBefore, reassembled.disassemble(),
+                "and must disassemble identically, operands included");
+    }
+
     @Test
     public void aModuleSurvivesARoundTrip() throws Exception {
         ModuleView original = ModuleView.open(ecstasy());

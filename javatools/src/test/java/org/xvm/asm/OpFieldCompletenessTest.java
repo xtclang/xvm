@@ -90,19 +90,17 @@ public class OpFieldCompletenessTest {
         assertEquals(Map.of(), mismatches,
                 () -> "op classes whose field model disagrees with write(): " + mismatches);
 
-        // The blind spot, pinned - now a single class. It was eleven: the whole Var family was
-        // unverifiable because OpVar.write dereferenced a Register that only exists at compile
-        // time, so re-serializing any Var op read from disk threw NPE. Fixing that (a master bug,
-        // and the blocker for an op-level round-trip) immediately exposed eleven Var classes whose
-        // field models were INCOMPLETE, which is exactly what the blind spot had been hiding.
+        // There is no blind spot left, and pinning the EMPTY set is the point: a class that
+        // becomes unverifiable fails here rather than quietly shrinking what is checked.
         //
-        // GuardStart is a limitation of this oracle rather than a defect: resolveAddresses
-        // repopulates m_aOpCatch, so its write() takes the compile-time branch and needs a real
-        // ConstantRegistry, which a re-serialization check cannot supply.
-        //
-        // Pinning the set by name means a class JOINING it fails visibly, instead of silently
-        // shrinking what is actually checked.
-        assertEquals(Set.of("GuardStart"), unverifiable.keySet(),
+        // It was eleven classes, then one. The whole Var family could not be re-serialized because
+        // OpVar.write dereferenced a Register that exists only at compile time, and GuardStart
+        // survived a first fix because CatchStart.preWrite reaches the SAME dereference by another
+        // path. That residue was written off as "the oracle needs a real ConstantRegistry" - wrong:
+        // a registry is only needed to encode a compile-time Argument, and serialized ops already
+        // carry their encoded ids. Both sites are now guarded (row 58), and every op in the tree
+        // re-serializes.
+        assertEquals(Set.of(), unverifiable.keySet(),
                 () -> "op classes this oracle cannot verify: " + unverifiable);
     }
 

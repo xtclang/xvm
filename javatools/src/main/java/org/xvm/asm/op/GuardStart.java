@@ -244,13 +244,15 @@ public class GuardStart
         // belong to jumpTable(), not here
         // wire order is a triple per catch clause: the exception type, the variable name it binds,
         // and where that handler starts
-        return Optional.of(IntStream.range(0, m_anTypeId.length)
-                .boxed()
-                .flatMap(i -> Stream.of(
-                        OpField.arg("catchType[" + i + ']', m_anTypeId[i]),
-                        OpField.arg("catchName[" + i + ']', m_anNameId[i]),
-                        OpField.branch("catch[" + i + ']', m_aofCatch[i])))
-                .toList());
+        return Optional.of(OpField.concat(
+                List.of(OpField.literal("catch.count", m_anTypeId.length)),
+                IntStream.range(0, m_anTypeId.length)
+                        .boxed()
+                        .<OpField>flatMap(i -> Stream.of(
+                                OpField.arg("catchType[" + i + ']', m_anTypeId[i]),
+                                OpField.arg("catchName[" + i + ']', m_anNameId[i]),
+                                OpField.branch("catch[" + i + ']', m_aofCatch[i])))
+                        .toList()));
     }
 
 

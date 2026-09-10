@@ -69,7 +69,15 @@ public class CatchStart
     }
 
     void preWrite(ConstantRegistry registry) {
-        m_nType = encodeArgument(getRegisterType(), registry);
+        // Same shape as OpVar.write: only re-encode when there is a compile-time Register to encode
+        // FROM. An op read back from a compiled module has no Register - m_reg is set by the
+        // compile-time constructor only - and already carries the encoded id in m_nType, so writing
+        // it back out just passes that id through. Without the guard, getRegisterType() throws NPE,
+        // which is what made GuardStart the last op family that could not be re-serialized from a
+        // module read off disk.
+        if (m_reg != null) {
+            m_nType = encodeArgument(getRegisterType(), registry);
+        }
 
         if (m_constName != null) {
             m_nNameId = encodeArgument(m_constName, registry);

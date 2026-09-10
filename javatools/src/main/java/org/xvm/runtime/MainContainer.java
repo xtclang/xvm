@@ -222,6 +222,31 @@ public class MainContainer
      * @throws IllegalArgumentException if the method does not exist, or returns more than one value
      * @throws IllegalStateException    if the main service has terminated
      */
+    /**
+     * Invoke a method on the module and answer its result as the type the caller expects.
+     *
+     * <p>The untyped overload hands back an {@code ObjectHandle}, so every caller re-establishes
+     * the type by hand with a cast the compiler cannot check - and the type is known on BOTH sides,
+     * dropped only in between. {@code runner.x} declares {@code Int runTask(...)}; the caller knows
+     * what it asked for; only the boundary forgets. Passing the expected type puts that knowledge
+     * in one place and turns a signature change in Ecstasy into a {@link ClassCastException} at the
+     * boundary that names both types, rather than one further away in whichever site unwrapped it.
+     *
+     * @param sMethodName  the method to invoke on the module
+     * @param typeResult   the handle type the method answers with
+     * @param ahArg        the arguments
+     *
+     * @param <T> the handle type the method answers with
+     *
+     * @return the future result; completes with null for a void method
+     */
+    public <T extends ObjectHandle> CompletableFuture<T> invokeAsync(
+            String sMethodName, Class<T> typeResult, ObjectHandle... ahArg) {
+        // Class.cast rather than an unchecked cast: this is a real check AT the boundary, and
+        // Class.cast(null) is null, so a void method still completes cleanly
+        return invokeAsync(sMethodName, ahArg).thenApply(typeResult::cast);
+    }
+
     public CompletableFuture<ObjectHandle> invokeAsync(String sMethodName, ObjectHandle... ahArg) {
         MethodConstant idMethod = findModuleMethod(sMethodName, ahArg);
         if (idMethod == null) {
