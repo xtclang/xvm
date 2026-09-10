@@ -155,6 +155,52 @@ it dropped unverifiable ops to 845 and immediately exposed **eleven `Var` classe
 field models**. Coverage claims are worth exactly as much as the oracle behind them, and an oracle
 that skips what it cannot check is how "complete" stops meaning anything.
 
+### SHOULD-FIX: finish the FrozenArray migration, and write down where it STOPS (added 2026-09-10)
+
+Family C froze the escaping accessors but left the owning classes' algorithms speaking raw arrays,
+so the conversion is half done. More importantly, nothing records which array fields are candidates
+and which must never be frozen - and the wrong answer there is a performance regression in the
+hottest code in the interpreter.
+
+**Census, `javatools/src/main/java/org/xvm/runtime` (2026-09-10).**
+
+| | count | candidate? |
+| --- | ---: | --- |
+| array-typed fields, total | 182 | |
+| non-final (the reference is reassigned) | 104 | **no** - mutable by design |
+| final, but WRITTEN THROUGH (`x[i] = ...`) | 22 | **no** - mutation is the point |
+| final and never written through | 56 | **yes**, ~31% of the total |
+
+`final` alone is the wrong filter, and it is the mistake to avoid: most of `Frame`'s finals are
+final REFERENCES to mutable buffers. `f_ahVar` is the register file and is written on essentially
+every op; `f_aInfo` and `f_anNextVar` likewise, as are the `Utils` scratch arrays.
+
+**The rule, which is what this row exists to record.** Freeze **interned or shared metadata**; never
+freeze **per-frame scratch**.
+
+- A `FrozenArray` costs about 16 bytes - a final class with one final field - plus one indirection.
+  `get(i)` is a final method on a final class, so it inlines to a raw array access with a null
+  check: near-free hot, one extra hop cold.
+- That cost scales with the NUMBER OF INSTANCES, not with array size. Interned metadata is created
+  once and lives long, in the thousands - noise. Per-frame arrays are created per call, in the
+  millions - a wrapper each would be a real allocation regression.
+
+The two tests agree, which is why this needs no judgement call at each site: **the 22
+written-through finals are exactly the per-frame buffers.** Mutability and hotness pick out the same
+set. Anything that is genuinely read-only after construction is, by that fact, not per-frame
+scratch.
+
+**Also open: the algorithms, not just the accessors.** There are 163 `unsafeArray()` sites in the
+tree, 28 of them added by the Family C conversion. None is a leak - roughly half are `MethodInfo`
+reading its OWN storage for merge and compare logic, which is what the documented hatch is for, and
+most of the rest feed APIs that still take arrays (`CallChain`, which retains for dispatch and must;
+`Handy.prepend`/`containsAll`; `getJitIdentity`). But that is the honest measure of how much of the
+migration is left: the escape is closed, the internals are not converted.
+
+**Evidence that freezing the chains cost nothing measurable:** suite time was 3m24s/3m21s before the
+Family C commits and 3m22s/3m15s after. That is an absence of an obvious regression rather than a
+benchmark, and should not be quoted as one.
+
 ### SHOULD-FIX: three representations of "no method chain", and nothing converts consistently (added 2026-09-10)
 
 Found by walking into it: the Family C conversion introduced an NPE at
