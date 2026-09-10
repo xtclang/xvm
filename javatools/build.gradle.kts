@@ -248,9 +248,16 @@ val versionOutputTest = tasks.register<Test>("versionOutputTest") {
 //   ./gradlew :javatools:test --tests "...EngineParallelCompileTest" -Dxvm.assembly.checkOwnership=true
 val checkAssemblyOwnership = providers.systemProperty("xvm.assembly.checkOwnership")
 
+// The registration twin: catches an illegal rewrite at the WRITE, where assembly's check catches it
+// later at the read. It enumerates rather than throws - see ConstantPool.checkRegistrationOwnership.
+val checkRegistrationOwnership = providers.systemProperty("xvm.registration.checkOwnership")
+
 tasks.withType<Test>().configureEach {
     systemProperty("xvm.checkout.root", rootDir.parentFile.absolutePath)
     if (checkAssemblyOwnership.isPresent) {
         systemProperty("xvm.assembly.checkOwnership", checkAssemblyOwnership.get())
+    }
+    if (checkRegistrationOwnership.isPresent) {
+        systemProperty("xvm.registration.checkOwnership", checkRegistrationOwnership.get())
     }
 }

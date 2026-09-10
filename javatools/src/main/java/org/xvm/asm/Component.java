@@ -2375,6 +2375,12 @@ public abstract sealed class Component
     protected void registerConstants(ConstantPool pool) {
         assert getContaining() == null || getContaining() instanceof Component;
 
+        if (ConstantPool.CHECK_REGISTRATION_OWNERSHIP) {
+            // the line below rewrites this component's identity; doing that to a structure someone
+            // else shares is the lost update that corrupts a concurrently-assembled module
+            ConstantPool.checkRegistrationOwnership(this, pool);
+        }
+
         m_constId = pool.register(m_constId);
         m_cond    = pool.register(m_cond);
 

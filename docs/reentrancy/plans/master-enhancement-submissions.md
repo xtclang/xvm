@@ -5482,3 +5482,63 @@ Two sibling counters are deliberately left alone: `ConditionalStatement.LABEL_CO
 ### Filing notes
 
 One field, one method body, one import removed. Independent of everything else filed today.
+
+## E54 - `FileStructure.addChild` does not reparent, so a module can report the wrong owning pool
+
+**NOT fixed** anywhere. Filed as an observation with a concrete consequence, NOT as a defect report:
+no failing behaviour on master has been demonstrated, and the section below says exactly why.
+
+### The asymmetry
+
+`Component.addChild` reparents the child:
+
+```java
+// master: javatools/src/main/java/org/xvm/asm/Component.java:924
+child.setContaining(this);
+```
+
+`FileStructure.addChild` - which overrides it - does not:
+
+```java
+// master: javatools/src/main/java/org/xvm/asm/FileStructure.java
+public boolean addChild(Component child) {
+    assert child instanceof ModuleStructure;
+    ...
+    modules.put(id, module);
+    m_moduleById = Collections.unmodifiableMap(modules);   // added, never reparented
+    markModified();
+    return true;
+}
+```
+
+So a `ModuleStructure` can be a child of FileStructure A - reachable through `A.children()`, which
+is `getModuleByIdMap().values()` - while `getContaining()`, and therefore `getConstantPool()`, still
+answer with FileStructure B. Every walk that asks a component which pool owns it gets B's answer for
+a component held by A.
+
+### Why it is worth recording even without a master failure
+
+On master this is invisible, and arguably by design: the repository contract is "create a copy,
+allowing the compiler to mutate the repos[0] contents", so each compile owns what it compiles
+against and the same `ModuleStructure` is not in two places at once. The inconsistency has no
+observable consequence while that holds.
+
+It stops being invisible the moment anything shares module structures between two owners. On
+`lagergren/lazy-instance`, where one prepared library is shared across concurrent compiles, this is
+the mechanism behind intermittently corrupt compiled modules: the compile's registration walk
+reaches a library module through `children()` and rewrites its constant fields into the compile's
+pool, two compiles race, and the loser assembles a structure carrying the winner's constants -
+observed as `assembling TestUriTemplate would write the position of a constant owned by TestSimple`.
+
+### What is NOT claimed
+
+That this is a bug on master. It is not demonstrated to be one, and the copy-per-compile contract
+plausibly makes it unreachable there. What is claimed is narrower and checkable: `getConstantPool()`
+can disagree with the structure actually holding the component, and nothing in the API says so.
+
+### Shape of a fix, if it is wanted
+
+Either reparent in `FileStructure.addChild` like every other `addChild`, or - if a FileStructure
+deliberately holds modules owned elsewhere - say so in the javadoc of `addChild` and
+`getConstantPool`, so a caller knows the answer may name a different file. The documentation-only
+option is a real answer here; the hazard is the silence, not the behaviour.

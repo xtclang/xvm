@@ -310,6 +310,64 @@ the GET asymmetry exists there. Nothing to file.
 override compiles, sits next to sibling overrides that now all work, and silently never runs.
 `xRegEx` was the only template with one; nothing prevents the next.
 
+### ENUMERATED 2026-09-10: exactly TWO sites rewrite a structure they do not own
+
+A guard was added to `Component.registerConstants` (flag-gated,
+`-Dxvm.registration.checkOwnership=true`) that reports - once per distinct call site, and does NOT
+throw - a component being registered into a pool that does not own it. It ENUMERATES rather than
+enforces, because the question was "how many places do this" and throwing answers only "at least
+one".
+
+**Result, stable across 3- and 8-iteration runs: two sites, and NEITHER is the one predicted.**
+
+```
+ModuleStructure owned by net.xtclang.org rewritten into TestSimple
+   <- org.xvm.compiler.Compiler.generateCode  <- XtcEngine.runPhase <- compileInternal
+   <- org.xvm.asm.FileStructure.writeTo       <- writeTo            <- XtcEngine.assemble
+```
+
+The prediction was `linkModules`, which registers a repo-loaded module into the compile's pool. That
+line is real and is on master, but it is not what fires. Both live sites are the ORDINARY
+registration walk of the compile's own `FileStructure` - during code generation, and again during
+the write. **Designing the fix from the one site found by reading would have fixed a site that is
+not the problem.** That is the whole argument for enumerating first.
+
+**Master classification, checked one by one - NONE of the parallel-compiler findings is a master bug.**
+
+| finding | on master? | filed |
+| --- | --- | --- |
+| deadlock in `reserveUsage` | no - `grep -c reserveUsage` on master is 0 | nothing to file |
+| self-recursive `checkAssemblyOwnership` | no - the check does not exist on master | nothing to file |
+| size-based fixed point in `writeTo` | no - master does ONE `reregisterConstants` pass, no loop | nothing to file |
+| shared-structure lost update | no - needs concurrent compiles AND T1 sharing, neither on master | nothing to file |
+| `addChild` does not reparent | **yes, identical shape** | **E54**, as an observation, not a defect |
+
+The last one is the only master-visible shape, and it is filed deliberately as an observation:
+master is protected by the copy-per-compile contract, so no failing behaviour there has been
+demonstrated, and filing it as a bug would be speculation dressed as a report.
+
+**The mechanism, now exact.** `FileStructure.addChild` puts a `ModuleStructure` into `m_moduleById`
+and never calls `setContaining(this)` - unlike `Component.addChild`, which does. So a library module
+linked into a compile's `FileStructure` is reachable through that file's `children()` while still
+reporting the LIBRARY's `FileStructure` as its container. The compile's registration walk then
+reaches it and rewrites its constant fields into the compile's pool, twice per compile. Two
+concurrent compiles do that to the same object: lost update, and the loser assembles a structure
+stamped with the winner's constants.
+
+**What this changes about the fix.** It is not "stop `linkModules` mutating". The candidates are now:
+
+1. **Reparent or copy at the boundary** - a module entering a compile's `FileStructure` becomes that
+   file's, by copy. Restores the ownership master relies on; costs a copy per dependency per compile,
+   not a copy of the library.
+2. **Skip what you do not own** - `registerChildrenConstants` skips a child whose `getContaining()`
+   is not this structure. Three lines, and it states the invariant exactly. Needs checking against
+   what the compiled file is supposed to CONTAIN: `FileStructure.children()` feeds `assembleChildren`,
+   so skipping registration for a child that is nonetheless written would trade one bug for another.
+3. **Serialize** - still rejected, for the reason recorded above.
+
+Option 2 is the cheapest and the most likely to be right, and it is NOT safe to apply without first
+answering what the output file is meant to contain for a linked dependency. That question is open.
+
 ### ROOT-CAUSED 2026-09-10: mode 1 is a lost update on SHARED library structures
 
 Two findings, and the first is why the second took so long.

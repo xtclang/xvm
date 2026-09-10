@@ -4646,6 +4646,69 @@ public class ConstantPool
     private static final ThreadLocal<ConstantPool> ASSEMBLING = new ThreadLocal<>();
 
     /**
+     * True iff registration should verify that it only rewrites structures the target pool OWNS.
+     *
+     * <p>Off by default; {@code -Dxvm.registration.checkOwnership=true} turns it on. This is an
+     * ENUMERATOR, not an enforcer: it records each distinct call site once and keeps going, because
+     * the question it exists to answer is "how many places do this", and throwing would answer only
+     * "at least one". Some hits are legitimate - a merge or bundle transfers ownership on purpose -
+     * so the output is a list to classify, not a list of bugs.</p>
+     */
+    public static final boolean CHECK_REGISTRATION_OWNERSHIP =
+            Boolean.getBoolean("xvm.registration.checkOwnership");
+
+    /**
+     * Distinct call sites already reported by {@link #checkRegistrationOwnership}. Static mutable
+     * state, deliberately: it is diagnostic-only, unreachable unless the flag above is set, and its
+     * whole purpose is to survive across the compiles being observed.
+     */
+    private static final Set<String> REGISTRATION_SITES = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Report - once per call site - a component being registered into a pool that does not own it.
+     *
+     * <p>Registration rewrites a component's constant fields in place ({@code m_constId =
+     * pool.register(m_constId)}), so doing it to a structure another owner shares is a lost update
+     * waiting for a second thread. Master avoids this by giving every compile its own copy of what
+     * it compiles against; this check exists to find the places that assumption has been dropped.</p>
+     *
+     * @param component  the component whose constants are about to be rewritten
+     * @param pool       the pool they are being rewritten into
+     */
+    public static void checkRegistrationOwnership(Component component, ConstantPool pool) {
+        ConstantPool poolOwner;
+        try {
+            poolOwner = component.getConstantPool();
+        } catch (RuntimeException | StackOverflowError e) {
+            // a structure still being assembled into its parent has no owner to ask for yet
+            return;
+        }
+        if (poolOwner == pool) {
+            return;
+        }
+
+        var sb = new StringBuilder();
+        StackWalker.getInstance().walk(frames -> {
+            frames.map(f -> f.getClassName() + "." + f.getMethodName())
+                    .filter(sFrame -> sFrame.startsWith("org.xvm"))
+                    .filter(sFrame -> !sFrame.endsWith("checkRegistrationOwnership"))
+                    .dropWhile(sFrame -> sFrame.endsWith("registerConstants")
+                                      || sFrame.endsWith("registerChildrenConstants")
+                                      || sFrame.endsWith("registerChildConstants"))
+                    .limit(3)
+                    .forEach(sFrame -> sb.append("\n        <- ").append(sFrame));
+            return null;
+        });
+
+        String sSite = sb.toString();
+        if (REGISTRATION_SITES.add(sSite)) {
+            System.err.println("REGISTRATION-OWNERSHIP: " + component.getClass().getSimpleName()
+                    + " owned by " + poolOwner.describeOwner()
+                    + " rewritten into " + pool.describeOwner() + sSite);
+        }
+    }
+
+    /**
      * True iff assembly should verify that every position it writes belongs to the pool being
      * written. Off by default because {@code getPosition} is hot; on, it turns a malformed module
      * into an immediate, attributable failure.
