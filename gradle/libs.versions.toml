@@ -36,6 +36,7 @@ download = "5.7.0"
 foojay-resolver = "1.0.0"
 gradle-portal-publish = "2.1.1"
 palantir-git-version = "5.1.0"
+spotless = "8.10.2"
 vanniktech-maven-publish = "0.37.0"
 
 # =============================================================================
@@ -116,6 +117,7 @@ download = { id = "de.undercouch.download", version.ref = "download" }
 foojay-resolver = { id = "org.gradle.toolchains.foojay-resolver", version.ref = "foojay-resolver" }
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
 palantir-git-version = { id = "com.palantir.git-version", version.ref = "palantir-git-version" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 vanniktech-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }
 
 # =============================================================================
