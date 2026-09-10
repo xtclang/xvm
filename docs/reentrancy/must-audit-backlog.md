@@ -371,9 +371,27 @@ a library-pure TypeInfo has nothing to rebuild against.
 -> layerOnMethods`, plus a keyed cache to replace a field. That is a refactor, not an edit, and it
 should be started fresh rather than tacked onto the end of a long session.
 
-**Do NOT start it by threading a pool parameter.** That is the obvious move and it fixes the smaller
-half - constants land in the right tier - while leaving request-derived TypeInfos cached on library
-types, which is the half that actually leaks. Decide the cache keying first.
+**Pass ownership explicitly - but pass a TIER, not a bare pool.** Explicit ownership is the right
+principle and every defect on this board argues for it: `addChild` left the container implicit,
+`layerOnMethods` leaves the intern target implicit (`getConstantPool()`), the TypeInfo caches leave
+lifetime implicit, and `checkValidPools` left even the QUESTION implicit. In each the code asked an
+object "who owns you?" instead of being told "this is who owns this."
+
+The caveat is narrower than "do not thread a pool", and it matters: a pool parameter answers only
+half of ownership.
+
+- WHERE DOES THIS LIVE - the pool. A pool parameter answers this.
+- WHO MAY SEE IT, AND WHEN IS IT DISCARDED - the tier. A pool parameter does not.
+
+Threading a pool into `layerOnMethods` interns the derived MethodConstants into the request pool -
+and then stores the resulting MethodInfo in the LIBRARY TypeInfo's `f_mapMethods` anyway. The library
+now holds request-owned constants and the leak is unchanged, possibly identical. The code reads as
+fixed, the measurement does not move, and the natural conclusion - "that was not the cause" - is
+wrong. That is the trap, not the parameter.
+
+So thread a request/tier context, and let it answer both: intern here, cache here, and discard the
+whole tier at the end. That last part is what makes reclamation a pointer drop instead of a leak
+hunt.
 
 ### ROOT OF THE ROOT 2026-09-10: `register` declines a foreign type and returns it, and the caller keeps it
 
