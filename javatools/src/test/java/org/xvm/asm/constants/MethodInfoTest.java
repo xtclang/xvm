@@ -264,7 +264,8 @@ public class MethodInfoTest {
             var futures = IntStream.range(0, 8)
                     .mapToObj(i -> executor.submit(() -> {
                         start.await();
-                        return owned.ensureOptimizedMethodChain(info);
+                        // unwrap: the identity being asserted is the chain's, not a per-call Optional's
+                        return owned.ensureOptimizedMethodChain(info).orElseThrow();
                     }))
                     .toList();
 

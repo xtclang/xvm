@@ -10,6 +10,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import java.util.function.Predicate;
@@ -1275,7 +1276,8 @@ public class PropertyInfo
      * @param infoType  the enclosing TypeInfo
      * @param idNested  the nested id of this property info (null for "top level" properties)
      *
-     * @return the method chain iff the property exists; otherwise null
+     * @return the getter chain, never null and never absent - this property exists, so a chain is
+     *         always built for it (possibly empty). Absence is TypeInfo's answer, not this one.
      */
     public FrozenArray<MethodBody> ensureOptimizedGetChain(TypeInfo infoType, PropertyConstant idNested) {
         // the cache holds the FROZEN form: wrapping per call would allocate on a hot path and
@@ -1463,7 +1465,7 @@ public class PropertyInfo
      */
     protected MethodBody[] augmentPropertyChain(MethodBody[] chain, TypeInfo infoType,
             MethodConstant idMethod) {
-        if (chain == null || chain.length == 0) {
+        if (chain.length == 0) {
             if (isNative()) {
                 chain = new MethodBody[] {
                     new MethodBody(idMethod, idMethod.getSignature(),
@@ -1527,15 +1529,9 @@ public class PropertyInfo
 
         return isDelegating()
                 ? createDelegatingChain(infoType, idGet)
-                : augmentPropertyChain(rawChain(infoType.getOptimizedMethodChain(idGet)), infoType, idGet);
+                : augmentPropertyChain(unwrapChain(infoType.getOptimizedMethodChain(idGet)), infoType, idGet);
     }
 
-    /**
-     * @param chain  a method chain, or null when the method is absent
-     *
-     * @return the chain's storage for read-only use, or null - the null MUST survive, because the
-     *         consumers treat it as "no such method" rather than as an empty chain
-     */
     /**
      * @param chain  a freshly built accessor chain
      *
@@ -1546,8 +1542,15 @@ public class PropertyInfo
         return chain.length == 0 ? MethodBody.NO_BODIES_FROZEN : FrozenArray.adopt(chain);
     }
 
-    private static MethodBody[] rawChain(FrozenArray<MethodBody> chain) {
-        return chain == null ? null : chain.unsafeArray();
+    /**
+     * @param chain  an accessor's underlying method chain, absent if that method does not exist
+     *
+     * @return the chain's storage for read-only use, empty if absent - the one caller,
+     *         {@link #augmentPropertyChain}, synthesizes the same body either way, so the two
+     *         states need not stay apart past this point
+     */
+    private static MethodBody[] unwrapChain(Optional<FrozenArray<MethodBody>> chain) {
+        return chain.map(FrozenArray::unsafeArray).orElse(MethodBody.NO_BODIES);
     }
 
     private MethodBody[] buildOptimizedSetChain(TypeInfo infoType, PropertyConstant idNested) {
@@ -1558,7 +1561,7 @@ public class PropertyInfo
 
         return isDelegating()
                 ? createDelegatingChain(infoType, idSet)
-                : augmentPropertyChain(rawChain(infoType.getOptimizedMethodChain(idSet)), infoType, idSet);
+                : augmentPropertyChain(unwrapChain(infoType.getOptimizedMethodChain(idSet)), infoType, idSet);
     }
 
     /**

@@ -4,6 +4,7 @@ package org.xvm.asm.constants;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
@@ -555,41 +556,57 @@ public abstract sealed class TypeInfo
      */
     public abstract MethodInfo getMethodByNestedId(Nid nid, boolean fRuntime);
 
+    // ----- optimized call chains ------------------------------------------------------------
+    //
+    // THE CONVENTION, stated once for all four accessors below.
+    //
+    // "The member does not exist" and "the member exists and its chain is empty" are DIFFERENT
+    // answers, and callers act on the difference: PropertyComposition falls back to the Ref/Var
+    // class when a chain is absent, and delivers an empty chain as-is when it is present.
+    //
+    //   absent            -> Optional.empty()
+    //   present and empty -> Optional.of(MethodBody.NO_BODIES_FROZEN)
+    //
+    // Optional rather than a nullable return so the compiler enforces the check. These are cold
+    // paths - every caller is a cache-miss lambda or TypeInfo construction - so the wrapper costs
+    // nothing that matters. The previous nullable form read as non-null at a new call site, and
+    // the resulting NPE surfaced as "Service terminated: ..." several layers from its cause.
+
     /**
      * Obtain the method chain for the specified method.
      *
      * @param id  the MethodConstant for the method
      *
-     * @return the method chain iff the method exists; otherwise null
+     * @return the method chain, or empty iff the method does not exist
      */
-    public abstract FrozenArray<MethodBody> getOptimizedMethodChain(MethodConstant id);
+    public abstract Optional<FrozenArray<MethodBody>> getOptimizedMethodChain(MethodConstant id);
 
     /**
      * Obtain the method chain for the specified method.
      *
      * @param nid  the nested id for the method
      *
-     * @return the method chain iff the method exists; otherwise null
+     * @return the method chain, or empty iff the method does not exist
      */
-    public abstract FrozenArray<MethodBody> getOptimizedMethodChain(Nid nid);
+    public abstract Optional<FrozenArray<MethodBody>> getOptimizedMethodChain(Nid nid);
 
     /**
      * Obtain the method chain for the property getter for the specified property id.
      *
      * @param id  the property id
      *
-     * @return the method chain iff the property exists; otherwise null
+     * @return the getter chain, or empty iff the property does not exist
      */
-    public abstract FrozenArray<MethodBody> getOptimizedGetChain(PropertyConstant id);
+    public abstract Optional<FrozenArray<MethodBody>> getOptimizedGetChain(PropertyConstant id);
 
     /**
      * Obtain the method chain for the property setter for the specified property id.
      *
      * @param id  the property id
      *
-     * @return the method chain iff the property exists and is a Var; otherwise null
+     * @return the setter chain, or empty iff the property does not exist or is not a Var
      */
-    public abstract FrozenArray<MethodBody> getOptimizedSetChain(PropertyConstant id);
+    public abstract Optional<FrozenArray<MethodBody>> getOptimizedSetChain(PropertyConstant id);
 
     /**
      * Find a named method or function that best matches the specified requirements.

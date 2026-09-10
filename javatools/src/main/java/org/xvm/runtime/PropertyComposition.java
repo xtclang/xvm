@@ -11,7 +11,6 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
-import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
@@ -30,7 +29,6 @@ import org.xvm.runtime.template.reflect.xVar;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.util.FrozenArray;
 import org.xvm.util.Lazy;
 
 
@@ -228,9 +226,13 @@ public final class PropertyComposition
 
                 TypeInfo   infoParent = getParentInfo();
                 MethodInfo info       = infoParent.getMethodByNestedId(idNested.getNestedIdentity(), true);
+                // a capped chain can redirect to a method that is not there; that is the same
+                // "not found here" answer as a missing MethodInfo, so it defers the same way
                 return info == null
                         ? f_clzRef.getMethodCallChain(nid)
-                        : new CallChain(info.ensureOptimizedMethodChain(infoParent).unsafeArray());
+                        : info.ensureOptimizedMethodChain(infoParent)
+                                .map(CallChain::new)
+                                .orElseGet(() -> f_clzRef.getMethodCallChain(nid));
             });
     }
 
@@ -249,10 +251,11 @@ public final class PropertyComposition
                         : (PropertyConstant) idBase.appendNestedIdentity(
                                 idBase.getConstantPool(), id.getNestedIdentity());
 
-                FrozenArray<MethodBody> chain = getParentInfo().getOptimizedGetChain(idNested);
-                return chain == null
-                        ? f_clzRef.getPropertyGetterChain(id)
-                        : CallChain.createPropertyCallChain(chain.unsafeArray());
+                // absence is load-bearing here: no accessor on the parent means fall back to the
+                // Ref/Var class, whereas a present-but-empty chain is used as it stands
+                return getParentInfo().getOptimizedGetChain(idNested)
+                        .map(CallChain::createPropertyCallChain)
+                        .orElseGet(() -> f_clzRef.getPropertyGetterChain(id));
             });
     }
 
@@ -270,10 +273,10 @@ public final class PropertyComposition
                         : (PropertyConstant) idBase.appendNestedIdentity(
                                 idBase.getConstantPool(), id.getNestedIdentity());
 
-                FrozenArray<MethodBody> chain = getParentInfo().getOptimizedSetChain(idNested);
-                return chain == null
-                        ? f_clzRef.getPropertySetterChain(id)
-                        : new CallChain(chain.unsafeArray());
+                // see getPropertyGetterChain: absent means "defer to the Ref/Var class"
+                return getParentInfo().getOptimizedSetChain(idNested)
+                        .map(CallChain::new)
+                        .orElseGet(() -> f_clzRef.getPropertySetterChain(id));
             });
     }
 

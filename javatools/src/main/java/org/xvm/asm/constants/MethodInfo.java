@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import java.util.function.Predicate;
@@ -1155,9 +1156,11 @@ public class MethodInfo
      *
      * @param infoType  the TypeInfo that contains this method
      *
-     * @return a chain of bodies, each representing functionality to invoke, in their "super" order
+     * @return a chain of bodies, each representing functionality to invoke, in their "super"
+     *         order, or empty iff this is a capped chain whose redirect target does not exist -
+     *         see the convention note on {@link TypeInfo#getOptimizedMethodChain(MethodConstant)}
      */
-    public FrozenArray<MethodBody> ensureOptimizedMethodChain(TypeInfo infoType) {
+    public Optional<FrozenArray<MethodBody>> ensureOptimizedMethodChain(TypeInfo infoType) {
         FrozenArray<MethodBody> chain = m_aBodyResolved;
         if (chain == null) {
             FrozenArray<MethodBody> chainRaw = getChain();
@@ -1192,7 +1195,7 @@ public class MethodInfo
             }
         }
 
-        return chain;
+        return Optional.of(chain);
     }
 
     /**

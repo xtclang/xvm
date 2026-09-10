@@ -10,6 +10,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -1638,23 +1639,23 @@ public final class TypeInfoReal
     }
 
     @Override
-    public FrozenArray<MethodBody> getOptimizedMethodChain(MethodConstant id) {
+    public Optional<FrozenArray<MethodBody>> getOptimizedMethodChain(MethodConstant id) {
         MethodInfo info = getMethodById(id, true);
         return info == null
-                ? null
+                ? Optional.empty()
                 : info.ensureOptimizedMethodChain(this);
     }
 
     @Override
-    public FrozenArray<MethodBody> getOptimizedMethodChain(Nid nid) {
+    public Optional<FrozenArray<MethodBody>> getOptimizedMethodChain(Nid nid) {
         MethodInfo info = getMethodByNestedId(nid, true);
         return info == null
-                ? null
+                ? Optional.empty()
                 : info.ensureOptimizedMethodChain(this);
     }
 
     @Override
-    public FrozenArray<MethodBody> getOptimizedGetChain(PropertyConstant id) {
+    public Optional<FrozenArray<MethodBody>> getOptimizedGetChain(PropertyConstant id) {
         PropertyInfo prop = findProperty(id, true);
         if (prop == null) {
             TypeInfo infoOrigin = findPropertyOrigin(id);
@@ -1663,12 +1664,12 @@ public final class TypeInfoReal
             }
         }
         return prop == null
-                ? null
-                : prop.ensureOptimizedGetChain(this, null);
+                ? Optional.empty()
+                : Optional.of(prop.ensureOptimizedGetChain(this, null));
     }
 
     @Override
-    public FrozenArray<MethodBody> getOptimizedSetChain(PropertyConstant id) {
+    public Optional<FrozenArray<MethodBody>> getOptimizedSetChain(PropertyConstant id) {
         PropertyInfo prop = findProperty(id, true);
         if (prop == null) {
             TypeInfo infoOrigin = findPropertyOrigin(id);
@@ -1677,8 +1678,8 @@ public final class TypeInfoReal
             }
         }
         return prop == null
-                ? null
-                : prop.ensureOptimizedSetChain(this, null);
+                ? Optional.empty()
+                : Optional.of(prop.ensureOptimizedSetChain(this, null));
     }
 
     @Override
@@ -2264,10 +2265,13 @@ public final class TypeInfoReal
     private String renderMethod(Entry<MethodConstant, MethodInfo> entry, boolean fRuntime, ConstantPool pool) {
         var method = entry.getValue();
         if (fRuntime) {
-            var chain = method.ensureOptimizedMethodChain(this);
-            method = chain.isEmpty()
+            // a display: absent and present-but-empty both render as the Native placeholder
+            MethodBody[] chain = method.ensureOptimizedMethodChain(this)
+                    .map(FrozenArray::unsafeArray)
+                    .orElse(MethodBody.NO_BODIES);
+            method = chain.length == 0
                     ? MethodInfo.create(new MethodBody(method.getHead(), Implementation.Native), 0)
-                    : MethodInfo.create(chain.unsafeArray(), 0);
+                    : MethodInfo.create(chain, 0);
         }
         String sVirtual = f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool, null))
                 ? "(v) " : "";

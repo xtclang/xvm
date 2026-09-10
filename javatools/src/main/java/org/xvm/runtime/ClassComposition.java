@@ -12,7 +12,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.util.FrozenArray;
 import org.xvm.util.Severity;
 
 import org.xvm.asm.Constants.Access;
@@ -357,10 +356,11 @@ public final class ClassComposition
         TypeInfo info = isStruct()
                 ? f_typeStructure.ensureTypeInfo(ErrorListener.RUNTIME)
                 : f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME);
-        // NOTE: getOptimizedMethodChain answers null for an absent method, and CallChain's
-        // constructor turns that into NO_BODIES - so the null must survive to reach it
-        FrozenArray<MethodBody> chain = info.getOptimizedMethodChain(nidMethod);
-        return new CallChain(chain == null ? null : chain.unsafeArray());
+        // methods collapse the distinction ON PURPOSE, unlike the two property accessors below:
+        // getMethodCallChain never answers null, so an absent method is delivered as an empty
+        // chain and the caller's invoke fails on the empty chain rather than on a null
+        return new CallChain(info.getOptimizedMethodChain(nidMethod)
+                .orElse(MethodBody.NO_BODIES_FROZEN));
     }
 
     @Override
@@ -368,7 +368,7 @@ public final class ClassComposition
         CallChain chain = f_mapGetters.get(idProp);
         return chain == null
                 ? ensureGetterChain(idProp)
-                : chain == NIL_CHAIN ? null : chain;
+                : chain == CHAIN_ABSENT ? null : chain;
     }
 
     /**
@@ -398,15 +398,14 @@ public final class ClassComposition
             CallChain chain = fShared
                     ? f_mapGetters.computeIfAbsent(idProp, this::computeGetterChain)
                     : computeGetterChain(idProp);
-            return chain == NIL_CHAIN ? null : chain;
+            return chain == CHAIN_ABSENT ? null : chain;
         }
     }
 
     private CallChain computeGetterChain(PropertyConstant id) {
-        FrozenArray<MethodBody> aBody = f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME).getOptimizedGetChain(id);
-        return aBody == null
-                ? NIL_CHAIN
-                : CallChain.createPropertyCallChain(aBody.unsafeArray());
+        return f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME).getOptimizedGetChain(id)
+                .map(CallChain::createPropertyCallChain)
+                .orElse(CHAIN_ABSENT);
     }
 
     @Override
@@ -414,7 +413,7 @@ public final class ClassComposition
         CallChain chain = f_mapSetters.get(idProp);
         return chain == null
                 ? ensurePropertySetterChain(idProp)
-                : chain == NIL_CHAIN ? null : chain;
+                : chain == CHAIN_ABSENT ? null : chain;
     }
 
     /**
@@ -440,15 +439,14 @@ public final class ClassComposition
             CallChain chain = fShared
                     ? f_mapSetters.computeIfAbsent(idProp, this::computeSetterChain)
                     : computeSetterChain(idProp);
-            return chain == NIL_CHAIN ? null : chain;
+            return chain == CHAIN_ABSENT ? null : chain;
         }
     }
 
     private CallChain computeSetterChain(PropertyConstant id) {
-        FrozenArray<MethodBody> aBody = f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME).getOptimizedSetChain(id);
-        return aBody == null
-                ? NIL_CHAIN
-                : CallChain.createPropertyCallChain(aBody.unsafeArray());
+        return f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME).getOptimizedSetChain(id)
+                .map(CallChain::createPropertyCallChain)
+                .orElse(CHAIN_ABSENT);
     }
 
     @Override
@@ -1036,7 +1034,14 @@ public final class ClassComposition
     private final Lazy.Bound<ClassComposition, MethodStructure> f_methodInit;
 
     /**
-     * Marker for a cached null {@link CallChain}.
+     * Cache sentinel standing for "this property has no such accessor".
+     *
+     * <p>It exists only because {@link ConcurrentHashMap} cannot store a null value, so the two
+     * accessor caches need something to memoize a negative answer as. It never leaves this class:
+     * every read maps it straight back to null, which is what
+     * {@link TypeComposition#getPropertyGetterChain} promises for an absent accessor. It is NOT a
+     * third state alongside absent and empty - an empty chain is a real {@link CallChain} over
+     * {@link MethodBody#NO_BODIES_FROZEN} and is cached and returned as itself.</p>
      */
-    private static final CallChain NIL_CHAIN = new CallChain(MethodBody.NO_BODIES);
+    private static final CallChain CHAIN_ABSENT = new CallChain(MethodBody.NO_BODIES_FROZEN);
 }

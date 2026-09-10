@@ -25,25 +25,33 @@ import org.xvm.runtime.template.xService.ServiceHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
+import org.xvm.util.FrozenArray;
+
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * Represents a chain of invocation.
  */
 public class CallChain {
     /**
-     * Construct a CallChain for an array of method bodies.
+     * Construct a CallChain over a chain of method bodies.
+     *
+     * @param aMethods  the chain; may be empty ({@link MethodBody#NO_BODIES_FROZEN}), never null
+     *
+     * <p>Null is rejected rather than absorbed. Quietly mapping it to the empty chain is what
+     * erased the difference between "no such method" and "the method's chain is empty" - the
+     * caller holds that distinction and must decide it where the answer still means something.</p>
      */
-    public CallChain(MethodBody[] aMethods) {
-        f_aMethods = aMethods == null
-                ? MethodBody.NO_BODIES
-                : aMethods;
+    public CallChain(FrozenArray<MethodBody> aMethods) {
+        f_aMethods = requireNonNull(aMethods);
     }
 
     /**
      * Construct a CallChain for a lambda or a private method.
      */
     public CallChain(MethodStructure method) {
-        f_aMethods = new MethodBody[] {new MethodBody(method)};
+        f_aMethods = FrozenArray.adopt(new MethodBody[] {new MethodBody(method)});
     }
 
     // ----- chain access ---------------------------------------------------------------------------
@@ -64,7 +72,7 @@ public class CallChain {
      * to fall back on.</p>
      */
     protected MethodBody head() {
-        return f_aMethods.length == 0 ? null : f_aMethods[0];
+        return f_aMethods.isEmpty() ? null : f_aMethods.get(0);
     }
 
     /**
@@ -73,21 +81,21 @@ public class CallChain {
      * @return the body at that depth, or null if the depth is outside the chain
      */
     protected MethodBody bodyAt(int nDepth) {
-        return nDepth < 0 || nDepth >= f_aMethods.length ? null : f_aMethods[nDepth];
+        return nDepth < 0 || nDepth >= f_aMethods.size() ? null : f_aMethods.get(nDepth);
     }
 
     /**
      * @return the chain depth
      */
     public int getDepth() {
-        return f_aMethods.length;
+        return f_aMethods.size();
     }
 
     /**
      * @return true iff the chain is empty
      */
     public boolean isEmpty() {
-        return f_aMethods.length == 0;
+        return f_aMethods.isEmpty();
     }
 
     /**
@@ -186,8 +194,7 @@ public class CallChain {
      */
     public int invoke(Frame frame, ObjectHandle hTarget, int iReturn) {
         if (isNative()) {
-            return hTarget.getTemplate().
-                invokeNativeN(frame, getTop(), hTarget, Utils.OBJECTS_NONE, iReturn);
+            return hTarget.invokeNativeN(frame, getTop(), Utils.OBJECTS_NONE, iReturn);
         }
 
         ObjectHandle[] ahVar = new ObjectHandle[getMaxVars()];
@@ -200,8 +207,7 @@ public class CallChain {
      */
     public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         if (isNative()) {
-            return hTarget.getTemplate().
-                invokeNative1(frame, getTop(), hTarget, hArg, iReturn);
+            return hTarget.invokeNative1(frame, getTop(), hArg, iReturn);
         }
 
         ObjectHandle[] ahVar = new ObjectHandle[Math.max(getMaxVars(), 1)];
@@ -215,8 +221,7 @@ public class CallChain {
      */
     public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn) {
         if (isNative()) {
-            return hTarget.getTemplate().
-                invokeNativeNN(frame, getTop(), hTarget, new ObjectHandle[]{hArg}, aiReturn);
+            return hTarget.invokeNativeNN(frame, getTop(), new ObjectHandle[]{hArg}, aiReturn);
         }
 
         ObjectHandle[] ahVar = new ObjectHandle[Math.max(getMaxVars(), 1)];
@@ -293,8 +298,8 @@ public class CallChain {
     /**
      * Create a CallChain representing a property access.
      */
-    public static CallChain createPropertyCallChain(MethodBody[] aMethods) {
-        return aMethods.length == 1 && aMethods[0].getImplementation() == Implementation.Field
+    public static CallChain createPropertyCallChain(FrozenArray<MethodBody> aMethods) {
+        return aMethods.size() == 1 && aMethods.get(0).getImplementation() == Implementation.Field
                 ? new FieldAccessChain(aMethods)
                 : new CallChain(aMethods);
     }
@@ -538,7 +543,7 @@ public class CallChain {
      */
     public static class FieldAccessChain
             extends CallChain {
-        public FieldAccessChain(MethodBody[] aMethods) {
+        public FieldAccessChain(FrozenArray<MethodBody> aMethods) {
             super(aMethods);
 
             // Validate the constructor argument directly. Calling isField() here
@@ -601,7 +606,7 @@ public class CallChain {
             extends CallChain {
         public VirtualConstructorChain(ConstantPool pool, MethodConstant idConstructor,
                                        ObjectHandle hTarget) {
-            super((MethodBody[]) null);
+            super(MethodBody.NO_BODIES_FROZEN);
 
             TypeComposition clzTarget  = hTarget.getComposition();
             TypeConstant    typeTarget = clzTarget.getType();
@@ -696,7 +701,7 @@ public class CallChain {
     public static class ExceptionChain
             extends CallChain {
         public ExceptionChain(ExceptionHandle hException) {
-            super(MethodBody.NO_BODIES);
+            super(MethodBody.NO_BODIES_FROZEN);
 
             f_hException = hException;
         }
@@ -753,7 +758,7 @@ public class CallChain {
 
     @Override
     public String toString() {
-        return f_aMethods.length == 0
+        return f_aMethods.isEmpty()
             ? "empty"
             : head().getIdentity().getSignature().getValueString() +
                 (isNative()
@@ -767,16 +772,17 @@ public class CallChain {
     /**
      * @return true iff the specified chain bodies represent a field
      */
-    private static boolean isFieldChain(MethodBody[] aMethods) {
-        return aMethods != null &&
-               aMethods.length > 0 &&
-               aMethods[0].getImplementation() == Implementation.Field;
+    private static boolean isFieldChain(FrozenArray<MethodBody> aMethods) {
+        return !aMethods.isEmpty() &&
+               aMethods.get(0).getImplementation() == Implementation.Field;
     }
 
     /**
-     * An array of method bodies.
+     * The chain of method bodies. Immutable: a CallChain is cached per composition and handed to
+     * every caller that dispatches through it, so the bodies must not be writable through it.
+     * Chains built from a TypeInfo REUSE that TypeInfo's frozen array rather than re-wrapping it.
      */
-    protected final MethodBody[] f_aMethods;
+    protected final FrozenArray<MethodBody> f_aMethods;
 
     /**
      * Cached response for "isAtomic()" API.
