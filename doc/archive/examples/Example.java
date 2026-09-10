@@ -64,7 +64,6 @@ Int a=0;
 Int b=0;
 Int c=0;
 
-
 (Int a, Int b, Int c) = (0, 0, 0);
 
 (c, String d) = foo();

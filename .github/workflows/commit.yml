@@ -422,6 +422,7 @@ jobs:
                 ${{ env.GRADLE_CACHE_INSPECT }}
                 # Combine standard options with optional extra options
                 GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
+                # Root check includes spotlessCheck; CI disables the local automatic spotlessApply.
                 BUILD_TASKS="distZip check :plugin:compileJava"
                 BUILD_PROPS="-Porg.xtclang.java.test.failFast=true -Porg.xtclang.plugin.java.lint=true"
                 BUILD_JVM_ARGS=""

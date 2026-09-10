@@ -580,7 +580,6 @@ public class ArrayᐸBitᐳ
 
     // ----- Array internals -----------------------------------------------------------------------
 
-
     @Override
     protected java.lang.String $elementToString(Ctx ctx, long index) {
         int i = getElement$pi(ctx, index);
@@ -781,7 +780,6 @@ public class ArrayᐸBitᐳ
         return (BigInteger.valueOf(Integer.toUnsignedLong(nHigh))).shiftLeft(32).
                 add(BigInteger.valueOf(Integer.toUnsignedLong(nLow)));
     }
-
 
     // ---- Iterator implementation ----------------------------------------------------------------
 

@@ -421,7 +421,6 @@ mixin M1 into I2
     @Override Void foo();                           // ok because "into" should lay down an implicit foo()
     }
 
-
 // ----- conditional returns
 
 conditional Int indexOf(Char ch);
@@ -467,7 +466,6 @@ Alternatively:
 interface Module
     {
     Boolean supports(ApplicationStyle style);
-
 
     }
 
@@ -527,7 +525,6 @@ static service FAService
         }
     }
 
-
 // --- inference
 
 // legal of course
@@ -573,8 +570,6 @@ Int i = zoo();                      // error
 Int i = foo();      // sure, this is OK (String is discarded)
 Int i = bar();      // error
 
-
-
 // precision and conversions
 
 Int x = 4/3;        // 1
@@ -587,7 +582,6 @@ Int sqkm = (PI * (r * r) / (1000 * 1000)).to<Int>();    // ok iff r is of FP typ
 
 // how to handle this one?
 Int zero = (1/3) * 10;
-
 
 // --- switch expression
 
@@ -883,7 +877,6 @@ p.x                     // Int
 p.&x                    // bound property, i.e. Ref/Var: Var<Int>
 p.&x.&get()             // Function
 
-
 Class c = Point;
 Boolean f = c.isAbstract;
 // could have also said:
@@ -907,7 +900,6 @@ Boolean f3() {...}
 // or ...
 function void() f = f3() ? f1 : f2;
 f();
-
 
 void f5(Int n) {...}
 void f6(String s) {...}
@@ -952,7 +944,6 @@ function Point (Int) pg = y -> new Point(bar(), y);
 function Point (Int) pg = new Point(bar(), ?);
 
 function Util (void) pu = &new Util();
-
 
 Method<C, <Int, Int, String>, <>> m  = C.foo(?, ?, ?);
 Method<C, <Int, Int, String>, <>> m2 = C.foo(<Int>?, <Int>?, <String>?);
@@ -1171,11 +1162,9 @@ if (ab1 < ab2) ...      // ... is this ok?
 @M1 Int mi2 = ..
 if (mi1 == mi2) {..}        // what does it mean?
 
-
 @M1 @M2 (A | B) mmab1 = ..
 @M1 @M2 (A | B) mmab2 = ..
 if (mmab1 == mmab2) ...     // ???
-
 
 (A | B) ab1 = ..
 (B | A) ba2 = ..
@@ -1371,7 +1360,6 @@ if (a != null)
             }
         }
 
-
 if (a != null && a.b != null && a.b.c == "hello") // could be re-written: if (a?.b?.c == "hello")
     {
     // do something
@@ -1484,7 +1472,6 @@ class B<T>
     C cFirst;           // B<T>.C<???>
     C<Int> c2;
     C<Int,String> c3;   // error (both compile time and verifier)
-
 
     class C<T2>         // B<T>.C<T2>
         {
@@ -1798,8 +1785,6 @@ if (foo())
 // what is the Assignment for "i" here? it must be "Assigned" (NOT AssignedOnce, since there are 2 points that assign i, even though not in this "path")
 }
 
-
-
 // example changes
 String s = ╔═════════════════════╗
            ║This could be any    ║
@@ -1811,7 +1796,6 @@ String s2 = ./template.jsp;     // same dir as this source file
 String s3 = /template.jsp;      // same dir as the module source file
 String s4 = /util/template.jsp; // relative to the module source file
 String s4 = $./Example12.x;     // this file
-
 
 // case "match" expressions
 switch (a,b,c)
@@ -1861,7 +1845,6 @@ val x: type = initializer
 // of a value that must be an instance of MyType; if it is determined to be effectively
 // final, then (&x) is a Ref<MyType>, which is a read-only holder of a MyType value
 MyType x = initializer;
-
 
 // this variable object (&y) is a Ref<MyType>, which is a read-only holder of a MyType
 // value (inferred from the initializer)
@@ -1958,7 +1941,6 @@ const Order
 
     List<Order> orderLines {...}
     }
-
 
 // --- "shared mutable" discussion
 
@@ -2234,7 +2216,6 @@ tag `string text ${expression} string text`
 //const char* p = "\xfff"; // error: hex escape sequence out of range
 const char* p = "\xff""f"; // OK: the literal is const char[3] holding {'\xff','f','\0'}
 
-
 // here's how it would look in Ecstasy:
 
 String s = `|<%@ taglib uri="/WEB-INF/jspwiki.tld" prefix="wiki" %>
@@ -2327,12 +2308,9 @@ String s = `|When she had a child, it had to be sent out to nurse. When he came 
          + `| haymaking during ...
 ; // this has to go on a new line, otherwise it's part of the raw string
 
-
 // downsides of this approach:
 // - trailing whitespace could be an issue (solution: use the file include syntax instead)
 // - when used with $, there is a number of rules that have to be ordered for precedence, such as escapes
-
-
 
 // -- IO thoughts
 
@@ -2403,7 +2381,6 @@ const Path implements Sequence<Path>
     Path add(String)
     Path add(Path)
 
-
 PathElement {Root, Parent, Current, Name}
 
 --
@@ -2447,7 +2424,6 @@ class C
     }
 
 function void(String) f = c.foo(_, 5);
-
 
 Matrix matrix = new Float16[5,6];
 Float16[?,?] matrix = new Float16[5,6];
@@ -2571,7 +2547,6 @@ if (c1.equals(c2))
     // ...
     }
 
-
 // ----- assumptions
 
 // 1) this and outer this's (assumption-safe) : "this", "this.outer", "this.outer.outer", etc.
@@ -2605,7 +2580,6 @@ Node
   |             |      |
   |--------------------|
 
-
 // so:
 // - every AST node could generate one or more assumptions (identity / assumption pairs)
 // - every AST node could invalidate one or more assumption identities
@@ -2635,7 +2609,6 @@ static boolean isDependent(String sDepId, String sId)
     {
     return sDepId.startsWith(sId) && (sDepId.length() == sId.length() || sDepId.charAt(sId.length()) == '.');
     }
-
 
 // so every expression (or maybe AST node):
 // - with respect to assumptions:
@@ -2671,7 +2644,6 @@ if (s != null)
     {
     // ...
     }
-
 
 interface Duck
     {

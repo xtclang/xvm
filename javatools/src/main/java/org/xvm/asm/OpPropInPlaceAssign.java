@@ -152,7 +152,6 @@ public abstract class OpPropInPlaceAssign
                 + regTarget.type().getValueString());
     }
 
-
     // ----- data fields ---------------------------------------------------------------------------
 
     protected int m_nTarget;

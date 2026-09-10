@@ -80,7 +80,6 @@ public class IntNBuilder extends IntNumberBuilder {
         boolean      isByteArray = paramType.isA(pool.typeByteArray());
         boolean      isString    = paramType.isA(pool.typeString());
 
-
         if (isString) {
             classBuilder.withMethodBody(jitName, jmd.standardMD, flags, code -> {
                 int    ctxSlot    = code.parameterSlot(jmd.optimizedCtx());

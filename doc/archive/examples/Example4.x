@@ -10,15 +10,12 @@ module x // module or package ..
   // long form embed
   embed [module] spring.vmware.com as spring;   // embed the entire module into package "spring"
 
-
-
   import rootpackage.secondpackage.ClassName
   import [package|class|interface|value|enum|mixin|trait|service] rootpackage.secondpackage.ClassName [as Name];
 
   import [module|package|class|interface|value|enum|mixin|trait|service] name.name.name [as name];
   ...
   }
-
 
 // -- ignore below for now
 

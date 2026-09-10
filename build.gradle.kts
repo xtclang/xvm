@@ -1,4 +1,6 @@
 import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
+import com.diffplug.gradle.spotless.SpotlessCheck
+import com.diffplug.spotless.LineEnding
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 
 /*
@@ -8,6 +10,44 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 plugins {
     alias(libs.plugins.xdk.build.aggregator)
     alias(libs.plugins.xdk.build.properties)
+    alias(libs.plugins.spotless)
+}
+
+// Repository code standards. Spotless attaches spotlessCheck to check.
+// Add future language-specific standards here as they are adopted.
+spotless {
+    format("javaAndXtc") {
+        // Cover the complete source tree, even when optional composite builds are disabled.
+        // New files are checked before staging; generated output and local worktrees are excluded.
+        target(fileTree(layout.projectDirectory) {
+            include("**/*.java", "**/*.x")
+            exclude(
+                "**/build/**", "**/out/**", "**/node_modules/**",
+                "**/.*/**"
+            )
+        })
+        // Accept LF and CRLF without imposing a repository-wide line-ending convention.
+        lineEndings = LineEnding.PRESERVE
+        trimTrailingWhitespace()
+        leadingTabsToSpaces(4)
+        // A remaining tab may be literal data: require an explicit repair rather than alter it.
+        forbidRegex("noTabs", "\t", "Literal tabs are forbidden; use spaces or a \\t escape in string literals.")
+        replaceRegex("consecutiveBlankLines", "(?m)^(?:\\h*\\n){2,}", "\n")
+        endWithNewline()
+    }
+}
+
+// Local check/build repairs formatting first; CI only verifies committed source.
+// An explicit spotlessCheck stays read-only in both environments.
+if (!providers.environmentVariable("CI").isPresent) {
+    val spotlessApply = tasks.named("spotlessApply")
+    tasks.named("check") {
+        dependsOn(spotlessApply)
+    }
+    // Order the actual per-format checks, not just their aggregate lifecycle task.
+    tasks.withType<SpotlessCheck>().configureEach {
+        mustRunAfter(spotlessApply)
+    }
 }
 
 // Root aggregator: version set automatically by properties plugin

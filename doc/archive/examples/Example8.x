@@ -59,7 +59,6 @@ Boolean innerClass;
 enum DeclarationZone {TopLevel, Class, Method}
 Zone    zone;
 
-
 Void foo()
     {
     Int i = 4;
@@ -72,7 +71,6 @@ Void foo()
             }
         }
     }
-
 
 module MyTopSecretCalc
     {
@@ -108,7 +106,6 @@ class Dohickey
     incorporates AnnoType2
     incorporates AnnoType(parm)
 
-
 class MyMap
     {
     static service MyEntry
@@ -122,7 +119,6 @@ class MyMap
         Void foo()
             {
             v = MyMap.this.bar();
-
 
             Int j = 4;
 
@@ -301,7 +297,6 @@ if (!C1 & !C2)
         implements I2
     }
 
-
 // import expansion
 
 import a.b.c; // c -> a.b.c
@@ -389,7 +384,6 @@ class D2 extends D
     // implicit D foo()
     }
 
-
 // parents and grandparents
 class B<T>
     {
@@ -423,7 +417,6 @@ class B<T>
         {
         Q someQ = array[i]; // Q here is a type, so someQ is NVAR of RegisterTypeConstant(0)
 
-
         Q q0 = q[0];
         Q q1 = q[1];
         if (q1 == q0) throw ISE();
@@ -434,7 +427,6 @@ class B<T>
     Animal a = extract(animals, 5);
     Object o = extract(animals, 5);
     Object o = extract<Object>(animals, 5);
-
 
     Node bar();             // "this.type".Node
 

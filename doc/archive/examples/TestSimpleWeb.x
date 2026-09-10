@@ -37,7 +37,6 @@ module TestSimpleWeb
         }
     }
 
-
 // =================================================================================================
 // somewhere else
 // =================================================================================================
@@ -48,7 +47,6 @@ module TestSimpleWeb
 mixin WebApp
         into Module
     {
-
 
     }
 
@@ -71,7 +69,6 @@ mixin GET    into Method {}
 mixin PUT    into Method {}
 mixin POST   into Method {}
 mixin DELETE into Method {}
-
 
 // =================================================================================================
 // somewhere else

@@ -18,7 +18,6 @@ module MyApp
         }
     }
 
-
 file
   module MyApp
     package Spring = springframework.vmware.org
@@ -27,7 +26,6 @@ file
       mmethod write
         method public/(Void)/(OutputStream)
     class OutputStream
-
 
 // --- futures & pass throughs
 
@@ -111,7 +109,6 @@ bar(foo1());    // VAR Int              ; #1
                 // VAR Int              ; #1
                 // INVOKE01 foo1, 1
 
-
 Array<@future Int> a = ...
 
 // ----
@@ -165,7 +162,6 @@ FutureRef<Int> fi = &i;                 // this is OK
 @future Int i2 = fi;    // is this OK?
 
 @future Int i3 = fi.createContinuation(i -> i);
-
 
 // what should this do?
 

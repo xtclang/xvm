@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.util.List;
 
 import java.util.concurrent.ConcurrentMap;
@@ -12,7 +11,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
-
 
 /**
  * Tests for {@link ConstantPool} thread-safety diagnostics.

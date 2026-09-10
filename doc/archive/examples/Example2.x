@@ -83,7 +83,6 @@ public class TraitExample
     S.O.print(v); // 2
     }
 
-
 value String(@ro char[] Chars)
     {
     foo
@@ -100,8 +99,6 @@ value String(@ro char[] Chars)
         int get() {...}
         }
     }
-
-
 
 -- this --
 
@@ -126,7 +123,6 @@ Point p = ...
 Property prop = p.&x;
 Method mGet = p.&x.&get;
 
-
 public class Whatever { void foo(); int foo(int x); void foo(String s); }
 Method m = Whatever.foo(int)!;
 
@@ -139,7 +135,6 @@ Function f = w.foo; // ??? overloaded
 &(x.y)  x.y!
 x.&y    x.y!
 
-
 class Person {
   int age;
   boolean oldEnough();
@@ -150,7 +145,6 @@ class Person {
   }
   static int add(int a, int b) -> a + b;
   }
-
 
 class Map<K,V>
   {
@@ -235,7 +229,6 @@ module M2 {
   }
 }
 
-
 module M3 {
   package P3 {
     class C3 {
@@ -247,7 +240,6 @@ module M3 {
     }
   }
 }
-
 
 #ifdef A
   ...

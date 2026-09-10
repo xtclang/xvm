@@ -24,7 +24,6 @@ Map<String, Int> map =
         "three":3,
         }
 
-
 // let's mock up a new Collection implementation
 // I have a few methods already written in BaseColl
 
@@ -41,7 +40,6 @@ class MyColl
     }
 
 // modules
-
 
 module MyApp
     {
@@ -78,7 +76,6 @@ module MyApp
 
     // need to somehow simplify that though so that it's obvious FIRST that i need spring:
     package Spring import springframework.spring.org 1.2.0 prefer 1.2.3.4.5, 1.2.3 avoid 1.2.3.4.17
-
 
     package Spring import springframework.spring.org
         {
@@ -211,7 +208,6 @@ module.x:
 
 package.x:
 
-
     P
     package p
         {
@@ -336,7 +332,6 @@ x = a?.b ?: c;
 // translates to:
 x = a != null && a.b != null ? a.b : c;
 
-
 Boolean s2 = sc ?: true;
 
 if (sc?)
@@ -407,7 +402,6 @@ Boolean? foo()
     return true, true;
     }
 
-
 //  "colon works"
 Int? i = conditionalfoo();
 if (Int j : i) {...}
@@ -435,7 +429,6 @@ x ?= a;
 
 // TODO ..
 
-
 // ----- cast
 
 // C style
@@ -446,7 +439,6 @@ y = x.@(Type);  // cast
 y = x.?(Type);  // instanceof?
 
 y = x.as(Type);
-
 
 //
 
@@ -510,7 +502,6 @@ x.y(foo(3+z(name.name((somename<name, name> othername)))));
 // it COULD be a generic type, e.g. in a lambda
 x.y(foo(3+z(name.name((somename.secondname<Int,String> x, Boolean y) -> ...
 
-
 //
 
 class Parent
@@ -522,7 +513,6 @@ c = new Parent.Child(); // compiler error!
 p = Parent.new();
 c = p.new Child();
 c = new p.Child(); //?
-
 
 // parsing generics again
 
@@ -536,7 +526,6 @@ name.name< ... >
 // types can't contain ()
 // types CAN contain <>
 // types CAN contain []
-
 
 // type conditional
 
@@ -601,7 +590,6 @@ class Parent
 
 foo(List<Person>:{foo1(), b, c});
 
-
 // conditional compilation
 
 module MyApp
@@ -634,7 +622,6 @@ module MyApp
         }
     }
 
-
 // singletons
 
 const Point(Int x, Int y);
@@ -650,10 +637,8 @@ Class    c2 = Origin!;
 Method   m2 = Origin!.draw;
 Function f2 = Origin.draw;
 
-
 Method f = RED.getRGB;
 if (color == RED) ...
-
 
 // future example
 
@@ -687,8 +672,6 @@ class SomeTest
         @future Int i;
         FutureRef<Int> f = &i;
         assert !i.assigned;
-
-
 
         }
     }

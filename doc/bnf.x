@@ -92,11 +92,11 @@ TypeExpressionListElement
 #
 
 CompilationUnit
-	ImportStatements-opt TypeCompositionStatement
+    ImportStatements-opt TypeCompositionStatement
 
 ImportStatements
-	ImportStatement
-	ImportStatements ImportStatement
+    ImportStatement
+    ImportStatements ImportStatement
 
 #
 # type compositions
@@ -359,8 +359,8 @@ Statement
     TypeCompositionStatement
     PropertyDeclarationStatement        # note: always "static" or "private"
     MethodDeclarationStatement
-	VariableDeclaration ";"
-	Assignment ";"
+    VariableDeclaration ";"
+    Assignment ";"
     LabeledStatement
     AssertStatement
     BreakStatement
@@ -368,15 +368,15 @@ Statement
     DoStatement
     ForStatement
     IfStatement
-	ImportStatement
-	ReturnStatement
+    ImportStatement
+    ReturnStatement
     SwitchStatement
     TryStatement
-	TypeDefStatement
+    TypeDefStatement
     UsingStatement
     WhileStatement
     StatementBlock
-	Expression ";"    # for parsing purposes (compilation will only allow specific expression forms)
+    Expression ";"    # for parsing purposes (compilation will only allow specific expression forms)
 
 StatementBlock
     "{" Statements "}"
@@ -849,7 +849,6 @@ NewFinish
 NewArguments
     ArrayIndexes ArgumentList-opt
     ArgumentList
-
 
 # Note: A parenthesized Expression, a TupleLiteral, and a LambdaExpression share a parse path
 # Note: The use of QualifiedName instead of a simple Name here (which would be logical and even
