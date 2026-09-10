@@ -365,8 +365,47 @@ stamped with the winner's constants.
    so skipping registration for a child that is nonetheless written would trade one bug for another.
 3. **Serialize** - still rejected, for the reason recorded above.
 
-Option 2 is the cheapest and the most likely to be right, and it is NOT safe to apply without first
-answering what the output file is meant to contain for a linked dependency. That question is open.
+**The open question was answered by looking, and it picked the fix.** A compiled `.xtc` was dumped:
+
+```
+FILE webauth.xtc   main=webauth.xtclang.org   children=11
+    webauth.xtclang.org   fingerprint=false  containerIsThisFile=true   hasChildren=true
+    ecstasy.xtclang.org   fingerprint=true   containerIsThisFile=true   hasChildren=false
+    ... 9 more, every one a childless fingerprint, every one contained by THIS file
+```
+
+So a well-formed file holds the main module plus childless fingerprint stubs, and never a component
+owned by another `FileStructure`. A foreign module in `m_moduleById` is therefore not a thing to
+tolerate and skip - it is itself the defect. And a fingerprint is a STUB, so giving each compile its
+own costs almost nothing, which is what made option 1 cheap after all.
+
+**FIXED at the boundary.** `FileStructure.linkModules`, compile-time branch:
+
+```java
+if (fileTop.getModule(idModule) == null) {
+    fileTop.addChild(moduleFingerprint);   // moduleFingerprint belongs to `this`, not to fileTop
+}
+```
+
+During the downstream recursion `this` is a LIBRARY's `FileStructure` - shared across compiles by a
+warm engine - so this put a library-owned fingerprint into `fileTop`'s child map without reparenting.
+It now clones and reparents when the fingerprint is not already fileTop's. **The correct version was
+already twenty lines below**: `replace()` does exactly `cloneBody()` + `setContaining(this)` on the
+runtime path. The compile path had simply never done it.
+
+| stage | `EngineParallelCompileTest` failures |
+| --- | ---: |
+| `bbd1d0038`, before the day's work | 4 of 5 |
+| after the deadlock fix | 1 of 18 |
+| **after this fix** | **0 of 14** (~1,764 compiles, assembly check armed) |
+
+Registration-ownership sites: **2 -> 0**.
+
+**Still not called closed.** 0-of-14 is not proof of zero, and one thing is definitely NOT fixed: at
+8 iterations the test still fails, with `OutOfMemoryError` and a cache report that is T15's retention
+leak verbatim - heap linear in `poolsCreated` (140 -> 197 MB, 398 -> 442 MB of 512 MB) while library
+caches stay flat at `typeInfos=1032, relations=13163`. Separate issue, and it now caps how far any
+concurrency measurement can run.
 
 ### ROOT-CAUSED 2026-09-10: mode 1 is a lost update on SHARED library structures
 

@@ -945,7 +945,23 @@ public final class FileStructure
                 }
 
                 if (fileTop.getModule(idModule) == null) {
-                    fileTop.addChild(moduleFingerprint);
+                    // GIVE fileTop ITS OWN. This runs during the downstream recursion, so
+                    // moduleFingerprint belongs to `this` - a library's FileStructure, which a warm
+                    // engine shares across compiles - and addChild does NOT reparent (unlike
+                    // Component.addChild). Adding it directly leaves one structure in two files, and
+                    // fileTop's registration walk then rewrites its constants in place
+                    // (m_constId = pool.register(m_constId)) in a structure another owner is still
+                    // using. Two overlapping compiles make that a lost update: the loser assembles a
+                    // structure carrying the winner's constants, and the module it writes is
+                    // unreadable. replace() already clones and reparents on the runtime path; this
+                    // is the compile-time path doing the same. A fingerprint is a childless stub, so
+                    // the copy costs almost nothing.
+                    ModuleStructure moduleOwned = moduleFingerprint;
+                    if (moduleFingerprint.getContaining() != fileTop) {
+                        moduleOwned = moduleFingerprint.cloneBody();
+                        moduleOwned.setContaining(fileTop);
+                    }
+                    fileTop.addChild(moduleOwned);
                 }
 
                 if (!setFilesDone.contains(idModule)) {
