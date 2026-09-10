@@ -2003,6 +2003,12 @@ public class TypeCompositionStatement
                 org.xvm.asm.Annotation.NO_ANNOTATIONS, org.xvm.asm.Parameter.NO_PARAMS,
                 "construct", org.xvm.asm.Parameter.NO_PARAMS, true, false);
 
+            // a synthetic default constructor satisfies an inherited virtual constructor contract
+            if (component.findMethodDeep("construct",
+                    m -> m.getParamCount() == 0 && m.isVirtualConstructor()) != null) {
+                constructor.addAnnotation(pool().clzOverride());
+            }
+
             // set the synthetic flag so that the constructor knows to provide its own
             // default implementation when it emits code
             constructor.setSynthetic(true);
