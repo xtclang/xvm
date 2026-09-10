@@ -66,7 +66,7 @@ public class GP_Shl
     }
 
     @Override
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+    protected TypeConstant buildOptimizedNumber(BuildContext bctx, CodeBuilder code,
                                                    RegisterInfo regTarget, int nArgValue) {
         buildXvmPrimitiveShl(bctx, code, regTarget, nArgValue);
         return regTarget.type();

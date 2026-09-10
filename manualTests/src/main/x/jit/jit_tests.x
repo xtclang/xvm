@@ -19,6 +19,7 @@ module jit_tests.examples.org {
         passed &= new ranges.TestRunner().run();
         passed &= new switches.TestRunner().run();
         passed &= new indexed_ops.TestRunner().run();
+        passed &= new temporal.TestRunner().run();
 
         console.print("<<<< Finished JIT tests <<<<");
         if (passed) {

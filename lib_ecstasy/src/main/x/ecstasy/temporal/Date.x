@@ -119,8 +119,8 @@ const Date(Int32 epochDay)
      * The day of the week represented by the date.
      */
     @RO DayOfWeek dayOfWeek.get() {
-        // epoch 0 was a Thursday, so we need to shift it forward 4 days to make Monday be day 0
-        return DayOfWeek.values[(epochDay + 4) % 7];
+        // epoch 0 was a Thursday, so we need to shift it forward 3 days to make Monday be day 0
+        return DayOfWeek.values[(epochDay + 3) % 7];
     }
 
     /**
@@ -161,7 +161,7 @@ const Date(Int32 epochDay)
 
     @Override
     Int stepsTo(Date that) {
-        return this.epochDay - that.epochDay;
+        return that.epochDay - this.epochDay;
     }
 
     @Override

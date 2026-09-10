@@ -223,33 +223,16 @@ public abstract class OpGeneral
             if (cdTarget.isPrimitive()) {
                 assertNotMultislot(regTarget);
                 typeResult = buildOptimizedBinary(bctx, code, regTarget, m_nArgValue);
-            } else if (typeTarget.isXvmPrimitive()) {
-                typeResult = buildXvmOptimizedBinary(bctx, code, regTarget, m_nArgValue);
+            } else if (typeTarget.isXvmPrimitive() && typeTarget.isA(bctx.pool().typeNumber())) {
+                typeResult = buildOptimizedNumber(bctx, code, regTarget, m_nArgValue);
             } else {
-                MethodInfo    method   = findOpMethod(bctx, typeTarget);
-                String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-                JitMethodDesc jmd      = method.getJitDesc(bctx.builder, typeTarget);
+                MethodInfo    method = findOpMethod(bctx, typeTarget);
+                JitMethodDesc jmd;
 
-                MethodTypeDesc md;
-                if (jmd.isOptimized) {
-                    md        = jmd.optimizedMD;
-                    sJitName += Builder.OPT;
+                if (typeTarget.isXvmPrimitive()) {
+                    jmd = buildOptimizedXvmPrimitive(bctx, code, regTarget, method, m_nArgValue);
                 } else {
-                    md = jmd.standardMD;
-                }
-
-                regTarget.load(code);
-                if (jmd.isOptimizedStatic) {
-                    // the target must be a boxed primitive
-                    assert typeTarget.isJitPrimitive();
-                    Builder.unbox(code, typeTarget);
-                }
-                bctx.loadCtx(code);
-                bctx.loadCallArguments(code, jmd, new int[] {m_nArgValue});
-                if (jmd.isOptimizedStatic) {
-                    code.invokestatic(bctx.builder.ensureClassDesc(typeTarget), sJitName, md);
-                } else {
-                    code.invokevirtual(regTarget.cd(), sJitName, md);
+                    jmd = buildBinaryOp(bctx, code, typeTarget, regTarget, method);
                 }
                 bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
                 return -1;
@@ -258,8 +241,8 @@ public abstract class OpGeneral
         } else { // unary op
             if (cdTarget.isPrimitive()) {
                 buildOptimizedUnary(bctx, code, regTarget.load(code));
-            } else if (typeTarget.isXvmPrimitive()) {
-                buildXvmOptimizedUnary(bctx, code, regTarget);
+            } else if (typeTarget.isXvmPrimitive() && typeTarget.isA(bctx.pool().typeNumber())) {
+                buildOptimizedNumber(bctx, code, regTarget);
             } else {
                 String sName;
                 String sOp;
@@ -268,39 +251,77 @@ public abstract class OpGeneral
                     case OP_GP_COMPL -> {sName = "not"; sOp = "~"; }
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
                 }
-                MethodInfo    method   = bctx.getTypeInfo(typeTarget).findOpMethod(sName, sOp, null);
-                String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-                JitMethodDesc jmd      = method.getJitDesc(bctx.builder, typeTarget);
+                MethodInfo    method = bctx.getTypeInfo(typeTarget).findOpMethod(sName, sOp, null);
+                JitMethodDesc jmd;
 
-                MethodTypeDesc md;
-                if (jmd.isOptimized) {
-                    md        = jmd.optimizedMD;
-                    sJitName += Builder.OPT;
+                if (typeTarget.isXvmPrimitive()) {
+                    jmd = buildOptimizedXvmPrimitive(bctx, code, regTarget, method);
                 } else {
-                    md = jmd.standardMD;
+                    jmd = buildUnaryOp(bctx, code, typeTarget, regTarget, method);
                 }
-
-                regTarget.load(code);
-                if (jmd.isOptimizedStatic) {
-                    assert typeTarget.isJitPrimitive(); // ditto the above
-                    Builder.unbox(code, typeTarget);
-                }
-                bctx.loadCtx(code);
-                if (jmd.isOptimizedStatic) {
-                    code.invokestatic(bctx.builder.ensureClassDesc(typeTarget), sJitName, md);
-                } else {
-                    code.invokevirtual(regTarget.cd(), sJitName, md);
-                }
-
-                TypeConstant typeReturn = method.getSignature().getRawReturns()[0]; // could differ from target
-                TypeConstant typeResult = typeReturn.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null);
-                if (!typeReturn.isA(typeResult)) {
-                    code.checkcast(bctx.builder.ensureClassDesc(typeResult));
-                }
+                bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
+                return -1;
             }
             bctx.storeValue(code, m_nRetValue, typeTarget);
         }
         return -1;
+    }
+
+    protected JitMethodDesc buildBinaryOp(BuildContext bctx, CodeBuilder code,
+                                          TypeConstant typeTarget, RegisterInfo regTarget,
+                                          MethodInfo method) {
+        JitMethodDesc  jmd      = method.getJitDesc(bctx.builder, typeTarget);
+        String         sJitName = method.ensureJitMethodName(bctx.typeSystem);
+        MethodTypeDesc md;
+
+        if (jmd.isOptimized) {
+            md        = jmd.optimizedMD;
+            sJitName += Builder.OPT;
+        } else {
+            md = jmd.standardMD;
+        }
+
+        regTarget.load(code);
+        if (jmd.isOptimizedStatic && !regTarget.flavor().isOptimized) {
+            // a non-optimized register contains a boxed primitive
+            assert typeTarget.isJitPrimitive();
+            Builder.unbox(code, typeTarget);
+        }
+        bctx.loadCtx(code);
+        bctx.loadCallArguments(code, jmd, new int[] {m_nArgValue});
+        if (jmd.isOptimizedStatic) {
+            code.invokestatic(bctx.builder.ensureClassDesc(typeTarget), sJitName, md);
+        } else {
+            code.invokevirtual(regTarget.cd(), sJitName, md);
+        }
+        return jmd;
+    }
+
+    protected JitMethodDesc buildUnaryOp(BuildContext bctx, CodeBuilder code, TypeConstant typeTarget,
+                                         RegisterInfo regTarget, MethodInfo method) {
+        JitMethodDesc  jmd      = method.getJitDesc(bctx.builder, typeTarget);
+        String         sJitName = method.ensureJitMethodName(bctx.typeSystem);
+        MethodTypeDesc md;
+
+        if (jmd.isOptimized) {
+            md        = jmd.optimizedMD;
+            sJitName += Builder.OPT;
+        } else {
+            md = jmd.standardMD;
+        }
+
+        regTarget.load(code);
+        if (jmd.isOptimizedStatic && !regTarget.flavor().isOptimized) {
+            assert typeTarget.isJitPrimitive();
+            Builder.unbox(code, typeTarget);
+        }
+        bctx.loadCtx(code);
+        if (jmd.isOptimizedStatic) {
+            code.invokestatic(bctx.builder.ensureClassDesc(typeTarget), sJitName, md);
+        } else {
+            code.invokevirtual(regTarget.cd(), sJitName, md);
+        }
+        return jmd;
     }
 
     /**
