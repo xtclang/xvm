@@ -79,7 +79,7 @@ public class IP_Shr
     }
 
     @Override
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+    protected TypeConstant buildOptimizedNumber(BuildContext bctx, CodeBuilder code,
                                                    RegisterInfo regTarget, int nArgValue) {
         buildXvmPrimitiveShr(bctx, code, regTarget, nArgValue);
         return regTarget.type();
