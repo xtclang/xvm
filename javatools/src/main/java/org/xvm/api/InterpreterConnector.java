@@ -225,17 +225,29 @@ public class InterpreterConnector
     /**
      * The main container currently associated with this Connector.
      */
-    private MainContainer m_containerMain;
+    private volatile MainContainer m_containerMain;
 
     /**
      * Last completed main container retained only so opt-in same-JVM direct
      * diagnostics can validate owner-scoped state after {@link #join()} clears
      * the active connector state.
      */
-    private MainContainer m_containerLast;
+    private volatile MainContainer m_containerLast;
 
     /**
      * Status indicator.
+     *
+     * <p>All three of these are volatile because the writers and the readers are not the same
+     * thread. The caller's thread writes them - {@code loadModule}, {@code start} and
+     * {@code join} - while runtime threads read {@code m_containerMain} through
+     * {@link #getMainContainer()} and {@code diagnosticContainer()}. Nothing here synchronizes, so
+     * without volatile a reader has no happens-before edge to the write and may see a stale value:
+     * a started connector that still looks unstarted, or - worse, because it fails far away - a
+     * container that {@code join()} has already cleared.</p>
+     *
+     * <p>The write ORDER matters and is deliberate: {@code start()} sets the container before the
+     * flag, so a reader that observes {@code m_fStarted} is guaranteed to see the container it
+     * implies. Same shape as the safe-publication pairing used for the service shutdown future.</p>
      */
-    private boolean m_fStarted;
+    private volatile boolean m_fStarted;
 }
