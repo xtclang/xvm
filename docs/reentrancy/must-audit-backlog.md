@@ -310,6 +310,28 @@ the GET asymmetry exists there. Nothing to file.
 override compiles, sits next to sibling overrides that now all work, and silently never runs.
 `xRegEx` was the only template with one; nothing prevents the next.
 
+### DONE 2026-09-10: `Vector` and `Stack` retired from the asm layer (filed as E55)
+
+Spotted in passing while reading `ConstantPool` for retention suspects. Both upstream on master, both
+1996 defaults rather than decisions - but `ConstantPool.f_listInvalidated`'s `Vector` was
+load-bearing in a way nothing in the code says: the write was already inside an explicit monitor
+(so the collection's lock was redundant there) and the READ took no lock at all. Visibility was
+covered by the volatile `m_cInvalidated`; what `Vector` protected against was a concurrent RESIZE
+under that unsynchronized reader. The obvious `ArrayList` swap would have been a latent
+`ArrayIndexOutOfBoundsException`. Fixed as `ArrayList` + lock on the read.
+
+`Op.ConstantRegistry.m_stackScopes` was a `Stack` guarding one field in a class whose other mutable
+fields are a bare `ArrayList` and plain arrays - decorative, and now an `ArrayDeque`.
+
+`xRTNameService`'s `Hashtable` stays: `InitialDirContext` takes one by JNDI contract, now commented
+so it is not "fixed" later.
+
+**Same shape as four other findings today** - `checkAssemblyOwnership` recursing into itself,
+`getChildrenCount()` and `children()` disagreeing about materialization, `addChild` not reparenting,
+and `wait()` called while holding two type monitors. Load-bearing behaviour that nothing states, so
+the next person to touch it breaks it. That is the recurring defect in this area, more than any one
+bug.
+
 ### ENUMERATED 2026-09-10: exactly TWO sites rewrite a structure they do not own
 
 A guard was added to `Component.registerConstants` (flag-gated,

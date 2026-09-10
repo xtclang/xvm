@@ -5542,3 +5542,78 @@ Either reparent in `FileStructure.addChild` like every other `addChild`, or - if
 deliberately holds modules owned elsewhere - say so in the javadoc of `addChild` and
 `getConstantPool`, so a caller knows the answer may name a different file. The documentation-only
 option is a real answer here; the hazard is the silence, not the behaviour.
+
+## E55 - `Vector` and `Stack` in the asm layer, and one of them is load-bearing in a way nothing says
+
+**FIXED** on `lagergren/lazy-instance`. Not pushed. Both are present on master unchanged.
+
+### `ConstantPool.f_listInvalidated` is a `Vector`
+
+```java
+// master: javatools/src/main/java/org/xvm/asm/ConstantPool.java
+private final List<IdentityConstant> f_listInvalidated = new Vector<>();
+```
+
+Three accesses in the whole file. The write already sits inside an explicit monitor, so `Vector`'s
+own lock is redundant there:
+
+```java
+synchronized (f_listInvalidated) {
+    f_listInvalidated.add(register(id));
+    m_cInvalidated = f_listInvalidated.size();     // volatile
+}
+```
+
+The read does not take the lock at all:
+
+```java
+int cNew = getInvalidationCount();                        // reads the volatile
+for (int i = cOld; i < cNew; ++i) {
+    set.add(f_listInvalidated.get(i));                    // no lock
+}
+```
+
+**Why a naive `Vector` -> `ArrayList` swap would introduce a race, and why that is easy to miss.**
+The instinct is "the volatile already publishes the elements, so the collection's locking is
+redundant" - and the first half is true: reading `m_cInvalidated` happens-after the write that
+follows the `add`, so every element below `cNew` is visible. What `Vector` is actually buying is
+different: it protects this unsynchronized reader from a concurrent RESIZE. A plain `ArrayList`
+reader can hold a stale backing array and index past its end. So the legacy collection is
+load-bearing, for a reason no comment states, and the obvious modernization is a latent
+`ArrayIndexOutOfBoundsException` under concurrent invalidation.
+
+**Fix:** `ArrayList`, and take the lock on the read. Invalidation is a cold path, so the
+unsynchronized read is a micro-optimization that does not pay for its subtlety.
+
+### `Op.ConstantRegistry.m_stackScopes` is a `Stack`
+
+`Stack` extends `Vector`, so every operation is synchronized. It is protecting one field in a class
+whose other mutable fields are a bare `ArrayList` and plain arrays:
+
+```java
+private Constant[]                   m_aconst;
+private final ArrayList<RegisterAST> m_listRegs = new ArrayList<>();   // unsynchronized
+private RegisterAST[]                m_aregParams;
+```
+
+If `ConstantRegistry` were ever shared across threads, `m_listRegs` would already be broken - so the
+synchronization is decorative. Its own javadoc calls the class "a point-in-time data structure used
+during reading the AST and during simulation".
+
+**Fix:** `ArrayDeque`, `Deque`-typed. Checked: only `isEmpty`/`push`/`pop`, so the iteration-order
+difference (`Stack` bottom-up, `ArrayDeque` head-first) is moot; the only push is an autoboxed
+`int`, so `ArrayDeque`'s null rejection is moot; and nothing in the tree catches
+`EmptyStackException`.
+
+### What must NOT be "fixed"
+
+`xRTNameService` uses a `Hashtable`, and has to: `InitialDirContext`'s constructor takes one by JNDI
+contract. The branch adds a comment saying so, because otherwise it is the next thing someone
+removes and then puts back. The two remaining `StringBuffer` hits in `TemplateExpression` are inside
+COMMENTS describing generated Ecstasy code, not Java.
+
+### Filing notes
+
+Two field declarations, one import each, and one read wrapped in the lock it should always have
+taken. The `Vector` half is worth reviewing carefully despite its size: it is the one change here
+that is wrong if done the obvious way.
