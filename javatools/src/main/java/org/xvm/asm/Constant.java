@@ -404,12 +404,16 @@ public abstract class Constant
      *         to the constant
      */
     public int getPosition() {
+        int iPos = m_iPos;
         if (ConstantPool.CHECK_ASSEMBLY_OWNERSHIP) {
             // A position only means anything in the pool that assigned it; see
-            // ConstantPool.checkAssemblyOwnership.
-            ConstantPool.checkAssemblyOwnership(this);
+            // ConstantPool.checkAssemblyOwnership. Hand it the position we just read rather than
+            // let it call back here: building the failure message used to re-enter this method,
+            // which re-entered the check, which built the message again - so a detected violation
+            // reported itself as a StackOverflowError and named nothing.
+            ConstantPool.checkAssemblyOwnership(this, iPos);
         }
-        return m_iPos;
+        return iPos;
     }
 
     /**

@@ -310,6 +310,90 @@ the GET asymmetry exists there. Nothing to file.
 override compiles, sits next to sibling overrides that now all work, and silently never runs.
 `xRegEx` was the only template with one; nothing prevents the next.
 
+### ROOT-CAUSED 2026-09-10: mode 1 is a lost update on SHARED library structures
+
+Two findings, and the first is why the second took so long.
+
+**The ownership diagnostic could never report.** `checkAssemblyOwnership` detected the violation
+correctly and then died building its own message:
+
+```java
++ " (position " + constant.getPosition() + " is meaningless ...
+//                ^^^^^^^^^^^^^^^^^^^^^ -> Constant.getPosition -> checkAssemblyOwnership -> ...
+```
+
+Every fire recursed until the stack blew, so an armed run reported `StackOverflowError` and named
+nothing. That is worse than not checking: it turns a precise finding into noise, and it is why the
+plan's own design answer ("enforce ownership at the write") was built, wired, and still never
+produced an attribution. Fixed by passing the already-read position in. Verified first that no
+`toString`/`getValueString`/`describeOwner` path calls `getPosition()`, so interpolating the
+constant itself is safe.
+
+**With that fixed, the violation names itself on the first hit:**
+
+```
+assembling TestUriTemplate@4f6561fa would write the position of a constant owned by
+TestSimple@5b259cbe: ModuleConstant Module{module=crypto.xtclang.org}
+(position 65 is meaningless in the pool being written, which holds 396 constants)
+
+  at ConstantPool.checkAssemblyOwnership
+  at Constant.getPosition
+  at Component.assemble(Component.java:2404)      <- writeMagnitude(out, m_constId.getPosition())
+  at ClassStructure.assemble / ModuleStructure.assemble
+  at Component.assembleChild / assembleChildren
+  at FileStructure.assemble / writeTo
+```
+
+The constant belongs to **another concurrent compile's pool** - `TestSimple`, a different module on
+a different thread - and it is a SHARED LIBRARY module id.
+
+**The mechanism, and the code says it out loud.** Registration rewrites a component's identity in
+place:
+
+```java
+// Component.registerConstants, Component.java:2378
+m_constId = pool.register(m_constId);
+```
+
+and `XtcEngine.ensureLibraryPrepared` already states the hazard it depends on:
+
+> "create a copy, allowing the compiler to mutate the repos[0] contents". **The compiler mutates
+> what it compiles against.** Serving ONE library to many compiles therefore requires owning the
+> instances, not asking for them again.
+
+T1 shares ONE prepared library across every compile. So two concurrent compiles both execute
+`m_constId = pool.register(m_constId)` against the SAME `Component`, each interning into its own
+pool. It is a lost update: whoever registers last wins the field, and the other thread then
+assembles a structure stamped with a constant from a pool it is not writing. Sequentially this is
+invisible, because each compile rewrites everything immediately before its own assembly and nothing
+interleaves.
+
+**Proven vs inferred.** Proven: the attribution above, the mutation site, and that the foreign owner
+is a concurrent compile's pool. Inferred: that the specific shared instance is a library fingerprint
+`ModuleStructure` reached through the shared `PreparedLibrary`. The exact sharing path was not
+traced to a line, and should be before a fix is designed.
+
+**NOT the size-based fixed point.** That remains a real latent defect - `reregisterConstants(true)`
+both interns and discards (`optimize()` drops constants with no refs), so a pass can add three and
+drop three, leaving `pool.size()` flat over a DIFFERENT set, and `writeTo`'s `pool.size() != cPrev`
+then declares a convergence that did not happen. Worth fixing with a content-change counter bumped
+at `f_listConst.add` and at `optimize`'s discard, both of which already run under the pool monitor.
+But it is NOT the cause of this failure, and folding the two together would be exactly the kind of
+plausible-but-unmeasured story this file exists to prevent.
+
+**Fix options, none applied - this is an architecture call, not a patch.**
+
+1. Give each compile its own copies of the structures registration mutates. That is what T1 removed
+   for performance, so it trades this bug against T1's ~18% clone cost.
+2. Stop mutating shared structures during registration: a per-compile side table from constant to
+   interned instance, consulted at assembly instead of rewriting fields. Correct, and a large change
+   to `Component`/`assemble`.
+3. Serialize the register-plus-assemble window per pool. Cheap to write, and it removes most of the
+   parallelism the work exists to buy.
+
+Note this compounds T15: T1 is already "not shippable yet" for the retention leak. This is a second
+reason.
+
 ### ROOT-CAUSED 2026-09-10: mode 2 is a deadlock - `reserveUsage` waits while holding type monitors
 
 Caught with a thread dump added to `EngineParallelCompileTest` on the `fut.get` timeout (a bare

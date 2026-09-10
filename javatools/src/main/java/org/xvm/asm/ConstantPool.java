@@ -4682,15 +4682,22 @@ public class ConstantPool
      * Fail if the constant does not belong to the pool currently being assembled on this thread.
      *
      * @param constant  the constant whose position is about to be written
+     * @param iPos       that constant's position, ALREADY READ by the caller
+     *
+     * <p>The position is passed in rather than read here on purpose. Reading it would call
+     * {@link Constant#getPosition}, which calls this method, which would build the message again:
+     * the check detected the violation correctly and then died of a StackOverflowError instead of
+     * reporting it, which is worse than not checking - it converts a legible failure into an
+     * illegible one.</p>
      */
-    public static void checkAssemblyOwnership(Constant constant) {
+    public static void checkAssemblyOwnership(Constant constant, int iPos) {
         ConstantPool poolWriting = ASSEMBLING.get();
         if (poolWriting != null && constant.getConstantPool() != poolWriting) {
             throw new IllegalStateException("assembling " + poolWriting.describeOwner()
                     + " would write the position of a constant owned by "
                     + constant.getConstantPool().describeOwner() + ": "
                     + constant.getClass().getSimpleName() + " " + constant
-                    + " (position " + constant.getPosition() + " is meaningless in the pool"
+                    + " (position " + iPos + " is meaningless in the pool"
                     + " being written, which holds " + poolWriting.size() + " constants)");
         }
     }
