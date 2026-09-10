@@ -4347,3 +4347,88 @@ through the result (no `cds[i] = ...`, no `Arrays.sort`/`fill`/`setAll`).
 **Fix options, neither applied:** return a copy (allocates at 37 sites, several in loops), or
 retype the accessor to an immutable view. The second is the right one but is a `javajit` API
 change.
+
+## 61. `Component.assembleChildren` takes its count and its content from two different calls
+
+**FIXED** on `lagergren/lazy-instance` 2026-09-10. Not pushed.
+
+**Status/category:** Latent defect in current master source, verified byte-identical there. Two
+independent ways to write a wrong module; neither observed firing on master's single-threaded
+compile path, both reachable.
+
+**Explanation.**
+
+```java
+// master: javatools/src/main/java/org/xvm/asm/Component.java
+protected void assembleChildren(DataOutput out) throws IOException {
+    int cKids = getChildrenCount();          // source 1
+    writePackedLong(out, cKids);
+
+    if (cKids > 0) {
+        int cActual = 0;
+        for (Component child : children()) { // source 2
+            assembleChild(out, child);
+            ++cActual;
+        }
+        assert cActual == cKids;             // the only guard
+    }
+}
+```
+
+**Problem 1 - the guard is an assertion.** A module is written as a child count followed by that
+many children. If the two sources disagree, the file is malformed, and the only thing that says so
+is an `assert`, which is off under `-da`. The failure then surfaces on read-back, far from the
+writer, as an `IOException` or an out-of-bounds index.
+
+**Problem 2 - the two sources are not interchangeable.** `children()` calls `ensureChildren()` and
+materializes a lazily-deserialized component. `getChildrenCount()` does not:
+
+```java
+public int getChildrenCount() {
+    return m_childByName == null ? 0 : m_childByName.size();   // no ensureChildren()
+}
+public Collection<? extends Component> children() {
+    return Collections.unmodifiableCollection(getChildByNameMap().values());  // materializes
+}
+```
+
+So on a component whose children have not been read in yet, the count is 0, the `if` is skipped,
+and every child is silently dropped from the written module. It holds together today only because
+the caller, `Component.assembleChild`, happens to call `child.hasChildren()` first - and
+`hasChildren()` does call `ensureChildren()`. The correctness of serialization rests on the call
+order of a different method.
+
+**Master evidence:** `git show master:javatools/src/main/java/org/xvm/asm/Component.java` -
+`assembleChildren`, `getChildrenCount`, `hasChildren` and `children` are identical to the branch's
+pre-fix form.
+
+**Fix:** let one collection decide both.
+
+```java
+protected void assembleChildren(DataOutput out) throws IOException {
+    Collection<? extends Component> kids = childrenToAssemble();
+    writePackedLong(out, kids.size());
+    for (Component child : kids) {
+        assembleChild(out, child);
+    }
+}
+
+/** @return the children to write; normally just children() */
+protected Collection<? extends Component> childrenToAssemble() {
+    return children();
+}
+```
+
+Divergence becomes structurally impossible rather than incidentally avoided, and the assertion is
+not needed because there is nothing left to assert.
+
+**It also removes a ThreadLocal.** `MultiMethodStructure` is the one component that writes a subset
+of its children (it drops the synthesized Const-interface functions). On master it does that by
+setting a `ThreadLocal<Boolean>` around `super.assembleChildren(out)` so that `getChildrenCount()`
+and `children()` - both PUBLIC - answer differently while the flag is up, and forcing it back to
+`false` in the `finally` rather than restoring the previous value. With the seam above it overrides
+`childrenToAssemble()` instead, the two accessors mean one thing again, and
+`s_tloIgnoreNative` is deleted.
+
+**Verification on the branch:** the whole XDK builds (every Ecstasy library assembles through the
+new seam) and the 22-module XTC suite runs the results back.

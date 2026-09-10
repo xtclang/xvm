@@ -310,6 +310,100 @@ the GET asymmetry exists there. Nothing to file.
 override compiles, sits next to sibling overrides that now all work, and silently never runs.
 `xRegEx` was the only template with one; nothing prevents the next.
 
+### MUST-FIX (pre-existing, NOT from today): parallel compilation is unstable, two failure modes
+
+**Measured, both directions.** `EngineParallelCompileTest` asserts that concurrent compilation of 42
+modules on 8 threads produces no failures; its own comment records "40 iterations ... 1680 compiles,
+zero failures - so anything here is a regression". It is not clean now:
+
+| tree | runs | failures |
+| --- | ---: | ---: |
+| `bbd1d0038` (before today's work) | 5 | **4** |
+| today's branch tip | 7 | 2 |
+
+So it is pre-existing and severe, and today's changes did not cause it - if anything the tip is less
+flaky, which is probably sample noise and should not be claimed as an improvement. **The attribution
+is worth recording:** the first check stashed today's diff, saw it still fail, and read that as "not
+mine". That inference is invalid here - HEAD is my own branch tip, so it only rules out TODAY. The
+real baseline is the commit before the work started, which is what the table above uses.
+
+**Two distinct failure modes observed, not one.**
+
+1. `IllegalStateException: assembling module Module{module=TestMisc}` - from `XtcEngine:833`, which
+   wraps ONLY `IOException`. So concurrent assembly produced a module that could not be written or
+   read back: a corrupt file, which is exactly what `ConstantPool.checkAssemblyOwnership`'s javadoc
+   describes ("Index 5503 out of bounds for length 396" - a position never re-interned locally).
+2. `TimeoutException` at `EngineParallelCompileTest:108`, on a `fut.get(300, SECONDS)`. Five minutes
+   for one module compile is a hang, not slowness - so there is a deadlock or livelock too.
+
+**Diagnostic now reachable.** `CHECK_ASSEMBLY_OWNERSHIP` exists precisely to turn mode 1 from "an
+unreadable file, later" into "this constant, owned by that pool, written into this one" - and it was
+unreachable from the test JVM, because nothing forwarded the system property. `javatools/build.gradle.kts`
+now forwards it:
+
+```
+./gradlew :javatools:test --tests "...EngineParallelCompileTest" -Dxvm.assembly.checkOwnership=true
+```
+
+The one failure captured with it armed was mode 2 (the hang), so the check has not yet had a chance
+to attribute mode 1. That is the next step, and it is cheap: loop with the flag until mode 1 lands.
+
+**Not root-caused, deliberately.** Two concurrency failure modes in the compiler is its own
+investigation, not a drive-by. What is done here is the part that makes the next attempt cheap: an
+honest baseline, the two modes told apart, and the attribution diagnostic wired up.
+
+### DONE 2026-09-10: two pieces of unowned mutable state given owners
+
+Both found by the repo-wide statics audit above, both hygiene rather than live bugs - but one of them
+removed a real count/content divergence on the serialization path.
+
+**Filed for master: issue 61** (the `assembleChildren` count/content divergence, which the
+ThreadLocal removal rides on) and **E53** (the compiler counter). Both verified byte-identical on
+master. The parallel-compile instability above is NOT filed: `XtcEngine` and
+`EngineParallelCompileTest` are branch-local, so master has no concurrent compilation to be
+unstable.
+
+**1. `MultiMethodStructure.s_tloIgnoreNative` is gone.** It was a `ThreadLocal<Boolean>` that made two
+PUBLIC accessors answer differently depending on invisible thread state:
+
+```java
+public int getChildrenCount()               { ... s_tloIgnoreNative.get() ? filtered : map.size(); }
+public Collection<? extends Component> children() { return s_tloIgnoreNative.get() ? filtered : methods(); }
+```
+
+set around `super.assembleChildren(out)` and forced to `false` in the `finally` rather than restored -
+safe today only because the enclosing `if` happens to prevent re-entry, which is a property of the
+current call graph, not an invariant. Replaced with an explicit seam: `Component.childrenToAssemble()`,
+which `MultiMethodStructure` overrides to return the filtered set. `children()` and `getChildrenCount()`
+now mean one thing always, and the ThreadLocal is deleted. Four ThreadLocals remain in the tree, all
+legitimate: `TypeSystemThread.CURRENT` and `ServiceContext.s_tloContext` ARE the ownership framework,
+`ConstantPool.SYNTHESIS_WINDOWS` is thread-scoped by design, and `ConstantPool.ASSEMBLING` is a
+diagnostic that correctly saves and restores.
+
+**The seam fixed something beyond the flag.** `Component.assembleChildren` took its count from
+`getChildrenCount()` and its content from `children()` - two calls, guarded only by
+`assert cActual == cKids`, which evaporates under `-da` and would then write a malformed file. Worse,
+the two are NOT interchangeable: `children()` calls `ensureChildren()` and materializes a lazily
+deserialized component; `getChildrenCount()` does not. On a component not yet materialized the pair
+could write "0 children" and silently drop all of them. It only holds together because the caller
+(`Component.assembleChild`) happens to call `hasChildren()` first, which does materialize. One
+collection now decides both, so the divergence is structurally impossible rather than incidentally
+avoided.
+
+**2. `MethodDeclarationStatement.COUNTER` is now owned by the declaration.** It was a process-wide
+`AtomicInteger` and it is the ROOT of the `getCodeContainerCounter()` walk, numbering labels and
+synthetic variable names (`"_:" + n`, `VariableDeclarationStatement:163`). So synthetic names depended
+on how many methods had been compiled earlier in the same JVM, and under the parallel compiler on
+thread interleaving - the same source did not compile to the same names twice. Now an instance field,
+which is both deterministic and the correct scope: the walk stops at this node precisely because it is
+the enclosing code container. **Not claimed:** that this changed emitted bytes. It was never
+demonstrated to, and `EngineParallelCompileTest` would not have caught it either way - it records
+per-module outcomes, it does not compare output. A two-compiles-in-one-JVM byte comparison is the test
+that would settle it, and it is not written.
+
+Still process-wide, left alone: `ConditionalStatement.LABEL_COUNTER` and the `COUNTER`s in
+`ElseExpression`/`ElvisExpression` feed label ids only, not names.
+
 ### AUDIT RESULT 2026-09-10: static mutable state, repo-wide - clean but for one latent hazard
 
 Asked directly: is there process-wide mutable state that should have been kept on an owner, or

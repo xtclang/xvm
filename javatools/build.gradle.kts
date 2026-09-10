@@ -242,6 +242,15 @@ val versionOutputTest = tasks.register<Test>("versionOutputTest") {
 // worktree, and absent altogether in a container or an exported source tree - and the walk that used
 // to do this failed into an assumeTrue skip, so the suite reported green while the tests never ran.
 // This build knows where the composite root is; see org.xvm.test.XdkOutputs.
+// Forward the assembly-ownership diagnostic into the test JVM when it is asked for. It is off by
+// default because ConstantPool.getPosition is hot; switched on, it turns a module that assembles
+// into an unreadable file into an immediate failure naming the constant and its owning pool.
+//   ./gradlew :javatools:test --tests "...EngineParallelCompileTest" -Dxvm.assembly.checkOwnership=true
+val checkAssemblyOwnership = providers.systemProperty("xvm.assembly.checkOwnership")
+
 tasks.withType<Test>().configureEach {
     systemProperty("xvm.checkout.root", rootDir.parentFile.absolutePath)
+    if (checkAssemblyOwnership.isPresent) {
+        systemProperty("xvm.assembly.checkOwnership", checkAssemblyOwnership.get())
+    }
 }

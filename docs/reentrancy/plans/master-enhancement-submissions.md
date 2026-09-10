@@ -5409,3 +5409,76 @@ Signature change across four abstract accessors plus one `MethodInfo` method, an
 sites. Mechanical, but it is an API change to `TypeInfo`, so it wants to land as one commit rather
 than be split. Verified on the branch: 712 `javatools` + 107 `javatools_utils` unit tests and the
 full 22-module XTC manual suite, all green.
+
+## E53 - Synthetic names are numbered by a process-wide counter, so the same source does not compile twice the same
+
+**BUILT** on `lagergren/lazy-instance` 2026-09-10. One field. Not pushed.
+
+### The state on master
+
+`getCodeContainerCounter()` walks up the AST to the enclosing code container and asks it for a
+number. `MethodDeclarationStatement` is where that walk stops, and it answers from a static:
+
+```java
+// master: javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java
+@Override
+protected int getCodeContainerCounter() {
+    return COUNTER.getAndIncrement();
+}
+...
+private static final AtomicInteger COUNTER = new AtomicInteger();
+```
+
+The number is not only a label id. `VariableDeclarationStatement:163` builds a synthetic variable
+NAME from it:
+
+```java
+name = name.withValue("_:" + getCodeContainerCounter());
+```
+
+So the names a method compiles to depend on how many methods were compiled earlier in the same JVM.
+Compile module A then B, and B's synthetic names differ from what B gets when compiled alone. Any
+tool that compiles more than one thing per process - the CLI compiling several modules, a build
+daemon, a language server, a test harness - sees that.
+
+### Why it is worth changing
+
+Two reasons, one of which is only latent on master.
+
+- **Reproducibility.** The same source should compile to the same module. Today it does not, if
+  something else was compiled first in that JVM.
+- **Concurrency.** A shared `AtomicInteger` remains unique under concurrent compilation, so nothing
+  breaks - but the numbering then depends on thread interleaving, which makes output
+  non-deterministic run to run. Master does not compile concurrently today; this is the kind of
+  thing that has to be fixed before it can.
+
+### The change
+
+Give the counter its owner. The walk stops at this node precisely because this node is the
+enclosing code container, so per-declaration numbering is the correct scope, not merely a smaller
+one:
+
+```java
+@Override
+protected int getCodeContainerCounter() {
+    return m_cCodeContainer++;
+}
+...
+private int m_cCodeContainer;
+```
+
+### What is NOT claimed
+
+That this changes the emitted bytes. It was not demonstrated to. The names certainly change, and
+they are used to construct `Token` values for synthetic variables, but whether every such name
+reaches the constant pool of the written module was not traced, and no byte comparison was run. The
+test that would settle it - compile the same source twice in one JVM and compare the output - does
+not exist. It should; it is a small test and it would pin reproducibility generally, not just this
+counter.
+
+Two sibling counters are deliberately left alone: `ConditionalStatement.LABEL_COUNTER` and the
+`COUNTER`s in `ElseExpression`/`ElvisExpression` feed label ids only, never names.
+
+### Filing notes
+
+One field, one method body, one import removed. Independent of everything else filed today.
