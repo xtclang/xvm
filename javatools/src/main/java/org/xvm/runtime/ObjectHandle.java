@@ -269,19 +269,6 @@ public abstract class ObjectHandle
         return getTemplate().invokeNativeNN(frame, method, this, ahArg, aiReturn);
     }
 
-    /**
-     * Read a native property from this handle.
-     *
-     * @param frame      the current frame
-     * @param sPropName  the property name
-     * @param iReturn    the register to place the result into
-     *
-     * @return one of the {@code Op.R_*} values
-     */
-    public int invokeNativeGet(Frame frame, String sPropName, int iReturn) {
-        return getTemplate().invokeNativeGet(frame, sPropName, this, iReturn);
-    }
-
 
     /**
      * @return the underlying template for this handle

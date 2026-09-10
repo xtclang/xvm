@@ -306,9 +306,20 @@ its own analysis rather than a drive-by on top of a refactor that just proved pa
 at all - handle-level native dispatch is entirely branch-local, so neither the 2/5 regression nor
 the GET asymmetry exists there. Nothing to file.
 
-**Still open here, as a should-fix:** the GET asymmetry itself. A handle-level `invokeNativeGet`
-override compiles, sits next to sibling overrides that now all work, and silently never runs.
-`xRegEx` was the only template with one; nothing prevents the next.
+**FIXED 2026-09-10: the trap is gone by construction.** `ObjectHandle.invokeNativeGet(Frame, String,
+int)` had ZERO callers - checked across main and test. Its only body delegated to the template, and
+nothing in the tree invoked it. So it was API that existed solely to be overridden, where overriding
+it did nothing: the override compiled, read correctly beside three sibling overrides that DO
+dispatch, and silently never ran.
+
+Deleted rather than wired up. Routing `ClassTemplate`'s get path through the handle would have made
+it symmetric with the method paths, but `this` at that site is not necessarily
+`hTarget.getTemplate()` for struct and annotated compositions, so that is a dispatch change wanting
+its own analysis. Removing the method costs nothing and makes the mistake impossible: you cannot
+override a method that does not exist, and an `@Override` on it will not compile.
+
+Native property reads go through `markNativeProperty(name, HandleClass.class, getter)` - the bound
+form `xOSStorage` already uses and `xRegEx` now uses - which is the API that is actually dispatched.
 
 ### PATTERN 2026-09-10: seven diagnostics failed in one day, each differently, all reassuringly
 
