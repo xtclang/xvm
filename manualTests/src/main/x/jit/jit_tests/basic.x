@@ -13,6 +13,7 @@ package basic {
                 passed &= runTest(() -> assertTests.run());
                 passed &= runTest(() -> callTests.run());
                 passed &= runTest(() -> condMixinTests.run());
+                passed &= runTest(() -> constuctTests.run());
                 passed &= runTest(() -> delegationTests.run());
                 passed &= runTest(() -> enumTests.run());
                 passed &= runTest(() -> equalTests.run());

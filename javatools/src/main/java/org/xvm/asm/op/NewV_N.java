@@ -144,13 +144,16 @@ public class NewV_N
 
     // ----- JIT support ---------------------------------------------------------------------------
 
-//    @Override
-//    public void computeTypes(BuildContext bctx) {
-//    }
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeConstant type = bctx.getArgumentType(m_nType);
+        assert type.isTypeOfType();
+        bctx.typeMatrix.assign(getAddress(), m_nRetValue, type.getParamType(0));
+    }
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        return buildNewV(bctx, code, m_nType, NO_ARGS);
+        return buildNewV(bctx, code, m_nType, m_anArgValue);
     }
 
     // ----- fields --------------------------------------------------------------------------------
