@@ -360,8 +360,39 @@ per-thread for cycle breaking. Care needed on the guard's identity - a `UsageKey
 `(typeName, access)` and is only unique WITHIN one TypeConstant's map, so per-thread tracking has to
 be keyed by map identity too, not by key alone.
 
-**Not yet fixed.** This is a hot, subtle path in the type system and the change is a real design
-change, not a patch.
+**FIXED, and measured.** Nothing waits any more. A thread that finds another's reservation joins it
+as a co-owner and computes its own copy:
+
+| tree | runs | failures |
+| --- | ---: | ---: |
+| `bbd1d0038` (before the day's work) | 5 | **4** |
+| tip, before this fix | 7 | 2 |
+| tip, after this fix | **18** | **1** |
+
+`PendingUsage` became multi-owner (an identity set, every access under the owning map's monitor) and
+`wait()`/`notifyAll()` are gone from the protocol. Joining rather than merely computing is what keeps
+the cycle guard working: this thread's own re-entry for the key must still see itself as an owner,
+and the `UsageKey` is `(typeName, access)`, unique only within one TypeConstant's map.
+
+**Why duplicate computation is the right trade.** A usage is derived from the type graph by
+`checkProduction`/`checkConsumption` with an empty recursion path. Under contention two threads may
+compute the same answer; that costs a little work and removes a cross-thread dependency entirely.
+Being precise about the purity claim: the graph CAN be mid-build under concurrency, so two threads
+could in principle observe different states - but that is pre-existing, not introduced here. The old
+code also computed against whatever state won the race and then froze that answer for every later
+caller, which is if anything less well-defined, not more.
+
+**A ThreadLocal in-flight set was considered and rejected.** It would have worked, but it
+reintroduces exactly the thread-scoped-state pattern removed from `MultiMethodStructure` the same
+day, and the ownership belongs with the data it guards rather than with the thread that happens to
+be walking it.
+
+**NOT resolved: one failure in 18 remains, and it was not captured.** The campaign that saw it did
+not preserve the XML, so its mode is unknown - it could be the corruption (mode 1, untouched by this
+fix) or a residual hang. Do not read "1 in 18" as "the deadlock is gone and only mode 1 is left";
+read it as "the rate fell from 4-in-5 to 1-in-18 and the remaining failure is unidentified". The next
+run should capture on failure, with `-Dxvm.assembly.checkOwnership=true` armed so mode 1 arrives
+attributed.
 
 ### MUST-FIX (pre-existing, NOT from today): parallel compilation is unstable, two failure modes
 

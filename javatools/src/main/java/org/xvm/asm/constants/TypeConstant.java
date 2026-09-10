@@ -16,6 +16,7 @@ import java.lang.constant.MethodTypeDesc;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.HashMap;
@@ -8449,6 +8450,23 @@ public abstract sealed class TypeConstant
 
     private record UsageKey(String typeName, Access access) {}
 
+    /**
+     * Memoize one formal-type usage answer, computing it if this thread has to.
+     *
+     * <p>NOTHING HERE WAITS ON ANOTHER THREAD, and that is the point. The previous version had a
+     * second thread {@code wait()} on the in-flight entry, which deadlocked: the waiter is reached
+     * through {@code ensureTypeInfo}, which is {@code synchronized}, so it holds one or more
+     * TypeConstant monitors, and {@code Object.wait()} releases only the map's. The thread that
+     * would complete the entry then blocks on a monitor the waiter is holding while it waits.
+     * Observed as eight compile threads with six BLOCKED and two WAITING, none able to proceed.</p>
+     *
+     * <p>A usage is DERIVED from the type graph, so the fix is to let a second thread compute its own
+     * copy rather than wait for the first: duplicate work under contention is cheap, a deadlock is
+     * not. Being exact about that - the graph can be mid-build under concurrency, so two threads are
+     * not guaranteed to observe identical state. That is not introduced here: the previous code
+     * computed against whatever state won the race and then froze that one answer for every later
+     * caller, which is no better defined. What changes is that no thread waits on another.</p>
+     */
     private Usage ensureUsage(Map<UsageKey, UsageEntry> mapUsage, UsageKey keyUsage,
                               Supplier<Usage> supplier) {
         UsageEntry entry = reserveUsage(mapUsage, keyUsage);
@@ -8462,17 +8480,18 @@ public abstract sealed class TypeConstant
             usage = supplier.get();
         } catch (RuntimeException | Error e) {
             synchronized (mapUsage) {
-                if (mapUsage.get(keyUsage) == pending) {
+                // drop the reservation only when no other thread is still computing it
+                if (pending.removeOwner(Thread.currentThread())
+                        && mapUsage.get(keyUsage) == pending) {
                     mapUsage.remove(keyUsage);
-                    mapUsage.notifyAll();
                 }
             }
             throw e;
         }
 
         synchronized (mapUsage) {
+            pending.removeOwner(Thread.currentThread());
             mapUsage.put(keyUsage, new CompleteUsage(usage));
-            mapUsage.notifyAll();
         }
         return usage;
     }
@@ -8493,16 +8512,19 @@ public abstract sealed class TypeConstant
                 }
 
                 case PendingUsage pending -> {
-                    if (pending.isOwner(Thread.currentThread())) {
+                    Thread thread = Thread.currentThread();
+                    if (pending.isOwner(thread)) {
+                        // THIS thread is already computing this key: a cycle in the type graph,
+                        // which is what the reservation exists to break.
                         return new CompleteUsage(Usage.NO);
                     }
 
-                    try {
-                        mapUsage.wait();
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new IllegalStateException("Interrupted while awaiting formal type usage", e);
-                    }
+                    // Another thread is computing it. Join as a co-owner and compute our own copy
+                    // instead of waiting - see ensureUsage for why waiting here deadlocks. Joining
+                    // (rather than simply computing) is what keeps the cycle guard working: our own
+                    // re-entry for this key must still see us as an owner.
+                    pending.addOwner(thread);
+                    return pending;
                 }
                 }
             }
@@ -8515,17 +8537,36 @@ public abstract sealed class TypeConstant
     private record CompleteUsage(Usage usage)
             implements UsageEntry {}
 
+    /**
+     * A usage that one or more threads are computing right now.
+     *
+     * <p>Multi-owner on purpose: a thread that finds another's reservation joins it rather than
+     * waiting, so "is this key already in flight ON MY STACK" stays answerable per thread while no
+     * thread ever blocks on another. Every access is under the owning map's monitor.</p>
+     */
     private static final class PendingUsage
             implements UsageEntry {
         private PendingUsage() {
-            f_threadOwner = Thread.currentThread();
+            f_owners.add(Thread.currentThread());
         }
 
         private boolean isOwner(Thread thread) {
-            return f_threadOwner == thread;
+            return f_owners.contains(thread);
         }
 
-        private final Thread f_threadOwner;
+        private void addOwner(Thread thread) {
+            f_owners.add(thread);
+        }
+
+        /**
+         * @return true iff no thread is computing this key any more
+         */
+        private boolean removeOwner(Thread thread) {
+            f_owners.remove(thread);
+            return f_owners.isEmpty();
+        }
+
+        private final Set<Thread> f_owners = Collections.newSetFromMap(new IdentityHashMap<>());
     }
 
     /**
