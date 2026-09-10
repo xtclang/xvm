@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.EqualsDispatch;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpCondJump;
 
@@ -58,7 +59,7 @@ public class JumpNotEq
     @Override
     protected int completeBinaryOp(Frame frame, int iPC, TypeConstant type,
                                    ObjectHandle hValue1, ObjectHandle hValue2) {
-        switch (type.callEquals(frame, hValue1, hValue2, A_STACK)) {
+        switch (EqualsDispatch.callEquals(this, frame, type, hValue1, hValue2, A_STACK)) {
         case R_NEXT: {
             BooleanHandle hValue = (BooleanHandle) frame.popStack();
             return hValue.get() ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);

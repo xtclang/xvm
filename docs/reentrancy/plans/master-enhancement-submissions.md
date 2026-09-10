@@ -5152,11 +5152,23 @@ manualTests sweep: the mix of monomorphic to supertype comparisons here is chose
 Correctness signal beyond the suite: the benchmark's three results are byte-identical with the cache
 on and off, on every run.
 
+### Follow-up done the same day: the jump forms share it
+
+`JumpEq`/`JumpNotEq` extend `OpCondJump`, not `OpTest`, so they inherited nothing when the cache
+first landed. The logic moved to `org.xvm.asm.EqualsDispatch` rather than being copied: one
+implementation now serves all four sites, which is the difference between a fix and a fix applied to
+half the places that need it. One cache category serves them all, because the op-info cache is keyed
+by the OP as well, so two sites cannot collide.
+
+`eqBench.x` gained a `viaJump` case, since the original loop only produced `IsEq`/`IsNotEq` - an
+equality in an `if` condition compiles to the jump forms, and nothing was exercising them. It
+returns 1,000,000 identically on every run.
+
 ### Filing notes
 
-Ready to file. Three pieces with a clean seam: the extraction is behaviour-preserving on its own,
-the opt-out predicate is inert until something consults it, and the cache is confined to `OpTest`.
-`JumpEq`/`JumpNotEq` still take the uncached path and are the obvious follow-up.
+Ready to file. Four pieces with a clean seam: the extraction from `callEquals` is
+behaviour-preserving on its own, the opt-out predicate is inert until something consults it,
+`EqualsDispatch` is self-contained, and the four op sites are one line each.
 
 ## E50 - The cross-pool sharing contract is load-bearing and undocumented
 

@@ -20,6 +20,7 @@ module eqBench {
         console.print($"sameType   = {sameType(reps)}");
         console.print($"viaObject  = {viaObject(reps)}");
         console.print($"viaEnum    = {viaEnum(reps)}");
+        console.print($"viaJump    = {viaJump(reps)}");
     }
 
     /** Monomorphic: both operands are always String. */
@@ -47,6 +48,26 @@ module eqBench {
             Object b = i % 2 == 0 ? "x" : i + 1;
             if (a == b) {
                 ++hits;
+            }
+        }
+        return hits;
+    }
+
+    /**
+     * Equality in a JUMP position rather than an assignment, which compiles to `JumpEq`/`JumpNotEq`
+     * instead of `IsEq`/`IsNotEq`. Those extend a different base and so were not covered when the
+     * cache first landed on `OpTest`; this exercises the path that shares it now.
+     */
+    Int viaJump(Int reps) {
+        String[] words = ["alpha", "beta", "gamma", "delta"];
+        Int      hits  = 0;
+        for (Int i : 0 ..< reps) {
+            for (String w : words) {
+                if (w == "gamma") {
+                    ++hits;
+                } else if (w != "delta") {
+                    hits += 2;
+                }
             }
         }
         return hits;
