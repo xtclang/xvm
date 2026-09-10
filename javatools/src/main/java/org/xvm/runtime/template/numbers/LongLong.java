@@ -300,7 +300,7 @@ public class LongLong {
 
         if (l2H == 0) {
             if (l2L == 0) {
-                return OVERFLOWx2;
+                return overflowPair();
             }
 
             if (l2L > 0) {
@@ -352,7 +352,7 @@ public class LongLong {
 
         if (l2H == 0) {
             if (l2L == 0) {
-                return OVERFLOWx2;
+                return overflowPair();
             }
 
             if (l2L > 0) {
@@ -620,7 +620,17 @@ public class LongLong {
     public static final LongLong   ONE          = new LongLong(1, 0);
     public static final LongLong   MAX_VALUE    = new LongLong(-1, Long.MAX_VALUE);
     public static final LongLong   MIN_VALUE    = new LongLong(0, Long.MIN_VALUE);
-    public static final LongLong[] OVERFLOWx2   = new LongLong[] {OVERFLOW, OVERFLOW};
+    /**
+     * @return a fresh {@code {OVERFLOW, OVERFLOW}} quotient/remainder pair
+     *
+     * <p>Every other {@code divrem}/{@code divremUnsigned} branch returns a freshly built pair;
+     * this was the one that handed out a shared {@code public static final} array. Same shape as
+     * the {@code ZEROx2} constant that was deleted for the same reason - the current callers only
+     * read the result, so nothing was corrupted, but the array was writable by anyone holding it.</p>
+     */
+    private static LongLong[] overflowPair() {
+        return new LongLong[] {OVERFLOW, OVERFLOW};
+    }
 
     protected static final BigInteger BIG_MASK64  = new BigInteger("FFFFFFFFFFFFFFFF", 16);
     protected static final BigInteger BIG_MASK128 = BigInteger.ONE.shiftLeft(128).subtract(BigInteger.ONE);
