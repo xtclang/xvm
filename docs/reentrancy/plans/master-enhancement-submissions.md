@@ -5309,3 +5309,103 @@ the honest statement is that the win is predicted, not yet demonstrated.
 Two small, independent changes: one memoized field with a resolution guard, and one loop replacing
 a stream. Both apply cleanly to master. Worth filing together since they come from the same
 profiling pass, but they share no code and can be reviewed separately.
+
+## E52 - Three representations of "no method chain", and nothing converts between them consistently
+
+**BUILT** on `lagergren/lazy-instance` 2026-09-10. Applies to master with one difference noted
+below. Not pushed.
+
+### The state on master
+
+`TypeInfo` answers "there is no such member" with `null`, from four accessors:
+
+```java
+public abstract MethodBody[] getOptimizedMethodChain(MethodConstant id);   // master:510
+public abstract MethodBody[] getOptimizedMethodChain(Object nid);          // master:519
+public abstract MethodBody[] getOptimizedGetChain(PropertyConstant id);    // master:528
+public abstract MethodBody[] getOptimizedSetChain(PropertyConstant id);
+```
+
+Three different conventions then act on that null, none of them stated in a signature:
+
+| representation | means | produced by |
+| --- | --- | --- |
+| `null` | no such member | the four accessors above |
+| `MethodBody.NO_BODIES` | the member exists, its chain is empty | `buildOptimizedMethodChain` |
+| `ClassComposition.NIL_CHAIN` | a `CallChain` wrapping `NO_BODIES` | `ClassComposition:955` |
+
+- `CallChain`'s constructor silently absorbs the null, collapsing absent into empty:
+
+  ```java
+  public CallChain(MethodBody[] aMethods) {
+      f_aMethods = aMethods == null ? MethodBody.NO_BODIES : aMethods;
+  }
+  ```
+
+- `computeMethodChain` depends on that absorption and passes the possibly-null value straight in:
+  `return new CallChain(info.getOptimizedMethodChain(nidMethod));`
+- `computeGetterChain`/`computeSetterChain` instead guard explicitly and map null to `NIL_CHAIN`;
+- three further sites map `NIL_CHAIN` back to `null` (`chain == NIL_CHAIN ? null : chain`);
+- `PropertyInfo.augmentPropertyChain` treats null and empty identically (`chain == null ||
+  chain.length == 0`, master:1349), so on that path the distinction never mattered at all.
+
+So one value can travel `null -> NO_BODIES -> NIL_CHAIN -> null`, and which convention applies
+depends on which accessor it arrived through.
+
+### Why this is worth changing rather than noting
+
+The distinction between absent and present-but-empty is REAL and load-bearing:
+`PropertyComposition` falls back to the Ref/Var class when a chain is absent and uses a
+present-but-empty chain as it stands. So the fix is not to collapse the two - that would silently
+change behaviour - it is to stop hiding which one you have.
+
+Nothing in any signature says "may be null", the return type is an array, and the neighbouring
+accessor paths do guard, so the reasonable inference at a new call site is that null is impossible.
+**That inference is wrong, and the branch proved it empirically:** converting these accessors to a
+wrapper type produced an NPE at `ClassComposition.computeMethodChain` on the first run, because
+there was no way to tell from the code that the value could be absent. The failure surfaced as
+`"Service terminated: runner.xtclang.org"` several layers from the cause, not as a null dereference
+at the site.
+
+### The change
+
+Make absence explicit in the type, so the compiler enforces the check:
+
+- the four `TypeInfo` accessors return `Optional<...>`;
+- `MethodInfo.ensureOptimizedMethodChain` returns `Optional` too - it has to, because a capped
+  chain redirects to another chain and that redirect can find nothing, which is where the absence
+  entered the accessors to begin with;
+- `CallChain`'s constructor takes its argument non-null (`requireNonNull`);
+- `NIL_CHAIN` is renamed `CHAIN_ABSENT` and documented as what it actually is - not a third state,
+  but a null-object the two accessor caches need because `ConcurrentHashMap` cannot store a null
+  value. It never leaves the class;
+- the convention is stated ONCE, in a comment above the four declarations, rather than four times
+  in `@return` prose.
+
+Every caller is a cache-miss lambda or `TypeInfo` construction, so the `Optional` is off the
+dispatch path and costs nothing that matters.
+
+### Two things the compiler cannot catch
+
+Recorded because they are the failure mode of any nullable-to-`Optional` migration, and both were
+found by reading rather than by compiling:
+
+1. Two sites called `.isEmpty()` on the result. That compiles unchanged and silently flips meaning,
+   from "the chain has no bodies" to "there is no chain" - in a renderer, it would just print the
+   wrong thing.
+2. `CallChain.VirtualConstructorChain` called `super((MethodBody[]) null)`, relying on precisely
+   the null-absorbing constructor being removed. It compiled and would have thrown at runtime on
+   the first virtual constructor.
+
+### Difference from master
+
+The branch's accessors return `FrozenArray<MethodBody>` rather than `MethodBody[]`, because a
+separate change froze the chain storage. That is independent: on master the same change reads
+`Optional<MethodBody[]>`, and everything above applies unaltered.
+
+### Filing notes
+
+Signature change across four abstract accessors plus one `MethodInfo` method, and about ten call
+sites. Mechanical, but it is an API change to `TypeInfo`, so it wants to land as one commit rather
+than be split. Verified on the branch: 712 `javatools` + 107 `javatools_utils` unit tests and the
+full 22-module XTC manual suite, all green.

@@ -4267,3 +4267,83 @@ if (isTypeAware()) {
 **92,149 to 0** (845 after the first site was guarded, zero after the second) (the intermediate 845 were `GuardStart`, which turned out to be the same
 defect through `CatchStart.preWrite` rather than a registry requirement). The 91,304 newly verifiable ops immediately exposed **11 `Var` classes whose
 operand models were incomplete** - a hole the NPE had been hiding.
+
+## 59. `LongLong.divrem`/`divremUnsigned` hand out two shared `public static final` arrays
+
+**FIXED** on `lagergren/lazy-instance` (the `OVERFLOW` pair only - the `ZERO` pair was fixed there
+earlier, and master still has both). Not pushed.
+
+**Status/category:** Latent defect in current master source. No caller writes through the result
+today, so nothing is corrupted; the arrays are simply writable by anyone holding them, and the
+methods that return them are inconsistent about it.
+
+**Explanation.** `divrem(LongLong)` and `divremUnsigned(LongLong)` return a two-element
+quotient/remainder array. Every branch builds a fresh one - except two, which return a shared
+constant:
+
+```java
+// master: javatools/src/main/java/org/xvm/runtime/template/numbers/LongLong.java
+public static final LongLong[] ZEROx2     = new LongLong[] {ZERO, ZERO};        // :621
+public static final LongLong[] OVERFLOWx2 = new LongLong[] {OVERFLOW, OVERFLOW};// :622
+
+if (l2L == 0) { return OVERFLOWx2; }   // :301, :353
+...
+if (...)      { return ZEROx2;     }   // :327, :375
+...
+return new LongLong[] {new LongLong(l1L/l), new LongLong(l1L%l)};   // every other branch
+```
+
+**Why the inconsistency is the defect.** A caller cannot tell from the signature whether the array
+it holds is its own or process-wide, and the answer depends on which arm of the divisor test it
+took. `BaseInt128.opDivRem` - the only caller - reads `[0]` and `[1]` and stops, so this is latent.
+Any future caller that normalizes, sorts or reuses the pair in place corrupts `ZERO`/`OVERFLOW`
+arithmetic for every container in the JVM, and the corruption is silent and permanent.
+
+**Master evidence:** `git show master:javatools/src/main/java/org/xvm/runtime/template/numbers/LongLong.java`
+- lines 301, 327, 353, 375 for the returns and 621-622 for the constants.
+
+**Fix:** return a fresh pair from those four branches and delete the two constants, matching what
+the other branches already do. On the branch this is a private `overflowPair()` factory; the `ZERO`
+pair was inlined as `new LongLong[] {ZERO, ZERO}`.
+
+**Found by:** a repo-wide audit of static mutable state (2423 static fields across 1442 classes).
+That audit's headline result is that there are ZERO non-final static fields in `javatools`; these
+two constants are the only non-private, non-empty static arrays in the tree that are handed out by
+a method rather than merely read at their consumers.
+
+## 60. `JitTypeDesc.getXvmPrimitiveClasses` returns shared `Builder.CDs_*` arrays from a public API
+
+**NOT fixed** anywhere - filed only. `javajit` is under active development, and the obvious fix
+would allocate on the compilation path, so this wants the JIT authors' call rather than a drive-by.
+
+**Status/category:** Latent defect in current master source, same shape as issue 59.
+
+**Explanation.**
+
+```java
+// master: javatools/src/main/java/org/xvm/javajit/JitTypeDesc.java
+public static ClassDesc[] getXvmPrimitiveClasses(TypeConstant type) {
+    ...
+    return switch (baseType.getSingleUnderlyingClass(false).getName()) {
+        case "Dec32"                       -> CDs_Int;        // shared static
+        case "Dec64"                       -> CDs_Long;       // shared static
+        case "Dec128", "Int128", "UInt128" -> CDs_LongLong;   // shared static
+        default -> { ... yield new ClassDesc[]{cd}; }         // fresh array
+    };
+}
+```
+
+`Builder.CDs_Int`/`CDs_Long`/`CDs_LongLong` are `public static final ClassDesc[]`. Three branches
+return the process-wide constant, the fallback returns a fresh array - so, as in issue 59, the
+caller cannot know which it holds. The array escapes further: `MultiSlot` is a record with a public
+`slotCds()` component that retains whatever it is handed.
+
+**Latent, measured:** all 37 call sites of `getXvmPrimitiveClasses` were checked - none writes
+through the result (no `cds[i] = ...`, no `Arrays.sort`/`fill`/`setAll`).
+
+**Master evidence:** `git show master:javatools/src/main/java/org/xvm/javajit/Builder.java` lines
+2149-2151, and `JitTypeDesc.getXvmPrimitiveClasses` - identical to the branch.
+
+**Fix options, neither applied:** return a copy (allocates at 37 sites, several in loops), or
+retype the accessor to an immutable view. The second is the right one but is a `javajit` API
+change.

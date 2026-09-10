@@ -162,14 +162,26 @@ so the conversion is half done. More importantly, nothing records which array fi
 and which must never be frozen - and the wrong answer there is a performance regression in the
 hottest code in the interpreter.
 
-**Census, `javatools/src/main/java/org/xvm/runtime` (2026-09-10).**
+**Census, `org/xvm/runtime` - CORRECTED 2026-09-10, see the method note.**
 
 | | count | candidate? |
 | --- | ---: | --- |
-| array-typed fields, total | 182 | |
-| non-final (the reference is reassigned) | 104 | **no** - mutable by design |
-| final, but WRITTEN THROUGH (`x[i] = ...`) | 22 | **no** - mutation is the point |
-| final and never written through | 56 | **yes**, ~31% of the total |
+| array-typed fields, total | 98 | |
+| non-final (the reference is reassigned) | 18 | **no** - mutable by design |
+| final, but WRITTEN THROUGH | 38 | **no** - mutation is the point |
+| final and never written through | 42 | **yes** (25 static, 17 instance) |
+
+**Method note - the first numbers filed here (182/104/22/56) were wrong, and how they were wrong
+is worth keeping.** They came from a source regex with two defects: it required a 4-space indent,
+so every field declared in a nested class was skipped, and it detected writes only as `x[i] = ...`,
+so `Arrays.setAll(x, ...)` / `Arrays.fill` / `System.arraycopy(..., x, ...)` all read as "never
+written". The second defect is the dangerous one: it moves fields INTO the candidate column, which
+is the direction that gets something frozen that is actually mutated. The table above is derived
+from `javap -p` over the 498 compiled classes under `org/xvm/runtime` (498/498 parsed) with the
+write scan widened to those forms. A third bug found on the way: the javap parser's own type
+pattern excluded `?`, silently dropping every generic-typed field - fixed before these counts.
+The lesson is the one this file keeps relearning: a census is a measurement, and an unvalidated
+regex reports whatever it happens to match.
 
 `final` alone is the wrong filter, and it is the mistake to avoid: most of `Frame`'s finals are
 final REFERENCES to mutable buffers. `f_ahVar` is the register file and is written on essentially
@@ -185,7 +197,7 @@ freeze **per-frame scratch**.
   once and lives long, in the thousands - noise. Per-frame arrays are created per call, in the
   millions - a wrapper each would be a real allocation regression.
 
-The two tests agree, which is why this needs no judgement call at each site: **the 22
+The two tests agree, which is why this needs no judgement call at each site: **the
 written-through finals are exactly the per-frame buffers.** Mutability and hotness pick out the same
 set. Anything that is genuinely read-only after construction is, by that fact, not per-frame
 scratch.
@@ -197,11 +209,164 @@ most of the rest feed APIs that still take arrays (`CallChain`, which retains fo
 `Handy.prepend`/`containsAll`; `getJitIdentity`). But that is the honest measure of how much of the
 migration is left: the escape is closed, the internals are not converted.
 
+**Audit of the 25 static candidates (2026-09-10): 24 safe, 1 fixed.** These are the shared
+process-wide arrays, so they are the ones where a write through an escaped reference corrupts
+every other user. Each was traced to its consumers:
+
+- **Zero-length sentinels** - `Utils.NO_NAMES` / `OBJECTS_NONE` / `STRINGS_NONE`,
+  `xConst.NO_FIELDS`, `xOSFile.NO_ACCESS`, `xRTNameService.NO_RECORD_FIELDS`,
+  `xRTClassTemplate.NO_TEMPLATES`. Immutable by construction: there is no element to write.
+- **Native-registration name tables** - `ClassTemplate.VOID/THIS/OBJECT/INT/STRING/BOOLEAN/BYTES`,
+  `xArray.ELEMENT_TYPE`, `xRTDelegate.ELEMENT_TYPE`, `xRTNameService.RECORD_TYPES`,
+  `xBasicHashCollector.TYPE_HASH_COLLECTOR`. All feed `markNativeMethod`, which resolves them to
+  `TypeConstant[]` and uses them for error text. It never retains and never writes them.
+- **Native op programs** - `Frame.WAIT_FOR_FUTURE` / `WAIT_FOR_IO`, `Utils.WAIT_FOR_RELIEF`.
+  Installed as a native frame's op array, which is read-only for exactly the same reason every
+  compiled method's op array is shared across frames.
+- **`xRTCompiler.STACK_2`** - private, passed as `aiReturn`. The one array-store on an `aiReturn`
+  anywhere in the tree (`ServiceContext:1452`) writes a freshly allocated local that shadows the
+  parameter, so the convention that `aiReturn` is read-only actually holds.
+- **`LongLong.OVERFLOWx2` - the exception, now fixed.** `public static final LongLong[]`, returned
+  from `divrem` and `divremUnsigned`. Every other branch of those two methods returns a freshly
+  built pair; this was the one that handed out the shared array, and it is the same shape as the
+  `ZEROx2` constant already deleted for this reason in stage 2 - the fix missed its sibling.
+  Latent rather than live (the sole caller, `BaseInt128.opDivRem`, only reads `[0]` and `[1]`),
+  but it was writable by anyone holding it. Replaced with a private `overflowPair()` factory.
+
+The 17 instance candidates were not converted. The three `JavaLong[] cache` fields
+(`xNibble`/`xUInt8`/`xChar`) are the illustrative case: private, filled once by `Arrays.setAll` at
+owner-template init, never escaping, and read by index on a hot path - freezing buys no safety and
+costs an indirection. They are per-owner state already covered by the canonical-owner template
+work, not shared mutable statics.
+
+**Migrated in this pass: `CallChain`'s storage is now `FrozenArray<MethodBody>`.** This was the
+conversion the accessor refactor was staged for - all ten uses of the field were already routed
+through `head()`/`bodyAt()`/`getDepth()`/`isEmpty()`, so the change was those methods plus the
+constructors. It is a net WIN rather than a cost: chains built from a `TypeInfo` now reuse that
+TypeInfo's existing frozen array instead of calling `unsafeArray()` to unwrap it, so the cached
+metadata path allocates strictly less than before. Only the uncached `new CallChain(method)` path
+for lambdas and private methods gains a wrapper, on a path that already allocates two objects.
+Tree-wide `unsafeArray()` sites: 163 at census time, 155 now.
+
 **Evidence that freezing the chains cost nothing measurable:** suite time was 3m24s/3m21s before the
 Family C commits and 3m22s/3m15s after. That is an absence of an obvious regression rather than a
 benchmark, and should not be quoted as one.
 
-### SHOULD-FIX: three representations of "no method chain", and nothing converts consistently (added 2026-09-10)
+### FIXED 2026-09-10: my own native-dispatch refactor was only 2/5 done (branch-local regression)
+
+`TestRegularExpressions` was red. It stayed red with all of today's work stashed, so the first
+reading was "pre-existing, not mine". **That reading was wrong, and the mistake is the point:**
+HEAD here is my own branch tip, so "pre-existing at HEAD" only means "not from today". `git log`
+on the file names the culprit as `1185463e9 "Dispatch native calls through the receiver, not past
+it"` - my commit, on this branch only, never on master. It is a branch-local regression I
+introduced, not something inherited. Same trap as the W1 misattribution recorded earlier: proving
+a failure predates today's diff says nothing about who wrote it.
+
+**What the refactor did and did not do.** `CallChain` has five `invoke` overloads that dispatch a
+native chain. That commit converted TWO of them to go through the receiver
+(`hTarget.invokeNativeN(...)`) and left THREE still calling past it
+(`hTarget.getTemplate().invokeNativeN(..., hTarget, ...)`):
+
+| overload | before | reachable handle override? |
+| --- | --- | --- |
+| `(hTarget, iReturn)` | `getTemplate()` | no |
+| `(hTarget, hArg, iReturn)` | `getTemplate()` | no |
+| `(hTarget, hArg, aiReturn)` | `getTemplate()` | no |
+| `(hTarget, ahArg, iReturn)` | receiver | yes |
+| `(hTarget, ahArg, aiReturn)` | receiver | yes |
+
+`xRegEx` had moved its native dispatch onto `RegExHandle` on the strength of that commit. Its
+`invokeNativeN` override worked, so the refactor looked done. `RegEx.match(String)` is one argument
+and two returns (a conditional), which lands on row 3 - dispatch went past the handle to a template
+with no such native method, and reported `Unknown native(NN) method: "match(String)"`.
+
+**Fixed** by routing the remaining three through the receiver, so all five agree. This is
+behaviour-preserving for every other template: `ObjectHandle.invokeNative1/N/NN` default to
+`getTemplate().invokeNativeX(frame, method, this, ...)`, character for character what the three
+sites already did, so only handles that actually override see a difference.
+
+**Blast radius, measured rather than argued: exactly one class.** A scan for handle-level native
+dispatch overrides across the whole tree (signatures with no `ObjectHandle` receiver parameter)
+finds `ObjectHandle`'s own four defaults and `xRegEx.RegExHandle`'s three - nothing else. So the
+set of classes whose behaviour this change can alter is the one class that was broken; every other
+template reaches the identical default. That is the argument for making the change here rather
+than deferring it.
+
+**Also fixed, same root cause, different path: native property GET.** `xRegEx` also overrode
+handle-level `invokeNativeGet`, which is unreachable for a different reason - `ClassTemplate:800`
+calls the TEMPLATE's four-argument `invokeNativeGet` directly, and it is not part of `CallChain`'s
+five overloads at all. Fixed locally instead, with
+`markNativeProperty(name, HandleClass.class, getter)` - the bound form the native-template work
+introduced and that `xOSStorage` already uses - and the dead override deleted. The systemic fix
+(route `ClassTemplate:800` through `hTarget.invokeNativeGet(...)`) is NOT applied: `this` at that
+site is not necessarily `hTarget.getTemplate()` for struct and annotated compositions, so it wants
+its own analysis rather than a drive-by on top of a refactor that just proved partial.
+
+**Not a master issue, checked:** `ObjectHandle` on master has no `invokeNativeGet`/`invokeNativeN`
+at all - handle-level native dispatch is entirely branch-local, so neither the 2/5 regression nor
+the GET asymmetry exists there. Nothing to file.
+
+**Still open here, as a should-fix:** the GET asymmetry itself. A handle-level `invokeNativeGet`
+override compiles, sits next to sibling overrides that now all work, and silently never runs.
+`xRegEx` was the only template with one; nothing prevents the next.
+
+### AUDIT RESULT 2026-09-10: static mutable state, repo-wide - clean but for one latent hazard
+
+Asked directly: is there process-wide mutable state that should have been kept on an owner, or
+handled behind an API method instead of exposed as a static? Measured over all 1442 compiled
+classes in `javatools` (2423 static fields), by `javap -p` and cross-checked against source.
+
+**There are ZERO non-final static fields in `javatools/src/main/java`.** Both methods agree - the
+bytecode says 0, and the source grep's only four hits are `static class` declarations, not fields.
+There is no process-wide mutable *variable* anywhere in the tree. That is the finding that matters
+for container isolation, and it is a strong one: the ownership work held.
+
+What remains is 156 `static final` fields of a mutable TYPE (an array or a collection), which are
+final references to writable objects. 114 are private. Of the 42 that are not:
+
+- 26 are verified zero-length sentinels (`NO_CONSTS`, `NO_TYPES`, `NO_BODIES`, `NO_PARAMS`, ...)
+  plus 3 aliases of them (`BinaryAST.NO_CONSTS = Constant.NO_CONSTS` and friends). A zero-length
+  array is immutable by construction - there is no element to write.
+- 13 are the runtime tables audited in the FrozenArray row above: the `ClassTemplate` native-name
+  tables, the `Frame`/`Utils` native op programs, and the two `ELEMENT_TYPE` constants. All are
+  read-only at their consumers.
+- 1 was a real hazard and is fixed: `LongLong.OVERFLOWx2`. **Filed for master as issue 59** -
+  and master is worse than this branch was: it still has BOTH `ZEROx2` and `OVERFLOWx2` being
+  returned from `divrem`/`divremUnsigned` (master lines 301, 327, 353, 375), because the `ZERO`
+  pair was only ever fixed here.
+- 3 are the open item below.
+
+**SHOULD-FIX (not fixed here - it is in the actively developed JIT): `Builder.CDs_Int` /
+`CDs_Long` / `CDs_LongLong` escape through a public API. Filed for master as issue 60**, verified
+identical there (`Builder` lines 2149-2151). `JitTypeDesc.getXvmPrimitiveClasses`
+is exactly the "API method" shape the question asks for, but it hands out the shared static array
+rather than a copy:
+
+```java
+return switch (baseType.getSingleUnderlyingClass(false).getName()) {
+    case "Dec32"                       -> CDs_Int;        // shared static
+    case "Dec64"                       -> CDs_Long;       // shared static
+    case "Dec128", "Int128", "UInt128" -> CDs_LongLong;   // shared static
+    default -> { ... yield new ClassDesc[]{cd}; }         // fresh array
+};
+```
+
+The inconsistency is the tell, and it is the same shape as the `OVERFLOWx2` bug fixed above: three
+branches return a process-wide constant, the fallback returns a fresh array, so a caller cannot
+know from the signature which one it holds. The array then escapes further - `MultiSlot` is a
+record with a public `slotCds()` component that retains it.
+
+**Latent, not live:** all 37 call sites were checked and none writes through the result (no
+`cds[i] =`, no `Arrays.sort/fill/setAll`). Left unfixed deliberately, for two reasons: `javajit` is
+under active development elsewhere and this would collide, and the obvious fix (copy on return)
+would allocate at 37 sites on the JIT compilation path. The right fix is `FrozenArray<ClassDesc>`
+on the accessor, which is a `javajit` API change and belongs with that work, not in this branch.
+
+### FIXED 2026-09-10 (was SHOULD-FIX): three representations of "no method chain"
+
+**Filed for master as E52.** Verified present on master in raw-array form: the four accessors
+return nullable `MethodBody[]`, `CallChain`'s constructor absorbs the null, `NIL_CHAIN` sits at
+`ClassComposition:955`, and `computeMethodChain` passes the possibly-null value straight in.
 
 Found by walking into it: the Family C conversion introduced an NPE at
 `ClassComposition.computeMethodChain` because there was no way to tell from the code whether the
@@ -231,11 +396,46 @@ at a new call site is that null is impossible. That inference is wrong, and the 
 NPE inside a service - which surfaces as `"Service terminated: runner.xtclang.org"` several layers
 away from the cause, not as a null dereference at the site.
 
-**Shape of the fix.** Pick one convention and state it once. Either the accessors never answer null
-(absent becomes `NO_BODIES_FROZEN`, and callers that need to distinguish ask separately), or they
-answer `Optional` so the compiler enforces the check. The current in-between - nullable returns,
-a constructor that quietly absorbs null, and a third sentinel layered on top - is what makes the
-correct call impossible to write from local reading.
+**Fixed by making absence explicit in the type, not by erasing it.** The first option in the
+original sketch - "the accessors never answer null" - turned out to be wrong, and checking is what
+showed it: `PropertyComposition` genuinely branches on absent, falling back to the Ref/Var class
+when the parent has no accessor and using a present-but-empty chain as it stands. Collapsing absent
+into `NO_BODIES_FROZEN` would have silently changed that behaviour. So the distinction stays and
+the compiler now enforces it.
+
+- `TypeInfo.getOptimizedMethodChain` (both overloads), `getOptimizedGetChain` and
+  `getOptimizedSetChain` return `Optional<FrozenArray<MethodBody>>`. The convention is stated once,
+  in a block comment above the four declarations, rather than four times in `@return` text.
+- `MethodInfo.ensureOptimizedMethodChain` returns `Optional` too. It had to: a capped chain
+  redirects to another chain, and that redirect can find nothing - which is why the absence
+  propagated out of the accessors in the first place.
+- `CallChain`'s constructor takes the chain non-null (`requireNonNull`). Absorbing null was what
+  erased the distinction downstream.
+- `ClassComposition.NIL_CHAIN` is renamed `CHAIN_ABSENT` and documented for what it actually is:
+  not a third state, but a null-object the two accessor caches need because `ConcurrentHashMap`
+  cannot store a null value. It never leaves the class.
+- `PropertyInfo.rawChain` - the null-preserving helper added during the Family C work - is gone.
+  Its consumer, `augmentPropertyChain`, already treated null and empty identically, so absence
+  needed no separate representation past that point.
+
+All five paths are cold (every caller is a cache-miss lambda or TypeInfo construction), so the
+`Optional` costs nothing that matters on the dispatch path.
+
+**Two things the compiler could not catch, both found by reading rather than by the type change.**
+Worth recording because they are the failure mode of any nullable-to-Optional migration:
+
+1. `TypeInfoReal.renderMethod` and `MethodInfoTest` both called `.isEmpty()` on the result. That
+   compiles unchanged and silently flips meaning - from "the chain has no bodies" to "there is no
+   chain". The test would have failed loudly; the renderer would just have printed the wrong thing.
+2. `CallChain.VirtualConstructorChain` called `super((MethodBody[]) null)`, relying on exactly the
+   null-absorbing constructor being removed. It compiled fine and would have thrown at runtime on
+   the first virtual constructor.
+
+**One deliberate behaviour change.** `PropertyComposition.getMethodCallChain` used to call
+`.unsafeArray()` on the result of `ensureOptimizedMethodChain` with no guard, so a capped chain
+whose redirect target was missing would NPE there. It now falls back to `f_clzRef`, which is what
+the neighbouring `info == null` branch already does for the same "not found on the parent" answer.
+Nothing can regress - the previous behaviour on that path was an exception.
 
 ### MEASURED, ready to build: the equality path has no inline cache (updated 2026-09-09)
 
