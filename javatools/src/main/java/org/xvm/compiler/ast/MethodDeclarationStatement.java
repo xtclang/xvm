@@ -825,7 +825,7 @@ public non-sealed class MethodDeclarationStatement
             return true;
         }
 
-        if (infoMethod.getChain().length < 2) {
+        if (infoMethod.getChain().size() < 2) {
             log(errs, Severity.ERROR, Compiler.SUPER_MISSING);
             return false;
         }

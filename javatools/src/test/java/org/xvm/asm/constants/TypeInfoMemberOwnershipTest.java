@@ -17,6 +17,8 @@ import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.util.FrozenArray;
+
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
@@ -270,7 +272,7 @@ public class TypeInfoMemberOwnershipTest {
         var info = createTypeInfo(struct, idProperty, property, child);
         var owned = info.getProperties().get(idProperty);
         var start = new CountDownLatch(1);
-        record AccessorChains(MethodBody[] getter, MethodBody[] setter) {}
+        record AccessorChains(FrozenArray<MethodBody> getter, FrozenArray<MethodBody> setter) {}
 
         try (var executor = Executors.newFixedThreadPool(8)) {
             var futures = IntStream.range(0, 8)
@@ -284,8 +286,8 @@ public class TypeInfoMemberOwnershipTest {
 
             start.countDown();
 
-            MethodBody[] getChain = null;
-            MethodBody[] setChain = null;
+            FrozenArray<MethodBody> getChain = null;
+            FrozenArray<MethodBody> setChain = null;
             for (var future : futures) {
                 var chains = future.get(10, TimeUnit.SECONDS);
                 if (getChain == null) {
@@ -299,8 +301,8 @@ public class TypeInfoMemberOwnershipTest {
 
             assertSame(getChain, getField.get(owned));
             assertSame(setChain, setField.get(owned));
-            assertEquals(Implementation.Field, getChain[0].getImplementation());
-            assertEquals(Implementation.Field, setChain[0].getImplementation());
+            assertEquals(Implementation.Field, getChain.get(0).getImplementation());
+            assertEquals(Implementation.Field, setChain.get(0).getImplementation());
         }
     }
 

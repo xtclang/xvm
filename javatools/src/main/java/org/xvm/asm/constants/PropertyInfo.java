@@ -34,6 +34,7 @@ import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
 
+import org.xvm.util.FrozenArray;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 import static org.xvm.util.Handy.copyOf;
@@ -1276,8 +1277,10 @@ public class PropertyInfo
      *
      * @return the method chain iff the property exists; otherwise null
      */
-    public MethodBody[] ensureOptimizedGetChain(TypeInfo infoType, PropertyConstant idNested) {
-        MethodBody[] chain = m_chainGet;
+    public FrozenArray<MethodBody> ensureOptimizedGetChain(TypeInfo infoType, PropertyConstant idNested) {
+        // the cache holds the FROZEN form: wrapping per call would allocate on a hot path and
+        // break the identity that safe publication is asserted on
+        FrozenArray<MethodBody> chain = m_chainGet;
         if (idNested == null) {
             if (chain == null) {
                 // runtime-lazy chain building interns constants (accessor ids, nested
@@ -1293,7 +1296,8 @@ public class PropertyInfo
                              * publish it once; nested ids are computed separately so they cannot
                              * poison this slot.
                              */
-                            m_chainGet = chain = buildOptimizedGetChain(infoType, null);
+                            m_chainGet = chain =
+                                    freeze(buildOptimizedGetChain(infoType, null));
                         }
                     }
                 }
@@ -1303,7 +1307,7 @@ public class PropertyInfo
 
         try (var _ = pool().openRuntimeSynthesisWindow("optimized nested get chain")) {
             synchronized (this) {
-                return buildOptimizedGetChain(infoType, idNested);
+                return FrozenArray.adopt(buildOptimizedGetChain(infoType, idNested));
             }
         }
     }
@@ -1341,8 +1345,8 @@ public class PropertyInfo
      *
      * @return the method chain iff the property exists; otherwise null
      */
-    public MethodBody[] ensureOptimizedSetChain(TypeInfo infoType, PropertyConstant idNested) {
-        MethodBody[] chain = m_chainSet;
+    public FrozenArray<MethodBody> ensureOptimizedSetChain(TypeInfo infoType, PropertyConstant idNested) {
+        FrozenArray<MethodBody> chain = m_chainSet;
         if (idNested == null) {
             if (chain == null) {
                 // see ensureOptimizedGetChain for the synthesis-window rationale
@@ -1355,7 +1359,8 @@ public class PropertyInfo
                              * setter chains keep the old hot cache, while nested ids are never
                              * allowed to populate this unkeyed slot.
                              */
-                            m_chainSet = chain = buildOptimizedSetChain(infoType, null);
+                            m_chainSet = chain =
+                                    freeze(buildOptimizedSetChain(infoType, null));
                         }
                     }
                 }
@@ -1365,7 +1370,7 @@ public class PropertyInfo
 
         try (var _ = pool().openRuntimeSynthesisWindow("optimized nested set chain")) {
             synchronized (this) {
-                return buildOptimizedSetChain(infoType, idNested);
+                return FrozenArray.adopt(buildOptimizedSetChain(infoType, idNested));
             }
         }
     }
@@ -1456,7 +1461,8 @@ public class PropertyInfo
      *
      * @return the method chain iff the property exists; otherwise null
      */
-    protected MethodBody[] augmentPropertyChain(MethodBody[] chain, TypeInfo infoType, MethodConstant idMethod) {
+    protected MethodBody[] augmentPropertyChain(MethodBody[] chain, TypeInfo infoType,
+            MethodConstant idMethod) {
         if (chain == null || chain.length == 0) {
             if (isNative()) {
                 chain = new MethodBody[] {
@@ -1521,7 +1527,27 @@ public class PropertyInfo
 
         return isDelegating()
                 ? createDelegatingChain(infoType, idGet)
-                : augmentPropertyChain(infoType.getOptimizedMethodChain(idGet), infoType, idGet);
+                : augmentPropertyChain(rawChain(infoType.getOptimizedMethodChain(idGet)), infoType, idGet);
+    }
+
+    /**
+     * @param chain  a method chain, or null when the method is absent
+     *
+     * @return the chain's storage for read-only use, or null - the null MUST survive, because the
+     *         consumers treat it as "no such method" rather than as an empty chain
+     */
+    /**
+     * @param chain  a freshly built accessor chain
+     *
+     * @return the chain as an immutable view, reusing the shared empty one so the identity that
+     *         {@code MethodBody.NO_BODIES} carries survives the freeze
+     */
+    private static FrozenArray<MethodBody> freeze(MethodBody[] chain) {
+        return chain.length == 0 ? MethodBody.NO_BODIES_FROZEN : FrozenArray.adopt(chain);
+    }
+
+    private static MethodBody[] rawChain(FrozenArray<MethodBody> chain) {
+        return chain == null ? null : chain.unsafeArray();
     }
 
     private MethodBody[] buildOptimizedSetChain(TypeInfo infoType, PropertyConstant idNested) {
@@ -1532,7 +1558,7 @@ public class PropertyInfo
 
         return isDelegating()
                 ? createDelegatingChain(infoType, idSet)
-                : augmentPropertyChain(infoType.getOptimizedMethodChain(idSet), infoType, idSet);
+                : augmentPropertyChain(rawChain(infoType.getOptimizedMethodChain(idSet)), infoType, idSet);
     }
 
     /**
@@ -1755,12 +1781,12 @@ public class PropertyInfo
     /**
      * Cached "get" chain.
      */
-    private volatile MethodBody[] m_chainGet;
+    private volatile FrozenArray<MethodBody> m_chainGet;
 
     /**
      * Cached "set" chain.
      */
-    private volatile MethodBody[] m_chainSet;
+    private volatile FrozenArray<MethodBody> m_chainSet;
 
     /**
      * Cached "annotation" chain.

@@ -106,6 +106,7 @@ import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
 
 import static org.xvm.javajit.TypeSystem.HASH;
 
+import org.xvm.util.FrozenArray;
 import org.xvm.util.Severity;
 
 import static org.xvm.asm.Constants.RT_TYPES_UNRECONCILABLE;
@@ -148,7 +149,7 @@ public class BuildContext {
         this.thisType      = typeInfo.getType();
         this.jitType       = thisType.getCallableJitType();
         this.callChain     = methodInfo.getChain();
-        this.methodStruct  = callChain[0].getMethodStructure();
+        this.methodStruct  = callChain.get(0).getMethodStructure();
         this.callDepth     = 0;
         this.methodDesc    = jmd;
         this.methodJitName = methodInfo.ensureJitMethodName(typeSystem);
@@ -178,7 +179,7 @@ public class BuildContext {
         this.callChain     = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
                 : propInfo.ensureOptimizedSetChain(typeInfo, null);
-        this.methodStruct  = callChain[0].getMethodStructure();
+        this.methodStruct  = callChain.get(0).getMethodStructure();
         this.methodDesc    = methodDesc;
         this.methodJitName = isGetter
                 ? propInfo.ensureGetterJitMethodName(typeSystem)
@@ -194,7 +195,7 @@ public class BuildContext {
      * Construct {@link BuildContext} for a synthetic method in the call chain.
      */
     private BuildContext(BuildContext bctx, String jitName, int callDepth) {
-        MethodBody body = bctx.callChain[callDepth];
+        MethodBody body = bctx.callChain.get(callDepth);
 
         this.builder       = bctx.builder;
         this.typeSystem    = bctx.builder.typeSystem;
@@ -252,7 +253,7 @@ public class BuildContext {
     public final TypeConstant    thisType;      // PRIVATE
     public final TypeConstant    jitType;       // PUBLIC
     public final int             callDepth;
-    public final MethodBody[]    callChain;
+    public final FrozenArray<MethodBody> callChain;
     public final MethodStructure methodStruct;
     public final JitMethodDesc   methodDesc;
     public final String          methodJitName; // standard name
@@ -1152,7 +1153,7 @@ public class BuildContext {
             case Op.A_THIS,
                  Op.A_STRUCT -> typeMatrix.getType(Op.A_THIS, currOpAddr);
             case Op.A_SUPER  -> {
-                TypeConstant typeSuper = callChain[callDepth + 1].getIdentity().getType();
+                TypeConstant typeSuper = callChain.get(callDepth + 1).getIdentity().getType();
                 assert typeSuper.isMethod();
                 yield pool().bindMethodTarget(typeSuper);
             }
@@ -1493,11 +1494,11 @@ public class BuildContext {
         // instantiate a function object (see Builder.loadConstant for MethodConstant)
 
         int              nDepth      = callDepth + 1;
-        MethodBody       bodySuper   = callChain[nDepth];
+        MethodBody       bodySuper   = callChain.get(nDepth);
         MethodConstant   superId     = bodySuper.getIdentity();
         IdentityConstant containerId = superId.getNamespace();
         Component.Format format      = containerId.getComponent().getFormat();
-        String           jitName     = MethodInfo.getJitIdentity(callChain).ensureJitMethodName(typeSystem);
+        String           jitName     = MethodInfo.getJitIdentity(callChain.unsafeArray()).ensureJitMethodName(typeSystem);
         ClassDesc        containerCD;
 
         if (format == Component.Format.MIXIN) {

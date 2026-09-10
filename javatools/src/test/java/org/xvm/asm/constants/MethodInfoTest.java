@@ -126,7 +126,7 @@ public class MethodInfoTest {
         MethodInfo method = MethodInfo.create(body, 9);
 
         assertEquals(9, method.getRank());
-        assertEquals(1, method.getChain().length);
+        assertEquals(1, method.getChain().size());
         assertSame(method, method.getHead().getMethodInfo());
         assertNotSame(body, method.getHead());
         assertNull(body.getMethodInfo());
@@ -271,11 +271,11 @@ public class MethodInfoTest {
             start.countDown();
 
             for (var future : futures) {
-                assertSame(MethodBody.NO_BODIES, future.get(10, TimeUnit.SECONDS));
+                assertSame(MethodBody.NO_BODIES_FROZEN, future.get(10, TimeUnit.SECONDS));
             }
         }
 
-        assertSame(MethodBody.NO_BODIES, field.get(owned));
+        assertSame(MethodBody.NO_BODIES_FROZEN, field.get(owned));
     }
 
     private static ConstantPool invokePool(Object target) throws Exception {
@@ -320,7 +320,7 @@ public class MethodInfoTest {
 
         @Override
         synchronized MethodBody forMethod(MethodInfo method) {
-            if (method.getRank() != expectedRank || method.getChain().length != expectedBodies) {
+            if (method.getRank() != expectedRank || method.getChain().size() != expectedBodies) {
                 throw new IllegalStateException("method owner was observed too early");
             }
             return super.forMethod(method);

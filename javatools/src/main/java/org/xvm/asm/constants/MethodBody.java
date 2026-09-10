@@ -15,6 +15,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 
+import org.xvm.util.FrozenArray;
 import org.xvm.util.Handy;
 import org.xvm.util.Hash;
 
@@ -978,6 +979,13 @@ public class MethodBody {
      * Empty array of method bodies.
      */
     public static final MethodBody[] NO_BODIES = new MethodBody[0];
+
+    /**
+     * The empty chain as an immutable view. Shared rather than wrapped per call, so that the
+     * identity {@link #NO_BODIES} has always carried survives the freeze - callers and tests
+     * compare the empty chain by reference.
+     */
+    public static final FrozenArray<MethodBody> NO_BODIES_FROZEN = FrozenArray.adopt(NO_BODIES);
 
     /**
      * The MethodConstant that this method body corresponds to.

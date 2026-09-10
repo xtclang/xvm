@@ -155,6 +155,42 @@ it dropped unverifiable ops to 845 and immediately exposed **eleven `Var` classe
 field models**. Coverage claims are worth exactly as much as the oracle behind them, and an oracle
 that skips what it cannot check is how "complete" stops meaning anything.
 
+### SHOULD-FIX: three representations of "no method chain", and nothing converts consistently (added 2026-09-10)
+
+Found by walking into it: the Family C conversion introduced an NPE at
+`ClassComposition.computeMethodChain` because there was no way to tell from the code whether the
+value could be null. It could.
+
+| representation | means | produced by |
+| --- | --- | --- |
+| `null` | no such method - the `MethodInfo` was not found | `TypeInfo.getOptimizedMethodChain` / `getOptimizedGetChain` / `getOptimizedSetChain` |
+| `MethodBody.NO_BODIES` | the method exists, its optimized chain is empty | `buildOptimizedMethodChain` |
+| `ClassComposition.NIL_CHAIN` | a `CallChain` wrapping `NO_BODIES` | `ClassComposition:1041` |
+
+**The distinction is real; the conversions are not.** Absent versus present-but-empty is a genuine
+difference and worth keeping - it is the same distinction `Op.fields()` makes deliberately. The
+problem is that nothing applies it uniformly:
+
+- `CallChain`'s constructor silently maps `null` to `NO_BODIES`, collapsing the distinction;
+- `computeMethodChain` depends on that collapse and passes a possibly-null chain straight in;
+- `computeGetterChain`/`computeSetterChain` instead guard explicitly and map null to `NIL_CHAIN`;
+- three further sites map `NIL_CHAIN` back to `null` (`chain == NIL_CHAIN ? null : chain`).
+
+So a value can travel `null -> NO_BODIES -> NIL_CHAIN -> null`, and which convention holds depends
+on which accessor it arrived through. Nothing in any signature says "may be null".
+
+**Why it is worth fixing rather than noting.** The accessors' return type is
+`FrozenArray<MethodBody>` and the neighbouring accessor paths DO guard, so the reasonable inference
+at a new call site is that null is impossible. That inference is wrong, and the failure mode is an
+NPE inside a service - which surfaces as `"Service terminated: runner.xtclang.org"` several layers
+away from the cause, not as a null dereference at the site.
+
+**Shape of the fix.** Pick one convention and state it once. Either the accessors never answer null
+(absent becomes `NO_BODIES_FROZEN`, and callers that need to distinguish ask separately), or they
+answer `Optional` so the compiler enforces the check. The current in-between - nullable returns,
+a constructor that quietly absorbs null, and a third sentinel layered on top - is what makes the
+correct call impossible to write from local reading.
+
 ### MEASURED, ready to build: the equality path has no inline cache (updated 2026-09-09)
 
 **Still not a bug.** `OpInvocable` and `OpIndex` had caches that were broken (rows 55-56 of

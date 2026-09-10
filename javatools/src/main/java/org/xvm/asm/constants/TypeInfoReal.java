@@ -35,6 +35,7 @@ import org.xvm.asm.constants.TypeConstant.Origin;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Constants;
 
+import org.xvm.util.FrozenArray;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 import static org.xvm.util.Handy.copyOf;
@@ -1637,7 +1638,7 @@ public final class TypeInfoReal
     }
 
     @Override
-    public MethodBody[] getOptimizedMethodChain(MethodConstant id) {
+    public FrozenArray<MethodBody> getOptimizedMethodChain(MethodConstant id) {
         MethodInfo info = getMethodById(id, true);
         return info == null
                 ? null
@@ -1645,7 +1646,7 @@ public final class TypeInfoReal
     }
 
     @Override
-    public MethodBody[] getOptimizedMethodChain(Nid nid) {
+    public FrozenArray<MethodBody> getOptimizedMethodChain(Nid nid) {
         MethodInfo info = getMethodByNestedId(nid, true);
         return info == null
                 ? null
@@ -1653,7 +1654,7 @@ public final class TypeInfoReal
     }
 
     @Override
-    public MethodBody[] getOptimizedGetChain(PropertyConstant id) {
+    public FrozenArray<MethodBody> getOptimizedGetChain(PropertyConstant id) {
         PropertyInfo prop = findProperty(id, true);
         if (prop == null) {
             TypeInfo infoOrigin = findPropertyOrigin(id);
@@ -1667,7 +1668,7 @@ public final class TypeInfoReal
     }
 
     @Override
-    public MethodBody[] getOptimizedSetChain(PropertyConstant id) {
+    public FrozenArray<MethodBody> getOptimizedSetChain(PropertyConstant id) {
         PropertyInfo prop = findProperty(id, true);
         if (prop == null) {
             TypeInfo infoOrigin = findPropertyOrigin(id);
@@ -2264,9 +2265,9 @@ public final class TypeInfoReal
         var method = entry.getValue();
         if (fRuntime) {
             var chain = method.ensureOptimizedMethodChain(this);
-            method = chain.length == 0
+            method = chain.isEmpty()
                     ? MethodInfo.create(new MethodBody(method.getHead(), Implementation.Native), 0)
-                    : MethodInfo.create(chain, 0);
+                    : MethodInfo.create(chain.unsafeArray(), 0);
         }
         String sVirtual = f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool, null))
                 ? "(v) " : "";

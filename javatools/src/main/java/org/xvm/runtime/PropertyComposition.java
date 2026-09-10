@@ -30,6 +30,7 @@ import org.xvm.runtime.template.reflect.xVar;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.util.FrozenArray;
 import org.xvm.util.Lazy;
 
 
@@ -229,7 +230,7 @@ public final class PropertyComposition
                 MethodInfo info       = infoParent.getMethodByNestedId(idNested.getNestedIdentity(), true);
                 return info == null
                         ? f_clzRef.getMethodCallChain(nid)
-                        : new CallChain(info.ensureOptimizedMethodChain(infoParent));
+                        : new CallChain(info.ensureOptimizedMethodChain(infoParent).unsafeArray());
             });
     }
 
@@ -248,10 +249,10 @@ public final class PropertyComposition
                         : (PropertyConstant) idBase.appendNestedIdentity(
                                 idBase.getConstantPool(), id.getNestedIdentity());
 
-                MethodBody[] chain = getParentInfo().getOptimizedGetChain(idNested);
+                FrozenArray<MethodBody> chain = getParentInfo().getOptimizedGetChain(idNested);
                 return chain == null
                         ? f_clzRef.getPropertyGetterChain(id)
-                        : CallChain.createPropertyCallChain(chain);
+                        : CallChain.createPropertyCallChain(chain.unsafeArray());
             });
     }
 
@@ -269,10 +270,10 @@ public final class PropertyComposition
                         : (PropertyConstant) idBase.appendNestedIdentity(
                                 idBase.getConstantPool(), id.getNestedIdentity());
 
-                MethodBody[] chain = getParentInfo().getOptimizedSetChain(idNested);
+                FrozenArray<MethodBody> chain = getParentInfo().getOptimizedSetChain(idNested);
                 return chain == null
                         ? f_clzRef.getPropertySetterChain(id)
-                        : new CallChain(chain);
+                        : new CallChain(chain.unsafeArray());
             });
     }
 

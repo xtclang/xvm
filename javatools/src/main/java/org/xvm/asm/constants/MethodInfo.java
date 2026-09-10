@@ -30,6 +30,7 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.NativeNames;
 import org.xvm.javajit.TypeSystem;
 
+import org.xvm.util.FrozenArray;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
@@ -92,7 +93,7 @@ public class MethodInfo
         Arrays.setAll(aOwned, i -> new MethodBody(this, Objects.requireNonNull(aBody[i])));
 
         m_infoType = infoType;
-        m_aBody    = aOwned;
+        m_aBody    = FrozenArray.adopt(aOwned);
         f_nRank    = nRank;
     }
 
@@ -105,7 +106,7 @@ public class MethodInfo
 
         return m_infoType == infoType
                 ? this
-                : create(infoType, m_aBody, f_nRank);
+                : create(infoType, m_aBody.unsafeArray(), f_nRank);
     }
 
     /**
@@ -139,7 +140,7 @@ public class MethodInfo
             }
         }
 
-        MethodBody[] aOld = m_aBody;
+        MethodBody[] aOld = m_aBody.unsafeArray();
         int          cOld = aOld.length;
         MethodBody[] aNew = new MethodBody[cOld+1];
 
@@ -177,8 +178,8 @@ public class MethodInfo
             return this;
         }
 
-        MethodBody[] aBase = this.m_aBody;
-        MethodBody[] aAdd  = that.m_aBody;
+        MethodBody[] aBase = this.m_aBody.unsafeArray();
+        MethodBody[] aAdd  = that.m_aBody.unsafeArray();
         int          cBase = aBase.length;
         int          cAdd  = aAdd.length;
 
@@ -324,8 +325,8 @@ public class MethodInfo
     public MethodInfo layerOnValidator(MethodInfo that) {
         assert this.isValidator() && that.isValidator();
 
-        MethodBody[] aBase = this.m_aBody;
-        MethodBody[] aAdd  = that.m_aBody;
+        MethodBody[] aBase = this.m_aBody.unsafeArray();
+        MethodBody[] aAdd  = that.m_aBody.unsafeArray();
 
         ArrayList<MethodBody> listMerge = null;
         NextLayer: for (MethodBody bodyThat : aAdd) {
@@ -361,7 +362,7 @@ public class MethodInfo
      * @return the resulting MethodInfo
      */
     public MethodInfo layerOnVirtualConstructor(MethodInfo that) {
-        MethodBody[] aThis = m_aBody;
+        MethodBody[] aThis = m_aBody.unsafeArray();
         int          cThis = -1;
         for (int i = aThis.length - 1; i >=0; --i) {
             if (aThis[i].isVirtualConstructor()) {
@@ -373,7 +374,7 @@ public class MethodInfo
         assert cThis > 0;
 
         // add the base virtual constructor at the bottom
-        MethodBody[] aThat = that.m_aBody;
+        MethodBody[] aThat = that.m_aBody.unsafeArray();
         int          cThat = aThat.length;
         MethodBody[] aNew  = new MethodBody[cThat + cThis];
 
@@ -400,8 +401,8 @@ public class MethodInfo
         assert this.isFunction();
         assert that.isFunction();
 
-        MethodBody[] aBase = that.m_aBody;
-        MethodBody[] aAdd  = this.m_aBody;
+        MethodBody[] aBase = that.m_aBody.unsafeArray();
+        MethodBody[] aAdd  = this.m_aBody.unsafeArray();
 
         ArrayList<MethodBody> listMerge = null;
         NextLayer: for (MethodBody bodyAdd : aAdd) {
@@ -494,7 +495,7 @@ public class MethodInfo
         MethodBody bodyCap    = getHead();
         Nid     nidTarget  = idProp.appendNestedIdentity(pool, bodyCap.getNarrowingNestedIdentity()).
                                     resolveNestedIdentity(pool, null);
-        MethodBody[] chainNew = copyOf(getChain());
+        MethodBody[] chainNew = getChain().copy();
         chainNew[0] = new MethodBody(bodyCap.getIdentity(), bodyCap.getSignature(),
                                      Implementation.Capped, MethodBody.Target.narrowing(nidTarget));
         return MethodInfo.create(chainNew, f_nRank);
@@ -508,7 +509,7 @@ public class MethodInfo
      *         or null if all bodies are excluded
      */
     public MethodInfo excluding(Set<IdentityConstant> setFromInto) {
-        MethodBody[]     aBodyOld = m_aBody;
+        MethodBody[]     aBodyOld = m_aBody.unsafeArray();
         int              cBodies  = aBodyOld.length;
         List<MethodBody> listNew  = null;
         for (int iBody = 0; iBody < cBodies; iBody++) {
@@ -548,10 +549,10 @@ public class MethodInfo
             return null;
         }
 
-        if (m_aBody.length == 1) {
-            MethodBody head = m_aBody[0];
+        if (m_aBody.size() == 1) {
+            MethodBody head = m_aBody.get(0);
             if (head.isInto()) {
-                return setFromInto == null || setFromInto.contains(m_aBody[0].getIdentity().getClassIdentity())
+                return setFromInto == null || setFromInto.contains(m_aBody.get(0).getIdentity().getClassIdentity())
                         ? this
                         : null;
             }
@@ -586,7 +587,7 @@ public class MethodInfo
      * to be exploded.
      */
     public MethodInfo rebaseInto() {
-        MethodBody[] aBodyNew = copyOf(m_aBody);
+        MethodBody[] aBodyNew = copyOf(m_aBody.unsafeArray());
         int          cBodies  = aBodyNew.length;
         MethodBody   tail     = aBodyNew[cBodies-1];
         assert tail.isInto();
@@ -611,7 +612,7 @@ public class MethodInfo
      */
     public MethodInfo markImplicitConstructor() {
         assert getHead().isConstructor();
-        MethodBody   bodyOld  = m_aBody[0];
+        MethodBody   bodyOld  = m_aBody.get(0);
         MethodBody   bodyNew  = new MethodBody(bodyOld.getIdentity(), bodyOld.getSignature(), Implementation.Implicit, new MethodBody.Target.Origin(this));
         return MethodInfo.create(new MethodBody[] {bodyNew}, f_nRank);
     }
@@ -689,7 +690,7 @@ public class MethodInfo
      * @return true iff this MethodInfo contains every MethodBody from that MethodInfo
      */
     public boolean containsAllBodies(MethodInfo that) {
-        return Handy.containsAll(this.m_aBody, that.m_aBody);
+        return Handy.containsAll(this.m_aBody.unsafeArray(), that.m_aBody.unsafeArray());
     }
 
     /**
@@ -843,14 +844,14 @@ public class MethodInfo
      * @return the first MethodBody in the call chain
      */
     public MethodBody getHead() {
-        return m_aBody[0];
+        return m_aBody.get(0);
     }
 
     /**
      * @return the last MethodBody in the call chain
      */
     public MethodBody getTail() {
-        return m_aBody[m_aBody.length-1];
+        return m_aBody.get(m_aBody.size() - 1);
     }
 
     /**
@@ -1142,7 +1143,7 @@ public class MethodInfo
     /**
      * @return the method chain
      */
-    public MethodBody[] getChain() {
+    public FrozenArray<MethodBody> getChain() {
         return m_aBody;
     }
 
@@ -1156,11 +1157,11 @@ public class MethodInfo
      *
      * @return a chain of bodies, each representing functionality to invoke, in their "super" order
      */
-    public MethodBody[] ensureOptimizedMethodChain(TypeInfo infoType) {
-        MethodBody[] chain = m_aBodyResolved;
+    public FrozenArray<MethodBody> ensureOptimizedMethodChain(TypeInfo infoType) {
+        FrozenArray<MethodBody> chain = m_aBodyResolved;
         if (chain == null) {
-            MethodBody[] chainRaw = getChain();
-            MethodBody   bodyHead = chainRaw[0];
+            FrozenArray<MethodBody> chainRaw = getChain();
+            MethodBody              bodyHead = chainRaw.get(0);
 
             // first, see if this chain was capped, which means that it (virtually) redirects to
             // a different method chain, which (somewhere at the bottom of that chain) will contain
@@ -1184,13 +1185,24 @@ public class MethodInfo
                          * fully built array, and use the volatile field to make those writes visible to
                          * later readers.
                          */
-                        m_aBodyResolved = chain = buildOptimizedMethodChain(infoType, chainRaw);
+                        m_aBodyResolved = chain =
+                                freeze(buildOptimizedMethodChain(infoType, chainRaw.unsafeArray()));
                     }
                 }
             }
         }
 
         return chain;
+    }
+
+    /**
+     * @param chain  a freshly built chain
+     *
+     * @return the chain as an immutable view, reusing the shared empty one so that the identity
+     *         {@code MethodBody.NO_BODIES} carries is not lost to a per-call wrapper
+     */
+    private static FrozenArray<MethodBody> freeze(MethodBody[] chain) {
+        return chain.length == 0 ? MethodBody.NO_BODIES_FROZEN : FrozenArray.adopt(chain);
     }
 
     private MethodBody[] buildOptimizedMethodChain(TypeInfo infoType, MethodBody[] chain) {
@@ -1333,9 +1345,9 @@ public class MethodInfo
      * @return the "super" signature
      */
     public SignatureConstant getSuper(TypeInfo infoType) {
-        MethodBody[] chain = m_aBodyResolved;
+        FrozenArray<MethodBody> chain = m_aBodyResolved;
         if (chain != null) {
-            return chain.length > 1 ? chain[1].getSignature() : null;
+            return chain.size() > 1 ? chain.get(1).getSignature() : null;
         }
 
         // the logic below is a specialized version of the ensureOptimizedMethodChain() method
@@ -1353,7 +1365,7 @@ public class MethodInfo
             }
         }
 
-        MethodBody bodySuper = findSuper(infoType, chain);
+        MethodBody bodySuper = findSuper(infoType, chain.unsafeArray());
         if (bodySuper == null) {
             return null;
         }
@@ -1361,7 +1373,7 @@ public class MethodInfo
         SignatureConstant sigSuper = bodySuper.getSignature();
 
         // if the "head" is auto-narrowing, we need to adjust the "super()" signature as well
-        MethodBody bodyHead = chain[0];
+        MethodBody bodyHead = chain.get(0);
         if (bodyHead.getSignature().containsAutoNarrowing(false)) {
             sigSuper = sigSuper.resolveAutoNarrowing(pool(), infoType.getType(), null);
         }
@@ -1514,7 +1526,7 @@ public class MethodInfo
      * @return the identity of the method to be used by the JIT compiler
      */
     public MethodConstant getJitIdentity() {
-        return getJitIdentity(m_aBody);
+        return getJitIdentity(m_aBody.unsafeArray());
     }
 
     /**
@@ -1605,7 +1617,7 @@ public class MethodInfo
     private JitMethodDesc computeJitDesc(Builder builder, TypeConstant typeContainer) {
         MethodBody head = getHead();
         return switch (head.getImplementation()) {
-            case Capped -> getChain()[1].getJitDesc(builder, typeContainer);
+            case Capped -> getChain().get(1).getJitDesc(builder, typeContainer);
 
             case Delegating -> {
                 // there could be multiple delegates; take the first "real" one
@@ -1638,7 +1650,7 @@ public class MethodInfo
             return false;
         }
 
-        return Arrays.equals(this.m_aBody, that.m_aBody);
+        return this.m_aBody.contentEquals(that.m_aBody);
     }
 
     @Override
@@ -1675,7 +1687,7 @@ public class MethodInfo
     /**
      * The method chain.
      */
-    private final MethodBody[] m_aBody;
+    private final FrozenArray<MethodBody> m_aBody;
 
     /**
      * The TypeInfo that contains this MethodInfo, or null while the MethodInfo is being assembled.
@@ -1692,5 +1704,5 @@ public class MethodInfo
     /**
      * The "optimized" (resolved) method chain.
      */
-    private transient volatile MethodBody[] m_aBodyResolved;
+    private transient volatile FrozenArray<MethodBody> m_aBodyResolved;
 }

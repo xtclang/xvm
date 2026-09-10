@@ -4864,7 +4864,7 @@ public abstract sealed class TypeConstant
                     if (idMethod.isTopLevel()) {
                         MethodBody bodyDelegate = new MethodBody(idMethod, head.getSignature(),
                                 Implementation.Delegating, new MethodBody.Target.Prop(idDelegate));
-                        methodResult = MethodInfo.create(Handy.prepend(methodResult.getChain(),
+                        methodResult = MethodInfo.create(Handy.prepend(methodResult.getChain().unsafeArray(),
                                 bodyDelegate), methodResult.getRank());
                     }
                 }
@@ -4956,7 +4956,7 @@ public abstract sealed class TypeConstant
         }
 
         var listBodies = new ArrayList<MethodBody>();
-        Collections.addAll(listBodies, methodResult.getChain());
+        methodResult.getChain().forEach(listBodies::add);
         for (MethodBody body : methodLayered.getChain()) {
             if (!methodResult.containsBody(body)) {
                 listBodies.add(body);

@@ -12,6 +12,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.util.FrozenArray;
 import org.xvm.util.Severity;
 
 import org.xvm.asm.Constants.Access;
@@ -356,7 +357,10 @@ public final class ClassComposition
         TypeInfo info = isStruct()
                 ? f_typeStructure.ensureTypeInfo(ErrorListener.RUNTIME)
                 : f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME);
-        return new CallChain(info.getOptimizedMethodChain(nidMethod));
+        // NOTE: getOptimizedMethodChain answers null for an absent method, and CallChain's
+        // constructor turns that into NO_BODIES - so the null must survive to reach it
+        FrozenArray<MethodBody> chain = info.getOptimizedMethodChain(nidMethod);
+        return new CallChain(chain == null ? null : chain.unsafeArray());
     }
 
     @Override
@@ -399,10 +403,10 @@ public final class ClassComposition
     }
 
     private CallChain computeGetterChain(PropertyConstant id) {
-        MethodBody[] aBody = f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME).getOptimizedGetChain(id);
+        FrozenArray<MethodBody> aBody = f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME).getOptimizedGetChain(id);
         return aBody == null
                 ? NIL_CHAIN
-                : CallChain.createPropertyCallChain(aBody);
+                : CallChain.createPropertyCallChain(aBody.unsafeArray());
     }
 
     @Override
@@ -441,10 +445,10 @@ public final class ClassComposition
     }
 
     private CallChain computeSetterChain(PropertyConstant id) {
-        MethodBody[] aBody = f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME).getOptimizedSetChain(id);
+        FrozenArray<MethodBody> aBody = f_typeInception.ensureTypeInfo(ErrorListener.RUNTIME).getOptimizedSetChain(id);
         return aBody == null
                 ? NIL_CHAIN
-                : CallChain.createPropertyCallChain(aBody);
+                : CallChain.createPropertyCallChain(aBody.unsafeArray());
     }
 
     @Override

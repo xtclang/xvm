@@ -20,6 +20,7 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant.Origin;
 
+import org.xvm.util.FrozenArray;
 import org.xvm.util.ListMap;
 
 
@@ -561,7 +562,7 @@ public abstract sealed class TypeInfo
      *
      * @return the method chain iff the method exists; otherwise null
      */
-    public abstract MethodBody[] getOptimizedMethodChain(MethodConstant id);
+    public abstract FrozenArray<MethodBody> getOptimizedMethodChain(MethodConstant id);
 
     /**
      * Obtain the method chain for the specified method.
@@ -570,7 +571,7 @@ public abstract sealed class TypeInfo
      *
      * @return the method chain iff the method exists; otherwise null
      */
-    public abstract MethodBody[] getOptimizedMethodChain(Nid nid);
+    public abstract FrozenArray<MethodBody> getOptimizedMethodChain(Nid nid);
 
     /**
      * Obtain the method chain for the property getter for the specified property id.
@@ -579,7 +580,7 @@ public abstract sealed class TypeInfo
      *
      * @return the method chain iff the property exists; otherwise null
      */
-    public abstract MethodBody[] getOptimizedGetChain(PropertyConstant id);
+    public abstract FrozenArray<MethodBody> getOptimizedGetChain(PropertyConstant id);
 
     /**
      * Obtain the method chain for the property setter for the specified property id.
@@ -588,7 +589,7 @@ public abstract sealed class TypeInfo
      *
      * @return the method chain iff the property exists and is a Var; otherwise null
      */
-    public abstract MethodBody[] getOptimizedSetChain(PropertyConstant id);
+    public abstract FrozenArray<MethodBody> getOptimizedSetChain(PropertyConstant id);
 
     /**
      * Find a named method or function that best matches the specified requirements.
