@@ -7,7 +7,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
@@ -297,7 +296,14 @@ public non-sealed class MethodDeclarationStatement
 
     @Override
     protected int getCodeContainerCounter() {
-        return COUNTER.getAndIncrement();
+        // Owned by this method declaration, not by the JVM. This counter is the root of the
+        // getCodeContainerCounter() walk, and it numbers labels and synthetic variable names
+        // ("_:" + n, see VariableDeclarationStatement). A process-wide AtomicInteger made those
+        // names depend on how many methods had been compiled earlier in this JVM and, with the
+        // parallel compiler, on thread interleaving - so the same source did not compile to the
+        // same names twice. Per-declaration numbering is both deterministic and the correct
+        // scope: the walk stops here precisely because this is the enclosing code container.
+        return m_cCodeContainer++;
     }
 
     // ----- compile phases ------------------------------------------------------------------------
@@ -1271,7 +1277,11 @@ public non-sealed class MethodDeclarationStatement
     // complementary statement for the constructor points to the finalizer and vice versa
     private transient MethodDeclarationStatement m_stmtComplement;
 
-    private static final AtomicInteger COUNTER = new AtomicInteger();
+    /**
+     * Numbers the code containers within this method declaration; see
+     * {@link #getCodeContainerCounter()}.
+     */
+    private int m_cCodeContainer;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class,
             "condition", "annotations", "typeParams", "returns", "redundant", "params", "body");
