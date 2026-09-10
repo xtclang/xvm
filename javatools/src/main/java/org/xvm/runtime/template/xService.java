@@ -44,27 +44,34 @@ import org.xvm.runtime.template._native.temporal.xNanosTimer;
  */
 public class xService
         extends ClassTemplate {
-    public static xService INSTANCE;
-    public static ClassConstant INCEPTION_CLASS;
+    /**
+     * The rebased inception class for this container's Service template; null unless this is
+     * the container's native Service template.
+     */
+    private final ClassConstant f_idInception;
 
-    public xService(Container container, ClassStructure structure, boolean fInstance) {
+    /**
+     * @param fBaseTemplate  true iff this is the container's base template for this class - here,
+     *                       the rebased template over the {@code Service} interface, rather than
+     *                       a template for a concrete service class
+     *
+     * Note: the flag cannot be replaced by a {@code NativeTemplates} lookup. The
+     * table only answers once construction has finished - that is what keeps a half-built template
+     * from escaping - and the answer is needed here, because {@link NativeRebaseConstant} may only
+     * be built over an interface. Every concrete service template (xRTKeyStore, xRTServer, ...)
+     * runs this constructor over a SERVICE structure, and would trip that assertion.
+     */
+    public xService(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
 
-        if (fInstance) {
-            INSTANCE = this;
-            INCEPTION_CLASS = new NativeRebaseConstant(
-                (ClassConstant) structure.getIdentityConstant());
-        }
-    }
-
-    @Override
-    public void registerNativeTemplates() {
-        new Proxy(f_container); // this initializes the Proxy.INSTANCE reference
+        f_idInception = fBaseTemplate
+                ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
+                : null;
     }
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xService.class)) {
             SYNCHRONICITY = (xEnum) f_container.getTemplate("Service.Synchronicity");
 
             // since Service is an interface, we cannot annotate the properties naturally and need to do
@@ -83,7 +90,7 @@ public class xService
 
     @Override
     protected ClassConstant getInceptionClassConstant() {
-        return this == INSTANCE ? INCEPTION_CLASS : (ClassConstant) super.getInceptionClassConstant();
+        return isNativeInstance(xService.class) ? f_idInception : (ClassConstant) super.getInceptionClassConstant();
     }
 
     /**
@@ -318,7 +325,7 @@ public class xService
             return frame.f_context.f_container.ensureTypeSystemHandle(frame, iReturn);
 
         case "serviceName":
-            return frame.assignValue(iReturn, xString.makeHandle(hService.f_context.f_sName));
+            return frame.assignValue(iReturn, xString.makeHandle(frame, hService.f_context.f_sName));
 
         case "serviceControl":
             return frame.assignValue(iReturn, xRTServiceControl.makeHandle(hService.f_context));

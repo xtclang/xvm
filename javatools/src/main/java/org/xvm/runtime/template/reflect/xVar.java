@@ -27,17 +27,17 @@ import org.xvm.runtime.template.xException;
 public class xVar
         extends xRef
         implements VarSupport {
-    public static xVar INSTANCE;
-    public static ClassConstant INCEPTION_CLASS;
+    /**
+     * The rebased inception class for this container's Var template.
+     */
+    private final ClassConstant f_idInception;
 
-    public xVar(Container container, ClassStructure structure, boolean fInstance) {
+    public xVar(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
 
-        if (fInstance) {
-            INSTANCE = this;
-            INCEPTION_CLASS = new NativeRebaseConstant(
-                (ClassConstant) structure.getIdentityConstant());
-        }
+        f_idInception = fBaseTemplate
+                ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
+                : null;
     }
 
     @Override
@@ -47,7 +47,10 @@ public class xVar
 
     @Override
     protected ClassConstant getInceptionClassConstant() {
-        return INCEPTION_CLASS;
+        // subclasses (xFuture, xLazy, xAtomic) inherit this and are not themselves rebased, so the
+        // answer is the container's own xVar template's constant - not this instance's, which
+        // is only populated for that one template
+        return f_container.nativeTemplate(xVar.class).f_idInception;
     }
 
     @Override

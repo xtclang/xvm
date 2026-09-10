@@ -425,7 +425,7 @@ public class ClassComposition
                 FieldInfo field = entry.getValue();
 
                 if (!(enid instanceof NestedIdentity) && field.isRegular()) {
-                    ashNames[i++] = xString.makeHandle(field.getName());
+                    ashNames[i++] = xString.makeHandle(f_container, field.getName());
                 }
             }
             assert i == m_cRegularFields;

@@ -7,6 +7,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
@@ -23,7 +24,8 @@ import org.xvm.runtime.template.numbers.LongLong;
 public class xAtomicInt128
         extends xAtomic {
     public xAtomicInt128(BaseInt128 templateIntBase) {
-        super(templateIntBase.f_container, xAtomicIntNumber.INSTANCE.getStructure(), false);
+        super(templateIntBase.f_container, NativeTemplates.of(templateIntBase).
+                get(xAtomicIntNumber.class).getStructure(), false);
 
         f_templateReferent = templateIntBase;
     }

@@ -48,14 +48,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public class xRTNameService
         extends xService {
-    public static xRTNameService INSTANCE;
-
-    public xRTNameService(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTNameService(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -90,7 +84,8 @@ public class xRTNameService
 
         if (frame.f_context != hService.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
+                    call1(frame, hTarget, ahArg, iReturn);
         }
 
         switch (method.getName()) {
@@ -104,7 +99,7 @@ public class xRTNameService
                 Frame.Continuation continuation = frameCaller -> {
                     try {
                         return frameCaller.assignValue(iReturn,
-                                xString.makeArrayHandle(cfRecords.get()));
+                                xString.makeArrayHandle(frame.container(), cfRecords.get()));
                     } catch (Throwable e) {
                         return frameCaller.raiseException(
                             xException.obscureIoException(frameCaller, exceptionMessage(e)));
@@ -124,7 +119,8 @@ public class xRTNameService
 
         if (frame.f_context != hService.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(method).callN(frame, hTarget, ahArg, aiReturn);
+            return xRTFunction.makeAsyncNativeHandle(frame.container(), method).
+                    callN(frame, hTarget, ahArg, aiReturn);
         }
 
         switch (method.getName()) {
@@ -174,7 +170,7 @@ public class xRTNameService
                     String      sNotName = addr.getHostAddress();
                     if (sName != null && !sName.isEmpty() && !sName.equals(sNotName)) {
                         return frameCaller.assignValues(aiReturn,
-                                xBoolean.TRUE, xString.makeHandle(sName));
+                                xBoolean.TRUE, xString.makeHandle(frame, sName));
                     }
                 } catch (Exception ignore) {
                     // REVIEW CP: do we want to report the reason somehow?
@@ -193,7 +189,7 @@ public class xRTNameService
     // -----  helpers ------------------------------------------------------------------------------
 
     static TypeComposition ensureByteArrayArrayComposition(Container container) {
-        return container.ensureClassComposition(BYTE_ARRAY_ARRAY_TYPE, xArray.INSTANCE);
+        return container.ensureClassComposition(BYTE_ARRAY_ARRAY_TYPE, container.nativeTemplate(xArray.class));
     }
 
     static String[] getAllRecords(String sName)

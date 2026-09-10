@@ -106,8 +106,9 @@ public class Var_M
 
             frame.introduceResolvedVar(m_nVar, typeMap, null, Frame.VAR_STANDARD, null);
 
-            return xListMap.INSTANCE.constructMap(frame, typeMap, ahKey, ahValue,
-                    anyDeferred(ahKey), anyDeferred(ahValue), m_nVar);
+            return frame.nativeTemplate(xListMap.class).
+                    constructMap(frame, typeMap, ahKey, ahValue,
+                            anyDeferred(ahKey), anyDeferred(ahValue), m_nVar);
         } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
         }

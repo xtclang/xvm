@@ -31,14 +31,8 @@ import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
  */
 public class xCoreRepository
         extends ClassTemplate {
-    public static xCoreRepository INSTANCE;
-
-    public xCoreRepository(Container container, ClassStructure structure, boolean fInstance) {
+    public xCoreRepository(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -66,7 +60,7 @@ public class xCoreRepository
             ModuleRepository repo     = f_container.getModuleRepository();
             Set<String>      setNames = repo.getModuleNames();
 
-            ArrayHandle hArray = xString.makeArrayHandle(setNames.toArray(Utils.NO_NAMES));
+            ArrayHandle hArray = xString.makeArrayHandle(frame.container(), setNames.toArray(Utils.NO_NAMES));
             return xArray.createListSet(frame, hArray, iReturn);
         }
         }

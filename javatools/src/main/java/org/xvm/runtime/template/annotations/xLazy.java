@@ -24,7 +24,7 @@ import org.xvm.runtime.template.xException;
  */
 public class xLazy
         extends xVar {
-    public xLazy(Container container, ClassStructure structure, boolean fInstance) {
+    public xLazy(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
     }
 

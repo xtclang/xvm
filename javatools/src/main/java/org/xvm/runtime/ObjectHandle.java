@@ -728,7 +728,8 @@ public abstract class ObjectHandle
 
         @Override
         public String toString() {
-            return super.toString() + (m_clazz.getTemplate() == xChar.INSTANCE
+            return super.toString()
+                    + (m_clazz.getTemplate() == NativeTemplates.of(m_clazz).get(xChar.class)
                     ? Handy.quotedChar((char) m_lValue)
                     : String.valueOf(m_lValue));
         }

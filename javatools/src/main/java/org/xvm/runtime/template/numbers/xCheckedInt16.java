@@ -9,18 +9,12 @@ import org.xvm.runtime.Container;
  */
 public class xCheckedInt16
         extends xCheckedConstrainedInt {
-    public static xCheckedInt16 INSTANCE;
-
-    public xCheckedInt16(Container container, ClassStructure structure, boolean fInstance) {
+    public xCheckedInt16(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, Short.MIN_VALUE, Short.MAX_VALUE, 16, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return xCheckedUInt16.INSTANCE;
+        return f_container.nativeTemplate(xCheckedUInt16.class);
     }
 }

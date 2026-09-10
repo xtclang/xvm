@@ -21,14 +21,8 @@ import org.xvm.runtime.template.numbers.xInt8;
  */
 public class xRTViewFromByteToInt8
         extends xRTViewFromByte {
-    public static xRTViewFromByteToInt8 INSTANCE;
-
-    public xRTViewFromByteToInt8(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewFromByteToInt8(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -51,7 +45,7 @@ public class xRTViewFromByteToInt8
         if (tSource instanceof ByteView tView) {
             byte[] abValue = tView.getBytes(hSource, ofStart, cSize, fReverse);
 
-            return xRTInt8Delegate.INSTANCE.makeHandle(abValue, cSize, mutability);
+            return f_container.nativeTemplate(xRTInt8Delegate.class).makeHandle(abValue, cSize, mutability);
         }
 
         throw new UnsupportedOperationException();
@@ -66,7 +60,7 @@ public class xRTViewFromByteToInt8
         if (tSource instanceof ByteView tView) {
             byte bValue = tView.extractByte(hSource, lIndex);
 
-            return frame.assignValue(iReturn, xInt8.INSTANCE.makeJavaLong(bValue));
+            return frame.assignValue(iReturn, f_container.nativeTemplate(xInt8.class).makeJavaLong(bValue));
         }
 
         throw new UnsupportedOperationException();

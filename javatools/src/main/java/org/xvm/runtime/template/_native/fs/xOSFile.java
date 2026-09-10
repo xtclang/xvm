@@ -51,14 +51,8 @@ import org.xvm.util.Handy;
  */
 public class xOSFile
         extends xOSFileNode {
-    public static xOSFile INSTANCE;
-
-    public xOSFile(Container container, ClassStructure structure, boolean fInstance) {
+    public xOSFile(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -484,7 +478,7 @@ public class xOSFile
         Path path = hFile.f_path;
         try {
             FileChannel channel = FileChannel.open(path, aOpenOpt);
-            return xRawOSFileChannel.INSTANCE.createHandle(frame, channel, path, iReturn);
+            return f_container.nativeTemplate(xRawOSFileChannel.class).createHandle(frame, channel, path, iReturn);
         } catch (IOException e) {
             return raisePathException(frame, e, path);
         }

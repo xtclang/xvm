@@ -18,6 +18,7 @@ import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.javajit.registers.Ref;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -103,8 +104,9 @@ public class MoveVar
                         ? frame.poolContext().typeObject()
                         : frame.getVarInfo(nFrom).getType();
             }
-            TypeComposition clzRef = xVar.INSTANCE.
-                    ensureParameterizedClass(frame.f_context.f_container, typeReferent);
+            Container       container = frame.container();
+            TypeComposition clzRef    = container.nativeTemplate(xVar.class).
+                    ensureParameterizedClass(container, typeReferent);
             hRef = new RefHandle(clzRef, frame, nFrom);
             if (fNextReg) {
                 frame.introduceResolvedVar(nTo, hRef.getType());

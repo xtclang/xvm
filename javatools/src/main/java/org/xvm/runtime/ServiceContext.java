@@ -1508,7 +1508,7 @@ public class ServiceContext {
     protected void callUnhandledExceptionHandler(ExceptionHandle hException) {
         FunctionHandle hFunction = m_hExceptionHandler;
         if (hFunction == null) {
-            hFunction = new NativeFunctionHandle((frame, ahArg, iReturn) -> {
+            hFunction = new NativeFunctionHandle(f_container, (frame, ahArg, iReturn) -> {
                 switch (Utils.callToString(frame, ahArg[0])) {
                 case Op.R_NEXT -> {
                     Utils.log(frame, "\nUnhandled exception: " +

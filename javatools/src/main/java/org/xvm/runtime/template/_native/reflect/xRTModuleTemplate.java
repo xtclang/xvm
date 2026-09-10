@@ -31,14 +31,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public class xRTModuleTemplate
         extends xRTClassTemplate {
-    public static xRTModuleTemplate INSTANCE;
-
-    public xRTModuleTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTModuleTemplate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -63,7 +57,7 @@ public class xRTModuleTemplate
         case "qualifiedName": {
             ModuleStructure module = hTemplate.getModuleStructure();
             return frame.assignValue(iReturn,
-                xString.makeHandle(module.getIdentityConstant().getName()));
+                xString.makeHandle(frame, module.getIdentityConstant().getName()));
         }
 
         case "versionString": {
@@ -77,7 +71,7 @@ public class xRTModuleTemplate
             } else {
                 sVersion = module.getVersionString();
             }
-            return frame.assignValue(iReturn, makeNullableStringHandle(sVersion));
+            return frame.assignValue(iReturn, makeNullableStringHandle(frame, sVersion));
         }
 
         case "modulesByPath":
@@ -104,7 +98,7 @@ public class xRTModuleTemplate
         // TODO GG: how to cache the result?
         ModuleStructure module    = hTemplate.getModuleStructure();
         Container       container = frame.f_context.f_container;
-        TypeComposition clzMap    = container.resolveClass(ensureListMapType());
+        TypeComposition clzMap    = container.resolveClass(ensureListMapType(container));
 
         // starting with this module, find all module dependencies, and the shortest path to each
         Map<ModuleConstant, String> mapModulePaths = module.collectDependencies();
@@ -118,7 +112,7 @@ public class xRTModuleTemplate
             if (!idDep.equals(module.getIdentityConstant())) {
                 ModuleStructure moduleDep = module.getFileStructure().getModule(idDep);
 
-                ahPaths[index]    = xString.makeHandle(entry.getValue());
+                ahPaths[index]    = xString.makeHandle(container, entry.getValue());
                 ahTemplate[index] = makeHandle(container, moduleDep);
                 ++index;
             }
@@ -129,17 +123,17 @@ public class xRTModuleTemplate
         return Utils.constructListMap(frame, clzMap, haPaths, haTemplates, iReturn);
     }
 
-    private static ObjectHandle makeNullableStringHandle(String sValue) {
-        return sValue == null ? xNullable.NULL : xString.makeHandle(sValue);
+    private static ObjectHandle makeNullableStringHandle(Frame frame, String sValue) {
+        return sValue == null ? xNullable.NULL : xString.makeHandle(frame, sValue);
     }
 
     /**
      * @return the TypeConstant for ListMap<String, ModuleTemplate>
      */
-    private static TypeConstant ensureListMapType() {
+    private static TypeConstant ensureListMapType(Container container) {
         TypeConstant type = LISTMAP_TYPE;
         if (type == null) {
-            ConstantPool pool = INSTANCE.pool();
+            ConstantPool pool = container.nativeTemplate(xRTModuleTemplate.class).pool();
             LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
                     pool.ensureEcstasyTypeConstant("maps.ListMap"),
                     pool.typeString(), MODULE_TEMPLATE_TYPE);
@@ -149,7 +143,8 @@ public class xRTModuleTemplate
 
     private static ArrayHandle makeTemplateArrayHandle(Container container, ObjectHandle[] ahTemplate) {
         TypeComposition clzArray = container.ensureClassComposition(
-                container.getConstantPool().ensureArrayType(MODULE_TEMPLATE_TYPE), xArray.INSTANCE);
+                container.getConstantPool().ensureArrayType(MODULE_TEMPLATE_TYPE),
+                        container.nativeTemplate(xArray.class));
         return xArray.makeArrayHandle(clzArray, ahTemplate.length, ahTemplate, Mutability.Constant);
     }
 
@@ -164,8 +159,9 @@ public class xRTModuleTemplate
      */
     public static ComponentTemplateHandle makeHandle(Container container, ModuleStructure module) {
         // note: no need to initialize the struct because there are no natural fields
-        TypeComposition clz = INSTANCE.ensureClass(container,
-                                INSTANCE.getCanonicalType(), MODULE_TEMPLATE_TYPE);
+        xRTModuleTemplate template = container.nativeTemplate(xRTModuleTemplate.class);
+        TypeComposition  clz      = template.ensureClass(container, template.getCanonicalType(),
+                MODULE_TEMPLATE_TYPE);
         return new ComponentTemplateHandle(clz, module);
     }
 

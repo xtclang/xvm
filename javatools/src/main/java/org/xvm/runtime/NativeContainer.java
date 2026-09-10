@@ -164,8 +164,8 @@ public class NativeContainer
             scanNativeDirectory(dirTemplates, "", mapTemplateClasses);
         }
 
-        // we need a number of INSTANCE static variables to be set up right away
-        // (they are used by the ClassTemplate constructor)
+        // these have to be registered before anything else: the templates constructed below look
+        // them up through the container's native template table while they are being built
         storeNativeTemplate(new xObject (this, getClassStructure("Object"),  true));
         storeNativeTemplate(new xEnum   (this, getClassStructure("Enum"),    true));
         storeNativeTemplate(new xConst  (this, getClassStructure("Const"),   true));
@@ -199,8 +199,8 @@ public class NativeContainer
         }
 
         // add run-time templates
-        f_mapTemplatesByType.put(pool.typeFunction(), xRTFunction.INSTANCE);
-        f_mapTemplatesByType.put(pool.typeType()    , xRTType.INSTANCE);
+        f_mapTemplatesByType.put(pool.typeFunction(), f_templates.get(xRTFunction.class));
+        f_mapTemplatesByType.put(pool.typeType()    , f_templates.get(xRTType.class));
 
         // clone the map since the loop below can add to it
         Set<ClassTemplate> setTemplates = new HashSet<>(f_mapTemplatesByType.values());
@@ -298,24 +298,24 @@ public class NativeContainer
 
     private void initResources(ConstantPool pool) {
         // +++ temporal.LocalClock
-        xLocalClock  templateClock = xLocalClock.INSTANCE;
+        xLocalClock  templateClock = f_templates.get(xLocalClock.class);
         TypeConstant typeClock     = templateClock.getCanonicalType();
         addResourceSupplier(new InjectionKey("clock"     , typeClock), templateClock::ensureDefaultClock);
         addResourceSupplier(new InjectionKey("localClock", typeClock), templateClock::ensureLocalClock);
         addResourceSupplier(new InjectionKey("utcClock"  , typeClock), templateClock::ensureUTCClock);
 
         // +++ temporal.NanosTimer
-        xNanosTimer  templateTimer = xNanosTimer.INSTANCE;
+        xNanosTimer  templateTimer = f_templates.get(xNanosTimer.class);
         TypeConstant typeTimer     = templateTimer.getCanonicalType();
         addResourceSupplier(new InjectionKey("timer", typeTimer), templateTimer::ensureTimer);
 
         // +++ io.Console
-        xTerminalConsole templateConsole = xTerminalConsole.INSTANCE;
+        xTerminalConsole templateConsole = f_templates.get(xTerminalConsole.class);
         TypeConstant     typeConsole     = templateConsole.getCanonicalType();
         addResourceSupplier(new InjectionKey("console", typeConsole), templateConsole::ensureConsole);
 
         // +++ numbers.Random
-        xRTRandom    templateRandom = xRTRandom.INSTANCE;
+        xRTRandom    templateRandom = f_templates.get(xRTRandom.class);
         TypeConstant typeRandom     = templateRandom.getCanonicalType();
         addResourceSupplier(new InjectionKey("rnd"   , typeRandom), templateRandom::ensureDefaultRandom);
         addResourceSupplier(new InjectionKey("random", typeRandom), templateRandom::ensureDefaultRandom);
@@ -330,55 +330,55 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
 
         // +++ net:Network
-        xRTNetwork   templateNetwork = xRTNetwork.INSTANCE;
+        xRTNetwork   templateNetwork = f_templates.get(xRTNetwork.class);
         TypeConstant typeNetwork     = templateNetwork.getCanonicalType();
         addResourceSupplier(new InjectionKey("network"        , typeNetwork), this::ensureInsecureNetwork);
         addResourceSupplier(new InjectionKey("insecureNetwork", typeNetwork), this::ensureInsecureNetwork);
         addResourceSupplier(new InjectionKey("secureNetwork"  , typeNetwork), this::ensureSecureNetwork);
 
         // +++ crypto:KeyStore
-        xRTKeyStore  templateKeyStore = xRTKeyStore.INSTANCE;
+        xRTKeyStore  templateKeyStore = f_templates.get(xRTKeyStore.class);
         TypeConstant typeKeyStore     = templateKeyStore.getCanonicalType();
         addResourceSupplier(new InjectionKey("keystore", typeKeyStore), templateKeyStore::ensureKeyStore);
 
         // +++ crypto:CertificateManager
-        xRTCertificateManager templateCertManager = xRTCertificateManager.INSTANCE;
+        xRTCertificateManager templateCertManager = f_templates.get(xRTCertificateManager.class);
         TypeConstant          typeCertManager     = templateCertManager.getCanonicalType();
         addResourceSupplier(new InjectionKey("manager", typeCertManager), templateCertManager::ensureManager);
 
         // +++ crypto:Algorithms
-        xRTAlgorithms templateAlgorithms = xRTAlgorithms.INSTANCE;
+        xRTAlgorithms templateAlgorithms = f_templates.get(xRTAlgorithms.class);
         TypeConstant  typeAlgorithms     = pool.ensureTerminalTypeConstant(
                 pool.ensureClassConstant(pool.ensureModuleConstant("crypto.xtclang.org"), "Algorithms"));
         addResourceSupplier(new InjectionKey("algorithms", typeAlgorithms), templateAlgorithms::ensureAlgorithms);
 
         // +++ web:Client.Connector
-        xRTConnector templateConnector = xRTConnector.INSTANCE;
+        xRTConnector templateConnector = f_templates.get(xRTConnector.class);
         TypeConstant typeConnector     = templateConnector.getCanonicalType();
         addResourceSupplier(new InjectionKey("connector", typeConnector), templateConnector::ensureConnector);
 
         // +++ web:WebServer
-        xRTServer templateServer = xRTServer.INSTANCE;
+        xRTServer templateServer = f_templates.get(xRTServer.class);
         TypeConstant typeServer  = templateServer.getCanonicalType();
         addResourceSupplier(new InjectionKey("server", typeServer), templateServer::ensureServer);
 
         // +++ mgmt.Linker
-        xContainerLinker templateLinker = xContainerLinker.INSTANCE;
+        xContainerLinker templateLinker = f_templates.get(xContainerLinker.class);
         TypeConstant     typeLinker     = templateLinker.getCanonicalType();
         addResourceSupplier(new InjectionKey("linker", typeLinker), templateLinker::ensureLinker);
 
         // +++ mgmt.ModuleRepository
-        xCoreRepository templateRepo = xCoreRepository.INSTANCE;
+        xCoreRepository templateRepo = f_templates.get(xCoreRepository.class);
         TypeConstant    typeRepo     = templateRepo.getCanonicalType();
         addResourceSupplier(new InjectionKey("repository", typeRepo), templateRepo::ensureModuleRepository);
 
         // +++ lang.src.Compiler
-        xRTCompiler  templateCompiler = xRTCompiler.INSTANCE;
+        xRTCompiler  templateCompiler = f_templates.get(xRTCompiler.class);
         TypeConstant typeCompiler     = templateCompiler.getCanonicalType();
         addResourceSupplier(new InjectionKey("compiler", typeCompiler), templateCompiler::ensureCompiler);
 
         // +++ reflect.Injector
-        xInjector templateInjector = xInjector.INSTANCE;
+        xInjector templateInjector = f_templates.get(xInjector.class);
         TypeConstant typeInjector = templateInjector.getCanonicalType();
         addResourceSupplier(new InjectionKey("injector", typeInjector), templateInjector::ensureInjector);
 
@@ -387,7 +387,7 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("properties", typeProps), this::ensureProperties);
 
         // +++ collections.HashCollector
-        xBasicHashCollector templateHashCollector = xBasicHashCollector.INSTANCE;
+        xBasicHashCollector templateHashCollector = f_templates.get(xBasicHashCollector.class);
         TypeConstant        typeHashCollector     = templateHashCollector.getCanonicalType();
         addResourceSupplier(new InjectionKey("hash", typeHashCollector), templateHashCollector::ensureCollector);
     }
@@ -519,8 +519,8 @@ public class NativeContainer
                 if (sKey.startsWith("xvm.")) {
                     String sVal = System.getProperty(sKey);
                     if (sVal != null) {
-                        listKeys.add(xString.makeHandle(sKey.substring(4)));
-                        listVals.add(xString.makeHandle(sVal));
+                        listKeys.add(xString.makeHandle(frame, sKey.substring(4)));
+                        listVals.add(xString.makeHandle(frame, sVal));
                     }
                 }
             }
@@ -877,6 +877,11 @@ public class NativeContainer
 
     private ObjectHandle m_hSecureNetwork;
     private ObjectHandle m_hInsecureNetwork;
+
+    /**
+     * This container's native template table; see {@link NativeTemplates}.
+     */
+    final NativeTemplates f_templates = new NativeTemplates(this);
 
     private final ModuleRepository f_repository;
     private       ModuleStructure  m_moduleSystem;

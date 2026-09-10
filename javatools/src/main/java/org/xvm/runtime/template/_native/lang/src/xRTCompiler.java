@@ -62,14 +62,8 @@ import org.xvm.util.Severity;
  */
 public class xRTCompiler
         extends xService {
-    public static xRTCompiler INSTANCE;
-
-    public xRTCompiler(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTCompiler(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -162,7 +156,7 @@ public class xRTCompiler
                     return completeWithError(frame, compiler, sMissing, aiReturn);
                 }
                 CallChain chain = computeGetModuleChain(frame, hRepo);
-                switch (chain.invoke(frame, hRepo, xString.makeHandle(sMissing), STACK_2)) {
+                switch (chain.invoke(frame, hRepo, xString.makeHandle(frame, sMissing), STACK_2)) {
                 case Op.R_NEXT:
                     return popModuleStructure(frame, compiler)
                         ? doCompile(frame, compiler, hRepo, sMissing, aiReturn)
@@ -263,7 +257,7 @@ public class xRTCompiler
             haErrors    = xString.ensureEmptyArray();
         } else {
             haTemplates = xArray.makeArrayHandle(clzArray, 0, Utils.OBJECTS_NONE, Mutability.Constant);
-            haErrors    = xString.makeArrayHandle(listErrors.toArray(Utils.NO_NAMES));
+            haErrors    = xString.makeArrayHandle(frame.container(), listErrors.toArray(Utils.NO_NAMES));
         }
 
         compiler.reset();

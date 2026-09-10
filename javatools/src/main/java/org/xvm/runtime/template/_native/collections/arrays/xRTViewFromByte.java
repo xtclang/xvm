@@ -15,19 +15,13 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
  */
 public class xRTViewFromByte
         extends xRTView {
-    public static xRTViewFromByte INSTANCE;
-
-    public xRTViewFromByte(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewFromByte(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void registerNativeTemplates() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xRTViewFromByte.class)) {
             registerNativeTemplate(new xRTViewFromByteToInt8   (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewFromByteToInt16  (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewFromByteToInt64  (f_container, f_struct, true));

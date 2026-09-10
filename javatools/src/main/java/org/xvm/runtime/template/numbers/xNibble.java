@@ -20,21 +20,15 @@ import org.xvm.runtime.template.text.xChar;
  */
 public class xNibble
         extends xUnsignedConstrainedInt {
-    public static xNibble INSTANCE;
-
-    public xNibble(Container container, ClassStructure structure, boolean fInstance) {
+    public xNibble(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, 0, 15, 4, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
         super.initNative();
 
-        if (this == INSTANCE) {
+        if (isNativeInstance(xNibble.class)) {
             ClassComposition clz = getCanonicalClass();
             for (int i = 0; i < cache.length; ++i) {
                 cache[i] = new JavaLong(clz, i);
@@ -44,7 +38,7 @@ public class xNibble
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return xNibble.INSTANCE;
+        return f_container.nativeTemplate(xNibble.class);
     }
 
     @Override
@@ -61,9 +55,26 @@ public class xNibble
         return makeHandle(lValue & 0x0FL);
     }
 
-    public static JavaLong makeHandle(long lValue) {
+    /**
+     * @return a Nibble handle owned by this template's container
+     */
+    public JavaLong makeHandle(long lValue) {
         assert lValue >= 0 & lValue <= 15;
-        return INSTANCE.cache[(int) lValue];
+        return cache[(int) lValue];
+    }
+
+    /**
+     * @return a Nibble handle owned by the specified container
+     */
+    public static JavaLong makeHandle(Container container, long lValue) {
+        return container.nativeTemplate(xNibble.class).makeHandle(lValue);
+    }
+
+    /**
+     * @return a Nibble handle owned by the container the specified frame runs in
+     */
+    public static JavaLong makeHandle(Frame frame, long lValue) {
+        return makeHandle(frame.container(), lValue);
     }
 
     @Override
@@ -72,7 +83,7 @@ public class xNibble
         if (method.getName().equals("toChar")) {
             long lValue = ((JavaLong) hTarget).getValue();
             long cValue = lValue <= 9 ? '0' + lValue : 'A' + lValue - 0xA;
-            return frame.assignValue(iReturn, xChar.makeHandle(cValue));
+            return frame.assignValue(iReturn, xChar.makeHandle(frame, cValue));
         }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
     }

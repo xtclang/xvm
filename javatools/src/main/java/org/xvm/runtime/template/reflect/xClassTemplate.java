@@ -18,14 +18,8 @@ import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTe
  */
 public class xClassTemplate
         extends ClassTemplate {
-    public static xClassTemplate INSTANCE;
-
-    public xClassTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xClassTemplate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -33,7 +27,7 @@ public class xClassTemplate
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return hValue1 instanceof ComponentTemplateHandle &&
                 hValue2 instanceof ComponentTemplateHandle
-            ? xRTComponentTemplate.INSTANCE.callEquals(frame, clazz, hValue1, hValue2, iReturn)
+            ? f_container.nativeTemplate(xRTComponentTemplate.class).callEquals(frame, clazz, hValue1, hValue2, iReturn)
             : frame.assignValue(iReturn, xBoolean.FALSE);
     }
 }

@@ -21,14 +21,8 @@ import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SecretHandle;
  */
 public class xRTKeyGenerator
         extends xService {
-    public static xRTKeyGenerator INSTANCE;
-
-    public xRTKeyGenerator(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTKeyGenerator(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -57,6 +51,7 @@ public class xRTKeyGenerator
         SecretKey key   = hKeyGen.f_generator.generateKey();
         int       nSize = key.getEncoded().length;
 
-        return frame.assignValues(aiReturn, xInt64.makeHandle(nSize), new SecretHandle(key));
+        return frame.assignValues(aiReturn, xInt64.makeHandle(frame, nSize),
+                new SecretHandle(frame.container(), key));
     }
 }

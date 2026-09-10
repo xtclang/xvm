@@ -36,14 +36,8 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
  */
 public class xRTMethod
         extends xRTSignature {
-    public static xRTMethod INSTANCE;
-
-    public xRTMethod(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTMethod(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -256,7 +250,7 @@ public class xRTMethod
         if (aAnno != null && aAnno.length > 0) {
             type = pool.ensureAnnotatedTypeConstant(type, aAnno);
 
-            TypeComposition clzMethod = INSTANCE.ensureClass(container, type);
+            TypeComposition clzMethod = container.nativeTemplate(xRTMethod.class).ensureClass(container, type);
             MethodHandle    hStruct   = new MethodHandle(clzMethod.ensureAccess(Access.STRUCT),
                                             type, method, typeTarget);
 
@@ -265,7 +259,7 @@ public class xRTMethod
             return frame.popResultImmutable(iResult);
         }
 
-        return new MethodHandle(INSTANCE.ensureClass(container, type), type, method, typeTarget);
+        return new MethodHandle(container.nativeTemplate(xRTMethod.class).ensureClass(container, type), type, method, typeTarget);
     }
 
     /**
@@ -338,10 +332,10 @@ public class xRTMethod
     /**
      * @return the ArrayConstant for an empty Array of Method
      */
-    public static ArrayConstant ensureEmptyArrayConstant() {
+    public static ArrayConstant ensureEmptyArrayConstant(Container container) {
         ArrayConstant constant = EMPTY_ARRAY;
         if (constant == null) {
-            ConstantPool pool = INSTANCE.pool();
+            ConstantPool pool = container.nativeTemplate(xRTMethod.class).pool();
             EMPTY_ARRAY = constant = new ArrayConstant(pool, Constant.Format.Array,
                                             pool.ensureArrayType(pool.typeMethod()));
         }
@@ -352,7 +346,7 @@ public class xRTMethod
      * @return the handle for an empty Array of Method
      */
     public static ObjectHandle ensureEmptyArray(Container container) {
-        ArrayConstant constArray = ensureEmptyArrayConstant();
+        ArrayConstant constArray = ensureEmptyArrayConstant(container);
         ObjectHandle hArray = container.f_heap.getConstHandle(constArray);
         if (hArray == null) {
             TypeComposition clzArray = container.resolveClass(constArray.getType());

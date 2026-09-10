@@ -18,6 +18,7 @@ import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.javajit.registers.Ref;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
@@ -70,8 +71,9 @@ public class MoveRef
                     typeReg = infoSrc.getType();
                 }
             } else {
-                TypeComposition clzRef = xRef.INSTANCE.ensureParameterizedClass(
-                        frame.f_context.f_container, infoSrc.getType());
+                Container       container = frame.container();
+                TypeComposition clzRef    = container.nativeTemplate(xRef.class).
+                        ensureParameterizedClass(container, infoSrc.getType());
                 hRef    = new RefHandle(clzRef, frame, m_nFromValue);
                 typeReg = hRef.getType();
             }

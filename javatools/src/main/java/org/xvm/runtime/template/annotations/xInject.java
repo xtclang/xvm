@@ -31,14 +31,8 @@ import org.xvm.runtime.template.reflect.xRef;
  */
 public class xInject
         extends xRef {
-    public static xInject INSTANCE;
-
-    public xInject(Container container, ClassStructure structure, boolean fInstance) {
+    public xInject(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -80,7 +74,7 @@ public class xInject
         if (aParams.length < 2) {
             // opts are not specified; the handle could be trivially initialized on-the-spot
             InjectedHandle hInject = new InjectedHandle(clazz.ensureAccess(Access.PUBLIC), sName, sResource);
-            hInject.setField(frame, "resourceName", xString.makeHandle(sResource));
+            hInject.setField(frame, "resourceName", xString.makeHandle(frame, sResource));
             hInject.setField(frame, "opts", xNullable.NULL);
             hInject.makeImmutable();
             return hInject;

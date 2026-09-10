@@ -9,18 +9,12 @@ import org.xvm.runtime.Container;
  */
 public class xInt32
         extends xConstrainedInteger {
-    public static xInt32 INSTANCE;
-
-    public xInt32(Container container, ClassStructure structure, boolean fInstance) {
+    public xInt32(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, Integer.MIN_VALUE, Integer.MAX_VALUE, 32, false, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return xUInt32.INSTANCE;
+        return f_container.nativeTemplate(xUInt32.class);
     }
 }

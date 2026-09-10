@@ -40,14 +40,8 @@ import org.xvm.runtime.template.xNullable;
  */
 public class xRegEx
         extends xConst {
-    public static xRegEx INSTANCE;
-
-    public xRegEx(Container container, ClassStructure structure, boolean fInstance) {
+    public xRegEx(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -91,7 +85,7 @@ public class xRegEx
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         RegExHandle hPattern = (RegExHandle) hTarget;
         if ("pattern".equals(sPropName)) {
-            return frame.assignValue(iReturn, xString.makeHandle(hPattern.f_regex));
+            return frame.assignValue(iReturn, xString.makeHandle(frame, hPattern.f_regex));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -108,7 +102,7 @@ public class xRegEx
             return frame.assignValue(iReturn, makeHandle(regex, nFlags));
         }
         case "appendTo": {
-            StringHandle hRegex = xString.makeHandle(((RegExHandle) hTarget).getRegex());
+            StringHandle hRegex = xString.makeHandle(frame, ((RegExHandle) hTarget).getRegex());
             return xString.callAppendTo(frame, hRegex, hArg, iReturn);
         }
         }
@@ -125,7 +119,7 @@ public class xRegEx
             String       text        = hText.getStringValue();
             String       replacement = ((StringHandle) ahArg[1]).getStringValue();
             Matcher      matcher     = ((RegExHandle) hTarget).getPattern().matcher(text);
-            StringHandle hResult     = xString.makeHandle(matcher.replaceAll(replacement));
+            StringHandle hResult     = xString.makeHandle(frame, matcher.replaceAll(replacement));
             return frame.assignValue(iReturn, hResult);
         }
         }
@@ -216,9 +210,9 @@ public class xRegEx
             int nStart = match.start(i);
             if (nStart >= 0) {
                 GenericHandle hRange = new GenericHandle(clzRange);
-                hRange.setField(frame, "lowerBound",     xInt64.makeHandle(nStart));
+                hRange.setField(frame, "lowerBound",     xInt64.makeHandle(frame, nStart));
                 hRange.setField(frame, "lowerExclusive", xBoolean.FALSE);
-                hRange.setField(frame, "upperBound",     xInt64.makeHandle(match.end(i)));
+                hRange.setField(frame, "upperBound",     xInt64.makeHandle(frame, match.end(i)));
                 hRange.setField(frame, "upperExclusive", xBoolean.TRUE);
                 hRange.setField(frame, "descending",     xBoolean.FALSE);
                 hRange.makeImmutable();

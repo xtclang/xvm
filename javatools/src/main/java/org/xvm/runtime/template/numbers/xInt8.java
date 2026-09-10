@@ -12,19 +12,13 @@ import org.xvm.runtime.Frame;
  */
 public class xInt8
         extends xConstrainedInteger {
-    public static xInt8 INSTANCE;
-
-    public xInt8(Container container, ClassStructure structure, boolean fInstance) {
+    public xInt8(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, Byte.MIN_VALUE, Byte.MAX_VALUE, 8, false, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return xUInt8.INSTANCE;
+        return f_container.nativeTemplate(xUInt8.class);
     }
 
     @Override

@@ -45,14 +45,8 @@ import org.xvm.runtime.template._native.io.xRawChannel;
  */
 public class xRawOSFileChannel
         extends xRawChannel {
-    public static xRawOSFileChannel INSTANCE;
-
-    public xRawOSFileChannel(Container container, ClassStructure structure, boolean fInstance) {
+    public xRawOSFileChannel(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -82,14 +76,14 @@ public class xRawOSFileChannel
         switch (sPropName) {
         case "size":
             try {
-                return frame.assignValue(iReturn, xInt64.makeHandle(hChannel.f_channel.size()));
+                return frame.assignValue(iReturn, xInt64.makeHandle(frame, hChannel.f_channel.size()));
             } catch (IOException e) {
                 return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
             }
 
         case "position":
             try {
-                return frame.assignValue(iReturn, xInt64.makeHandle(hChannel.f_channel.position()));
+                return frame.assignValue(iReturn, xInt64.makeHandle(frame, hChannel.f_channel.position()));
             } catch (IOException e) {
                 return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
             }
@@ -194,7 +188,7 @@ public class xRawOSFileChannel
             try {
                 int cbRead = cfRead.get().intValue();
                 return frameCaller.assignValue(iReturn, cbRead < 0
-                        ? xInt64.makeHandle(-1)
+                        ? xInt64.makeHandle(frame, -1)
                         : xArray.makeByteArrayHandle(buffer.array(), cbRead, Mutability.Constant));
             } catch (InterruptedException | ExecutionException e) {
                 return xOSFileNode.raisePathException(frameCaller, e, hChannel.f_path);
@@ -209,7 +203,7 @@ public class xRawOSFileChannel
      */
     protected int invokeSubmit(Frame frame, ChannelHandle hChannel, ObjectHandle[] ahArg, int iReturn) {
         if (!hChannel.f_channel.isOpen()) {
-            return frame.assignValue(iReturn, xInt64.makeHandle(-1)); // closed
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, -1)); // closed
         }
 
         ArrayHandle hArray = (ArrayHandle) ahArg[0];
@@ -228,7 +222,7 @@ public class xRawOSFileChannel
 
         frame.f_context.f_container.scheduleIO(task); // don't wait
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(0)); // OK
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, 0)); // OK
     }
 
     // ----- ObjectHandle --------------------------------------------------------------------------

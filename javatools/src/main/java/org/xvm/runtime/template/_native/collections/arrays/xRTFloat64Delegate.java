@@ -10,6 +10,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
@@ -27,14 +28,8 @@ import org.xvm.runtime.template.numbers.xInt64;
  */
 public class xRTFloat64Delegate
         extends xRTDelegate {
-    public static xRTFloat64Delegate INSTANCE;
-
-    public xRTFloat64Delegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTFloat64Delegate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -76,7 +71,7 @@ public class xRTFloat64Delegate
     public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
         DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_adValue.length));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_adValue.length));
     }
 
     @Override
@@ -125,7 +120,7 @@ public class xRTFloat64Delegate
         DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                xFloat64.INSTANCE.makeHandle(hDelegate.m_adValue[(int) lIndex]));
+                f_container.nativeTemplate(xFloat64.class).makeHandle(hDelegate.m_adValue[(int) lIndex]));
     }
 
     @Override
@@ -299,7 +294,8 @@ public class xRTFloat64Delegate
 
         @Override
         public boolean checkAssign(ObjectHandle hValue) {
-            return hValue.getTemplate() == xFloat64.INSTANCE;
+            return hValue.getTemplate()
+                    == NativeTemplates.of(getComposition()).get(xFloat64.class);
         }
 
         @Override

@@ -167,7 +167,7 @@ public abstract class xConstrainedInteger
                 }
             }
 
-            return frame.assignValue(iReturn, xInt64.makeHandle(cDigits));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, cDigits));
         }
 
         case "bits": {
@@ -179,11 +179,11 @@ public abstract class xConstrainedInteger
 
         case "bitCount": {
             long l = ((JavaLong) hTarget).getValue();
-            return frame.assignValue(iReturn, xInt64.makeHandle(Long.bitCount(l)));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, Long.bitCount(l)));
         }
 
         case "bitLength":
-            return frame.assignValue(iReturn, xInt64.makeHandle(f_cNumBits));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, f_cNumBits));
 
         case "leftmostBit": {
             long l = ((JavaLong) hTarget).getValue();
@@ -211,7 +211,7 @@ public abstract class xConstrainedInteger
             } else {
                 c = Long.numberOfLeadingZeros(l) - 64 + f_cNumBits;
             }
-            return frame.assignValue(iReturn, xInt64.makeHandle(c));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, c));
         }
 
         case "trailingZeroCount": {
@@ -222,7 +222,7 @@ public abstract class xConstrainedInteger
             } else {
                 c = Long.numberOfTrailingZeros(l);
             }
-            return frame.assignValue(iReturn, xInt64.makeHandle(c));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, c));
         }
         }
 
@@ -277,7 +277,7 @@ public abstract class xConstrainedInteger
 
         case "stepsTo":
             // the return value must be an Int!
-            return xInt64.INSTANCE.invokeSub(frame, hArg, hTarget, iReturn);
+            return f_container.nativeTemplate(xInt64.class).invokeSub(frame, hArg, hTarget, iReturn);
 
         case "toInt8":
         case "toInt16":
@@ -354,7 +354,7 @@ public abstract class xConstrainedInteger
                     }
                     lValue &= 0x0F_FFFF;
                 }
-                return frame.assignValue(iReturn, xChar.makeHandle(lValue));
+                return frame.assignValue(iReturn, xChar.makeHandle(frame, lValue));
             }
 
             break;
@@ -590,7 +590,7 @@ public abstract class xConstrainedInteger
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         long l = ((JavaLong) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(l));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, l));
     }
 
     // ----- type specific -------------------------------------------------------------------------

@@ -43,14 +43,8 @@ import org.xvm.util.Handy;
 public class xString
         extends xConst
         implements IndexSupport {
-    public static xString INSTANCE;
-
-    public xString(Container container, ClassStructure structure, boolean fInstance) {
+    public xString(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -134,7 +128,7 @@ public class xString
 
         switch (sPropName) {
         case "size":
-            return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_achValue.length));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, hThis.m_achValue.length));
 
         case "chars":
             return frame.assignValue(iReturn,
@@ -173,7 +167,7 @@ public class xString
                 }
                 return ofResult < 0
                         ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                        : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofResult));
+                        : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, ofResult));
             }
             }
         }
@@ -190,7 +184,7 @@ public class xString
 
         return nIx < 0
                 ? frame.raiseException(xException.outOfBounds(frame, lIndex, ach.length))
-                : frame.assignValue(iReturn, xChar.makeHandle(ach[nIx]));
+                : frame.assignValue(iReturn, xChar.makeHandle(frame, ach[nIx]));
     }
 
     @Override
@@ -275,7 +269,9 @@ public class xString
         char[] ach = new char[c1 + c2];
         System.arraycopy(ach1, 0, ach, 0, c1);
         System.arraycopy(ach2, 0, ach, c1, c2);
-        return makeHandle(ach);
+
+        // the result belongs where the string being appended to belongs
+        return makeHandle(h1.getComposition().getContainer(), ach);
     }
 
     private static int indexOf(char[] achSource, char chTarget, int ofStart) {
@@ -362,7 +358,8 @@ public class xString
         public JavaLong getHashCode() {
             JavaLong hHash = m_hash;
             return hHash == null
-                    ? (m_hash = xInt64.makeHandle(calcHashCode()))
+                    ? (m_hash = xInt64.makeHandle(getComposition().getContainer(),
+                            calcHashCode()))
                     : hHash;
         }
 
@@ -395,14 +392,48 @@ public class xString
         }
     }
 
-    public static StringHandle makeHandle(String sValue) {
+    /**
+     * @return a String handle owned by this template's container
+     */
+    public StringHandle makeHandle(String sValue) {
         return makeHandle(sValue.toCharArray());
     }
 
-    public static StringHandle makeHandle(char[] achValue) {
+    /**
+     * @return a String handle owned by this template's container
+     */
+    public StringHandle makeHandle(char[] achValue) {
         return achValue.length == 0
             ? EMPTY_STRING
-            : new StringHandle(INSTANCE.getCanonicalClass(), achValue);
+            : new StringHandle(getCanonicalClass(), achValue);
+    }
+
+    /**
+     * @return a String handle owned by the specified container
+     */
+    public static StringHandle makeHandle(Container container, String sValue) {
+        return container.nativeTemplate(xString.class).makeHandle(sValue);
+    }
+
+    /**
+     * @return a String handle owned by the specified container
+     */
+    public static StringHandle makeHandle(Container container, char[] achValue) {
+        return container.nativeTemplate(xString.class).makeHandle(achValue);
+    }
+
+    /**
+     * @return a String handle owned by the container the specified frame runs in
+     */
+    public static StringHandle makeHandle(Frame frame, String sValue) {
+        return makeHandle(frame.container(), sValue);
+    }
+
+    /**
+     * @return a String handle owned by the container the specified frame runs in
+     */
+    public static StringHandle makeHandle(Frame frame, char[] achValue) {
+        return makeHandle(frame.container(), achValue);
     }
 
     // ----- Composition and handle caching --------------------------------------------------------
@@ -410,11 +441,11 @@ public class xString
     /**
      * @return an immutable array of Strings
      */
-    public static ArrayHandle makeArrayHandle(String[] asValue) {
+    public static ArrayHandle makeArrayHandle(Container container, String[] asValue) {
         int            cValues = asValue.length;
         StringHandle[] ahValue = new StringHandle[cValues];
         for (int i = 0; i < cValues; i++) {
-            ahValue[i] = makeHandle(asValue[i]);
+            ahValue[i] = makeHandle(container, asValue[i]);
         }
         return xArray.makeStringArrayHandle(ahValue);
     }

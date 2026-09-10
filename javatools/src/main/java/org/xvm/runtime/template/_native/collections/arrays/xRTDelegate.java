@@ -40,19 +40,13 @@ import org.xvm.runtime.template.numbers.xInt64;
 public class xRTDelegate
         extends ClassTemplate
         implements IndexSupport {
-    public static xRTDelegate INSTANCE;
-
-    public xRTDelegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTDelegate(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void registerNativeTemplates() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xRTDelegate.class)) {
             registerNativeTemplate(new xRTNibbleDelegate  (f_container, f_struct, true));
 
             registerNativeTemplate(new xRTBooleanDelegate (f_container, f_struct, true));
@@ -80,33 +74,33 @@ public class xRTDelegate
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xRTDelegate.class)) {
             // register native delegations
             ConstantPool                   pool         = pool();
             Map<TypeConstant, xRTDelegate> mapDelegates = new HashMap<>();
 
-            mapDelegates.put(pool.typeNibble(),  xRTNibbleDelegate .INSTANCE);
+            mapDelegates.put(pool.typeNibble(),  f_container.nativeTemplate(xRTNibbleDelegate.class));
 
-            mapDelegates.put(pool.typeBoolean(), xRTBooleanDelegate.INSTANCE);
-            mapDelegates.put(pool.typeBit(),     xRTBitDelegate    .INSTANCE);
-            mapDelegates.put(pool.typeChar(),    xRTCharDelegate   .INSTANCE);
+            mapDelegates.put(pool.typeBoolean(), f_container.nativeTemplate(xRTBooleanDelegate.class));
+            mapDelegates.put(pool.typeBit(),     f_container.nativeTemplate(xRTBitDelegate.class));
+            mapDelegates.put(pool.typeChar(),    f_container.nativeTemplate(xRTCharDelegate.class));
 
-            mapDelegates.put(pool.typeInt8(),    xRTInt8Delegate   .INSTANCE);
-            mapDelegates.put(pool.typeInt16(),   xRTInt16Delegate  .INSTANCE);
-            mapDelegates.put(pool.typeInt32(),   xRTInt32Delegate  .INSTANCE);
-            mapDelegates.put(pool.typeInt64(),   xRTInt64Delegate  .INSTANCE);
-            mapDelegates.put(pool.typeInt128(),  xRTInt128Delegate .INSTANCE);
+            mapDelegates.put(pool.typeInt8(),    f_container.nativeTemplate(xRTInt8Delegate.class));
+            mapDelegates.put(pool.typeInt16(),   f_container.nativeTemplate(xRTInt16Delegate.class));
+            mapDelegates.put(pool.typeInt32(),   f_container.nativeTemplate(xRTInt32Delegate.class));
+            mapDelegates.put(pool.typeInt64(),   f_container.nativeTemplate(xRTInt64Delegate.class));
+            mapDelegates.put(pool.typeInt128(),  f_container.nativeTemplate(xRTInt128Delegate.class));
 
-            mapDelegates.put(pool.typeNibble(),  xRTNibbleDelegate  .INSTANCE);
-            mapDelegates.put(pool.typeUInt8(),   xRTUInt8Delegate  .INSTANCE);
-            mapDelegates.put(pool.typeUInt16(),  xRTUInt16Delegate .INSTANCE);
-            mapDelegates.put(pool.typeUInt32(),  xRTUInt32Delegate .INSTANCE);
-            mapDelegates.put(pool.typeUInt64(),  xRTUInt64Delegate .INSTANCE);
-            mapDelegates.put(pool.typeUInt128(), xRTUInt128Delegate.INSTANCE);
+            mapDelegates.put(pool.typeNibble(),  f_container.nativeTemplate(xRTNibbleDelegate.class));
+            mapDelegates.put(pool.typeUInt8(),   f_container.nativeTemplate(xRTUInt8Delegate.class));
+            mapDelegates.put(pool.typeUInt16(),  f_container.nativeTemplate(xRTUInt16Delegate.class));
+            mapDelegates.put(pool.typeUInt32(),  f_container.nativeTemplate(xRTUInt32Delegate.class));
+            mapDelegates.put(pool.typeUInt64(),  f_container.nativeTemplate(xRTUInt64Delegate.class));
+            mapDelegates.put(pool.typeUInt128(), f_container.nativeTemplate(xRTUInt128Delegate.class));
 
-            mapDelegates.put(pool.typeFloat64(), xRTFloat64Delegate.INSTANCE);
+            mapDelegates.put(pool.typeFloat64(), f_container.nativeTemplate(xRTFloat64Delegate.class));
 
-            mapDelegates.put(pool.typeString(),  xRTStringDelegate .INSTANCE);
+            mapDelegates.put(pool.typeString(),  f_container.nativeTemplate(xRTStringDelegate.class));
 
             DELEGATES = mapDelegates;
 
@@ -144,7 +138,7 @@ public class xRTDelegate
 
     @Override
     public ClassTemplate getTemplate(TypeConstant type) {
-        return getArrayTemplate(type.getParamType(0));
+        return getArrayTemplate(f_container, type.getParamType(0));
     }
 
     /**
@@ -317,7 +311,7 @@ public class xRTDelegate
     protected int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
         GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_ahValue.length));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_ahValue.length));
     }
 
     /**
@@ -350,7 +344,7 @@ public class xRTDelegate
     protected int getPropertySize(Frame frame, ObjectHandle hTarget, int iReturn) {
         DelegateHandle hDelegate = (DelegateHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_cSize));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_cSize));
     }
 
     /**
@@ -435,7 +429,7 @@ public class xRTDelegate
     public DelegateHandle slice(DelegateHandle hTarget, long ofStart, long cSize, boolean fReverse) {
         return ofStart == 0 && cSize == hTarget.m_cSize && !fReverse
             ? hTarget
-            : xRTSlicingDelegate.INSTANCE.makeHandle(hTarget, ofStart, cSize, fReverse);
+            : f_container.nativeTemplate(xRTSlicingDelegate.class).makeHandle(hTarget, ofStart, cSize, fReverse);
     }
 
     /**
@@ -711,9 +705,11 @@ public class xRTDelegate
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    public static xRTDelegate getArrayTemplate(TypeConstant typeParam) {
+    public static xRTDelegate getArrayTemplate(Container container, TypeConstant typeParam) {
         xRTDelegate template = DELEGATES.get(typeParam);
-        return template == null ? INSTANCE : template;
+        return template == null
+                ? container.nativeTemplate(xRTDelegate.class)
+                : template;
     }
 
     private static ObjectHandle[] reverse(ObjectHandle[] ahValue, int cSize) {

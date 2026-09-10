@@ -45,19 +45,13 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public class xModule
         extends xPackage {
-    public static xModule INSTANCE;
-
-    public xModule(Container container, ClassStructure structure, boolean fInstance) {
+    public xModule(Container container, ClassStructure structure, boolean fBaseTemplate) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
+        if (isNativeInstance(xModule.class)) {
             ConstantPool pool = f_container.getConstantPool();
 
             MODULE_ARRAY_TYPE  = pool.ensureArrayType(pool.typeModule());
@@ -128,7 +122,7 @@ public class xModule
      */
     public int getPropertySimpleName(Frame frame, PackageHandle hModule, int iReturn) {
         String sName = ((ModuleConstant) hModule.getId()).getUnqualifiedName();
-        return frame.assignValue(iReturn, xString.makeHandle(sName));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, sName));
     }
 
     /**
@@ -136,7 +130,7 @@ public class xModule
      */
     public int getPropertyQualifiedName(Frame frame, PackageHandle hModule, int iReturn) {
         String sName = hModule.getId().getName();
-        return frame.assignValue(iReturn, xString.makeHandle(sName));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, sName));
     }
 
     /**
@@ -158,7 +152,7 @@ public class xModule
         Container       container = frame.f_context.f_container;
         ModuleConstant  idModule  = (ModuleConstant) hTarget.getId();
         ModuleStructure module    = (ModuleStructure) idModule.getComponent();
-        TypeComposition clzMap    = container.resolveClass(ensureListMapType());
+        TypeComposition clzMap    = container.resolveClass(ensureListMapType(container));
 
         // starting with this module, find all module dependencies, and the shortest path to each
         Map<ModuleConstant, String> mapModulePaths = module.collectDependencies();
@@ -176,7 +170,7 @@ public class xModule
             ModuleConstant idDep = entry.getKey();
             if (idDep != idModule) {
                 ObjectHandle hM = frame.getConstHandle(idDep);
-                ahPaths  [index] = xString.makeHandle(entry.getValue());
+                ahPaths  [index] = xString.makeHandle(container, entry.getValue());
                 ahModules[index] = hM;
                 fDeferred |= Op.isDeferred(hM);
                 ++index;
@@ -206,7 +200,8 @@ public class xModule
     public int invokeClassForName(Frame frame, PackageHandle hTarget, ObjectHandle hArg, int[] aiReturn) {
         ModuleStructure module  = (ModuleStructure) hTarget.getStructure();
         String          sClass  = ((StringHandle) hArg).getStringValue();
-        Object          oResult = resolveClass(module.getFileStructure(), module, sClass);
+        Object          oResult = resolveClass(frame.container(),
+                                    module.getFileStructure(), module, sClass);
         if (oResult == null) {
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
@@ -225,7 +220,8 @@ public class xModule
     public int invokeTypeForName(Frame frame, PackageHandle hTarget, ObjectHandle hArg, int[] aiReturn) {
         ModuleStructure module  = (ModuleStructure) hTarget.getStructure();
         String          sType   = ((StringHandle) hArg).getStringValue();
-        Object          oResult = resolveType(module.getFileStructure(), module, sType);
+        Object          oResult = resolveType(frame.container(),
+                                    module.getFileStructure(), module, sType);
         if (oResult == null) {
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
@@ -247,8 +243,9 @@ public class xModule
      *
      * @return either a TypeConstant or null if the class couldn't be resolved for any reason
      */
-    public static Object resolveClass(FileStructure structTS, ModuleStructure module, String sClass) {
-        return resolveClassOrType(structTS, module, sClass, true);
+    public static Object resolveClass(Container container, FileStructure structTS,
+                                      ModuleStructure module, String sClass) {
+        return resolveClassOrType(container, structTS, module, sClass, true);
     }
 
     /**
@@ -260,14 +257,18 @@ public class xModule
      *
      * @return either a TypeConstant or null if the type couldn't be resolved for any reason
      */
-    public static Object resolveType(FileStructure structTS, ModuleStructure module, String sType) {
-        return resolveClassOrType(structTS, module, sType, false);
+    public static Object resolveType(Container container, FileStructure structTS,
+                                     ModuleStructure module, String sType) {
+        return resolveClassOrType(container, structTS, module, sType, false);
     }
 
-    private static Object resolveClassOrType(FileStructure structTS, ModuleStructure module, String sClassOrType, boolean fClass) {
+    private static Object resolveClassOrType(Container container, FileStructure structTS,
+                                             ModuleStructure module, String sClassOrType,
+                                             boolean fClass) {
         if (module == null) {
             module = structTS == null
-                ? INSTANCE.f_struct.getFileStructure().getModule()  // only Ecstasy classes
+                ? container.nativeTemplate(xModule.class).
+                        f_struct.getFileStructure().getModule()  // only Ecstasy classes
                 : structTS.getModule();
         }
 
@@ -309,7 +310,8 @@ public class xModule
      * @return the TypeComposition for an Array of Module
      */
     public static TypeComposition ensureArrayComposition(Container container) {
-        return container.ensureClassComposition(MODULE_ARRAY_TYPE, xArray.INSTANCE);
+        return container.ensureClassComposition(MODULE_ARRAY_TYPE,
+                container.nativeTemplate(xArray.class));
     }
 
     /**
@@ -327,10 +329,10 @@ public class xModule
     /**
      * @return the TypeConstant for {@code ListMap<String, Module>}
      */
-    private static TypeConstant ensureListMapType() {
+    private static TypeConstant ensureListMapType(Container container) {
         TypeConstant type = LISTMAP_TYPE;
         if (type == null) {
-            ConstantPool pool = INSTANCE.pool();
+            ConstantPool pool = container.nativeTemplate(xModule.class).pool();
             LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
                     pool.typeListMap(),
                     pool.typeString(), pool.typeModule());
