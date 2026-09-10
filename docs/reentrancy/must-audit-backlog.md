@@ -999,6 +999,30 @@ read it as "the rate fell from 4-in-5 to 1-in-18 and the remaining failure is un
 run should capture on failure, with `-Dxvm.assembly.checkOwnership=true` armed so mode 1 arrives
 attributed.
 
+### FIXED 2026-09-10 (was MUST-FIX): parallel compilation was unstable in two ways; both closed
+
+**Both failure modes are fixed.** Kept for the measurement trail and because the attribution method
+is worth reusing.
+
+- **The hang** was a deadlock: `reserveUsage` called `wait()` while holding two TypeConstant monitors
+  (reached through `synchronized ensureTypeInfo`), so the thread that would complete the entry
+  blocked on a monitor the waiter held. Fixed by never waiting - a thread that finds another's
+  reservation joins as a co-owner and computes its own copy.
+- **The corruption** was a shared library fingerprint linked into a compile's `FileStructure` without
+  being reparented, so two compiles rewrote the same structure's constants. Fixed by cloning at the
+  boundary, exactly as `replace()` already does on the runtime path.
+
+| tree | runs | failures |
+| --- | ---: | ---: |
+| `bbd1d0038`, before the day's work | 5 | 4 |
+| after the deadlock fix | 18 | 1 |
+| **after the fingerprint fix** | **14** | **0** (~1,764 compiles, assembly check armed) |
+
+**Still open, and separate:** the retention leak at higher iteration counts - see the rows above.
+That is a heap problem, not a correctness one, and it has its own root cause (`checkValidPools`).
+
+### SUPERSEDED - the original row follows for the measurement trail
+
 ### MUST-FIX (pre-existing, NOT from today): parallel compilation is unstable, two failure modes
 
 **Measured, both directions.** `EngineParallelCompileTest` asserts that concurrent compilation of 42
@@ -1220,7 +1244,7 @@ whose redirect target was missing would NPE there. It now falls back to `f_clzRe
 the neighbouring `info == null` branch already does for the same "not found on the parent" answer.
 Nothing can regress - the previous behaviour on that path was an exception.
 
-### MEASURED, ready to build: the equality path has no inline cache (updated 2026-09-09)
+### BUILT 2026-09-10 (was MEASURED, ready to build): the equality path has no inline cache
 
 **Still not a bug.** `OpInvocable` and `OpIndex` had caches that were broken (rows 55-56 of
 `plans/master-issue-submissions.md`); `IsEq` has none, so nothing there is wrong - it is
