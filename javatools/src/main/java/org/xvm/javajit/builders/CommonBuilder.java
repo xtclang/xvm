@@ -640,6 +640,10 @@ public class CommonBuilder
         int flags = ClassFile.ACC_PUBLIC;
         if (prop.isConstant()) {
             flags |= ClassFile.ACC_STATIC;
+            if (isInterface) {
+                // interface fields must be "public static final"
+                flags |= ClassFile.ACC_FINAL;
+            }
         }
 
         if (isContainerScoped(prop)) {
