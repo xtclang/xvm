@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ErrorListener.ErrorInfo;
 
+import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Parser;
@@ -31,6 +32,9 @@ import org.xvm.util.Severity;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,6 +70,58 @@ public class FileStructureTest {
         // and each answers its own, for the life of the structure
         assertSame(otherListener, other.getConstantPool().getErrorListener());
         assertSame(otherListener, other.getErrorListener());
+    }
+
+    /**
+     * A warm engine shares a prepared library's FileStructure across compiles, so a fingerprint
+     * reached through the downstream recursion of {@link FileStructure#linkModules} belongs to the
+     * library's file, not to the file being compiled. Adding it to the compiling file directly
+     * would leave one ModuleStructure parented by two FileStructures, and the compiling file's
+     * registration walk then rewrites that structure's constants in place while the library's other
+     * consumers are still reading it - a lost update whose loser assembles a module carrying the
+     * winner's constants, and writes something unreadable.
+     *
+     * <p>Compile-time linking must therefore hand the top file its own copy, exactly as the runtime
+     * path's {@code replace()} already does. The invariant asserted here is the general one that
+     * makes the sharing impossible to reintroduce: every module a file holds is contained by that
+     * file.
+     */
+    @Test
+    public void compileTimeLinkingGivesTheTopFileItsOwnFingerprint() {
+        // dep <- lib <- app, with lib and dep served from a repository the way a library would be
+        var fileDep = new FileStructure("dep");
+
+        var fileLib = new FileStructure("lib");
+        fileLib.ensureModule("dep").fingerprintRequired();
+
+        var fileApp = new FileStructure("app");
+        fileApp.ensureModule("lib").fingerprintRequired();
+
+        // the repository hands out the library's own structures, by reference - that sharing is the
+        // point, and is what a warm engine does between compiles
+        var repo = new BuildRepository();
+        repo.storeModule(fileLib.getModule());
+        repo.storeModule(fileDep.getModule());
+
+        // compile-time linking: app pulls in lib, and recursing into lib discovers dep, which app
+        // has no fingerprint of - the case that reparents rather than adopting
+        assertNull(fileApp.linkModules(repo, false), "linking should not report a missing module");
+
+        var moduleAppDep = fileApp.getModule(fileApp.getConstantPool().ensureModuleConstant("dep"));
+        var moduleLibDep = fileLib.getModule(fileLib.getConstantPool().ensureModuleConstant("dep"));
+
+        assertNotNull(moduleAppDep, "linking must give the compiling file a module for 'dep'");
+        assertNotNull(moduleLibDep, "the library must keep its own fingerprint for 'dep'");
+
+        // one structure must not end up in two files ...
+        assertNotSame(moduleLibDep, moduleAppDep,
+                "the library's fingerprint must not be adopted into the compiling file");
+
+        // ... and each file's module must be contained by that file
+        assertSame(fileApp, moduleAppDep.getContaining(),
+                "the compiling file's module must be contained by the compiling file");
+        assertSame(fileLib, moduleLibDep.getContaining(),
+                "the library's module must still be contained by the library");
     }
 
     @Test @Disabled("TODO: Re-enable test")
