@@ -88,6 +88,11 @@ public class Container
     private final Map<MethodHandle, Object> staticValues = new ConcurrentHashMap<>();
 
     /**
+     * An indicator used for a circular dependency detection.
+     */
+    private final Object computeInProgress = new Object();
+
+    /**
      * Handle used to adapt a static property initializer by obtaining the current Ctx from its
      * Container argument.
      */
@@ -152,17 +157,14 @@ public class Container
      *                     produce "null"
      */
     public Object computeStatic(MethodHandle computation) {
-        // since staticValues itself can never be the result, we use it to prevent circular
-        // initialization
-        var    values = staticValues;
-        Object result = values.get(computation);
-        return result != null && result != values
+        Object result = staticValues.get(computation);
+        return result != null && result != computeInProgress
                 ? result
                 : computeStaticInternal(computation);
     }
 
     private Object computeStaticInternal(MethodHandle computation) {
-        Object inProgress = staticValues;
+        Object inProgress = computeInProgress;
         synchronized (inProgress) {
             Object result = staticValues.get(computation);
             if (result == inProgress) {
