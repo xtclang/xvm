@@ -256,6 +256,9 @@ val checkRegistrationOwnership = providers.systemProperty("xvm.registration.chec
 // number that turns "per-compile pools are retained" from an inference into a measurement.
 val trackPoolLifetimes = providers.systemProperty("xvm.pool.trackLifetimes")
 
+// -Dxvm.test.jfr=/path/to.jfr records a flight recording, including OldObjectSample.
+val jfrRecording = providers.systemProperty("xvm.test.jfr")
+
 tasks.withType<Test>().configureEach {
     systemProperty("xvm.checkout.root", rootDir.parentFile.absolutePath)
     if (checkAssemblyOwnership.isPresent) {
@@ -266,5 +269,11 @@ tasks.withType<Test>().configureEach {
     }
     if (trackPoolLifetimes.isPresent) {
         systemProperty("xvm.pool.trackLifetimes", trackPoolLifetimes.get())
+    }
+    // JFR's OldObjectSample records objects that SURVIVED a GC together with their reference chain
+    // back to a GC root - which is the reverse reference a weak-reference counter cannot give. This
+    // is how you find WHO holds a leaked object rather than guessing.
+    if (jfrRecording.isPresent) {
+        jvmArgs("-XX:StartFlightRecording=settings=profile,filename=${jfrRecording.get()},dumponexit=true,path-to-gc-roots=true")
     }
 }

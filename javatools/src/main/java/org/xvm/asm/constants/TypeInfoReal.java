@@ -1400,6 +1400,28 @@ public final class TypeInfoReal
         return map;
     }
 
+    /**
+     * Memoize a signature lookup, but ONLY for a signature this TypeInfo's own pool owns.
+     *
+     * <p>This cache is extended with whatever the CALLER looked up, and it hangs off a TypeInfo that
+     * can be long-lived - a shared library type's. A `SignatureConstant` holds its `ConstantPool`
+     * through `m_xsParent`, so caching a compiling module's signature here keeps that module's
+     * ENTIRE pool alive for the life of the engine. Found by walking the reference path
+     *   XtcEngine -> f_mapPreparedLibraries -> ... -> ecstasy's ConstantPool
+     *     -> TerminalTypeConstant -> TypeInfoReal.m_mapMethodsBySignature
+     *     -> a compiled module's SignatureConstant -> that module's ConstantPool
+     *
+     * <p>The direction is the bug: a compile's TypeInfo caching a library signature is harmless,
+     * because the compile dies first. Skipping the memo costs a re-search on a cold path; it cannot
+     * retain anything. Sibling of the same fix in {@code findConversion}'s {@code m_typeAuto}.</p>
+     */
+    private void cacheBySignature(Map<SignatureConstant, MethodInfo> mapBySig,
+                                  SignatureConstant sig, MethodInfo method) {
+        if (sig.getConstantPool() == getType().getConstantPool()) {
+            mapBySig.putIfAbsent(sig, method);
+        }
+    }
+
     private Map<SignatureConstant, MethodInfo> buildMethodsBySignature() {
         /*
          * getMethodBySignature() extends this cache with substitutable/runtime lookup results.
@@ -1513,17 +1535,17 @@ public final class TypeInfoReal
         }
 
         if (methodBest != null) {
-            mapBySig.putIfAbsent(sig, methodBest);
+            cacheBySignature(mapBySig, sig, methodBest);
             return methodBest;
         }
 
         if (methodCapped != null) {
-            mapBySig.putIfAbsent(sig, methodCapped);
+            cacheBySignature(mapBySig, sig, methodCapped);
             return methodCapped;
         }
 
         if (methodRT != null) {
-            mapBySig.putIfAbsent(sig, methodRT);
+            cacheBySignature(mapBySig, sig, methodRT);
             return methodRT;
         }
 
@@ -1533,7 +1555,7 @@ public final class TypeInfoReal
                 Set<MethodConstant> set = findMethods("invoke", 1, MethodKind.Method);
                 assert set.size() == 1;
                 method = getMethodById(set.iterator().next(), true);
-                mapBySig.putIfAbsent(sig, method);
+                cacheBySignature(mapBySig, sig, method);
                 return method;
             }
         }
@@ -1596,7 +1618,7 @@ public final class TypeInfoReal
 
         // try to find a method with the same signature
         infoMethod = getMethodByNestedId(id.resolveNestedIdentity(pool(), f_type), fRuntime);
-        if (infoMethod != null) {
+        if (infoMethod != null && isLocallyOwned(id)) {
             f_cacheById.put(id, infoMethod);
         }
 
@@ -1982,9 +2004,52 @@ public final class TypeInfoReal
 
         if (!sigResolved.equals(idMethod.getSignature())) {
             idMethod = pool.ensureMethodConstant(idMethod.getNamespace(), sigResolved);
-            f_cacheById.putIfAbsent(idMethod, method);
+            if (isLocallyOwned(idMethod)) {
+                f_cacheById.putIfAbsent(idMethod, method);
+            }
         }
         return idMethod;
+    }
+
+    /**
+     * @return true iff this id, and everything its signature names, belongs to this TypeInfo's pool
+     *
+     * <p>Checking the id's OWN pool is not enough, and that is the whole point of this method. A
+     * constant interned in the library's pool can still hold sub-constants owned by another - the
+     * observed leak was a MethodConstant belonging to the library whose signature's RETURN TYPE
+     * belonged to a module being compiled:</p>
+     *
+     * <pre>
+     *   f_cacheById -> key MethodConstant (library pool - passes a naive check)
+     *     -> m_constSig -> SignatureConstant
+     *       -> m_aconstReturns[0] -> TerminalTypeConstant (a COMPILE's pool)
+     *         -> that compile's entire ConstantPool, pinned
+     * </pre>
+     *
+     * <p>Bounded on purpose: the namespace, the signature, and its parameter and return types. That
+     * is where the leak was and it is a handful of pointer compares, which a cache-insertion path
+     * can afford. A full transitive check would be correct and far too slow here.</p>
+     */
+    private boolean isLocallyOwned(MethodConstant id) {
+        ConstantPool pool = pool();
+        if (id.getConstantPool() != pool) {
+            return false;
+        }
+        SignatureConstant sig = id.getSignature();
+        if (sig.getConstantPool() != pool) {
+            return false;
+        }
+        for (TypeConstant type : sig.getRawParams()) {
+            if (type.getConstantPool() != pool) {
+                return false;
+            }
+        }
+        for (TypeConstant type : sig.getRawReturns()) {
+            if (type.getConstantPool() != pool) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private Map<String, Set<MethodConstant>> ensureMethodsByNameCache() {
@@ -2163,9 +2228,26 @@ public final class TypeInfoReal
                 }
             }
 
-            // cache the result
-            m_typeAuto   = typeDesired;
-            m_methodAuto = methodMatch;
+            // Memoize ONLY a type this TypeInfo's own pool owns.
+            //
+            // This is a one-slot cache on a TypeInfo that can be long-lived - a shared library type's
+            // - and it stores whatever the CALLER asked about. When a compile asks whether a library
+            // type converts to one of ITS types, the library's TypeInfo would keep that type, and a
+            // TypeConstant holds its ConstantPool through m_xsParent, so the compile's ENTIRE pool
+            // stays reachable for the life of the engine. Measured: this single field retained ~60
+            // per-compile pools over four iterations, found by walking the reference path
+            //   XtcEngine -> f_mapPreparedLibraries -> PreparedLibrary -> BuildRepository
+            //     -> a library ConstantPool -> UnionTypeConstant -> TypeInfoReal.m_typeAuto
+            //     -> a compiled module's TypeConstant -> that module's ConstantPool
+            //
+            // The direction is what matters: a compile caching a library type is harmless, because
+            // the compile dies first. A library caching a compile type is the leak. Same-pool is the
+            // conservative test - it also skips memoizing legitimate upstream types, which costs a
+            // re-search on a cold path and cannot retain anything.
+            if (typeDesired.getConstantPool() == getType().getConstantPool()) {
+                m_typeAuto   = typeDesired;
+                m_methodAuto = methodMatch;
+            }
         }
 
         return methodMatch;

@@ -8377,6 +8377,26 @@ public abstract sealed class TypeConstant
      * <p>A non-zero count here is the T12 defect made countable: a request's constant reachable
      * from the shared library, outliving the request that made it.
      */
+    /**
+     * @param isLibrary  identifies pools that are allowed to be referenced
+     *
+     * @return TypeInfo cache field name to count of foreign constants held through it
+     *
+     * <p>Companion to {@link #countTypeInfoMembersOutside}, which walks only the method and property
+     * key sets - and therefore reported ZERO while three separate caches on the same TypeInfo were
+     * each pinning a compiled module's whole ConstantPool. This walks every field.</p>
+     */
+    public Map<String, Integer> auditForeignTypeInfoCaches(Predicate<ConstantPool> isLibrary) {
+        TypeInfo info = getTypeInfo();
+        // NULL, not empty, when there is no TypeInfo to audit. The caller samples, and an empty map
+        // would be indistinguishable from "audited and clean" - which is how a sampled audit came
+        // back reporting nothing while a known-dirty cache was live: the budget went on types that
+        // had never built a TypeInfo.
+        return info == null || info.isPlaceHolder()
+                ? null
+                : ForeignCacheAudit.auditCaches(info, isLibrary);
+    }
+
     public int countTypeInfoMembersOutside(Predicate<ConstantPool> isLibrary) {
         TypeInfo info = getTypeInfo();
         if (info == null || info.isPlaceHolder()) {

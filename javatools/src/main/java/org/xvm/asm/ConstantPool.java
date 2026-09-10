@@ -167,7 +167,7 @@ public class ConstantPool
             // report time, long after this constructor returns - so nothing can observe a half-built
             // pool through it. Registering here rather than at the three FileStructure call sites so
             // a fourth one cannot silently go untracked.
-            POOL_REFS.add(new PoolRef(this, POOLS_CREATED.get()));
+            POOL_REFS.add(new PoolRef(this, POOLS_CREATED.get(), captureCreationSite()));
         }
     }
 
@@ -4691,12 +4691,30 @@ public class ConstantPool
      */
     private static final class PoolRef
             extends WeakReference<ConstantPool> {
-        private PoolRef(ConstantPool pool, int nSeq) {
+        private PoolRef(ConstantPool pool, int nSeq, String sSite) {
             super(pool, POOL_QUEUE);
-            f_nSeq = nSeq;
+            f_nSeq  = nSeq;
+            f_sSite = sSite;
         }
 
-        private final int f_nSeq;
+        private final int    f_nSeq;
+        private final String f_sSite;
+    }
+
+    /**
+     * @return "Class:line" of whoever constructed the pool, for grouping survivors by origin
+     *
+     * <p>There are only three {@code new ConstantPool(...)} sites, all in {@link FileStructure}. If
+     * the pools that leak all come from ONE of them, that names the path without needing a reverse
+     * reference at all - which is the expensive thing to obtain.</p>
+     */
+    private static String captureCreationSite() {
+        return StackWalker.getInstance().walk(frames -> frames
+                .map(f -> f.getClassName() + ':' + f.getLineNumber())
+                .filter(sFrame -> !sFrame.startsWith("org.xvm.asm.ConstantPool:"))
+                .findFirst()
+                .map(sFrame -> sFrame.substring(sFrame.lastIndexOf('.') + 1))
+                .orElse("?"));
     }
 
     /**
@@ -4736,16 +4754,39 @@ public class ConstantPool
         drainCollectedPools();
 
         Map<String, Integer> mapByOwner = new HashMap<>();
+        Map<String, Integer> mapBySite  = new HashMap<>();
         int nOldest = Integer.MAX_VALUE;
         int nNewest = Integer.MIN_VALUE;
         for (PoolRef ref : POOL_REFS) {
             ConstantPool pool = ref.get();
             if (pool != null) {
                 mapByOwner.merge(pool.describeOwner(), 1, Integer::sum);
+                mapBySite.merge(ref.f_sSite, 1, Integer::sum);
                 nOldest = Math.min(nOldest, ref.f_nSeq);
                 nNewest = Math.max(nNewest, ref.f_nSeq);
             }
         }
+        // Per-site seq RANGE, not just a count. The overall span's lower bound is pinned by the
+        // library pools, which are created first and retained on purpose - so it cannot tell a leak
+        // from collection lag. Per site it can: if the compile-side pools span back to low
+        // sequence numbers, old compiles are being held; if they cluster high, they are merely the
+        // most recent, not yet collected.
+        Map<String, int[]> mapSpan = new HashMap<>();
+        for (PoolRef ref : POOL_REFS) {
+            if (ref.get() != null) {
+                mapSpan.compute(ref.f_sSite, (k, span) -> span == null
+                        ? new int[] {ref.f_nSeq, ref.f_nSeq}
+                        : new int[] {Math.min(span[0], ref.f_nSeq), Math.max(span[1], ref.f_nSeq)});
+            }
+        }
+        s_sLiveBySite = mapBySite.entrySet().stream()
+                .sorted(Entry.<String, Integer>comparingByValue().reversed())
+                .map(e -> {
+                    int[] span = mapSpan.get(e.getKey());
+                    return e.getValue() + "x " + e.getKey()
+                            + " (seq " + span[0] + ".." + span[1] + ")";
+                })
+                .collect(Collectors.joining(", "));
         if (mapByOwner.isEmpty()) {
             return "";
         }
@@ -4759,10 +4800,57 @@ public class ConstantPool
                         .collect(Collectors.joining(", "));
     }
 
+    /**
+     * @return the survivor histogram BY CREATION SITE, as of the last {@link #getLivePoolHistogram}
+     */
+    public static String getLivePoolsBySite() {
+        return s_sLiveBySite;
+    }
+
+    private static volatile String s_sLiveBySite = "";
+
+    /**
+     * Drain what the collector has enqueued.
+     *
+     * <p>References are enqueued ASYNCHRONOUSLY by the reference handler after a collection, so
+     * draining immediately after {@code System.gc()} returns can still see a cleared reference as
+     * live. Poll, yield briefly, poll again: this does not make the count exact, but it stops the
+     * lag from being mistaken for retention - which is a mistake this measurement already made
+     * once, reading a span whose lower bound was pinned by the legitimately-retained library
+     * pools.</p>
+     */
+    /**
+     * @param sSite  a creation site, e.g. "FileStructure:122"
+     *
+     * @return the still-live pools created at that site, oldest first
+     */
+    public static List<ConstantPool> getLivePoolsCreatedAt(String sSite) {
+        if (!TRACK_POOL_LIFETIMES) {
+            return List.of();
+        }
+        drainCollectedPools();
+        return POOL_REFS.stream()
+                .filter(ref -> ref.f_sSite.equals(sSite))
+                .sorted(Comparator.comparingInt(ref -> ref.f_nSeq))
+                .map(Reference::get)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
     private static void drainCollectedPools() {
-        for (Reference<? extends ConstantPool> ref; (ref = POOL_QUEUE.poll()) != null; ) {
-            //noinspection SuspiciousMethodCalls
-            POOL_REFS.remove(ref);
+        for (int i = 0; i < 2; ++i) {
+            for (Reference<? extends ConstantPool> ref; (ref = POOL_QUEUE.poll()) != null; ) {
+                //noinspection SuspiciousMethodCalls
+                POOL_REFS.remove(ref);
+            }
+            if (i == 0) {
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
         }
     }
 
