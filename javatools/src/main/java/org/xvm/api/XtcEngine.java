@@ -258,9 +258,37 @@ public final class XtcEngine
         TypeConstant typeNakedRef = injectNakedRefIntoLibrary(repoLib, repoHeld);
         warmRootObject(repoHeld);
 
+        // EXPERIMENT behind a flag: build the library pools' valid-pool sets so that
+        // Constant.checkValidPools actually RUNS for them. It currently cannot: the set is only ever
+        // built by TypeCompositionStatement, on the pool of the component being compiled, so a
+        // library pool's set stays empty - and checkValidPools returns immediately on an empty set
+        // ("the modules are not yet linked"), which for these pools is permanent rather than early.
+        // That is why constants referencing a compile's pool can register into the library unchecked.
+        if (Boolean.getBoolean("xvm.library.checkPools")) {
+            for (var sName : repoHeld.getModuleNames()) {
+                var moduleLib = repoHeld.loadModule(sName);
+                if (moduleLib != null) {
+                    moduleLib.getConstantPool().buildValidPoolSet();
+                }
+            }
+        }
+
         prepared = new PreparedLibrary(repoHeld, typeNakedRef);
         f_mapPreparedLibraries.put(repoLib, prepared);
         return prepared;
+    }
+
+    /**
+     * Append the reference chain from this engine to one leaked pool, or say it is unreachable.
+     *
+     * @param sWhich  "OLDEST" or "NEWEST", so the two can be told apart in the output
+     */
+    private void appendRetainerPath(StringBuilder sb, String sWhich, ConstantPool pool) {
+        String sPath = RetainerPath.find(this, o -> o == pool, 14);
+        sb.append("  RETAINER PATH (").append(sWhich).append(") to ")
+          .append(pool.describeOwner()).append(": ")
+          .append(sPath == null ? "NOT REACHABLE FROM THE ENGINE" : "\n        " + sPath)
+          .append('\n');
     }
 
     /**
@@ -422,13 +450,22 @@ public final class XtcEngine
             // held by something. Walk from this engine and print the chain.
             // Enumerate every TypeInfo cache field holding a foreign constant, across the library.
             // Three of these were found one run at a time; this lists them all at once.
+            String sCross = ConstantPool.getCrossPoolInvalidations();
+            if (!sCross.isEmpty()) {
+                sb.append("  CROSS-POOL TYPEINFO INVALIDATIONS: ").append(sCross).append('\n');
+            }
+
+            // BOTH ends, because persistence and GROWTH are different questions. The oldest
+            // surviving pool says what has been held since the first iteration; the newest says what
+            // is being acquired NOW. Only ever asking about the oldest is how a fixed cost gets
+            // mistaken for a trend - the path to the oldest has been the same for several fixes
+            // while the per-iteration growth carried on regardless.
             var listOld = ConstantPool.getLivePoolsCreatedAt("FileStructure:122");
             if (!listOld.isEmpty()) {
-                ConstantPool poolOldest = listOld.get(0);
-                String sPath = RetainerPath.find(this, o -> o == poolOldest, 14);
-                sb.append("  RETAINER PATH to ").append(poolOldest.describeOwner()).append(": ")
-                  .append(sPath == null ? "NOT REACHABLE FROM THE ENGINE" : "\n        " + sPath)
-                  .append('\n');
+                appendRetainerPath(sb, "OLDEST", listOld.get(0));
+                if (listOld.size() > 1) {
+                    appendRetainerPath(sb, "NEWEST", listOld.get(listOld.size() - 1));
+                }
             }
         }
         return sb.toString();

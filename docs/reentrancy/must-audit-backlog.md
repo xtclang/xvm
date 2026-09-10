@@ -310,6 +310,194 @@ the GET asymmetry exists there. Nothing to file.
 override compiles, sits next to sibling overrides that now all work, and silently never runs.
 `xRegEx` was the only template with one; nothing prevents the next.
 
+### ROOT CAUSE 2026-09-10: `checkValidPools` never runs for the shared library, and that is BOTH bugs
+
+The retention hunt and the corruption hunt converge on one defect.
+
+**The growth mechanism, found by asking the right pool.** `RetainerPath` had only ever been pointed at
+the OLDEST surviving pool - which answers "what has been held since iteration 1", a constant, not
+"what is being acquired now", the slope. Pointing it at the NEWEST as well gave the same path shape
+for both ends, and it was no longer a cache:
+
+```
+ecstasy.xtclang.org pool -> f_listConst -> elem[38371] (oldest) / elem[38267] (newest)
+  -> SignatureConstant -> m_aconstReturns -> TypeConstant[1] -> [0] -> TerminalTypeConstant
+    -> ConstantPool(TestOperators)
+```
+
+The library pool's own INTERNED CONSTANTS include signatures whose return types belong to compiled
+modules. Different elements at each end, so every compile adds more.
+
+**Why nothing stopped it.** Registration already asserts exactly this:
+
+```java
+if (fRegisterRecursively) {
+    constant.registerConstants(this);
+    constant.checkValidPools(f_setValidPools);   // "do not refer to an unknown upstream pool"
+}
+```
+
+and `checkValidPools` opens with:
+
+```java
+if (!setValidPools.contains(getConstantPool())) {
+    if (setValidPools.isEmpty()) {
+        return;                      // "the modules are not yet linked"
+    }
+    throw ...
+}
+```
+
+`buildValidPoolSet()` has exactly ONE caller - `TypeCompositionStatement:1616`, on
+`component.getConstantPool()`, the COMPILE's pool. **A shared library pool's set is never built**, so
+it is empty, so the check returns immediately for every constant registered into the library. The
+escape reads as "early, before linking"; for these pools it is permanent.
+
+**Verified by turning it on.** Building the valid-pool sets for the prepared library
+(`-Dxvm.library.checkPools=true`) makes it fire, naming the exact shape traced above:
+
+```
+attempt to register a constant that refers to an unknown upstream constant pool:
+ConstantPool{module=TestArray, size=1272}
+  at Constant.checkValidPools -> SignatureConstant.forEachUnderlying
+```
+
+**This is the root of BOTH symptoms.** Unchecked foreign references in the library pool pin whole
+compile pools (the retention leak) AND become positions valid only in another pool when a module is
+assembled (the corruption fixed earlier via the fingerprint clone). Two hunts, one cause.
+
+It also explains why three cache guards only halved the heap: they blocked symptoms downstream of an
+assertion that was never running.
+
+**A deferred-failure detail worth its own note.** The assertion surfaced during `cacheReport`, not
+during the compile that caused it: `awaitRegistrationComplete` rethrows a recorded registration
+failure when a LATER reader touches the constant. So compiles report success while leaving a constant
+in a failed state, and the error appears attached to whoever reads it next.
+
+**Sixth instance of the day's meta-pattern, and the most consequential: a check that looks like
+coverage and does not run.** With `checkAssemblyOwnership` dying inside its own error message,
+`outsideLib=0` auditing two maps out of fifteen, the pool-owner capture recording `null`, and the
+sampled audit that examined nothing. Every one reported reassuringly while the thing it guarded was
+broken.
+
+**The fix is NOT in `copyForAdoption`, and that was nearly the seventh wrong guess.** The story was
+clean: `copyForAdoption` rebuilds the shell with `Arrays.copyOf` - the ARRAY, not the elements - so
+adoption is shallow and foreign types survive. It matched the observed path exactly. It is also
+wrong, because `SignatureConstant.registerConstants` adopts the children properly:
+
+```java
+m_aconstParams  = FrozenArray.adopt(TypeConstant.registerTypeConstants(pool, aParams()));
+m_aconstReturns = FrozenArray.adopt(TypeConstant.registerTypeConstants(pool, aReturns()));
+```
+
+The shallow copy is BY DESIGN - `TerminalTypeConstant.copyForAdoption` says so ("the defining
+identity is registered by the destination pool below"). Patching it would have changed nothing and
+looked like a fix.
+
+**The site, from the full cause chain:**
+
+```
+ConstantPool.register:442                    <- checkValidPools fires here
+  ensureMethodConstant:1846
+    IdentityConstant.appendNestedIdentity:395
+      TypeConstant.layerOnMethods:4924
+        collectMemberInfo -> buildTypeInfo   <- building a LIBRARY type's TypeInfo
+          <- TypeCollector.inferFrom <- ListExpression.getImplicitElementType
+            <- while compiling TestArray
+```
+
+Registration DID recurse - the check only runs when `fRegisterRecursively` is true - so "registration
+was skipped" is ruled out too.
+
+**Current best hypothesis: publish-before-adopt.** `register()` adds the constant to `f_listConst`
+and `mapConstants` INSIDE the synchronized block, and adopts its children AFTERWARDS:
+
+```java
+if (constantOld == null) {
+    constant.setPosition(f_listConst.size());
+    f_listConst.add(constant);          // published, children not yet adopted
+    mapConstants.put(constant, constant);
+}
+...
+if (fRegisterRecursively) {
+    constant.registerConstants(this);   // children adopted only now
+    constant.checkValidPools(...);      // validated after that
+}
+```
+
+So a constant is reachable in the pool while still holding foreign children, and if the recursive
+step fails the constant STAYS there - `finishRegistrationCompletion` records the failure for later
+readers but does not remove it from `f_listConst`. Every later equals-based lookup then returns the
+dirty instance, and the foreign reference is permanent. That matches what `RetainerPath` reports:
+a foreign type reachable from `ecstasy`'s `f_listConst[38371]`.
+
+**NOT yet verified**, and it should be before anything is changed - the obvious-and-wrong answer has
+come up six times on this bug. The cheap test: with `-Dxvm.library.checkPools=true`, does the SAME
+constant fail repeatedly (stuck in the pool) or once (transient)? Repeated failure on one constant
+confirms it is published and never removed.
+
+**If confirmed, the fix has a shape**: adopt children BEFORE publishing, or remove the constant from
+`f_listConst`/`mapConstants` when recursive registration fails. The second is smaller; the first is
+more obviously correct. Either way `-Dxvm.library.checkPools=true` is the proof - a correct fix makes
+that run clean.
+
+### MEASURED 2026-09-10: cross-pool invalidation is real, rare, and NOT the growth mechanism
+
+Chasing the fourth retainer led to T1's plan step 4 - "Mark the shared library pools published
+(`markRuntimePublished`)" - which was never done. Without it, a compiler pass can invalidate a pool
+it does not own:
+
+```java
+// MethodDeclarationStatement, a COMPILER pass
+ConstantPool poolId = idClz.getConstantPool();   // for a library class, the LIBRARY's pool
+pool.invalidateTypeInfos(idClz);
+if (pool != poolId) {
+    poolId.invalidateTypeInfos(idClz);
+}
+```
+
+Each invalidation forces a library TypeInfo rebuild, and a rebuild that happens during a compile
+captures that compile's types. Plausible mechanism, so it was measured rather than assumed.
+
+**Attempt 1, publishing the library: INVALID, and nearly reported as a result.** Marking the prepared
+library pools published made 43 of 43 modules fail with `AssertionError`, 129 of them - which reads
+like "every compile reaches into the library". It is not. The stack shows the failure inside
+`markRuntimePublished` ITSELF, at
+`prewarmRuntimeAccessTypeConstants -> prewarmAccessTypeConstants -> isSingleUnderlyingClass ->
+PropertyConstant.getConstraintType`, called from `ensureLibraryPrepared`. Publishing threw during
+library SETUP; no compile ever reached the fence. The experiment measured nothing.
+
+The tell, in hindsight: the numbers were too clean. 43/43 every iteration, and `typeInfos=3` where a
+healthy run reports 1032 - a library that had actually been fenced would still have built its
+TypeInfos. **Worth recording as its own finding: `markRuntimePublished` does not currently work on
+the prepared library pools.** T1 step 4 is not merely undone, it is blocked, and that prewarm
+assertion is why.
+
+**Attempt 2, a counter instead of a fence.** Counting invalidations whose target pool is not the
+caller's - no behaviour change, so it cannot fail at setup or be mistaken for a result:
+
+```
+17x total, every one targeting ecstasy.xtclang.org:
+  10x <- SimpleApp   3x <- FailProbe   2x <- xunit_demo   1x <- TestLoops   1x <- AesRawKeyRepro
+```
+
+**Rare and confined** - 17 invalidations, one target library, five modules. And the totals are
+IDENTICAL at iterations 1, 2 and 3 against a cumulative counter, so there are **zero new cross-pool
+invalidations after the first iteration.**
+
+**That rules it out as the growth mechanism.** It would pin a fixed set from iteration 1; the leak
+adds roughly 13 pools per iteration, indefinitely. Cross-pool invalidation is at most a contributor.
+
+**What that leaves, and the next experiment.** The retainer path has consistently named the oldest
+surviving `:122` pool. Growth is a different question from persistence, and may have a different
+answer: ask `RetainerPath` about a RECENT pool - one from the latest iteration - instead of the
+oldest. If the path differs, the growth has its own retainer and the oldest-pool path was a fixed
+cost being mistaken for a trend. That is one cheap run and it has not been done.
+
+Also unexplained: the library reports a constant `typeInfos=1032` across iterations, so new library
+TypeInfos are not being built after the first - which sits awkwardly with a per-iteration leak and
+should be reconciled before any further fix is designed.
+
 ### PARTLY FIXED 2026-09-10: library TypeInfo caches pinned per-compile pools; a fourth resists
 
 Three memos on a long-lived `TypeInfo` stored whatever the CALLER asked about. A constant reaches

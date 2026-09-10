@@ -3784,11 +3784,39 @@ public class ConstantPool
             assertMutableBeforeRuntimePublished("TypeInfo invalidation");
         }
 
+        if (TRACK_POOL_LIFETIMES) {
+            // Count invalidations that reach a pool the CALLER does not own. A compiler pass
+            // invalidating a shared library's TypeInfos forces a rebuild that happens DURING the
+            // compile and captures that compile's types - the retainer that three cache guards and
+            // a warm-up all failed to close. The question this answers is HOW OFTEN, which decides
+            // whether the fix is to stop a few sites crossing pools or to stop sharing the library.
+            ConstantPool poolOwner = id.getConstantPool();
+            if (poolOwner != this) {
+                INVALIDATIONS_ACROSS_POOLS.merge(
+                        poolOwner.describeOwner() + " <- " + describeOwner(), 1, Integer::sum);
+            }
+        }
+
         synchronized (f_listInvalidated) {
             f_listInvalidated.add(register(id));
             m_cInvalidated = f_listInvalidated.size();
         }
     }
+
+    /**
+     * @return a histogram of cross-pool TypeInfo invalidations, "owning pool &lt;- invalidating pool"
+     */
+    public static String getCrossPoolInvalidations() {
+        return INVALIDATIONS_ACROSS_POOLS.isEmpty()
+                ? ""
+                : INVALIDATIONS_ACROSS_POOLS.entrySet().stream()
+                        .sorted(Entry.<String, Integer>comparingByValue().reversed())
+                        .limit(8)
+                        .map(e -> e.getValue() + "x " + e.getKey())
+                        .collect(Collectors.joining(", "));
+    }
+
+    private static final Map<String, Integer> INVALIDATIONS_ACROSS_POOLS = new ConcurrentHashMap<>();
 
     /**
      * Cause all TypeInfos that are built from the specified TypeInfo to re-build.

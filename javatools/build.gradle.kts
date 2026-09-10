@@ -256,6 +256,9 @@ val checkRegistrationOwnership = providers.systemProperty("xvm.registration.chec
 // number that turns "per-compile pools are retained" from an inference into a measurement.
 val trackPoolLifetimes = providers.systemProperty("xvm.pool.trackLifetimes")
 
+// Activates Constant.checkValidPools for the shared library, which an empty valid-pool set disables.
+val checkLibraryPools = providers.systemProperty("xvm.library.checkPools")
+
 // -Dxvm.test.jfr=/path/to.jfr records a flight recording, including OldObjectSample.
 val jfrRecording = providers.systemProperty("xvm.test.jfr")
 
@@ -269,6 +272,9 @@ tasks.withType<Test>().configureEach {
     }
     if (trackPoolLifetimes.isPresent) {
         systemProperty("xvm.pool.trackLifetimes", trackPoolLifetimes.get())
+    }
+    if (checkLibraryPools.isPresent) {
+        systemProperty("xvm.library.checkPools", checkLibraryPools.get())
     }
     // JFR's OldObjectSample records objects that SURVIVED a GC together with their reference chain
     // back to a GC root - which is the reverse reference a weak-reference counter cannot give. This
