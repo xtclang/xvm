@@ -439,7 +439,9 @@ public class ConstantPool
                 // constant pools that we are allowed to refer to from this constant pool, so this
                 // is an assertion to make sure that we don't accidentally refer to a constant pool
                 // that isn't in that set of valid pools
-                constant.checkValidPools(f_setValidPools);
+                if (m_fValidPoolsBuilt) {
+                    constant.checkValidPools(f_setValidPools);
+                }
             }
         } catch (RuntimeException | Error e) {
             failure = e;
@@ -728,6 +730,26 @@ public class ConstantPool
         if (set.isEmpty()) {
             contributeToValidPoolSet(set);
         }
+        // Explicit state, because "empty" and "never built" are NOT the same thing and conflating
+        // them is what disabled this pool's cross-pool checking entirely. checkValidPools used to
+        // read an empty set as "the modules are not yet linked" and return - which is right while a
+        // pool is still being linked, and permanently wrong for any pool nobody ever builds a set
+        // for. Library pools were in the second category for their whole lives.
+        m_fValidPoolsBuilt = true;
+    }
+
+    /**
+     * @return true iff {@link #buildValidPoolSet} has run, so {@link #getValidPools} means something
+     */
+    public boolean isValidPoolSetBuilt() {
+        return m_fValidPoolsBuilt;
+    }
+
+    /**
+     * @return the pools this one is permitted to reference; meaningful only once built
+     */
+    public Set<ConstantPool> getValidPools() {
+        return f_setValidPools;
     }
 
     /**
@@ -4699,6 +4721,12 @@ public class ConstantPool
      * may be referred to (directly or indirectly) from constants stored in this pool.
      */
     private final Set<ConstantPool> f_setValidPools = Collections.newSetFromMap(new IdentityHashMap<>());
+
+    /**
+     * True once {@link #buildValidPoolSet} has run. See there for why this is not inferred from the
+     * set being non-empty.
+     */
+    private volatile boolean m_fValidPoolsBuilt;
 
     /**
      * Tracks whether the ConstantPool should recursively register constants.

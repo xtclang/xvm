@@ -258,12 +258,16 @@ public final class XtcEngine
         TypeConstant typeNakedRef = injectNakedRefIntoLibrary(repoLib, repoHeld);
         warmRootObject(repoHeld);
 
-        // EXPERIMENT behind a flag: build the library pools' valid-pool sets so that
-        // Constant.checkValidPools actually RUNS for them. It currently cannot: the set is only ever
-        // built by TypeCompositionStatement, on the pool of the component being compiled, so a
-        // library pool's set stays empty - and checkValidPools returns immediately on an empty set
-        // ("the modules are not yet linked"), which for these pools is permanent rather than early.
-        // That is why constants referencing a compile's pool can register into the library unchecked.
+        // TIER BOUNDARY. A prepared library is the upper, read-only tier: a compile reads through
+        // to it and must never write into it. Building the valid-pool sets here is what makes that
+        // enforceable - until now a library pool's set was never built by anyone, so
+        // Constant.checkValidPools saw an empty set and returned, and cross-pool references into the
+        // library went unchecked for the pool's entire life. See the backlog: that one gap is behind
+        // both the retention leak and the intermittently unreadable compiled modules.
+        //
+        // Still behind a flag while the violations it exposes are worked through - turning it on
+        // with a known violation outstanding would just break every compile. Flip the default once
+        // -Dxvm.library.checkPools=true runs clean.
         if (Boolean.getBoolean("xvm.library.checkPools")) {
             for (var sName : repoHeld.getModuleNames()) {
                 var moduleLib = repoHeld.loadModule(sName);

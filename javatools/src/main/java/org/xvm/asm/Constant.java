@@ -377,10 +377,13 @@ public abstract class Constant
     private void checkValidPools(Set<ConstantPool> setValidPools, int depth) {
         // check this pool
         if (!setValidPools.contains(getConstantPool())) {
-            if (setValidPools.isEmpty()) {
-                // the modules are not yet linked
-                return;
-            }
+            // NO "empty means skip" escape. That reads as "the modules are not yet linked", which is
+            // true while a pool is being linked and permanently false for a pool nobody builds a set
+            // for - and a check that silently turns itself off is indistinguishable from a check
+            // that passes. Whether the set is meaningful is now the CALLER's to know
+            // (ConstantPool.isValidPoolSetBuilt); by the time we are here, it is.
+            assert !setValidPools.isEmpty()
+                    : "checkValidPools called with an unbuilt valid-pool set";
 
             if (ConstantPool.TRACK_POOL_LIFETIMES) {
                 // Reported HERE, at the detection point, and to stderr. Three previous attempts to
