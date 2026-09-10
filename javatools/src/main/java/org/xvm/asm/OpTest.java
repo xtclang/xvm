@@ -21,9 +21,15 @@ import org.xvm.javajit.ExtendedSlot;
 import org.xvm.javajit.MultiSlot;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.InlineCache;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.OpInfoKey;
+import org.xvm.runtime.ServiceContext;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.xBoolean;
 
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nType;
@@ -508,6 +514,77 @@ public abstract class OpTest
                 hasSecondArgument() ? OpField.arg("value2", m_nValue2) : null,
                                       OpField.arg("return", m_nRetValue)));
     }
+
+
+    /**
+     * Compare two handles for equality, memoizing which composition the comparison dispatches
+     * through.
+     *
+     * <p>{@code TypeConstant.callEquals} re-derives that composition on every comparison, and the
+     * derivation is two structural {@code equals} calls. Profiling put the selection at the
+     * dominant share of a hot equality path, and a measurement of the miss population
+     * ({@code docs/reentrancy/iseq-canonicalization-measurement.md}) established that the cheaper
+     * alternative - canonicalizing the op's type into the container's pool - cannot help there:
+     * the misses are comparisons through a SUPERTYPE or an enum type, not pool artifacts. A cache
+     * covers both cases, because it skips the selection whichever branch would have run.</p>
+     *
+     * <p>The key is (resolved type, composition, composition) and all three parts are load-bearing.
+     * {@code Frame.resolveType} depends on the frame's generics and {@code this}, so the same op
+     * yields different types in different frames; a composition-pair key alone was measured
+     * returning a STALE composition 0.045% of the time, which is a wrong-template dispatch rather
+     * than a slow path. The container is implicit: the cache lives in the executing service.</p>
+     *
+     * @param frame    the current frame
+     * @param type     the resolved comparison type
+     * @param hValue1  the first value
+     * @param hValue2  the second value
+     * @param iReturn  where to put the Boolean result
+     *
+     * @return one of {@code R_NEXT}, {@code R_CALL} or {@code R_EXCEPTION}
+     */
+    protected int callEqualsCached(Frame frame, TypeConstant type,
+                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
+        if (hValue1 == hValue2) {
+            return frame.assignValue(iReturn, xBoolean.trueHandle(frame));
+        }
+
+        // the six TypeConstant subclasses that override callEquals select no single composition,
+        // so they opt out rather than have this try to detect them
+        if (!type.isEqualsSelectionStable()) {
+            return type.callEquals(frame, hValue1, hValue2, iReturn);
+        }
+
+        ServiceContext  context = frame.f_context;
+        TypeComposition clz1    = hValue1.getComposition();
+        TypeComposition clz2    = hValue2.getComposition();
+
+        InlineCache<TypeComposition> cache = context.getOpInfo(this, INFO_EQUALS_CACHE);
+        if (cache != null) {
+            TypeComposition cached = cache.match(type, clz1, clz2);
+            if (cached != null) {
+                InlineCache.recordHit(context, this, INFO_EQUALS_CACHE, cache);
+                return cached.getTemplate().callEquals(frame, cached, hValue1, hValue2, iReturn);
+            }
+            if (cache.isMegamorphic()) {
+                return type.callEquals(frame, hValue1, hValue2, iReturn);
+            }
+        }
+
+        TypeComposition clz = type.selectEqualsComposition(frame, clz1, clz2);
+        if (clz == null) {
+            return frame.raiseException(TypeConstant.noCommonEqualsType(clz1, clz2));
+        }
+
+        InlineCache.recordMiss(context, this, INFO_EQUALS_CACHE, cache, type, clz1, clz2, clz);
+        return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
+    }
+
+    // categories for cached info
+    protected enum Category {EqualsComposition}
+
+    /** The value each {@link Category} caches, declared once so the pairing cannot drift. */
+    protected static final OpInfoKey<InlineCache<TypeComposition>> INFO_EQUALS_CACHE =
+            OpInfoKey.ofGeneric(Category.EqualsComposition, InlineCache.class);
 
     // ----- fields --------------------------------------------------------------------------------
 

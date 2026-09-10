@@ -597,6 +597,12 @@ public final class AnnotatedTypeConstant
     }
 
     @Override
+    public boolean isEqualsSelectionStable() {
+        // overrides callEquals, so there is no single composition an op site could memoize
+        return false;
+    }
+
+    @Override
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return Utils.callEqualsSequence(frame,
             m_annotation.getAnnotationType(), m_constType, hValue1, hValue2, iReturn);

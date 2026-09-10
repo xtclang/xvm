@@ -636,6 +636,12 @@ public abstract sealed class RelationalTypeConstant
     }
 
     @Override
+    public boolean isEqualsSelectionStable() {
+        // overrides callEquals, so there is no single composition an op site could memoize
+        return false;
+    }
+
+    @Override
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         throw new UnsupportedOperationException();
     }

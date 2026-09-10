@@ -487,6 +487,12 @@ public final class DifferenceTypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
+    public boolean isEqualsSelectionStable() {
+        // overrides callEquals, so there is no single composition an op site could memoize
+        return false;
+    }
+
+    @Override
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         // disregard what the second type thinks
         return m_constType1.callEquals(frame, hValue1, hValue2, iReturn);

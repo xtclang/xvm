@@ -777,6 +777,12 @@ public sealed class IntersectionTypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
+    public boolean isEqualsSelectionStable() {
+        // overrides callEquals, so there is no single composition an op site could memoize
+        return false;
+    }
+
+    @Override
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return Utils.callEqualsSequence(frame,
                 m_constType1, m_constType2, hValue1, hValue2, iReturn);

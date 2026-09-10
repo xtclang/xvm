@@ -5117,11 +5117,46 @@ sweep, 12.6 % in the arithmetic loop), which dilutes every share and likely expl
 reading 15.1 % here against 21.3 % clean. The selection-to-comparison ratio the verdict rests on is
 much more robust than the absolute shares.
 
+### BUILT 2026-09-10
+
+The deciding measurement was taken (`../iseq-canonicalization-measurement.md`) and answered against
+canonicalization: of 508 both-miss selections, **zero** would have matched after canonicalizing into
+one pool. The misses are comparisons through a SUPERTYPE or an enum type - `Int` against `String`
+through `Object`, two `Array.Mutability` values through `Array.Mutability` - which is a property of
+how the code is written, not a pool artifact. `TypeConstant.equals` already compares structurally,
+so a cross-pool but structurally equal type lands in the equals case and never in the miss case.
+Canonicalization fixes the equals case only; a cache fixes both, because it memoizes the selection
+OUTCOME and skips the chain whichever branch would have run.
+
+**Shipped as three pieces.** `TypeConstant.selectEqualsComposition` extracts the selection, leaving
+`callEquals` unchanged for every existing caller. `TypeConstant.isEqualsSelectionStable` defaults
+true and is overridden false by the six subclasses that override `callEquals` - they opt out rather
+than have the caller try to detect them, because for them there is no single composition to
+memoize. `OpTest.callEqualsCached` holds the cache, keyed on (resolved type, composition,
+composition) through the shared `org.xvm.runtime.InlineCache`; `IsEq` and `IsNotEq` use it.
+
+**Measured** on a synthetic benchmark added as `manualTests/src/main/x/eqBench.x`, which
+deliberately mixes the three shapes the miss population showed - a loop over only one of them would
+flatter whichever design suits it:
+
+| | warm runs |
+| --- | --- |
+| cache on | 964, 944 ms / 981, 975 ms (two samples, different machine loads) |
+| cache bypassed | 1,030, 1,056 ms |
+
+**~6 %, repeatable across both on-samples.** Two caveats matter more than the number. This is TOTAL
+runtime, of which the equality path is only a part, so it is not comparable with the profile's
+"14-15 % of interpreter CPU" for the selection in isolation. And a synthetic loop is not the
+manualTests sweep: the mix of monomorphic to supertype comparisons here is chosen, not observed.
+
+Correctness signal beyond the suite: the benchmark's three results are byte-identical with the cache
+on and off, on every run.
+
 ### Filing notes
 
-Not ready to file as a PR - this is the evidence that the work is worth doing and the constraints it
-must respect. The next step is a measurement, not an implementation: does canonicalizing the type at
-resolution collapse the 89.77 %?
+Ready to file. Three pieces with a clean seam: the extraction is behaviour-preserving on its own,
+the opt-out predicate is inert until something consults it, and the cache is confined to `OpTest`.
+`JumpEq`/`JumpNotEq` still take the uncached path and are the obvious follow-up.
 
 ## E50 - The cross-pool sharing contract is load-bearing and undocumented
 

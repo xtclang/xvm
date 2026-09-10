@@ -8051,14 +8051,59 @@ public abstract sealed class TypeConstant
         // this type is a common [compile time] type that should be used for the comparison
         TypeComposition clz1 = hValue1.getComposition();
         TypeComposition clz2 = hValue2.getComposition();
-        TypeComposition clz = clz1.getType().equals(this) ? clz1
-                            : clz2.getType().equals(this) ? clz2
-                            : ensureClass(frame);
+        TypeComposition clz  = selectEqualsComposition(frame, clz1, clz2);
         return clz == null
-                ? frame.raiseException("Unknown common type for " +
-                        clz1.getType().getValueString() + " and " +
-                        clz2.getType().getValueString())
+                ? frame.raiseException(noCommonEqualsType(clz1, clz2))
                 : clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
+    }
+
+    /**
+     * Choose the composition that an equality comparison between two handles of this type should
+     * dispatch through.
+     *
+     * <p>Extracted so an op site can memoize the ANSWER instead of re-deriving it per comparison:
+     * the two {@code equals} calls here are structural comparisons, and profiling attributed a
+     * large share of interpreter time to them. See {@link #isEqualsSelectionStable} for when that
+     * memoizing is legal.</p>
+     *
+     * @param frame  the current frame
+     * @param clz1   the first handle's composition
+     * @param clz2   the second handle's composition
+     *
+     * @return the composition to compare through, or null if there is no common one
+     */
+    public TypeComposition selectEqualsComposition(Frame frame, TypeComposition clz1,
+                                                   TypeComposition clz2) {
+        return clz1.getType().equals(this) ? clz1
+             : clz2.getType().equals(this) ? clz2
+             : ensureClass(frame);
+    }
+
+    /**
+     * Whether {@link #selectEqualsComposition} is a pure function of this type and the two
+     * compositions - and therefore whether an op site may cache its result.
+     *
+     * <p>True for the base implementation. The subclasses that OVERRIDE {@link #callEquals} return
+     * false, because for them there is no single composition to memoize: an annotated type runs a
+     * SEQUENCE of comparisons through {@code Utils.callEqualsSequence}, and a union type recurses
+     * on {@code isA} tests against its members. Caching a composition for those would be wrong
+     * rather than merely unhelpful, so they opt out rather than the caller trying to detect them.</p>
+     *
+     * @return true iff an op site may cache the selected composition for this type
+     */
+    public boolean isEqualsSelectionStable() {
+        return true;
+    }
+
+    /**
+     * @param clz1  the first handle's composition
+     * @param clz2  the second handle's composition
+     *
+     * @return the message for two handles with no common comparison type
+     */
+    public static String noCommonEqualsType(TypeComposition clz1, TypeComposition clz2) {
+        return "Unknown common type for " + clz1.getType().getValueString()
+                + " and " + clz2.getType().getValueString();
     }
 
     /**

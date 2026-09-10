@@ -55,6 +55,6 @@ public class IsEq
     @Override
     protected int completeBinaryOp(Frame frame, TypeConstant type,
                                    ObjectHandle hValue1, ObjectHandle hValue2) {
-        return type.callEquals(frame, hValue1, hValue2, m_nRetValue);
+        return callEqualsCached(frame, type, hValue1, hValue2, m_nRetValue);
     }
 }

@@ -58,7 +58,7 @@ public class IsNotEq
     @Override
     protected int completeBinaryOp(Frame frame, TypeConstant type,
                                    ObjectHandle hValue1, ObjectHandle hValue2) {
-        switch (type.callEquals(frame, hValue1, hValue2, A_STACK)) {
+        switch (callEqualsCached(frame, type, hValue1, hValue2, A_STACK)) {
         case R_NEXT: {
             return frame.assignValue(m_nRetValue,
                 xBoolean.not((BooleanHandle) frame.popStack()));
