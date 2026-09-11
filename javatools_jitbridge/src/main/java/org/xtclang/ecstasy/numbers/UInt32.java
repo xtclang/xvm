@@ -31,7 +31,7 @@ public class UInt32 extends UIntNumber {
     }
 
     public static long estimateStringLength$p(int thi$, Ctx ctx) {
-        return $estimateUnsignedStringLength(thi$);
+        return $estimateUnsignedStringLength(Integer.toUnsignedLong(thi$));
     }
 
     /**
