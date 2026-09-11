@@ -70,7 +70,8 @@ public class IntNumberBuilder extends NumberBuilder {
     @Override
     protected boolean useNaturalImplementation(MethodInfo method) {
         String name = method.getJitIdentity().getName();
-        return name.equals("appendTo")             ||
+        return name.equals("add")                  ||
+               name.equals("appendTo")             ||
                name.equals("estimateStringLength") ||
                name.equals("mul")                  ||
                name.equals("neg")                  ||
