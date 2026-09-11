@@ -22,6 +22,7 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeConstant.Origin;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
@@ -997,26 +998,33 @@ public abstract class OpCallable extends Op {
     protected int buildConstruct(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         MethodConstant   idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
         IdentityConstant idTarget   = idCtor.getNamespace();
-        TypeConstant     typeTarget = idTarget.getType();
-        TypeInfo         infoTarget = bctx.getTypeInfo(typeTarget);
+        TypeConstant     typeOwner  = idTarget.getType();
+        TypeInfo         infoTarget = bctx.getTypeInfo(typeOwner);
         MethodInfo       infoCtor   = infoTarget.getMethodById(idCtor);
 
         if (infoCtor == null) {
             throw new RuntimeException("Unresolvable constructor \"" +
-                idCtor.getValueString() + "\" for " + typeTarget.getValueString());
+                idCtor.getValueString() + "\" for " + typeOwner.getValueString());
         }
 
-        ClassDesc cdTarget;
-        String    sJitCtor;
+        // CONSTR_* opcodes can only point to a super class of "this" class or a mixin;
+        // in either case the exact target type derives from "this" type
+        TypeConstant typeTarget;
+        ClassDesc    cdTarget;
+        String       sJitCtor;
         if (infoTarget.getFormat() == Format.MIXIN) {
-            cdTarget   = ClassDesc.of(bctx.className);
             typeTarget = bctx.thisType;
+            cdTarget   = bctx.builder.art.CD();
             sJitCtor   = idTarget.getName() + "$" + infoCtor.ensureJitMethodName(bctx.typeSystem);
 
             bctx.buildMethod(sJitCtor, infoCtor.getHead());
         } else {
-            cdTarget = bctx.builder.ensureClassDesc(typeTarget);
-            sJitCtor = infoCtor.ensureJitMethodName(bctx.typeSystem);
+            Origin origin = bctx.typeInfo.getClassChain().get(idCtor.getClassIdentity());
+            assert origin != null;
+
+            typeTarget = origin.getType();
+            cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
+            sJitCtor   = infoCtor.ensureJitMethodName(bctx.typeSystem);
         }
 
         JitMethodDesc jmdCtor = infoCtor.getJitDesc(bctx.builder, typeTarget);

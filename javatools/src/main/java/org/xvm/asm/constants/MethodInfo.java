@@ -1571,7 +1571,25 @@ public class MethodInfo
     private JitMethodDesc computeJitDesc(Builder builder, TypeConstant typeContainer) {
         MethodBody head = getHead();
         return switch (head.getImplementation()) {
-            case Capped -> getChain()[1].getJitDesc(builder, typeContainer);
+            case Capped -> {
+                MethodBody target = getChain()[1];
+                if (target.getImplementation() != Implementation.Delegating ||
+                        target.getMethodStructure() != null) {
+                    yield target.getJitDesc(builder, typeContainer);
+                }
+
+                TypeInfo        infoType = typeContainer.ensureTypeInfo();
+                MethodStructure method   = getTopmostMethodStructure(infoType);
+
+                // a capped chain can redirect through a synthetic delegating body with no
+                // MethodStructure; its signature is nevertheless fully resolved and belongs to
+                // the capped method, while the narrowing method supplies its classification and
+                // default-parameter count
+                SignatureConstant sig = getSignature();
+                yield JitMethodDesc.of(builder, typeContainer, method.isStatic(), false,
+                        sig.getRawParams(), sig.getRawReturns(),
+                        method.getTypeParamCount() + getRequiredParamCount(infoType));
+            }
 
             case Delegating -> {
                 // there could be multiple delegates; take the first "real" one
