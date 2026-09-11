@@ -261,10 +261,9 @@ public class TypeMatrix {
         }
 
         // use CastTypeConstant to remember the original type
-        assert assignType.isA(currType) ||
-            assignType.isA(currType.removeImmutable()) ||
-            assignType.containsFormalType(true) ||
-            currType.containsFormalType(true);
+        assert assignType.isA(currType.removeImmutable()) ||
+               assignType.containsFormalType(true) ||
+               currType.containsFormalType(true);
 
         if (assignType.equals(currType)) {
             return assignType;
