@@ -97,20 +97,6 @@ public class Int64 extends IntNumber {
         return BigDecimal.valueOf($value);
     }
 
-    /**
-     * Int64 add(Int64! n)
-     */
-    public static long addꖛ0$p(long thi$, Ctx ctx, long n) {
-        return thi$ + n;
-    }
-
-    /**
-     * Int64 mul(Int64! n)
-     */
-    public static long mul$p(long thi$, Ctx ctx, long n) {
-        return thi$*n;
-    }
-
     // ----- primitive helpers ---------------------------------------------------------------------
 
     public static long $next(Ctx ctx, long n) {

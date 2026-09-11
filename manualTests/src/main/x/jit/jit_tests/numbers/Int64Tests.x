@@ -460,6 +460,7 @@ class Int64Tests {
         Int64 n2 = 19;
         Int64 n3 = n1 + n2;
         assert n3 == 1019;
+        assert n1.add(n2) == 1019;
     }
 
     void testInt64OpAddInPlace() {
@@ -660,6 +661,7 @@ class Int64Tests {
         Int64 n = 1234;
         Int64 n2 = n * 10;
         assert n2 == 12340;
+        assert n.mul(10) == 12340;
     }
 
     void testInt64OpMultiplyInPlace() {
