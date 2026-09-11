@@ -5003,11 +5003,15 @@ Swept every `.xtc` in the tree - 726 modules, 5,394,089 ops, 8,818,893 operands:
 
 ### Two bugs it exposed while being built
 
-Both are filed separately, and both were only reachable by reading a module back from disk, which
-nothing in the tree did until now:
+Both are filed separately, and both were surfaced by reading a module back from disk, which nothing
+in the tree did until now:
 
-- `OpJump.toString()` recursed through jump targets and overflowed the stack on a real module
-  (row 54 of `master-issue-submissions.md`).
+- `OpJump.getLabelDesc` renders a jump's target by calling its `toString()`, overflowing the stack
+  (row 54 of `master-issue-submissions.md`). **Corrected 2026-09-11:** reading from disk is what
+  EXPOSED this, not what triggers it - the read path asserts `m_ofJmp > 0` and so renders an offset.
+  The overflow needs a zero offset, which happens for an unreachable op (whose target resolves to
+  itself) or through the four callers that pass arbitrary `(op, offset)` pairs. Still unfixed on
+  master.
 - `MethodStructure.assemble` wrote a method with no op bytes after an assembly failure, producing a
   loadable `.xtc` with an empty body (row 53).
 

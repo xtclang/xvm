@@ -120,7 +120,7 @@ Status is as of this file's last update; check the PR before re-filing.
 | 51 | `xRTNameService` catches `Throwable` in a DNS continuation, so an `Error` is reported to XTC code as "host not found" | narrow to `ExecutionException`; restore the interrupt | independent | 2 sites; the sibling catches `Exception` for the same `.get()` |
 | 52 | `Parser` reports "no such directory or file" for an include path that resolved and could not be READ | key the message off `resource`, not off an exception | independent | `checkReadable` answers false without throwing, so there is usually no exception to key on |
 | 53 | `MethodStructure.assemble` catches an op-assembly failure, prints to stderr and writes the method anyway - producing a loadable `.xtc` whose body is empty | delete the catch; rethrow with context | independent | a corrupt artifact, not a bad message |
-| 54 | `OpJump.toString()` recurses through jump targets and overflows the stack on a module read back from disk | render the target's opcode name, not the target | independent | only reachable after reading a `.xtc`, which is why nothing hit it |
+| 54 | `OpJump.getLabelDesc` renders a jump's target by calling its `toString()`, so a 0 offset overflows the stack | render the target's opcode name, not the target | independent | **NOT fixed on master** - verified live at `1b7693ac9` 2026-09-11; unchanged in substance since 2017 |
 | 55 | `OpInvocable.getCallChain`'s inline cache rewrites on every miss and probes twice, so a bimorphic call site pays four map operations per call and never hits - strictly worse than no cache | stop writing back after N consecutive misses; read both halves as one entry | independent | perf only; no behaviour change, no red test |
 | 56 | `OpIndex.getOpChain`/`saveOpChain` has the identical shape - two lookups, two writes, no deopt | same fix; share the policy with row 55 | shares a fix with 55 | perf only |
 | 57 | `ServiceContext.f_mapOpInfo` is a `WeakHashMap` whose weak keys protect nothing, and whose weak VALUES can collect a live cache entry | identity-keyed strong map | independent | the weak-value half is a correctness wart, not only perf |
@@ -4036,7 +4036,7 @@ is already a behavioural test for it in that file.
 
 ---
 
-## 54. `OpJump.toString()` overflows the stack on a module read back from disk
+## 54. `OpJump.getLabelDesc` renders a jump target by calling `toString()`, and overflows the stack
 
 **FIXED** on `lagergren/lazy-instance`. One line. Not pushed.
 
@@ -4056,12 +4056,34 @@ public static String getLabelDesc(Op opDest, int ofJmp) {
 `"-> " + opDest` calls the target's `toString()`, which for another jump renders ITS target, and so
 on. A jump chain that loops - which is what a loop compiles to - recurses until the stack is gone.
 
-**Why nothing hit it:** while compiling, a jump's destination is a `Label` and takes the first
-branch. The third branch is only reachable once ops have been READ BACK from a compiled module, with
-destinations resolved to real ops. Nothing in the tree disassembled a `.xtc` until now, so the path
-had no callers.
+**Not fixed on master, and never was - re-verified 2026-09-11 against `1b7693ac9`.** The third
+branch still reads `return "-> " + opDest;`. `toString()` is byte-identical to its form before
+`1e106dfea` (Cameron Purdy, 2025-05-05, "Fixed ops that needed 'type' for comparisons and reformatted
+all Ops (#264)"), which only changed brace placement. The last edits that touched the region's
+SUBSTANCE are both 2017-11-20: `5b830d25b` (Gene Gleyzer, "Fixes for GT/LT") and `b17c3f791`
+(Cameron Purdy, "compilation work (in progress) - toString improvements"). So the defect has stood
+for roughly nine years, and the only fix anywhere is this branch's, unpushed.
 
-**Master evidence:** `javatools/src/main/java/org/xvm/asm/OpJump.java:107-108`.
+**Correction to the mechanism stated above - there are TWO paths, and the reachability claim was
+wrong.** Reading a `.xtc` is NOT the trigger: `OpJump(DataInput, Constant[])` does
+`m_ofJmp = readPackedInt(in); assert m_ofJmp > 0;`, so a disk-read op takes the SECOND branch and
+renders an offset. The third branch needs `ofJmp == 0`, which arises two ways:
+
+- **Self-recursion, via `OpJump.toString()` itself.** `resolveAddresses` asserts
+  `m_ofJmp > 0 || !isReachable() && m_ofJmp == 0` - a zero offset is legal precisely for an
+  UNREACHABLE op - and then sets `m_opDest = aop[getAddress() + m_ofJmp]`, i.e. `aop[getAddress()]`,
+  **the jump itself**. `toString()` then renders itself, forever. Dead code, not a loop, is the
+  trigger.
+- **Chain recursion, via the other callers.** `getLabelDesc(Op, int)` is public static and four
+  other sites pass arbitrary `(op, offset)` pairs: `OpSwitch:274`, `JumpInt:193` and `:197`,
+  `LoopEnd:84` (and `OpCondJump:307` through its own override). A case whose offset is 0 and whose
+  target is some OTHER jump renders that jump, which renders its target - the chain the original
+  description had in mind. So the chain reading is right for the switch/loop callers and wrong for
+  the bare `OpJump` path.
+
+**Master evidence:** `javatools/src/main/java/org/xvm/asm/OpJump.java:105-106` (the branch),
+`:36-39` (the read-path assert that rules out the disk trigger), `:49-57` (the unreachable-op
+assert and the self-assignment).
 
 **Failure mode:** `StackOverflowError` from `toString()`. That is the worst place for one - a
 debugger rendering a frame, a log line, or a diagnostic describing another failure, all of which are
