@@ -2,7 +2,6 @@ package org.xtclang.ecstasy.numbers;
 
 import java.math.BigDecimal;
 
-import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.nType;
@@ -33,24 +32,6 @@ public class Int64 extends IntNumber {
 
     public static String toString$p(long thi$, Ctx ctx) {
         return String.of(ctx, Long.toString(thi$));
-    }
-
-    public static long estimateStringLength$p(long thi$, Ctx ctx) {
-        return Long.toString(thi$).length();
-    }
-
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        for (char c : Long.toString($value).toCharArray()) {
-            appender = appender.add$p(ctx, c);
-        }
-        return appender;
-    }
-
-    public static AppenderᐸCharᐳ appendTo$p(long thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
-        for (char c : Long.toString(thi$).toCharArray()) {
-            appender = appender.add$p(ctx, c);
-        }
-        return appender;
     }
 
     private static final int     SMALL_CACHE_OFFSET = 512;  // number of cached negative values

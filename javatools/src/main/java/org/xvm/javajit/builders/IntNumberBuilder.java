@@ -70,6 +70,12 @@ public class IntNumberBuilder extends NumberBuilder {
     @Override
     protected boolean useNaturalImplementation(MethodInfo method) {
         String name = method.getJitIdentity().getName();
+
+        // toString() intentionally uses the native primitive implementations; the natural
+        // Stringable method allocates a StringBuffer and formats the value through appendTo()
+
+        // TODO: remove the native UInt* estimateStringLength() implementations once the generic
+        //       calculateStringSize() preserves its specialized IntType[] instead of Object[]
         return name.equals("add")                  ||
                name.equals("appendTo")             ||
                name.equals("estimateStringLength") ||
