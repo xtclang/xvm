@@ -45,13 +45,6 @@ public class Float32 extends BinaryFPNumber {
         return Float.toString(thi$).length();
     }
 
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        for (char c : Float.toString($value).toCharArray()) {
-            appender = appender.add$p(ctx, c);
-        }
-        return appender;
-    }
-
     public static AppenderᐸCharᐳ appendTo$p(float thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
         for (char c : Float.toString(thi$).toCharArray()) {
             appender = appender.add$p(ctx, c);

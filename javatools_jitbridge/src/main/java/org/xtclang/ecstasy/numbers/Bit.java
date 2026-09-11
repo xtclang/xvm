@@ -102,14 +102,6 @@ public class Bit extends nConst {
     }
 
     /**
-     * The standard native implementation of "Appender<Char> appendTo(Appender<Char> buf)".
-     */
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        char c = $value == 0 ? '0' : '1';
-        return appender.add$p(ctx, c);
-    }
-
-    /**
      * The optimized native implementation of "Appender<Char> appendTo(Appender<Char> buf)".
      */
     public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {

@@ -2,8 +2,6 @@ package org.xtclang.ecstasy.numbers;
 
 import java.math.BigDecimal;
 
-import org.xtclang.ecstasy.AppenderᐸCharᐳ;
-
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
@@ -34,20 +32,6 @@ public class UInt32 extends UIntNumber {
 
     public static long estimateStringLength$p(int thi$, Ctx ctx) {
         return $estimateUnsignedStringLength(thi$);
-    }
-
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        for (char c : Integer.toUnsignedString($value).toCharArray()) {
-            appender = appender.add$p(ctx, c);
-        }
-        return appender;
-    }
-
-    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
-        for (char c : Integer.toUnsignedString(thi$).toCharArray()) {
-            appender = appender.add$p(ctx, c);
-        }
-        return appender;
     }
 
     /**
