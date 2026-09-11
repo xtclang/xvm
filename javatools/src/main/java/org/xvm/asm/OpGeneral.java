@@ -316,6 +316,7 @@ public abstract class OpGeneral
             Builder.unbox(code, typeTarget);
         }
         bctx.loadCtx(code);
+        bctx.loadCallArguments(code, jmd, NO_ARGS);
         if (jmd.isOptimizedStatic) {
             code.invokestatic(bctx.builder.ensureClassDesc(typeTarget), sJitName, md);
         } else {
