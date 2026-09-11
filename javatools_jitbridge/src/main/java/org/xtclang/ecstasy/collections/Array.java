@@ -3,10 +3,10 @@ package org.xtclang.ecstasy.collections;
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.IterableᐸCharᐳ;
 import org.xtclang.ecstasy.Iterator;
-import org.xtclang.ecstasy.ReadOnly;
 import org.xtclang.ecstasy.nEnum;
-import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nType;
+import org.xtclang.ecstasy.Object;
+import org.xtclang.ecstasy.ReadOnly;
 
 import org.xtclang.ecstasy.reflect.Enumeration;
 
@@ -153,39 +153,41 @@ public abstract class Array
     }
 
     public static class eMutability extends Enumeration {
-        private eMutability(Ctx ctx) {
-            super(ctx, ctx.pool().ensureEcstasyTypeConstant("collections.Array.Mutability"));
+        private eMutability(Ctx ctx, TypeConstant type) {
+            super(ctx, type);
         }
 
-        public static final eMutability $INSTANCE = new eMutability(
-                ((ModuleLoader) eMutability.class.getClassLoader()).getCtx());
+        static {
+            Ctx          ctx  = ((ModuleLoader) eMutability.class.getClassLoader()).getCtx();
+            TypeConstant type = ctx.pool().ensureEcstasyTypeConstant("collections.Array.Mutability");
+            $INSTANCE = new eMutability(ctx, type);
+            $names    = ArrayᐸObjectᐳ.$makeStringArray(ctx, Mutability.Constant.$INSTANCE.$name,
+                                                 Mutability.Persistent.$INSTANCE.$name,
+                                                 Mutability.Fixed.$INSTANCE.$name,
+                                                 Mutability.Mutable.$INSTANCE.$name);
 
-        public static final String[] $names = new String[] {
-            Mutability.Constant.$INSTANCE.$name,
-            Mutability.Persistent.$INSTANCE.$name,
-            Mutability.Fixed.$INSTANCE.$name,
-            Mutability.Mutable.$INSTANCE.$name,
-        };
+            $values   = ArrayᐸObjectᐳ.$makeArray(ctx, type, Mutability.Constant.$INSTANCE,
+                                                       Mutability.Persistent.$INSTANCE,
+                                                       Mutability.Fixed.$INSTANCE,
+                                                       Mutability.Mutable.$INSTANCE);
+        }
 
-        public static final Mutability[] $values = new Mutability[] {
-            Mutability.Constant.$INSTANCE,
-            Mutability.Persistent.$INSTANCE,
-            Mutability.Fixed.$INSTANCE,
-            Mutability.Mutable.$INSTANCE,
-        };
+        public static final eMutability $INSTANCE;
+        public static final ArrayᐸObjectᐳ $names;
+        public static final ArrayᐸObjectᐳ $values;
 
         @Override
-        public long count$get$p() {
+        public long count$get$p(Ctx ctx) {
             return 4;
         }
 
         @Override
-        public Mutability[] values$get() {
+        public ArrayᐸObjectᐳ values$get(Ctx ctx) {
             return $values;
         }
 
         @Override
-        public String[] names$get() {
+        public ArrayᐸObjectᐳ names$get(Ctx ctx) {
             return $names;
         }
     }

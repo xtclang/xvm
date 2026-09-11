@@ -55,15 +55,13 @@ class DateTests {
     }
 
     void testDayOfWeek() {
-// TODO enums!
-//        Date d = new Date(2026, 9, 8);
-//        assert d.dayOfWeek == Tuesday;
+        Date d = new Date(2026, 9, 8);
+        assert d.dayOfWeek == Tuesday;
     }
 
     void testMonthOfYear() {
-// TODO enums!
-//        Date d = new Date(2026, 9, 8);
-//        assert d.monthOfYear == September;
+        Date d = new Date(2026, 9, 8);
+        assert d.monthOfYear == September;
     }
 
     void testAdd() {

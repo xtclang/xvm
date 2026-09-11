@@ -4,7 +4,6 @@ import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
 
 import java.lang.classfile.CodeBuilder;
-import java.lang.constant.ClassDesc;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -29,7 +28,7 @@ public class EnumValueBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void appendCLInit(CodeBuilder code) {
+    protected void appendCLInit(CodeBuilder code, int ctxSlot) {
         code.aconst_null()
             .loadConstant(classStruct.getName())
             .invokestatic(CD_String, "of", MD_StringOf)
