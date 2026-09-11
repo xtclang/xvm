@@ -4308,6 +4308,8 @@ public class CommonBuilder
             "org.xtclang.ecstasy.collections.Tuple",
             "org.xtclang.ecstasy.collections.UniformIndexed*",
             "org.xtclang.ecstasy.collections.VirtualHasher",
+            "org.xtclang.ecstasy.collections.deferred.DeferredCollection",
+            "org.xtclang.ecstasy.collections.deferred.DistinctCollection",
 
             // io
             "org.xtclang.ecstasy.io.Reader",
@@ -4372,6 +4374,12 @@ public class CommonBuilder
     };
 
     private static final Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
+        Map.entry("org.xtclang.ecstasy.collections.deferred.DeferredCollection",
+            Set.of("calc",    // TODO: applied @Lazy property state is not available on the host
+                   "toArray")), // TODO: super call resolves to a synthetic MethodBody
+        Map.entry("org.xtclang.ecstasy.collections.deferred.DistinctCollection",
+            Set.of("calc",        // TODO: applied @Lazy property state is not available on the host
+                   "evaluateInto")), // TODO: requires HashSet compilation
         Map.entry("org.xtclang.ecstasy.collections.UniformIndexed",
             Set.of("elementAt")), // TODO: NEWCG_N is not implemented
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",

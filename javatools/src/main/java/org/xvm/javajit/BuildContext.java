@@ -218,8 +218,8 @@ public class BuildContext {
     public final Builder         builder;
     public final TypeSystem      typeSystem;
     public final String          className;
-    public final TypeInfo        typeInfo;      // PRIVATE
-    public final TypeConstant    thisType;      // PRIVATE
+    public final TypeInfo        typeInfo;      // PRIVATE or STRUCT
+    public final TypeConstant    thisType;      // PRIVATE or STRUCT
     public final TypeConstant    jitType;       // PUBLIC
     public final int             callDepth;
     public final MethodBody[]    callChain;
