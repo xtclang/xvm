@@ -1,5 +1,7 @@
 package org.xvm.runtime.template._native.mgmt;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -142,23 +144,30 @@ public class xContainerControl
      */
     protected int invokeKill(Frame frame, ControlHandle hCtrl, int iReturn) {
         if (hCtrl.f_container instanceof NestedContainer container) {
-            switch (closeResourceProvider(frame, container.f_hProvider)) {
-            case Op.R_NEXT:
-                return completeKill(frame, iReturn);
-
-            case Op.R_CALL:
-                frame.m_frameNext.addContinuation(
-                    frameCaller -> completeKill(frameCaller, iReturn));
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
-            default:
-                throw new IllegalStateException();
-            }
+            CompletableFuture<ObjectHandle> future = container.terminateServices().thenApply(_ -> xTuple.H_VOID);
+            return frame.waitForExternalCompletion(future, Op.A_IGNORE,
+                    frameCaller -> closeResourceProvider(frameCaller, container.f_hProvider, iReturn));
         }
         return frame.raiseException("Main container cannot be killed");
+    }
+
+    private int closeResourceProvider(Frame frame, ObjectHandle hProvider, int iReturn) {
+        // Note: the caller is async; we must return the Tuple()
+        switch (closeResourceProvider(frame, hProvider)) {
+        case Op.R_NEXT:
+            return frame.assignValue(iReturn, xTuple.H_VOID);
+
+        case Op.R_CALL:
+            frame.m_frameNext.addContinuation(
+                frameCaller -> frameCaller.assignValue(iReturn, xTuple.H_VOID));
+            return Op.R_CALL;
+
+        case Op.R_EXCEPTION:
+            return Op.R_EXCEPTION;
+
+        default:
+            throw new IllegalStateException();
+        }
     }
 
     private int closeResourceProvider(Frame frame, ObjectHandle hProvider) {
@@ -171,11 +180,6 @@ public class xContainerControl
         ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars()];
         ahVars[0] = xNullable.NULL;
         return chain.invoke(frame, hProvider, ahVars, Op.A_IGNORE);
-    }
-
-    private int completeKill(Frame frame, int iReturn) {
-        // Note: the caller is async; we must return the Tuple()
-        return frame.assignValue(iReturn, xTuple.H_VOID);
     }
 
     /**

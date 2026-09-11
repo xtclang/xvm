@@ -108,7 +108,24 @@ public class InterpreterConnector
         }
         }
 
-        m_containerMain.invoke0(method.getName(), ahArg);
+        m_containerMain.invoke(method.getName(), ahArg);
+    }
+
+    /**
+     * @return the native container used by this connector
+     */
+    NativeContainer getNativeContainer() {
+        return f_containerNative;
+    }
+
+    /**
+     * @return the main container used by this connector
+     */
+    MainContainer getMainContainer() {
+        if (!m_fStarted) {
+            throw new IllegalStateException("The container has not been started");
+        }
+        return m_containerMain;
     }
 
     /**

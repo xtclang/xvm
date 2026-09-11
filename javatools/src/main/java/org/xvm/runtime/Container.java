@@ -113,9 +113,15 @@ public abstract class Container
      * @return the new service context
      */
     public ServiceContext createServiceContext(String sName) {
-        ServiceContext service = new ServiceContext(this, sName, f_runtime.makeUniqueId());
-        f_setServices.add(service);
-        return service;
+        synchronized (this) {
+            if (m_futureTermination != null) {
+                throw new IllegalStateException("Container is terminating: " + this);
+            }
+
+            ServiceContext service = new ServiceContext(this, sName, f_runtime.makeUniqueId());
+            f_setServices.add(service);
+            return service;
+        }
     }
 
     /**
@@ -123,6 +129,27 @@ public abstract class Container
      */
     public Set<ServiceContext> getServices() {
         return f_setServices;
+    }
+
+    /**
+     * Terminate every service that belongs to this container.
+     *
+     * @return a future that completes when all of the services have terminated
+     */
+    public CompletableFuture<Void> terminateServices() {
+        synchronized (this) {
+            CompletableFuture<Void> future = m_futureTermination;
+            if (future == null) {
+                ServiceContext[]       services = f_setServices.toArray(ServiceContext[]::new);
+                int                    count    = services.length;
+                CompletableFuture<?>[] futures  = new CompletableFuture<?>[count];
+                for (int i = 0; i < count; i++) {
+                    futures[i] = services[i].requestShutdown();
+                }
+                m_futureTermination = future = CompletableFuture.allOf(futures);
+            }
+            return future;
+        }
     }
 
     /**
@@ -733,6 +760,11 @@ public abstract class Container
      * Set of services that were started by this container (stored as a Map with no values).
      */
     private final Set<ServiceContext> f_setServices = Collections.newSetFromMap(new ConcurrentWeakHasherMap<>());
+
+    /**
+     * Completion of this container's termination.
+     */
+    private CompletableFuture<Void> m_futureTermination;
 
     /**
      * A cache of "instantiate-able" ClassCompositions keyed by the "inception type".
