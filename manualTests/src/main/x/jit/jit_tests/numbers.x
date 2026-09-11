@@ -10,6 +10,7 @@ package numbers {
 
             Boolean passed = True;
             try {
+                passed &= runTest(() -> new IntNumberTests().run());
                 passed &= runTest(() -> new Int64Tests().run());
                 passed &= runTest(() -> new Int128Tests().run());
                 passed &= runTest(() -> new UInt128Tests().run());

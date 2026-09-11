@@ -33,7 +33,7 @@ public class UInt8 extends UIntNumber {
     }
 
     public static long estimateStringLength$p(int thi$, Ctx ctx) {
-        return $estimateUnsignedStringLength(thi$);
+        return $estimateUnsignedStringLength(thi$ & 0xFFL);
     }
 
     /**

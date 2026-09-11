@@ -31,7 +31,7 @@ public class UInt16 extends UIntNumber {
     }
 
     public static long estimateStringLength$p(int thi$, Ctx ctx) {
-        return $estimateUnsignedStringLength(thi$);
+        return $estimateUnsignedStringLength(thi$ & 0xFFFFL);
     }
 
     /**
