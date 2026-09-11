@@ -1103,8 +1103,6 @@ public class NumberBuilder extends AugmentingBuilder {
     }
 
     protected void generateCompare(ClassBuilder classBuilder) {
-//        public static Ordered compare(Ctx ctx, nType type, Int64 value1, Int64 value2) {
-
         ClassDesc      thisCD  = art.CD();
         MethodTypeDesc md      = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, thisCD, thisCD);
         int            flags   = ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC;
@@ -1120,7 +1118,7 @@ public class NumberBuilder extends AugmentingBuilder {
             code.aload(code.parameterSlot(3));
             unbox(code, thisType);
 
-            String    name      = thisType.getSingleUnderlyingClass(false).getName();
+            String name = thisType.getSingleUnderlyingClass(false).getName();
             switch (name) {
             case "Bit", "Nibble", "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32":
                 code.isub();
@@ -1169,11 +1167,7 @@ public class NumberBuilder extends AugmentingBuilder {
             default:
                 throw new UnsupportedOperationException("Unsupported number type " + name);
             }
-
-            convertIntToOrdered(code);
-            // the previous method would have coded an areturn if not equal
-            loadConstant(code, pool().valEqual());
-            code.areturn();
+            returnIntToOrdered(code);
         });
     }
 }

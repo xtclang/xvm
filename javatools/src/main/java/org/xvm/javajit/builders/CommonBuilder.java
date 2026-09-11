@@ -3357,6 +3357,16 @@ public class CommonBuilder
     }
 
     /**
+     * Convert the Java primitive {@code int} on the stack to an {@code Ordered} enum value and
+     * code an areturn to return the {@code Ordered} instance.
+     */
+    protected void returnIntToOrdered(CodeBuilder code) {
+        convertIntToOrdered(code);
+        loadConstant(code, pool().valEqual());
+        code.areturn();
+    }
+
+    /**
      * If the Java primitive {@code int} on the stack is non-zero, build the code to return the
      * corresponding {@code Ordered}; otherwise fall-through.
      */
