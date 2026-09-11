@@ -4396,10 +4396,7 @@ public class CommonBuilder
         Map.entry("org.xtclang.ecstasy.Timeout",
             Set.of("construct")), // TODO: native Service is a Java class, but the call expects an interface
         Map.entry("org.xtclang.ecstasy.numbers.Number",
-            Set.of("converterFor",
-                   "converterTo")),
-        Map.entry("org.xtclang.ecstasy.numbers.IntNumber",
-            Set.of("not"))          // TODO: depends on virtual constructor
+            Set.of("converterFor", "converterTo"))
     );
 
     private static final HashSet<String> SKIP_SET = new HashSet<>();
