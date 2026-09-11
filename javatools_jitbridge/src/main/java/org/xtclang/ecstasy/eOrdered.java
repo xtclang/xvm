@@ -1,45 +1,52 @@
 package org.xtclang.ecstasy;
 
-import org.xtclang.ecstasy.reflect.Enumeration;
-import org.xtclang.ecstasy.text.String;
+import org.xtclang.ecstasy.collections.ArrayᐸObjectᐳ;
 
+import org.xtclang.ecstasy.reflect.Enumeration;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.Ctx;
 import org.xvm.javajit.ModuleLoader;
 
 /**
  * Native Enumeration<Ordered>.
  */
 public class eOrdered extends Enumeration {
-    private eOrdered() {
-        super(null, ((ModuleLoader) eOrdered.class.getClassLoader()).getCtx().
-                pool().typeOrdered());
+    private eOrdered(Ctx ctx, TypeConstant type) {
+        super(ctx, type);
     }
 
-    public static final eOrdered $INSTANCE = new eOrdered();
+    static {
+        Ctx          ctx  = ((ModuleLoader) eBoolean.class.getClassLoader()).getCtx();
+        TypeConstant type = ctx.pool().typeOrdered();
+        $INSTANCE = new eOrdered(ctx, type);
 
-    public static final String[] $names = new String[] {
-        Ordered.Lesser.$INSTANCE.$name,
-        Ordered.Equal.$INSTANCE.$name,
-        Ordered.Greater.$INSTANCE.$name
-    };
+        $names  = ArrayᐸObjectᐳ.$makeStringArray(ctx, Ordered.Lesser.$INSTANCE.$name,
+                                                       Ordered.Equal.$INSTANCE.$name,
+                                                       Ordered.Greater.$INSTANCE.$name);
 
-    public static final Ordered[] $values = new Ordered[] {
-        Ordered.Lesser.$INSTANCE,
-        Ordered.Equal.$INSTANCE,
-        Ordered.Greater.$INSTANCE
-    };
+        $values = ArrayᐸObjectᐳ.$makeArray(ctx, type, Ordered.Lesser.$INSTANCE,
+                                                       Ordered.Equal.$INSTANCE,
+                                                       Ordered.Greater.$INSTANCE);
+    }
+
+    public static final eOrdered $INSTANCE;
+    public static final ArrayᐸObjectᐳ $names;
+    public static final ArrayᐸObjectᐳ $values;
 
     @Override
-    public long count$get$p() {
+    public long count$get$p(Ctx ctx) {
         return 3;
     }
 
     @Override
-    public Ordered[] values$get() {
+    public ArrayᐸObjectᐳ values$get(Ctx ctx) {
         return $values;
     }
 
     @Override
-    public String[] names$get() {
+    public ArrayᐸObjectᐳ names$get(Ctx ctx) {
         return $names;
     }
 }

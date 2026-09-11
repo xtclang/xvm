@@ -951,7 +951,7 @@ public class CommonBuilder
                 }
             }
 
-            appendCLInit(code);
+            appendCLInit(code, ctxSlot);
 
             code.labelBinding(endScope)
                 .return_();
@@ -1015,7 +1015,7 @@ public class CommonBuilder
     /**
      * Allow subclasses to append to the {@code <clinit>} assembly.
      */
-    protected void appendCLInit(CodeBuilder code) {}
+    protected void appendCLInit(CodeBuilder code, int ctxSlot) {}
 
     /**
      * Add fields initialization to the Java constructor {@code void <init>(Ctx ctx)}.
@@ -4359,9 +4359,7 @@ public class CommonBuilder
             "org.xtclang.ecstasy.text.StringBuffer",
 
             // temporal
-            "org.xtclang.ecstasy.temporal.Date",
-            "org.xtclang.ecstasy.temporal.Date$DayOfWeek",
-            "org.xtclang.ecstasy.temporal.Date$MonthOfYear",
+            "org.xtclang.ecstasy.temporal.Date*",
             "org.xtclang.ecstasy.temporal.Duration",
             "org.xtclang.ecstasy.temporal.Time",
             "org.xtclang.ecstasy.temporal.TimeZone",

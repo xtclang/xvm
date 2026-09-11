@@ -4,9 +4,10 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
-import org.xtclang.ecstasy.OutOfBounds;
-import org.xtclang.ecstasy.eBoolean;
 import org.xtclang.ecstasy.nEnum;
+import org.xtclang.ecstasy.OutOfBounds;
+
+import org.xtclang.ecstasy.collections.ArrayᐸObjectᐳ;
 
 import org.xtclang.ecstasy.reflect.Enumeration;
 
@@ -485,7 +486,7 @@ public abstract class FPNumber extends Number {
 
         @Override
         public Enumeration enumeration$get(Ctx ctx) {
-            return eBoolean.$INSTANCE;
+            return eRounding.$INSTANCE;
         }
 
         @Override
@@ -535,41 +536,45 @@ public abstract class FPNumber extends Number {
     }
 
     public static class eRounding extends Enumeration {
-        private eRounding(Ctx ctx) {
-            super(ctx, ctx.pool().typeRounding());
+        private eRounding(Ctx ctx, TypeConstant type) {
+            super(ctx, type);
         }
 
-        public static final eRounding $INSTANCE = new eRounding(
-                ((ModuleLoader) eRounding.class.getClassLoader()).getCtx());
+        static {
+            Ctx          ctx  = ((ModuleLoader) eRounding.class.getClassLoader()).getCtx();
+            TypeConstant type = ctx.pool().typeRounding();
 
-        public static final String[]  $names  = new String[] {
-                Rounding.TiesToEven.$INSTANCE.$name,
-                Rounding.TiesToAway.$INSTANCE.$name,
-                Rounding.TowardPositive.$INSTANCE.$name,
-                Rounding.TowardZero.$INSTANCE.$name,
-                Rounding.TowardNegative.$INSTANCE.$name
-        };
+            $INSTANCE = new eRounding(ctx, type);
 
-        public static final Rounding[] $values = new Rounding[] {
-                Rounding.TiesToEven.$INSTANCE,
-                Rounding.TiesToAway.$INSTANCE,
-                Rounding.TowardPositive.$INSTANCE,
-                Rounding.TowardZero.$INSTANCE,
-                Rounding.TowardNegative.$INSTANCE
-        };
+            $names  = ArrayᐸObjectᐳ.$makeStringArray(ctx, Rounding.TiesToEven.$INSTANCE.$name,
+                                                           Rounding.TiesToAway.$INSTANCE.$name,
+                                                           Rounding.TowardPositive.$INSTANCE.$name,
+                                                           Rounding.TowardZero.$INSTANCE.$name,
+                                                           Rounding.TowardNegative.$INSTANCE.$name);
+
+            $values = ArrayᐸObjectᐳ.$makeArray(ctx, type, Rounding.TiesToEven.$INSTANCE,
+                                                           Rounding.TiesToAway.$INSTANCE,
+                                                           Rounding.TowardPositive.$INSTANCE,
+                                                           Rounding.TowardZero.$INSTANCE,
+                                                           Rounding.TowardNegative.$INSTANCE);
+        }
+
+        public static final eRounding $INSTANCE;
+        public static final ArrayᐸObjectᐳ $names;
+        public static final ArrayᐸObjectᐳ $values;
 
         @Override
-        public long count$get$p() {
+        public long count$get$p(Ctx ctx) {
             return 5;
         }
 
         @Override
-        public String[] names$get() {
+        public ArrayᐸObjectᐳ names$get(Ctx ctx) {
             return $names;
         }
 
         @Override
-        public nEnum[] values$get() {
+        public ArrayᐸObjectᐳ values$get(Ctx ctx) {
             return $values;
         }
     }

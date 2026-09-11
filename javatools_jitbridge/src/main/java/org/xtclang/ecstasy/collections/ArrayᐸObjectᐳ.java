@@ -106,6 +106,30 @@ public class ArrayᐸObjectᐳ
         throw new UnsupportedOperationException();
     }
 
+    public static ArrayᐸObjectᐳ $makeStringArray(Ctx ctx, String... values) {
+        return $makeStringArray(ctx, Mutability.Constant.$INSTANCE, values);
+    }
+
+    public static ArrayᐸObjectᐳ $makeStringArray(Ctx ctx, Mutability mutability, String... values) {
+        return $makeArray(ctx, ctx.pool().typeString(), mutability, values);
+    }
+
+    public static ArrayᐸObjectᐳ $makeArray(Ctx ctx, Object... values) {
+        return $makeArray(ctx, ctx.pool().typeObject(), Mutability.Constant.$INSTANCE, values);
+    }
+
+    public static ArrayᐸObjectᐳ $makeArray(Ctx ctx, TypeConstant type, Object... values) {
+        return $makeArray(ctx, type, Mutability.Constant.$INSTANCE, values);
+    }
+
+    public static ArrayᐸObjectᐳ $makeArray(Ctx ctx, TypeConstant type, Mutability mutability, Object... values) {
+        ArrayᐸObjectᐳ array = new ArrayᐸObjectᐳ(ctx, type);
+        array.$storage = Arrays.copyOf(values, values.length);
+        array.$size(values.length);
+        array.$mut((int) mutability.ordinal$get$p(ctx));
+        return array;
+    }
+
     @Override public long capacity$get$p(Ctx ctx) {
         return $delegate == null
                 ? $storage == null ? $capCfg(ctx) : $storage.length
