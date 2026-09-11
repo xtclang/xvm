@@ -44,14 +44,14 @@ public abstract class Number
     public static int $estimateUnsignedStringLength(long number) {
         for (int i = 0; i < UNSIGNED_TENS.length; i++) {
             if (Long.compareUnsigned(number, UNSIGNED_TENS[i]) < 0) {
-                return i;
+                return i + 1;
             }
         }
         return 20; // If it is greater than or equal to 10^19, it has 20 digits.
     }
 
     private static final long[] UNSIGNED_TENS = {
-            1L, 10L, 100L, 1000L, 10000L, 100000L, 1000000L, 10000000L, 100000000L, 1000000000L,
+            10L, 100L, 1000L, 10000L, 100000L, 1000000L, 10000000L, 100000000L, 1000000000L,
             10000000000L, 100000000000L, 1000000000000L, 10000000000000L, 100000000000000L,
             1000000000000000L, 10000000000000000L, 100000000000000000L, 1000000000000000000L,
             Long.parseUnsignedLong("10000000000000000000")

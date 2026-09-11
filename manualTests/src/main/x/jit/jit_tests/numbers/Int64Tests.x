@@ -877,5 +877,14 @@ class Int64Tests {
         assert n.estimateStringLength() == 7;
         n = -9876543;
         assert n.estimateStringLength() == 8;
+
+        UInt64 u = 0;
+        assert u.estimateStringLength() == 1;
+        u = 9;
+        assert u.estimateStringLength() == 1;
+        u = 10;
+        assert u.estimateStringLength() == 2;
+        u = UInt64.MaxValue;
+        assert u.estimateStringLength() == 20;
     }
 }
