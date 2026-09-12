@@ -27,14 +27,14 @@ jakarta-xml-bind-api = "4.0.5"
 jaxb-runtime = "4.0.9"
 jetbrains-annotations = "26.1.0"
 jline = "4.0.16"
-slf4j = "2.0.18"
+slf4j = "2.0.19"
 
 # =============================================================================
 # Build tooling & publishing
 # =============================================================================
 download = "5.7.0"
 foojay-resolver = "1.0.0"
-gradle-portal-publish = "2.1.1"
+gradle-portal-publish = "2.2.0"
 palantir-git-version = "5.1.0"
 spotless = "8.10.2"
 vanniktech-maven-publish = "0.37.0"
@@ -52,7 +52,7 @@ mockito = "5.23.0"
 # Lang tooling - Kotlin & formatting
 # =============================================================================
 # Everything below is only used when includeBuildLang=true.
-lang-kotlin = "2.4.10"
+lang-kotlin = "2.4.20"
 lang-kotlinx-serialization = "1.11.0"
 lang-ktlint = "14.2.0"
 lang-ktlint-engine = "1.8.0"
@@ -62,7 +62,7 @@ lang-ktlint-engine = "1.8.0"
 # =============================================================================
 lang-logback = "1.6.3"
 lang-lsp4j = "1.0.0"
-lang-slf4j = "2.0.18"
+lang-slf4j = "2.0.19"
 
 # =============================================================================
 # Lang tooling - VS Code extension
