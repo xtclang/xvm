@@ -97,7 +97,6 @@ package enumTests {
         Red("R", 0), Green("G", 255), Blue("B", 255*255)
     }
 
-
     void testBooleanCount() {
         assert Boolean.count == 2;
     }
