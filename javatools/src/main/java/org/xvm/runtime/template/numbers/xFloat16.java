@@ -44,6 +44,12 @@ public class xFloat16
     }
 
     @Override
+    protected FPParts splitParts(double d) {
+        short n = Float.floatToFloat16((float) d);
+        return new FPParts((n & 0x8000) != 0, n & 0x03FF, (n & 0x7C00) >>> 10);
+    }
+
+    @Override
     protected String toString(double d) {
         return String.valueOf((float) d);
     }

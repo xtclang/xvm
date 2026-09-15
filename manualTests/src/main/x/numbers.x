@@ -251,6 +251,24 @@ module TestNumbers {
         assert max5.toByteArray() == [0x7B];
         assert !max5.infinity;
         assert Float8e5.PositiveInfinity.infinity;
+
+        // split() must report the fields of THIS format, not of the double that carries the value
+        (Boolean neg4, IntNumber sig4, IntNumber exp4) = n1.split();
+        console.print($"Float8e4 1.0 -> negative={neg4} significand={sig4} exponent={exp4}");
+        assert !neg4 && sig4 == 0 && exp4 == 7;      // E4M3 bias 7
+
+        (Boolean neg5, IntNumber sig5, IntNumber exp5) = n2.split();
+        console.print($"Float8e5 1.0 -> negative={neg5} significand={sig5} exponent={exp5}");
+        assert !neg5 && sig5 == 0 && exp5 == 15;     // E5M2 bias 15
+
+        // regression: the Float64 arm used to compute (l & EXP_MASK >>> 52), which Java parses as
+        // (l & (EXP_MASK >>> 52)) -- the low mantissa bits, so the exponent always came out 0
+        (Boolean neg64, IntNumber sig64, IntNumber exp64) = 1.0.toFloat64().split();
+        console.print($"Float64 1.0 -> negative={neg64} significand={sig64} exponent={exp64}");
+        assert !neg64 && sig64 == 0 && exp64 == 1023;
+
+        (Boolean neg16, IntNumber sig16, IntNumber exp16) = 1.0.toFloat16().split();
+        assert !neg16 && sig16 == 0 && exp16 == 15;
     }
 
     void testDec64() {

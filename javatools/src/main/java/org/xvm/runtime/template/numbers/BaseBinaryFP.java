@@ -252,34 +252,10 @@ public abstract class BaseBinaryFP
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn) {
         switch (method.getName()) {
         case "split": {
-            boolean fSign;
-            int     iExp;
-            long    lMantissa;
-
-            double d = ((FloatHandle) hTarget).getValue();
-            switch (this.f_cBits) {
-                case 16:
-                    short s = Float.floatToFloat16((float) d);
-                    fSign     = (s & 0x8000) != 0;
-                    iExp      = (s & 0x7C00) >>> 10;
-                    lMantissa = s & 0x03FF;
-                    break;
-                case 32:
-                    int i = Float.floatToRawIntBits((float) d);
-                    fSign     = (i & 0x80000000) != 0;
-                    iExp      = (i & 0x7F800000) >>> 23;
-                    lMantissa = i & 0x007FFFFF;
-                    break;
-                default:
-                    // TODO this only works for Float64, other FP types have different size exponent and
-                    //  mantissa parts
-                    long l = Double.doubleToRawLongBits(d);
-                    fSign     = (l & SIGN_MASK) != 0;
-                    iExp      = (int) (l & EXP_MASK >>> 52);
-                    lMantissa = l & MANTISSA_MASK;
-            }
-            return frame.assignValues(aiReturn, xBoolean.makeHandle(fSign),
-                                      xInt64.makeHandle(lMantissa), xInt64.makeHandle(iExp));
+            FPParts parts = splitParts(((FloatHandle) hTarget).getValue());
+            return frame.assignValues(aiReturn, xBoolean.makeHandle(parts.fNegative()),
+                                      xInt64.makeHandle(parts.lSignificand()),
+                                      xInt64.makeHandle(parts.iExponent()));
         }
         }
 
@@ -500,6 +476,27 @@ public abstract class BaseBinaryFP
 
     protected double toFloat64(double d) {
         return d;
+    }
+
+    /**
+     * The constituent parts of a floating point value as encoded by a specific FP format: the sign,
+     * the raw trailing significand field, and the raw (biased) exponent field.
+     */
+    protected record FPParts(boolean fNegative, long lSignificand, int iExponent) {}
+
+    /**
+     * Decompose a value into the parts encoded by this format.
+     *
+     * <p>A value is carried as a Java double regardless of its Ecstasy type, so the double's own
+     * layout answers this only for Float64; every narrower format overrides this. Note that the
+     * format cannot be inferred from the bit count, because Float8e4 and Float8e5 are both 8 bits
+     * wide and lay those bits out differently.</p>
+     *
+     * @return the parts of the specified double value, in this template's format
+     */
+    protected FPParts splitParts(double d) {
+        long l = Double.doubleToRawLongBits(d);
+        return new FPParts((l & SIGN_MASK) != 0, l & MANTISSA_MASK, (int) ((l & EXP_MASK) >>> 52));
     }
 
     /**
