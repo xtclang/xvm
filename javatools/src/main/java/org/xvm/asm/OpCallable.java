@@ -22,10 +22,12 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeConstant.Origin;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
@@ -617,12 +619,7 @@ public abstract class OpCallable extends Op {
         }
 
         if (isMultiReturn()) {
-            for (int i = 0, c = m_anRetValue.length; i < c; i++) {
-                int nRetVal = m_anRetValue[i];
-                if (nRetVal != A_IGNORE) {
-                    tmx.assign(getAddress(), nRetVal, atypeResult[i]);
-                }
-            }
+            tmx.assignAll(getAddress(), m_anRetValue, atypeResult);
         } else if (m_nRetValue != A_IGNORE) {
             TypeConstant typeResult = isTupleReturn()
                     ? bctx.pool().ensureTupleType(atypeResult)
@@ -956,8 +953,42 @@ public abstract class OpCallable extends Op {
      * Support for NEW_V ops.
      */
     protected int buildNewV(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
-        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()),
-                bctx.ctxSlot(code));
+        // find the virtual origin of the concrete constructor recorded by the op, then invoke the
+        // corresponding "$new" method on the runtime class-of-class through that origin interface
+        MethodConstant idCtor        = bctx.getConstant(m_nFunctionId, MethodConstant.class);
+        TypeConstant   typeTarget    = idCtor.getNamespace().getType();
+        TypeInfo       infoTarget    = bctx.getTypeInfo(typeTarget);
+        MethodInfo     infoCtor      = infoTarget.findVirtualConstructor(idCtor.getSignature());
+        MethodBody     bodyCtor      = infoCtor.getVirtualConstructor();
+        TypeConstant   typeInterface = bodyCtor.getIdentity().getNamespace().getType();
+        TypeInfo       infoInterface = bctx.getTypeInfo(typeInterface);
+        ClassDesc      cdInterface   = bctx.builder.ensureClassDesc(typeInterface);
+
+        JitMethodDesc jmdNew = Builder.convertConstructToNew(infoInterface, cdInterface,
+                (JitCtorDesc) bodyCtor.getJitDesc(bctx.builder, typeInterface));
+        String jitName = bodyCtor.getIdentity().ensureJitMethodName(bctx.typeSystem).
+                replace("construct", Builder.NEW);
+
+        MethodTypeDesc mdNew;
+        if (jmdNew.isOptimized) {
+            jitName += Builder.OPT;
+            mdNew    = jmdNew.optimizedMD;
+        } else {
+            mdNew = jmdNew.standardMD;
+        }
+
+        RegisterInfo regType = bctx.loadArgument(code, nTypeArg);
+        assert regType.type().isTypeOfType();
+
+        // generated class-of-class must implement the virtual constructor interface
+        bctx.loadCtx(code);
+        code.invokevirtual(CD_nType, "$xvmClass", MethodTypeDesc.of(CD_Class, CD_Ctx))
+            .checkcast(cdInterface);
+        bctx.loadCtx(code);
+        bctx.loadCallArguments(code, jmdNew, anArgValue);
+        code.invokeinterface(cdInterface, jitName, mdNew);
+
+        bctx.assignReturns(code, jmdNew, 1, new int[] {m_nRetValue});
         return -1;
     }
 
@@ -967,26 +998,33 @@ public abstract class OpCallable extends Op {
     protected int buildConstruct(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         MethodConstant   idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
         IdentityConstant idTarget   = idCtor.getNamespace();
-        TypeConstant     typeTarget = idTarget.getType();
-        TypeInfo         infoTarget = bctx.getTypeInfo(typeTarget);
+        TypeConstant     typeOwner  = idTarget.getType();
+        TypeInfo         infoTarget = bctx.getTypeInfo(typeOwner);
         MethodInfo       infoCtor   = infoTarget.getMethodById(idCtor);
 
         if (infoCtor == null) {
             throw new RuntimeException("Unresolvable constructor \"" +
-                idCtor.getValueString() + "\" for " + typeTarget.getValueString());
+                idCtor.getValueString() + "\" for " + typeOwner.getValueString());
         }
 
-        ClassDesc cdTarget;
-        String    sJitCtor;
+        // CONSTR_* opcodes can only point to a super class of "this" class or a mixin;
+        // in either case the exact target type derives from "this" type
+        TypeConstant typeTarget;
+        ClassDesc    cdTarget;
+        String       sJitCtor;
         if (infoTarget.getFormat() == Format.MIXIN) {
-            cdTarget   = ClassDesc.of(bctx.className);
             typeTarget = bctx.thisType;
+            cdTarget   = bctx.builder.art.CD();
             sJitCtor   = idTarget.getName() + "$" + infoCtor.ensureJitMethodName(bctx.typeSystem);
 
             bctx.buildMethod(sJitCtor, infoCtor.getHead());
         } else {
-            cdTarget = bctx.builder.ensureClassDesc(typeTarget);
-            sJitCtor = infoCtor.ensureJitMethodName(bctx.typeSystem);
+            Origin origin = bctx.typeInfo.getClassChain().get(idCtor.getClassIdentity());
+            assert origin != null;
+
+            typeTarget = origin.getType();
+            cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
+            sJitCtor   = infoCtor.ensureJitMethodName(bctx.typeSystem);
         }
 
         JitMethodDesc jmdCtor = infoCtor.getJitDesc(bctx.builder, typeTarget);

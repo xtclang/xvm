@@ -63,7 +63,7 @@ public class GP_Mul
     }
 
     @Override
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+    protected TypeConstant buildOptimizedNumber(BuildContext bctx, CodeBuilder code,
                                                    RegisterInfo regTarget, int nArgValue) {
         buildXvmPrimitiveMul(bctx, code, regTarget, nArgValue);
         return regTarget.type();

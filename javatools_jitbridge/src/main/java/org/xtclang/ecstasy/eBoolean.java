@@ -1,39 +1,49 @@
 package org.xtclang.ecstasy;
 
-import org.xtclang.ecstasy.reflect.Enumeration;
-import org.xtclang.ecstasy.text.String;
+import org.xtclang.ecstasy.collections.ArrayᐸObjectᐳ;
 
+import org.xtclang.ecstasy.reflect.Enumeration;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.Ctx;
 import org.xvm.javajit.ModuleLoader;
 
 /**
  * Native Enumeration<Boolean>.
  */
 public class eBoolean extends Enumeration {
-    private eBoolean() {
-        super(null, ((ModuleLoader) eBoolean.class.getClassLoader()).getCtx().
-                pool().typeBoolean());
+    private eBoolean(Ctx ctx, TypeConstant type) {
+        super(ctx, type);
     }
 
-    public static final eBoolean $INSTANCE = new eBoolean();
+    static {
+        Ctx          ctx  = ((ModuleLoader) eBoolean.class.getClassLoader()).getCtx();
+        TypeConstant type = ctx.pool().typeBoolean();
+        $INSTANCE = new eBoolean(ctx, type);
+        $names  = ArrayᐸObjectᐳ.$makeStringArray(ctx, Boolean.False.$name, Boolean.True.$name);
+        $values = ArrayᐸObjectᐳ.$makeArray(ctx, type, Boolean.False, Boolean.True);
+    }
 
-    public static final String[]  $names  = new String[] {Boolean.False.$name, Boolean.True.$name};
-    public static final Boolean[] $values = new Boolean[] {Boolean.False, Boolean.True};
+    public static final eBoolean $INSTANCE;
+    public static final ArrayᐸObjectᐳ $names;
+    // TODO this must be ArrayᐸBooleanᐳ
+    public static final ArrayᐸObjectᐳ $values;
 
     @Override
-    public long count$get$p() {
+    public long count$get$p(Ctx ctx) {
         return 2;
     }
 
-    // TODO this should be: public ArrayᐸObjectᐳ values$get() ???
-    //      or even: public ArrayᐸBooleanᐳ values$get() ???
+    // TODO this must return ArrayᐸBooleanᐳ but cannot because the super method returns
+    // ArrayᐸObjectᐳ and ArrayᐸBooleanᐳ is not an instance of ArrayᐸObjectᐳ
     @Override
-    public Boolean[] values$get() {
+    public ArrayᐸObjectᐳ values$get(Ctx ctx) {
         return $values;
     }
 
-    // TODO this should be: public ArrayᐸObjectᐳ names$get() ???
     @Override
-    public String[] names$get() {
+    public ArrayᐸObjectᐳ names$get(Ctx ctx) {
         return $names;
     }
 }

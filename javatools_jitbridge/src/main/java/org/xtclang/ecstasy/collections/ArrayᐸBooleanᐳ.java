@@ -89,6 +89,20 @@ public class ArrayᐸBooleanᐳ
         throw new UnsupportedOperationException();
     }
 
+    public static ArrayᐸBooleanᐳ $makeArray(Ctx ctx, Boolean... values) {
+        return $makeArray(ctx, Mutability.Constant.$INSTANCE, values);
+    }
+
+    public static ArrayᐸBooleanᐳ $makeArray(Ctx ctx, Mutability mutability, Boolean... values) {
+        ArrayᐸBooleanᐳ array = new ArrayᐸBooleanᐳ(ctx, ctx.pool().typeBoolean());
+        array.$mut($MUTABLE);
+        for (Boolean value : values) {
+            array.add$p(ctx, value.$value);
+        }
+        array.$mut((int) mutability.ordinal$get$p(ctx));
+        return array;
+    }
+
     public Boolean getElement(Ctx ctx, Int64 index) {
         return Boolean.$box(getElement$pi(ctx, index.$value));
     }

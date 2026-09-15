@@ -125,8 +125,19 @@ public abstract class OpInPlaceAssign
                 throw new UnsupportedOperationException(toName(getOpCode()) + " operation on multi-slot");
             }
             typeResult = buildOptimizedBinary(bctx, code, regTarget, m_nArgValue);
+        } else if (regTarget.type().isXvmPrimitive()
+                && regTarget.type().isA(bctx.pool().typeNumber())) {
+            typeResult = buildOptimizedNumber(bctx, code, regTarget, m_nArgValue);
         } else if (regTarget.type().isXvmPrimitive()) {
-            typeResult = buildXvmOptimizedBinary(bctx, code, regTarget, m_nArgValue);
+            TypeConstant  type   = regTarget.type();
+            MethodInfo    method = findOpMethod(bctx, type);
+            JitMethodDesc jmd    = buildOptimizedXvmPrimitive(bctx, code, regTarget, method, m_nArgValue);
+
+            for (int i = 1; i < jmd.optimizedReturns.length; i++) {
+                Builder.loadFromContext(code,
+                        jmd.optimizedReturns[i].cd, jmd.optimizedReturns[i].altIndex);
+            }
+            typeResult = method.getSignature().getRawReturns()[0];
         } else {
             typeResult = buildOpInvoke(bctx, code, regTarget);
         }
@@ -156,8 +167,8 @@ public abstract class OpInPlaceAssign
         }
 
         regTarget = regTarget.load(code);
-        if (jmd.isOptimizedStatic) {
-            // the target must be a boxed primitive
+        if (jmd.isOptimizedStatic && !regTarget.flavor().isOptimized) {
+            // a non-optimized register contains a boxed primitive
             assert typeTarget.isJitPrimitive();
             Builder.unbox(code, typeTarget);
         }

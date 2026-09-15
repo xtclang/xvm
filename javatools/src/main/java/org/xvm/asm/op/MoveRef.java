@@ -110,7 +110,7 @@ public class MoveRef
     public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regTo;
         if (m_nFromValue >= 0) {
-            Ref regFrom = (Ref) bctx.getRegisterInfo(code, m_nFromValue);
+            Ref regFrom = (Ref) bctx.ensureRegister(code, m_nFromValue);
 
             regTo = bctx.realizeRef(code, m_nToValue, regFrom.referentType(), false);
             code.aload(regFrom.slot());

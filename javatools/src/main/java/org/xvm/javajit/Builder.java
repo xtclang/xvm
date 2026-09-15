@@ -842,6 +842,18 @@ public abstract class Builder {
                 mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
                 break;
 
+            case "Date":
+                // array = ArrayᐸDateᐳ.$new$p(ctx, type, capacity, false);
+                cdArray = CD_ArrayDate;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "Duration":
+                // array = ArrayᐸDurationᐳ.$new$p(ctx, type, capacity, false);
+                cdArray = CD_ArrayDuration;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
+                break;
+
             default:
                 throw new UnsupportedOperationException("TODO");
             }
@@ -1417,6 +1429,18 @@ public abstract class Builder {
                 code.getfield(CD_UInt128, "$highValue", CD_long);
                 // stack is long, long_2
             }
+            case "Date"     -> code.getfield(CD_Date,   "epochDay", CD_int);
+            case "Duration" -> {
+                // stack is Duration
+                code.dup();
+                // stack is Duration Duration
+                code.getfield(CD_Duration, "picoseconds$0", CD_long);
+                // stack is Duration long
+                code.dup2_x1().pop2();
+                // stack is long Duration
+                code.getfield(CD_Duration, "picoseconds$1", CD_long);
+                // stack is long long_2
+            }
             default -> throw new UnsupportedOperationException("Cannot unbox " + name);
         }
     }
@@ -1449,26 +1473,28 @@ public abstract class Builder {
                           .getName();
 
         switch (name) {
-            case "Bit"     -> code.invokestatic(CD_Bit,     "$box", MD_Bit_box);
-            case "Boolean" -> code.invokestatic(CD_Boolean, "$box", MD_Boolean_box);
-            case "Char"    -> code.invokestatic(CD_Char,    "$box", MD_Char_box);
-            case "Dec32"   -> code.invokestatic(CD_Dec32,   "$box", MD_Dec32_box);
-            case "Dec64"   -> code.invokestatic(CD_Dec64,   "$box", MD_Dec64_box);
-            case "Dec128"  -> code.invokestatic(CD_Dec128,  "$box", MD_Dec128_box);
-            case "Float16" -> code.invokestatic(CD_Float16, "$box", MD_Float16_box);
-            case "Float32" -> code.invokestatic(CD_Float32, "$box", MD_Float32_box);
-            case "Float64" -> code.invokestatic(CD_Float64, "$box", MD_Float64_box);
-            case "Int8"    -> code.invokestatic(CD_Int8,    "$box", MD_Int8_box);
-            case "Int16"   -> code.invokestatic(CD_Int16,   "$box", MD_Int16_box);
-            case "Int32"   -> code.invokestatic(CD_Int32,   "$box", MD_Int32_box);
-            case "Int64"   -> code.invokestatic(CD_Int64,   "$box", MD_Int64_box);
-            case "Int128"  -> code.invokestatic(CD_Int128,  "$box", MD_Int128_box);
-            case "Nibble"  -> code.invokestatic(CD_Nibble,  "$box", MD_Nibble_box);
-            case "UInt8"   -> code.invokestatic(CD_UInt8,   "$box", MD_UInt8_box);
-            case "UInt16"  -> code.invokestatic(CD_UInt16,  "$box", MD_UInt16_box);
-            case "UInt32"  -> code.invokestatic(CD_UInt32,  "$box", MD_UInt32_box);
-            case "UInt64"  -> code.invokestatic(CD_UInt64,  "$box", MD_UInt64_box);
-            case "UInt128" -> code.invokestatic(CD_UInt128, "$box", MD_UInt128_box);
+            case "Bit"     -> code.invokestatic(CD_Bit,       "$box", MD_Bit_box);
+            case "Boolean" -> code.invokestatic(CD_Boolean,   "$box", MD_Boolean_box);
+            case "Char"    -> code.invokestatic(CD_Char,      "$box", MD_Char_box);
+            case "Dec32"   -> code.invokestatic(CD_Dec32,     "$box", MD_Dec32_box);
+            case "Dec64"   -> code.invokestatic(CD_Dec64,     "$box", MD_Dec64_box);
+            case "Dec128"  -> code.invokestatic(CD_Dec128,    "$box", MD_Dec128_box);
+            case "Float16" -> code.invokestatic(CD_Float16,   "$box", MD_Float16_box);
+            case "Float32" -> code.invokestatic(CD_Float32,   "$box", MD_Float32_box);
+            case "Float64" -> code.invokestatic(CD_Float64,   "$box", MD_Float64_box);
+            case "Int8"    -> code.invokestatic(CD_Int8,      "$box", MD_Int8_box);
+            case "Int16"   -> code.invokestatic(CD_Int16,     "$box", MD_Int16_box);
+            case "Int32"   -> code.invokestatic(CD_Int32,     "$box", MD_Int32_box);
+            case "Int64"   -> code.invokestatic(CD_Int64,     "$box", MD_Int64_box);
+            case "Int128"  -> code.invokestatic(CD_Int128,    "$box", MD_Int128_box);
+            case "Nibble"  -> code.invokestatic(CD_Nibble,    "$box", MD_Nibble_box);
+            case "UInt8"   -> code.invokestatic(CD_UInt8,     "$box", MD_UInt8_box);
+            case "UInt16"  -> code.invokestatic(CD_UInt16,    "$box", MD_UInt16_box);
+            case "UInt32"  -> code.invokestatic(CD_UInt32,    "$box", MD_UInt32_box);
+            case "UInt64"  -> code.invokestatic(CD_UInt64,    "$box", MD_UInt64_box);
+            case "UInt128" -> code.invokestatic(CD_UInt128,   "$box", MD_UInt128_box);
+            case "Date"    -> code.invokestatic(CD_Date,      "$box", MD_Date_box);
+            case "Duration" -> code.invokestatic(CD_Duration, "$box", MD_Duration_box);
             default        -> throw new UnsupportedOperationException("Cannot box " + name);
         }
     }
@@ -1757,17 +1783,15 @@ public abstract class Builder {
      * Convert the "void construct$17(...)" specified by jmdCtor to a new MethodDesc for
      * "This new$17(...)".
      */
-    public static JitMethodDesc convertConstructToNew(
-            TypeInfo    typeInfo,
-            ClassDesc   cd,
-            JitCtorDesc jmdCtor) {
+    public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, ClassDesc cd,
+                                                      JitCtorDesc jmdCtor) {
         JitParamDesc retDesc = new JitParamDesc(typeInfo.getType(), Specific, cd, 0, -1, false);
 
         JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
         return typeInfo.hasGenericTypes()
             ? new JitCtorDesc(typeInfo.getType(),
-                    /*add implicit CD_Target arg*/ null, /*addCtorCtx*/ false, /*addType*/ true,
+                    /*targetCD*/ null, /*addCtorCtx*/ false, /*addType*/ true,
                     standardReturns,  jmdCtor.standardParams,
                     optimizedReturns, jmdCtor.optimizedParams)
             : new JitMethodDesc(typeInfo.getType(),
@@ -1778,17 +1802,12 @@ public abstract class Builder {
     /**
      * Call the "new$" [static] method.
      *
-     * @param bctx       optional BuildContext
      * @param argsLoader the function (consumer) that is responsible for loading the arguments
      *                   on the Java stack
      */
-    public JitMethodDesc buildNew(
-            BuildContext            bctx,
-            CodeBuilder             code,
-            TypeConstant            typeTarget,
-            MethodConstant          idCtor,
-            Consumer<JitMethodDesc> argsLoader,
-            int                     ctxSlot) {
+    public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant typeTarget,
+                                  MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader,
+                                  int ctxSlot) {
         TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
         MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
 
@@ -1950,6 +1969,9 @@ public abstract class Builder {
     public static final String N_ArrayUInt32  = "org.xtclang.ecstasy.collections.ArrayᐸUInt32ᐳ";
     public static final String N_ArrayUInt64  = "org.xtclang.ecstasy.collections.ArrayᐸUInt64ᐳ";
     public static final String N_ArrayUInt128 = "org.xtclang.ecstasy.collections.ArrayᐸUInt128ᐳ";
+    public static final String N_ArrayDate    = "org.xtclang.ecstasy.collections.ArrayᐸDateᐳ";
+    public static final String N_ArrayDuration =
+            "org.xtclang.ecstasy.collections.ArrayᐸDurationᐳ";
     public static final String N_ArrayObj     = "org.xtclang.ecstasy.collections.ArrayᐸObjectᐳ";
     public static final String N_Bit          = "org.xtclang.ecstasy.numbers.Bit";
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
@@ -1991,6 +2013,8 @@ public abstract class Builder {
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
     public static final String N_UInt128      = "org.xtclang.ecstasy.numbers.UInt128";
     public static final String N_UIntN        = "org.xtclang.ecstasy.numbers.UIntN";
+    public static final String N_Date         = "org.xtclang.ecstasy.temporal.Date";
+    public static final String N_Duration     = "org.xtclang.ecstasy.temporal.Duration";
     public static final String N_AppenderChar = "org.xtclang.ecstasy.AppenderᐸCharᐳ";
 
     public static final String N_nConst       = "org.xtclang.ecstasy.nConst";
@@ -2074,6 +2098,8 @@ public abstract class Builder {
     public static final ClassDesc CD_ArrayUInt32         = ClassDesc.of(N_ArrayUInt32);
     public static final ClassDesc CD_ArrayUInt64         = ClassDesc.of(N_ArrayUInt64);
     public static final ClassDesc CD_ArrayUInt128        = ClassDesc.of(N_ArrayUInt128);
+    public static final ClassDesc CD_ArrayDate           = ClassDesc.of(N_ArrayDate);
+    public static final ClassDesc CD_ArrayDuration       = ClassDesc.of(N_ArrayDuration);
     public static final ClassDesc CD_ArrayObj            = ClassDesc.of(N_ArrayObj);
     public static final ClassDesc CD_Class               = ClassDesc.of(N_Class);
     public static final ClassDesc CD_Enumeration         = ClassDesc.of(N_Enumeration);
@@ -2122,6 +2148,8 @@ public abstract class Builder {
     public static final ClassDesc CD_UInt64              = ClassDesc.of(N_UInt64);
     public static final ClassDesc CD_UInt128             = ClassDesc.of(N_UInt128);
     public static final ClassDesc CD_UIntN               = ClassDesc.of(N_UIntN);
+    public static final ClassDesc CD_Date                = ClassDesc.of(N_Date);
+    public static final ClassDesc CD_Duration            = ClassDesc.of(N_Duration);
     public static final ClassDesc CD_AppenderChar        = ClassDesc.of(N_AppenderChar);
 
     public static final ClassDesc CD_Container           = ClassDesc.of(Container.class.getName());
@@ -2164,38 +2192,40 @@ public abstract class Builder {
     public static final String DataType = "$dataType";
 
     // various commonly used MethodDesc constants
-    public static final MethodTypeDesc MD_Bit_box     = MethodTypeDesc.of(CD_Bit,     CD_int);
-    public static final MethodTypeDesc MD_Boolean_box = MethodTypeDesc.of(CD_Boolean, CD_boolean);
-    public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char,    CD_int);
-    public static final MethodTypeDesc MD_Char_addInt = MethodTypeDesc.of(CD_int,     CD_int, CD_Ctx, CD_long);
-    public static final MethodTypeDesc MD_Char_subInt = MethodTypeDesc.of(CD_int,     CD_int, CD_Ctx, CD_long);
-    public static final MethodTypeDesc MD_Dec32_box   = MethodTypeDesc.of(CD_Dec32,   CD_int);
-    public static final MethodTypeDesc MD_Dec64_box   = MethodTypeDesc.of(CD_Dec64,   CD_long);
-    public static final MethodTypeDesc MD_Dec128_box  = MethodTypeDesc.of(CD_Dec128,  CD_long, CD_long);
-    public static final MethodTypeDesc MD_Float16_box = MethodTypeDesc.of(CD_Float16, CD_float);
-    public static final MethodTypeDesc MD_Float32_box = MethodTypeDesc.of(CD_Float32, CD_float);
-    public static final MethodTypeDesc MD_Float64_box = MethodTypeDesc.of(CD_Float64, CD_double);
-    public static final MethodTypeDesc MD_Nibble_box  = MethodTypeDesc.of(CD_Nibble,  CD_int);
-    public static final MethodTypeDesc MD_Int8_box    = MethodTypeDesc.of(CD_Int8,    CD_int);
-    public static final MethodTypeDesc MD_Int16_box   = MethodTypeDesc.of(CD_Int16,   CD_int);
-    public static final MethodTypeDesc MD_Int32_box   = MethodTypeDesc.of(CD_Int32,   CD_int);
-    public static final MethodTypeDesc MD_Int64_box   = MethodTypeDesc.of(CD_Int64,   CD_long);
-    public static final MethodTypeDesc MD_Int128_box  = MethodTypeDesc.of(CD_Int128,  CD_long, CD_long);
-    public static final MethodTypeDesc MD_UInt8_box   = MethodTypeDesc.of(CD_UInt8,   CD_int);
-    public static final MethodTypeDesc MD_UInt16_box  = MethodTypeDesc.of(CD_UInt16,  CD_int);
-    public static final MethodTypeDesc MD_UInt32_box  = MethodTypeDesc.of(CD_UInt32,  CD_int);
-    public static final MethodTypeDesc MD_UInt64_box  = MethodTypeDesc.of(CD_UInt64,  CD_long);
-    public static final MethodTypeDesc MD_UInt128_box = MethodTypeDesc.of(CD_UInt128, CD_long, CD_long);
-    public static final MethodTypeDesc MD_StringOf    = MethodTypeDesc.of(CD_String,  CD_Ctx, CD_JavaString);
-    public static final MethodTypeDesc MD_TypeIsA     = MethodTypeDesc.of(CD_boolean, CD_TypeConstant);
-    public static final MethodTypeDesc MD_FloorModI   = MethodTypeDesc.of(CD_int, CD_int, CD_int);
-    public static final MethodTypeDesc MD_FloorModJ   = MethodTypeDesc.of(CD_long, CD_long, CD_long);
-    public static final MethodTypeDesc MD_UDivInt     = MethodTypeDesc.of(CD_int, CD_int, CD_int);
-    public static final MethodTypeDesc MD_UDivLong    = MethodTypeDesc.of(CD_long, CD_long, CD_long);
-    public static final MethodTypeDesc MD_D2L         = MethodTypeDesc.of(CD_long, CD_double);
-    public static final MethodTypeDesc MD_L2D         = MethodTypeDesc.of(CD_double, CD_long);
-    public static final MethodTypeDesc MD_F2I         = MethodTypeDesc.of(CD_int, CD_float);
-    public static final MethodTypeDesc MD_I2F         = MethodTypeDesc.of(CD_float, CD_int);
-    public static final MethodTypeDesc MD_xvmType     = MethodTypeDesc.of(CD_TypeConstant, CD_Ctx);
-    public static final MethodTypeDesc MD_xvmVoid     = MethodTypeDesc.of(CD_void, CD_Ctx);
+    public static final MethodTypeDesc MD_Bit_box      = MethodTypeDesc.of(CD_Bit,     CD_int);
+    public static final MethodTypeDesc MD_Boolean_box  = MethodTypeDesc.of(CD_Boolean, CD_boolean);
+    public static final MethodTypeDesc MD_Char_box     = MethodTypeDesc.of(CD_Char,    CD_int);
+    public static final MethodTypeDesc MD_Char_addInt  = MethodTypeDesc.of(CD_int,     CD_int, CD_Ctx, CD_long);
+    public static final MethodTypeDesc MD_Char_subInt  = MethodTypeDesc.of(CD_int,     CD_int, CD_Ctx, CD_long);
+    public static final MethodTypeDesc MD_Dec32_box    = MethodTypeDesc.of(CD_Dec32,   CD_int);
+    public static final MethodTypeDesc MD_Dec64_box    = MethodTypeDesc.of(CD_Dec64,   CD_long);
+    public static final MethodTypeDesc MD_Dec128_box   = MethodTypeDesc.of(CD_Dec128,  CD_long, CD_long);
+    public static final MethodTypeDesc MD_Float16_box  = MethodTypeDesc.of(CD_Float16, CD_float);
+    public static final MethodTypeDesc MD_Float32_box  = MethodTypeDesc.of(CD_Float32, CD_float);
+    public static final MethodTypeDesc MD_Float64_box  = MethodTypeDesc.of(CD_Float64, CD_double);
+    public static final MethodTypeDesc MD_Nibble_box   = MethodTypeDesc.of(CD_Nibble,  CD_int);
+    public static final MethodTypeDesc MD_Int8_box     = MethodTypeDesc.of(CD_Int8,    CD_int);
+    public static final MethodTypeDesc MD_Int16_box    = MethodTypeDesc.of(CD_Int16,   CD_int);
+    public static final MethodTypeDesc MD_Int32_box    = MethodTypeDesc.of(CD_Int32,   CD_int);
+    public static final MethodTypeDesc MD_Int64_box    = MethodTypeDesc.of(CD_Int64,   CD_long);
+    public static final MethodTypeDesc MD_Int128_box   = MethodTypeDesc.of(CD_Int128,  CD_long, CD_long);
+    public static final MethodTypeDesc MD_UInt8_box    = MethodTypeDesc.of(CD_UInt8,   CD_int);
+    public static final MethodTypeDesc MD_UInt16_box   = MethodTypeDesc.of(CD_UInt16,  CD_int);
+    public static final MethodTypeDesc MD_UInt32_box   = MethodTypeDesc.of(CD_UInt32,  CD_int);
+    public static final MethodTypeDesc MD_UInt64_box   = MethodTypeDesc.of(CD_UInt64,  CD_long);
+    public static final MethodTypeDesc MD_UInt128_box  = MethodTypeDesc.of(CD_UInt128, CD_long, CD_long);
+    public static final MethodTypeDesc MD_Date_box     = MethodTypeDesc.of(CD_Date,    CD_int);
+    public static final MethodTypeDesc MD_Duration_box = MethodTypeDesc.of(CD_Duration,CD_long, CD_long);
+    public static final MethodTypeDesc MD_StringOf     = MethodTypeDesc.of(CD_String,  CD_Ctx,  CD_JavaString);
+    public static final MethodTypeDesc MD_TypeIsA      = MethodTypeDesc.of(CD_boolean, CD_TypeConstant);
+    public static final MethodTypeDesc MD_FloorModI    = MethodTypeDesc.of(CD_int,     CD_int,  CD_int);
+    public static final MethodTypeDesc MD_FloorModJ    = MethodTypeDesc.of(CD_long,    CD_long, CD_long);
+    public static final MethodTypeDesc MD_UDivInt      = MethodTypeDesc.of(CD_int,     CD_int,  CD_int);
+    public static final MethodTypeDesc MD_UDivLong     = MethodTypeDesc.of(CD_long,    CD_long, CD_long);
+    public static final MethodTypeDesc MD_D2L          = MethodTypeDesc.of(CD_long,    CD_double);
+    public static final MethodTypeDesc MD_L2D          = MethodTypeDesc.of(CD_double,  CD_long);
+    public static final MethodTypeDesc MD_F2I          = MethodTypeDesc.of(CD_int,     CD_float);
+    public static final MethodTypeDesc MD_I2F          = MethodTypeDesc.of(CD_float,   CD_int);
+    public static final MethodTypeDesc MD_xvmType      = MethodTypeDesc.of(CD_TypeConstant, CD_Ctx);
+    public static final MethodTypeDesc MD_xvmVoid      = MethodTypeDesc.of(CD_void,         CD_Ctx);
 }

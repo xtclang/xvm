@@ -77,7 +77,7 @@ public class IP_Or
     }
 
     @Override
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+    protected TypeConstant buildOptimizedNumber(BuildContext bctx, CodeBuilder code,
                                                    RegisterInfo regTarget, int nArgValue) {
         buildXvmPrimitiveOr(bctx, code, regTarget, nArgValue);
         return regTarget.type();

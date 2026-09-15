@@ -130,7 +130,7 @@ public class MoveVar
     public int build(BuildContext bctx, CodeBuilder code) {
         assert m_nFromValue >= 0;
 
-        Ref regFrom = (Ref) bctx.getRegisterInfo(code, m_nFromValue);
+        Ref regFrom = (Ref) bctx.ensureRegister(code, m_nFromValue);
         assert regFrom.isVar();
         code.aload(regFrom.slot());
 

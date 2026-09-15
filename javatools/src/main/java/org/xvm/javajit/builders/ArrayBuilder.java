@@ -250,6 +250,8 @@ public class ArrayBuilder extends AugmentingBuilder {
             case "UInt32"   -> Builder.N_ArrayUInt32;
             case "UInt64"   -> Builder.N_ArrayUInt64;
             case "UInt128"  -> Builder.N_ArrayUInt128;
+            case "Date"     -> Builder.N_ArrayDate;
+            case "Duration" -> Builder.N_ArrayDuration;
             default         -> throw new UnsupportedOperationException();
         };
     }

@@ -332,11 +332,14 @@ public class PropertyConstant
                 if (sJitName == null) {
                     PropertyStructure prop = (PropertyStructure) getComponent();
                     assert prop != null;
-                    ClassStructure clzParent = prop.getContainingClass();
-                    String         sNameOrig = getName();
-                    sJitName = switch (clzParent.getFormat()) {
-                        case ANNOTATION, MIXIN -> sNameOrig + ts.xvm.createUniqueSuffix(sNameOrig);
-                        default                -> sNameOrig;
+                    String sNameOrig = getName();
+                    sJitName = switch (prop.getParent().getFormat()) {
+                        case ANNOTATION, MIXIN ->
+                                sNameOrig + ts.xvm.createUniqueSuffix(sNameOrig);
+                        case METHOD ->
+                                ((MethodConstant) getNamespace()).ensureJitMethodName(ts) +
+                                        '$' + sNameOrig;
+                        default -> sNameOrig;
                     };
                     m_sJitName = sJitName;
                 }

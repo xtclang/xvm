@@ -49,14 +49,6 @@ public class Nibble extends UIntNumber {
     }
 
     /**
-     * The native implementation of:
-     *     Appender<Char> appendTo(Appender<Char> buf)
-     */
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        return Nibble.appendTo$p($value, ctx, appender);
-    }
-
-    /**
      * The primitive implementation of:
      *     Appender<Char> appendTo(Appender<Char> buf)
      */

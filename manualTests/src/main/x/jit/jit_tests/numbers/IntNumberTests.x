@@ -7,6 +7,7 @@ class IntNumberTests {
         testRightmostBit();
         testLeadingZeroCount();
         testTrailingZeroCount();
+        testEstimateStringLength();
     }
 
     void testLeftmostBit() {
@@ -670,5 +671,16 @@ class IntNumberTests {
     void testTrailingZeroCountUIntNumber(UIntNumber u, Int expected) {
         assert u.trailingZeroCount == expected;
         testTrailingZeroCountIntNumber(u, expected);
+    }
+
+    void testEstimateStringLength() {
+        UInt8 u8 = UInt8.MaxValue;
+        assert u8.estimateStringLength() == "255".size;
+
+        UInt16 u16 = UInt16.MaxValue;
+        assert u16.estimateStringLength() == "65535".size;
+
+        UInt32 u32 = UInt32.MaxValue;
+        assert u32.estimateStringLength() == "4294967295".size;
     }
 }
