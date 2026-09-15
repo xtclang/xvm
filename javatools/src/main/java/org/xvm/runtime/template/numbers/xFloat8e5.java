@@ -38,6 +38,12 @@ public class xFloat8e5
     }
 
     @Override
+    protected FPParts splitParts(double d) {
+        int n = Float8e5Constant.toBits((float) d);
+        return new FPParts((n & 0x80) != 0, n & 0x03, (n & 0x7C) >>> 2);
+    }
+
+    @Override
     protected String toString(double d) {
         return String.valueOf((float) d);
     }
