@@ -56,6 +56,7 @@ public final class ForkedCommandLineBuilder {
         final List<String> args = new ArrayList<>();
         addBooleanFlag(args, task.getShowVersion().get(), "--version");
         addBooleanFlag(args, task.getVerbose().get(), "-v");
+        addBooleanFlag(args, task.getJit().get(), "-J");
 
         final var methodName = task.getMethodName().getOrElse(DEFAULT_METHOD_NAME);
         if (!DEFAULT_METHOD_NAME.equals(methodName)) {
@@ -76,6 +77,7 @@ public final class ForkedCommandLineBuilder {
         final List<String> args = new ArrayList<>();
         addBooleanFlag(args, task.getShowVersion().get(), "--version");
         addBooleanFlag(args, task.getVerbose().get(), "-v");
+        addBooleanFlag(args, task.getJit().get(), "-J");
 
         for (final var modulePath : task.resolveFullModulePath()) {
             args.addAll(List.of("-L", modulePath.getAbsolutePath()));

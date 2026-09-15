@@ -97,6 +97,7 @@ public class DirectStrategy implements ExecutionStrategy {
             task.resolveFullModulePath(),
             task.getShowVersion().get(),
             task.getVerbose().get(),
+            task.getJit().get(),
             runConfig.getModuleName().get(),
             task.getMethodName().getOrElse(DEFAULT_METHOD_NAME),
             runConfig.getModuleArgs().get()
@@ -110,6 +111,7 @@ public class DirectStrategy implements ExecutionStrategy {
             task.resolveFullModulePath(),
             task.getShowVersion().get(),
             task.getVerbose().get(),
+            task.getJit().get(),
             runConfig.getModuleName().get(),
             task.getMethodName().getOrElse(DEFAULT_METHOD_NAME),
             runConfig.getModuleArgs().get()

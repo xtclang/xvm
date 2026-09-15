@@ -43,6 +43,7 @@ final class IsolatedLauncherOptionsBuilder {
         final var builder = RunnerOptions.builder()
             .enableShowVersion(request.showVersion())
             .enableVerbose(request.verbose())
+            .enableJit(request.jit())
             .setMethodName(request.methodName())
             .setTarget(request.moduleName(), request.moduleArgs())
             .noRecompile();
@@ -56,6 +57,7 @@ final class IsolatedLauncherOptionsBuilder {
             .setXUnitOutputDirectory(request.outputDir().getAbsolutePath());
         builder.enableShowVersion(request.showVersion())
             .enableVerbose(request.verbose())
+            .enableJit(request.jit())
             .setTarget(request.moduleName(), request.moduleArgs())
             .noRecompile();
 
