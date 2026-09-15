@@ -793,6 +793,7 @@ public class NativeContainer
         case Int64,  UInt64:
         case Int128, UInt128:
         case IntN,   UIntN:
+        case Float8e4, Float8e5:
         case BFloat16:
         case Float16, Float32, Float64, Float128, FloatN:
         case          Dec32,   Dec64,   Dec128,   DecN:

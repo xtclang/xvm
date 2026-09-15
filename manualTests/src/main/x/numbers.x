@@ -9,10 +9,7 @@ module TestNumbers {
         testFloat64();
         testFloat32();
         testFloat16();
-        // TODO: enable once the runtime can materialise a Float8 constant. Today this dies with
-        // "No implementation for constant": NativeContainer.getConstType has no Float8e4/Float8e5
-        // case, there is no xFloat8e4/xFloat8e5 template, and Float8e4.x's operators are all TODO.
-        // testFloat8();
+        testFloat8();
         testDec64();
         testInfinity();
         testConverter();
@@ -211,8 +208,6 @@ module TestNumbers {
      * The 8-bit FP8 formats. Float8e4 is the OCP "E4M3FN" variant: it has no infinities, its only
      * NaN encodings are #7F/#FF, and its largest finite value is #7E == 448. Float8e5 is the
      * IEEE-style "E5M2": infinity at #7C/#FC, largest finite #7B == 57344.
-     *
-     * NOTE: not called from run() yet -- see the TODO at the call site.
      */
     void testFloat8() {
         console.print("\n** testFloat8()");
