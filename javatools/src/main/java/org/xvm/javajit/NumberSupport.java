@@ -29,6 +29,26 @@ public interface NumberSupport
         extends NumberSupportInt128, NumberSupportDec {
 
     /**
+     * The 8-bit FP formats are carried as their encoding in an int, so they share the "I" carrier
+     * with the small integer types but share none of their arithmetic. Every primitive operation
+     * therefore has to ask the Ecstasy type, not the carrier, before dispatching.
+     *
+     * @return the jitbridge ClassDesc for an FP8 type, or null if this is not one
+     */
+    private static ClassDesc fp8Class(TypeConstant type) {
+        return switch (type.getSingleUnderlyingClass(false).getName()) {
+            case "Float8e4" -> Builder.CD_Float8e4;
+            case "Float8e5" -> Builder.CD_Float8e5;
+            default         -> null;
+        };
+    }
+
+    /**
+     * The signature shared by every FP8 binary helper: (encoding, encoding) -> encoding.
+     */
+    MethodTypeDesc MD_FP8_BINARY = MethodTypeDesc.of(CD_int, CD_int, CD_int);
+
+    /**
      * Build the optimized binary operation that will add two primitive types from the stack
      * (T + T -> T).
      *
@@ -37,6 +57,10 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveAdd(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
+            code.invokestatic(fp8CD, "$add", MD_FP8_BINARY);
+            return;
+        }
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.iadd();
@@ -174,6 +198,10 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveDiv(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
+            code.invokestatic(fp8CD, "$div", MD_FP8_BINARY);
+            return;
+        }
         TypeConstant typeTarget = regTarget.type();
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
@@ -215,6 +243,10 @@ public interface NumberSupport
      */
     default void buildPrimitiveRemainder(BuildContext bctx, CodeBuilder code,
                                          RegisterInfo regTarget, int nArgId, int nQuotientId) {
+        if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
+            code.invokestatic(fp8CD, "$rem", MD_FP8_BINARY);
+            return;
+        }
         regTarget.load(code);
         bctx.loadArgument(code, nArgId);
         bctx.loadArgument(code, nQuotientId);
@@ -296,6 +328,10 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveMod(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
+            code.invokestatic(fp8CD, "$mod", MD_FP8_BINARY);
+            return;
+        }
         ClassDesc cd       = regTarget.cd();
         boolean   unsigned = regTarget.type().getValueString().startsWith("UInt");
         switch (cd.descriptorString()) {
@@ -360,6 +396,12 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveNeg(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        if (fp8Class(regTarget.type()) != null) {
+            // an FP8 value is carried as its encoding, so negation just flips the sign bit
+            code.loadConstant(0x80)
+                .ixor();
+            return;
+        }
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.ineg();
@@ -412,6 +454,10 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveMul(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
+            code.invokestatic(fp8CD, "$mul", MD_FP8_BINARY);
+            return;
+        }
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.imul();
@@ -714,6 +760,10 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveSub(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
+            code.invokestatic(fp8CD, "$sub", MD_FP8_BINARY);
+            return;
+        }
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.isub();

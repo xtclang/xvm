@@ -59,7 +59,8 @@ public class JitTypeDesc {
         if (type.isJavaPrimitive()) {
             return switch (type.getSingleUnderlyingClass(false).getName()) {
                 case "Bit", "Nibble", "Char", "Byte",
-                     "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32"
+                     "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32",
+                     "Float8e4", "Float8e5"
                     -> CD_int;
                 case "Int64", "UInt64"
                     -> CD_long;
@@ -148,7 +149,8 @@ public class JitTypeDesc {
         TypeConstant sansNullable = type.removeNullable();
         if (sansNullable.isJavaPrimitive()) {
             return switch (sansNullable.getSingleUnderlyingClass(false).getName()) {
-                case "Byte", "Nibble", "Int8", "UInt8"
+                case "Byte", "Nibble", "Int8", "UInt8",
+                     "Float8e4", "Float8e5"
                         -> CD_byte;
                 case "Int16", "UInt16"
                         -> CD_short;
