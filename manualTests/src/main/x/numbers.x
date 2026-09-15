@@ -9,6 +9,10 @@ module TestNumbers {
         testFloat64();
         testFloat32();
         testFloat16();
+        // TODO: enable once the runtime can materialise a Float8 constant. Today this dies with
+        // "No implementation for constant": NativeContainer.getConstType has no Float8e4/Float8e5
+        // case, there is no xFloat8e4/xFloat8e5 template, and Float8e4.x's operators are all TODO.
+        // testFloat8();
         testDec64();
         testInfinity();
         testConverter();
@@ -201,6 +205,57 @@ module TestNumbers {
 
         Float16 pi16 = FPNumber.PI;
         console.print("pi16=" + pi16);
+    }
+
+    /**
+     * The 8-bit FP8 formats. Float8e4 is the OCP "E4M3FN" variant: it has no infinities, its only
+     * NaN encodings are #7F/#FF, and its largest finite value is #7E == 448. Float8e5 is the
+     * IEEE-style "E5M2": infinity at #7C/#FC, largest finite #7B == 57344.
+     *
+     * NOTE: not called from run() yet -- see the TODO at the call site.
+     */
+    void testFloat8() {
+        console.print("\n** testFloat8()");
+
+        Float8e4 n1 = 1.0;
+        console.print("n1=" + n1);
+
+        Byte[]   bytes1 = n1.toByteArray();
+        Float8e4 n11    = new Float8e4(bytes1);
+        assert n11 == n1;
+
+        Bit[]    bits1 = n1.toBitArray();
+        Float8e4 n12   = new Float8e4(bits1);
+        assert n12 == n1;
+
+        // the encoder used to collapse every non-zero value onto +0, which made these equal
+        assert Float8e4.one() != Float8e4.zero();
+        assert Float8e4.one() == n1;
+
+        Float8e4 max4 = 448.0;               // largest finite E4M3FN value
+        console.print("max4=" + max4);
+        assert max4.toByteArray() == [0x7E];
+        assert !max4.infinity;
+
+        Float8e5 n2 = 1.0;
+        console.print("n2=" + n2);
+
+        Byte[]   bytes2 = n2.toByteArray();
+        Float8e5 n21    = new Float8e5(bytes2);
+        assert n21 == n2;
+
+        Bit[]    bits2 = n2.toBitArray();
+        Float8e5 n22   = new Float8e5(bits2);
+        assert n22 == n2;
+
+        assert Float8e5.one() != Float8e5.zero();
+        assert Float8e5.one() == n2;
+
+        Float8e5 max5 = 57344.0;             // largest finite E5M2 value
+        console.print("max5=" + max5);
+        assert max5.toByteArray() == [0x7B];
+        assert !max5.infinity;
+        assert Float8e5.PositiveInfinity.infinity;
     }
 
     void testDec64() {

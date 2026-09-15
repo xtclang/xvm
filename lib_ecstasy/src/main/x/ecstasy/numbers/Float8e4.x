@@ -7,21 +7,16 @@
  * (and so few bits in total), these values are almost useless for most purposes, but can be quite
  * effective in large machine learning models. A similar type, [Float8e5], adds one bit of exponent
  * in exchange for losing one bit of mantissa.
+ *
+ * This is the "E4M3FN" variant defined by the OCP 8-bit Floating Point Specification: unlike the
+ * IEEE-754 binary formats (and unlike [Float8e5]), the all-1s exponent is not reserved, so there
+ * are no infinities and the only NaN encodings are `#7F` and `#FF`. That buys two extra finite
+ * exponent values, making `#7E` (448.0) the largest finite value.
  */
 const Float8e4
         extends BinaryFPNumber
         default(0.0) {
     // ----- constants -----------------------------------------------------------------------------
-
-    /**
-     * The value for a positive infinity Float8e4.
-     */
-    static Float8e4 PositiveInfinity = new Float8e4(#78);
-
-    /**
-     * The value for a negative infinity Float8e4.
-     */
-    static Float8e4 NegativeInfinity = new Float8e4(#F8);
 
     /**
      * The value for a positive NaN Float8e4.
@@ -140,6 +135,21 @@ const Float8e4
     }
 
     // ----- FPNumber properties -------------------------------------------------------------------
+
+    @Override
+    Boolean infinity.get() {
+        // unlike the IEEE-754 binary formats, E4M3 does not reserve the all-1s exponent, so it has
+        // no infinities at all; the inherited BinaryFPNumber implementation would report #78 (which
+        // is 256.0 in this format) as an infinity
+        return False;
+    }
+
+    @Override
+    Boolean NaN.get() {
+        // the all-1s exponent is only a NaN when the significand is also all 1s; the inherited
+        // BinaryFPNumber implementation would report #79 through #7E (256.0 up to 448.0) as NaNs
+        return bits.toByte() & 0b01111111 == 0b01111111;
+    }
 
     @Override
     Int emax.get() {
