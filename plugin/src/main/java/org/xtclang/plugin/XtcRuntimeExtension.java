@@ -27,6 +27,17 @@ import org.jetbrains.annotations.NotNull;
 public interface XtcRuntimeExtension extends XtcLauncherTaskExtension {
 
     /**
+     * Run modules on the JIT-to-Java back-end instead of the interpreter, i.e. pass {@code -J} to
+     * the launcher. Defaults to {@code false}.
+     *
+     * <p>The JIT is a work in progress; a module that runs under the interpreter may still fail
+     * under the JIT.</p>
+     *
+     * @return the jit property
+     */
+    Property<@NotNull Boolean> getJit();
+
+    /**
      * Return the plugin internal representation of a module execution config. This
      * is a tuple with a module name (mandatory), a method name for the execution
      * to start with (defaults to "run"), and a list of arguments to pass to the

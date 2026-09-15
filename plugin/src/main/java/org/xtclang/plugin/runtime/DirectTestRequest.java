@@ -9,6 +9,7 @@ public record DirectTestRequest(
         List<File> modulePath,
         boolean showVersion,
         boolean verbose,
+        boolean jit,
         String moduleName,
         String methodName,
         List<String> moduleArgs) {

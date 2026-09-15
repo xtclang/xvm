@@ -19,6 +19,7 @@ import org.xtclang.plugin.XtcRuntimeExtension;
 public abstract class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension implements XtcRuntimeExtension {
     private final ListProperty<@NotNull XtcRunModule> modules;
     private final Property<@NotNull Boolean> parallel;
+    private final Property<@NotNull Boolean> jit;
 
     @Inject
     @SuppressWarnings("ConstructorNotProtectedInAbstractClass")
@@ -26,6 +27,12 @@ public abstract class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskE
         super(objects, providers);
         this.modules = objects.listProperty(XtcRunModule.class).value(List.of());
         this.parallel = objects.property(Boolean.class).convention(false);
+        this.jit = objects.property(Boolean.class).convention(false);
+    }
+
+    @Override
+    public Property<@NotNull Boolean> getJit() {
+        return jit;
     }
 
     private XtcRunModule createModule(final String moduleName) {

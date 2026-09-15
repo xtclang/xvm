@@ -84,6 +84,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     protected final Map<XtcRunModule, Integer> executedModules; // Module -> exit code
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
 
+    private final Property<@NotNull Boolean> jit;
+
     // Command-line override properties (set via --module, --method, --args options)
     private final Property<String> cliModuleName;
     private final Property<String> cliMethodName;
@@ -105,6 +107,23 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         this.cliModuleName = objects.property(String.class);
         this.cliMethodName = objects.property(String.class);
         this.cliModuleArgs = objects.listProperty(String.class);
+        this.jit = objects.property(Boolean.class).convention(ext.getJit());
+    }
+
+    @Input
+    @Override
+    public Property<@NotNull Boolean> getJit() {
+        return jit;
+    }
+
+    /**
+     * Run on the JIT-to-Java back-end from the command line.
+     * Example: ./gradlew runXtc --jit
+     */
+    @SuppressWarnings("unused")
+    @Option(option = "jit", description = "Run on the JIT-to-Java back-end instead of the interpreter")
+    public void setJitOption(final boolean jit) {
+        this.jit.set(jit);
     }
 
     // =========================================================================
