@@ -149,12 +149,14 @@ public class JitTypeDesc {
         TypeConstant sansNullable = type.removeNullable();
         if (sansNullable.isJavaPrimitive()) {
             return switch (sansNullable.getSingleUnderlyingClass(false).getName()) {
-                case "Byte", "Nibble", "Int8", "UInt8",
-                     "Float8e4", "Float8e5"
+                case "Byte", "Nibble", "Int8", "UInt8"
                         -> CD_byte;
                 case "Int16", "UInt16"
                         -> CD_short;
-                case "Char", "Int32", "UInt32"
+                case "Char", "Int32", "UInt32",
+                     // an FP8 field uses the same carrier as an FP8 value, as every other FP type
+                     // does; a narrower field would only make the two descriptors disagree
+                     "Float8e4", "Float8e5"
                         -> CD_int;
                 case "Int64", "UInt64"
                         -> CD_long;
