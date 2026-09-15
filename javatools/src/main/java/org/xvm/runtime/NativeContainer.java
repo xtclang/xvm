@@ -777,82 +777,74 @@ public class NativeContainer
 
     /**
      * Obtain an object type for the specified constant.
+     *
+     * <p>The switch is deliberately exhaustive rather than closed with a {@code default}, so that
+     * adding a {@link Format} does not compile until someone has decided which of the three groups
+     * below it belongs to. The alternative - a {@code default} that throws - turns a new format
+     * into a run-time {@code "No implementation for constant"} that only shows up once a module
+     * containing one is actually executed.</p>
      */
     protected TypeConstant getConstType(Constant constValue) {
-        String sComponent;
+        return switch (constValue.getFormat()) {
+            // ----- constants that already carry their own Ecstasy type ---------------------------
 
-        switch (constValue.getFormat()) {
-        case Char, String:
-        case Bit,  Nibble:
+            case Char, String, Bit, Nibble,
+                 IntLiteral, FPLiteral,
+                 Int8, UInt8, Int16, UInt16, Int32, UInt32,
+                 Int64, UInt64, Int128, UInt128, IntN, UIntN,
+                 Float8e4, Float8e5, BFloat16,
+                 Float16, Float32, Float64, Float128, FloatN,
+                 Dec32, Dec64, Dec128, DecN,
+                 Array, UInt8Array,
+                 Date, TimeOfDay, Time, TimeZone, Duration,
+                 Range, Path, Version, RegEx,
+                 Module, Package, Tuple, SingletonConst
+                    -> constValue.getType();
 
-        case IntLiteral, FPLiteral:
+            // ----- constants implemented by a native or library class ----------------------------
 
-        case Int8,   UInt8:
-        case Int16,  UInt16:
-        case Int32,  UInt32:
-        case Int64,  UInt64:
-        case Int128, UInt128:
-        case IntN,   UIntN:
-        case Float8e4, Float8e5:
-        case BFloat16:
-        case Float16, Float32, Float64, Float128, FloatN:
-        case          Dec32,   Dec64,   Dec128,   DecN:
+            case FileStore         -> classType("_native.fs.CPFileStore");
+            case FSDir             -> classType("_native.fs.CPDirectory");
+            case FSFile            -> classType("_native.fs.CPFile");
+            case Map               -> classType("maps.ListMap");
+            case Set               -> classType("collections.Array");  // see xArray.createConstHandle()
+            case PropertyClassType -> classType("_native.reflect.RTProperty");
 
-        case Array, UInt8Array:
-        case Date, TimeOfDay, Time, TimeZone, Duration:
-        case Range, Path, Version, RegEx:
-        case Module, Package:
-        case Tuple:
-        case SingletonConst:
-            return constValue.getType();
+            case Class, DecoratedClass, NativeClass
+                    -> classType("reflect.Class");
 
-        case FileStore:
-            sComponent = "_native.fs.CPFileStore";
-            break;
+            case AnnotatedType, ParameterizedType,
+                 ImmutableType, AccessType, TerminalType,
+                 UnionType, IntersectionType, DifferenceType
+                    -> classType("_native.reflect.RTType");
 
-        case FSDir:
-            sComponent = "_native.fs.CPDirectory";
-            break;
+            case Method
+                    -> classType(((MethodConstant) constValue).isFunction()
+                            ? "_native.reflect.RTFunction"
+                            : "_native.reflect.RTMethod");
 
-        case FSFile:
-            sComponent = "_native.fs.CPFile";
-            break;
+            // ----- constants with no run-time representation --------------------------------------
 
-        case Map:
-            sComponent = "maps.ListMap";
-            break;
+            case EnumValueConst, SingletonService, MapEntry,
+                 RangeInclusive, RangeExclusive, Any, FSLink, ResponseSender,
+                 Typedef, Property, MultiMethod, Annotation, Register, BindTarget,
+                 UnresolvedName, DeferredValue, UnresolvedType,
+                 ThisClass, ParentClass, ChildClass, PureType,
+                 TypeParameter, FormalTypeChild, DynamicFormal, Signature,
+                 IsConst, IsEnum, IsModule, IsPackage, IsClass,
+                 ServiceType, TurtleType, VirtualChildType, InnerChildType,
+                 AnonymousClassType, CastType, RecursiveType,
+                 ConditionNot, ConditionAll, ConditionAny, ConditionNamed,
+                 ConditionPresent, ConditionVersionMatches, ConditionVersioned
+                    -> throw new LauncherException(true,
+                            "No implementation for constant: " + constValue);
+        };
+    }
 
-        case Set:
-            // see xArray.createConstHandle()
-            sComponent = "collections.Array";
-            break;
-
-        case Class:
-        case DecoratedClass:
-        case NativeClass:
-            sComponent = "reflect.Class";
-            break;
-
-        case PropertyClassType:
-            sComponent = "_native.reflect.RTProperty";
-            break;
-
-        case AnnotatedType, ParameterizedType:
-        case ImmutableType, AccessType, TerminalType:
-        case UnionType, IntersectionType, DifferenceType:
-            sComponent = "_native.reflect.RTType";
-            break;
-
-        case Method:
-            sComponent = ((MethodConstant) constValue).isFunction()
-                    ? "_native.reflect.RTFunction" : "_native.reflect.RTMethod";
-            break;
-
-        case MapEntry:
-        default:
-            throw new LauncherException(true, "No implementation for constant: " + constValue);
-        }
-
+    /**
+     * @return the type of the Ecstasy class with the specified component name
+     */
+    private TypeConstant classType(String sComponent) {
         return getClassStructure(sComponent).getIdentityConstant().getType();
     }
 
