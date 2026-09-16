@@ -9,10 +9,7 @@ module TestNumbers {
         testFloat64();
         testFloat32();
         testFloat16();
-        // TODO: enable once the runtime can materialise a BFloat16 constant. Today this dies with
-        // "Unknown constant: BFloat16{value=1.0}": there is no xBFloat16 template in
-        // runtime/template/numbers, so no BFloat16 value can be created at all.
-        // testBFloat16();
+        testBFloat16();
         testFloat8();
         testDec64();
         testInfinity();
@@ -303,7 +300,6 @@ module TestNumbers {
      * exactly representable values alone -- so round trips looked clean -- while moving 12.5% of
      * the values that actually need rounding to the wrong neighbour.
      *
-     * NOTE: not called from run() yet -- see the TODO at the call site.
      */
     void testBFloat16() {
         console.print("\n** testBFloat16()");
@@ -333,7 +329,24 @@ module TestNumbers {
         BFloat16 near = -1.5748398;
         assert near == -1.578125;
 
-        console.print($"bf16: one={one} two={two} tie={tie} near={near}");
+        // arithmetic happens at wider precision and has to be rounded back into the format;
+        // BFloat16 stores 7 significand bits, so 1.0 + 2^-8 sits exactly on the midpoint between
+        // 1.0 and 1.0078125 and must go to the even neighbour, 1.0
+        BFloat16 half = 0.00390625;
+        assert one + half == one;
+
+        // BFloat16 keeps Float32's exponent, so its largest finite value is the same magnitude;
+        // exceeding it yields an infinity rather than a larger number
+        BFloat16 max = 3.3895314E38;
+        assert max.finite;
+        assert !max.infinity;
+        assert (max + max).infinity;
+
+        // split() must report this format's fields: 8 exponent bits biased by 127, 7 of significand
+        (Boolean neg, IntNumber sig, IntNumber exp) = one.split();
+        assert !neg && sig == 0 && exp == 127;
+
+        console.print($"bf16: one={one} two={two} tie={tie} near={near} over={max + max}");
     }
 
     void testDec64() {
