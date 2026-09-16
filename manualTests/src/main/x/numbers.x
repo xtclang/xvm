@@ -16,6 +16,7 @@ module TestNumbers {
         testFloat8();
         testDec64();
         testInfinity();
+        testFPMath();
         testConverter();
         testAggregator();
         testDec28();
@@ -397,6 +398,60 @@ module TestNumbers {
             f = -f*f;
             d = -d*d;
         }
+    }
+
+    /**
+     * Trigonometric and hyperbolic functions across the FP types.
+     *
+     * cos() used to throw NotImplemented for every one of them: it was never passed to
+     * markNativeMethod, so it fell through to the TODO body in the Ecstasy source, while sin() and
+     * tan() beside it worked. atanh() computed 0.5*ln((x+1)/(x-1)), which is arcoth rather than
+     * artanh, so over atanh's actual domain of |x| < 1 the argument to the logarithm was negative
+     * and the result was NaN.
+     */
+    void testFPMath() {
+        console.print("\n** testFPMath()");
+
+        Float64 zero = 0.0;
+        assert zero.cos() == 1.0;
+        assert zero.sin() == 0.0;
+
+        Float64 x = 1.0;
+        Float64 s = x.sin();
+        Float64 c = x.cos();
+        assert (s*s + c*c - 1.0).abs() < 0.000000001;
+
+        // cos must work for every binary FP width, not just Float64
+        Float32 f32 = 0.0;
+        assert f32.cos() == 1.0;
+        // NOTE: compared via Float64 deliberately. On this branch a Float16 literal whose
+        // significand is zero still decodes 1023 ULPs high, so "f16.cos() == 1.0" compares a
+        // correctly computed 1.0 against a literal that is not quite 1.0. That decoder defect is
+        // fixed separately; this assertion is about cos(), so it avoids depending on it.
+        Float16 f16 = 0.0;
+        assert f16.cos().toFloat64() == 1.0;
+
+        // and for the decimal types, which route through a separate implementation
+        Dec64 d64 = 0.0;
+        assert d64.cos() == 1.0;
+        Dec32 d32 = 0.0;
+        assert d32.cos() == 1.0;
+
+        // artanh over its own domain, and its inverse
+        Float64 h = 0.5;
+        Float64 a = h.atanh();
+        assert (a - 0.5493061443340549).abs() < 0.000000001;
+        assert (a.tanh() - 0.5).abs() < 0.000000001;
+
+        Dec64 hd = 0.5;
+        assert (hd.atanh().toFloat64() - 0.5493061443340549).abs() < 0.000000001;
+
+        // the neighbouring inverse hyperbolics, which share the shape and were correct
+        assert (h.asinh() - 0.48121182505960347).abs() < 0.000000001;
+        Float64 two = 2.0;
+        assert (two.acosh() - 1.3169578969248166).abs() < 0.000000001;
+
+        console.print($"cos(0)={zero.cos()} atanh(0.5)={a} acosh(2)={two.acosh()}");
     }
 
     void testConverter() {

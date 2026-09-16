@@ -233,6 +233,9 @@ public abstract class BaseDecFP
         case "sin":
             return frame.assignValue(iReturn, makeHandle(dec.sin()));
 
+        case "cos":
+            return frame.assignValue(iReturn, makeHandle(dec.cos()));
+
         case "tan":
             return frame.assignValue(iReturn, makeHandle(dec.tan()));
 

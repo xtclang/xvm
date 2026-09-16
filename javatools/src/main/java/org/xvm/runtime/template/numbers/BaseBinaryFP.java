@@ -202,6 +202,9 @@ public abstract class BaseBinaryFP
         case "sin":
             return frame.assignValue(iReturn, makeHandle(Math.sin(d)));
 
+        case "cos":
+            return frame.assignValue(iReturn, makeHandle(Math.cos(d)));
+
         case "tan":
             return frame.assignValue(iReturn, makeHandle(Math.tan(d)));
 
@@ -230,7 +233,7 @@ public abstract class BaseBinaryFP
             return frame.assignValue(iReturn, makeHandle( Math.log(d+Math.sqrt(d*d-1.0))));
 
         case "atanh":
-            return frame.assignValue(iReturn, makeHandle(0.5*Math.log((d+1.0)/(d-1.0))));
+            return frame.assignValue(iReturn, makeHandle(0.5 * Math.log((1.0 + d) / (1.0 - d))));
 
         case "deg2rad":
             return frame.assignValue(iReturn, makeHandle(Math.toRadians(d)));
