@@ -4,7 +4,7 @@ This document describes how to manually test every feature implemented in the Ec
 
 ## Feature Implementation Status
 
-> See [PLAN_IDE_INTEGRATION.md](plans/PLAN_IDE_INTEGRATION.md) for the canonical feature implementation matrix comparing Mock, Tree-sitter, and Compiler adapter capabilities.
+> See [plan-ide-integration.md](plans/plan-ide-integration.md) for the canonical feature implementation matrix comparing Mock, Tree-sitter, and Compiler adapter capabilities.
 
 ---
 
@@ -573,7 +573,7 @@ Workspace folders take precedence; extra roots are merged in. Non-existent paths
 
 ## Adapter Comparison Summary
 
-> See [PLAN_IDE_INTEGRATION.md](plans/PLAN_IDE_INTEGRATION.md) for the canonical adapter comparison matrix.
+> See [plan-ide-integration.md](plans/plan-ide-integration.md) for the canonical adapter comparison matrix.
 
 ---
 

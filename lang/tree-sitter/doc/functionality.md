@@ -3,7 +3,7 @@
 This document now focuses on the **tree-sitter-specific** capabilities and limitations.
 It is no longer the canonical full adapter matrix; that information lives in:
 
-- [`../../doc/plans/PLAN_IDE_INTEGRATION.md`](../../doc/plans/PLAN_IDE_INTEGRATION.md)
+- [`../../doc/plans/plan-ide-integration.md`](../../doc/plans/plan-ide-integration.md)
 - [`../../doc/plans/existing-tree-sitter-functionality-missing.md`](../../doc/plans/existing-tree-sitter-functionality-missing.md)
 
 ## What tree-sitter provides well
@@ -52,9 +52,9 @@ Compared to the older version of this document, the current branch now includes:
 
 Use these documents instead of duplicating status here:
 
-- [`../../doc/plans/PLAN_TREE_SITTER.md`](../../doc/plans/PLAN_TREE_SITTER.md)
+- [`../../doc/plans/plan-tree-sitter.md`](../../doc/plans/plan-tree-sitter.md)
   - implementation history and architecture
-- [`../../doc/plans/PLAN_IDE_INTEGRATION.md`](../../doc/plans/PLAN_IDE_INTEGRATION.md)
+- [`../../doc/plans/plan-ide-integration.md`](../../doc/plans/plan-ide-integration.md)
   - current cross-adapter feature matrix
 - [`../../doc/plans/existing-tree-sitter-functionality-missing.md`](../../doc/plans/existing-tree-sitter-functionality-missing.md)
   - current tree-sitter implemented vs remaining gaps

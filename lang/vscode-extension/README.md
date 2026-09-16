@@ -299,7 +299,7 @@ The wrapper script (`scripts/run-vscode-tests.cjs`) does the platform detection 
 
 **Tests are not auto-attached to `:check`.** The test downloads ~210 MB on first run and requires either a display or `xvfb`; both make it a poor fit for unconditional CI runs. Wire it into your CI pipeline explicitly when you want it.
 
-For end-to-end LSP / DAP / file-association regression coverage, see the **VS Code Extension** section in [`../doc/MANUAL_TEST_PLAN.md`](../doc/MANUAL_TEST_PLAN.md).
+For end-to-end LSP / DAP / file-association regression coverage, see the **VS Code Extension** section in [`../doc/manual-test-plan.md`](../doc/manual-test-plan.md).
 
 ### Running from VS Code (Extension Development Host)
 

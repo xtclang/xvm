@@ -19,7 +19,7 @@ specific APIs or data structures needed.
 ## Current State
 
 For the canonical current implementation matrix, use
-[`PLAN_IDE_INTEGRATION.md`](./PLAN_IDE_INTEGRATION.md).
+[`plan-ide-integration.md`](./plan-ide-integration.md).
 
 This document is intentionally narrower: it explains which remaining capabilities belong to
 the tree-sitter tier, which ones fit a future semantic-model tier, and which truly require

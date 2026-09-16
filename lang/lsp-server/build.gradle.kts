@@ -37,7 +37,7 @@ plugins {
 // isolation (avoids lsp4j version conflicts with LSP4IJ) and crash/memory
 // isolation. The intellij-plugin spawns this server and communicates via stdio.
 //
-// See doc/plans/PLAN_IDE_INTEGRATION.md for architecture details.
+// See doc/plans/plan-ide-integration.md for architecture details.
 // =============================================================================
 
 // =============================================================================

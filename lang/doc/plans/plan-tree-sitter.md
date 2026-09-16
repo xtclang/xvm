@@ -450,7 +450,7 @@ Features requiring compiler for any useful implementation:
    - See "Task: Out-of-Process LSP Server" below
 
 8. ~~**End-to-End Testing**~~ ✅ PARTIAL - `LspIntegrationTest` verifies all LSP features against real `.x` files with tree-sitter native parsing. Manual IDE testing still needed for IntelliJ/VS Code.
-9. **IDE Integration** - See [PLAN_IDE_INTEGRATION.md](./PLAN_IDE_INTEGRATION.md)
+9. **IDE Integration** - See [plan-ide-integration.md](./plan-ide-integration.md)
 10. **Compiler Adapter** - Add semantic features (future)
 
 ---
@@ -481,7 +481,7 @@ Features requiring compiler for any useful implementation:
 
 **Status**: COMPLETE (2026-02-02)
 
-**Full details**: See [PLAN_IDE_INTEGRATION.md](./PLAN_IDE_INTEGRATION.md)
+**Full details**: See [plan-ide-integration.md](./plan-ide-integration.md)
 
 ### Implementation Summary
 
@@ -678,5 +678,5 @@ robust classification without positional fragility.
 
 ## Manual Test Plan
 
-See [MANUAL_TEST_PLAN.md](../MANUAL_TEST_PLAN.md) for comprehensive testing instructions,
+See [manual-test-plan.md](../manual-test-plan.md) for comprehensive testing instructions,
 including out-of-process server startup, crash recovery, and health check verification.

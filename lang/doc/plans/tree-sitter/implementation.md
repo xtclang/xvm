@@ -3,7 +3,7 @@
 This document captures the implementation history, challenges encountered, and solutions
 developed while building the XTC tree-sitter grammar.
 
-> **See also**: [PLAN_TREE_SITTER.md](../PLAN_TREE_SITTER.md) for current status and next steps.
+> **See also**: [plan-tree-sitter.md](../plan-tree-sitter.md) for current status and next steps.
 > **See also**: [tree-sitter/README.md](../../../tree-sitter/README.md) for usage documentation.
 
 ---

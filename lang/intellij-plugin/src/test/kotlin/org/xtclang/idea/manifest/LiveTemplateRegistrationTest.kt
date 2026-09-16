@@ -48,7 +48,7 @@ class LiveTemplateRegistrationTest {
     }
 
     @Test
-    @DisplayName("contains all snippet shortcuts the README + MANUAL_TEST_PLAN promise")
+    @DisplayName("contains all snippet shortcuts the README + manual-test-plan promise")
     fun coreShortcutsPresent() {
         val templates = templateSet.getElementsByTagName("template")
         val names =
@@ -57,7 +57,7 @@ class LiveTemplateRegistrationTest {
                 .filter { it.isNotEmpty() }
                 .toSet()
 
-        // The README's snippet table and MANUAL_TEST_PLAN section 17 promise
+        // The README's snippet table and manual-test-plan section 17 promise
         // these shortcuts. If a shortcut is renamed or removed without
         // updating either doc, users typing the documented prefix get nothing.
         val required =

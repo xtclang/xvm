@@ -269,9 +269,9 @@ Generated files:
 To avoid duplicating stale implementation matrices across multiple READMEs, the canonical
 status documents are:
 
-- [`doc/plans/PLAN_IDE_INTEGRATION.md`](./doc/plans/PLAN_IDE_INTEGRATION.md)
+- [`doc/plans/plan-ide-integration.md`](./doc/plans/plan-ide-integration.md)
   - current implementation matrix across adapters and IDE integration status
-- [`doc/plans/PLAN_TREE_SITTER.md`](./doc/plans/PLAN_TREE_SITTER.md)
+- [`doc/plans/plan-tree-sitter.md`](./doc/plans/plan-tree-sitter.md)
   - tree-sitter architecture and implementation status
 - [`doc/plans/existing-tree-sitter-functionality-missing.md`](./doc/plans/existing-tree-sitter-functionality-missing.md)
   - current tree-sitter implemented vs remaining functionality
@@ -339,7 +339,7 @@ All versions are defined in `/gradle/libs.versions.toml`.
 ## Documentation
 
 - [Implementation Plans](./doc/plans/README.md) - Current plans, status docs, and retained design notes for language tooling
-- [LSP Implementation Survey](./doc/LSP_IMPLEMENTATIONS_SURVEY.md) - Survey of how other languages implement language server support
+- [LSP Implementation Survey](./doc/lsp-implementations-survey.md) - Survey of how other languages implement language server support
 
 Architecture analysis and research documentation: *Internal documentation*
 
