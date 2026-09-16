@@ -17,7 +17,7 @@ The server is used by both the [IntelliJ plugin](../intellij-plugin/) and
 [VS Code extension](../vscode-extension/).
 
 For the canonical cross-adapter feature matrix and current implementation status, see
-[`../doc/plans/PLAN_IDE_INTEGRATION.md`](../doc/plans/PLAN_IDE_INTEGRATION.md). This
+[`../doc/plans/plan-ide-integration.md`](../doc/plans/plan-ide-integration.md). This
 README focuses on LSP-server-specific build/runtime/configuration details.
 
 > **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../../CLAUDE.md) in the project CLAUDE.md for details.
@@ -123,7 +123,7 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 ## Supported LSP Features
 
 The canonical feature matrix lives in
-[`../doc/plans/PLAN_IDE_INTEGRATION.md`](../doc/plans/PLAN_IDE_INTEGRATION.md).
+[`../doc/plans/plan-ide-integration.md`](../doc/plans/plan-ide-integration.md).
 At a high level, the current tree-sitter-backed default provides:
 
 - document symbols, same-file navigation, workspace-symbol search, and best-effort cross-file navigation
@@ -432,5 +432,5 @@ in slow operation reports:
 ## Documentation
 
 - [Tree-sitter Feature Matrix](../tree-sitter/doc/functionality.md) - What Tree-sitter can/cannot do
-- [Tree-sitter Integration Plan](../doc/plans/PLAN_TREE_SITTER.md) - Full implementation details
+- [Tree-sitter Integration Plan](../doc/plans/plan-tree-sitter.md) - Full implementation details
 - [Formatting Plan](../doc/plans/formatting-plan.md) - On-type formatting design, configuration architecture, industry survey

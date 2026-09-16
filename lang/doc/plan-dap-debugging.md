@@ -896,7 +896,7 @@ The DAP server receives these in the `launch` request and uses them to:
    - KDoc on `XtcDebugAdapterDescriptor` explains: out-of-process architecture, LSP vs DAP
      process lifecycle differences, and why the LSP `AtomicBoolean` notification guard is not needed
      for DAP (user-initiated sessions, no concurrent spawn race condition).
-   - `PLAN_IDE_INTEGRATION.md` documents LSP4IJ design choice over IntelliJ built-in LSP.
+   - `plan-ide-integration.md` documents LSP4IJ design choice over IntelliJ built-in LSP.
 
 **What's NOT done yet**: The DAP server itself (`dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt`)
 is still a stub. It needs to be connected to the XTC runtime's `Debugger` interface (Phase 1 below).

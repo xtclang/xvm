@@ -392,7 +392,7 @@ composite root's `gradle.properties` at settings time).
 
 ## Related Documentation
 
-- **[PLAN_TREE_SITTER.md](./PLAN_TREE_SITTER.md)** - Tree-sitter grammar status and development guide
+- **[plan-tree-sitter.md](./plan-tree-sitter.md)** - Tree-sitter grammar status and development guide
 - **[lsp-feature-tiers.md](./lsp-feature-tiers.md)** - LSP capability tiering: what tree-sitter can still add, what fits a future semantic-model layer, and what truly requires compiler-backed semantics
 - **[idea-specific.md](./idea-specific.md)** - IntelliJ-specific roadmap beyond standard LSP behavior
 - **[vscode-specific.md](./vscode-specific.md)** - VS Code-specific roadmap beyond standard LSP behavior

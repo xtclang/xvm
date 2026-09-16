@@ -320,5 +320,5 @@ The authoritative sources for XTC syntax are:
 | `javatools/src/main/java/org/xvm/compiler/Parser.java` | Grammar rules          |
 | `javatools/src/main/java/org/xvm/compiler/Token.java`  | Keyword/operator enums |
 
-See [PLAN_TREE_SITTER.md](../doc/plans/PLAN_TREE_SITTER.md) for implementation status and next steps.
+See [plan-tree-sitter.md](../doc/plans/plan-tree-sitter.md) for implementation status and next steps.
 See [implementation.md](../doc/plans/tree-sitter/implementation.md) for detailed implementation history.

@@ -318,7 +318,7 @@ val textMateGrammar =
 // =============================================================================
 // The LSP server runs as a separate Java process for classloader isolation
 // (avoids lsp4j version conflicts with LSP4IJ) and crash/memory isolation.
-// See doc/plans/PLAN_IDE_INTEGRATION.md for architecture details.
+// See doc/plans/plan-ide-integration.md for architecture details.
 
 val lspServerJar =
     configurations.create("lspServerJar") {

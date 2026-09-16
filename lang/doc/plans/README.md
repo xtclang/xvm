@@ -13,7 +13,7 @@
 
 | Document | Description |
 |----------|-------------|
-| [PLAN_TREE_SITTER](./PLAN_TREE_SITTER.md) | Tree-sitter integration — all phases complete |
+| [plan-tree-sitter](./plan-tree-sitter.md) | Tree-sitter integration — all phases complete |
 | [existing-tree-sitter-functionality-missing](./existing-tree-sitter-functionality-missing.md) | Current tree-sitter implemented-vs-remaining gap summary |
 | [document-formatting-plan](./document-formatting-plan.md) | Canonical current-status doc for formatting |
 
@@ -27,4 +27,4 @@
 
 | Document | Description |
 |----------|-------------|
-| [PLAN_IDE_INTEGRATION](./PLAN_IDE_INTEGRATION.md) | What's implemented across the language tooling stack |
+| [plan-ide-integration](./plan-ide-integration.md) | What's implemented across the language tooling stack |
