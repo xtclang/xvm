@@ -389,10 +389,7 @@ public abstract class Decimal {
     }
 
     public Decimal log2() {
-        if (isFinite()) {
-            return fromBigDecimal(new BigDecimal(Math.log10(toBigDecimal().doubleValue())*LOG2_10));
-        }
-        return isSigned() ? nan() : this;
+        return applyToDouble(d -> Math.log(d) / LOG_2, isSigned() ? nan() : this);
     }
 
     public Decimal log10() {
@@ -846,5 +843,8 @@ public abstract class Decimal {
     /**
      * The log2(10) value.
      */
-    public static final double LOG2_10 = 1.0/Math.log10(2);
+    /**
+     * The natural logarithm of two, for computing a base-2 logarithm.
+     */
+    public static final double LOG_2 = Math.log(2);
 }

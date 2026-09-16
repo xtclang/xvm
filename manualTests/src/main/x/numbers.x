@@ -489,8 +489,21 @@ module TestNumbers {
         assert close(one.exp(), 2.718281828459045);
         Float64 e = 2.718281828459045;
         assert close(e.log(), 1.0);
+        // log2 of an exact power of two must be exactly that power, not merely close to it.
+        // It used to be computed as log10(x) * (1/log10(2)), which returned a non-integer for 13
+        // of the 41 exact powers of two between 2^-20 and 2^20: log2(8.0) gave 2.9999999999999996.
         Float64 eight = 8.0;
-        assert close(eight.log2(), 3.0);
+        assert eight.log2() == 3.0;
+        Float64 half = 0.5;
+        assert half.log2() == -1.0;
+        Float64 k = 1024.0;
+        assert k.log2() == 10.0;
+        Float64 tiny = 0.00006103515625;        // 2^-14, one of the cases that used to fail
+        assert tiny.log2() == -14.0;
+
+        // and the decimal path shares the formula
+        Dec64 d8 = 8.0;
+        assert d8.log2() == 3.0;
         Float64 thousand = 1000.0;
         assert close(thousand.log10(), 3.0);
 
