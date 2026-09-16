@@ -38,6 +38,18 @@ public class xFloat8e5
     }
 
     @Override
+    public FloatHandle makeHandle(double dValue) {
+        // a handle carries a Java double regardless of its Ecstasy type, and BaseBinaryFP computes
+        // in double, so a result would otherwise keep precision and range this format does not
+        // have. Every value of this type has to be representable in it, so round the result back
+        // through the 8-bit encoding here, at the single point every result passes through.
+        //
+        // Going via float first does not double-round: float32 carries far more than the 2p+2 bits
+        // that a single correctly-rounded step needs for a 4-bit significand.
+        return super.makeHandle(Float8e5Constant.toFloat(Float8e5Constant.toBits((float) dValue)));
+    }
+
+    @Override
     protected FPParts splitParts(double d) {
         int n = Float8e5Constant.toBits((float) d);
         return new FPParts((n & 0x80) != 0, n & 0x03, (n & 0x7C) >>> 2);

@@ -189,9 +189,12 @@ public class Float16Constant
             exp = 0x3fc00;                              // -> NaN/Inf
         } else if (exp != 0) {                          // normalized value
             exp += 0x1c000;                             // exp - 15 + 127
-            if (mant == 0 && exp > 0x1c400) {           // smooth transition
-                return Float.intBitsToFloat((nHalf & 0x8000) << 16 | exp << 13 | 0x3ff);
-            }
+            // NOTE: the algorithm this was adapted from carried a "smooth transition" special case
+            // here that returned (sign | exp << 13 | 0x3ff) whenever the significand was zero. That
+            // belongs to a variant which trades exactness for a monotonic approximation; used as a
+            // decoder it sets the low ten significand bits of the resulting float, so every half
+            // whose significand is zero - every exact power of two, 1.0 included - came back 1023
+            // ULPs high. 1.0 decoded as 1.000122, 2.0 as 2.000244.
         } else if (mant != 0) {                         // && exp==0 -> subnormal
             exp = 0x1c400;                              // make it normal
             do {

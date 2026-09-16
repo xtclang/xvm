@@ -202,6 +202,28 @@ module TestNumbers {
 
         Float16 pi16 = FPNumber.PI;
         console.print("pi16=" + pi16);
+
+        // every Float16 whose significand is zero -- every exact power of two, 1.0 included --
+        // used to decode 1023 ULPs high: 1.0 came back as 1.000122, 2.0 as 2.000244
+        Float16 one = 1.0;
+        Float16 two = 2.0;
+        assert one.toByteArray() == [0x3C, 0x00];
+        assert two.toByteArray() == [0x40, 0x00];
+        assert one + one == two;
+        assert two / two == one;
+        assert one * one == one;
+        console.print($"f16 exact: one={one} two={two} half={two / (one + one)}");
+
+        // arithmetic happens at wider precision and has to be rounded back into the format;
+        // Float16 stores 10 significand bits, so 1.0 + 2^-11 must come back as exactly 1.0
+        Float16 tiny = 0.00048828125;
+        assert one + tiny == one;
+
+        // and exceeding the largest finite value yields an infinity, not a larger number
+        Float16 max16 = 65504.0;
+        assert max16.finite;
+        assert (max16 + max16).infinity;
+        console.print($"f16 limits: max={max16} over={max16 + max16}");
     }
 
     /**
