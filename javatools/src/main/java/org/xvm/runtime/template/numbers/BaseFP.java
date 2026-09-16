@@ -53,6 +53,7 @@ public abstract class BaseFP
         markNativeMethod("sqrt"       , VOID, THIS);
         markNativeMethod("cbrt"       , VOID, THIS);
         markNativeMethod("sin"        , VOID, THIS);
+        markNativeMethod("cos"        , VOID, THIS);
         markNativeMethod("tan"        , VOID, THIS);
         markNativeMethod("asin"       , VOID, THIS);
         markNativeMethod("acos"       , VOID, THIS);
@@ -62,7 +63,6 @@ public abstract class BaseFP
         markNativeMethod("sinh"       , VOID, THIS);
         markNativeMethod("cosh"       , VOID, THIS);
         markNativeMethod("tanh"       , VOID, THIS);
-        markNativeMethod("asinh"      , VOID, THIS);
         markNativeMethod("acosh"      , VOID, THIS);
         markNativeMethod("atanh"      , VOID, THIS);
         markNativeMethod("deg2rad"    , VOID, THIS);
