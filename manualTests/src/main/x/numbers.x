@@ -452,6 +452,90 @@ module TestNumbers {
         assert (two.acosh() - 1.3169578969248166).abs() < 0.000000001;
 
         console.print($"cos(0)={zero.cos()} atanh(0.5)={a} acosh(2)={two.acosh()}");
+
+        testFPMathSurface();
+    }
+
+    /**
+     * Every transcendental FPNumber declares, checked against a known value.
+     *
+     * Before this, numbers.x exercised almost none of them -- which is how cos() came to throw for
+     * every floating point type, and how atanh() came to compute arcoth, without anything noticing.
+     */
+    void testFPMathSurface() {
+        Float64 h = 0.5;
+
+        // trigonometric
+        assert close(h.sin(),  0.479425538604203);
+        assert close(h.cos(),  0.8775825618903728);
+        assert close(h.tan(),  0.5463024898437905);
+        assert close(h.asin(), 0.5235987755982988);
+        assert close(h.acos(), 1.0471975511965976);
+        assert close(h.atan(), 0.46364760900080615);
+
+        Float64 one = 1.0;
+        Float64 two = 2.0;
+        assert close(one.atan2(two), 0.4636476090008061);
+
+        // hyperbolic, and their inverses
+        assert close(h.sinh(),  0.5210953054937474);
+        assert close(h.cosh(),  1.1276259652063807);
+        assert close(h.tanh(),  0.46211715726000974);
+        assert close(h.asinh(), 0.48121182505960347);
+        assert close(two.acosh(), 1.3169578969248166);
+        assert close(h.atanh(), 0.5493061443340549);
+
+        // exponential and logarithmic
+        assert close(one.exp(), 2.718281828459045);
+        Float64 e = 2.718281828459045;
+        assert close(e.log(), 1.0);
+        Float64 eight = 8.0;
+        assert close(eight.log2(), 3.0);
+        Float64 thousand = 1000.0;
+        assert close(thousand.log10(), 3.0);
+
+        // roots
+        assert close(two.sqrt(), 1.4142135623730951);
+        Float64 twentySeven = 27.0;
+        assert close(twentySeven.cbrt(), 3.0);
+
+        // angle conversion, round tripping through each other
+        Float64 straight = 180.0;
+        assert close(straight.deg2rad(), 3.141592653589793);
+        assert close(straight.deg2rad().rad2deg(), 180.0);
+
+        // rounding and adjacency
+        Float64 threeHalves = 1.5;
+        assert threeHalves.floor() == 1.0;
+        assert threeHalves.ceil() == 2.0;
+        assert threeHalves.round() == 2.0;
+        assert threeHalves.round(TowardZero) == 1.0;
+        assert one.nextUp() > one;
+        assert one.nextDown() < one;
+        assert one.nextUp().nextDown() == one;
+
+        // scaleByPow scales by the radix raised to n -- 2^n here -- rather than raising the
+        // value to the power of n, which is what it used to do (2.0.scaleByPow(3) gave 8.0)
+        assert two.scaleByPow(3) == 16.0;
+        assert two.scaleByPow(0) == two;
+        assert two.scaleByPow(-1) == 1.0;
+        assert one.scaleByPow(10) == 1024.0;
+
+        // and for a decimal type the radix is ten, not two
+        Dec64 dec = 2.0;
+        assert dec.scaleByPow(3) == 2000.0;
+        assert dec.scaleByPow(0) == dec;
+        assert dec.scaleByPow(-1) == 0.2;
+
+        // pow, and its relationship to sqrt
+        assert close(two.pow(10.0), 1024.0);
+        assert close(two.pow(0.5), 1.4142135623730951);
+
+        console.print("full FP math surface checked");
+    }
+
+    static Boolean close(Float64 actual, Float64 expected) {
+        return (actual - expected).abs() < 0.000000001;
     }
 
     void testConverter() {

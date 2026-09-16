@@ -339,6 +339,19 @@ public abstract class Decimal {
         return applyToDouble(op, nan());
     }
 
+    /**
+     * Scale this value by a power of the radix, which for a decimal floating point type is ten.
+     *
+     * @param n  the power of ten to scale by
+     *
+     * @return this value multiplied by ten raised to the power of n
+     */
+    public Decimal scaleByPow(int n) {
+        return isFinite()
+                ? fromBigDecimal(toBigDecimal().scaleByPowerOfTen(n))
+                : this;
+    }
+
     public Decimal abs() {
         if (isFinite()) {
             return fromBigDecimal(toBigDecimal().abs());
