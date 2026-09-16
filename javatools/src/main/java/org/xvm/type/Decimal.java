@@ -544,7 +544,7 @@ public abstract class Decimal {
             if (that.isFinite()) {
                 BigDecimal big1 = this.toBigDecimal();
                 BigDecimal big2 = that.toBigDecimal();
-            return fromBigDecimal(big1.pow(big2.intValue(), getMathContext()));
+                return fromBigDecimal(big1.pow(big2.intValue(), getMathContext()));
             }
             return nan();
         }
@@ -564,7 +564,7 @@ public abstract class Decimal {
             if (that.isFinite()) {
                 BigDecimal big1 = this.toBigDecimal();
                 BigDecimal big2 = that.toBigDecimal();
-            return fromBigDecimal(
+                return fromBigDecimal(
                     BigDecimal.valueOf(Math.atan2(big1.doubleValue(), big2.doubleValue())));
             }
             return that;
@@ -844,7 +844,13 @@ public abstract class Decimal {
      * The log2(10) value.
      */
     /**
-     * The natural logarithm of two, for computing a base-2 logarithm.
+     * The natural logarithm of two, for computing a base-2 logarithm as log(x) / log(2). Shared
+     * with the binary FP templates, which compute log2 the same way; it lives here because
+     * org.xvm.type is the lower layer of the two.
+     *
+     * <p>NOTE: log2 used to be computed as log10(x) * (1/log10(2)). That identity is exact in real
+     * arithmetic but not in floating point: it returned a non-integer for 13 of the 41 exact
+     * powers of two between 2^-20 and 2^20, so log2(8.0) came back as 2.9999999999999996.</p>
      */
     public static final double LOG_2 = Math.log(2);
 }
