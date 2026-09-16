@@ -138,11 +138,26 @@ public class BFloat16Constant
      *         using the IEEE-754 binary-radix floating point format
      */
     public static int toHalf(float flVal) {
-        // this "magic number" rounds the result instead of truncating it
-        flVal *= 1.001957f;
+        // note: floatToRawIntBits() rather than floatToIntBits(), because the latter collapses
+        // every NaN onto the canonical positive 0x7FC00000 and would thus lose the sign
+        int nBits = Float.floatToRawIntBits(flVal);
 
-        int fbits = Float.floatToIntBits(flVal);
-        return fbits >>> 16;
+        if (Float.isNaN(flVal)) {
+            // truncating a NaN could leave an all-1s exponent with an empty significand, which is
+            // an infinity; keep the quiet bit so that it stays a NaN
+            return nBits >>> 16 | 0x0040;
+        }
+
+        // a BFloat16 is the top half of a float, so encoding is a truncation, and rounding it to
+        // nearest with ties to even is a matter of adding half an LSB plus the LSB itself before
+        // truncating. Overflow carries into the exponent and on into an infinity, as it should.
+        //
+        // NOTE: this used to multiply the value by 1.001957f, described as a "magic number [that]
+        // rounds the result instead of truncating it". Scaling is not rounding: it happens to
+        // leave exactly representable values alone, so round trips looked clean, but it moved
+        // 12.5% of the values that actually need rounding to the wrong neighbour.
+        int nLsb = nBits >>> 16 & 0x1;
+        return nBits + 0x7FFF + nLsb >>> 16;
     }
 
     // ----- fields --------------------------------------------------------------------------------

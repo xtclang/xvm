@@ -9,6 +9,10 @@ module TestNumbers {
         testFloat64();
         testFloat32();
         testFloat16();
+        // TODO: enable once the runtime can materialise a BFloat16 constant. Today this dies with
+        // "Unknown constant: BFloat16{value=1.0}": there is no xBFloat16 template in
+        // runtime/template/numbers, so no BFloat16 value can be created at all.
+        // testBFloat16();
         testFloat8();
         testDec64();
         testInfinity();
@@ -291,6 +295,45 @@ module TestNumbers {
 
         (Boolean neg16, IntNumber sig16, IntNumber exp16) = 1.0.toFloat16().split();
         assert !neg16 && sig16 == 0 && exp16 == 15;
+    }
+
+    /**
+     * BFloat16 is the top half of a float32, so encoding it is a truncation and the only question
+     * is how it rounds. It used to "round" by multiplying the value by 1.001957, which leaves
+     * exactly representable values alone -- so round trips looked clean -- while moving 12.5% of
+     * the values that actually need rounding to the wrong neighbour.
+     *
+     * NOTE: not called from run() yet -- see the TODO at the call site.
+     */
+    void testBFloat16() {
+        console.print("\n** testBFloat16()");
+
+        BFloat16 one = 1.0;
+        BFloat16 two = 2.0;
+        assert one.toByteArray() == [0x3F, 0x80];
+        assert two.toByteArray() == [0x40, 0x00];
+        assert one + one == two;
+        assert two / two == one;
+
+        Byte[]   bytes = one.toByteArray();
+        BFloat16 n11   = new BFloat16(bytes);
+        assert n11 == one;
+
+        Bit[]    bits = one.toBitArray();
+        BFloat16 n12  = new BFloat16(bits);
+        assert n12 == one;
+
+        // exactly halfway between #3F80 (1.0) and #3F81 (1.0078125): ties go to the even
+        // neighbour, which is 1.0
+        BFloat16 tie = 1.00390625;
+        assert tie == one;
+
+        // a value the old encoder sent to the wrong neighbour: it gave -1.5703125 (#BFC9) where
+        // the nearest BFloat16 is -1.578125 (#BFCA)
+        BFloat16 near = -1.5748398;
+        assert near == -1.578125;
+
+        console.print($"bf16: one={one} two={two} tie={tie} near={near}");
     }
 
     void testDec64() {
