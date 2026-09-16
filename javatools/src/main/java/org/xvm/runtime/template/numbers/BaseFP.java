@@ -142,7 +142,16 @@ public abstract class BaseFP
     /**
      * The log2(10) value.
      */
-    public static final double LOG2_10 = 1.0/Math.log10(2);
+    /**
+     * The natural logarithm of two, for computing a base-2 logarithm.
+     *
+     * <p>NOTE: log2 used to be computed as log10(x) * (1/log10(2)). That is correct in exact
+     * arithmetic but loses a bit in floating point: it returned a non-integer for 13 of the 41
+     * exact powers of two between 2^-20 and 2^20, so log2(8.0) came back as 2.9999999999999996.
+     * Dividing the natural logarithms is exact for all of them, and closer to the true value more
+     * often than not across the range.</p>
+     */
+    public static final double LOG_2 = Math.log(2);
 
     /**
      * The number of bits for this Float type.

@@ -193,7 +193,7 @@ public abstract class BaseBinaryFP
             return frame.assignValue(iReturn, makeHandle(Math.log(d)));
 
         case "log2":
-            return frame.assignValue(iReturn, makeHandle(Math.log10(d)*LOG2_10));
+            return frame.assignValue(iReturn, makeHandle(Math.log(d) / LOG_2));
 
         case "log10":
             return frame.assignValue(iReturn, makeHandle(Math.log10(d)));
