@@ -37,6 +37,7 @@ class Float8e5Tests {
         testFloat8e5toArray();
         testFloat8e5Rounding();
         testFloat8e5Negate();
+        testFloat8e5Arithmetic();
 
         // FP8 format tests
         testFloat8e5Encoding();
@@ -254,6 +255,32 @@ class Float8e5Tests {
         assert -(-n) == n;
         assert (-n) < n;
         assert (-n).abs() == n;
+    }
+
+    /**
+     * Arithmetic is performed at wider precision and must be rounded back into this format: a
+     * result that is not representable here is a bug, not a more precise answer. E5M2 is IEEE-style, so an out-of-range result becomes an infinity.
+     */
+    void testFloat8e5Arithmetic() {
+        Float8e5 a = 1.0;
+        Float8e5 b = 2.0;
+        Float8e5 c = 3.0;
+
+        assert a + b == 3.0;
+        assert b + b == 4.0;
+        assert c - a == 2.0;
+        assert a - b == -1.0;
+        assert b * c == 6.0;
+        assert c / b == 1.5;
+        assert a - a == 0.0;
+
+        // the significand is far too short to hold this, so it must round away entirely
+        Float8e5 tiny = 0.0625;
+        assert a + tiny == 1.0;
+
+        Float8e5 max = 57344.0;
+        assert max + max == Float8e5.PositiveInfinity;
+        assert (max + max).infinity == True;
     }
 
     // ----- FP8 format tests ----------------------------------------------------------------------
