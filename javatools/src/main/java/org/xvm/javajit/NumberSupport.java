@@ -13,8 +13,10 @@ import org.xvm.javajit.registers.MultiSlot;
 
 import static java.lang.constant.ConstantDescs.CD_Integer;
 import static java.lang.constant.ConstantDescs.CD_Long;
+import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
+import static java.lang.constant.ConstantDescs.CD_short;
 
 import static org.xvm.javajit.Builder.CD_JavaMath;
 import static org.xvm.javajit.Builder.MD_FloorModI;
@@ -43,6 +45,22 @@ public interface NumberSupport
         };
     }
 
+
+    /**
+     * Float16 shares the "F" carrier with Float32, so an operation on it is performed at float
+     * precision and has to be rounded back into the format afterwards; without this, a Float16
+     * result can hold a value Float16 cannot represent. Float32 and Float64 fill their carriers
+     * exactly and need nothing.
+     */
+    private static void narrowFloat(CodeBuilder code, TypeConstant type) {
+        if ("Float16".equals(type.getSingleUnderlyingClass(false).getName())) {
+            code.invokestatic(Builder.CD_JavaFloat, "floatToFloat16",
+                        MethodTypeDesc.of(CD_short, CD_float))
+                .invokestatic(Builder.CD_JavaFloat, "float16ToFloat",
+                        MethodTypeDesc.of(CD_float, CD_short));
+        }
+    }
+
     /**
      * The signature shared by every FP8 binary helper: (encoding, encoding) -> encoding.
      */
@@ -67,7 +85,10 @@ public interface NumberSupport
                 Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.ladd();
-            case "F" -> code.fadd();
+            case "F" -> {
+                code.fadd();
+                narrowFloat(code, regTarget.type());
+            }
             case "D" -> code.dadd();
             default  -> throw new IllegalStateException();
         }
@@ -223,7 +244,10 @@ public interface NumberSupport
                     code.ldiv();
                 }
             }
-            case "F" -> code.fdiv();
+            case "F" -> {
+                code.fdiv();
+                narrowFloat(code, regTarget.type());
+            }
             case "D" -> code.ddiv();
             default  -> throw new IllegalStateException();
         }
@@ -350,7 +374,10 @@ public interface NumberSupport
                     code.invokestatic(CD_JavaMath, "floorMod", MD_FloorModJ);
                 }
             }
-            case "F" -> code.frem();
+            case "F" -> {
+                code.frem();
+                narrowFloat(code, regTarget.type());
+            }
             case "D" -> code.drem();
             default  -> throw new IllegalStateException();
         }
@@ -464,7 +491,10 @@ public interface NumberSupport
                 Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.lmul();
-            case "F" -> code.fmul();
+            case "F" -> {
+                code.fmul();
+                narrowFloat(code, regTarget.type());
+            }
             case "D" -> code.dmul();
             default  -> throw new IllegalStateException();
         }
@@ -770,7 +800,10 @@ public interface NumberSupport
                 Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.lsub();
-            case "F" -> code.fsub();
+            case "F" -> {
+                code.fsub();
+                narrowFloat(code, regTarget.type());
+            }
             case "D" -> code.dsub();
             default  -> throw new IllegalStateException();
         }

@@ -32,6 +32,7 @@ package numbers {
                 passed &= runTest(() -> new Dec64ConvertTests().run());
                 passed &= runTest(() -> new Dec128ConvertTests().run());
 
+                passed &= runTest(() -> new Float16Tests().run());
                 passed &= runTest(() -> new Float8e4Tests().run());
                 passed &= runTest(() -> new Float8e5Tests().run());
                 passed &= runTest(() -> new Float32Tests().run());
