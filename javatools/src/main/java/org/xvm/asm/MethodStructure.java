@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -1200,9 +1199,6 @@ public class MethodStructure
         setAbstract(false);
         resetRuntimeInfo();
 
-        if (getName().equals("compare") && getIdentityConstant().getNamespace().getName().equals("Const")) {
-            int q= 0;
-        }
         m_fNative    = true;
         m_fTransient = true;
     }
@@ -2186,7 +2182,7 @@ public class MethodStructure
 
     @Override
     public Iterable<? extends XvmStructure> getContained() {
-        return containedWith(() -> Stream.<XvmStructure>concat(
+        return containedWith(() -> Stream.concat(
                 Stream.<XvmStructure>concat(
                         Arrays.stream(m_aAnnotations), Arrays.stream(m_aReturns)),
                 Arrays.stream(m_aParams)).iterator());
@@ -2333,7 +2329,6 @@ public class MethodStructure
             }
 
             m_fTrailingPrefix = op instanceof Prefix;
-            m_mapIndex        = null;
 
             return this;
         }
@@ -2479,7 +2474,6 @@ public class MethodStructure
                 that.m_listOps = new ArrayList<>(this.m_listOps);
             }
 
-            that.m_mapIndex        = null;
             that.m_fTrailingPrefix = this.m_fTrailingPrefix;
             that.m_aop             = this.m_aop == null ? null : this.m_aop.clone();
             that.m_nPrevLine       = this.m_nPrevLine;
@@ -2816,11 +2810,6 @@ public class MethodStructure
          * List of ops being assembled.
          */
         private ArrayList<Op> m_listOps;
-
-        /**
-         * Lookup of op address by op.
-         */
-        private IdentityHashMap<Op, Integer> m_mapIndex;
 
         /**
          * True iff the last op added was a prefix.
