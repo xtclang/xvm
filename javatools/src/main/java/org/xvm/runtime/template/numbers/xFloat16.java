@@ -44,6 +44,14 @@ public class xFloat16
     }
 
     @Override
+    public FloatHandle makeHandle(double dValue) {
+        // a handle carries a Java double regardless of its Ecstasy type, and BaseBinaryFP computes
+        // in double, so a result would otherwise keep precision and range Float16 does not have.
+        // Round it back into the format here, at the single point every result passes through.
+        return super.makeHandle(Float.float16ToFloat(Float.floatToFloat16((float) dValue)));
+    }
+
+    @Override
     protected FPParts splitParts(double d) {
         short n = Float.floatToFloat16((float) d);
         return new FPParts((n & 0x8000) != 0, n & 0x03FF, (n & 0x7C00) >>> 10);
