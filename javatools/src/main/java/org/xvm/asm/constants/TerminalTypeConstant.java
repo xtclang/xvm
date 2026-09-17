@@ -1179,33 +1179,20 @@ public class TerminalTypeConstant
         }
 
         Constant constant = getDefiningConstant();
-        switch (constant.getFormat()) {
-        case Module:
-        case Package:
-        case NativeClass:
-            // these are always class types (not interface types)
-            return (IdentityConstant) constant;
-
-        case Class:
-            assert fAllowInterface ||
-                   (((ClassConstant) constant).getComponent()).getFormat() != Component.Format.INTERFACE;
-            return (IdentityConstant) constant;
-
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-            return ((FormalConstant) constant).getConstraintType().
-                getSingleUnderlyingClass(fAllowInterface);
-
-        case ParentClass:
-        case ChildClass:
-        case ThisClass:
-            return ((PseudoConstant) constant).getDeclarationLevelClass();
-
-        default:
-            throw new IllegalStateException("unexpected defining constant: " + constant);
-        }
+        return switch (constant.getFormat()) {
+            case Module, Package, NativeClass -> (IdentityConstant) constant; // never interfaces
+            case Class -> {
+                assert fAllowInterface ||
+                        getDefiningClassStructure(constant).getFormat() != Component.Format.INTERFACE;
+                yield (IdentityConstant) constant;
+            }
+            case Property, TypeParameter, FormalTypeChild, DynamicFormal ->
+                    ((FormalConstant) constant).getConstraintType()
+                            .getSingleUnderlyingClass(fAllowInterface);
+            case ThisClass, ParentClass, ChildClass ->
+                    ((PseudoConstant) constant).getDeclarationLevelClass();
+            default -> throw new IllegalStateException("unexpected defining constant: " + constant);
+        };
     }
 
     @Override
