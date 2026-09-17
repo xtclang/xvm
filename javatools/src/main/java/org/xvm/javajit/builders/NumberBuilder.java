@@ -29,6 +29,9 @@ import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
 
+import static org.xvm.javajit.Builder.MD_FP8Binary;
+import static org.xvm.javajit.Builder.MD_FP8Predicate;
+
 import static java.lang.constant.ConstantDescs.CD_Double;
 import static java.lang.constant.ConstantDescs.CD_Float;
 import static java.lang.constant.ConstantDescs.CD_Integer;
@@ -311,30 +314,23 @@ public class NumberBuilder extends AugmentingBuilder {
             String name = thisType.getSingleUnderlyingClass(false).getName();
             switch (name) {
             case "Bit", "Nibble", "UInt8", "UInt16", "UInt32", "Dec32", "Int32":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(64 - bitLength)
-                    .lushr()
-                    .l2i();
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength).l2i();
                 break;
 
             case "Int8":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(56)
-                    .lushr()
-                    .l2i()
-                    .i2b();
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength)
+                        .l2i()
+                        .i2b();
                 break;
 
             case "Int16":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(48)
-                    .lushr()
-                    .l2i()
-                    .i2s();
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength)
+                        .l2i()
+                        .i2s();
                 break;
 
             case "Dec64", "Int64", "UInt64":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength);
                 break;
 
             case "Dec128", "Int128", "UInt128":
@@ -345,37 +341,28 @@ public class NumberBuilder extends AugmentingBuilder {
 
             case "Float8e4", "Float8e5":
                 // an FP8 value is carried as its 8-bit encoding; just extract the byte
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(56)
-                    .lushr()
-                    .l2i()
-                    .loadConstant(0xFF)
-                    .iand();
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength).l2i();
                 break;
 
             case "Float16":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(48)
-                    .lushr()
-                    .l2i()
-                    .i2s()
-                    .invokestatic(CD_JavaFloat, "float16ToFloat",
-                            MethodTypeDesc.of(CD_float, CD_short));
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength)
+                        .l2i()
+                        .i2s()
+                        .invokestatic(CD_JavaFloat, "float16ToFloat",
+                                MethodTypeDesc.of(CD_float, CD_short));
                 break;
 
             case "Float32":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(32)
-                    .lushr()
-                    .l2i()
-                    .invokestatic(CD_JavaFloat, "intBitsToFloat",
-                            MethodTypeDesc.of(CD_float, CD_int));
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength)
+                        .l2i()
+                        .invokestatic(CD_JavaFloat, "intBitsToFloat",
+                                MethodTypeDesc.of(CD_float, CD_int));
                 break;
 
             case "Float64":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.invokestatic(CD_JavaDouble, "longBitsToDouble",
-                        MethodTypeDesc.of(CD_double, CD_long));
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength)
+                        .invokestatic(CD_JavaDouble, "longBitsToDouble",
+                                MethodTypeDesc.of(CD_double, CD_long));
                 break;
 
             default:
@@ -387,9 +374,24 @@ public class NumberBuilder extends AugmentingBuilder {
     }
 
     /**
+     * Load a primitive Number constructor's representation with the value in the low bits.
+     * <p/>
+     * {@link #loadConstructorLong} leaves the value in the high bits of the long, so a fixed-width
+     * type has to shift it down by its own width subtracted from the 64 bits of the long. A 64-bit
+     * type needs no shift.
+     */
+    private CodeBuilder loadConstructorBits(CodeBuilder code, int ctxSlot, int arraySlot,
+                                     ClassDesc arrayCD, boolean isBitArray, int bitLength) {
+        loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
+        return bitLength < 64
+                ? code.loadConstant(64 - bitLength).lushr()
+                : code;
+    }
+
+    /**
      * Load a 64-bit segment of the representation supplied to a primitive Number constructor.
      */
-    private void loadConstructorLong(CodeBuilder code, int ctxSlot, int arraySlot,
+    private CodeBuilder loadConstructorLong(CodeBuilder code, int ctxSlot, int arraySlot,
                                      ClassDesc arrayCD, boolean isBitArray, int index, int bitLength) {
         code.aload(arraySlot)
             .aload(ctxSlot)
@@ -402,7 +404,7 @@ public class NumberBuilder extends AugmentingBuilder {
             code.loadConstant(bitLength);
             md = MethodTypeDesc.of(CD_long, CD_Ctx, CD_int, CD_int);
         }
-        code.invokevirtual(arrayCD, "$toLong", md);
+        return code.invokevirtual(arrayCD, "$toLong", md);
     }
 
     /**
@@ -1184,33 +1186,31 @@ public class NumberBuilder extends AugmentingBuilder {
                 break;
 
             case "Float8e4":
-                MethodTypeDesc f8e4Cmp = MethodTypeDesc.of(CD_int, CD_int, CD_int);
-                code.invokestatic(CD_Float8e4, "$compare", f8e4Cmp);
+                code.invokestatic(CD_Float8e4, "$compare", MD_FP8Binary);
                 break;
 
             case "Float8e5":
-                MethodTypeDesc f8e5Cmp = MethodTypeDesc.of(CD_int, CD_int, CD_int);
-                code.invokestatic(CD_Float8e5, "$compare", f8e5Cmp);
+                code.invokestatic(CD_Float8e5, "$compare", MD_FP8Binary);
                 break;
 
             case "Float16", "Float32":
-                MethodTypeDesc fCmp = MethodTypeDesc.of(CD_int, CD_float, CD_float);
-                code.invokestatic(CD_Float, "compare", fCmp);
+                code.invokestatic(CD_Float, "compare",
+                        MethodTypeDesc.of(CD_int, CD_float, CD_float));
                 break;
 
             case "Float64":
-                MethodTypeDesc dCmp = MethodTypeDesc.of(CD_int, CD_double, CD_double);
-                code.invokestatic(CD_Double, "compare", dCmp);
+                code.invokestatic(CD_Double, "compare",
+                        MethodTypeDesc.of(CD_int, CD_double, CD_double));
                 break;
 
             case "Dec32":
-                MethodTypeDesc d32Cmp = MethodTypeDesc.of(CD_int, CD_int, CD_int);
-                code.invokestatic(CD_Dec32, "$compare", d32Cmp);
+                code.invokestatic(CD_Dec32, "$compare",
+                        MethodTypeDesc.of(CD_int, CD_int, CD_int));
                 break;
 
             case "Dec64":
-                MethodTypeDesc d64Cmp = MethodTypeDesc.of(CD_int, CD_long, CD_long);
-                code.invokestatic(CD_Dec64, "$compare", d64Cmp);
+                code.invokestatic(CD_Dec64, "$compare",
+                        MethodTypeDesc.of(CD_int, CD_long, CD_long));
                 break;
 
             case "Dec128":
