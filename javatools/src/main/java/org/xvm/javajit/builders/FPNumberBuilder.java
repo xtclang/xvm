@@ -1,6 +1,5 @@
 package org.xvm.javajit.builders;
 
-
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
