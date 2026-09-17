@@ -15,7 +15,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -325,6 +324,7 @@ public class ConstantPool
      *
      * @return a {@link RegExConstant} for the passed regular expression value
      */
+    @SuppressWarnings("unused")
     public RegExConstant ensureRegExConstant(String expression, int nFlags) {
         // check the pre-existing constants first (only for default flags)
         RegExConstant constant = nFlags == 0
@@ -3919,46 +3919,41 @@ public class ConstantPool
     /**
      * A cached and pre-parsed image of the "implicit.x" file.
      */
-    private static final Map<String, String[]> s_implicits;
-    private static final Map<String, String>   s_implicitsByPath;
-    static {
-        try {
-            ClassLoader loader = ConstantPool.class.getClassLoader();
-            if (loader == null) {
-                loader = ClassLoader.getSystemClassLoader();
-            }
-            Source src = new Source(loader.getResourceAsStream("implicit.x"));
+    private static final Map<String, String[]> s_implicits       = parseImplicits();
+    private static final Map<String, String>   s_implicitsByPath = indexImplicitsByPath(s_implicits);
 
-            ErrorList errs   = new ErrorList(1);
-            Parser    parser = new Parser(src, errs);
-            Map<String, String[]> mapImplicits = parser.parseImplicits();
-
-            s_implicits       = new HashMap<>(mapImplicits);
-            s_implicitsByPath = new HashMap<>();
-
-            for (Map.Entry<String, String[]> entry : mapImplicits.entrySet()) {
-                StringBuilder sb     = new StringBuilder();
-                boolean       fFirst = true;
-                for (String sPart : entry.getValue()) {
-                    if (fFirst) {
-                        fFirst = false;
-                    } else {
-                        sb.append('.');
-                    }
-                    sb.append(sPart);
-                }
-                s_implicitsByPath.putIfAbsent(sb.toString(), entry.getKey());
-            }
-
-            for (ErrorListener.ErrorInfo err : errs.getErrors()) {
-                System.err.println(err);
-            }
-            if (errs.hasSeriousErrors()) {
-                throw new IllegalStateException();
-            }
-        } catch (Exception e) {
-            throw e instanceof RuntimeException ex ? ex : new RuntimeException(e);
+    /**
+     * @return the contents of the "implicit.x" resource, mapping each implicitly imported name to
+     *         the parts of its qualified path
+     */
+    private static Map<String, String[]> parseImplicits() {
+        ClassLoader loader = ConstantPool.class.getClassLoader();
+        if (loader == null) {
+            loader = ClassLoader.getSystemClassLoader();
         }
+
+        ErrorList errs = new ErrorList(1);
+        Map<String, String[]> mapImplicits =
+                new Parser(new Source(loader.getResourceAsStream("implicit.x")), errs).parseImplicits();
+
+        errs.getErrors().forEach(System.err::println);
+        if (errs.hasSeriousErrors()) {
+            throw new IllegalStateException("unable to parse implicit.x");
+        }
+        return Map.copyOf(mapImplicits);
+    }
+
+    /**
+     * @param mapImplicits  implicitly imported names, mapped to the parts of their qualified paths
+     *
+     * @return the reverse index, mapping each dotted path to the name that first declared it
+     */
+    private static Map<String, String> indexImplicitsByPath(Map<String, String[]> mapImplicits) {
+        return mapImplicits.entrySet().stream()
+                .collect(Collectors.toUnmodifiableMap(
+                        entry -> String.join(".", entry.getValue()),
+                        Map.Entry::getKey,
+                        (sFirst, sDuplicate) -> sFirst));
     }
 
     // ----- fields --------------------------------------------------------------------------------
