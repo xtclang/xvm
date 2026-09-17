@@ -90,17 +90,13 @@ public class EnumerationBuilder extends CommonBuilder {
         JitMethodDesc jmDesc     = prop.getGetterJitDesc(this);
 
         classBuilder.withMethodBody(getterName + OPT, jmDesc.optimizedMD, ClassFile.ACC_PUBLIC,
-                code -> {
-            code.loadConstant((long) enumValues.length)
-                .lreturn();
-        });
+                code -> code.loadConstant((long) enumValues.length)
+                    .lreturn());
 
         classBuilder.withMethodBody(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC,
-                code -> {
-            code.loadConstant((long) enumValues.length)
-                .invokestatic(CD_Int64, "$box", md(CD_Int64, CD_long))
-                .areturn();
-        });
+                code -> code.loadConstant((long) enumValues.length)
+                    .invokestatic(CD_Int64, "$box", md(CD_Int64, CD_long))
+                    .areturn());
     }
 
     private void assembleNamesProp(ClassBuilder classBuilder) {
@@ -179,13 +175,12 @@ public class EnumerationBuilder extends CommonBuilder {
     }
 
     private void assembleConstructor(ClassBuilder classBuilder) {
-        classBuilder.withMethodBody("<init>", MD_xvmVoid, ClassFile.ACC_PUBLIC, code -> {
-            code.aload(0)
-                .aload(code.parameterSlot(0))
-                .getstatic(art.CD(), "$sc0", CD_TypeConstant)
-                .invokespecial(CD_Enumeration, "<init>", MD_xvmInitType)
-                .return_();
-        });
+        classBuilder.withMethodBody("<init>", MD_xvmVoid, ClassFile.ACC_PUBLIC,
+                code -> code.aload(0)
+                    .aload(code.parameterSlot(0))
+                    .getstatic(art.CD(), "$sc0", CD_TypeConstant)
+                    .invokespecial(CD_Enumeration, "<init>", MD_xvmInitType)
+                    .return_());
     }
 
     /**

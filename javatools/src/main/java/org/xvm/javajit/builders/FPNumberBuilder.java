@@ -354,31 +354,30 @@ public class FPNumberBuilder extends NumberBuilder {
     /**
      * Convert the double on the stack back to this type's primitive carrier.
      */
-    protected void narrowDoubleToCarrier(CodeBuilder code, ClassDesc valueCD) {
+    protected CodeBuilder narrowDoubleToCarrier(CodeBuilder code, ClassDesc valueCD) {
         if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
             // an FP8 value is carried as its 8-bit encoding, so re-encode the result
-            code.d2f()
-                .invokestatic(fp8CD, "$toBits", md(CD_int, CD_float));
-        } else if (valueCD.equals(CD_float)) {
-            code.d2f();
-            if (thisType.equals(pool().typeBFloat16())) {
-                code.invokestatic(CD_BFloat16, "$narrow", md(CD_float, CD_float));
-            }
-        } else {
-            assert valueCD.equals(CD_double) : "unsupported \"double\" conversion: " + valueCD;
+            return code.d2f().invokestatic(fp8CD, "$toBits", md(CD_int, CD_float));
         }
+        if (valueCD.equals(CD_float)) {
+            code.d2f();
+            return thisType.equals(pool().typeBFloat16())
+                    ? code.invokestatic(CD_BFloat16, "$narrow", md(CD_float, CD_float))
+                    : code;
+        }
+        assert valueCD.equals(CD_double) : "unsupported \"double\" conversion: " + valueCD;
+        return code;
     }
 
     /**
      * Consume this type's primitive carrier from the stack and leave an "is finite" boolean.
      */
-    protected void loadIsFinite(CodeBuilder code, ClassDesc valueCD) {
+    protected CodeBuilder loadIsFinite(CodeBuilder code, ClassDesc valueCD) {
         if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
-            code.invokestatic(fp8CD, "$finite", MD_FP8Predicate);
-        } else {
-            code.invokestatic(valueCD.equals(CD_float) ? CD_JavaFloat : CD_JavaDouble,
-                    "isFinite", md(CD_boolean, valueCD));
+            return code.invokestatic(fp8CD, "$finite", MD_FP8Predicate);
         }
+        return code.invokestatic(valueCD.equals(CD_float) ? CD_JavaFloat : CD_JavaDouble,
+                "isFinite", md(CD_boolean, valueCD));
     }
 
     /**

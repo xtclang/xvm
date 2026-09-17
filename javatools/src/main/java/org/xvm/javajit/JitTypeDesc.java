@@ -145,10 +145,11 @@ public class JitTypeDesc {
      * @return the ClassDesc to use for a primitive field if the specified type is optimizable to a
      * single Java primitive ClassDesc; null otherwise
      */
-    public static ClassDesc getPrimitiveFieldClass(TypeConstant type) {
+    public static ClassDesc findPrimitiveFieldClass(TypeConstant type) {
         TypeConstant sansNullable = type.removeNullable();
         if (sansNullable.isJavaPrimitive()) {
-            return switch (sansNullable.getSingleUnderlyingClass(false).getName()) {
+            String name = sansNullable.getSingleUnderlyingClass(false).getName();
+            return switch (name) {
                 case "Byte", "Nibble", "Int8", "UInt8", "Float8e4", "Float8e5"
                         -> CD_byte;
                 case "Int16", "UInt16"
@@ -163,10 +164,30 @@ public class JitTypeDesc {
                         -> CD_double;
                 case "Boolean", "Bit"
                         -> CD_boolean;
+                // isJavaPrimitive() and this switch must list the same names
                 default
-                        -> null;
+                        -> throw new IllegalStateException("No field carrier for: " + name);
             };
         }
         return null;
+    }
+
+    /**
+     * The same carrier as {@link #findPrimitiveFieldClass}, for a type already known to have one.
+     * Callers that have checked {@link TypeConstant#isJavaPrimitive} should use this, so they do
+     * not have to answer for a null that cannot occur.
+     *
+     * @param type  a type with a Java primitive carrier; a nullable form is accepted
+     *
+     * @return the carrier, never null
+     *
+     * @throws IllegalArgumentException  if the type has no Java primitive carrier
+     */
+    public static ClassDesc getPrimitiveFieldClass(TypeConstant type) {
+        ClassDesc cd = findPrimitiveFieldClass(type);
+        if (cd == null) {
+            throw new IllegalArgumentException("Not a Java primitive type: " + type);
+        }
+        return cd;
     }
 }
