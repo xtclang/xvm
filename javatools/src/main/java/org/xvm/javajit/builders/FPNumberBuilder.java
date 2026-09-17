@@ -1,5 +1,6 @@
 package org.xvm.javajit.builders;
 
+
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
@@ -95,7 +96,7 @@ public class FPNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "exponent$get$p()".
-     *
+     * <p>
      * {@code return Int64.valueOf((rawBits & exponentMask) >>> significandBitLength);}
      */
     protected void generateExponentGet(CodeBuilder code, JitMethodDesc jmd) {
@@ -105,7 +106,7 @@ public class FPNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "significand$get$p()".
-     *
+     * <p>
      * {@code return Int64.valueOf(rawBits & significandMask);}
      */
     protected void generateSignificandGet(CodeBuilder code, JitMethodDesc jmd) {
@@ -283,7 +284,7 @@ public class FPNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "round$p()".
-     *
+     * <p>
      * {@code return finite ? bigDecimal.setScale(0, direction).toFPNumber() : this;}
      */
     protected void generateRound(CodeBuilder code, JitMethodDesc jmd) {
@@ -292,7 +293,7 @@ public class FPNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "floor$p()".
-     *
+     * <p>
      * {@code return finite ? bigDecimal.setScale(0, FLOOR).toFPNumber() : this;}
      */
     protected void generateFloor(CodeBuilder code, JitMethodDesc jmd) {
@@ -301,7 +302,7 @@ public class FPNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "ceil$p()".
-     *
+     * <p>
      * {@code return finite ? bigDecimal.setScale(0, CEILING).toFPNumber() : this;}
      */
     protected void generateCeil(CodeBuilder code, JitMethodDesc jmd) {
@@ -425,8 +426,7 @@ public class FPNumberBuilder extends NumberBuilder {
             // already a double
         } else if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
             // an FP8 value is carried as its 8-bit encoding, so decode it before widening
-            code.invokestatic(fp8CD, "$toFloat", MethodTypeDesc.of(CD_float, CD_int))
-                .f2d();
+            code.invokestatic(fp8CD, "$toFloat", MethodTypeDesc.of(CD_float, CD_int)).f2d();
         } else {
             throw new IllegalStateException("Unsupported binary FPNumber type " + thisType);
         }
