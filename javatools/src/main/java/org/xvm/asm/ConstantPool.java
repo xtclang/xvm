@@ -3,6 +3,7 @@ package org.xvm.asm;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 
 import java.nio.file.attribute.FileTime;
@@ -3608,7 +3609,6 @@ public class ConstantPool
         m_typeFloat16       = null;
         m_typeFloat32       = null;
         m_typeFloat64       = null;
-        f_jitPrimitives.reset();
         m_typeIndexed       = null;
         m_typeArray         = null;
         m_typeMatrix        = null;
@@ -3658,6 +3658,8 @@ public class ConstantPool
         m_sigValidator      = null;
         m_infoPlaceholder   = null;
 
+        f_jitPrimitives.reset();
+
         // sort the Constants by how often they are referred to within the FileStructure, with the
         // most frequently referred-to Constants appearing first
         Arrays.sort(aconst, 0, cAfter, DEBUG
@@ -3695,13 +3697,8 @@ public class ConstantPool
      * @return the contents of the "implicit.x" resource
      */
     private static Implicits parseImplicits() {
-        ClassLoader loader = ConstantPool.class.getClassLoader();
-        if (loader == null) {
-            loader = ClassLoader.getSystemClassLoader();
-        }
-
         var errs = new ErrorList(1);
-        var mapByName = new Parser(new Source(loader.getResourceAsStream("implicit.x")), errs).parseImplicits();
+        var mapByName = new Parser(readImplicitSource(), errs).parseImplicits();
         errs.getErrors().forEach(System.err::println);
         if (errs.hasSeriousErrors()) {
             throw new IllegalStateException("unable to parse implicit.x");
@@ -3711,9 +3708,25 @@ public class ConstantPool
                 .collect(Collectors.toUnmodifiableMap(
                         entry -> String.join(".", entry.getValue()),
                         Map.Entry::getKey,
-                        (sFirst, sDuplicate) -> sFirst));
+                        (sFirst, _) -> sFirst));
 
         return new Implicits(Map.copyOf(mapByName), mapByPath);
+    }
+
+    /**
+     * @return the "implicit.x" resource as a {@link Source}
+     */
+    private static Source readImplicitSource() {
+        // Class.getResourceAsStream falls back to the system resources when this class was loaded
+        // by the bootstrap loader, which is the only case where getClassLoader() returns null
+        try (InputStream in = ConstantPool.class.getResourceAsStream("/implicit.x")) {
+            if (in == null) {
+                throw new IllegalStateException("implicit.x is missing from the classpath");
+            }
+            return new Source(in);
+        } catch (IOException e) {
+            throw new IllegalStateException("unable to read implicit.x", e);
+        }
     }
 
     // ----- fields --------------------------------------------------------------------------------
