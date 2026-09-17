@@ -69,6 +69,12 @@ public class xFloat32
     }
 
     @Override
+    protected FPParts splitParts(double d) {
+        int n = Float.floatToRawIntBits((float) d);
+        return new FPParts((n & 0x80000000) != 0, n & 0x007FFFFF, (n & 0x7F800000) >>> 23);
+    }
+
+    @Override
     protected String toString(double d) {
         return String.valueOf((float) d);
     }

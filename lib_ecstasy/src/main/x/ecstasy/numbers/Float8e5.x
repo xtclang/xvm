@@ -36,7 +36,7 @@ const Float8e5
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct an 8-bit E4M3 binary floating point number from its bitwise machine representation.
+     * Construct an 8-bit E5M2 binary floating point number from its bitwise machine representation.
      *
      * @param bits  an array of bit values that represent this number, ordered from left-to-right,
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
@@ -48,7 +48,7 @@ const Float8e5
     }
 
     /**
-     * Construct an 8-bit E4M3 binary floating point number from its network-portable representation.
+     * Construct an 8-bit E5M2 binary floating point number from its network-portable representation.
      *
      * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
      *               as they would appear on the wire or in a file
@@ -60,7 +60,7 @@ const Float8e5
     }
 
     /**
-     * Construct an 8-bit E4M3 binary floating point number from its `String` representation.
+     * Construct an 8-bit E5M2 binary floating point number from its `String` representation.
      *
      * @param text  a floating point number, in text format
      */
@@ -143,27 +143,27 @@ const Float8e5
 
     @Override
     Int emax.get() {
-        return 8;
+        return 15;
     }
 
     @Override
     Int emin.get() {
-        return -6;
+        return 1 - emax;
     }
 
     @Override
     Int bias.get() {
-        return 7;
+        return emax;
     }
 
     @Override
     Int significandBitLength.get() {
-        return 3;
+        return 2;
     }
 
     @Override
     Int exponentBitLength.get() {
-        return 4;
+        return 5;
     }
 
     // ----- FPNumber operations -------------------------------------------------------------------

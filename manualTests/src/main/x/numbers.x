@@ -9,6 +9,11 @@ module TestNumbers {
         testFloat64();
         testFloat32();
         testFloat16();
+        // TODO: enable once the runtime can materialise a BFloat16 constant. Today this dies with
+        // "Unknown constant: BFloat16{value=1.0}": there is no xBFloat16 template in
+        // runtime/template/numbers, so no BFloat16 value can be created at all.
+        // testBFloat16();
+        testFloat8();
         testDec64();
         testInfinity();
         testConverter();
@@ -201,6 +206,134 @@ module TestNumbers {
 
         Float16 pi16 = FPNumber.PI;
         console.print("pi16=" + pi16);
+
+        // every Float16 whose significand is zero -- every exact power of two, 1.0 included --
+        // used to decode 1023 ULPs high: 1.0 came back as 1.000122, 2.0 as 2.000244
+        Float16 one = 1.0;
+        Float16 two = 2.0;
+        assert one.toByteArray() == [0x3C, 0x00];
+        assert two.toByteArray() == [0x40, 0x00];
+        assert one + one == two;
+        assert two / two == one;
+        assert one * one == one;
+        console.print($"f16 exact: one={one} two={two} half={two / (one + one)}");
+
+        // arithmetic happens at wider precision and has to be rounded back into the format;
+        // Float16 stores 10 significand bits, so 1.0 + 2^-11 must come back as exactly 1.0
+        Float16 tiny = 0.00048828125;
+        assert one + tiny == one;
+
+        // and exceeding the largest finite value yields an infinity, not a larger number
+        Float16 max16 = 65504.0;
+        assert max16.finite;
+        assert (max16 + max16).infinity;
+        console.print($"f16 limits: max={max16} over={max16 + max16}");
+    }
+
+    /**
+     * The 8-bit FP8 formats. Float8e4 is the OCP "E4M3FN" variant: it has no infinities, its only
+     * NaN encodings are #7F/#FF, and its largest finite value is #7E == 448. Float8e5 is the
+     * IEEE-style "E5M2": infinity at #7C/#FC, largest finite #7B == 57344.
+     */
+    void testFloat8() {
+        console.print("\n** testFloat8()");
+
+        Float8e4 n1 = 1.0;
+        console.print("n1=" + n1);
+
+        Byte[]   bytes1 = n1.toByteArray();
+        Float8e4 n11    = new Float8e4(bytes1);
+        assert n11 == n1;
+
+        Bit[]    bits1 = n1.toBitArray();
+        Float8e4 n12   = new Float8e4(bits1);
+        assert n12 == n1;
+
+        // the encoder used to collapse every non-zero value onto +0, which made these equal
+        assert Float8e4.one() != Float8e4.zero();
+        assert Float8e4.one() == n1;
+
+        Float8e4 max4 = 448.0;               // largest finite E4M3FN value
+        console.print("max4=" + max4);
+        assert max4.toByteArray() == [0x7E];
+        assert !max4.infinity;
+
+        Float8e5 n2 = 1.0;
+        console.print("n2=" + n2);
+
+        Byte[]   bytes2 = n2.toByteArray();
+        Float8e5 n21    = new Float8e5(bytes2);
+        assert n21 == n2;
+
+        Bit[]    bits2 = n2.toBitArray();
+        Float8e5 n22   = new Float8e5(bits2);
+        assert n22 == n2;
+
+        assert Float8e5.one() != Float8e5.zero();
+        assert Float8e5.one() == n2;
+
+        Float8e5 max5 = 57344.0;             // largest finite E5M2 value
+        console.print("max5=" + max5);
+        assert max5.toByteArray() == [0x7B];
+        assert !max5.infinity;
+        assert Float8e5.PositiveInfinity.infinity;
+
+        // split() must report the fields of THIS format, not of the double that carries the value
+        (Boolean neg4, IntNumber sig4, IntNumber exp4) = n1.split();
+        console.print($"Float8e4 1.0 -> negative={neg4} significand={sig4} exponent={exp4}");
+        assert !neg4 && sig4 == 0 && exp4 == 7;      // E4M3 bias 7
+
+        (Boolean neg5, IntNumber sig5, IntNumber exp5) = n2.split();
+        console.print($"Float8e5 1.0 -> negative={neg5} significand={sig5} exponent={exp5}");
+        assert !neg5 && sig5 == 0 && exp5 == 15;     // E5M2 bias 15
+
+        // regression: the Float64 arm used to compute (l & EXP_MASK >>> 52), which Java parses as
+        // (l & (EXP_MASK >>> 52)) -- the low mantissa bits, so the exponent always came out 0
+        (Boolean neg64, IntNumber sig64, IntNumber exp64) = 1.0.toFloat64().split();
+        console.print($"Float64 1.0 -> negative={neg64} significand={sig64} exponent={exp64}");
+        assert !neg64 && sig64 == 0 && exp64 == 1023;
+
+        (Boolean neg16, IntNumber sig16, IntNumber exp16) = 1.0.toFloat16().split();
+        assert !neg16 && sig16 == 0 && exp16 == 15;
+    }
+
+    /**
+     * BFloat16 is the top half of a float32, so encoding it is a truncation and the only question
+     * is how it rounds. It used to "round" by multiplying the value by 1.001957, which leaves
+     * exactly representable values alone -- so round trips looked clean -- while moving 12.5% of
+     * the values that actually need rounding to the wrong neighbour.
+     *
+     * NOTE: not called from run() yet -- see the TODO at the call site.
+     */
+    void testBFloat16() {
+        console.print("\n** testBFloat16()");
+
+        BFloat16 one = 1.0;
+        BFloat16 two = 2.0;
+        assert one.toByteArray() == [0x3F, 0x80];
+        assert two.toByteArray() == [0x40, 0x00];
+        assert one + one == two;
+        assert two / two == one;
+
+        Byte[]   bytes = one.toByteArray();
+        BFloat16 n11   = new BFloat16(bytes);
+        assert n11 == one;
+
+        Bit[]    bits = one.toBitArray();
+        BFloat16 n12  = new BFloat16(bits);
+        assert n12 == one;
+
+        // exactly halfway between #3F80 (1.0) and #3F81 (1.0078125): ties go to the even
+        // neighbour, which is 1.0
+        BFloat16 tie = 1.00390625;
+        assert tie == one;
+
+        // a value the old encoder sent to the wrong neighbour: it gave -1.5703125 (#BFC9) where
+        // the nearest BFloat16 is -1.578125 (#BFCA)
+        BFloat16 near = -1.5748398;
+        assert near == -1.578125;
+
+        console.print($"bf16: one={one} two={two} tie={tie} near={near}");
     }
 
     void testDec64() {

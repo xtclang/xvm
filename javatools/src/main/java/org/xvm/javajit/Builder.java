@@ -298,9 +298,7 @@ public abstract class Builder {
         case FloatConstant floatConstant:
             return switch (floatConstant.getFormat()) {
                 case Float16 -> {
-                    float value = floatConstant.getValue();
-                    // normalize the value produced by the legacy Float16 constant decoder
-                    code.loadConstant(Float.float16ToFloat(Float.floatToFloat16(value)));
+                    code.loadConstant(floatConstant.getValue().floatValue());
                     yield new SingleSlot(constant.getType(), Primitive, CD_float, "");
                 }
                 case Float32 -> {
