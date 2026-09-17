@@ -52,13 +52,13 @@ public interface NumberSupport
      * result can hold a value Float16 cannot represent. Float32 and Float64 fill their carriers
      * exactly and need nothing.
      */
-    private static void narrowFloat(CodeBuilder code, TypeConstant type) {
-        if ("Float16".equals(type.getSingleUnderlyingClass(false).getName())) {
-            code.invokestatic(Builder.CD_JavaFloat, "floatToFloat16",
-                        MethodTypeDesc.of(CD_short, CD_float))
-                .invokestatic(Builder.CD_JavaFloat, "float16ToFloat",
-                        MethodTypeDesc.of(CD_float, CD_short));
-        }
+    private static CodeBuilder narrowFloat(CodeBuilder code, TypeConstant type) {
+        return "Float16".equals(type.getSingleUnderlyingClass(false).getName())
+                ? code.invokestatic(Builder.CD_JavaFloat, "floatToFloat16",
+                            MethodTypeDesc.of(CD_short, CD_float))
+                      .invokestatic(Builder.CD_JavaFloat, "float16ToFloat",
+                            MethodTypeDesc.of(CD_float, CD_short))
+                : code;
     }
 
     /**
@@ -80,12 +80,10 @@ public interface NumberSupport
                 Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.ladd();
-            case "F" -> {
-                code.fadd();
-                narrowFloat(code, regTarget.type());
-            }
+            case "F" -> narrowFloat(code.fadd(), regTarget.type());
             case "D" -> code.dadd();
-            default  -> throw new IllegalStateException();
+            default  -> throw new IllegalStateException(
+                    "Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -136,7 +134,8 @@ public interface NumberSupport
             }
             case "J" -> code.land();
             case "Z" -> code.iand();
-            default  -> throw new IllegalStateException();
+            default  -> throw new IllegalStateException(
+                    "Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -181,7 +180,8 @@ public interface NumberSupport
             }
             case "Z" -> code.iconst_1().ixor();
             case "J" -> code.ldc(-1L).lxor();
-            default  -> throw new IllegalStateException();
+            default  -> throw new IllegalStateException(
+                    "Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -239,12 +239,10 @@ public interface NumberSupport
                     code.ldiv();
                 }
             }
-            case "F" -> {
-                code.fdiv();
-                narrowFloat(code, regTarget.type());
-            }
+            case "F" -> narrowFloat(code.fdiv(), regTarget.type());
             case "D" -> code.ddiv();
-            default  -> throw new IllegalStateException();
+            default  -> throw new IllegalStateException(
+                    "Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -369,12 +367,10 @@ public interface NumberSupport
                     code.invokestatic(CD_JavaMath, "floorMod", MD_FloorModJ);
                 }
             }
-            case "F" -> {
-                code.frem();
-                narrowFloat(code, regTarget.type());
-            }
+            case "F" -> narrowFloat(code.frem(), regTarget.type());
             case "D" -> code.drem();
-            default  -> throw new IllegalStateException();
+            default  -> throw new IllegalStateException(
+                    "Unsupported carrier: " + cd.descriptorString());
         }
     }
 
@@ -434,13 +430,15 @@ public interface NumberSupport
                     case "Int32" -> {}
                     case "UInt8", "UInt16", "UInt32"
                             -> bctx.throwUnsupported(code);
-                    default -> throw new IllegalStateException();
+                    default -> throw new IllegalStateException("Unsupported type: "
+                            + regTarget.type().getSingleUnderlyingClass(false).getName());
                 }
             }
             case "J" -> code.lneg();
             case "F" -> code.fneg();
             case "D" -> code.dneg();
-            default  -> throw new IllegalStateException();
+            default  -> throw new IllegalStateException(
+                    "Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -486,12 +484,10 @@ public interface NumberSupport
                 Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.lmul();
-            case "F" -> {
-                code.fmul();
-                narrowFloat(code, regTarget.type());
-            }
+            case "F" -> narrowFloat(code.fmul(), regTarget.type());
             case "D" -> code.dmul();
-            default  -> throw new IllegalStateException();
+            default  -> throw new IllegalStateException(
+                    "Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -541,7 +537,8 @@ public interface NumberSupport
             }
             case "Z" -> code.ior();
             case "J" -> code.lor();
-            default  -> throw new IllegalStateException();
+            default  -> throw new IllegalStateException(
+                    "Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -602,7 +599,8 @@ public interface NumberSupport
                 Builder.adjustIntValue(code, regLoaded.type());
             }
             case "J" -> code.lshl();
-            default  -> throw new IllegalStateException();
+            default  -> throw new IllegalStateException(
+                    "Unsupported carrier: " + regLoaded.cd().descriptorString());
         }
         return regLoaded.type();
     }
@@ -770,7 +768,8 @@ public interface NumberSupport
                     code.lshr();
                 }
             }
-            default  -> throw new IllegalStateException();
+            default  -> throw new IllegalStateException(
+                    "Unsupported carrier: " + regTarget.cd().descriptorString());
         }
 
         return typeTarget;
@@ -795,12 +794,10 @@ public interface NumberSupport
                 Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.lsub();
-            case "F" -> {
-                code.fsub();
-                narrowFloat(code, regTarget.type());
-            }
+            case "F" -> narrowFloat(code.fsub(), regTarget.type());
             case "D" -> code.dsub();
-            default  -> throw new IllegalStateException();
+            default  -> throw new IllegalStateException(
+                    "Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -851,7 +848,8 @@ public interface NumberSupport
             }
             case "Z" -> code.ixor();
             case "J" -> code.lxor();
-            default  -> throw new IllegalStateException();
+            default  -> throw new IllegalStateException(
+                    "Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
