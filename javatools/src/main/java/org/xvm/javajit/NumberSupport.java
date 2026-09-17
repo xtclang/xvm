@@ -83,8 +83,7 @@ public interface NumberSupport
             case "J" -> code.ladd();
             case "F" -> narrowFloat(code.fadd(), regTarget.type());
             case "D" -> code.dadd();
-            default  -> throw new IllegalStateException(
-                    "Unsupported carrier: " + regTarget.cd().descriptorString());
+            default  -> throw new IllegalStateException("Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -106,16 +105,11 @@ public interface NumberSupport
                                       RegisterInfo regTarget,
                                       int          nArgId) {
         switch (regTarget.type().getValueString()) {
-            case "Int128", "UInt128" ->
-                    buildLongLongAdd(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec32" ->
-                    buildDec32Add(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec", "Dec64" ->
-                    buildDec64Add(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec128" ->
-                    buildDec128Add(bctx, code, (MultiSlot) regTarget, nArgId);
-            default  -> throw new IllegalStateException("Unsupported type: "
-                    + regTarget.type().getValueString());
+            case "Int128", "UInt128" -> buildLongLongAdd(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec32"             -> buildDec32Add(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec", "Dec64"      -> buildDec64Add(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec128"            -> buildDec128Add(bctx, code, (MultiSlot) regTarget, nArgId);
+            default  -> throw new IllegalStateException("Unsupported type: " + regTarget.type().getValueString());
         }
     }
 
@@ -135,8 +129,7 @@ public interface NumberSupport
             }
             case "J" -> code.land();
             case "Z" -> code.iand();
-            default  -> throw new IllegalStateException(
-                    "Unsupported carrier: " + regTarget.cd().descriptorString());
+            default  -> throw new IllegalStateException("Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -158,10 +151,8 @@ public interface NumberSupport
                                       RegisterInfo regTarget,
                                       int          nArgId) {
         switch (regTarget.type().getValueString()) {
-            case "Int128", "UInt128" ->
-                    buildLongLongAnd(bctx, code, (MultiSlot) regTarget, nArgId);
-            default -> throw new IllegalStateException("Unsupported type: "
-                    + regTarget.type().getValueString());
+            case "Int128", "UInt128" -> buildLongLongAnd(bctx, code, (MultiSlot) regTarget, nArgId);
+            default -> throw new IllegalStateException("Unsupported type: " + regTarget.type().getValueString());
         }
     }
 
@@ -175,14 +166,10 @@ public interface NumberSupport
      */
     default void buildPrimitiveCompl(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         switch (regTarget.cd().descriptorString()) {
-            case "I"  -> {
-                code.iconst_m1().ixor();
-                Builder.adjustIntValue(code, regTarget.type());
-            }
+            case "I"  -> Builder.adjustIntValue(code.iconst_m1().ixor(), regTarget.type());
             case "Z" -> code.iconst_1().ixor();
             case "J" -> code.ldc(-1L).lxor();
-            default  -> throw new IllegalStateException(
-                    "Unsupported carrier: " + regTarget.cd().descriptorString());
+            default  -> throw new IllegalStateException("Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -198,11 +185,8 @@ public interface NumberSupport
     default void buildXvmPrimitiveCompl(CodeBuilder  code,
                                         RegisterInfo regTarget) {
         switch (regTarget.type().getValueString()) {
-        case "Int128", "UInt128" ->
-                buildLongLongCompl(code, (MultiSlot) regTarget);
-        default ->
-                throw new IllegalStateException("Unsupported type: "
-                        + regTarget.type().getValueString());
+            case "Int128", "UInt128" -> buildLongLongCompl(code, (MultiSlot) regTarget);
+            default -> throw new IllegalStateException("Unsupported type: " + regTarget.type().getValueString());
         }
     }
 
@@ -240,8 +224,7 @@ public interface NumberSupport
             }
             case "F" -> narrowFloat(code.fdiv(), regTarget.type());
             case "D" -> code.ddiv();
-            default  -> throw new IllegalStateException(
-                    "Unsupported carrier: " + regTarget.cd().descriptorString());
+            default  -> throw new IllegalStateException("Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -294,17 +277,12 @@ public interface NumberSupport
                                       RegisterInfo regTarget,
                                       int          nArgId) {
         switch (regTarget.type().getValueString()) {
-            case "Int128", "UInt128" ->
-                    buildLongLongDiv(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec32" ->
-                    buildDec32Div(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec", "Dec64" ->
-                    buildDec64Div(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec128" ->
-                    buildDec128Div(bctx, code, (MultiSlot) regTarget, nArgId);
-            default ->
-                    throw new IllegalStateException("Unsupported type: "
-                            + regTarget.type().getValueString());
+            case "Int128", "UInt128" -> buildLongLongDiv(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec32"             -> buildDec32Div(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec", "Dec64"      -> buildDec64Div(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec128"            -> buildDec128Div(bctx, code, (MultiSlot) regTarget, nArgId);
+            default                  ->
+                    throw new IllegalStateException("Unsupported type: " + regTarget.type().getValueString());
         }
     }
 
@@ -393,17 +371,12 @@ public interface NumberSupport
                                       RegisterInfo regTarget,
                                       int          nArgId) {
         switch (regTarget.type().getValueString()) {
-            case "Int128", "UInt128" ->
-                    buildLongLongMod(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec32" ->
-                    buildDec32Mod(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec", "Dec64" ->
-                    buildDec64Mod(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec128" ->
-                    buildDec128Mod(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Int128", "UInt128" -> buildLongLongMod(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec32"             -> buildDec32Mod(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec", "Dec64"      -> buildDec64Mod(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec128"            -> buildDec128Mod(bctx, code, (MultiSlot) regTarget, nArgId);
             default ->
-                    throw new IllegalStateException("Unsupported type: "
-                            + regTarget.type().getValueString());
+                    throw new IllegalStateException("Unsupported type: " + regTarget.type().getValueString());
         }
     }
 
@@ -438,8 +411,7 @@ public interface NumberSupport
             case "J" -> code.lneg();
             case "F" -> code.fneg();
             case "D" -> code.dneg();
-            default  -> throw new IllegalStateException(
-                    "Unsupported carrier: " + regTarget.cd().descriptorString());
+            default  -> throw new IllegalStateException("Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -453,16 +425,13 @@ public interface NumberSupport
      */
     default void buildXvmPrimitiveNeg(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         switch (regTarget.type().removeAccess().getValueString()) {
-            case "Int128"  -> buildLongLongNeg(code, (MultiSlot) regTarget);
-            case "UInt128" -> bctx.throwUnsupported(code);
-            case "Dec32" ->
-                    buildDec32Neg(bctx, code, (MultiSlot) regTarget);
-            case "Dec", "Dec64" ->
-                    buildDec64Neg(bctx, code, (MultiSlot) regTarget);
-            case "Dec128" ->
-                    buildDec128Neg(bctx, code, (MultiSlot) regTarget);
-            default -> throw new IllegalStateException("Unsupported type: "
-                    + regTarget.type().getValueString());
+            case "Int128"       -> buildLongLongNeg(code, (MultiSlot) regTarget);
+            case "UInt128"      -> bctx.throwUnsupported(code);
+            case "Dec32"        -> buildDec32Neg(bctx, code, (MultiSlot) regTarget);
+            case "Dec", "Dec64" -> buildDec64Neg(bctx, code, (MultiSlot) regTarget);
+            case "Dec128"       -> buildDec128Neg(bctx, code, (MultiSlot) regTarget);
+            default             ->
+                    throw new IllegalStateException("Unsupported type: " + regTarget.type().getValueString());
         }
     }
 
@@ -480,15 +449,11 @@ public interface NumberSupport
             return;
         }
         switch (regTarget.cd().descriptorString()) {
-            case "I" -> {
-                code.imul();
-                Builder.adjustIntValue(code, regTarget.type());
-            }
+            case "I" -> Builder.adjustIntValue(code.imul(), regTarget.type());
             case "J" -> code.lmul();
             case "F" -> narrowFloat(code.fmul(), regTarget.type());
             case "D" -> code.dmul();
-            default  -> throw new IllegalStateException(
-                    "Unsupported carrier: " + regTarget.cd().descriptorString());
+            default  -> throw new IllegalStateException("Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -508,16 +473,12 @@ public interface NumberSupport
                                       RegisterInfo regTarget,
                                       int          nArgId) {
         switch (regTarget.type().getValueString()) {
-            case "Int128", "UInt128" ->
-                    buildLongLongMul(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec32" ->
-                    buildDec32Mul(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec", "Dec64" ->
-                    buildDec64Mul(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec128" ->
-                    buildDec128Mul(bctx, code, (MultiSlot) regTarget, nArgId);
-            default -> throw new IllegalStateException("Unsupported type: "
-                    + regTarget.type().getValueString());
+            case "Int128", "UInt128" -> buildLongLongMul(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec32"             -> buildDec32Mul(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec", "Dec64"      -> buildDec64Mul(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec128"            -> buildDec128Mul(bctx, code, (MultiSlot) regTarget, nArgId);
+            default                  ->
+                    throw new IllegalStateException("Unsupported type: " + regTarget.type().getValueString());
         }
     }
 
@@ -560,10 +521,8 @@ public interface NumberSupport
                                      RegisterInfo regTarget,
                                      int          nArgId) {
         switch (regTarget.type().getValueString()) {
-            case "Int128", "UInt128" ->
-                    buildLongLongOr(bctx, code, (MultiSlot) regTarget, nArgId);
-            default -> throw new IllegalStateException("Unsupported type: "
-                    + regTarget.type().getValueString());
+            case "Int128", "UInt128" -> buildLongLongOr(bctx, code, (MultiSlot) regTarget, nArgId);
+            default -> throw new IllegalStateException("Unsupported type: " + regTarget.type().getValueString());
         }
     }
 
@@ -594,13 +553,9 @@ public interface NumberSupport
         }
 
         switch (regLoaded.cd().descriptorString()) {
-            case "I" -> {
-                code.ishl();
-                Builder.adjustIntValue(code, regLoaded.type());
-            }
+            case "I" -> Builder.adjustIntValue(code.ishl(), regLoaded.type());
             case "J" -> code.lshl();
-            default  -> throw new IllegalStateException(
-                    "Unsupported carrier: " + regLoaded.cd().descriptorString());
+            default  -> throw new IllegalStateException("Unsupported carrier: " + regLoaded.cd().descriptorString());
         }
         return regLoaded.type();
     }
@@ -621,10 +576,8 @@ public interface NumberSupport
                                       RegisterInfo regTarget,
                                       int          nArgId) {
         switch (regTarget.type().getValueString()) {
-            case "Int128", "UInt128" ->
-                    buildLongLongShl(bctx, code, (MultiSlot) regTarget, nArgId);
-            default -> throw new IllegalStateException("Unsupported type: "
-                    + regTarget.type().getValueString());
+            case "Int128", "UInt128" -> buildLongLongShl(bctx, code, (MultiSlot) regTarget, nArgId);
+            default -> throw new IllegalStateException("Unsupported type: " + regTarget.type().getValueString());
         }
     }
 
@@ -644,12 +597,9 @@ public interface NumberSupport
                                       RegisterInfo regTarget,
                                       int          nArgId) {
         switch (regTarget.type().getValueString()) {
-            case "Int128" ->
-                    buildLongLongShr(bctx, code, (MultiSlot) regTarget, nArgId, false);
-            case "UInt128" ->
-                    buildLongLongShr(bctx, code, (MultiSlot) regTarget, nArgId, true);
-            default -> throw new IllegalStateException("Unsupported type: "
-                    + regTarget.type().getValueString());
+            case "Int128"  -> buildLongLongShr(bctx, code, (MultiSlot) regTarget, nArgId, false);
+            case "UInt128" -> buildLongLongShr(bctx, code, (MultiSlot) regTarget, nArgId, true);
+            default -> throw new IllegalStateException("Unsupported type: " + regTarget.type().getValueString());
         }
     }
 
@@ -669,10 +619,8 @@ public interface NumberSupport
                                               RegisterInfo regTarget,
                                               int          nArgId) {
         switch (regTarget.type().getValueString()) {
-            case "Int128", "UInt128" ->
-                    buildLongLongShr(bctx, code, (MultiSlot) regTarget, nArgId, true);
-            default -> throw new IllegalStateException("Unsupported type: "
-                    + regTarget.type().getValueString());
+            case "Int128", "UInt128" -> buildLongLongShr(bctx, code, (MultiSlot) regTarget, nArgId, true);
+            default -> throw new IllegalStateException("Unsupported type: " + regTarget.type().getValueString());
         }
     }
 
@@ -768,8 +716,7 @@ public interface NumberSupport
                     code.lshr();
                 }
             }
-            default  -> throw new IllegalStateException(
-                    "Unsupported carrier: " + regTarget.cd().descriptorString());
+            default  -> throw new IllegalStateException("Unsupported carrier: " + regTarget.cd().descriptorString());
         }
 
         return typeTarget;
@@ -789,15 +736,11 @@ public interface NumberSupport
             return;
         }
         switch (regTarget.cd().descriptorString()) {
-            case "I" -> {
-                code.isub();
-                Builder.adjustIntValue(code, regTarget.type());
-            }
+            case "I" -> Builder.adjustIntValue(code.isub(), regTarget.type());
             case "J" -> code.lsub();
             case "F" -> narrowFloat(code.fsub(), regTarget.type());
             case "D" -> code.dsub();
-            default  -> throw new IllegalStateException(
-                    "Unsupported carrier: " + regTarget.cd().descriptorString());
+            default  -> throw new IllegalStateException("Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -819,16 +762,11 @@ public interface NumberSupport
                                       RegisterInfo regTarget,
                                       int          nArgId) {
         switch (regTarget.type().getValueString()) {
-            case "Int128", "UInt128" ->
-                    buildLongLongSub(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec32" ->
-                    buildDec32Sub(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec", "Dec64" ->
-                    buildDec64Sub(bctx, code, (MultiSlot) regTarget, nArgId);
-            case "Dec128" ->
-                    buildDec128Sub(bctx, code, (MultiSlot) regTarget, nArgId);
-            default  -> throw new IllegalStateException("Unsupported type: "
-                    + regTarget.type().getValueString());
+            case "Int128", "UInt128" -> buildLongLongSub(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec32"             -> buildDec32Sub(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec", "Dec64"      -> buildDec64Sub(bctx, code, (MultiSlot) regTarget, nArgId);
+            case "Dec128"            -> buildDec128Sub(bctx, code, (MultiSlot) regTarget, nArgId);
+            default -> throw new IllegalStateException("Unsupported type: " + regTarget.type().getValueString());
         }
     }
 
@@ -842,14 +780,10 @@ public interface NumberSupport
      */
     default void buildPrimitiveXor(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         switch (regTarget.cd().descriptorString()) {
-            case "I" -> {
-                code.ixor();
-                Builder.adjustIntValue(code, regTarget.type());
-            }
+            case "I" -> Builder.adjustIntValue(code.ixor(), regTarget.type());
             case "Z" -> code.ixor();
             case "J" -> code.lxor();
-            default  -> throw new IllegalStateException(
-                    "Unsupported carrier: " + regTarget.cd().descriptorString());
+            default  -> throw new IllegalStateException("Unsupported carrier: " + regTarget.cd().descriptorString());
         }
     }
 
@@ -871,10 +805,8 @@ public interface NumberSupport
                                       RegisterInfo regTarget,
                                       int          nArgId) {
         switch (regTarget.type().getValueString()) {
-            case "Int128", "UInt128" ->
-                    buildLongLongXor(bctx, code, (MultiSlot) regTarget, nArgId);
-            default -> throw new IllegalStateException("Unsupported type: "
-                    + regTarget.type().getValueString());
+            case "Int128", "UInt128" -> buildLongLongXor(bctx, code, (MultiSlot) regTarget, nArgId);
+            default -> throw new IllegalStateException("Unsupported type: " + regTarget.type().getValueString());
         }
     }
 }
