@@ -7,7 +7,6 @@ import java.lang.constant.ClassDesc;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -188,7 +187,7 @@ public record MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
     }
 
     @Override
-    public @NotNull String toString() {
+    public String toString() {
         return "regId="    + regId
             + ", slots="   + Arrays.toString(slots)
             + ", flavor="  + flavor
