@@ -258,7 +258,7 @@ public class JitMethodDesc {
                 type = type.resolveAutoNarrowing(pool, false, targetType, null);
             }
 
-            if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
+            if ((cd = JitTypeDesc.findJavaPrimitive(type)) != null) {
                 if (iOrig >= 0) {
                     JitFlavor stdFlavor = fDflt ? SpecificWithDefault : Specific;
                     ClassDesc cdStd     = builder.ensureClassDesc(type);
@@ -376,7 +376,7 @@ public class JitMethodDesc {
                 type = type.resolveAutoNarrowing(pool, false, targetType, null);
             }
 
-            if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
+            if ((cd = JitTypeDesc.findJavaPrimitive(type)) != null) {
                 ClassDesc cdStd = builder.ensureClassDesc(type);
 
                 stdParamList.add(new JitParamDesc(type, Specific, cdStd, iOrig, ixStdObj++, false));

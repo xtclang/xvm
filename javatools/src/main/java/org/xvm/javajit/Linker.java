@@ -19,7 +19,7 @@ import static org.xvm.util.Handy.require;
 
 /**
  * A TypeSystem Linker is the "builder" for new TypeSystems.
- *
+ * <p>
  * TODO differentiate between "shared" in the Java sense (applies to any module that can be broken
  *      out) and "shared" in the Ecstasy sense (able to pass things back and forth using those types)
  * TODO show example of how shared modules can be associated with Ecstasy module imports, especially
@@ -276,7 +276,7 @@ public class Linker {
                     return withMain(module);
                 }
             } else {
-                log(Severity.ERROR, LNK_MAIN_EXISTS, modules.get(0).getName(), moduleName);
+                log(Severity.ERROR, LNK_MAIN_EXISTS, modules.getFirst().getName(), moduleName);
             }
         }
         return this;
@@ -295,7 +295,7 @@ public class Linker {
             if (modules.isEmpty()) {
                 return addModule(module);
             } else {
-                log(Severity.ERROR, LNK_MAIN_EXISTS, modules.get(0).getName(), module.getName());
+                log(Severity.ERROR, LNK_MAIN_EXISTS, modules.getFirst().getName(), module.getName());
             }
         }
         return this;

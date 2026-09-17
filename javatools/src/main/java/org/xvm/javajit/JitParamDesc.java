@@ -54,7 +54,7 @@ public class JitParamDesc extends JitTypeDesc {
         JitParamDesc[] apdStdParam;
         ClassDesc      cd;
 
-        if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
+        if ((cd = JitTypeDesc.findJavaPrimitive(type)) != null) {
             ClassDesc cdStd = builder.ensureClassDesc(type);
 
             apdStdParam = new JitParamDesc[] {
