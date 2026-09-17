@@ -173,12 +173,12 @@ public class JitTypeDesc {
             // NOTE: isJavaPrimitive() and this switch must list the same names
             return switch (name) {
                 case "Byte", "Nibble", "Int8", "UInt8", "Float8e4", "Float8e5" -> CD_byte;
-                case "Int16", "UInt16" -> CD_short;
-                case "Char", "Int32", "UInt32" -> CD_int;
-                case "Int64", "UInt64" -> CD_long;
-                case "BFloat16", "Float16", "Float32" -> CD_float;
-                case "Float64" -> CD_double;
-                case "Boolean", "Bit" -> CD_boolean;
+                case "Int16", "UInt16"                                         -> CD_short;
+                case "Char", "Int32", "UInt32"                                 -> CD_int;
+                case "Int64", "UInt64"                                         -> CD_long;
+                case "BFloat16", "Float16", "Float32"                           -> CD_float;
+                case "Float64"                                                 -> CD_double;
+                case "Boolean", "Bit"                                          -> CD_boolean;
                 default -> throw new IllegalStateException("No field carrier for: " + name);
             };
         }
