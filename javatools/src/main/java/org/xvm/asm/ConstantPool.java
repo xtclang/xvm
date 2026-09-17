@@ -1210,7 +1210,7 @@ public class ConstantPool
         IdentityConstant id = f_implicits.get(sName);
 
         if (id == null) {
-            String[] asParts = s_implicits.get(sName);
+            String[] asParts = IMPLICITS.byName().get(sName);
             if (asParts == null) {
                 return null;
             }
@@ -1274,7 +1274,7 @@ public class ConstantPool
      * @return the "import as" name, or null
      */
     public static String getImplicitImportName(String sPath) {
-        return s_implicitsByPath.get(sPath);
+        return IMPLICITS.byPath().get(sPath);
     }
 
     /**
@@ -2211,10 +2211,12 @@ public class ConstantPool
     public ClassConstant     clzFuture()         {ClassConstant     c = m_clzFuture;         if (c == null) {m_clzFuture         = c = (ClassConstant) getImplicitlyImportedIdentity("Future"          );} return c;}
     public ClassConstant     clzOverride()       {ClassConstant     c = m_clzOverride;       if (c == null) {m_clzOverride       = c = (ClassConstant) getImplicitlyImportedIdentity("Override"        );} return c;}
     public ClassConstant     clzLazy()           {ClassConstant     c = m_clzLazy;           if (c == null) {m_clzLazy           = c = (ClassConstant) getImplicitlyImportedIdentity("Lazy"            );} return c;}
-    public ClassConstant     clzTest()           {ClassConstant     c = m_clzTest;           if (c == null) {m_clzTest           = c = (ClassConstant) getImplicitlyImportedIdentity("Test"            );} return c;}
     public ClassConstant     clzTransient()      {ClassConstant     c = m_clzTransient;      if (c == null) {m_clzTransient      = c = (ClassConstant) getImplicitlyImportedIdentity("Transient"       );} return c;}
     public ClassConstant     clzUnassigned()     {ClassConstant     c = m_clzUnassigned;     if (c == null) {m_clzUnassigned     = c = (ClassConstant) getImplicitlyImportedIdentity("Unassigned"      );} return c;}
     public ClassConstant     clzVolatile()       {ClassConstant     c = m_clzVolatile;       if (c == null) {m_clzVolatile       = c = (ClassConstant) getImplicitlyImportedIdentity("Volatile"        );} return c;}
+    @SuppressWarnings("unused")
+    public ClassConstant     clzTest()           {ClassConstant     c = m_clzTest;           if (c == null) {m_clzTest           = c = (ClassConstant) getImplicitlyImportedIdentity("Test"            );} return c;}
+
     public TypeConstant      typeComparable()    {TypeConstant      c = m_typeComparable;    if (c == null) {m_typeComparable    = c = ensureTerminalTypeConstant(clzComparable()                      );} return c;}
     public TypeConstant      typeObject()        {TypeConstant      c = m_typeObject;        if (c == null) {m_typeObject        = c = ensureTerminalTypeConstant(clzObject()                          );} return c;}
     public TypeConstant      typeInner()         {TypeConstant      c = m_typeInner;         if (c == null) {m_typeInner         = c = ensureVirtualChildTypeConstant(typeOuter(), "Inner"             );} return c;}
@@ -2288,7 +2290,6 @@ public class ConstantPool
     public TypeConstant      typeFloat16()       {TypeConstant      c = m_typeFloat16;       if (c == null) {m_typeFloat16       = c = ensureTerminalTypeConstant(clzFloat16()                         );} return c;}
     public TypeConstant      typeFloat32()       {TypeConstant      c = m_typeFloat32;       if (c == null) {m_typeFloat32       = c = ensureTerminalTypeConstant(clzFloat32()                         );} return c;}
     public TypeConstant      typeFloat64()       {TypeConstant      c = m_typeFloat64;       if (c == null) {m_typeFloat64       = c = ensureTerminalTypeConstant(clzFloat64()                         );} return c;}
-    public TypeConstant      typeUniformIndexed(){ /* Just an alias */ return typeIndexed();                                                                                                                  }
     public TypeConstant      typeIndexed()       {TypeConstant      c = m_typeIndexed;       if (c == null) {m_typeIndexed       = c = ensureTerminalTypeConstant(clzIndexed()                         );} return c;}
     public TypeConstant      typeArray()         {TypeConstant      c = m_typeArray;         if (c == null) {m_typeArray         = c = ensureTerminalTypeConstant(clzArray()                           );} return c;}
     public TypeConstant      typeMatrix()        {TypeConstant      c = m_typeMatrix;        if (c == null) {m_typeMatrix        = c = ensureTerminalTypeConstant(clzMatrix()                          );} return c;}
@@ -2330,6 +2331,8 @@ public class ConstantPool
     public TypeConstant      typeInjector()      {TypeConstant      c = m_typeInjector;      if (c == null) {m_typeInjector      = c = ensureTerminalTypeConstant(clzInjector()                        );} return c;}
     public TypeConstant      typeRounding()      {TypeConstant      c = m_typeRounding;      if (c == null) {m_typeRounding      = c = ensureTerminalTypeConstant(clzRounding()                        );} return c;}
     public TypeConstant      typeAppender()      {TypeConstant      c = m_typeAppender;      if (c == null) {m_typeAppender      = c = ensureTerminalTypeConstant(clzAppender()                        );} return c;}
+    @SuppressWarnings("unused")
+    public TypeConstant      typeUniformIndexed(){ /* Just an alias */ return typeIndexed();                                                                                                                  }
 
     public IntConstant       val0()              {IntConstant       c = m_val0;              if (c == null) {m_val0              = c = ensureIntConstant(0)                                             ;} return c;}
     public SingletonConstant valFalse()          {SingletonConstant c = m_valFalse;          if (c == null) {m_valFalse          = c = ensureSingletonConstConstant(clzFalse()                         );} return c;}
@@ -2387,7 +2390,7 @@ public class ConstantPool
     protected ClassConstant  clzInt64()         {return (ClassConstant) getImplicitlyImportedIdentity("Int64"                    );}
     protected ClassConstant  clzInt128()        {return (ClassConstant) getImplicitlyImportedIdentity("Int128"                   );}
     protected ClassConstant  clzIntN()          {return (ClassConstant) getImplicitlyImportedIdentity("IntN"                     );}
-    protected ClassConstant  clzUIntNumber()    {return (ClassConstant) ensureEcstasyClassConstant   ("numbers.UIntNumber"       );}
+    protected ClassConstant  clzUIntNumber()    {return                 ensureEcstasyClassConstant   ("numbers.UIntNumber"       );}
     protected ClassConstant  clzUInt8()         {return (ClassConstant) getImplicitlyImportedIdentity("UInt8"                    );}
     protected ClassConstant  clzUInt16()        {return (ClassConstant) getImplicitlyImportedIdentity("UInt16"                   );}
     protected ClassConstant  clzUInt32()        {return (ClassConstant) getImplicitlyImportedIdentity("UInt32"                   );}
@@ -2603,337 +2606,102 @@ public class ConstantPool
             Constant constant;
             int      nFmt   = in.readUnsignedByte();
             Format   format = Constant.Format.valueOf(nFmt);
-            switch (format) {
-            /*
-            * Values.
-            */
-            case IntLiteral:
-            case FPLiteral:
-            case Date:
-            case TimeOfDay:
-            case Time:
-            case TimeZone:
-            case Duration:
-            case Path:
-                constant = new LiteralConstant(this, format, in);
-                break;
-
-            case Bit:
-            case Nibble:
-            case Int8:
-            case UInt8:
-                constant = new ByteConstant(this, format, in);
-                break;
-
-            case Int16:
-            case Int32:
-            case Int64:
-            case Int128:
-            case IntN:
-            case UInt16:
-            case UInt32:
-            case UInt64:
-            case UInt128:
-            case UIntN:
-                constant = new IntConstant(this, format, in);
-                break;
-
-            case Dec32:
-            case Dec64:
-            case Dec128:
-                constant = new DecimalConstant(this, format, in);
-                break;
-
-            case DecN:
-            case FloatN:
-                constant = new FPNConstant(this, format, in);
-                break;
-
-            case Float8e4:
-                constant = new Float8e4Constant(this, format, in);
-                break;
-
-            case Float8e5:
-                constant = new Float8e5Constant(this, format, in);
-                break;
-
-            case BFloat16:
-                constant = new BFloat16Constant(this, format, in);
-                break;
-
-            case Float16:
-                constant = new Float16Constant(this, format, in);
-                break;
-
-            case Float32:
-                constant = new Float32Constant(this, format, in);
-                break;
-
-            case Float64:
-                constant = new Float64Constant(this, format, in);
-                break;
-
-            case Float128:
-                constant = new Float128Constant(this, format, in);
-                break;
-
-            case Char:
-                constant = new CharConstant(this, format, in);
-                break;
-
-            case RegEx:
-                constant = new RegExConstant(this, format, in);
-                break;
-
-            case String:
-                constant = new StringConstant(this, format, in);
-                break;
-
-            case Version:
-                constant = new VersionConstant(this, format, in);
-                break;
-
-            case SingletonConst:
-            case SingletonService:
-                constant = new SingletonConstant(this, format, in);
-                break;
-
-            case EnumValueConst:
-                constant = new EnumValueConstant(this, format, in);
-                break;
-
-            case Array:
-            case Tuple:
-            case Set:
-                constant = new ArrayConstant(this, format, in);
-                break;
-
-            case UInt8Array:
-                constant = new UInt8ArrayConstant(this, format, in);
-                break;
-
-            case MapEntry:
-            case Map:
-                constant = new MapConstant(this, format, in);
-                break;
-
-            case Range:
-            case RangeInclusive:
-            case RangeExclusive:
-                constant = new RangeConstant(this, format, in);
-                break;
-
-            case Any:
-                constant = new MatchAnyConstant(this, format, in);
-                break;
-
-            case FileStore:
-                constant = new FileStoreConstant(this, format, in);
-                break;
-
-            case FSDir:
-            case FSFile:
-            case FSLink:
-                constant = new FSNodeConstant(this, format, in);
-                break;
-
-            /*
-            * Structural identifiers.
-            */
-            case Module:
-                constant = new ModuleConstant(this, format, in);
-                break;
-
-            case Package:
-                constant = new PackageConstant(this, format, in);
-                break;
-
-            case Class:
-                constant = new ClassConstant(this, format, in);
-                break;
-
-            case Typedef:
-                constant = new TypedefConstant(this, format, in);
-                break;
-
-            case Property:
-                constant = new PropertyConstant(this, format, in);
-                break;
-
-            case MultiMethod:
-                constant = new MultiMethodConstant(this, format, in);
-                break;
-
-            case Method:
-                constant = new MethodConstant(this, format, in);
-                break;
-
-            case Annotation:
-                constant = new Annotation(this, in);
-                break;
-
-            case Register:
-                constant = new RegisterConstant(this, in);
-                break;
-
-            case BindTarget:
-                constant = new MethodBindingConstant(this, in);
-                break;
-
-            /*
-            * Pseudo identifiers.
-            */
-            case UnresolvedName:
-                throw new IOException("UnresolvedName not supported persistently");
-
-            case ThisClass:
-                constant = new ThisClassConstant(this, format, in);
-                break;
-
-            case ParentClass:
-                constant = new ParentClassConstant(this, format, in);
-                break;
-
-            case ChildClass:
-                constant = new ChildClassConstant(this, format, in);
-                break;
-
-            case PureType:
-                constant = new PureIdentityConstant(this, format, in);
-                break;
-
-            case TypeParameter:
-                constant = new TypeParameterConstant(this, format, in);
-                break;
-
-            case FormalTypeChild:
-                constant = new FormalTypeChildConstant(this, format, in);
-                break;
-
-            case DynamicFormal:
-                constant = new DynamicFormalConstant(this, format, in);
-                break;
-
-            case Signature:
-                constant = new SignatureConstant(this, format, in);
-                break;
-
-            case DecoratedClass:
-                constant = new DecoratedClassConstant(this, format, in);
-                break;
-
-            case NativeClass:
-                // it is not used in the persistent form of the module
-                throw new IllegalStateException();
-
-            case IsConst:
-            case IsEnum:
-            case IsModule:
-            case IsPackage:
-            case IsClass:
-                constant = new KeywordConstant(this, format, in);
-                break;
-
-            /*
-            * Types.
-            */
-            case UnresolvedType:
-                throw new IOException("UnresolvedType not supported persistently");
-
-            case TerminalType:
-                constant = new TerminalTypeConstant(this, format, in);
-                break;
-
-            case ImmutableType:
-                constant = new ImmutableTypeConstant(this, format, in);
-                break;
-
-            case ServiceType:
-                constant = new ServiceTypeConstant(this, format, in);
-                break;
-
-            case AccessType:
-                constant = new AccessTypeConstant(this, format, in);
-                break;
-
-            case AnnotatedType:
-                constant = new AnnotatedTypeConstant(this, format, in);
-                break;
-
-            case ParameterizedType:
-                constant = new ParameterizedTypeConstant(this, format, in);
-                break;
-
-            case TurtleType:
-                constant = new TypeSequenceTypeConstant(this);
-                break;
-
-            case VirtualChildType:
-                constant = new VirtualChildTypeConstant(this, format, in);
-                break;
-
-            case InnerChildType:
-                constant = new InnerChildTypeConstant(this, format, in);
-                break;
-
-            case AnonymousClassType:
-                constant = new AnonymousClassTypeConstant(this, format, in);
-                break;
-
-            case PropertyClassType:
-                constant = new PropertyClassTypeConstant(this, format, in);
-                break;
-
-            case IntersectionType:
-                constant = new IntersectionTypeConstant(this, format, in);
-                break;
-
-            case UnionType:
-                constant = new UnionTypeConstant(this, format, in);
-                break;
-
-            case DifferenceType:
-                constant = new DifferenceTypeConstant(this, format, in);
-                break;
-
-            case RecursiveType:
-                constant = new RecursiveTypeConstant(this, format, in);
-                break;
-
-            /*
-             * Conditions.
-             */
-            case ConditionNot:
-                constant = new NotCondition(this, format, in);
-                break;
-
-            case ConditionAll:
-                constant = new AllCondition(this, format, in);
-                break;
-
-            case ConditionAny:
-                constant = new AnyCondition(this, format, in);
-                break;
-
-            case ConditionNamed:
-                constant = new NamedCondition(this, format, in);
-                break;
-
-            case ConditionPresent:
-                constant = new PresentCondition(this, format, in);
-                break;
-
-            case ConditionVersionMatches:
-                constant = new VersionMatchesCondition(this, format, in);
-                break;
-
-            case ConditionVersioned:
-                constant = new VersionedCondition(this, format, in);
-                break;
-
-            default:
-                throw new IOException("Unsupported constant format: " + nFmt);
-            }
+            constant = switch (format) {
+                /*
+                 * Values.
+                 */
+                case IntLiteral, FPLiteral, Date, TimeOfDay, Time, TimeZone, Duration, Path ->
+                        new LiteralConstant(this, format, in);
+                case Bit, Nibble, Int8, UInt8 -> new ByteConstant(this, format, in);
+                case Int16, Int32, Int64, Int128, IntN, UInt16, UInt32, UInt64, UInt128, UIntN ->
+                        new IntConstant(this, format, in);
+                case Dec32, Dec64, Dec128 -> new DecimalConstant(this, format, in);
+                case DecN, FloatN -> new FPNConstant(this, format, in);
+                case Float8e4 -> new Float8e4Constant(this, format, in);
+                case Float8e5 -> new Float8e5Constant(this, format, in);
+                case BFloat16 -> new BFloat16Constant(this, format, in);
+                case Float16 -> new Float16Constant(this, format, in);
+                case Float32 -> new Float32Constant(this, format, in);
+                case Float64 -> new Float64Constant(this, format, in);
+                case Float128 -> new Float128Constant(this, format, in);
+                case Char -> new CharConstant(this, format, in);
+                case RegEx -> new RegExConstant(this, format, in);
+                case String -> new StringConstant(this, format, in);
+                case Version -> new VersionConstant(this, format, in);
+                case SingletonConst, SingletonService -> new SingletonConstant(this, format, in);
+                case EnumValueConst -> new EnumValueConstant(this, format, in);
+                case Array, Tuple, Set -> new ArrayConstant(this, format, in);
+                case UInt8Array -> new UInt8ArrayConstant(this, format, in);
+                case MapEntry, Map -> new MapConstant(this, format, in);
+                case Range, RangeInclusive, RangeExclusive -> new RangeConstant(this, format, in);
+                case Any -> new MatchAnyConstant(this, format, in);
+                case FileStore -> new FileStoreConstant(this, format, in);
+                case FSDir, FSFile, FSLink -> new FSNodeConstant(this, format, in);
+
+                /*
+                 * Structural identifiers.
+                 */
+                case Module -> new ModuleConstant(this, format, in);
+                case Package -> new PackageConstant(this, format, in);
+                case Class -> new ClassConstant(this, format, in);
+                case Typedef -> new TypedefConstant(this, format, in);
+                case Property -> new PropertyConstant(this, format, in);
+                case MultiMethod -> new MultiMethodConstant(this, format, in);
+                case Method -> new MethodConstant(this, format, in);
+                case Annotation -> new Annotation(this, in);
+                case Register -> new RegisterConstant(this, in);
+                case BindTarget -> new MethodBindingConstant(this, in);
+
+                /*
+                 * Pseudo identifiers.
+                 */
+                case UnresolvedName -> throw new IOException("UnresolvedName not supported persistently");
+                case ThisClass -> new ThisClassConstant(this, format, in);
+                case ParentClass -> new ParentClassConstant(this, format, in);
+                case ChildClass -> new ChildClassConstant(this, format, in);
+                case PureType -> new PureIdentityConstant(this, format, in);
+                case TypeParameter -> new TypeParameterConstant(this, format, in);
+                case FormalTypeChild -> new FormalTypeChildConstant(this, format, in);
+                case DynamicFormal -> new DynamicFormalConstant(this, format, in);
+                case Signature -> new SignatureConstant(this, format, in);
+                case DecoratedClass -> new DecoratedClassConstant(this, format, in);
+                case NativeClass ->
+                    // it is not used in the persistent form of the module
+                        throw new IllegalStateException();
+                case IsConst, IsEnum, IsModule, IsPackage, IsClass -> new KeywordConstant(this, format, in);
+
+                /*
+                 * Types.
+                 */
+                case UnresolvedType -> throw new IOException("UnresolvedType not supported persistently");
+                case TerminalType -> new TerminalTypeConstant(this, format, in);
+                case ImmutableType -> new ImmutableTypeConstant(this, format, in);
+                case ServiceType -> new ServiceTypeConstant(this, format, in);
+                case AccessType -> new AccessTypeConstant(this, format, in);
+                case AnnotatedType -> new AnnotatedTypeConstant(this, format, in);
+                case ParameterizedType -> new ParameterizedTypeConstant(this, format, in);
+                case TurtleType -> new TypeSequenceTypeConstant(this);
+                case VirtualChildType -> new VirtualChildTypeConstant(this, format, in);
+                case InnerChildType -> new InnerChildTypeConstant(this, format, in);
+                case AnonymousClassType -> new AnonymousClassTypeConstant(this, format, in);
+                case PropertyClassType -> new PropertyClassTypeConstant(this, format, in);
+                case IntersectionType -> new IntersectionTypeConstant(this, format, in);
+                case UnionType -> new UnionTypeConstant(this, format, in);
+                case DifferenceType -> new DifferenceTypeConstant(this, format, in);
+                case RecursiveType -> new RecursiveTypeConstant(this, format, in);
+
+                /*
+                 * Conditions.
+                 */
+                case ConditionNot -> new NotCondition(this, format, in);
+                case ConditionAll -> new AllCondition(this, format, in);
+                case ConditionAny -> new AnyCondition(this, format, in);
+                case ConditionNamed -> new NamedCondition(this, format, in);
+                case ConditionPresent -> new PresentCondition(this, format, in);
+                case ConditionVersionMatches -> new VersionMatchesCondition(this, format, in);
+                case ConditionVersioned -> new VersionedCondition(this, format, in);
+                default -> throw new IOException("Unsupported constant format: " + nFmt);
+            };
 
             constant.setPosition(i);
             f_listConst.add(constant);
@@ -3917,43 +3685,41 @@ public class ConstantPool
     }
 
     /**
-     * A cached and pre-parsed image of the "implicit.x" file.
+     * A pre-parsed image of the "implicit.x" file, indexed both ways.
+     *
+     * @param byName  each implicitly imported name, mapped to the parts of its qualified path
+     * @param byPath  each dotted path, mapped to the name that first declared it
      */
-    private static final Map<String, String[]> s_implicits       = parseImplicits();
-    private static final Map<String, String>   s_implicitsByPath = indexImplicitsByPath(s_implicits);
+    private record Implicits(Map<String, String[]> byName, Map<String, String> byPath) {}
 
     /**
-     * @return the contents of the "implicit.x" resource, mapping each implicitly imported name to
-     *         the parts of its qualified path
+     * A cached and pre-parsed image of the "implicit.x" file.
      */
-    private static Map<String, String[]> parseImplicits() {
+    private static final Implicits IMPLICITS = parseImplicits();
+
+    /**
+     * @return the contents of the "implicit.x" resource
+     */
+    private static Implicits parseImplicits() {
         ClassLoader loader = ConstantPool.class.getClassLoader();
         if (loader == null) {
             loader = ClassLoader.getSystemClassLoader();
         }
 
-        ErrorList errs = new ErrorList(1);
-        Map<String, String[]> mapImplicits =
-                new Parser(new Source(loader.getResourceAsStream("implicit.x")), errs).parseImplicits();
-
+        var errs = new ErrorList(1);
+        var mapByName = new Parser(new Source(loader.getResourceAsStream("implicit.x")), errs).parseImplicits();
         errs.getErrors().forEach(System.err::println);
         if (errs.hasSeriousErrors()) {
             throw new IllegalStateException("unable to parse implicit.x");
         }
-        return Map.copyOf(mapImplicits);
-    }
 
-    /**
-     * @param mapImplicits  implicitly imported names, mapped to the parts of their qualified paths
-     *
-     * @return the reverse index, mapping each dotted path to the name that first declared it
-     */
-    private static Map<String, String> indexImplicitsByPath(Map<String, String[]> mapImplicits) {
-        return mapImplicits.entrySet().stream()
+        var mapByPath = mapByName.entrySet().stream()
                 .collect(Collectors.toUnmodifiableMap(
                         entry -> String.join(".", entry.getValue()),
                         Map.Entry::getKey,
                         (sFirst, sDuplicate) -> sFirst));
+
+        return new Implicits(Map.copyOf(mapByName), mapByPath);
     }
 
     // ----- fields --------------------------------------------------------------------------------
