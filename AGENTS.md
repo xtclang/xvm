@@ -39,11 +39,19 @@ Non-`clean` combinations are fine: `./gradlew build installDist`, `./gradlew tes
 ./gradlew :lang:<task> -PincludeBuildLang=true -PincludeBuildAttachLang=true
 ```
 
+- Task addressing: root-registered tasks are unprefixed (`spotlessCheck`, `installDist`, `publishLocal`, docker);
+  included-build tasks take `:<build>:<task>` (`:javatools:test`, `:xdk:installDist`). "Task not found in
+  project ':foo'" on a root task means the wrong address, not that the task is missing — check `tasks --all`.
+
 ## Run vs build lifecycle
 
 - A leaf task does not imply `build`. `runXtc`/alias/`greet` tasks behave like Gradle `run`: they build only
   what they need, not full `check`/`build`.
 - `testXtc` is wired into `check`, so `build` runs it — but `runXtc`/`greet` do not.
+- Spotless also rides `check`, asymmetrically: locally `check` runs **`spotlessApply`** (rewrites your files,
+  build goes green), under `CI=true` only **`spotlessCheck`** (fails). A green local `build` therefore says
+  nothing about CI — it may have repaired the tree and left the fix uncommitted. Pre-push gate:
+  `./gradlew spotlessCheck` (read-only in both) plus `git status`.
 
 ## Running tests so they actually run
 
