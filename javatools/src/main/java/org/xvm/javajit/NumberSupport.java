@@ -19,6 +19,7 @@ import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_short;
 
 import static org.xvm.javajit.Builder.CD_JavaMath;
+import static org.xvm.javajit.Builder.MD_FP8Binary;
 import static org.xvm.javajit.Builder.MD_FloorModI;
 import static org.xvm.javajit.Builder.MD_FloorModJ;
 import static org.xvm.javajit.Builder.MD_UDivInt;
@@ -61,11 +62,6 @@ public interface NumberSupport
     }
 
     /**
-     * The signature shared by every FP8 binary helper: (encoding, encoding) -> encoding.
-     */
-    MethodTypeDesc MD_FP8_BINARY = MethodTypeDesc.of(CD_int, CD_int, CD_int);
-
-    /**
      * Build the optimized binary operation that will add two primitive types from the stack
      * (T + T -> T).
      *
@@ -75,7 +71,7 @@ public interface NumberSupport
      */
     default void buildPrimitiveAdd(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
-            code.invokestatic(fp8CD, "$add", MD_FP8_BINARY);
+            code.invokestatic(fp8CD, "$add", MD_FP8Binary);
             return;
         }
         switch (regTarget.cd().descriptorString()) {
@@ -219,7 +215,7 @@ public interface NumberSupport
      */
     default void buildPrimitiveDiv(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
-            code.invokestatic(fp8CD, "$div", MD_FP8_BINARY);
+            code.invokestatic(fp8CD, "$div", MD_FP8Binary);
             return;
         }
         TypeConstant typeTarget = regTarget.type();
@@ -267,7 +263,7 @@ public interface NumberSupport
     default void buildPrimitiveRemainder(BuildContext bctx, CodeBuilder code,
                                          RegisterInfo regTarget, int nArgId, int nQuotientId) {
         if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
-            code.invokestatic(fp8CD, "$rem", MD_FP8_BINARY);
+            code.invokestatic(fp8CD, "$rem", MD_FP8Binary);
             return;
         }
         regTarget.load(code);
@@ -352,7 +348,7 @@ public interface NumberSupport
      */
     default void buildPrimitiveMod(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
-            code.invokestatic(fp8CD, "$mod", MD_FP8_BINARY);
+            code.invokestatic(fp8CD, "$mod", MD_FP8Binary);
             return;
         }
         ClassDesc cd       = regTarget.cd();
@@ -481,7 +477,7 @@ public interface NumberSupport
      */
     default void buildPrimitiveMul(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
-            code.invokestatic(fp8CD, "$mul", MD_FP8_BINARY);
+            code.invokestatic(fp8CD, "$mul", MD_FP8Binary);
             return;
         }
         switch (regTarget.cd().descriptorString()) {
@@ -790,7 +786,7 @@ public interface NumberSupport
      */
     default void buildPrimitiveSub(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
-            code.invokestatic(fp8CD, "$sub", MD_FP8_BINARY);
+            code.invokestatic(fp8CD, "$sub", MD_FP8Binary);
             return;
         }
         switch (regTarget.cd().descriptorString()) {
