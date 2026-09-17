@@ -326,7 +326,6 @@ class Float8e4Tests {
         assert !Float8e4.PositiveNaN.finite;
     }
 
-
     // ----- Stringable tests ----------------------------------------------------------------------
 
     void testAppendTo() {

@@ -324,7 +324,6 @@ class Float8e5Tests {
         assert tiny > 0.0;
     }
 
-
     // ----- Stringable tests ----------------------------------------------------------------------
 
     void testAppendTo() {

@@ -45,7 +45,6 @@ public interface NumberSupport
         };
     }
 
-
     /**
      * Float16 shares the "F" carrier with Float32, so an operation on it is performed at float
      * precision and has to be rounded back into the format afterwards; without this, a Float16
