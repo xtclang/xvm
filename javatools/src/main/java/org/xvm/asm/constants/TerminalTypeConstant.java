@@ -1754,40 +1754,7 @@ public class TerminalTypeConstant
             constId = ((NativeRebaseConstant) constId).getClassConstant();
             // fall through
         case Class:
-            if (isTuple()) {
-                // Tuple consumes and produces every element type
-                for (TypeConstant constParam : listParams) {
-                    if (constParam.consumesFormalType(sTypeName, access)
-                        ||
-                        constParam.producesFormalType(sTypeName, access)) {
-                        return Usage.YES;
-                    }
-                }
-            } else if (!listParams.isEmpty()) {
-                ConstantPool   pool = getConstantPool();
-                ClassStructure clz  = (ClassStructure) ((IdentityConstant) constId).getComponent();
-
-                Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
-
-                listParams = clz.normalizeParameters(pool, listParams);
-
-                Iterator<TypeConstant>   iterParams = listParams.iterator();
-                Iterator<StringConstant> iterNames  = mapFormal.keySet().iterator();
-
-                while (iterParams.hasNext()) {
-                    TypeConstant constParam = iterParams.next();
-                    String       sFormal    = iterNames.next().getValue();
-
-                    if (constParam.consumesFormalType(sTypeName, access)
-                            && clz.producesFormalType(pool, sFormal, access, listParams)
-                        ||
-                        constParam.producesFormalType(sTypeName, access)
-                            && clz.consumesFormalType(pool, sFormal, access, listParams)) {
-                        return Usage.YES;
-                    }
-                }
-            }
-            return Usage.NO;
+            return checkClassUsage(constId, sTypeName, access, listParams, true);
 
         case ThisClass:
         case ParentClass:
@@ -1834,40 +1801,7 @@ public class TerminalTypeConstant
             constId = ((NativeRebaseConstant) constId).getClassConstant();
             // fall through
         case Class:
-            if (isTuple()) {
-                // Tuple consumes and produces every element type
-                for (TypeConstant constParam : listParams) {
-                    if (constParam.producesFormalType(sTypeName, access)
-                        ||
-                        constParam.consumesFormalType(sTypeName, access)) {
-                        return Usage.YES;
-                    }
-                }
-            } else if (!listParams.isEmpty()) {
-                ConstantPool   pool = getConstantPool();
-                ClassStructure clz  = (ClassStructure) ((IdentityConstant) constId).getComponent();
-
-                Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
-
-                listParams = clz.normalizeParameters(pool, listParams);
-
-                Iterator<TypeConstant>   iterParams = listParams.iterator();
-                Iterator<StringConstant> iterNames  = mapFormal.keySet().iterator();
-
-                while (iterParams.hasNext()) {
-                    TypeConstant constParam = iterParams.next();
-                    String       sFormal    = iterNames.next().getValue();
-
-                    if (constParam.producesFormalType(sTypeName, access)
-                            && clz.producesFormalType(pool, sFormal, access, listParams)
-                        ||
-                        constParam.consumesFormalType(sTypeName, access)
-                            && clz.consumesFormalType(pool, sFormal, access, listParams)) {
-                        return Usage.YES;
-                    }
-                }
-            }
-            return Usage.NO;
+            return checkClassUsage(constId, sTypeName, access, listParams, false);
 
         case ThisClass:
         case ParentClass:
@@ -1878,6 +1812,66 @@ public class TerminalTypeConstant
         default:
             throw new IllegalStateException("unexpected constant: " + constId);
         }
+    }
+
+    /**
+     * Common implementation of the {@code Class} case of {@link #checkConsumption} and
+     * {@link #checkProduction}. Both walk the formal type parameters identically and differ only in
+     * which usage each parameter is tested for: consumption pairs the opposite usages, production
+     * pairs the matching ones.
+     *
+     * @param constId       the defining constant, already resolved past {@code NativeClass}
+     * @param sTypeName     the formal type name to look for
+     * @param access        the access level to use for the check
+     * @param listParams    the type parameters
+     * @param fConsumption  true to check consumption, false to check production
+     *
+     * @return {@link Usage#YES} iff this class type uses the specified formal type that way
+     */
+    private Usage checkClassUsage(Constant constId, String sTypeName, Access access,
+                                  List<TypeConstant> listParams, boolean fConsumption) {
+        if (isTuple()) {
+            // a Tuple consumes and produces every element type, so the test is the same either way
+            for (TypeConstant constParam : listParams) {
+                if (constParam.consumesFormalType(sTypeName, access)
+                    ||
+                    constParam.producesFormalType(sTypeName, access)) {
+                    return Usage.YES;
+                }
+            }
+        } else if (!listParams.isEmpty()) {
+            ConstantPool   pool = getConstantPool();
+            ClassStructure clz  = (ClassStructure) ((IdentityConstant) constId).getComponent();
+
+            Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
+
+            listParams = clz.normalizeParameters(pool, listParams);
+
+            Iterator<TypeConstant>   iterParams = listParams.iterator();
+            Iterator<StringConstant> iterNames  = mapFormal.keySet().iterator();
+
+            while (iterParams.hasNext()) {
+                TypeConstant constParam = iterParams.next();
+                String       sFormal    = iterNames.next().getValue();
+
+                // these queries recurse through the type graph, so keep the original short-circuit
+                // order rather than evaluating both pairs up front
+                boolean fAgainstProduces = fConsumption
+                        ? constParam.consumesFormalType(sTypeName, access)
+                        : constParam.producesFormalType(sTypeName, access);
+                if (fAgainstProduces && clz.producesFormalType(pool, sFormal, access, listParams)) {
+                    return Usage.YES;
+                }
+
+                boolean fAgainstConsumes = fConsumption
+                        ? constParam.producesFormalType(sTypeName, access)
+                        : constParam.consumesFormalType(sTypeName, access);
+                if (fAgainstConsumes && clz.consumesFormalType(pool, sFormal, access, listParams)) {
+                    return Usage.YES;
+                }
+            }
+        }
+        return Usage.NO;
     }
 
     // ----- JIT support ---------------------------------------------------------------------------
