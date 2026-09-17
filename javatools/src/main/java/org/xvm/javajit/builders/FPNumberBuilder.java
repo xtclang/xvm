@@ -1,5 +1,6 @@
 package org.xvm.javajit.builders;
 
+
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
@@ -422,8 +423,7 @@ public class FPNumberBuilder extends NumberBuilder {
             // already a double
         } else if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
             // an FP8 value is carried as its 8-bit encoding, so decode it before widening
-            code.invokestatic(fp8CD, "$toFloat", md(CD_float, CD_int))
-                .f2d();
+            code.invokestatic(fp8CD, "$toFloat", md(CD_float, CD_int)).f2d();
         } else {
             throw new IllegalStateException("Unsupported binary FPNumber type " + thisType);
         }
