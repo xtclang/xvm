@@ -2145,6 +2145,27 @@ public class CommonBuilder
     }
 
     /**
+     * Look up a method the type is required to have, so that callers do not have to answer for a
+     * null they cannot get: every Const has equals, compare, hashCode, appendTo and
+     * estimateStringLength, and a property's type has whichever of those is being delegated to it.
+     *
+     * @param info  the type to look in
+     * @param sig   the signature to find
+     *
+     * @return the method, never null
+     *
+     * @throws IllegalStateException  if the type does not have it after all
+     */
+    private static MethodInfo requireMethod(TypeInfo info, SignatureConstant sig) {
+        MethodInfo method = info.getMethodBySignature(sig);
+        if (method == null) {
+            throw new IllegalStateException(
+                    "No " + sig.getValueString() + " on " + info.getType());
+        }
+        return method;
+    }
+
+    /**
      * Generate the const implementation of:
      * <pre>{@code
      *     static <CompileType extends T> Boolean equals(T value1, T value2)
@@ -2155,7 +2176,7 @@ public class CommonBuilder
      */
     protected void assembleConstEquals(ClassBuilder classBuilder) {
         SignatureConstant eqSig    = pool().sigEquals();
-        MethodInfo        eqMethod = typeInfo.getMethodBySignature(eqSig);
+        MethodInfo        eqMethod = requireMethod(typeInfo, eqSig);
         Implementation    impl     = eqMethod.getHead().getImplementation();
         IdentityConstant  targetId = eqMethod.getIdentity().getNamespace();
 
@@ -2345,7 +2366,7 @@ public class CommonBuilder
                     .ifne(returnFalse);
             } else {
                 // Object type: call static equals$p(Ctx, nType, T, T) -> boolean
-                MethodInfo     eqMethod = propType.ensureTypeInfo().getMethodBySignature(eqSig);
+                MethodInfo     eqMethod = requireMethod(propType.ensureTypeInfo(), eqSig);
                 MethodConstant eqTarget = eqMethod.getJitIdentity();
 
                 assert eqTarget != null;
@@ -2399,7 +2420,7 @@ public class CommonBuilder
      */
     protected void assembleConstCompare(ClassBuilder classBuilder) {
         SignatureConstant cmpSig    = pool().sigCompare();
-        MethodInfo        cmpMethod = typeInfo.getMethodBySignature(cmpSig);
+        MethodInfo        cmpMethod = requireMethod(typeInfo, cmpSig);
         Implementation    impl      = cmpMethod.getHead().getImplementation();
         IdentityConstant  targetId  = cmpMethod.getIdentity().getNamespace();
 
@@ -2593,7 +2614,7 @@ public class CommonBuilder
                 convertIntToOrdered(code);
             } else {
                 // Object type: call static compare(Ctx, nType, T, T) -> Ordered
-                MethodInfo    cmpMethod = propType.ensureTypeInfo().getMethodBySignature(cmpSig);
+                MethodInfo    cmpMethod = requireMethod(propType.ensureTypeInfo(), cmpSig);
                 JitMethodDesc cmpJmd    = cmpMethod.getJitDesc(this, propType);
 
                 // load the context to the stack (compare param 0)
@@ -2646,7 +2667,7 @@ public class CommonBuilder
      */
     protected void assembleConstHashCode(ClassBuilder classBuilder) {
         SignatureConstant hashSig    = pool().sigHashCode();
-        MethodInfo        hashMethod = typeInfo.getMethodBySignature(hashSig);
+        MethodInfo        hashMethod = requireMethod(typeInfo, hashSig);
         Implementation    impl       = hashMethod.getHead().getImplementation();
         IdentityConstant  targetId   = hashMethod.getIdentity().getNamespace();
 
@@ -2857,7 +2878,7 @@ public class CommonBuilder
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
 
-                MethodInfo    hashMethod = propType.ensureTypeInfo().getMethodBySignature(hashSig);
+                MethodInfo    hashMethod = requireMethod(propType.ensureTypeInfo(), hashSig);
                 JitMethodDesc hashJmd    = hashMethod.getJitDesc(this, propType);
 
                 IdentityConstant idTarget = hashMethod.getIdentity().getClassIdentity();
@@ -2899,7 +2920,7 @@ public class CommonBuilder
      */
     protected void assembleConstEstimateStringLength(ClassBuilder classBuilder) {
         SignatureConstant signature = pool().sigEstimateStrLen();
-        MethodInfo        method    = typeInfo.getMethodBySignature(signature);
+        MethodInfo        method    = requireMethod(typeInfo, signature);
         Implementation    impl      = method.getHead().getImplementation();
         IdentityConstant  targetId  = method.getIdentity().getNamespace();
 
@@ -3059,7 +3080,7 @@ public class CommonBuilder
      */
     protected void assembleConstAppendTo(ClassBuilder classBuilder) {
         SignatureConstant appendSig    = pool().sigAppendTo();
-        MethodInfo        appendMethod = typeInfo.getMethodBySignature(appendSig);
+        MethodInfo        appendMethod = requireMethod(typeInfo, appendSig);
         Implementation    impl         = appendMethod.getHead().getImplementation();
         IdentityConstant  targetId     = appendMethod.getIdentity().getNamespace();
 
@@ -3244,7 +3265,7 @@ public class CommonBuilder
                                            ClassDesc cdProp, SignatureConstant signature,
                                            String standardName, MethodTypeDesc mdStandard) {
         if (propType.isJitPrimitive()) {
-            MethodInfo    method = propType.ensureTypeInfo().getMethodBySignature(signature);
+            MethodInfo    method = requireMethod(propType.ensureTypeInfo(), signature);
             JitMethodDesc jmd    = method.getJitDesc(this, propType);
             assert jmd.isOptimizedStatic;
             code.invokestatic(cdProp, signature.getName() + OPT, jmd.optimizedMD);

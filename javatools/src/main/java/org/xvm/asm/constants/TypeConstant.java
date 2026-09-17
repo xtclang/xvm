@@ -7310,7 +7310,7 @@ public abstract class TypeConstant
      */
     public JitTypeDesc getJitDesc(Builder builder) {
         ClassDesc cd;
-        if ((cd = JitTypeDesc.getJavaPrimitive(this)) != null) {
+        if ((cd = JitTypeDesc.findJavaPrimitive(this)) != null) {
             return new JitTypeDesc(getCallableJitType(), Primitive, cd);
         }
         if ((cd = JitTypeDesc.getNullablePrimitiveClass(this)) != null) {

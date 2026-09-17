@@ -55,9 +55,10 @@ public class JitTypeDesc {
      * @return the primitive ClassDesc if the specified type is optimizable to a primitive Java
      *         class; null otherwise
      */
-    public static ClassDesc getJavaPrimitive(TypeConstant type) {
+    public static ClassDesc findJavaPrimitive(TypeConstant type) {
         if (type.isJavaPrimitive()) {
-            return switch (type.getSingleUnderlyingClass(false).getName()) {
+            String name = type.getSingleUnderlyingClass(false).getName();
+            return switch (name) {
                 case "Bit", "Nibble", "Char", "Byte",
                      "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32",
                      "Float8e4", "Float8e5"
@@ -70,11 +71,31 @@ public class JitTypeDesc {
                      -> CD_double;
                 case "Boolean"
                     -> CD_boolean;
+                // isJavaPrimitive() and this switch must list the same names
                 default
-                    -> null;
+                    -> throw new IllegalStateException("No Java primitive carrier for: " + name);
             };
         }
         return null;
+    }
+
+    /**
+     * The same carrier as {@link #findJavaPrimitive}, for a type already known to have one.
+     * Callers that have checked {@link TypeConstant#isJavaPrimitive} should use this, so they do
+     * not have to answer for a null that cannot occur.
+     *
+     * @param type  a type optimizable to a primitive Java class
+     *
+     * @return the carrier, never null
+     *
+     * @throws IllegalArgumentException  if the type has no primitive Java carrier
+     */
+    public static ClassDesc getJavaPrimitive(TypeConstant type) {
+        ClassDesc cd = findJavaPrimitive(type);
+        if (cd == null) {
+            throw new IllegalArgumentException("Not a Java primitive type: " + type);
+        }
+        return cd;
     }
 
     /**
@@ -83,7 +104,7 @@ public class JitTypeDesc {
      */
     public static ClassDesc getNullablePrimitiveClass(TypeConstant type) {
         return type.isNullable()
-            ? getJavaPrimitive(type.removeNullable())
+            ? findJavaPrimitive(type.removeNullable())
             : null;
     }
 
@@ -130,7 +151,7 @@ public class JitTypeDesc {
                 case "Dec64" -> CDs_Long;
                 case "Dec128", "Int128", "UInt128", "Duration" -> CDs_LongLong;
                 default        -> {
-                    ClassDesc cd = getJavaPrimitive(baseType);
+                    ClassDesc cd = findJavaPrimitive(baseType);
                     if (cd == null) {
                         throw new IllegalArgumentException("Unsupported primitive: " + baseType);
                     }
@@ -149,24 +170,16 @@ public class JitTypeDesc {
         TypeConstant sansNullable = type.removeNullable();
         if (sansNullable.isJavaPrimitive()) {
             String name = sansNullable.getSingleUnderlyingClass(false).getName();
+            // NOTE: isJavaPrimitive() and this switch must list the same names
             return switch (name) {
-                case "Byte", "Nibble", "Int8", "UInt8", "Float8e4", "Float8e5"
-                        -> CD_byte;
-                case "Int16", "UInt16"
-                        -> CD_short;
-                case "Char", "Int32", "UInt32"
-                        -> CD_int;
-                case "Int64", "UInt64"
-                        -> CD_long;
-                case "BFloat16", "Float16", "Float32"
-                        -> CD_float;
-                case "Float64"
-                        -> CD_double;
-                case "Boolean", "Bit"
-                        -> CD_boolean;
-                // isJavaPrimitive() and this switch must list the same names
-                default
-                        -> throw new IllegalStateException("No field carrier for: " + name);
+                case "Byte", "Nibble", "Int8", "UInt8", "Float8e4", "Float8e5" -> CD_byte;
+                case "Int16", "UInt16" -> CD_short;
+                case "Char", "Int32", "UInt32" -> CD_int;
+                case "Int64", "UInt64" -> CD_long;
+                case "BFloat16", "Float16", "Float32" -> CD_float;
+                case "Float64" -> CD_double;
+                case "Boolean", "Bit" -> CD_boolean;
+                default -> throw new IllegalStateException("No field carrier for: " + name);
             };
         }
         return null;
