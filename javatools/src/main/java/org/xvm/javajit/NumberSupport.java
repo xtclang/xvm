@@ -205,7 +205,7 @@ public interface NumberSupport
             case "I" -> {
                 boolean fUnsigned = typeTarget.getValueString().charAt(0) == 'U';
                 if (fUnsigned) {
-                    code.invokestatic(CD_Integer,"divideUnsigned", MD_UDivInt);
+                    code.invokestatic(CD_Integer, "divideUnsigned", MD_UDivInt);
                 } else {
                     code.idiv();
                 }
@@ -214,7 +214,7 @@ public interface NumberSupport
             case "J" -> {
                 boolean fUnsigned = typeTarget.getValueString().charAt(0) == 'U';
                 if (fUnsigned) {
-                    code.invokestatic(CD_Long,"divideUnsigned", md(CD_long, CD_long, CD_long));
+                    code.invokestatic(CD_Long, "divideUnsigned", md(CD_long, CD_long, CD_long));
                 } else {
                     code.ldiv();
                 }
