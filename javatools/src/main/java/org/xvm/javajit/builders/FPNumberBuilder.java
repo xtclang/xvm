@@ -171,7 +171,6 @@ public class FPNumberBuilder extends NumberBuilder {
         if (thisType.isJavaPrimitive()) {
             ClassDesc cd   = JitTypeDesc.getJavaPrimitive(thisType);
             int       slot = code.parameterSlot(0);
-            assert cd != null;
 
             switch (cd.descriptorString()) {
                 case "I", "S", "B", "Z":
@@ -227,7 +226,6 @@ public class FPNumberBuilder extends NumberBuilder {
         if (thisType.isJavaPrimitive()) {
             ClassDesc cd   = JitTypeDesc.getJavaPrimitive(thisType);
             int       slot = code.parameterSlot(0);
-            assert cd != null;
 
             switch (cd.descriptorString()) {
                 case "I", "S", "B", "Z":
