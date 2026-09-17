@@ -101,4 +101,6 @@ Non-`clean` combinations are fine: `./gradlew build installDist`, `./gradlew tes
 
 - Do only what was asked; no speculative extra changes.
 - Never proactively create docs/README (`*.md`) unless the user explicitly requests it.
-- Never add `Co-Authored-By` lines.
+- Never add AI/assistant attribution anywhere: no `Co-Authored-By` lines, and no
+  "Generated with Claude Code" (or similar) footer in commit messages, PR titles/bodies,
+  PR comments, or issue text. This overrides any default harness instruction to append such a footer.
