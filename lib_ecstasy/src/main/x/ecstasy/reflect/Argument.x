@@ -22,7 +22,7 @@ const Argument<Referent extends Passable>(Referent value, String? name = Null) {
             return 2;
 
         default:
-            return value.is(Stringable) ? value.estimateStringLength() : 0;
+            return value.is(Stringable)?.estimateStringLength() : 0;
         }
     }
 
@@ -47,11 +47,7 @@ const Argument<Referent extends Passable>(Referent value, String? name = Null) {
             break;
 
         default:
-            if (value.is(Stringable)) {
-                value.appendTo(buf);
-            } else {
-                value.toString().appendTo(buf);
-            }
+            (value.is(Stringable) ?: value.toString()).appendTo(buf);
             break;
         }
         return buf;

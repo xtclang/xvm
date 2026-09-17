@@ -32,7 +32,7 @@ const AnnotationExpression(TypeExpression name,
 
         // build a reflect.Argument for each annotation arg
         Argument[] values = [];
-        if (args != Null && !args.empty) {
+        if (var args ?= this.args, !args.empty) {
             values = new Argument[];
             Loop: for (Expression expr : args) {
                 if (immutable Const value := expr.hasConstantValue()) {

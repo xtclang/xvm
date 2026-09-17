@@ -534,7 +534,7 @@ const Path
         Int length = name.size;
         // prepend the parent path and the path separator; if the parent is the root, then no
         // additional separator is added
-        if (parent != Null) {
+        if (Path parent ?= this.parent) {
             if (parent.form == Root) {
                 ++length;
             } else {
@@ -548,7 +548,7 @@ const Path
     Appender<Char> appendTo(Appender<Char> buf) {
         // prepend the parent path and the path separator; if the parent is the root, then no
         // additional separator is added
-        if (parent != Null) {
+        if (Path parent ?= this.parent) {
             parent.appendTo(buf);
             if (parent.form != Root) {
                 buf.add('/');

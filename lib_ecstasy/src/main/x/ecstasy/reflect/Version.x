@@ -695,7 +695,7 @@ const Version
     Appender<Char> appendTo(Appender<Char> buf, Boolean suppressBuild=False) {
         parent?.appendTo(buf, True);
 
-        if (parent != Null && parent.form == Number) {
+        if (parent?.form == Number) {
             buf.add(this.form == Number ? '.' : '-');
         }
 
@@ -705,7 +705,7 @@ const Version
             form.text.appendTo(buf);
         }
 
-        if (build != Null && !suppressBuild) {
+        if (var build ?= this.build, !suppressBuild) {
             buf.add('+').addAll(build);
         }
 

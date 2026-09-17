@@ -93,7 +93,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
         /**
          * The HTTP Method.
          */
-        HttpMethod? httpMethod.get() = method.is(Observe|Intercept) ? method.httpMethod : Null;
+        HttpMethod? httpMethod.get() = method.is(Observe|Intercept)?.httpMethod : Null;
     }
 
     /**

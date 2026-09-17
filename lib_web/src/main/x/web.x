@@ -589,9 +589,8 @@ module web.xtclang.org {
          */
         ResponseOut makeResponse() {
             import responses.SimpleResponse;
-            return text == Null
-                    ? new SimpleResponse(status)
-                    : new SimpleResponse(status, text);
+            return new SimpleResponse(status, text?) :
+                   new SimpleResponse(status);
         }
     }
 }

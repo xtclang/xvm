@@ -465,10 +465,7 @@ interface DBProcessor<Message extends immutable Const>
          *         message processing has not completed before the next iteration would begin
          */
         conditional (Duration repeatInterval, Policy repeatPolicy) isRepeating() {
-            if (repeatInterval != Null) {
-                return True, repeatInterval, repeatPolicy;
-            }
-
+            return True, repeatInterval?, repeatPolicy;
             return False;
         }
 

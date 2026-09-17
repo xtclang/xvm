@@ -68,14 +68,12 @@ const RestrictedClient(Client underlying)
     String toString() {
         return $|RestrictedClient {mode} \
                 |{{
-                |if (!(hostPorts.is(HostPort[]) && hostPorts.empty))
-                |   {
+                |if (hostPorts.is(HostPort[])?.size > 0) {
                 |   $.addAll("hosts={hostPorts}");
-                |   }
-                |if (!(protocols.is(Protocol[]) && protocols.empty))
-                |  {
+                |}
+                |if (protocols.is(Protocol[])?.size > 0) {
                 |  $.addAll("protocols={protocols}");
-                |  }
+                |}
                 |}}
                 ;
     }

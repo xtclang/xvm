@@ -35,7 +35,7 @@ const ChildTypeExpression(TypeExpression          parent,
             }
 
             // resolve type parameters
-            if (params != Null) {
+            if (var params ?= this.params) {
                 Type[] paramTypes = new Type[];
                 for (Int i : 0 ..< params.size) {
                     if (Type paramType := params[i].resolveType(typeSystem, hideExceptions)) {
@@ -96,7 +96,7 @@ const ChildTypeExpression(TypeExpression          parent,
             token.appendTo(buf);
         }
 
-        if (params != Null) {
+        if (var params ?= this.params) {
             buf.add('<');
             Loop: for (TypeExpression param : params) {
                 if (!Loop.first) {
