@@ -42,6 +42,17 @@ public class ListMap<K,V>
         m_list = new ArrayList<>(map.m_list);
     }
 
+    /**
+     * @return the immutable empty ListMap
+     *
+     * @param <K>  the key type
+     * @param <V>  the value type
+     */
+    @SuppressWarnings("unchecked")
+    public static <K, V> ListMap<K, V> empty() {
+        return (ListMap<K, V>) EMPTY;
+    }
+
     @Override
     public V put(K key, V value) {
         Entry<K,V> entry = getEntry(key);
@@ -137,7 +148,8 @@ public class ListMap<K,V>
     private static final ArrayList<?> EMPTY_ARRAY_LIST = new ArrayList<>(0);
 
     /**
-     * An empty ListMap.
+     * An empty ListMap. Immutable - {@link #put} rejects it - so one instance serves every
+     * parameterization; reach it through {@link #empty()}.
      */
-    public static final ListMap EMPTY = new ListMap<>(-1);
+    private static final ListMap<?, ?> EMPTY = new ListMap<>(-1);
 }

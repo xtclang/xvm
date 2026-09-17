@@ -547,7 +547,7 @@ public class ClassStructure
     public ListMap<StringConstant, TypeConstant> getTypeParams() {
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
-                ? ListMap.EMPTY
+                ? ListMap.empty()
                 : new ListMap<>(mapThis);
     }
 
