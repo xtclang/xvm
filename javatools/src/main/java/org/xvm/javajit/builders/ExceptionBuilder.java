@@ -6,8 +6,6 @@ import java.lang.classfile.ClassFile;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
-import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.TypeSystem;
@@ -75,7 +73,7 @@ public class ExceptionBuilder extends CommonBuilder {
      *     }
      *</pre></code>
      */
-    public void assembleJavaException(String className, ClassBuilder classBuilder) {
+    public void assembleJavaException(@SuppressWarnings("unused") String className, ClassBuilder classBuilder) {
         TypeConstant superType = typeInfo.getExtends();
         ClassDesc    superCD   = getJavaExceptionSuperCD();
         ClassDesc    exCD      = ensureClassDesc(thisType);

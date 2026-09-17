@@ -1031,6 +1031,21 @@ public abstract class Builder {
     }
 
     /**
+     * Shorthand for {@link MethodTypeDesc#of}. A descriptor is the bulkiest part of an
+     * {@code invokestatic} in a fluent code sequence, and spelling it out tends to push the call
+     * onto a second line; most of them cannot be constants because they close over a local
+     * {@link ClassDesc}.
+     *
+     * @param cdReturn  the return type
+     * @param cdParams  the parameter types
+     *
+     * @return the corresponding {@link MethodTypeDesc}
+     */
+    public static MethodTypeDesc md(ClassDesc cdReturn, ClassDesc... cdParams) {
+        return MethodTypeDesc.of(cdReturn, cdParams);
+    }
+
+    /**
      * Generate a value "load" for the specified Java class.
      */
     public static CodeBuilder load(CodeBuilder code, ClassDesc cd, int slot) {

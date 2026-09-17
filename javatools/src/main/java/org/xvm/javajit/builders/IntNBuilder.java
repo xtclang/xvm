@@ -3,14 +3,11 @@ package org.xvm.javajit.builders;
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
-import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.math.BigInteger;
-
-import java.util.function.BiConsumer;
 
 import org.xvm.asm.ConstantPool;
 
@@ -34,30 +31,9 @@ public class IntNBuilder extends IntNumberBuilder {
     @Override
     protected void assembleMethod(ClassBuilder classBuilder, MethodInfo method,
                                   String jitName, JitMethodDesc jmd) {
-        if (method.getHead().getMethodStructure().isPropertyInitializer()) {
-            super.assembleMethod(classBuilder, method, jitName, jmd);
-            return;
-        }
-
-        String         methodName = jmd.isOptimized ? jitName+OPT : jitName;
-        MethodTypeDesc md         = jmd.isOptimized ? jmd.optimizedMD : jmd.standardMD;
-        if (isNativeMethod(methodName, md)) {
-            super.assembleMethod(classBuilder, method, jitName, jmd);
-            return;
-        }
-
-        if (useNaturalImplementation(method)) {
-            super.assembleMethod(classBuilder, method, jitName, jmd);
-            return;
-        }
-
-        BiConsumer<CodeBuilder, JitMethodDesc> generator = jmd.isPrimitivized()
-                ? getMethodCodeGenerator(method.getJitIdentity().getName())
-                : null;
-        if (generator == null) {
-            generator = (code, jmd_) -> generateUnsupported(code, jmd_, jitName);
-        }
-        assembleGeneratedMethod(classBuilder, method, jitName, jmd, generator);
+        // IntN is not a JIT primitive, so NumberBuilder.assembleMethod would hand it straight on;
+        // take the generated path regardless
+        assembleGeneratedOrInherited(classBuilder, method, jitName, jmd);
     }
 
     @Override

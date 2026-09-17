@@ -20,6 +20,7 @@ import static java.lang.constant.ConstantDescs.CD_short;
 
 import static org.xvm.javajit.Builder.CD_JavaMath;
 import static org.xvm.javajit.Builder.MD_FP8Binary;
+import static org.xvm.javajit.Builder.md;
 import static org.xvm.javajit.Builder.MD_FloorModI;
 import static org.xvm.javajit.Builder.MD_FloorModJ;
 import static org.xvm.javajit.Builder.MD_UDivInt;
@@ -54,10 +55,8 @@ public interface NumberSupport
      */
     private static CodeBuilder narrowFloat(CodeBuilder code, TypeConstant type) {
         return "Float16".equals(type.getSingleUnderlyingClass(false).getName())
-                ? code.invokestatic(Builder.CD_JavaFloat, "floatToFloat16",
-                            MethodTypeDesc.of(CD_short, CD_float))
-                      .invokestatic(Builder.CD_JavaFloat, "float16ToFloat",
-                            MethodTypeDesc.of(CD_float, CD_short))
+                ? code.invokestatic(Builder.CD_JavaFloat, "floatToFloat16", md(CD_short, CD_float))
+                      .invokestatic(Builder.CD_JavaFloat, "float16ToFloat", md(CD_float, CD_short))
                 : code;
     }
 
@@ -223,8 +222,7 @@ public interface NumberSupport
             case "I" -> {
                 boolean fUnsigned = typeTarget.getValueString().charAt(0) == 'U';
                 if (fUnsigned) {
-                    code.invokestatic(CD_Integer,"divideUnsigned",
-                            MethodTypeDesc.of(CD_int, CD_int, CD_int));
+                    code.invokestatic(CD_Integer,"divideUnsigned", md(CD_int, CD_int, CD_int));
                 } else {
                     code.idiv();
                 }
@@ -233,8 +231,7 @@ public interface NumberSupport
             case "J" -> {
                 boolean fUnsigned = typeTarget.getValueString().charAt(0) == 'U';
                 if (fUnsigned) {
-                    code.invokestatic(CD_Long,"divideUnsigned",
-                            MethodTypeDesc.of(CD_long, CD_long, CD_long));
+                    code.invokestatic(CD_Long,"divideUnsigned", md(CD_long, CD_long, CD_long));
                 } else {
                     code.ldiv();
                 }

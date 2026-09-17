@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import org.xvm.asm.ConstantPool;
 
@@ -178,7 +179,19 @@ public class NumberBuilder extends AugmentingBuilder {
             super.assembleMethod(classBuilder, method, jitName, jmd);
             return;
         }
+        assembleGeneratedOrInherited(classBuilder, method, jitName, jmd);
+    }
 
+    /**
+     * Assemble a method by generating its code, unless it is a case that has to keep the inherited
+     * assembly: a property initializer, a natively implemented method, or one the type prefers to
+     * implement naturally. A method with no generator gets an "unsupported" body.
+     * <p/>
+     * Shared with {@link IntNBuilder}, which takes this path even though IntN is not a JIT
+     * primitive and so would otherwise be turned away by {@link #assembleMethod} above.
+     */
+    protected void assembleGeneratedOrInherited(ClassBuilder classBuilder, MethodInfo method,
+                                                String jitName, JitMethodDesc jmd) {
         if (method.getHead().getMethodStructure().isPropertyInitializer()) {
             super.assembleMethod(classBuilder, method, jitName, jmd);
             return;
@@ -241,8 +254,7 @@ public class NumberBuilder extends AugmentingBuilder {
     protected void generateUnsupported(CodeBuilder code, JitMethodDesc jmd, String jitName) {
         code.aload(code.parameterSlot(jmd.optimizedCtx()))
             .ldc(jitName)
-            .invokestatic(CD_Exception, "$unsupported",
-                    MethodTypeDesc.of(CD_nException, CD_Ctx, CD_JavaString))
+            .invokestatic(CD_Exception, "$unsupported", md(CD_nException, CD_Ctx, CD_JavaString))
             .athrow();
     }
 
@@ -297,7 +309,7 @@ public class NumberBuilder extends AugmentingBuilder {
 
             code.aload(arraySlot)
                 .aload(ctxSlot)
-                .invokevirtual(CD_Array, "size$get$p", MethodTypeDesc.of(CD_long, CD_Ctx))
+                .invokevirtual(CD_Array, "size$get$p", md(CD_long, CD_Ctx))
                 .loadConstant(expectedSize)
                 .lcmp()
                 .ifeq(validSize);
@@ -345,21 +357,18 @@ public class NumberBuilder extends AugmentingBuilder {
                 loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength)
                         .l2i()
                         .i2s()
-                        .invokestatic(CD_JavaFloat, "float16ToFloat",
-                                MethodTypeDesc.of(CD_float, CD_short));
+                        .invokestatic(CD_JavaFloat, "float16ToFloat", md(CD_float, CD_short));
                 break;
 
             case "Float32":
                 loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength)
                         .l2i()
-                        .invokestatic(CD_JavaFloat, "intBitsToFloat",
-                                MethodTypeDesc.of(CD_float, CD_int));
+                        .invokestatic(CD_JavaFloat, "intBitsToFloat", md(CD_float, CD_int));
                 break;
 
             case "Float64":
                 loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength)
-                        .invokestatic(CD_JavaDouble, "longBitsToDouble",
-                                MethodTypeDesc.of(CD_double, CD_long));
+                        .invokestatic(CD_JavaDouble, "longBitsToDouble", md(CD_double, CD_long));
                 break;
 
             default:
@@ -396,10 +405,10 @@ public class NumberBuilder extends AugmentingBuilder {
 
         MethodTypeDesc md;
         if (isBitArray) {
-            md = MethodTypeDesc.of(CD_long, CD_Ctx, CD_int);
+            md = md(CD_long, CD_Ctx, CD_int);
         } else {
             code.loadConstant(bitLength);
-            md = MethodTypeDesc.of(CD_long, CD_Ctx, CD_int, CD_int);
+            md = md(CD_long, CD_Ctx, CD_int, CD_int);
         }
         return code.invokevirtual(arrayCD, "$toLong", md);
     }
@@ -496,7 +505,7 @@ public class NumberBuilder extends AugmentingBuilder {
 
         // the populated long array is on the top of the stack
         // create the ArrayᐸBitᐳ and return it
-        MethodTypeDesc md = MethodTypeDesc.of(CD_ArrayBit, CD_Ctx, CD_long, CD_long.arrayType());
+        MethodTypeDesc md = md(CD_ArrayBit, CD_Ctx, CD_long, CD_long.arrayType());
         code.invokestatic(CD_ArrayBit, "$fromLongs", md)
             .areturn();
     }
@@ -534,12 +543,10 @@ public class NumberBuilder extends AugmentingBuilder {
             case "F":
                 code.fload(slot);
                 if (name.equals("Float16")) {
-                    code.invokestatic(CD_JavaFloat, "floatToFloat16",
-                                    MethodTypeDesc.of(CD_short, CD_float))
+                    code.invokestatic(CD_JavaFloat, "floatToFloat16", md(CD_short, CD_float))
                         .i2l();
                 } else {
-                    code.invokestatic(CD_JavaFloat, "floatToRawIntBits",
-                                    MethodTypeDesc.of(CD_int, CD_float));
+                    code.invokestatic(CD_JavaFloat, "floatToRawIntBits", md(CD_int, CD_float));
                     if (name.equals("BFloat16")) {
                         code.loadConstant(16)
                             .iushr();
@@ -549,8 +556,7 @@ public class NumberBuilder extends AugmentingBuilder {
                 break;
             case "D":
                 code.dload(slot)
-                    .invokestatic(CD_JavaDouble, "doubleToRawLongBits",
-                            MethodTypeDesc.of(CD_long, CD_double));
+                    .invokestatic(CD_JavaDouble, "doubleToRawLongBits", md(CD_long, CD_double));
                 break;
             default:
                 throw new IllegalStateException();
@@ -676,45 +682,30 @@ public class NumberBuilder extends AugmentingBuilder {
      * @param sJava     the corresponding java.lang.Float / java.lang.Double method
      * @param fDefault  the answer for a type that is not a binary FP number
      */
-    private void generateBinaryFPPredicate(CodeBuilder code, String sFP8, String sJava,
-                                           boolean fDefault) {
+    private CodeBuilder generateBinaryFPPredicate(CodeBuilder code, String sFP8, String sJava,
+                                                 boolean fDefault) {
         if (!thisType.isA(pool().typeBinFPNumber())) {
-            (fDefault ? code.iconst_1() : code.iconst_0())
-                    .ireturn();
-            return;
+            return (fDefault ? code.iconst_1() : code.iconst_0()).ireturn();
         }
 
         String name      = thisType.getSingleUnderlyingClass(false).getName();
         int    paramSlot = code.parameterSlot(0);
 
-        switch (name) {
-            case "Float8e4":
-                code.iload(paramSlot)
+        return switch (name) {
+            case "Float8e4" -> code.iload(paramSlot)
                     .invokestatic(CD_Float8e4, sFP8, MD_FP8Predicate)
                     .ireturn();
-                break;
-
-            case "Float8e5":
-                code.iload(paramSlot)
+            case "Float8e5" -> code.iload(paramSlot)
                     .invokestatic(CD_Float8e5, sFP8, MD_FP8Predicate)
                     .ireturn();
-                break;
-
-            case "Float16", "Float32":
-                code.fload(paramSlot)
-                    .invokestatic(CD_Float, sJava, MethodTypeDesc.of(CD_boolean, CD_float))
+            case "Float16", "Float32" -> code.fload(paramSlot)
+                    .invokestatic(CD_Float, sJava, md(CD_boolean, CD_float))
                     .ireturn();
-                break;
-
-            case "Float64":
-                code.dload(paramSlot)
-                    .invokestatic(CD_Double, sJava, MethodTypeDesc.of(CD_boolean, CD_double))
+            case "Float64" -> code.dload(paramSlot)
+                    .invokestatic(CD_Double, sJava, md(CD_boolean, CD_double))
                     .ireturn();
-                break;
-
-            default:
-                throw new UnsupportedOperationException("Unsupported Binary FP type: " + name);
-        }
+            default -> throw new UnsupportedOperationException("Unsupported Binary FP type: " + name);
+        };
     }
 
     /**
@@ -750,57 +741,69 @@ public class NumberBuilder extends AugmentingBuilder {
     protected void generateAbs(CodeBuilder code, JitMethodDesc jmd) {
         String name    = thisType.getSingleUnderlyingClass(false).getName();
         int    ctxSlot = code.parameterSlot(jmd.optimizedCtx());
-        Label  valid   = code.newLabel();
 
         switch (name) {
         case "Int8":
-            code.iload(code.parameterSlot(0))
-                .loadConstant((int) Byte.MIN_VALUE)
-                .if_icmpne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            guardNotMinValue(code, ctxSlot, Byte.MIN_VALUE);
             break;
 
         case "Int16":
-            code.iload(code.parameterSlot(0))
-                .loadConstant((int) Short.MIN_VALUE)
-                .if_icmpne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            guardNotMinValue(code, ctxSlot, Short.MIN_VALUE);
             break;
 
         case "Int32":
-            code.iload(code.parameterSlot(0))
-                .loadConstant(Integer.MIN_VALUE)
-                .if_icmpne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            guardNotMinValue(code, ctxSlot, Integer.MIN_VALUE);
             break;
 
         case "Int64":
-            code.lload(code.parameterSlot(0))
-                .loadConstant(Long.MIN_VALUE)
-                .lcmp()
-                .ifne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            guardNotMinValue(code, ctxSlot, valid ->
+                    code.lload(code.parameterSlot(0))
+                        .loadConstant(Long.MIN_VALUE)
+                        .lcmp()
+                        .ifne(valid));
             break;
 
         case "Int128":
-            code.lload(code.parameterSlot(1))
-                .loadConstant(Long.MIN_VALUE)
-                .lcmp()
-                .ifne(valid)
-                .lload(code.parameterSlot(0))
-                .lconst_0()
-                .lcmp()
-                .ifne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            // the most negative Int128 is the low word zero under a most negative high word
+            guardNotMinValue(code, ctxSlot, valid ->
+                    code.lload(code.parameterSlot(1))
+                        .loadConstant(Long.MIN_VALUE)
+                        .lcmp()
+                        .ifne(valid)
+                        .lload(code.parameterSlot(0))
+                        .lconst_0()
+                        .lcmp()
+                        .ifne(valid));
             break;
         }
 
         generateMagnitudeGet(code, jmd);
+    }
+
+    /**
+     * Guard abs() against a signed type's most negative value, whose absolute value is not
+     * representable: throw "out of bounds" for it and fall through for anything else.
+     *
+     * @param minValue  the most negative value of a type carried in an int
+     */
+    private void guardNotMinValue(CodeBuilder code, int ctxSlot, int minValue) {
+        guardNotMinValue(code, ctxSlot, valid ->
+                code.iload(code.parameterSlot(0))
+                    .loadConstant(minValue)
+                    .if_icmpne(valid));
+    }
+
+    /**
+     * Guard abs() against a signed type's most negative value.
+     *
+     * @param emitCompare  emits the comparison, which must jump to the supplied label for every
+     *                     value that is not the most negative one
+     */
+    private void guardNotMinValue(CodeBuilder code, int ctxSlot, Consumer<Label> emitCompare) {
+        Label valid = code.newLabel();
+        emitCompare.accept(valid);
+        throwOutOfBounds(code, "", ctxSlot);
+        code.labelBinding(valid);
     }
 
     /**
@@ -816,7 +819,7 @@ public class NumberBuilder extends AugmentingBuilder {
         switch (name) {
         case "Int8", "Int16", "Int32":
             code.iload(paramSlot)
-                .invokestatic(cdMath, "abs", MethodTypeDesc.of(CD_int, CD_int));
+                .invokestatic(cdMath, "abs", md(CD_int, CD_int));
             generateMagnitudeReturn(code, jmd);
             break;
 
@@ -827,7 +830,7 @@ public class NumberBuilder extends AugmentingBuilder {
 
         case "Int64":
             code.lload(paramSlot)
-                .invokestatic(cdMath, "abs", MethodTypeDesc.of(CD_long, CD_long));
+                .invokestatic(cdMath, "abs", md(CD_long, CD_long));
             generateMagnitudeReturn(code, jmd);
             break;
 
@@ -846,13 +849,13 @@ public class NumberBuilder extends AugmentingBuilder {
 
         case "Float16", "Float32":
             code.fload(paramSlot)
-                .invokestatic(cdMath, "abs", MethodTypeDesc.of(CD_float, CD_float));
+                .invokestatic(cdMath, "abs", md(CD_float, CD_float));
             generateMagnitudeReturn(code, jmd);
             break;
 
         case "Float64":
             code.dload(paramSlot)
-                .invokestatic(cdMath, "abs", MethodTypeDesc.of(CD_double, CD_double));
+                .invokestatic(cdMath, "abs", md(CD_double, CD_double));
             generateMagnitudeReturn(code, jmd);
             break;
 
@@ -969,7 +972,7 @@ public class NumberBuilder extends AugmentingBuilder {
             // we call a helper method on FPNumber to obtain the signum for this value
             // the helper signature params are the same as the method we are generating code for
             ClassDesc      cd     = JitTypeDesc.getJitClass(this, pool.typeFPNumber());
-            MethodTypeDesc md     = MethodTypeDesc.of(CD_int, jmd.optimizedMD.parameterArray());
+            MethodTypeDesc md     = md(CD_int, jmd.optimizedMD.parameterArray());
             ClassDesc[]    params = md.parameterArray();
             for (int i = 0; i < params.length; i++) {
                 load(code, params[i], code.parameterSlot(i));
@@ -994,8 +997,7 @@ public class NumberBuilder extends AugmentingBuilder {
                 // using Integer.compareUnsigned
                 code.iload(paramSlot)
                     .iconst_0()
-                    .invokestatic(CD_Integer, "compareUnsigned",
-                            MethodTypeDesc.of(CD_int, CD_int, CD_int));
+                    .invokestatic(CD_Integer, "compareUnsigned", md(CD_int, CD_int, CD_int));
                 break;
 
             case "Int64":
@@ -1010,8 +1012,7 @@ public class NumberBuilder extends AugmentingBuilder {
                 // using Long.compareUnsigned
                 code.lload(paramSlot)
                     .lconst_0()
-                    .invokestatic(CD_Long, "compareUnsigned",
-                            MethodTypeDesc.of(CD_int, CD_long, CD_long));
+                    .invokestatic(CD_Long, "compareUnsigned", md(CD_int, CD_long, CD_long));
                 break;
 
             case "Int128", "UInt128":
@@ -1020,8 +1021,7 @@ public class NumberBuilder extends AugmentingBuilder {
                     .lload(code.parameterSlot(1))
                     .loadConstant(0L)
                     .loadConstant(0L)
-                    .invokestatic(art.CD(), "$compare",
-                            MethodTypeDesc.of(CD_int, CD_long, CD_long, CD_long, CD_long));
+                    .invokestatic(art.CD(), "$compare", md(CD_int, CD_long, CD_long, CD_long, CD_long));
                 break;
 
             default:
@@ -1089,13 +1089,13 @@ public class NumberBuilder extends AugmentingBuilder {
         loadLongValues(code, jmd);
 
         code.invokestatic(arrayCD, "$fromLongs",
-                        MethodTypeDesc.of(arrayCD, CD_Ctx, mutabilityCD, CD_long, CD_long.arrayType()))
+                        md(arrayCD, CD_Ctx, mutabilityCD, CD_long, CD_long.arrayType()))
                 .areturn();
     }
 
     protected void generateCompare(ClassBuilder classBuilder) {
         ClassDesc      thisCD  = art.CD();
-        MethodTypeDesc md      = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, thisCD, thisCD);
+        MethodTypeDesc md      = md(CD_Ordered, CD_Ctx, CD_nType, thisCD, thisCD);
         int            flags   = ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC;
         String         jitName = "compare";
 
@@ -1129,37 +1129,33 @@ public class NumberBuilder extends AugmentingBuilder {
                 break;
 
             case "Float16", "Float32":
-                code.invokestatic(CD_Float, "compare",
-                        MethodTypeDesc.of(CD_int, CD_float, CD_float));
+                code.invokestatic(CD_Float, "compare", md(CD_int, CD_float, CD_float));
                 break;
 
             case "Float64":
-                code.invokestatic(CD_Double, "compare",
-                        MethodTypeDesc.of(CD_int, CD_double, CD_double));
+                code.invokestatic(CD_Double, "compare", md(CD_int, CD_double, CD_double));
                 break;
 
             case "Dec32":
-                code.invokestatic(CD_Dec32, "$compare",
-                        MethodTypeDesc.of(CD_int, CD_int, CD_int));
+                code.invokestatic(CD_Dec32, "$compare", md(CD_int, CD_int, CD_int));
                 break;
 
             case "Dec64":
-                code.invokestatic(CD_Dec64, "$compare",
-                        MethodTypeDesc.of(CD_int, CD_long, CD_long));
+                code.invokestatic(CD_Dec64, "$compare", md(CD_int, CD_long, CD_long));
                 break;
 
             case "Dec128":
-                MethodTypeDesc d128Cmp = MethodTypeDesc.of(CD_int, CD_long, CD_long, CD_long, CD_long);
+                MethodTypeDesc d128Cmp = md(CD_int, CD_long, CD_long, CD_long, CD_long);
                 code.invokestatic(CD_Dec128, "$compare", d128Cmp);
                 break;
 
             case "Int128":
-                MethodTypeDesc i128Cmp = MethodTypeDesc.of(CD_int, CD_long, CD_long, CD_long, CD_long);
+                MethodTypeDesc i128Cmp = md(CD_int, CD_long, CD_long, CD_long, CD_long);
                 code.invokestatic(CD_Int128, "$compare", i128Cmp);
                 break;
 
             case "UInt128":
-                MethodTypeDesc u128Cmp = MethodTypeDesc.of(CD_int, CD_long, CD_long, CD_long, CD_long);
+                MethodTypeDesc u128Cmp = md(CD_int, CD_long, CD_long, CD_long, CD_long);
                 code.invokestatic(CD_UInt128, "$compare", u128Cmp);
                 break;
 

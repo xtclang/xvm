@@ -124,7 +124,7 @@ public class CommonBuilder
 
     /**
      * List of constant properties for every class name this builder assembles.
-     *
+     * <p>
      * Note: a vast majority of builders assemble one and only one class.
      */
     protected List<PropertyInfo> constProperties;
@@ -512,7 +512,7 @@ public class CommonBuilder
             return ShallowSizeOf.fieldOf(Object.class);
         }
         TypeConstant type = prop.getType();
-        ClassDesc    cd   = JitTypeDesc.getPrimitiveFieldClass(type);
+        ClassDesc    cd   = JitTypeDesc.findPrimitiveFieldClass(type);
         return cd == null
             ? ShallowSizeOf.fieldOf(Object.class)
             : ShallowSizeOf.fieldOf(cd);
@@ -791,11 +791,11 @@ public class CommonBuilder
                 // create a snapshot of the work to do RIGHT AT THIS MOMENT IN TIME so that if other
                 // things get appended to the map in the process, we don't accidentally trigger a
                 // CME etc.
-                Map.Entry<Constant, Integer>[] entries =
+                List<Map.Entry<Constant, Integer>> entries =
                         constants.entrySet().stream().sorted(Map.Entry.comparingByValue())
-                                                     .toArray(Map.Entry[]::new);
-                for (int size = entries.length; emitted < size; ++emitted) {
-                    Map.Entry<Constant, Integer> entry = entries[emitted];
+                                                     .toList();
+                for (int size = entries.size(); emitted < size; ++emitted) {
+                    Map.Entry<Constant, Integer> entry = entries.get(emitted);
                     Constant constant = entry.getKey();
                     String   name     = CONST_PROP + entry.getValue();
                     if (constant instanceof TypeConstant type) {
@@ -1605,7 +1605,7 @@ public class CommonBuilder
 
     /**
      * Assemble the "public TypeConstant $xvmType()" method.
-     *
+     * <p>
      * TODO: consider using a couple of bits of $meta value to indicate the ACCESS trait
      *       of the type (or at least a bit for STRUCT); it would be used by this method
      *       to at least answer "is(struct)" question
@@ -3805,7 +3805,7 @@ public class CommonBuilder
 
     /**
      * Assemble the "$new" method.
-     *
+     * <p>
      * <code><pre>
      * Ecstasy:
      *      class C {...}
