@@ -79,7 +79,7 @@ public class TerminalTypeConstant
      *
      * @throws IOException if an issue occurs reading the Constant value
      */
-    public TerminalTypeConstant(ConstantPool pool, Format format, DataInput in)
+    public TerminalTypeConstant(ConstantPool pool, @SuppressWarnings("unused") Format format, DataInput in)
             throws IOException {
         super(pool);
 
@@ -1159,43 +1159,23 @@ public class TerminalTypeConstant
         }
 
         Constant constant = getDefiningConstant();
-        switch (constant.getFormat()) {
-        case Module:
-        case Package:
-        case NativeClass:
-            // these are always class types (not interface types)
-            return true;
-
-        case IsConst:
-        case IsEnum:
-        case IsModule:
-        case IsPackage:
-        case IsClass:
-            return false;
-
-        case Class: {
-            ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
-            return fAllowInterface || clz.getFormat() != Component.Format.INTERFACE;
-        }
-
-        case Property:
-        case TypeParameter:
-        case FormalTypeChild:
-        case DynamicFormal:
-            return ((FormalConstant) constant).getConstraintType().
-                    isSingleUnderlyingClass(fAllowInterface);
-
-        case ThisClass:
-        case ParentClass:
-        case ChildClass: {
-            ClassStructure clz = (ClassStructure) ((PseudoConstant) constant)
-                    .getDeclarationLevelClass().getComponent();
-            return fAllowInterface || clz.getFormat() != Component.Format.INTERFACE;
-        }
-
-        default:
-            throw new IllegalStateException("unexpected defining constant: " + constant);
-        }
+        return switch (constant.getFormat()) {
+            case Module, Package, NativeClass -> true; // these are always class types (not interface types)
+            case IsConst, IsEnum, IsModule, IsPackage, IsClass -> false;
+            case Class -> {
+                ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
+                yield fAllowInterface || clz.getFormat() != Component.Format.INTERFACE;
+            }
+            case Property, TypeParameter, FormalTypeChild, DynamicFormal ->
+                    ((FormalConstant) constant).getConstraintType().
+                            isSingleUnderlyingClass(fAllowInterface);
+            case ThisClass, ParentClass, ChildClass -> {
+                ClassStructure clz = (ClassStructure) ((PseudoConstant) constant)
+                        .getDeclarationLevelClass().getComponent();
+                yield fAllowInterface || clz.getFormat() != Component.Format.INTERFACE;
+            }
+            default -> throw new IllegalStateException("unexpected defining constant: " + constant);
+        };
     }
 
     @Override
@@ -1300,16 +1280,7 @@ public class TerminalTypeConstant
             return constId.getReferredToType().getExplicitClassInto(fResolve);
         }
 
-        Constant       constId = getDefiningConstant();
-        ClassStructure structMixin = switch (constId.getFormat()) {
-            // get the class referred to and return its format
-            case Class -> (ClassStructure) ((ClassConstant) constId).getComponent();
-
-            case ThisClass, ParentClass, ChildClass -> (ClassStructure) ((PseudoConstant) constId).getDeclarationLevelClass().getComponent();
-
-            default -> throw new IllegalStateException("no class format for: " + constId);
-        };
-
+        ClassStructure structMixin = getStructMixin();
         if (structMixin == null ||
                 (structMixin.getFormat() != Component.Format.ANNOTATION &&
                  structMixin.getFormat() != Component.Format.MIXIN)) {
@@ -1317,6 +1288,17 @@ public class TerminalTypeConstant
         }
 
         return structMixin.getTypeInto();
+    }
+
+    private ClassStructure getStructMixin() {
+        Constant constId = getDefiningConstant();
+        return switch (constId.getFormat()) {
+            // get the class referred to and return its format
+            case Class -> (ClassStructure) ((ClassConstant) constId).getComponent();
+            case ThisClass, ParentClass, ChildClass ->
+                    (ClassStructure) ((PseudoConstant) constId).getDeclarationLevelClass().getComponent();
+            default -> throw new IllegalStateException("no class format for: " + constId);
+        };
     }
 
     @Override
