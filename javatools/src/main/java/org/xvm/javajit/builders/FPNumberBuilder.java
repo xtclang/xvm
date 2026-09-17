@@ -141,12 +141,10 @@ public class FPNumberBuilder extends NumberBuilder {
                 case 256 -> 19;
                 default  -> {
                     if (thisType.isA(pool().typeBinFPNumber()) && bitLength >= 128) {
-                        // IEEE-754-2008 spec Table 3.5 — Binary interchange format parameters
-                        // for bit lengths >= 128
+                        // IEEE-754-2008 spec Table 3.5 — Binary interchange format parameters for bit lengths >= 128
                         yield (int) Math.round((Math.log10(bitLength) / Math.log10(2)) * 4) - 13;
                     } else if (thisType.isA(pool().typeDecFPNumber()) && bitLength >= 32) {
-                        // IEEE-754-2008 spec Table 3.6 — Decimal interchange format parameters
-                        // for bit lengths >= 32
+                        // IEEE-754-2008 spec Table 3.6 — Decimal interchange format parameters for bit lengths >= 32
                         yield (bitLength / 16) + 9;
                     }
                     throw new UnsupportedOperationException("Unsupported bitLength " + bitLength);
@@ -387,8 +385,8 @@ public class FPNumberBuilder extends NumberBuilder {
         assert valueCD != null;
 
         Label finite = code.newLabel();
-        loadTarget(code, jmd);
-        code.invokestatic(CD_DecimalFPNumber, "$leftmost7Bits", md(CD_int, valueCDs))
+        loadTarget(code, jmd)
+            .invokestatic(CD_DecimalFPNumber, "$leftmost7Bits", md(CD_int, valueCDs))
             .invokestatic(CD_DecimalFPNumber, "$isFinite", md(CD_boolean, CD_int))
             .ifne(finite);
         loadTarget(code, jmd);
@@ -396,8 +394,8 @@ public class FPNumberBuilder extends NumberBuilder {
 
         code.labelBinding(finite)
             .aload(code.parameterSlot(jmd.optimizedCtx()));
-        loadTarget(code, jmd);
-        code.invokestatic(valueCD, "$toBigDecimal", md(CD_BigDecimal, valueCDs));
+        loadTarget(code, jmd)
+            .invokestatic(valueCD, "$toBigDecimal", md(CD_BigDecimal, valueCDs));
         generateSetScale(code, jmd, mode);
 
         ClassDesc returnCD = jmd.optimizedMD.returnType();
@@ -410,14 +408,16 @@ public class FPNumberBuilder extends NumberBuilder {
      * Load the primitive binary value as a double.
      */
     protected void loadBinaryValueAsDouble(CodeBuilder code, ClassDesc valueCD) {
-        load(code, valueCD, code.parameterSlot(0));
+        CodeBuilder loaded = load(code, valueCD, code.parameterSlot(0));
+
+        if (valueCD.equals(CD_double)) {
+            return;                                     // nothing to widen
+        }
         if (valueCD.equals(CD_float)) {
-            code.f2d();
-        } else if (valueCD.equals(CD_double)) {
-            // already a double
+            loaded.f2d();
         } else if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
             // an FP8 value is carried as its 8-bit encoding, so decode it before widening
-            code.invokestatic(fp8CD, "$toFloat", md(CD_float, CD_int)).f2d();
+            loaded.invokestatic(fp8CD, "$toFloat", md(CD_float, CD_int)).f2d();
         } else {
             throw new IllegalStateException("Unsupported binary FPNumber type " + thisType);
         }
@@ -438,11 +438,12 @@ public class FPNumberBuilder extends NumberBuilder {
     /**
      * Load all primitive slots that represent the target value.
      */
-    protected void loadTarget(CodeBuilder code, JitMethodDesc jmd) {
+    protected CodeBuilder loadTarget(CodeBuilder code, JitMethodDesc jmd) {
         for (int i = 0, count = jmd.optimizedParams.length;
                 i < count && jmd.optimizedParams[i].index < 0; i++) {
             load(code, jmd.optimizedParams[i].cd, code.parameterSlot(i));
         }
+        return code;
     }
 
     /**
@@ -453,8 +454,8 @@ public class FPNumberBuilder extends NumberBuilder {
         if (mode == null) {
             Label specified = code.newLabel();
             Label loaded    = code.newLabel();
-            int   modeSlot  = code.parameterSlot(
-                    jmd.getImplicitParamCount() + jmd.getOptimizedParamIndex(0));
+            int   paramNo   = jmd.getImplicitParamCount() + jmd.getOptimizedParamIndex(0);
+            int   modeSlot  = code.parameterSlot(paramNo);
 
             code.aload(modeSlot)
                 .dup()
