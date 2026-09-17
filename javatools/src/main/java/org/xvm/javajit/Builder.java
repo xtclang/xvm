@@ -1057,8 +1057,7 @@ public abstract class Builder {
             case "J"                -> code.lload(slot);
             case "F"                -> code.fload(slot);
             case "D"                -> code.dload(slot);
-            default -> throw new IllegalStateException(
-                    "Unsupported carrier: " + cd.descriptorString());
+            default -> throw new IllegalStateException("Unsupported carrier: " + cd.descriptorString());
         };
     }
 
