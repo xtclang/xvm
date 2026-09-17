@@ -19,7 +19,8 @@ public class ListMap<K,V>
      * Construct a new ListMap.
      */
     public ListMap() {
-        m_list = new ArrayList<>();
+        m_list       = new ArrayList<>();
+        f_fImmutable = false;
     }
 
     /**
@@ -28,9 +29,8 @@ public class ListMap<K,V>
      * @param cInitSize  the initial capacity; negative value indicates an immutable empty map
      */
     public ListMap(int cInitSize) {
-        m_list = cInitSize >= 0
-            ? new ArrayList<>(cInitSize)
-            : (ArrayList<SimpleEntry<K,V>>) EMPTY_ARRAY_LIST;
+        m_list       = new ArrayList<>(Math.max(cInitSize, 0));
+        f_fImmutable = cInitSize < 0;
     }
 
     /**
@@ -39,18 +39,34 @@ public class ListMap<K,V>
      * @param map  the map to clone
      */
     public ListMap(ListMap<K, V> map) {
-        m_list = new ArrayList<>(map.m_list);
+        m_list       = new ArrayList<>(map.m_list.size());
+        f_fImmutable = false;
+
+        for (Entry<K, V> entry : map.m_list) {
+            m_list.add(new SimpleEntry<>(entry.getKey(), entry.getValue()));
+        }
+    }
+
+    /**
+     * @return the immutable empty ListMap
+     *
+     * @param <K>  the key type
+     * @param <V>  the value type
+     */
+    @SuppressWarnings("unchecked")
+    public static <K, V> ListMap<K, V> empty() {
+        return (ListMap<K, V>) EMPTY;
     }
 
     @Override
     public V put(K key, V value) {
+        if (f_fImmutable) {
+            throw new UnsupportedOperationException();
+        }
+
         Entry<K,V> entry = getEntry(key);
         if (entry != null) {
             return entry.setValue(value);
-        }
-
-        if (m_list == EMPTY_ARRAY_LIST) {
-            throw new UnsupportedOperationException();
         }
 
         m_list.add(new SimpleEntry<>(key, value));
@@ -68,9 +84,7 @@ public class ListMap<K,V>
      * @return the entries of the map in a List
      */
     public List<Entry<K,V>> asList() {
-        List<Entry<K,V>> list = (List) m_list;
-        assert (list = Collections.unmodifiableList(list)) != null;
-        return list;
+        return Collections.unmodifiableList(m_list);
     }
 
     /**
@@ -91,10 +105,10 @@ public class ListMap<K,V>
      *
      * @return the entry if it exists; otherwise null
      */
-    protected SimpleEntry<K,V> getEntry(Object key) {
-        ArrayList<SimpleEntry<K,V>> list = m_list;
+    protected Entry<K,V> getEntry(Object key) {
+        ArrayList<Entry<K,V>> list = m_list;
         for (int i = 0, c = list.size(); i < c; ++i) { // avoid Iterator creation
-            SimpleEntry<K, V> entry = list.get(i);
+            Entry<K, V> entry = list.get(i);
             if (entry.getKey().equals(key)) {
                 return entry;
             }
@@ -105,7 +119,7 @@ public class ListMap<K,V>
 
     @Override
     public V get(Object key) {
-        SimpleEntry<K, V> entry = getEntry(key);
+        Entry<K, V> entry = getEntry(key);
         return entry == null ? null : entry.getValue();
     }
 
@@ -113,7 +127,12 @@ public class ListMap<K,V>
      * The contents of the map are stored in an ArrayList of SimpleEntry
      * objects.
      */
-    private final ArrayList<SimpleEntry<K, V>> m_list;
+    private final ArrayList<Entry<K, V>> m_list;
+
+    /**
+     * True iff this map refuses to take entries; see {@link #ListMap(int)}.
+     */
+    private final boolean f_fImmutable;
 
     /**
      * The AbstractMap implementation needs an underlying "entry set" to be
@@ -122,7 +141,7 @@ public class ListMap<K,V>
     private final Set<Entry<K, V>> m_setEntries = new AbstractSet<>() {
         @Override
         public Iterator<Entry<K, V>> iterator() {
-            return (Iterator) m_list.iterator();
+            return m_list.iterator();
         }
 
         @Override
@@ -132,12 +151,8 @@ public class ListMap<K,V>
     };
 
     /**
-     * An empty ArrayList.
+     * An empty ListMap. Immutable - {@link #put} rejects it - so one instance serves every
+     * parameterization; reach it through {@link #empty()}.
      */
-    private static final ArrayList<?> EMPTY_ARRAY_LIST = new ArrayList<>(0);
-
-    /**
-     * An empty ListMap.
-     */
-    public static final ListMap EMPTY = new ListMap<>(-1);
+    private static final ListMap<?, ?> EMPTY = new ListMap<>(-1);
 }

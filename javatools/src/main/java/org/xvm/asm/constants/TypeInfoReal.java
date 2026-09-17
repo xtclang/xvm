@@ -651,13 +651,13 @@ public class TypeInfoReal
             null,                   // typeRebase
             null,                   // typeInto
             Collections.emptyList(),// listProcess,
-            ListMap.EMPTY,          // listmapClassChain
-            ListMap.EMPTY,          // listmapDefaultChain
+            ListMap.empty(),        // listmapClassChain
+            ListMap.empty(),        // listmapDefaultChain
             Collections.emptyMap(), // mapProps
             mapMethods,
             Collections.emptyMap(), // mapVirtProps
             mapVirtMethods,
-            ListMap.EMPTY,          // mapChildren
+            ListMap.empty(),        // mapChildren
             null, Progress.Complete
         );
     }
