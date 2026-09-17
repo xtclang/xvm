@@ -42,6 +42,7 @@ import org.xvm.compiler.Source;
 import org.xvm.type.Decimal;
 
 import org.xvm.util.Auto;
+import org.xvm.util.Lazy;
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.TransientThreadLocal;
@@ -834,7 +835,7 @@ public class ConstantPool
      * @param sPath     the path used to specify the FileStore
      * @param constDir  the directory contents of the FileStore
      *
-     * @return
+     * @return a new FileStoreConstant
      */
     public FileStoreConstant ensureFileStoreConstant(String sPath, FSNodeConstant constDir) {
         return new FileStoreConstant(this, sPath, constDir);
@@ -2122,40 +2123,43 @@ public class ConstantPool
      * @return the immutable set of all JIT-Primitive types for this ConstantPool
      */
     public Set<TypeConstant> getJitPrimitiveTypes() {
-        Set<TypeConstant> setTypes = m_setJitPrimitives;
-        if (setTypes == null) {
-            m_setJitPrimitives = setTypes = Stream.of(
-                        typeBit(),
-                        typeNibble(),
-                        typeBoolean(),
-                        typeChar(),
-                        typeInt8(),
-                        typeInt16(),
-                        typeInt32(),
-                        typeInt64(),
-                        typeInt128(),
-                        typeUInt8(),
-                        typeUInt16(),
-                        typeUInt32(),
-                        typeUInt64(),
-                        typeUInt128(),
-                        typeFloat8e4(),
-                        typeFloat8e5(),
-                        typeBFloat16(),
-                        typeFloat16(),
-                        typeFloat32(),
-                        typeFloat64(),
-                        typeDec32(),
-                        typeDec64(),
-                        typeDec128(),
-                        typeDuration())
-                    .flatMap(type -> {
-                        assert type.isJitPrimitive();
-                        return Stream.of(type, type.ensureNullable());
-                    })
-                    .collect(Collectors.toUnmodifiableSet());
-        }
-        return setTypes;
+        return f_jitPrimitives.get(this);
+    }
+
+    /**
+     * @return the set of JIT primitive types, and their nullable forms, for this pool
+     */
+    private Set<TypeConstant> buildJitPrimitiveTypes() {
+        return Stream.of(
+                    typeBit(),
+                    typeNibble(),
+                    typeBoolean(),
+                    typeChar(),
+                    typeInt8(),
+                    typeInt16(),
+                    typeInt32(),
+                    typeInt64(),
+                    typeInt128(),
+                    typeUInt8(),
+                    typeUInt16(),
+                    typeUInt32(),
+                    typeUInt64(),
+                    typeUInt128(),
+                    typeFloat8e4(),
+                    typeFloat8e5(),
+                    typeBFloat16(),
+                    typeFloat16(),
+                    typeFloat32(),
+                    typeFloat64(),
+                    typeDec32(),
+                    typeDec64(),
+                    typeDec128(),
+                    typeDuration())
+                .flatMap(type -> {
+                    assert type.isJitPrimitive();
+                    return Stream.of(type, type.ensureNullable());
+                })
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     // ----- caching helpers -----------------------------------------------------------------------
@@ -3842,7 +3846,7 @@ public class ConstantPool
         m_typeFloat16       = null;
         m_typeFloat32       = null;
         m_typeFloat64       = null;
-        m_setJitPrimitives  = null;
+        f_jitPrimitives.reset();
         m_typeIndexed       = null;
         m_typeArray         = null;
         m_typeMatrix        = null;
@@ -4021,6 +4025,23 @@ public class ConstantPool
     private final Map<TypeConstant, TypeInfo> f_mapRefTypes = new ConcurrentHashMap<>();
 
     /**
+     * The JIT primitive types, computed on demand and discarded by {@link #optimize}.
+     * <p/>
+     * Bound rather than plain for two reasons: {@link #optimize} must be able to discard the value,
+     * which only the resettable forms allow; and the value derives from this pool, so taking the
+     * owner at access time avoids capturing a partially constructed {@code this} in this field
+     * initializer.
+     * <p/>
+     * Note that computing it acquires this pool's monitor, by way of the {@code typeXxx()} calls
+     * registering constants, while holding the holder's own monitor. Nothing acquires those in the
+     * opposite order today, and the work done under the pool monitor in {@link #register} is narrow
+     * bookkeeping that does not reach type queries. A caller that reached
+     * {@link #getJitPrimitiveTypes} while already holding the pool monitor would invert that order.
+     */
+    private final Lazy.Bound<ConstantPool, Set<TypeConstant>> f_jitPrimitives =
+            Lazy.ofBound(ConstantPool::buildJitPrimitiveTypes);
+
+    /**
      * Thread local allowing to get the "current" ConstantPool without any context.
      */
     private static final ThreadLocal<ConstantPool[]> s_tloPool =
@@ -4162,7 +4183,6 @@ public class ConstantPool
     private transient TypeConstant      m_typeFloat16;
     private transient TypeConstant      m_typeFloat32;
     private transient TypeConstant      m_typeFloat64;
-    private transient Set<TypeConstant> m_setJitPrimitives;
     private transient TypeConstant      m_typeIndexed;
     private transient TypeConstant      m_typeArray;
     private transient TypeConstant      m_typeMatrix;
