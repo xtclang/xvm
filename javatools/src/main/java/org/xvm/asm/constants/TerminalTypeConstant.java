@@ -1162,18 +1162,10 @@ public class TerminalTypeConstant
         return switch (constant.getFormat()) {
             case Module, Package, NativeClass -> true; // these are always class types (not interface types)
             case IsConst, IsEnum, IsModule, IsPackage, IsClass -> false;
-            case Class -> {
-                ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
-                yield fAllowInterface || clz.getFormat() != Component.Format.INTERFACE;
-            }
+            case Class, ThisClass, ParentClass, ChildClass -> fAllowInterface ||
+                    getDefiningClassStructure(constant).getFormat() != Component.Format.INTERFACE;
             case Property, TypeParameter, FormalTypeChild, DynamicFormal ->
-                    ((FormalConstant) constant).getConstraintType().
-                            isSingleUnderlyingClass(fAllowInterface);
-            case ThisClass, ParentClass, ChildClass -> {
-                ClassStructure clz = (ClassStructure) ((PseudoConstant) constant)
-                        .getDeclarationLevelClass().getComponent();
-                yield fAllowInterface || clz.getFormat() != Component.Format.INTERFACE;
-            }
+                    ((FormalConstant) constant).getConstraintType().isSingleUnderlyingClass(fAllowInterface);
             default -> throw new IllegalStateException("unexpected defining constant: " + constant);
         };
     }
@@ -1280,7 +1272,7 @@ public class TerminalTypeConstant
             return constId.getReferredToType().getExplicitClassInto(fResolve);
         }
 
-        ClassStructure structMixin = getStructMixin();
+        ClassStructure structMixin = getDefiningClassStructure(getDefiningConstant());
         if (structMixin == null ||
                 (structMixin.getFormat() != Component.Format.ANNOTATION &&
                  structMixin.getFormat() != Component.Format.MIXIN)) {
@@ -1290,10 +1282,13 @@ public class TerminalTypeConstant
         return structMixin.getTypeInto();
     }
 
-    private ClassStructure getStructMixin() {
-        Constant constId = getDefiningConstant();
+    /**
+     * @param constId  a defining constant that refers to a class, directly or via a pseudo constant
+     *
+     * @return the {@link ClassStructure} that the specified defining constant refers to
+     */
+    private static ClassStructure getDefiningClassStructure(Constant constId) {
         return switch (constId.getFormat()) {
-            // get the class referred to and return its format
             case Class -> (ClassStructure) ((ClassConstant) constId).getComponent();
             case ThisClass, ParentClass, ChildClass ->
                     (ClassStructure) ((PseudoConstant) constId).getDeclarationLevelClass().getComponent();
