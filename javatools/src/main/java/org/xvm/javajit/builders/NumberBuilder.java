@@ -29,9 +29,6 @@ import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
 
-import static org.xvm.javajit.Builder.MD_FP8Binary;
-import static org.xvm.javajit.Builder.MD_FP8Predicate;
-
 import static java.lang.constant.ConstantDescs.CD_Double;
 import static java.lang.constant.ConstantDescs.CD_Float;
 import static java.lang.constant.ConstantDescs.CD_Integer;
@@ -480,7 +477,7 @@ public class NumberBuilder extends AugmentingBuilder {
 
     /**
      * Assemble an optimized static implementation of "bits$get$p()".
-     *
+     * <p>
      * {@code return ArrayBit.fromLongs(bitLength, rawBits);}
      */
     protected void generateBitsGet(CodeBuilder code, JitMethodDesc jmd) {
@@ -599,7 +596,7 @@ public class NumberBuilder extends AugmentingBuilder {
 
     /**
      * Assemble an optimized static implementation of "sign$get$p()".
-     *
+     * <p>
      * {@code return value == 0 ? Zero : value < 0 ? Negative : Positive;}
      */
     protected void generateSignGet(CodeBuilder code, JitMethodDesc jmd) {
@@ -645,7 +642,7 @@ public class NumberBuilder extends AugmentingBuilder {
 
     /**
      * Assemble an optimized static implementation of "negative$get$p()".
-     *
+     * <p>
      * {@code return value < 0;}
      */
     protected void generateNegativeGet(CodeBuilder code, JitMethodDesc jmd) {
@@ -671,138 +668,80 @@ public class NumberBuilder extends AugmentingBuilder {
     }
 
     /**
-     * Assemble an optimized static implementation of "finite$get$p()".
+     * Assemble the body shared by "finite$get$p()", "infinity$get$p()" and "NaN$get$p()". The three
+     * differ only in which helper answers the question and in what the answer is for a type that is
+     * not a binary FP number.
      *
-     * {@code return !isBinaryFP || Float.isFinite(value);}
+     * @param sFP8      the predicate on the FP8 jitbridge class, which carries its 8-bit encoding
+     * @param sJava     the corresponding java.lang.Float / java.lang.Double method
+     * @param fDefault  the answer for a type that is not a binary FP number
      */
-    protected void generateFiniteGet(CodeBuilder code, JitMethodDesc jmd) {
+    private void generateBinaryFPPredicate(CodeBuilder code, String sFP8, String sJava,
+                                           boolean fDefault) {
+        if (!thisType.isA(pool().typeBinFPNumber())) {
+            (fDefault ? code.iconst_1() : code.iconst_0())
+                    .ireturn();
+            return;
+        }
+
         String name      = thisType.getSingleUnderlyingClass(false).getName();
         int    paramSlot = code.parameterSlot(0);
 
-        if (thisType.isA(pool().typeBinFPNumber())) {
-            switch (name) {
-                case "Float8e4":
-                    code.iload(paramSlot)
-                        .invokestatic(CD_Float8e4, "$finite", MD_FP8Predicate)
-                        .ireturn();
-                    break;
+        switch (name) {
+            case "Float8e4":
+                code.iload(paramSlot)
+                    .invokestatic(CD_Float8e4, sFP8, MD_FP8Predicate)
+                    .ireturn();
+                break;
 
-                case "Float8e5":
-                    code.iload(paramSlot)
-                        .invokestatic(CD_Float8e5, "$finite", MD_FP8Predicate)
-                        .ireturn();
-                    break;
+            case "Float8e5":
+                code.iload(paramSlot)
+                    .invokestatic(CD_Float8e5, sFP8, MD_FP8Predicate)
+                    .ireturn();
+                break;
 
-                case "Float16", "Float32":
-                    code.fload(paramSlot)
-                            .invokestatic(CD_Float, "isFinite", MethodTypeDesc.of(CD_boolean, CD_float))
-                            .ireturn();
-                    break;
+            case "Float16", "Float32":
+                code.fload(paramSlot)
+                    .invokestatic(CD_Float, sJava, MethodTypeDesc.of(CD_boolean, CD_float))
+                    .ireturn();
+                break;
 
-                case "Float64":
-                    code.dload(paramSlot)
-                            .invokestatic(CD_Double, "isFinite", MethodTypeDesc.of(CD_boolean, CD_double))
-                            .ireturn();
-                    break;
+            case "Float64":
+                code.dload(paramSlot)
+                    .invokestatic(CD_Double, sJava, MethodTypeDesc.of(CD_boolean, CD_double))
+                    .ireturn();
+                break;
 
-                default:
-                    throw new UnsupportedOperationException("Unsupported Binary FP type: " + name);
-            }
-        } else {
-            // must be finite
-            code.iconst_1()
-                .ireturn();
+            default:
+                throw new UnsupportedOperationException("Unsupported Binary FP type: " + name);
         }
+    }
+
+    /**
+     * Assemble an optimized static implementation of "finite$get$p()".
+     * <p>
+     * {@code return !isBinaryFP || Float.isFinite(value);}
+     */
+    protected void generateFiniteGet(CodeBuilder code, JitMethodDesc jmd) {
+        generateBinaryFPPredicate(code, "$finite", "isFinite", true);
     }
 
     /**
      * Assemble an optimized static implementation of "infinity$get$p()".
-     *
+     * <p>
      * {@code return isBinaryFP && Float.isInfinite(value);}
      */
     protected void generateInfinityGet(CodeBuilder code, JitMethodDesc jmd) {
-        if (thisType.isA(pool().typeBinFPNumber())) {
-            String name      = thisType.getSingleUnderlyingClass(false).getName();
-            int    paramSlot = code.parameterSlot(0);
-
-            switch (name) {
-                case "Float8e4":
-                    code.iload(paramSlot)
-                        .invokestatic(CD_Float8e4, "$infinity", MD_FP8Predicate)
-                        .ireturn();
-                    break;
-
-                case "Float8e5":
-                    code.iload(paramSlot)
-                        .invokestatic(CD_Float8e5, "$infinity", MD_FP8Predicate)
-                        .ireturn();
-                    break;
-
-                case "Float16", "Float32":
-                    code.fload(paramSlot)
-                        .invokestatic(CD_Float, "isInfinite", MethodTypeDesc.of(CD_boolean, CD_float))
-                        .ireturn();
-                    break;
-
-                case "Float64":
-                    code.dload(paramSlot)
-                        .invokestatic(CD_Double, "isInfinite", MethodTypeDesc.of(CD_boolean, CD_double))
-                        .ireturn();
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("Unsupported Binary FP type: " + name);
-            }
-        } else {
-            // cannot be infinity
-            code.iconst_0()
-                .ireturn();
-        }
+        generateBinaryFPPredicate(code, "$infinity", "isInfinite", false);
     }
 
     /**
      * Assemble an optimized static implementation of "NaN$get$p()".
-     *
+     * <p>
      * {@code return isBinaryFP && Float.isNaN(value);}
      */
     protected void generateNaNGet(CodeBuilder code, JitMethodDesc jmd) {
-        if (thisType.isA(pool().typeBinFPNumber())) {
-            String name      = thisType.getSingleUnderlyingClass(false).getName();
-            int    paramSlot = code.parameterSlot(0);
-
-            switch (name) {
-                case "Float8e4":
-                    code.iload(paramSlot)
-                        .invokestatic(CD_Float8e4, "$NaN", MD_FP8Predicate)
-                        .ireturn();
-                    break;
-
-                case "Float8e5":
-                    code.iload(paramSlot)
-                        .invokestatic(CD_Float8e5, "$NaN", MD_FP8Predicate)
-                        .ireturn();
-                    break;
-
-                case "Float16", "Float32":
-                    code.fload(paramSlot)
-                        .invokestatic(CD_Float, "isNaN", MethodTypeDesc.of(CD_boolean, CD_float))
-                        .ireturn();
-                    break;
-
-                case "Float64":
-                    code.dload(paramSlot)
-                        .invokestatic(CD_Double, "isNaN", MethodTypeDesc.of(CD_boolean, CD_double))
-                        .ireturn();
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("Unsupported Binary FP type: " + name);
-            }
-        } else {
-            // cannot be infinity
-            code.iconst_0()
-                .ireturn();
-        }
+        generateBinaryFPPredicate(code, "$NaN", "isNaN", false);
     }
 
     /**
@@ -866,7 +805,7 @@ public class NumberBuilder extends AugmentingBuilder {
 
     /**
      * Assemble an optimized static implementation of "magnitude$get$p()".
-     *
+     * <p>
      * {@code return isUnsigned ? value : Math.abs(value);}
      */
     protected void generateMagnitudeGet(CodeBuilder code, JitMethodDesc jmd) {
@@ -1115,7 +1054,7 @@ public class NumberBuilder extends AugmentingBuilder {
     /**
      * Assemble optimized static implementations of "toBitArray$p()", "toNibbleArray$p()", and
      * "toByteArray$p()".
-     *
+     * <p>
      * {@code return Array.fromLongs(mutability, bitLength, rawBits);}
      */
     protected void generateToArray(CodeBuilder code, JitMethodDesc jmd, String jitName) {
@@ -1123,25 +1062,21 @@ public class NumberBuilder extends AugmentingBuilder {
         long      size;
         ClassDesc arrayCD;
 
-        switch (jitName) {
-        case "toBitArray":
-            arrayCD = CD_ArrayBit;
-            size    = bitLength;
-            break;
-
-        case "toNibbleArray":
-            arrayCD = CD_ArrayNibble;
-            size    = bitLength;
-            break;
-
-        case "toByteArray":
-            arrayCD = CD_ArrayUInt8;
-            size    = bitLength >>> 3;
-            break;
-
-        default:
-            throw new IllegalArgumentException(jitName);
-        }
+        size = switch (jitName) {
+            case "toBitArray" -> {
+                arrayCD = CD_ArrayBit;
+                yield bitLength;
+            }
+            case "toNibbleArray" -> {
+                arrayCD = CD_ArrayNibble;
+                yield bitLength;
+            }
+            case "toByteArray" -> {
+                arrayCD = CD_ArrayUInt8;
+                yield bitLength >>> 3;
+            }
+            default -> throw new IllegalArgumentException(jitName);
+        };
 
         int       mutabilityIndex = jmd.getOptimizedParamIndex(0);
         int       mutabilitySlot  = code.parameterSlot(jmd.getImplicitParamCount() + mutabilityIndex);
