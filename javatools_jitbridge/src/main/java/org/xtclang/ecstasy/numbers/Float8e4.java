@@ -2,6 +2,8 @@ package org.xtclang.ecstasy.numbers;
 
 import java.math.BigDecimal;
 
+import java.util.stream.IntStream;
+
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.Orderable;
@@ -32,14 +34,17 @@ public class Float8e4 extends BinaryFPNumber {
     }
 
     /**
-     * Every E4M3 value, so boxing never allocates after warm-up.
-     */
-    private static final Float8e4[] CACHE = new Float8e4[256];
-
-    /**
      * The 8-bit E4M3 encoding, in the low 8 bits.
      */
     public final int $value;
+
+    /**
+     * Every E4M3 value. An 8-bit format has only 256 of them, so the table is built once during
+     * class initialization rather than filled lazily: boxing never allocates, never races, and
+     * {@link #$box} always returns the same reference for the same encoding.
+     */
+    private static final Float8e4[] CACHE =
+            IntStream.range(0, 256).mapToObj(Float8e4::new).toArray(Float8e4[]::new);
 
     /**
      * Obtain a Float8e4 for an 8-bit E4M3 encoding.
@@ -49,12 +54,7 @@ public class Float8e4 extends BinaryFPNumber {
      * @return a Float8e4 reference
      */
     public static Float8e4 $box(int value) {
-        int    key = value &= 0xFF;
-        Float8e4 ref = CACHE[key];
-        if (ref == null) {
-            CACHE[key] = ref = new Float8e4(value);
-        }
-        return ref;
+        return CACHE[value & 0xFF];
     }
 
     /**
