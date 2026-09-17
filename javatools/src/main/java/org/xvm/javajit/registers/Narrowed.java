@@ -6,6 +6,7 @@ import java.lang.constant.ClassDesc;
 
 import java.util.Arrays;
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -156,7 +157,7 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
     }
 
     @Override
-    public String toString() {
+    public @NotNull String toString() {
         return "regId=" + regId
             + ", slots=" + Arrays.toString(slots)
             + ", flavor=" + flavor

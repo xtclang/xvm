@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import org.xvm.asm.ConstantPool;
 
@@ -178,7 +179,19 @@ public class NumberBuilder extends AugmentingBuilder {
             super.assembleMethod(classBuilder, method, jitName, jmd);
             return;
         }
+        assembleGeneratedOrInherited(classBuilder, method, jitName, jmd);
+    }
 
+    /**
+     * Assemble a method by generating its code, unless it is a case that has to keep the inherited
+     * assembly: a property initializer, a natively implemented method, or one the type prefers to
+     * implement naturally. A method with no generator gets an "unsupported" body.
+     * <p/>
+     * Shared with {@link IntNBuilder}, which takes this path even though IntN is not a JIT
+     * primitive and so would otherwise be turned away by {@link #assembleMethod} above.
+     */
+    protected void assembleGeneratedOrInherited(ClassBuilder classBuilder, MethodInfo method,
+                                                String jitName, JitMethodDesc jmd) {
         if (method.getHead().getMethodStructure().isPropertyInitializer()) {
             super.assembleMethod(classBuilder, method, jitName, jmd);
             return;
@@ -669,45 +682,30 @@ public class NumberBuilder extends AugmentingBuilder {
      * @param sJava     the corresponding java.lang.Float / java.lang.Double method
      * @param fDefault  the answer for a type that is not a binary FP number
      */
-    private void generateBinaryFPPredicate(CodeBuilder code, String sFP8, String sJava,
-                                           boolean fDefault) {
+    private CodeBuilder generateBinaryFPPredicate(CodeBuilder code, String sFP8, String sJava,
+                                                 boolean fDefault) {
         if (!thisType.isA(pool().typeBinFPNumber())) {
-            (fDefault ? code.iconst_1() : code.iconst_0())
-                    .ireturn();
-            return;
+            return (fDefault ? code.iconst_1() : code.iconst_0()).ireturn();
         }
 
         String name      = thisType.getSingleUnderlyingClass(false).getName();
         int    paramSlot = code.parameterSlot(0);
 
-        switch (name) {
-            case "Float8e4":
-                code.iload(paramSlot)
+        return switch (name) {
+            case "Float8e4" -> code.iload(paramSlot)
                     .invokestatic(CD_Float8e4, sFP8, MD_FP8Predicate)
                     .ireturn();
-                break;
-
-            case "Float8e5":
-                code.iload(paramSlot)
+            case "Float8e5" -> code.iload(paramSlot)
                     .invokestatic(CD_Float8e5, sFP8, MD_FP8Predicate)
                     .ireturn();
-                break;
-
-            case "Float16", "Float32":
-                code.fload(paramSlot)
+            case "Float16", "Float32" -> code.fload(paramSlot)
                     .invokestatic(CD_Float, sJava, md(CD_boolean, CD_float))
                     .ireturn();
-                break;
-
-            case "Float64":
-                code.dload(paramSlot)
+            case "Float64" -> code.dload(paramSlot)
                     .invokestatic(CD_Double, sJava, md(CD_boolean, CD_double))
                     .ireturn();
-                break;
-
-            default:
-                throw new UnsupportedOperationException("Unsupported Binary FP type: " + name);
-        }
+            default -> throw new UnsupportedOperationException("Unsupported Binary FP type: " + name);
+        };
     }
 
     /**
@@ -743,57 +741,69 @@ public class NumberBuilder extends AugmentingBuilder {
     protected void generateAbs(CodeBuilder code, JitMethodDesc jmd) {
         String name    = thisType.getSingleUnderlyingClass(false).getName();
         int    ctxSlot = code.parameterSlot(jmd.optimizedCtx());
-        Label  valid   = code.newLabel();
 
         switch (name) {
         case "Int8":
-            code.iload(code.parameterSlot(0))
-                .loadConstant(Byte.MIN_VALUE)
-                .if_icmpne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            guardNotMinValue(code, ctxSlot, Byte.MIN_VALUE);
             break;
 
         case "Int16":
-            code.iload(code.parameterSlot(0))
-                .loadConstant(Short.MIN_VALUE)
-                .if_icmpne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            guardNotMinValue(code, ctxSlot, Short.MIN_VALUE);
             break;
 
         case "Int32":
-            code.iload(code.parameterSlot(0))
-                .loadConstant(Integer.MIN_VALUE)
-                .if_icmpne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            guardNotMinValue(code, ctxSlot, Integer.MIN_VALUE);
             break;
 
         case "Int64":
-            code.lload(code.parameterSlot(0))
-                .loadConstant(Long.MIN_VALUE)
-                .lcmp()
-                .ifne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            guardNotMinValue(code, ctxSlot, valid ->
+                    code.lload(code.parameterSlot(0))
+                        .loadConstant(Long.MIN_VALUE)
+                        .lcmp()
+                        .ifne(valid));
             break;
 
         case "Int128":
-            code.lload(code.parameterSlot(1))
-                .loadConstant(Long.MIN_VALUE)
-                .lcmp()
-                .ifne(valid)
-                .lload(code.parameterSlot(0))
-                .lconst_0()
-                .lcmp()
-                .ifne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            // the most negative Int128 is the low word zero under a most negative high word
+            guardNotMinValue(code, ctxSlot, valid ->
+                    code.lload(code.parameterSlot(1))
+                        .loadConstant(Long.MIN_VALUE)
+                        .lcmp()
+                        .ifne(valid)
+                        .lload(code.parameterSlot(0))
+                        .lconst_0()
+                        .lcmp()
+                        .ifne(valid));
             break;
         }
 
         generateMagnitudeGet(code, jmd);
+    }
+
+    /**
+     * Guard abs() against a signed type's most negative value, whose absolute value is not
+     * representable: throw "out of bounds" for it and fall through for anything else.
+     *
+     * @param minValue  the most negative value of a type carried in an int
+     */
+    private void guardNotMinValue(CodeBuilder code, int ctxSlot, int minValue) {
+        guardNotMinValue(code, ctxSlot, valid ->
+                code.iload(code.parameterSlot(0))
+                    .loadConstant(minValue)
+                    .if_icmpne(valid));
+    }
+
+    /**
+     * Guard abs() against a signed type's most negative value.
+     *
+     * @param emitCompare  emits the comparison, which must jump to the supplied label for every
+     *                     value that is not the most negative one
+     */
+    private void guardNotMinValue(CodeBuilder code, int ctxSlot, Consumer<Label> emitCompare) {
+        Label valid = code.newLabel();
+        emitCompare.accept(valid);
+        throwOutOfBounds(code, "", ctxSlot);
+        code.labelBinding(valid);
     }
 
     /**

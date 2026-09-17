@@ -4,6 +4,7 @@ import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -138,7 +139,7 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
     }
 
     @Override
-    public String toString() {
+    public @NotNull String toString() {
         return "regId="      + regId
             + ", slot="      + slot
             + ", flavor="    + flavor()
