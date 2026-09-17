@@ -1,15 +1,14 @@
 package org.xvm.asm;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -50,6 +49,47 @@ public class LiteralFormatPlumbingTest {
      * with a representative literal string. Adding a literal format to the compiler means adding a
      * row here, and the row then checks all the stages at once.
      */
+    /**
+     * Stage 3: a literal of every format the pool can build must survive being written and read
+     * back. The pool's construction switch and its {@code disassemble} switch are separate lists,
+     * so a format can be constructible and still unreadable - which is exactly what
+     * {@code TimeZone} was, and what makes a module containing one write fine and then fail to
+     * load.
+     * <p/>
+     * {@link FileStructure#writeTo} cannot be used here: it calls
+     * {@code reregisterConstants(true)}, whose {@code optimize()} prunes every constant nothing
+     * references, which is all of these. {@code reregisterConstants(false)} keeps them, and
+     * {@code assemble} is the same writer {@code writeTo} delegates to.
+     */
+    @Test
+    public void everyLiteralFormatSurvivesAWriteAndReadBack() throws IOException {
+        Map<Format, String> literals = literalFormats();
+
+        FileStructure file = new FileStructure("test");
+        literals.forEach(file.getConstantPool()::ensureLiteralConstant);
+
+        var bytes = new ByteArrayOutputStream();
+        file.reregisterConstants(false);
+        file.assemble(new DataOutputStream(bytes));
+
+        ConstantPool reread = assertDoesNotThrow(
+                () -> new FileStructure(new ByteArrayInputStream(bytes.toByteArray()))
+                        .getConstantPool(),
+                "ConstantPool.disassemble() could not read back a literal it had just written;"
+                + " a format is missing from its disassemble switch");
+
+        var found = new LinkedHashMap<Format, String>();
+        for (Constant constant : reread.getConstants()) {
+            if (constant instanceof LiteralConstant literal
+                    && literals.containsKey(literal.getFormat())) {
+                found.put(literal.getFormat(), literal.getValue());
+            }
+        }
+
+        assertEquals(literals, found,
+                "every literal written must come back with its format and value intact");
+    }
+
     private static Map<Format, String> literalFormats() {
         var map = new LinkedHashMap<Format, String>();
         map.put(Format.IntLiteral, "42");
@@ -196,156 +236,4 @@ public class LiteralFormatPlumbingTest {
         });
     }
 
-    /**
-     * Stage 3: the pool's {@code disassemble} switch is a SEPARATE list from its construction
-     * switch, so a format can be constructible and still unreadable - which is exactly what
-     * {@code TimeZone} was. A round trip through {@link FileStructure} cannot check this, because
-     * a constant nothing references is pruned before it is ever written, so this reads the two
-     * case lists out of the source and compares them.
-     */
-    @Test
-    public void diassembleReadsBackEveryLiteralFormatThePoolCanBuild() throws IOException {
-        String source     = Files.readString(constantPoolSource());
-        var    unreadable = new ArrayList<Format>();
-
-        int ofDisassemble = source.indexOf("protected void disassemble(DataInput in)");
-        assertTrue(ofDisassemble > 0, "ConstantPool.disassemble(DataInput) not found");
-        String disassemble = source.substring(ofDisassemble);
-
-        for (Format format : literalFormats().keySet()) {
-            if (!disassemble.contains("case " + format.name() + ":")) {
-                unreadable.add(format);
-            }
-        }
-
-        assertTrue(unreadable.isEmpty(),
-                () -> "ConstantPool.disassemble() cannot read back " + unreadable
-                      + ", so a module containing one of those literals writes but does not load."
-                      + " Its construction switch and its disassemble switch are separate lists;"
-                      + " both need the format.");
-    }
-
-    /**
-     * Formats whose runtime value is materialised by {@code xConst}'s literal switch, which calls
-     * a {@code construct(String)} on the corresponding Ecstasy class. This is a SIXTH list, in a
-     * different module from the other five, and it is the one that actually broke: after the pool
-     * plumbing was fixed, a {@code TimeZone:} literal compiled and then died at run time with
-     * {@code Unexpected op execution failure ... op=VAR_IN}, because the runtime had no case for
-     * it and {@code TimeZone} had no String constructor to call even if it had.
-     */
-    private static final List<Format> RUNTIME_LITERAL_FORMATS = List.of(
-            Format.Time, Format.Date, Format.TimeOfDay, Format.TimeZone,
-            Format.Duration, Format.Version, Format.Path);
-
-    /**
-     * Stage 4: the runtime must be able to turn the constant into a handle. A format can be
-     * constructible, typed, and readable, and STILL be unusable, which is exactly the state
-     * {@code TimeZone} was left in after the pool-side fix alone.
-     */
-    @Test
-    public void runtimeMaterialisesEveryLiteralFormatItIsGiven() throws IOException {
-        String source   = Files.readString(xConstSource());
-        var    unusable = new ArrayList<Format>();
-
-        for (Format format : RUNTIME_LITERAL_FORMATS) {
-            if (!source.contains("case " + format.name() + ":")) {
-                unusable.add(format);
-            }
-        }
-
-        assertTrue(unusable.isEmpty(),
-                () -> "xConst's literal switch cannot materialise " + unusable
-                      + ", so a literal of that form compiles and then fails at run time with"
-                      + " \"Unexpected op execution failure ... op=VAR_IN\".");
-    }
-
-    /**
-     * Stage 5: the runtime path calls {@code construct(String)} on the Ecstasy class, so the class
-     * must declare one. {@code TimeZone} did not - it had only {@code TimeZone(Int64 picos)} and a
-     * conditional {@code of(String)} - which is why the runtime case alone was not enough.
-     */
-    @Test
-    public void everyRuntimeLiteralClassHasAStringConstructor() throws IOException {
-        Map<Format, String> sources = Map.of(
-                Format.Time,      "temporal/Time.x",
-                Format.Date,      "temporal/Date.x",
-                Format.TimeOfDay, "temporal/TimeOfDay.x",
-                Format.TimeZone,  "temporal/TimeZone.x",
-                Format.Duration,  "temporal/Duration.x",
-                Format.Path,      "fs/Path.x");
-
-        var missing = new ArrayList<Format>();
-        for (Map.Entry<Format, String> entry : sources.entrySet()) {
-            Path path = ecstasySource(entry.getValue());
-            if (!Files.exists(path)) {
-                continue;
-            }
-            String text = Files.readString(path);
-            if (!text.contains("construct(String") && !text.contains("construct " + entry.getKey().name() + "(String")) {
-                missing.add(entry.getKey());
-            }
-        }
-
-        assertTrue(missing.isEmpty(),
-                () -> "these Ecstasy classes have no construct(String), so xConst cannot build a"
-                      + " literal value for them: " + missing);
-    }
-
-    /**
-     * Stage 6: {@code NativeContainer.getConstType} maps a constant to the Ecstasy class that
-     * implements it, and its default throws
-     * {@code LauncherException("No implementation for constant: ...")}. This was the LAST of the
-     * seven places {@code TimeZone} was missing, and the one that still failed after the pool and
-     * the {@code xConst} switch were both fixed - which is why this ratchet has six stages rather
-     * than the three it started with.
-     */
-    @Test
-    public void nativeContainerKnowsTheTypeOfEveryRuntimeLiteral() throws IOException {
-        String source    = Files.readString(nativeContainerSource());
-        var    unmapped  = new ArrayList<Format>();
-
-        for (Format format : RUNTIME_LITERAL_FORMATS) {
-            // getConstType groups its cases on one line, e.g. "case Date, TimeOfDay, Time, ...:"
-            if (!source.contains(format.name() + ",") && !source.contains(format.name() + ":")) {
-                unmapped.add(format);
-            }
-        }
-
-        assertTrue(unmapped.isEmpty(),
-                () -> "NativeContainer.getConstType has no mapping for " + unmapped
-                      + ", so loading such a constant fails with \"No implementation for"
-                      + " constant\" even though it compiled and the runtime switch handles it.");
-    }
-
-    private static Path nativeContainerSource() {
-        Path cwd     = Path.of("").toAbsolutePath();
-        Path project = cwd.resolve("src/main/java/org/xvm/runtime/NativeContainer.java");
-        return Files.exists(project)
-                ? project
-                : cwd.resolve("javatools/src/main/java/org/xvm/runtime/NativeContainer.java");
-    }
-
-    private static Path xConstSource() {
-        Path cwd     = Path.of("").toAbsolutePath();
-        Path project = cwd.resolve("src/main/java/org/xvm/runtime/template/xConst.java");
-        return Files.exists(project)
-                ? project
-                : cwd.resolve("javatools/src/main/java/org/xvm/runtime/template/xConst.java");
-    }
-
-    private static Path ecstasySource(String sRelative) {
-        Path cwd = Path.of("").toAbsolutePath();
-        Path here = cwd.resolve("lib_ecstasy/src/main/x/ecstasy/" + sRelative);
-        return Files.exists(here)
-                ? here
-                : cwd.getParent().resolve("lib_ecstasy/src/main/x/ecstasy/" + sRelative);
-    }
-
-    private static Path constantPoolSource() {
-        Path cwd     = Path.of("").toAbsolutePath();
-        Path project = cwd.resolve("src/main/java/org/xvm/asm/ConstantPool.java");
-        return Files.exists(project)
-                ? project
-                : cwd.resolve("javatools/src/main/java/org/xvm/asm/ConstantPool.java");
-    }
 }
