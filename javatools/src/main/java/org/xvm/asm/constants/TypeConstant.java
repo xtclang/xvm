@@ -7416,19 +7416,6 @@ public abstract class TypeConstant
     }
 
     /**
-     * Generate the code that compares the registers and either jumps to one of the specified labels
-     * or falls through.
-     *
-     * @param bctx       the current build context
-     * @param code       the {@link CodeBuilder} to use to generate byte-codes
-     * @param nOp        the compare op to generate
-     * @param reg1       the first register to compare
-     * @param argLoader  the {@link Loader} for the compare argument
-     * @param lblTrue    (optional) the label to go to in the case the positive result has been
-     *                   computed and the jump needs be generated; otherwise the result of the
-     *                   comparison should be placed on the Java stack
-     */
-    /**
      * The 8-bit FP formats are carried as their encoding in an int, sharing the "I" carrier with
      * the small integer types while sharing none of their ordering: the encoding is sign-magnitude.
      *
@@ -7442,6 +7429,19 @@ public abstract class TypeConstant
         };
     }
 
+    /**
+     * Generate the code that compares the registers and either jumps to one of the specified labels
+     * or falls through.
+     *
+     * @param bctx       the current build context
+     * @param code       the {@link CodeBuilder} to use to generate byte-codes
+     * @param nOp        the compare op to generate
+     * @param reg1       the first register to compare
+     * @param argLoader  the {@link Loader} for the compare argument
+     * @param lblTrue    (optional) the label to go to in the case the positive result has been
+     *                   computed and the jump needs be generated; otherwise the result of the
+     *                   comparison should be placed on the Java stack
+     */
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, Loader argLoader, Label lblTrue) {
         TypeConstant type1 = reg1.type();
