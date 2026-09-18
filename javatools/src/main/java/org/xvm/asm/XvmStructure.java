@@ -478,42 +478,25 @@ public abstract class XvmStructure
     /**
      * Log an error against this structure.
      *
-     * @param errs     the error list to log to, or null to use the runtime ErrorListener
+     * @param errs     the error listener to log to
      * @param sev      the severity of the error
      * @param sCode    the error code
      * @param aoParam  the parameters of the error
      */
     public boolean log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
         // TODO need a way to log to compiler error list if we have compile-time info on the location in the source code
-        return ensureErrorListener(errs).log(sev, sCode, aoParam, this);
+        return errs.log(sev, sCode, aoParam, this);
     }
 
     /**
-     * Make sure that an error listener is returned to use.
+     * The listener for diagnostics about this structure that are raised where the caller's own
+     * listener is not in hand. Prefer passing one: this walks to the containing FileStructure, so
+     * it answers whatever that file was last told, which is not necessarily the caller's.
      *
-     * @param  errs  an error listener, or null
-     *
-     * @return the error listener passed in, if it was not null, otherwise the previously specified
-     *         error listener, otherwise the runtime error listener
-     */
-    public ErrorListener ensureErrorListener(ErrorListener errs) {
-        return errs == null ? getErrorListener() : errs;
-    }
-
-    /**
-     * @return the error listener, if provided, otherwise the runtime error listener
+     * @return the error listener of the containing structure
      */
     public ErrorListener getErrorListener() {
         return m_xsParent.getErrorListener();
-    }
-
-    /**
-     * Specify an error listener.
-     *
-     * @param errs  the error listener
-     */
-    public void setErrorListener(ErrorListener errs) {
-        m_xsParent.setErrorListener(errs);
     }
 
     // ----- debugging support ---------------------------------------------------------------------
