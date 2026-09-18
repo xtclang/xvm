@@ -471,9 +471,9 @@ public class LambdaExpression
         int     cParams     = getParamCount();
 
         if (cReqParams != -1 && cParams != cReqParams) {
-            errs.log(Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT,
-                    new Object[]{cReqParams, cParams},
-                    getSource(), getStartPosition(), operator.getStartPosition());
+            errs.error(Compiler.ARGUMENT_WRONG_COUNT,
+                    ErrorListener.in(getSource(), getStartPosition(), operator.getStartPosition()),
+                    cReqParams, cParams);
             fValid = false;
         }
 
