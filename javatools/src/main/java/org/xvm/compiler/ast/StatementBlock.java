@@ -737,7 +737,7 @@ public class StatementBlock
                     ? exprLambda.isRequiredThis()
                     : !isFunction();
 
-            if (!fHasThis && errs != null) {
+            if (!fHasThis) {
                 errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
             }
             return fHasThis;

@@ -1,5 +1,7 @@
 package org.xvm.compiler.ast;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -33,7 +35,7 @@ public class AnonInnerClass {
      */
     public AnonInnerClass(TypeExpression expr, ErrorListener errs) {
         assert expr != null;
-        assert errs != null;
+        requireNonNull(errs, "errs");
 
         m_exprType = expr;
         f_errs     = errs;

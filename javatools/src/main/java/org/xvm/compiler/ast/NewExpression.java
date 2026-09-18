@@ -171,16 +171,12 @@ public class NewExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        return calculateTargetType(ctx, null);
+        return calculateTargetType(ctx, ErrorListener.BLACKHOLE);
     }
 
     private TypeConstant calculateTargetType(Context ctx, ErrorListener errs) {
         if (isValidated()) {
             return getType();
-        }
-
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
         }
 
         TypeConstant typeTarget = null;
@@ -1523,9 +1519,7 @@ public class NewExpression
         @Override
         public boolean requireThis(long lPos, ErrorListener errs) {
             if (getMethod().isStatic()) {
-                if (errs != null) {
-                    errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
-                }
+                errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
                 return false;
             }
 
