@@ -108,6 +108,7 @@ import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyAddAll;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * A base class for the various forms of Constants that will represent data types.
@@ -7472,7 +7473,7 @@ public abstract class TypeConstant
             if (cdFP8 != null) {
                 // an FP8 value is carried as its 8-bit encoding, which is sign-magnitude and
                 // therefore cannot be compared as an int: -4.0 encodes as 0xC8 and 4.0 as 0x48
-                code.invokestatic(cdFP8, "$compare", MethodTypeDesc.of(CD_int, CD_int, CD_int));
+                code.invokestatic(cdFP8, "$compare", md(CD_int, CD_int, CD_int));
                 switch (nOp) {
                 case Op.OP_CMP -> {
                     generateOrdered(bctx, code);
@@ -7544,7 +7545,7 @@ public abstract class TypeConstant
                  Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
                 // by convention, all XVM primitives have this method
                 methodName = XVM_PRIMITIVE_EQUALS;
-                methodDesc = MethodTypeDesc.of(CD_boolean, cdParams);
+                methodDesc = md(CD_boolean, cdParams);
             }
             case Op.OP_IS_GT,  Op.OP_JMP_GT,
                  Op.OP_IS_GTE, Op.OP_JMP_GTE,
@@ -7553,7 +7554,7 @@ public abstract class TypeConstant
                  Op.OP_CMP -> {
                 // by convention, all XVM primitives have this method
                 methodName = XVM_PRIMITIVE_COMPARE;
-                methodDesc = MethodTypeDesc.of(CD_int, cdParams);
+                methodDesc = md(CD_int, cdParams);
             }
             default -> throw new IllegalStateException();
             }
@@ -7664,7 +7665,7 @@ public abstract class TypeConstant
                 // generated class-of-class extends Class and implements "sComparable" and "sOrderable"
                 Builder.load(code, regType.cd(), slotType);
                 bctx.loadCtx(code);
-                code.invokevirtual(CD_nType, "$xvmClass", MethodTypeDesc.of(CD_Class, CD_Ctx))
+                code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
                     .checkcast(cd);
 
                 bctx.loadCtx(code);

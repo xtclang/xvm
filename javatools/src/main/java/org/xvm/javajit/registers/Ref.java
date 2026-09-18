@@ -3,7 +3,6 @@ package org.xvm.javajit.registers;
 import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
-import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.ConstantPool;
 
@@ -20,6 +19,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_nRef;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * A register that holds a Ref to an underlying value.
@@ -89,7 +89,7 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
 
         RegisterInfo.super.load(code);
         bctx.loadCtx(code);
-        code.invokevirtual(CD_nRef, "get", MethodTypeDesc.of(CD_Object, CD_Ctx));
+        code.invokevirtual(CD_nRef, "get", md(CD_Object, CD_Ctx));
         code.checkcast(referentCd);
         return switch (referentFlavor) {
             case Specific, Widened ->
@@ -123,7 +123,7 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
             RegisterInfo.super.load(code); // nRef
             bctx.loadCtx(code)
                 .aload(tempSlot)
-                .invokevirtual(CD_nRef, "set", MethodTypeDesc.of(CD_void, CD_Ctx, CD_Object));
+                .invokevirtual(CD_nRef, "set", md(CD_void, CD_Ctx, CD_Object));
 
             if (!type.isA(referentType)) {
                 return bctx.narrowRegister(code, origRef, type);

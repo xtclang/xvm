@@ -9,8 +9,6 @@ import java.lang.classfile.Label;
 
 import java.lang.classfile.instruction.SwitchCase;
 
-import java.lang.constant.MethodTypeDesc;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -48,6 +46,7 @@ import static org.xvm.javajit.Builder.CD_Ctx;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * JMP_VAL rvalue, #:(CONST, addr), addr-default ; if value equals a constant, jump to address, otherwise default
@@ -727,7 +726,7 @@ public class JumpVal
         // enumValue -> enumValue.ordinal;
         regArg.load(code);
         bctx.loadCtx(code);
-        code.invokevirtual(regArg.cd(), "ordinal$get$p", MethodTypeDesc.of(CD_long, CD_Ctx))
+        code.invokevirtual(regArg.cd(), "ordinal$get$p", md(CD_long, CD_Ctx))
             .l2i();
 
         Label labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);

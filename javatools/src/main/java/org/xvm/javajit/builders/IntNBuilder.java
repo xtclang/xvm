@@ -63,17 +63,15 @@ public class IntNBuilder extends IntNumberBuilder {
 
                 code.aload(ctxSlot)
                     .aload(stringSlot)
-                    .invokestatic(CD_IntLiteral, "$new",
-                            MethodTypeDesc.of(CD_IntLiteral, CD_Ctx, CD_String))
+                    .invokestatic(CD_IntLiteral, "$new", md(CD_IntLiteral, CD_Ctx, CD_String))
                     .aload(ctxSlot)
-                    .invokevirtual(CD_IntLiteral, "to" + thisName,
-                            MethodTypeDesc.of(thisCD, CD_Ctx))
+                    .invokevirtual(CD_IntLiteral, "to" + thisName, md(thisCD, CD_Ctx))
                     .areturn();
             });
         } else if (isBitArray || isByteArray) {
             classBuilder.withMethodBody(jitName, jmd.standardMD, flags, code -> {
-                MethodTypeDesc mdToBigInt = MethodTypeDesc.of(bigIntCD, CD_Ctx, CD_boolean);
-                MethodTypeDesc mdBox      = MethodTypeDesc.of(thisCD, bigIntCD);
+                MethodTypeDesc mdToBigInt = md(bigIntCD, CD_Ctx, CD_boolean);
+                MethodTypeDesc mdBox      = md(thisCD, bigIntCD);
                 ClassDesc      arrayCD    = jmd.standardParams[0].cd;
                 int            ctxSlot    = code.parameterSlot(jmd.standardCtx());
                 int            arraySlot  = code.parameterSlot(jmd.getImplicitParamCount());

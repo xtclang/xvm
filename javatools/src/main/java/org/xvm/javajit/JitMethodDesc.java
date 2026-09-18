@@ -29,6 +29,7 @@ import static org.xvm.javajit.JitFlavor.SpecificWithDefault;
 import static org.xvm.javajit.JitFlavor.Widened;
 import static org.xvm.javajit.JitFlavor.WidenedWithDefault;
 import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * JIT specific information for a method.
@@ -201,7 +202,7 @@ public class JitMethodDesc {
             paramCDs[ix++] = params[i].cd;
         }
 
-        return MethodTypeDesc.of(returns.length == 0 ? CD_void : returns[0].cd, paramCDs);
+        return md(returns.length == 0 ? CD_void : returns[0].cd, paramCDs);
         }
 
     /**

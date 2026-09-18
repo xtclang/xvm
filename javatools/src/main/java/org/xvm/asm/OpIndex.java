@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
-import java.lang.constant.MethodTypeDesc;
 
 import java.util.Set;
 
@@ -46,6 +45,7 @@ import static org.xvm.javajit.Builder.MD_xvmVoid;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * Base class for I_ (index based) and IIP_ (index based in-place) op codes.
@@ -261,8 +261,7 @@ public abstract class OpIndex
                 bctx.loadArgument(code, m_nIndex);
                 switch (getOpCode()) {
                     case OP_I_GET -> {
-                        code.invokevirtual(cdArray, "getElement$p",
-                            MethodTypeDesc.of(CD_Object, CD_Ctx, CD_long));
+                        code.invokevirtual(cdArray, "getElement$p", md(CD_Object, CD_Ctx, CD_long));
                         if (!typeEl.equals(pool.typeObject())) {
                             code.checkcast(bctx.builder.ensureClassDesc(typeEl));
                         }
@@ -278,8 +277,7 @@ public abstract class OpIndex
 
                     case OP_I_SET -> {
                         bctx.loadArgument(code, getValueId());
-                        code.invokevirtual(cdArray, "setElement$p",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_Object));
+                        code.invokevirtual(cdArray, "setElement$p", md(CD_void, CD_Ctx, CD_long, CD_Object));
                     }
 
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
@@ -506,7 +504,7 @@ public abstract class OpIndex
         // get the element from the array
         bctx.loadCtx(code);
         bctx.loadArgument(code, m_nIndex);
-        code.invokevirtual(cdArray, "getElement$pi", MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
+        code.invokevirtual(cdArray, "getElement$pi", md(cdEl, CD_Ctx, CD_long));
 
         RegisterInfo regElement = null;
 
@@ -555,7 +553,7 @@ public abstract class OpIndex
         bctx.loadCtx(code);
         bctx.loadArgument(code, m_nIndex);
         regElement.load(code);
-        code.invokevirtual(cdArray, "setElement$pi", MethodTypeDesc.of(CD_void, cdArgs));
+        code.invokevirtual(cdArray, "setElement$pi", md(CD_void, cdArgs));
     }
 
     /**

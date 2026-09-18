@@ -6,7 +6,6 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
-import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -34,6 +33,7 @@ import static org.xvm.javajit.Builder.CD_TypeConstant;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * Base class for all "VAR" ops.
@@ -264,8 +264,7 @@ public abstract class OpVar
         bctx.loadTypeConstant(code, type.removeImmutable());
         code.loadConstant((long) anArgValue.length)
                 .iconst_0()
-                .invokestatic(cdArray, "$new$p",
-                    MethodTypeDesc.of(cdArray, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean));
+                .invokestatic(cdArray, "$new$p", md(cdArray, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean));
 
         for (int nArg : anArgValue) {
             code.dup();
@@ -283,7 +282,7 @@ public abstract class OpVar
         if (type.isImmutable()) {
             code.dup();
             bctx.loadCtx(code);
-            code.invokevirtual(cdArray, "$makeImmut", MethodTypeDesc.of(CD_void, CD_Ctx));
+            code.invokevirtual(cdArray, "$makeImmut", md(CD_void, CD_Ctx));
         }
 
         reg.store(bctx, code, type);
@@ -320,8 +319,7 @@ public abstract class OpVar
             }
             code.aastore();
         }
-        code.invokespecial(CD_nTuple, "<init>",
-                MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
+        code.invokespecial(CD_nTuple, "<init>", md(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
         reg.store(bctx, code, type);
         return -1;
     }

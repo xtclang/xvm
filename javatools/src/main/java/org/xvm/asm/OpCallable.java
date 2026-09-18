@@ -58,6 +58,7 @@ import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * Common base for CALL_ ops.
@@ -779,7 +780,7 @@ public abstract class OpCallable extends Op {
                 }
                 // generated class-of-class extends Class and implements the funky interface
                 bctx.loadCtx(code);
-                code.invokevirtual(CD_nType, "$xvmClass", MethodTypeDesc.of(CD_Class, CD_Ctx))
+                code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
                     .checkcast(cdTarget);
             }
         } else {
@@ -819,8 +820,7 @@ public abstract class OpCallable extends Op {
                 // optimized MethodHandle signatures are not
                 code.aload(slotFn)
                     .ldc(jmdCall.optimizedMD)
-                    .invokevirtual(CD_nFunction, "$hasOptMethod",
-                        MethodTypeDesc.of(CD_boolean, CD_MethodType))
+                    .invokevirtual(CD_nFunction, "$hasOptMethod", md(CD_boolean, CD_MethodType))
                     .ifeq(lblStd)
                     .aload(slotFn)
                     .getfield(CD_nFunction, "optMethod", CD_MethodHandle);
@@ -982,7 +982,7 @@ public abstract class OpCallable extends Op {
 
         // generated class-of-class must implement the virtual constructor interface
         bctx.loadCtx(code);
-        code.invokevirtual(CD_nType, "$xvmClass", MethodTypeDesc.of(CD_Class, CD_Ctx))
+        code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
             .checkcast(cdInterface);
         bctx.loadCtx(code);
         bctx.loadCallArguments(code, jmdNew, anArgValue);

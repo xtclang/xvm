@@ -111,6 +111,7 @@ import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
 
 import static org.xvm.javajit.TypeSystem.HASH;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * Whatever is necessary for the method bytecode production.
@@ -1431,8 +1432,7 @@ public class BuildContext {
             }
             loadCtx(code);
             code.ldc(((FormalConstant) dataType.getDefiningConstant()).getName())
-                .invokevirtual(CD_nObject, "$typeForName",
-                        MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
+                .invokevirtual(CD_nObject, "$typeForName", md(CD_nType, CD_Ctx, CD_JavaString));
             return new SingleSlot(type, Specific, CD_nType, "");
         }
 
@@ -1443,8 +1443,7 @@ public class BuildContext {
 
         loadCtx(code);
         loadTypeConstant(code, dataType);
-        code.invokestatic(CD_nType, "$ensureType",
-                          MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+        code.invokestatic(CD_nType, "$ensureType", md(CD_nType, CD_Ctx, CD_TypeConstant));
         return new SingleSlot(type, Specific, CD_nType, "");
     }
 
@@ -1483,8 +1482,7 @@ public class BuildContext {
         }
         loadCtx(code);
         code.ldc(formalConst.getName())
-            .invokevirtual(CD_nObject, "$typeForName",
-                    MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
+            .invokevirtual(CD_nObject, "$typeForName", md(CD_nType, CD_Ctx, CD_JavaString));
         return new SingleSlot(formalConst.getType(), Specific, CD_nType, "");
     }
 
@@ -1568,7 +1566,7 @@ public class BuildContext {
 
         fnType = pool().bindMethodTarget(fnType);
 
-        MethodTypeDesc bindDesc = MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject);
+        MethodTypeDesc bindDesc = md(CD_MethodHandle, CD_JavaObject);
         ClassDesc      cd       = CD_nFunction;
         code.new_(cd)
             .dup()
@@ -1585,7 +1583,7 @@ public class BuildContext {
                 .invokevirtual(CD_MethodHandle, "bindTo", bindDesc);
         }
         code.iconst_1() // immutable = true
-            .invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
+            .invokespecial(cd, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
                 CD_MethodHandle, CD_MethodHandle, CD_boolean));
         return new SingleSlot(fnType, Specific, cd, "");
     }
@@ -2583,7 +2581,7 @@ public class BuildContext {
             code.aconst_null();
         }
 
-        code.invokespecial(CD_nRef, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx,
+        code.invokespecial(CD_nRef, INIT_NAME, md(CD_void, CD_Ctx,
                 CD_TypeConstant, CD_boolean, CD_MethodHandle, CD_MethodHandle))
             .astore(refReg.slot());
     }
@@ -2608,8 +2606,7 @@ public class BuildContext {
         if (loadedTarget.flavor().isOptimized) {
             Builder.box(code, loadedTarget);
         }
-        code.invokevirtual(CD_MethodHandle, "bindTo",
-                MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject));
+        code.invokevirtual(CD_MethodHandle, "bindTo", md(CD_MethodHandle, CD_JavaObject));
     }
 
     /**
@@ -3117,7 +3114,7 @@ public class BuildContext {
         }
 
         code.invokespecial(CD_nTuple, INIT_NAME,
-                MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
+                md(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
         storeValue(code, regId, tupleType);
     }
 
@@ -3396,8 +3393,7 @@ public class BuildContext {
     public void throwUnsupported(CodeBuilder code) {
         loadCtx(code);
         code.aconst_null()
-            .invokestatic(CD_Exception, "$unsupported",
-                MethodTypeDesc.of(CD_nException, CD_Ctx, CD_JavaString))
+            .invokestatic(CD_Exception, "$unsupported", md(CD_nException, CD_Ctx, CD_JavaString))
             .athrow();
     }
 
@@ -3416,12 +3412,10 @@ public class BuildContext {
         DirectMethodHandleDesc bsm = MethodHandleDesc.ofMethod(
                 DirectMethodHandleDesc.Kind.STATIC,
                 ClassDesc.of("java.lang.invoke.StringConcatFactory"),
-                "makeConcatWithConstants",
-                MethodTypeDesc.of(CD_CallSite, CD_MethodHandles_Lookup, CD_String,
+                "makeConcatWithConstants", md(CD_CallSite, CD_MethodHandles_Lookup, CD_String,
                         CD_MethodType, CD_String, CD_Object.arrayType())
         );
-        code.invokedynamic(DynamicCallSiteDesc.of(bsm, "makeConcat",
-                MethodTypeDesc.of(CD_String, argsTypes), text));
+        code.invokedynamic(DynamicCallSiteDesc.of(bsm, "makeConcat", md(CD_String, argsTypes), text));
     }
 
     /**
@@ -3607,8 +3601,7 @@ public class BuildContext {
         }
         loadTypeConstant(code, referentType);
         Builder.loadBoolean(code, isVar);
-        code.invokespecial(cd, INIT_NAME,
-            MethodTypeDesc.of(CD_void, CD_Ctx, CD_nObject, CD_TypeConstant, CD_boolean));
+        code.invokespecial(cd, INIT_NAME, md(CD_void, CD_Ctx, CD_nObject, CD_TypeConstant, CD_boolean));
     }
 
     /**
