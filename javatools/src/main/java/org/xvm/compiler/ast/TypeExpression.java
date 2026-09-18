@@ -36,7 +36,7 @@ public abstract class TypeExpression
      * @return a TypeConstant
      */
     public TypeConstant ensureTypeConstant() {
-        return ensureTypeConstant(null, null);
+        return ensureTypeConstant(null, ErrorListener.BLACKHOLE);
     }
 
     /**
@@ -63,7 +63,7 @@ public abstract class TypeExpression
                 // once the expression has validated, we know the type (can be Object for dynamic types)
                 constType = getType().getParamType(0);
             } else {
-                constType = instantiateTypeConstant(ctx, errs == null ? ErrorListener.BLACKHOLE : errs);
+                constType = instantiateTypeConstant(ctx, errs);
             }
 
             m_constType = constType;
@@ -181,7 +181,7 @@ public abstract class TypeExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        TypeConstant type = ensureTypeConstant(ctx, null);
+        TypeConstant type = ensureTypeConstant(ctx, ErrorListener.BLACKHOLE);
         if (type == null) {
             throw new IllegalStateException("type has not yet been determined for this: " + this);
         }

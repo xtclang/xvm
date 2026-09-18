@@ -519,10 +519,6 @@ public class NameExpression
             return TypeFit.Fit;
         }
 
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
-        }
-
         return calcFit(ctx, getImplicitType(ctx, typeRequired, errs), typeRequired);
     }
 
@@ -537,7 +533,7 @@ public class NameExpression
             // outer type
             TypeConstant typeDesired = null;
             if (typeRequired != null && typeRequired.isTypeOfType() && isIdentityMode(ctx, true) &&
-                    testFit(ctx, pool.typeInner().getType(), false, null).isFit()) {
+                    testFit(ctx, pool.typeInner().getType(), false, ErrorListener.BLACKHOLE).isFit()) {
                 typeDesired = pool.typeOuter().getType();
             }
 

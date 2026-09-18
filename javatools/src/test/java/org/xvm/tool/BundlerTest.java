@@ -14,6 +14,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.Version;
@@ -83,7 +84,7 @@ class BundlerTest {
     void testBundleCommandDispatch() {
         // -h takes the help path through the real Bundler launcher and returns success
         int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {"-h"},
-                new Console() {}, null);
+                new Console() {}, ErrorListener.BLACKHOLE);
         assertEquals(0, result);
     }
 
@@ -206,7 +207,7 @@ class BundlerTest {
         int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {
                 "-o", tempDir.resolve("out.xtc").toString(),
                 fileFirst.getPath(),
-                fileSecond.getPath()}, console, null);
+                fileSecond.getPath()}, console, ErrorListener.BLACKHOLE);
 
         assertEquals(1, result);
         var output = console.getAllOutput();
@@ -266,7 +267,7 @@ class BundlerTest {
             args.add(input.getPath());
         }
         return Launcher.launch(Launcher.CMD_BUNDLE, args.toArray(new String[0]),
-                new CaptureConsole(), null);
+                new CaptureConsole(), ErrorListener.BLACKHOLE);
     }
 
     private static final class CaptureConsole implements Console {

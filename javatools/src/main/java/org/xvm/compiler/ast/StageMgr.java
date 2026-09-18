@@ -1,5 +1,9 @@
 package org.xvm.compiler.ast;
 
+import org.jetbrains.annotations.NotNull;
+
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,15 +33,15 @@ public class StageMgr {
      *
      * @param node         the node to process
      * @param stageTarget  the target stage
-     * @param errs         the optional error list to log to
+     * @param errs         the error listener to log to
      */
-    public StageMgr(AstNode node, Stage stageTarget, ErrorListener errs) {
+    public StageMgr(AstNode node, Stage stageTarget, @NotNull ErrorListener errs) {
         assert node != null;
         assert stageTarget != null && stageTarget.isTargetable();
 
         m_listRevisit = Collections.singletonList(node);
         m_target      = stageTarget;
-        m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
+        m_errs        = requireNonNull(errs, "errs");
     }
 
     /**
@@ -46,15 +50,15 @@ public class StageMgr {
      *
      * @param list         the list of nodes to process
      * @param stageTarget  the target stage
-     * @param errs         the optional error list to log to
+     * @param errs         the error listener to log to
      */
-    public StageMgr(List<AstNode> list, Stage stageTarget, ErrorListener errs) {
+    public StageMgr(List<AstNode> list, Stage stageTarget, @NotNull ErrorListener errs) {
         assert list != null && !list.isEmpty();
         assert stageTarget != null && stageTarget.isTargetable();
 
         m_listRevisit = list;
         m_target      = stageTarget;
-        m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
+        m_errs        = requireNonNull(errs, "errs");
     }
 
     /**
