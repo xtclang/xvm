@@ -1,6 +1,9 @@
 package org.xvm.api;
 
-import java.io.BufferedReader;
+import org.jetbrains.annotations.NotNull;
+
+import static java.util.Objects.requireNonNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -212,14 +215,15 @@ public class EmbeddingSupport {
      *
      * @param source  the source code for an entire module to compile
      * @param input   (optional) the module repository to read any required modules from
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the ErrorListener to log any compiler messages to
      *
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      *
      * @see ModuleCompiler#compile(String, ModuleRepository, ErrorListener)
      */
-    public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
+    public ModuleStructure compile(String source, ModuleRepository input, @NotNull ErrorListener errs) {
         verifyConfigured();
+        requireNonNull(errs, "errs");
         return new ModuleCompiler(cfgRepo).compile(source, input, errs);
     }
 
@@ -229,15 +233,16 @@ public class EmbeddingSupport {
      * @param file    the module source file
      * @param input   (optional) the module repository to read any required modules from
      * @param output  (optional) the module repository to write any compiled modules to
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the ErrorListener to log any compiler messages to
      *
      * @return true if the compilation succeeded and the result was placed into the output
      *
      * @see ModuleCompiler#compile(File, ModuleRepository, ModuleRepository, ErrorListener)
      */
     public boolean compile(File file, ModuleRepository input, ModuleRepository output,
-                           ErrorListener errs) {
+                           @NotNull ErrorListener errs) {
         verifyConfigured();
+        requireNonNull(errs, "errs");
         return new ModuleCompiler(cfgRepo).compile(file, input, output, errs);
     }
 
@@ -357,7 +362,7 @@ public class EmbeddingSupport {
      *                    task-specific directory under "./.runner" that is deleted when the
      *                    returned Control is closed
      * @param injections  (optional) additional "String" and "String[]" injections
-     * @param errs        (optional) a means for the container to report uncaught exceptions and
+     * @param errs        a means for the container to report uncaught exceptions and
      *                    other errors
      *
      * @return a Control object for the running module
@@ -393,7 +398,7 @@ public class EmbeddingSupport {
      * @param customInjector  (optional) "module:class" name of a custom injector implementation to
      *                        use to provide injectable resources; when used, the "rootDir" value is
      *                        ignored
-     * @param errs            (optional) a means for the container to report uncaught exceptions and
+     * @param errs            a means for the container to report uncaught exceptions and
      *                        other errors
      *
      * @return a Control object for the running module, or null if it could not be started, in
@@ -407,60 +412,17 @@ public class EmbeddingSupport {
             File                      rootDir,
             Map<String, List<String>> injections,
             String                    customInjector,
-            ErrorListener             errs) {
-        if (injections != null && !injections.isEmpty() || customInjector != null) {
-            throw new UnsupportedOperationException("Custom injectors are not implemented yet");
-        }
-        return runMethod(input, moduleName, version, EntryPoint.RUN, console, ConsoleInput.NONE,
-                rootDir, errs);
-    }
-
-    /**
-     * Create a runtime container and invoke the specified entry method of a module.
-     *
-     * <p>The method is selected the way the command-line runner selects it, as described for
-     * {@link #entryMethod} and {@link #passesArguments}. A method that cannot be an entry point is
-     * reported as {@link #ERR_ENTRY_METHOD}, with the command-line runner's message.
-     *
-     * @param input       the ModuleRepository providing any necessary modules
-     * @param moduleName  the module name to execute; must be loadable from "input"
-     * @param version     (optional) the version of the module to load
-     * @param entry       the entry method to invoke and its arguments, such as
-     *                    {@link EntryPoint#RUN}
-     * @param console     (optional) the PrintWriter for the executing application
-     * @param consoleIn   the input for the application's console, or {@link ConsoleInput#NONE}:
-     *                    each {@code Console.readLine()} reads one line from it, and its end reads
-     *                    as an empty line. Used only with a console
-     * @param rootDir     (optional) the root directory for the application's file system, as
-     *                    described for {@link #run(ModuleStructure, PrintWriter, File, Map, ErrorListener)}
-     * @param errs        (optional) a means for the container to report uncaught exceptions and
-     *                    other errors
-     *
-     * @return a Control object for the running module, or null if it could not be started, in
-     *         which case the reason is reported to "errs"
-     */
-    public Control runMethod(
-            ModuleRepository input,
-            String           moduleName,
-            Version          version,
-            EntryPoint       entry,
-            PrintWriter      console,
-            ConsoleInput     consoleIn,
-            File             rootDir,
-            ErrorListener    errs) {
-        Objects.requireNonNull(entry, "entry");
-        Objects.requireNonNull(consoleIn, "consoleIn");
+            @NotNull ErrorListener    errs) {
         verifyConfigured();
+        requireNonNull(errs, "errs");
 
         ModuleRepository repository = new LinkedRepository(input, cfgRepo);
         ModuleStructure module = version == null
                 ? repository.loadModule(moduleName)
                 : repository.loadModule(moduleName, version, true);
         if (module == null) {
-            if (errs != null) {
-                errs.error(version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
-                        NOWHERE, moduleName, version);
-            }
+            errs.error(version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
+                    NOWHERE, moduleName, version);
             return null;
         }
 
@@ -479,10 +441,8 @@ public class EmbeddingSupport {
             // assertion in the structure code past this report and out to the host. Errors are
             // not caught wholesale: a VirtualMachineError says the JVM is in trouble, not that
             // this module failed to start, and handling one is not something to rely on
-            if (errs != null) {
-                errs.error(ERR_CREATE_APP_CONTAINER, at(module), e,
-                        "Unable to start " + moduleName);
-            }
+            errs.error(ERR_CREATE_APP_CONTAINER, at(module), e,
+                    "Unable to start " + moduleName);
             return null;
         }
     }
