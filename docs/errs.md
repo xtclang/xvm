@@ -4,9 +4,19 @@ Scoping document for making `ErrorListener` an always-present, non-null, immutab
 compiler's call stack, so that an embedding host — an LSP server above all — can rely on hearing
 every diagnostic the compiler produces.
 
-Measurements are from `origin/master` at `794bf23e6`.
+**Status.** All seven phases are implemented on `lagergren/errs`. What remains is one decision and
+the work that follows from it; see *What is left*.
 
-**Status.** All seven phases are implemented on `lagergren/errs`.
+Measurements throughout are of `origin/master` at `794bf23e6` - the state this was written against,
+kept as the record of what was wrong. Where that has since changed:
+
+| | before | after |
+|---|---|---|
+| null-coalescing sites | 33 | 8, all in the deferred ownership area |
+| names for the listener | 6 | 1 - `errs` |
+| kinds of silence | 1 undifferentiated | 133 `PROBE`, 6 `BLACKHOLE`, 10 `suppressCascade()` |
+| fields using null as a state flag | 4 | 0 |
+| `new Object[]` at report sites | 31 | 22, all behind a class's own log helper |
 
 ## Why
 
@@ -28,7 +38,7 @@ real signal out of a ~123k-line diff, so it is separable, but it is not cherry-p
 edits sit in files that were heavily churned for unrelated reasons. This document is a
 re-derivation, not a port.
 
-## What is true today
+## What was true, and what the phases changed
 
 | | |
 |---|---|
@@ -252,17 +262,31 @@ depended on whether its caller passed null.
 
 ### Phase 5 — Single ownership, no setters
 
-- Delete `XvmStructure.setErrorListener` and `FileStructure.setErrorListener`, and the mutable
-  `FileStructure.m_errs`.
-- Give the owner a final listener taken at construction, resolving inheritance **in the
-  constructor** rather than encoding "inherit" as a null the accessor decodes on every call.
-- Remove `XvmStructure.ensureErrorListener` and the `RUNTIME`-versus-`BLACKHOLE` asymmetry with it.
-- Fix the two call sites in `compiler/Compiler.java` that currently set and clear the listener.
+Done:
 
-This is the phase that requires a decision about who owns the compile-time listener. The prior art
-put it on `ConstantPool`, with a documented argument: the two callers of the old setter were the
-compiler patching in a listener it already had (a constructor parameter written as a mutation) and
-an engine pointing a *shared library pool* at one host's sink (a race, last writer winning).
+- Deleted `XvmStructure.setErrorListener`, which delegated the mutation to its *parent*, so any
+  structure could redirect the diagnostics of its whole containment tree. Removing it broke exactly
+  one line - the `@Override` on `FileStructure` - which is how little it was used for anything
+  legitimate.
+- Deleted `XvmStructure.ensureErrorListener`: once the listener was required it could only return
+  its own argument.
+- Fixed the restore in `compiler/Compiler`. The file is parked on a silent listener for the
+  duration of a compilation, but the restore sat inside an "if no serious errors" branch, so a
+  compilation that reported errors left the file permanently silenced - which matters for a
+  resident compiler that reuses structures across requests. It is a `finally` now.
+
+Deferred, because it needs the ownership decision below rather than more deletion:
+
+- `FileStructure` still resolves its listener through a field instead of taking one at
+  construction: 8 constructors, 67 call sites.
+- `getErrorListener()` still consults the ambient current pool.
+- The `RUNTIME`-versus-silent asymmetry therefore survives: an absent listener still throws after a
+  compilation and swallows during one.
+
+The prior art put ownership on `ConstantPool`, with a documented argument: the two callers of the
+old setter were the compiler patching in a listener it already had (a constructor parameter written
+as a mutation) and an engine pointing a *shared library pool* at one host's sink (a race, last
+writer winning).
 
 ### Phase 6 — Name the kinds of silence
 
@@ -317,13 +341,29 @@ Per phase:
 Throughout: `./gradlew spotlessCheck` alone before every commit, since locally `check` runs
 `spotlessApply` and silently repairs the tree.
 
-## Open questions
+## What is left
 
-- Who owns the compile-time listener — `ConstantPool`, `FileStructure`, or the `Compiler`? Phase 5
-  cannot start without this.
+Nothing in the seven phases. What remains is one decision and the work that follows from it, plus
+two independent questions.
+
+**The ownership decision.** Who owns the compile-time listener - `ConstantPool`, `FileStructure`,
+or the `Compiler`? Phase 5 was completed around this rather than through it: the hazards went, but
+`FileStructure` still holds a settable field and still consults the ambient pool. Settling this is
+what retires the last 8 null-coalescing sites and the RUNTIME/silent asymmetry, and it is the
+larger piece: 8 constructors and 67 call sites, and deleting the no-arg `ensureTypeInfo()` overload
+that depends on it would touch 126 call sites across 46 files.
+
+**Optional and independent:** the 22 remaining `new Object[]` sites, which go through each class's
+own private log helper rather than `ErrorListener` directly. The Phase 2 API is additive, so they
+can migrate whenever, or never.
+
+## Open questions
 - Should `log()` keep returning `boolean`? It currently means *abort*, which conflates recording
   with control flow and leaves a host that only wants to watch with no correct value to return.
   The prior art made it `void` and asked `isAbortDesired()` separately; only 3–5 call sites read
   the result. Cheap, but it is an API break.
 - Is `ErrorList` required to be thread-safe? It is not today. A resident LSP compiler serving
   concurrent requests would need it, or would need per-request lists that never share.
+
+Both of these bite the LSP specifically and neither is large; they are held here because they are
+decisions rather than work.
