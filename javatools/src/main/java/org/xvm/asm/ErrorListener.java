@@ -188,21 +188,32 @@ public interface ErrorListener {
      * in the same manner as this one until it is {@link #merge() merged} or discarded in the
      * (optional) context of the specified node.
      *
+     * A branch buffers errors that may or may not end up being reported, so deciding to abandon
+     * the work is the parent's call and not the branch's: it is given {@link ErrorList#UNLIMITED}
+     * rather than a budget of its own. {@link ErrorList} overrides this to pass on the budget it
+     * was built with, and the two have to agree, or the compiler would do less work for a host
+     * that supplied its own listener than for one that used an ErrorList.
+     *
      * @param node  (optional) the context ast node
      *
      * @return the branched-out ErrorListener
      */
     default ErrorListener branch(AstNode node) {
-        return new ErrorList.BranchedErrorListener(this, 1, node);
+        return new ErrorList.BranchedErrorListener(this, ErrorList.UNLIMITED, node);
     }
 
     /**
      * Merge all errors collected by this ErrorListener into the one it was branched out of.
      *
-     * @return the ErrorListener this one was {@link #branch branched out} of
+     * A listener that was never branched has nothing to merge and is already the sink the errors
+     * would be merged into, so merging it is a no-op. It is not an error: whether a listener in
+     * hand is a branch is not something its holder should have to know.
+     *
+     * @return the ErrorListener this one was {@link #branch branched out} of, or this one if it
+     *         was not branched out of anything
      */
     default ErrorListener merge() {
-        throw new UnsupportedOperationException("nothing to merge");
+        return this;
     }
 
     /**
