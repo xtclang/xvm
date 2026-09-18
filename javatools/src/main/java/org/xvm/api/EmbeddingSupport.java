@@ -211,7 +211,9 @@ public class EmbeddingSupport {
             return compiler.process() == 0
                     ? compiler.getModule()
                     : null;
-        } catch (LauncherException e) {
+        } catch (RuntimeException | AssertionError e) {
+            // as in run(): the compiler runs over caller-supplied source, so a failure in it is
+            // reported here rather than thrown at the caller, who was promised a null instead
             if (errs != null) {
                 errs.log(ERROR, ERR_INTERNAL,
                         new Object[] {e, "Compilation failed"}, null);
@@ -448,7 +450,8 @@ public class EmbeddingSupport {
      * @param errs            (optional) a means for the container to report uncaught exceptions and
      *                        other errors
      *
-     * @return a Control object for the running module
+     * @return a Control object for the running module, or null if it could not be started, in
+     *         which case the reason is reported to "errs"
      */
     public Control run(
             ModuleRepository          input,
@@ -486,7 +489,11 @@ public class EmbeddingSupport {
             return useJit()
                     ? JitControl.create(connector, module, repository, console, rootDir, errs)
                     : InterpreterControl.create(connector, module, repository, console, rootDir, errs);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException | AssertionError e) {
+            // an AssertionError is an Error, so the RuntimeException guard alone let a tripped
+            // assertion in the structure code past this report and out to the host. Errors are
+            // not caught wholesale: a VirtualMachineError says the JVM is in trouble, not that
+            // this module failed to start, and handling one is not something to rely on
             if (errs != null) {
                 errs.log(ERROR, ERR_CREATE_APP_CONTAINER,
                         new Object[] {e, "Unable to start " + moduleName}, module);
