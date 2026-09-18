@@ -35,7 +35,7 @@ public class AsExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        return ((TypeExpression) expr2).ensureTypeConstant(ctx, null);
+        return ((TypeExpression) expr2).ensureTypeConstant(ctx, ErrorListener.BLACKHOLE);
     }
 
     @Override
@@ -59,7 +59,7 @@ public class AsExpression
 
         TypeConstant type = exprType.ensureTypeConstant(ctx, errs).resolveAutoNarrowingBase();
 
-        if (!exprType.isDynamic() && expr1.testFit(ctx, type, false, null).isFit()) {
+        if (!exprType.isDynamic() && expr1.testFit(ctx, type, false, ErrorListener.BLACKHOLE).isFit()) {
             typeRequest     = type;
             m_fCastRequired = false;
         }
