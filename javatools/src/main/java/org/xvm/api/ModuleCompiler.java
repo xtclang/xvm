@@ -31,6 +31,9 @@ import org.xvm.tool.LauncherOptions.CompilerOptions;
 
 import static org.xvm.api.EmbeddingSupport.ERR_INTERNAL;
 
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.at;
+
 import static org.xvm.util.Handy.readFileChars;
 
 import static org.xvm.util.Severity.ERROR;
@@ -90,7 +93,7 @@ public final class ModuleCompiler {
             // in "errs", so this is an ordinary failed compile, as it is for the command-line
             // compiler. A tool-level failure is logged only to the silent console, so report it
             if (errs != null && !errs.hasSeriousErrors()) {
-                errs.log(ERROR, ERR_INTERNAL, new Object[] {e, "Compilation failed"}, null);
+                errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
             }
             return null;
         } catch (RuntimeException | AssertionError e) {
@@ -98,8 +101,7 @@ public final class ModuleCompiler {
             // failure in it is reported here rather than thrown at the caller, who was promised a
             // null instead
             if (errs != null) {
-                errs.log(ERROR, ERR_INTERNAL,
-                        new Object[] {e, "Compilation failed"}, null);
+                errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
             }
             return null;
         }
@@ -122,8 +124,7 @@ public final class ModuleCompiler {
             module = compile(new String(readFileChars(file)), input, errs);
         } catch (IOException e) {
             if (errs != null) {
-                errs.log(ERROR, ERR_INTERNAL,
-                        new Object[] {e, "Unable to read module " + file}, null);
+                errs.error(ERR_INTERNAL, NOWHERE, e, "Unable to read module " + file);
             }
             return false;
         }
@@ -138,8 +139,7 @@ public final class ModuleCompiler {
                 output.storeModule(module);
             } catch (IOException e) {
                 if (errs != null) {
-                    errs.log(ERROR, ERR_INTERNAL,
-                            new Object[] {e, "Unable to store module " + module.getName()}, module);
+                    errs.error(ERR_INTERNAL, at(module), e, "Unable to store module " + module.getName());
                 }
                 return false;
             }
