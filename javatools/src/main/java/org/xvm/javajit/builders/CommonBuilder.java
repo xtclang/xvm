@@ -124,7 +124,7 @@ public class CommonBuilder
 
     /**
      * List of constant properties for every class name this builder assembles.
-     *
+     * <p>
      * Note: a vast majority of builders assemble one and only one class.
      */
     protected List<PropertyInfo> constProperties;
@@ -1601,7 +1601,7 @@ public class CommonBuilder
 
     /**
      * Assemble the "public TypeConstant $xvmType()" method.
-     *
+     * <p>
      * TODO: consider using a couple of bits of $meta value to indicate the ACCESS trait
      *       of the type (or at least a bit for STRUCT); it would be used by this method
      *       to at least answer "is(struct)" question
@@ -3793,7 +3793,7 @@ public class CommonBuilder
 
     /**
      * Assemble the "$new" method.
-     *
+     * <p>
      * <code><pre>
      * Ecstasy:
      *      class C {...}
