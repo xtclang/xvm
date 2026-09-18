@@ -55,8 +55,8 @@ public class LiteralFormatPlumbingTest {
      * so a format can be constructible and still unreadable - which is exactly what
      * {@code TimeZone} was, and what makes a module containing one write fine and then fail to
      * load.
-     * <p/>
-     * {@link FileStructure#writeTo} cannot be used here: it calls
+     *
+     * <p>{@link FileStructure#writeTo} cannot be used here: it calls
      * {@code reregisterConstants(true)}, whose {@code optimize()} prunes every constant nothing
      * references, which is all of these. {@code reregisterConstants(false)} keeps them, and
      * {@code assemble} is the same writer {@code writeTo} delegates to.
