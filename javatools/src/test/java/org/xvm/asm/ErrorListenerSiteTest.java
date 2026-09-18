@@ -13,6 +13,7 @@ import org.xvm.util.Severity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.xvm.asm.ErrorListener.NOWHERE;
 import static org.xvm.asm.ErrorListener.in;
@@ -75,6 +76,47 @@ public class ErrorListenerSiteTest {
             });
         }
         assertEquals(List.of("3..7", "whole file"), published);
+    }
+
+    /**
+     * A tee reports to both, and answers the abort question for either: a caller that wrapped a
+     * budgeted listener has to keep getting the stop it asked for.
+     */
+    @Test
+    public void testATeeReportsToBothAndKeepsEithersAbort() {
+        Source    source  = new Source(SOURCE);
+        ErrorList watcher = new ErrorList(ErrorList.UNLIMITED);
+        ErrorList budget  = new ErrorList(1);
+
+        ErrorListener both = ErrorListener.tee(budget, watcher);
+        both.error(CODE, in(source, 0, 1), "a", "b");
+
+        assertEquals(1, budget.getErrors().size());
+        assertEquals(1, watcher.getErrors().size());
+        assertTrue(both.isAbortDesired(), "the budgeted side still gets its stop");
+    }
+
+    /**
+     * Recording with a tee and replaying with logTo is what lets a memoized result tell a later
+     * caller what building it had to say. Deduplication makes the replay idempotent.
+     */
+    @Test
+    public void testRecordedDiagnosticsReplayOnceToALaterCaller() {
+        Source    source   = new Source(SOURCE);
+        ErrorList first    = new ErrorList(ErrorList.UNLIMITED);
+        ErrorList recorder = new ErrorList(ErrorList.UNLIMITED);
+
+        ErrorListener.tee(first, recorder).error(CODE, in(source, 0, 1), "a", "b");
+        assertEquals(1, first.getErrors().size());
+
+        // a later caller, with its own listener, hears the same thing
+        ErrorList later = new ErrorList(ErrorList.UNLIMITED);
+        recorder.logTo(later);
+        assertEquals(1, later.getErrors().size());
+
+        // and asking twice does not say it twice
+        recorder.logTo(later);
+        assertEquals(1, later.getErrors().size());
     }
 
     private static void assertArrayEqualsAsList(Object[] expected, Object[] actual) {
