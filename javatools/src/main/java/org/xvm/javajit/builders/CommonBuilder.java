@@ -124,6 +124,7 @@ public class CommonBuilder
 
     /**
      * List of constant properties for every class name this builder assembles.
+     *
      * <p>Note: a vast majority of builders assemble one and only one class.
      */
     protected List<PropertyInfo> constProperties;
@@ -1604,6 +1605,7 @@ public class CommonBuilder
 
     /**
      * Assemble the "public TypeConstant $xvmType()" method.
+     *
      * <p>TODO: consider using a couple of bits of $meta value to indicate the ACCESS trait
      *       of the type (or at least a bit for STRUCT); it would be used by this method
      *       to at least answer "is(struct)" question
@@ -2190,11 +2192,13 @@ public class CommonBuilder
 
     /**
      * Generate the body of the "equals$p" method for a const type.
+     *
      * <p>The generated method signature is:
      * <pre>
      *     public static boolean equals$p(Ctx ctx, nType type, T value1, T value2)
      * </pre>
      * where T is the const type being built.
+     *
      * <p>Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value1, Slot 3 = value2
      */
     private void assembleConstEquals(CodeBuilder code, TypeConstant type, SignatureConstant eqSig) {
@@ -2416,11 +2420,13 @@ public class CommonBuilder
 
     /**
      * Generate the body of the "compare" method for a const type.
+     *
      * <p>The generated method signature is:
      * <pre>
      *     public static Ordered compare(Ctx ctx, nType CompileType, T value1, T value2)
      * </pre>
      * where T is the const type being built.
+     *
      * <p>Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value1, Slot 3 = value2
      */
     private void assembleConstCompare(CodeBuilder code, TypeConstant type, SignatureConstant cmpSig) {
@@ -2692,6 +2698,7 @@ public class CommonBuilder
 
     /**
      * Generate the body of the "hashCode$p" method for a const type.
+     *
      * <p>The generated method signature is:
      * <pre>
      *     public static long hashCode$p(Ctx ctx, nType CompileType, T value)
@@ -3790,6 +3797,7 @@ public class CommonBuilder
 
     /**
      * Assemble the "$new" method.
+     *
      * <p><code><pre>
      * Ecstasy:
      *      class C {...}

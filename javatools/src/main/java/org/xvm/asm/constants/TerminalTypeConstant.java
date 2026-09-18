@@ -35,6 +35,7 @@ import static org.xvm.util.Handy.writeMagnitude;
 /**
  * A TypeConstant that represents a type that is defined by some other structure within the module.
  * Specifically, the definition pointed to by this TypeConstant can be any one of:
+ *
  * <p><ul>
  * <li>{@link ModuleConstant} for a module</li>
  * <li>{@link PackageConstant} for a package</li>

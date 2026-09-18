@@ -39,12 +39,14 @@ import static org.xvm.util.Handy.checkElementsNonNull;
 
 /**
  * Base class for all Ecstasy expressions.
+ *
  * <p>Expressions go through a few stages of compilation. Initially, the expressions must determine
  * its arity and its type(s) etc., but there exists more than one possible result in some cases,
  * based on what type is expected or required of the expression. Similarly, the resulting type
  * of this expression could affect the type of a containing expression. To accommodate this, the
  * expression has to be able to answer some hypothetical questions _before_ it validates, and
  * _all_ questions after it validates.
+ *
  * <p>Concepts:
  * <pre>
  * 1. You've got to be able to ask an expression some simple, obvious questions:
@@ -117,6 +119,7 @@ public abstract class Expression
 
     /**
      * Validate that this expression is structurally correct to be a link-time condition.
+     *
      * <p><code><pre>
      * There are only a few expression forms that are permitted:
      * 1. StringLiteral "." "defined"
@@ -211,6 +214,7 @@ public abstract class Expression
 
     /**
      * (Pre-validation) Determine if the expression can yield the specified type.
+     *
      * <p>This method should be overridden by any Expression type that only expects to result in a
      * single value and has the ability to yield different types depending on what type is required.
      *
@@ -245,6 +249,7 @@ public abstract class Expression
 
     /**
      * (Pre-validation) Determine if the expression can yield the specified types.
+     *
      * <p>This method should be overridden by any Expression type that expects to result in multiple
      * values and has the ability to yield different types depending on what types are required.
      *
@@ -385,7 +390,9 @@ public abstract class Expression
     /**
      * Given the specified required type for the expression, resolve names, values, verify definite
      * assignment, etc.
+     *
      * <p>This method transitions the expression from "pre-validated" to "validated".
+     *
      * <p>This method should be overridden by any Expression type that only expects to result in a
      * single value.
      *
@@ -412,7 +419,9 @@ public abstract class Expression
     /**
      * Given the specified required type(s) for the expression, resolve names, values, verify
      * definite assignment, etc.
+     *
      * <p>This method transitions the expression from "pre-validated" to "validated".
+     *
      * <p>This method must be overridden by any Expression type that expects to result in multiple
      * values.
      *
@@ -959,6 +968,7 @@ public abstract class Expression
      * conditional result is one in which there are multiple results, the first of which is a
      * boolean, and the remainder of which cannot be safely accessed if the runtime value of that
      * first boolean is {@code false}.
+     *
      * <p>This method must be overridden by any expression that represents or could represent a
      * conditional result, including as the result of composition of other expressions that could
      * represent a conditional result.
@@ -1044,6 +1054,7 @@ public abstract class Expression
     /**
      * Obtain a {@link ExprAST binary expression} that represents this AST node and can
      * be used to serialize the AST.
+     *
      * <p>This method must not be called until after the expression has been validated.
      *
      * @return an "AST node" from the expression branch of the BinaryAST hierarchy of classes
@@ -1085,6 +1096,7 @@ public abstract class Expression
     /**
      * (Post-validation) Determine if the expression represents an L-Value, which means that this
      * expression can be assigned to.
+     *
      * <p>This method must be overridden by any expression that represents an L-Value, or that could
      * be composed of other expressions such that the result represents an L-Value.
      *
@@ -1130,6 +1142,7 @@ public abstract class Expression
 
     /**
      * Test if this expression is used as an R-Value, which is something that yields a value.
+     *
      * <p>In most cases, an expression is used as an R-Value (i.e. it has a value), but an expression
      * can be used as a left side of an assignment, for example, which makes it an L-Value. In a
      * few cases, an expression can be used as both an R-Value and an L-Value, such as with the
@@ -1143,6 +1156,7 @@ public abstract class Expression
 
     /**
      * (Post-validation) Determine if the expression can short-circuit.
+     *
      * <p>This method must be overridden by any expression can short circuit, or any expression that
      * can short circuit as a result of containing another expression that may short-circuit.
      *
@@ -1257,6 +1271,7 @@ public abstract class Expression
     /**
      * (Post-validation) For an expression that provides a compile-time constant, indicated by the
      * {@link #isConstant()} method returning true, obtain a constant representation of the value.
+     *
      * <p>If the Expression has more than one value, then this will return the first constant value. If
      * the Expression is <i>void</i>, then this will return null.
      *
@@ -1279,6 +1294,7 @@ public abstract class Expression
      * (Post-validation) For an expression that provides compile-time constants, indicated by the
      * {@link #isConstant()} method returning true, obtain an array of constants that represent the
      * value of the Expression.
+     *
      * <p>If the Expression is <i>void</i>, then this will return an empty array.
      *
      * @return the compile-time constant values of the expression, or null if the expression is not
@@ -1296,6 +1312,7 @@ public abstract class Expression
 
     /**
      * Generate the necessary code that discards the value of this expression.
+     *
      * <p>This method should be overridden by any expression that can produce better code than the
      * default discarded-assignment code.
      *
@@ -1318,6 +1335,7 @@ public abstract class Expression
 
     /**
      * Generate the necessary code that initializes an l-value variable.
+     *
      * <p>This method should be overridden by any expression that overrides
      * {@link #supportsCompactInit} method.
      *
@@ -1336,6 +1354,7 @@ public abstract class Expression
 
     /**
      * (Post-validation) Generate an argument that represents the result of this expression.
+     *
      * <p>If the expression {@link #hasSingleValueImpl()} is {@code true}, then this method or
      * {@link #generateAssignment} must be overridden.
      *
@@ -1371,6 +1390,7 @@ public abstract class Expression
     /**
      * Generate arguments of the specified types for this expression, or generate an error if that
      * is not possible.
+     *
      * <p>This method must be overridden by any expression that is multi-value-aware.
      *
      * @param ctx           the compilation context for the statement
@@ -1420,6 +1440,7 @@ public abstract class Expression
     /**
      * Generate the necessary code that assigns the value of this expression to the specified
      * L-Value, or generate an error if that is not possible.
+     *
      * <p>This method should be overridden by any expression that can produce better code than the
      * default assignment code.
      *
@@ -1447,6 +1468,7 @@ public abstract class Expression
     /**
      * Generate the necessary code that assigns the values of this expression to the specified
      * L-Values, or generate an error if that is not possible.
+     *
      * <p>This method should be overridden by any expression that must support multi-values and can
      * produce better code than the default assignment code.
      *
@@ -1629,7 +1651,9 @@ public abstract class Expression
 
     /**
      * For an L-Value expression with exactly one value, create a representation of the L-Value.
+     *
      * <p>An exception is generated if the expression is not assignable.
+     *
      * <p>This method must be overridden by any expression that is assignable, unless the multi-value
      * version of this method is overridden instead.
      *
@@ -1653,7 +1677,9 @@ public abstract class Expression
 
     /**
      * For an L-Value expression, create representations of the L-Values.
+     *
      * <p>An exception is generated if the expression is not assignable.
+     *
      * <p>This method must be overridden by any expression that is assignable and multi-value-aware.
      *
      * @param ctx   the compilation context for the statement

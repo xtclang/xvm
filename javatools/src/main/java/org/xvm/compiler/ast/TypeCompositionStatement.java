@@ -337,6 +337,7 @@ public class TypeCompositionStatement
      * wrap the parsed type composition into a statement block, this method takes a Statement
      * instead of a TypeCompositionStatement, but the idea is the same: the argument to this method
      * should be an object that was returned from {@link org.xvm.compiler.Parser#parseSource()}.
+     *
      * <p>This method is used to combine multiple files that were parsed independently into a single
      * parse tree -- a single "AST" for an entire module.
      *

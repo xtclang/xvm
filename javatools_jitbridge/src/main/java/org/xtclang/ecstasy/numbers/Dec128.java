@@ -242,6 +242,7 @@ public class Dec128 extends DecimalFPNumber {
     /**
      * Add two Dec128 values, each represented by an IEEE-754-2008 64-bit decimal packed into two
      * {@code long} values.
+     *
      * <p>The low 64-bits of the result will be returned, the high 64-bits of the result will be set
      * into the {@link Ctx#i0} field of the passed in context.
      *
@@ -274,6 +275,7 @@ public class Dec128 extends DecimalFPNumber {
     /**
      * Divide two Dec128 values, each represented by an IEEE-754-2008 64-bit decimal packed into two
      * {@code long} values.
+     *
      * <p>The low 64-bits of the result will be returned, the high 64-bits of the result will be set
      * into the {@link Ctx#i0} field of the passed in context.
      *
@@ -325,6 +327,7 @@ public class Dec128 extends DecimalFPNumber {
     /**
      * Return the modulus of two Dec128 values, each represented by an IEEE-754-2008 64-bit decimal
      * packed into two {@code long} values.
+     *
      * <p>The low 64-bits of the result will be returned, the high 64-bits of the result will be set
      * into the {@link Ctx#i0} field of the passed in context.
      *
@@ -357,6 +360,7 @@ public class Dec128 extends DecimalFPNumber {
     /**
      * Multiply two Dec128 values, each represented by an IEEE-754-2008 64-bit decimal packed into
      * two {@code long} values.
+     *
      * <p>The low 64-bits of the result will be returned, the high 64-bits of the result will be set
      * into the {@link Ctx#i0} field of the passed in context.
      *
@@ -395,6 +399,7 @@ public class Dec128 extends DecimalFPNumber {
     /**
      * Negate a Dec128 value represented by an IEEE-754-2008 128-bit decimal packed into two
      * {@code long} values.
+     *
      * <p>The low 64-bits of the result will be returned, the high 64-bits of the result will be set
      * into the {@link Ctx#i0} field of the passed in context.
      *
@@ -422,6 +427,7 @@ public class Dec128 extends DecimalFPNumber {
     /**
      * Subtract one Dec128 value from another, each represented by an IEEE-754-2008 64-bit decimal
      * packed into two {@code long} values.
+     *
      * <p>The low 64-bits of the result will be returned, the high 64-bits of the result will be set
      * into the {@link Ctx#i0} field of the passed in context.
      *
@@ -693,6 +699,7 @@ public class Dec128 extends DecimalFPNumber {
 
     /**
      * Convert a Java BigDecimal to an IEEE 754 128-bit decimal contained in two Java {@code long}s.
+     *
      * <p>This method will set the most significant 64-bits of the IEEE 754 128-bit decimal into the
      * {@link Ctx#i0} field of the passed in context. The least significant 64-bits of the
      * IEEE 754 128-bit decimal will be returned.

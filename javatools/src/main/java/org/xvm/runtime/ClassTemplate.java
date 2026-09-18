@@ -229,6 +229,7 @@ public abstract class ClassTemplate
 
     /**
      * Produce a TypeComposition using the specified actual type.
+     *
      * <p>Note: the passed type should be fully resolved and normalized
      *       (all formal parameters resolved)
      */
@@ -303,6 +304,7 @@ public abstract class ClassTemplate
 
     /**
      * Create an object handle for the specified constant and push it on the frame's local stack.
+     *
      * <p>Note: the overriding method *should never* push DeferredCallHandles on the stack.
      *
      * @param frame     the current frame
@@ -2138,6 +2140,7 @@ public abstract class ClassTemplate
 
     /**
      * Mark the specified property and its accessors as native.
+     *
      * <p>Note: if there are no accessors and the native property is a read/write
      *       (not ref-annotated and no explicit read-only at the declaration level),
      *       then we will mark the property as @Unassigned, which will retain the property field,

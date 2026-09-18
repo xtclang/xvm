@@ -451,6 +451,7 @@ public abstract class DecimalFPNumber
 
     /**
      * Convert the three least significant decimal digits of the passed integer value to a declet.
+     *
      * <p>Details are in IEEE 754-2008 section 3.5.2, table 3.4.
      *
      * @param nDigits  the int value containing the digits
@@ -463,6 +464,7 @@ public abstract class DecimalFPNumber
 
     /**
      * Convert three decimal digits to a declet.
+     *
      * <p>Details are in IEEE 754-2008 section 3.5.2, table 3.4.
      *
      * @param d1  4-bit value "d1" from table 3.4 (most significant digit)
@@ -492,6 +494,7 @@ public abstract class DecimalFPNumber
     /**
      * Convert the passed declet to three decimal digits, and format them as a Java <code>int</code> in
      * the range 0-999.
+     *
      * <p>Details are in IEEE 754-2008 section 3.5.2, table 3.3.
      *
      * @param nBits  a declet
@@ -560,6 +563,7 @@ public abstract class DecimalFPNumber
     /**
      * Convert the passed declet to three decimal digits, and return each of them in the three least
      * significant bytes of a Java <code>int</code>.
+     *
      * <p>Details are in IEEE 754-2008 section 3.5.2, table 3.3.
      *
      * @param nBits  a declet

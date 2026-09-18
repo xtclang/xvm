@@ -60,6 +60,7 @@ public class IntN extends IntNumber {
 
     /**
      * Return this IntN as an array of long values suitable for creating an {@link ArrayᐸBitᐳ}
+     *
      * <p>The bit length the long values represent is returned in {@link Ctx#i0}.
      */
     protected long[] $longValues(Ctx ctx) {

@@ -154,6 +154,7 @@ public class ModuleConstant
 
     /**
      * Get the qualified name of the Module.
+     *
      * <p>The qualified name for the module is constructed by combining the unqualified module name, a
      * separating '.', and the domain name.
      *

@@ -91,7 +91,9 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will add two XVM primitive types
      * (T + T -> T).
+     *
      * <p>Each type may be represented by one or more Java primitive types.
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -140,7 +142,9 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will logically AND two XVM primitive types
      * (T & T -> T).
+     *
      * <p>Each type may be represented by one or more Java primitive types stored on the stack.
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -183,6 +187,7 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will produce the complement of a XVM primitive
      * (~T -> T).
+     *
      * <p>The target register should not have been loaded to the stack.
      *
      * @param code       the code builder to add the op codes to
@@ -273,7 +278,9 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will divide two XVM primitive types
      * (T / T -> T).
+     *
      * <p>Each type may be represented by one or more Java primitive types stored on the stack.
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -371,7 +378,9 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will produce the modulo of two XVM primitive types
      * (T % T -> T).
+     *
      * <p>Each type may be represented by one or more Java primitive types stored on the stack.
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -535,7 +544,9 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will logically OR two XVM primitive types
      * (T | T -> T).
+     *
      * <p>Each type may be represented by one or more Java primitive types stored on the stack.
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -558,6 +569,7 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will logically shift left a primitive type
      * (T << T -> T).
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx      the current build context
@@ -594,6 +606,7 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will logically shift left a XVM primitive type
      * (T << T -> T).
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -616,6 +629,7 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will logically shift right a XVM primitive type
      * (T >> T -> T).
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -640,6 +654,7 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will logically unsigned shift right a XVM
      * primitive type (T >>> T -> T).
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -788,7 +803,9 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will subtract one XVM primitive type from another
      * (T - T -> T).
+     *
      * <p>Each type may be represented by one or more Java primitive types.
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -837,7 +854,9 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will logically XOR two XVM primitive types
      * (T ^ T -> T).
+     *
      * <p>Each type may be represented by one or more Java primitive types stored on the stack.
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context

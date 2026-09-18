@@ -999,6 +999,7 @@ public final class Handy {
 
     /**
      * Read a variable-length encoded 32-bit integer magnitude from a stream.
+     *
      * <p>Note that while the XVM itself is a 64-bit machine, Java does not support 64-bit (or even
      * unsigned 32-bit) magnitudes. This method is a convenience method that verifies that the
      * magnitude is within a range supported by Java.
@@ -1025,6 +1026,7 @@ public final class Handy {
 
     /**
      * Read a variable-length encoded 32-bit integer index from a stream.
+     *
      * <p>Note that while the XVM itself is a 64-bit machine, Java does not support 64-bit (or even
      * unsigned 32-bit) indexes. This method is a convenience method that verifies that the index is
      * within a range supported by Java.

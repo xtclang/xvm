@@ -15,10 +15,12 @@ import org.xvm.tool.LauncherOptions.TestRunnerOptions;
 
 /**
  * The "xtc test" command - runs tests in an Ecstasy module using the xunit engine.
+ *
  * <p>Usage:
  * <pre>
  *   xtc test [-L repo(s)] module.xtc
  * </pre>
+ *
  * <p>The TestRunner extends Runner but loads the xunit_engine module and injects the
  * test module information, allowing the xunit framework to discover and run tests.
  */

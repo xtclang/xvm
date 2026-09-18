@@ -50,6 +50,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * JMP_VAL rvalue, #:(CONST, addr), addr-default ; if value equals a constant, jump to address, otherwise default
+ *
  * <p>Note: No support for wild-cards or ranges.
  */
 public class JumpVal

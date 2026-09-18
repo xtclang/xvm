@@ -35,6 +35,7 @@ public abstract class FPNumber extends Number {
 
     /**
      * Convert this decimal to a Java {@link BigInteger}.
+     *
      * <p>If the {@code direction} parameter is {@code null}, a default direction value of
      * {@link Rounding.TowardZero} will be used. This is
      *

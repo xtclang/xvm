@@ -12,6 +12,7 @@ import org.xvm.compiler.ast.TypeCompositionStatement;
 
 /**
  * A module compiler for Ecstasy code.
+ *
  * <p>The compiler is a multi-step state machine. This design is the result of the compiler for one
  * module needing to be able to be coordinated with compilers for other modules that are
  * co-dependent, i.e. that have dependencies on each other that need to be jointly resolved.
@@ -99,7 +100,9 @@ public class Compiler {
      * First pass: Create a FileStructure that represents the module, its packages, their classes,
      * their nested classes (recursively), plus the names of properties and methods within each of
      * those.
+     *
      * <p>This method is not permitted to use the ModuleRepository.
+     *
      * <p>Any error results are logged to the ErrorListener.
      *
      * @return the initial file structure
@@ -158,8 +161,11 @@ public class Compiler {
     /**
      * Third pass: Resolve all of the globally-visible dependencies and names. This pass does not
      * recurse into methods.
+     *
      * <p>This method uses the ModuleRepository.
+     *
      * <p>Any error results are logged to the ErrorListener.
+     *
      * <p>The caller is responsible for calling this method until it returns true.
      *
      * @param  fLastAttempt  true iff this is the last attempt to resolve names; any deferral will be
@@ -200,8 +206,11 @@ public class Compiler {
     /**
      * Fourth pass: Resolve all types and constants. This does recurse to the full depth of the AST
      * tree.
+     *
      * <p>This method uses the ModuleRepository.
+     *
      * <p>Any error results are logged to the ErrorListener.
+     *
      * <p>The caller is responsible for calling this method until it returns true.
      *
      * @param  fLastAttempt  true iff this is the last attempt to validate expressions; any deferral
@@ -241,8 +250,11 @@ public class Compiler {
     /**
      * This stage finishes the compilation by emitting any necessary code and any remaining
      * structures.
+     *
      * <p>This method uses the ModuleRepository.
+     *
      * <p>Any error results are logged to the ErrorListener.
+     *
      * <p>The caller is responsible for calling this method until it returns true.
      *
      * @param  fLastAttempt  true iff this is the last attempt to generate code; any deferral will be

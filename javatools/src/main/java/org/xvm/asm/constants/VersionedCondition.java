@@ -25,6 +25,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  * conditionally include or exclude VMStructures within <b>this</b> module based on the version of
  * <b>this</b> module. This allows multiple versions of a module to be collocated within a single
  * FileStructure, for example.
+ *
  * <p>To evaluate if another module (or component thereof) is of a specified version, a {@link
  * PresentCondition} is used.
  */

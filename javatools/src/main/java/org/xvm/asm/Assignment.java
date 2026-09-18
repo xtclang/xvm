@@ -2,6 +2,7 @@ package org.xvm.asm;
 
 /**
  * The Assignment enumeration represents the various possible states of a variable's assignment.
+ *
  * <p>Specifically:
  * <ul>
  * <li>If the variable is known to be definitely unassigned;</li>

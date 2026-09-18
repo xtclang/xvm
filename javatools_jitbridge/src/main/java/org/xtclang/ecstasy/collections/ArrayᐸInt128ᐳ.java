@@ -14,6 +14,7 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of Int128, stored in an array of Java longs, two long array elements for ech Int128.
+ *
  * <p>Object header
  * xObj - 64 bits of flags
  * ---

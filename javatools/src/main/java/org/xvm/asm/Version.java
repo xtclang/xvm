@@ -322,10 +322,12 @@ public class Version
 
     /**
      * Determine if another version is the same version as this, or derives from this version.
+     *
      * <p>A version is either a base version, the subsequent version of another version, or a revision
      * of another version. A version number is represented as a dot-delimited string of integer
      * values; for example, version "1" is a potential base version number, version "2" is a
      * subsequent version of version "1", and version "1.1" is a revision of version 1.
+     *
      * <p>For each integer in the version string, the first integer is considered the most significant
      * version indicator, and each following integer is less significant, with the last integer
      * being the least significant version indicator. If the least significant version indicator is

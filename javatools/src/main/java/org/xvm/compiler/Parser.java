@@ -3255,6 +3255,7 @@ public class Parser {
      *       a name, because it could (might/will occasionally) still be a "less than sign" and not a
      *       parameterized type.
      * </li></ul>
+     *
      * <p><code><pre>
      * PrimaryExpression
      *     "(" Expression ")"

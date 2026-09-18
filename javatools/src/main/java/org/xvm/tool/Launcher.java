@@ -93,6 +93,7 @@ public abstract class Launcher<T extends LauncherOptions>
     /**
      * Registry of available commands. Each entry maps a command name to a handler that parses
      * the args and launches the appropriate tool.
+     *
      * <p>Note: We use string literals here instead of calling subclass static methods (e.g.,
      * Compiler.getCommandName()) to avoid class loading deadlock - referencing subclass static
      * methods from superclass static initialization can cause deadlock.
@@ -199,6 +200,7 @@ public abstract class Launcher<T extends LauncherOptions>
     /**
      * Executes a launcher command and returns an exit code.
      * Use this when calling from a daemon or other long-running process.
+     *
      * <p>Supported commands: build, run, test (or --help, --version).
      * Shell scripts call with the command directly (xcc calls with "build", xec with "run").
      *
@@ -405,9 +407,11 @@ public abstract class Launcher<T extends LauncherOptions>
     /**
      * Log a tool-level message with template substitution (SLF4J-style).
      * Use {} placeholders in the template for parameter substitution.
+     *
      * <p>Tool-level logs (file not found, invalid options, etc.) are displayed via Console and
      * tracked in Launcher for control flow, but NOT sent to ErrorListener. ErrorListener is only
      * for compilation/runtime errors from compiler/runner.
+     *
      * <p>If severity is FATAL, this method throws LauncherException immediately after logging.
      *
      * @param sev       the severity (may indicate an error)
@@ -421,8 +425,10 @@ public abstract class Launcher<T extends LauncherOptions>
     /**
      * Log an exception with an optional message template. Use {} placeholders in the template
      * for parameter substitution. The exception message will be included in the Console
+     *
      * <p>Tool-level exception logs are displayed via Console and tracked in Launcher, but NOT sent
      * to ErrorListener.
+     *
      * <p>If severity is FATAL, this method throws LauncherException immediately after logging.
      *
      * @param sev       the severity (may indicate an error)
@@ -517,6 +523,7 @@ public abstract class Launcher<T extends LauncherOptions>
 
     /**
      * Check if errors warrant aborting. If so, throws LauncherException with context.
+     *
      * <p>Checks BOTH Launcher's tracked severity (tool errors) AND ErrorListener delegate
      * (compiler errors).
      *
@@ -623,6 +630,7 @@ public abstract class Launcher<T extends LauncherOptions>
      * Validate the options. This is called after options have been parsed and set. Subclasses
      * should implement validation logic that requires access to instance state (like error
      * listeners, logging, etc.).
+     *
      * <p>Options classes should remain pure data/configuration holders. All validation logic that
      * requires business logic or instance state belongs here.
      */
@@ -737,6 +745,7 @@ public abstract class Launcher<T extends LauncherOptions>
 
     /**
      * Force load and link whatever modules are required by the compiler.
+     *
      * <p>Note: This implementation assumes that the read-through option on LinkedRepository is being
      * used.
      *
