@@ -16,7 +16,7 @@ kept as the record of what was wrong. Where that has since changed:
 | names for the listener | 6 | 1 - `errs` |
 | kinds of silence | 1 undifferentiated | 133 `PROBE`, 6 `BLACKHOLE`, 10 `suppressCascade()` |
 | fields using null as a state flag | 4 | 0 |
-| `new Object[]` at report sites | 31 | 22, all behind a class's own log helper |
+| `new Object[]` at report sites | 31 | 0 |
 
 ## Why
 
@@ -352,10 +352,6 @@ or the `Compiler`? Phase 5 was completed around this rather than through it: the
 what retires the last 8 null-coalescing sites and the RUNTIME/silent asymmetry, and it is the
 larger piece: 8 constructors and 67 call sites, and deleting the no-arg `ensureTypeInfo()` overload
 that depends on it would touch 126 call sites across 46 files.
-
-**Optional and independent:** the 22 remaining `new Object[]` sites, which go through each class's
-own private log helper rather than `ErrorListener` directly. The Phase 2 API is additive, so they
-can migrate whenever, or never.
 
 ## Open questions
 - Should `log()` keep returning `boolean`? It currently means *abort*, which conflates recording
