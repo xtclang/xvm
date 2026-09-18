@@ -43,6 +43,18 @@ public class FileStructureErrorListenerTest {
                 "XvmStructure must not offer a setter that mutates its parent");
     }
 
+    /**
+     * A collector reports resolution diagnostics somewhere its caller chose. The interface used to
+     * default that to a silent listener, so a collector that had not thought about diagnostics and
+     * one that had decided against them were the same collector.
+     */
+    @Test
+    public void aResolutionCollectorMustSayWhereItsDiagnosticsGo() throws NoSuchMethodException {
+        assertFalse(ComponentResolver.ResolutionCollector.class
+                        .getMethod("getErrorListener").isDefault(),
+                "the collector must supply a listener rather than inherit silence");
+    }
+
     @Test
     public void getErrorListenerPrefersAnExplicitlySetListener() {
         var file = new FileStructure("test");
