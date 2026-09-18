@@ -351,8 +351,8 @@ class PhantomGcTest {
 
         /**
          * A reference to the next Reclaim that was created by the current carrier (Java/OS) thread.
-         * <p/>
-         * Each Reclaim is part of a doubly linked list to hold a strong reference to each Reclaim
+         *
+         * <p>Each Reclaim is part of a doubly linked list to hold a strong reference to each Reclaim
          * until after it has been processed.
          */
         private Reclaim next;
@@ -360,8 +360,8 @@ class PhantomGcTest {
         /**
          * A reference to the previous Reclaim that was created by the current carrier (Java/OS)
          * thread.
-         * <p/>
-         * Each Reclaim is part of a doubly linked list to hold a strong reference to each Reclaim
+         *
+         * <p>Each Reclaim is part of a doubly linked list to hold a strong reference to each Reclaim
          * until after it has been processed.
          */
         private Reclaim prev;
