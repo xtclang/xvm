@@ -162,9 +162,7 @@ class InterpreterControl
                 this.result = result;
             } else {
                 this.result = null;
-                if (errs != null) {
-                    errs.error(ERR_UNHANDLED_EXCEPTION, at(module), failure);
-                }
+                errs.error(ERR_UNHANDLED_EXCEPTION, at(module), failure);
             }
         } finally {
             this.stopped = Instant.now();

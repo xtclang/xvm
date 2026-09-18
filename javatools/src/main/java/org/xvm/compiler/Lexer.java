@@ -1,5 +1,7 @@
 package org.xvm.compiler;
 
+import static java.util.Objects.requireNonNull;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -39,16 +41,14 @@ public class Lexer
      *
      * @param source  the source to parse
      */
-    public Lexer(Source source, ErrorListener errorListener) {
+    public Lexer(Source source, ErrorListener errs) {
         if (source == null) {
             throw new IllegalArgumentException("Source required");
         }
-        if (errorListener == null) {
-            throw new IllegalArgumentException("ErrorListener required");
-        }
+        requireNonNull(errs, "errs");
 
         m_source        = source;
-        m_errorListener = errorListener;
+        m_errs = errs;
 
         eatWhitespace();
     }
@@ -58,7 +58,7 @@ public class Lexer
      */
     protected Lexer(Lexer parent) {
         m_source        = parent.m_source;
-        m_errorListener = parent.m_errorListener;
+        m_errs = parent.m_errs;
         m_fWhitespace   = parent.m_fWhitespace;
     }
 
@@ -2504,8 +2504,8 @@ public class Lexer
      * Log an error.
      */
     protected void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd) {
-        if (m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd)) {
-            throw new CompilerException("error list is full: " + m_errorListener);
+        if (m_errs.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd)) {
+            throw new CompilerException("error list is full: " + m_errs);
         }
     }
 
@@ -2844,7 +2844,7 @@ public class Lexer
     /**
      * The ErrorListener to report errors to.
      */
-    private final ErrorListener m_errorListener;
+    private final ErrorListener m_errs;
 
     /**
      * Keeps track of whether whitespace was encountered.
