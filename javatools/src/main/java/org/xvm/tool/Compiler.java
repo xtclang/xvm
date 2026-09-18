@@ -645,8 +645,9 @@ public class Compiler extends Launcher<CompilerOptions> {
     public boolean isAbortDesired() {
         // Check BOTH Console (tool errors) AND ErrorListener delegate (compiler errors)
         // Use Compiler's strictness-aware abort threshold
-        return isBadEnoughToAbort(m_sevWorst) ||
-                (m_errs != ErrorListener.BLACKHOLE && m_errs.isAbortDesired());
+        // no sentinel comparison: a silent listener answers false to isAbortDesired anyway, so
+        // the guard could never change the answer - and there is now more than one silent listener
+        return isBadEnoughToAbort(m_sevWorst) || m_errs.isAbortDesired();
     }
 
     // ----- accessors -----------------------------------------------------------------------------
