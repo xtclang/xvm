@@ -171,7 +171,7 @@ public class NewExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        return calculateTargetType(ctx, ErrorListener.BLACKHOLE);
+        return calculateTargetType(ctx, ErrorListener.PROBE);
     }
 
     private TypeConstant calculateTargetType(Context ctx, ErrorListener errs) {
@@ -680,7 +680,7 @@ public class NewExpression
             // structures, such that we can revert it after we collect the information about the
             // captures; force a temp clone of the inner class to go through its validate() stage so
             // that we can determine what variables get captured (and if they are effectively final)
-            ensureInnerClass(ctx, AnonPurpose.CaptureAnalysis, ErrorListener.BLACKHOLE);
+            ensureInnerClass(ctx, AnonPurpose.CaptureAnalysis, ErrorListener.PROBE);
 
             // the capture information gets collected in a specialized Context that was created with
             // the inner class
