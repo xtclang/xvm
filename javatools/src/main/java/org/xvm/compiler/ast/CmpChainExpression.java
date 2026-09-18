@@ -503,7 +503,7 @@ public class CmpChainExpression
         ctx = ctx.enterInferring(type);
 
         for (Expression expr : expressions) {
-            if (!expr.testFit(ctx, type, false, null).isFit()) {
+            if (!expr.testFit(ctx, type, false, ErrorListener.BLACKHOLE).isFit()) {
                 return false;
             }
         }

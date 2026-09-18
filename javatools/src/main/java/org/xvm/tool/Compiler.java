@@ -112,12 +112,12 @@ public class Compiler extends Launcher<CompilerOptions> {
     /**
      * Compiler constructor for programmatic use.
      *
-     * @param options     pre-configured compiler options
-     * @param console     representation of the terminal within which this command is run, or null
-     * @param errListener optional ErrorListener to receive errors, or null for no delegation
+     * @param options  pre-configured compiler options
+     * @param console  representation of the terminal within which this command is run, or null
+     * @param errs     the ErrorListener to receive errors
      */
-    public Compiler(CompilerOptions options, Console console, ErrorListener errListener) {
-        super(options, console, errListener);
+    public Compiler(CompilerOptions options, Console console, ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**
@@ -646,7 +646,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         // Check BOTH Console (tool errors) AND ErrorListener delegate (compiler errors)
         // Use Compiler's strictness-aware abort threshold
         return isBadEnoughToAbort(m_sevWorst) ||
-                (m_errors != ErrorListener.BLACKHOLE && m_errors.isAbortDesired());
+                (m_errs != ErrorListener.BLACKHOLE && m_errs.isAbortDesired());
     }
 
     // ----- accessors -----------------------------------------------------------------------------

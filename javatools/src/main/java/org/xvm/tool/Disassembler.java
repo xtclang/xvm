@@ -59,12 +59,12 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
     /**
      * Disassembler constructor for programmatic use.
      *
-     * @param options     pre-configured disassembler options
-     * @param console     representation of the terminal within which this command is run, or null
-     * @param errListener optional ErrorListener to receive errors, or null for no delegation
+     * @param options  pre-configured disassembler options
+     * @param console  representation of the terminal within which this command is run, or null
+     * @param errs     the ErrorListener to receive errors
      */
-    public Disassembler(DisassemblerOptions options, Console console, ErrorListener errListener) {
-        super(options, console, errListener);
+    public Disassembler(DisassemblerOptions options, Console console, ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**

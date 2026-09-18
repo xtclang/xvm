@@ -1,5 +1,7 @@
 package org.xvm.compiler;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -48,7 +50,7 @@ public class Parser {
      * @param atoken  the tokens to parse
      */
     protected Parser(Parser parent, Token[] atoken) {
-        this(parent.m_source, parent.m_errorListener, parent.m_lexer.createLexer(atoken));
+        this(parent.m_source, parent.m_errs, parent.m_lexer.createLexer(atoken));
     }
 
     private Parser(Source source, ErrorListener errs, Lexer lexer) {
@@ -56,12 +58,10 @@ public class Parser {
             throw new IllegalArgumentException("Source required");
         }
 
-        if (errs == null) {
-            throw new IllegalArgumentException("ErrorListener required");
-        }
+        requireNonNull(errs, "errs");
 
         m_source        = source;
-        m_errorListener = errs;
+        m_errs = errs;
         m_lexer         = lexer;
 
         // prime the token stream
@@ -135,16 +135,16 @@ public class Parser {
      * @return the module name
      */
     public String parseModuleNameIgnoreEverythingElse() {
-        ErrorListener errsPrev = m_errorListener;
+        ErrorListener errsPrev = m_errs;
         try {
-            m_errorListener = ErrorListener.BLACKHOLE;
+            m_errs = ErrorListener.BLACKHOLE;
 
             Loop: while (!eof()) {
                 if (match(Id.MODULE) != null) {
                     if (!eof()) {
-                        m_errorListener = new ErrorList(1);
+                        m_errs = new ErrorList(1);
                         List<Token> tokens = parseQualifiedName();
-                        if (!m_errorListener.hasSeriousErrors()) {
+                        if (!m_errs.hasSeriousErrors()) {
                             StringBuilder sb = new StringBuilder();
                             for (int i = 0, c = tokens.size(); i < c; ++i) {
                                 if (i > 0) {
@@ -165,7 +165,7 @@ public class Parser {
             }
         } catch (RuntimeException ignore) {
         } finally {
-            m_errorListener = errsPrev;
+            m_errs = errsPrev;
         }
 
         return null;
@@ -711,7 +711,7 @@ public class Parser {
             // evaluate annotations
             if (annotations != null) {
                 for (AnnotationExpression annotation : annotations) {
-                    annotation.log(m_errorListener, Severity.ERROR, Compiler.ANNOTATION_UNEXPECTED);
+                    annotation.log(m_errs, Severity.ERROR, Compiler.ANNOTATION_UNEXPECTED);
                 }
             }
 
@@ -729,7 +729,7 @@ public class Parser {
                         }
                         // fall through
                     default:
-                        modifier.log(m_errorListener, m_source, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, modifier.getValueText());
+                        modifier.log(m_errs, m_source, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, modifier.getValueText());
                         break;
                     }
                 }
@@ -839,7 +839,7 @@ public class Parser {
                             if (expr.isLValueSyntax()) {
                                 listLVals.add(expr);
                             } else {
-                                expr.log(m_errorListener, Severity.ERROR, NOT_ASSIGNABLE);
+                                expr.log(m_errs, Severity.ERROR, NOT_ASSIGNABLE);
                             }
                         } else {
                             listLVals.add(new VariableDeclarationStatement(
@@ -2436,7 +2436,7 @@ public class Parser {
      */
     Expression parseLinkerCondition() {
         Expression expr = parseExpression();
-        expr.validateCondition(m_errorListener);
+        expr.validateCondition(m_errs);
         return expr;
     }
 
@@ -5577,9 +5577,9 @@ public class Parser {
     protected void log(Severity severity, String sCode, long lPosStart, long lPosEnd, Object... aoParam) {
         if (m_lookAhead != null) {
             m_lookAhead.log(severity, sCode, aoParam, lPosStart, lPosEnd);
-        } else if (m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd)) {
+        } else if (m_errs.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd)) {
             m_fAvoidRecovery = true;
-            throw new CompilerException("error list is full: " + m_errorListener);
+            throw new CompilerException("error list is full: " + m_errs);
         }
     }
 
@@ -5782,7 +5782,7 @@ public class Parser {
     /**
      * The ErrorListener to report errors to.
      */
-    private ErrorListener m_errorListener;
+    private ErrorListener m_errs;
 
     /**
      * The lexical analyzer.

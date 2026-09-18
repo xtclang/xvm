@@ -304,8 +304,7 @@ public abstract class Expression
                                              ErrorListener errs) {
         Expression exprTemp = (Expression) clone();
         Context    ctxTemp  = ctx.enter();
-        Expression exprNew  = exprTemp.validateMulti(ctxTemp, atypeRequired,
-                                        errs == null ? ErrorListener.BLACKHOLE : errs);
+        Expression exprNew  = exprTemp.validateMulti(ctxTemp, atypeRequired, errs);
         exprTemp.discard(true);
         ctxTemp.discard();
 
@@ -461,10 +460,13 @@ public abstract class Expression
      *
      * @see #testFit(Context, TypeConstant, boolean, ErrorListener)
      */
-    protected TypeFit testFitAsType(Context ctx, TypeConstant typeRequired, boolean fExhaustive,
-                                    ErrorListener errs) {
+    protected TypeFit testFitAsType(Context ctx, TypeConstant typeRequired, boolean fExhaustive) {
+        // a fit test reports nothing: its answer is the return value. Staging used to be handed
+        // the caller's listener, so whether a staging failure inside a probe was reported as a
+        // real error depended on what that caller happened to pass. validateAsType(), below,
+        // already had this right
         TypeExpression exprType = toTypeExpression();
-        return new StageMgr(exprType, Compiler.Stage.Validated, errs).fastForward(20)
+        return new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20)
                 ? exprType.testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE)
                 : TypeFit.NoFit;
     }
@@ -500,8 +502,8 @@ public abstract class Expression
      *                      has already been applied; {@link TypeFit#isPacking()} indicates that a
      *                      tuple packing has already been applied; {@link TypeFit#isUnpacking()}
      *                      indicates that a tuple un-packing has already been applied
-     * @param constVal      a constant value, iff this expression is constant (optional)
-     * @param errs          the error list to log any errors to
+     * @param constVal  a constant value, iff this expression is constant (optional)
+     * @param errs      the error list to log any errors to
      *
      * @return an expression to use (which may or may not be "this"), or null to indicate that the
      *         compilation should halt as soon as is practical
@@ -1557,10 +1559,10 @@ public abstract class Expression
      * Generate the necessary code that computes a conditional assignment and jumps to the specified
      * label if this expression evaluates to `true`.
      *
-     * @param ctx       the compilation context for the statement
-     * @param code      the code block
-     * @param label     the label to conditionally jump to
-     * @param errs      the error list to log any errors to
+     * @param ctx    the compilation context for the statement
+     * @param code   the code block
+     * @param label  the label to conditionally jump to
+     * @param errs   the error list to log any errors to
      */
     public void generateConditionalAssignment(Context ctx, Code code,
                                               Assignable LVal, Label labelEnd, ErrorListener errs) {
@@ -2294,8 +2296,8 @@ public abstract class Expression
          * @param fLocalPropOk  if no L-value is provided, then this is used to indicate whether the
          *                      resulting argument can be a property constant indicating a local
          *                      property value
-         * @param code          the code object to which the assembly is added
-         * @param errs          the error listener to log to
+         * @param code  the code object to which the assembly is added
+         * @param errs  the error listener to log to
          *
          * @return an argument, if an Assignable was not provided
          */
