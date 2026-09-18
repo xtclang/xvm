@@ -335,18 +335,15 @@ public class FPNumberBuilder extends NumberBuilder {
             loadBinaryValueAsDouble(code, valueCD);
             code.invokestatic(CD_JavaMath, mode.equals("FLOOR") ? "floor" : "ceil",
                     MethodTypeDesc.of(CD_double, CD_double));
-            if (valueCD.equals(CD_float)) {
-                code.d2f();
-            }
+            narrowDoubleToCarrier(code, valueCD);
             addPrimitiveReturn(code, jmd);
             return;
         }
 
         Label finite = code.newLabel();
         load(code, valueCD, code.parameterSlot(0));
-        code.invokestatic(valueCD.equals(CD_float) ? CD_JavaFloat : CD_JavaDouble,
-                    "isFinite", MethodTypeDesc.of(CD_boolean, valueCD))
-            .ifne(finite);
+        loadIsFinite(code, valueCD);
+        code.ifne(finite);
         load(code, valueCD, code.parameterSlot(0));
         addPrimitiveReturn(code, jmd);
 
@@ -357,10 +354,33 @@ public class FPNumberBuilder extends NumberBuilder {
         code.invokespecial(CD_BigDecimal, INIT_NAME, MethodTypeDesc.of(CD_void, CD_double));
         generateSetScale(code, jmd, null);
         code.invokevirtual(CD_BigDecimal, "doubleValue", MethodTypeDesc.of(CD_double));
-        if (valueCD.equals(CD_float)) {
+        narrowDoubleToCarrier(code, valueCD);
+        addPrimitiveReturn(code, jmd);
+    }
+
+    /**
+     * Convert the double on the stack back to this type's primitive carrier.
+     */
+    protected void narrowDoubleToCarrier(CodeBuilder code, ClassDesc valueCD) {
+        if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
+            // an FP8 value is carried as its 8-bit encoding, so re-encode the result
+            code.d2f()
+                .invokestatic(fp8CD, "$toBits", MethodTypeDesc.of(CD_int, CD_float));
+        } else if (valueCD.equals(CD_float)) {
             code.d2f();
         }
-        addPrimitiveReturn(code, jmd);
+    }
+
+    /**
+     * Consume this type's primitive carrier from the stack and leave an "is finite" boolean.
+     */
+    protected void loadIsFinite(CodeBuilder code, ClassDesc valueCD) {
+        if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
+            code.invokestatic(fp8CD, "$finite", MethodTypeDesc.of(CD_boolean, CD_int));
+        } else {
+            code.invokestatic(valueCD.equals(CD_float) ? CD_JavaFloat : CD_JavaDouble,
+                    "isFinite", MethodTypeDesc.of(CD_boolean, valueCD));
+        }
     }
 
     /**
@@ -401,9 +421,27 @@ public class FPNumberBuilder extends NumberBuilder {
         load(code, valueCD, code.parameterSlot(0));
         if (valueCD.equals(CD_float)) {
             code.f2d();
-        } else if (!valueCD.equals(CD_double)) {
+        } else if (valueCD.equals(CD_double)) {
+            // already a double
+        } else if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
+            // an FP8 value is carried as its 8-bit encoding, so decode it before widening
+            code.invokestatic(fp8CD, "$toFloat", MethodTypeDesc.of(CD_float, CD_int))
+                .f2d();
+        } else {
             throw new IllegalStateException("Unsupported binary FPNumber type " + thisType);
         }
+    }
+
+    /**
+     * @return the jitbridge ClassDesc for this type if it is one of the 8-bit FP formats, whose
+     *         values are carried as their encoding rather than as a Java float; null otherwise
+     */
+    protected ClassDesc fp8ClassDesc() {
+        return switch (thisType.getSingleUnderlyingClass(false).getName()) {
+            case "Float8e4" -> CD_Float8e4;
+            case "Float8e5" -> CD_Float8e5;
+            default         -> null;
+        };
     }
 
     /**

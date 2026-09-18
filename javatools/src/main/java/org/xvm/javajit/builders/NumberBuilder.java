@@ -343,6 +343,16 @@ public class NumberBuilder extends AugmentingBuilder {
                 loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
                 break;
 
+            case "Float8e4", "Float8e5":
+                // an FP8 value is carried as its 8-bit encoding; just extract the byte
+                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
+                code.loadConstant(56)
+                    .lushr()
+                    .l2i()
+                    .loadConstant(0xFF)
+                    .iand();
+                break;
+
             case "Float16":
                 loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
                 code.loadConstant(48)
@@ -669,6 +679,18 @@ public class NumberBuilder extends AugmentingBuilder {
 
         if (thisType.isA(pool().typeBinFPNumber())) {
             switch (name) {
+                case "Float8e4":
+                    code.iload(paramSlot)
+                        .invokestatic(CD_Float8e4, "$finite", MD_FP8Predicate)
+                        .ireturn();
+                    break;
+
+                case "Float8e5":
+                    code.iload(paramSlot)
+                        .invokestatic(CD_Float8e5, "$finite", MD_FP8Predicate)
+                        .ireturn();
+                    break;
+
                 case "Float16", "Float32":
                     code.fload(paramSlot)
                             .invokestatic(CD_Float, "isFinite", MethodTypeDesc.of(CD_boolean, CD_float))
@@ -702,6 +724,18 @@ public class NumberBuilder extends AugmentingBuilder {
             int    paramSlot = code.parameterSlot(0);
 
             switch (name) {
+                case "Float8e4":
+                    code.iload(paramSlot)
+                        .invokestatic(CD_Float8e4, "$infinity", MD_FP8Predicate)
+                        .ireturn();
+                    break;
+
+                case "Float8e5":
+                    code.iload(paramSlot)
+                        .invokestatic(CD_Float8e5, "$infinity", MD_FP8Predicate)
+                        .ireturn();
+                    break;
+
                 case "Float16", "Float32":
                     code.fload(paramSlot)
                         .invokestatic(CD_Float, "isInfinite", MethodTypeDesc.of(CD_boolean, CD_float))
@@ -735,6 +769,18 @@ public class NumberBuilder extends AugmentingBuilder {
             int    paramSlot = code.parameterSlot(0);
 
             switch (name) {
+                case "Float8e4":
+                    code.iload(paramSlot)
+                        .invokestatic(CD_Float8e4, "$NaN", MD_FP8Predicate)
+                        .ireturn();
+                    break;
+
+                case "Float8e5":
+                    code.iload(paramSlot)
+                        .invokestatic(CD_Float8e5, "$NaN", MD_FP8Predicate)
+                        .ireturn();
+                    break;
+
                 case "Float16", "Float32":
                     code.fload(paramSlot)
                         .invokestatic(CD_Float, "isNaN", MethodTypeDesc.of(CD_boolean, CD_float))
@@ -846,6 +892,14 @@ public class NumberBuilder extends AugmentingBuilder {
 
         case "UInt64":
             code.lload(paramSlot);
+            generateMagnitudeReturn(code, jmd);
+            break;
+
+        case "Float8e4", "Float8e5":
+            // clearing the sign bit of an FP8 encoding yields the encoding of its magnitude
+            code.iload(paramSlot)
+                .loadConstant(0x7F)
+                .iand();
             generateMagnitudeReturn(code, jmd);
             break;
 
@@ -1127,6 +1181,16 @@ public class NumberBuilder extends AugmentingBuilder {
             case "Int64", "UInt64":
                 code.lsub()
                     .l2i();
+                break;
+
+            case "Float8e4":
+                MethodTypeDesc f8e4Cmp = MethodTypeDesc.of(CD_int, CD_int, CD_int);
+                code.invokestatic(CD_Float8e4, "$compare", f8e4Cmp);
+                break;
+
+            case "Float8e5":
+                MethodTypeDesc f8e5Cmp = MethodTypeDesc.of(CD_int, CD_int, CD_int);
+                code.invokestatic(CD_Float8e5, "$compare", f8e5Cmp);
                 break;
 
             case "Float16", "Float32":

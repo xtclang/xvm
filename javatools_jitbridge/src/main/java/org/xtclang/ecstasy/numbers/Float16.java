@@ -44,6 +44,10 @@ public class Float16 extends BinaryFPNumber {
         return Float.toString(thi$).length();
     }
 
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+        return appendTo$p($value, ctx, appender);
+    }
+
     public static AppenderᐸCharᐳ appendTo$p(float thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
         for (char c : Float.toString(thi$).toCharArray()) {
             appender = appender.add$p(ctx, c);

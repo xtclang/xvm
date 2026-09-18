@@ -59,7 +59,8 @@ public class JitTypeDesc {
         if (type.isJavaPrimitive()) {
             return switch (type.getSingleUnderlyingClass(false).getName()) {
                 case "Bit", "Nibble", "Char", "Byte",
-                     "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32"
+                     "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32",
+                     "Float8e4", "Float8e5"
                     -> CD_int;
                 case "Int64", "UInt64"
                     -> CD_long;
@@ -152,7 +153,10 @@ public class JitTypeDesc {
                         -> CD_byte;
                 case "Int16", "UInt16"
                         -> CD_short;
-                case "Char", "Int32", "UInt32"
+                case "Char", "Int32", "UInt32",
+                     // an FP8 field uses the same carrier as an FP8 value, as every other FP type
+                     // does; a narrower field would only make the two descriptors disagree
+                     "Float8e4", "Float8e5"
                         -> CD_int;
                 case "Int64", "UInt64"
                         -> CD_long;

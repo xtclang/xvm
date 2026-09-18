@@ -13,10 +13,13 @@ import org.xvm.javajit.registers.MultiSlot;
 
 import static java.lang.constant.ConstantDescs.CD_Integer;
 import static java.lang.constant.ConstantDescs.CD_Long;
+import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
+import static java.lang.constant.ConstantDescs.CD_short;
 
 import static org.xvm.javajit.Builder.CD_JavaMath;
+import static org.xvm.javajit.Builder.MD_FP8Binary;
 import static org.xvm.javajit.Builder.MD_FloorModI;
 import static org.xvm.javajit.Builder.MD_FloorModJ;
 import static org.xvm.javajit.Builder.MD_UDivInt;
@@ -29,6 +32,36 @@ public interface NumberSupport
         extends NumberSupportInt128, NumberSupportDec {
 
     /**
+     * The 8-bit FP formats are carried as their encoding in an int, so they share the "I" carrier
+     * with the small integer types but share none of their arithmetic. Every primitive operation
+     * therefore has to ask the Ecstasy type, not the carrier, before dispatching.
+     *
+     * @return the jitbridge ClassDesc for an FP8 type, or null if this is not one
+     */
+    private static ClassDesc fp8Class(TypeConstant type) {
+        return switch (type.getSingleUnderlyingClass(false).getName()) {
+            case "Float8e4" -> Builder.CD_Float8e4;
+            case "Float8e5" -> Builder.CD_Float8e5;
+            default         -> null;
+        };
+    }
+
+    /**
+     * Float16 shares the "F" carrier with Float32, so an operation on it is performed at float
+     * precision and has to be rounded back into the format afterwards; without this, a Float16
+     * result can hold a value Float16 cannot represent. Float32 and Float64 fill their carriers
+     * exactly and need nothing.
+     */
+    private static void narrowFloat(CodeBuilder code, TypeConstant type) {
+        if ("Float16".equals(type.getSingleUnderlyingClass(false).getName())) {
+            code.invokestatic(Builder.CD_JavaFloat, "floatToFloat16",
+                        MethodTypeDesc.of(CD_short, CD_float))
+                .invokestatic(Builder.CD_JavaFloat, "float16ToFloat",
+                        MethodTypeDesc.of(CD_float, CD_short));
+        }
+    }
+
+    /**
      * Build the optimized binary operation that will add two primitive types from the stack
      * (T + T -> T).
      *
@@ -37,13 +70,20 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveAdd(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
+            code.invokestatic(fp8CD, "$add", MD_FP8Binary);
+            return;
+        }
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.iadd();
                 Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.ladd();
-            case "F" -> code.fadd();
+            case "F" -> {
+                code.fadd();
+                narrowFloat(code, regTarget.type());
+            }
             case "D" -> code.dadd();
             default  -> throw new IllegalStateException();
         }
@@ -174,6 +214,10 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveDiv(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
+            code.invokestatic(fp8CD, "$div", MD_FP8Binary);
+            return;
+        }
         TypeConstant typeTarget = regTarget.type();
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
@@ -195,7 +239,10 @@ public interface NumberSupport
                     code.ldiv();
                 }
             }
-            case "F" -> code.fdiv();
+            case "F" -> {
+                code.fdiv();
+                narrowFloat(code, regTarget.type());
+            }
             case "D" -> code.ddiv();
             default  -> throw new IllegalStateException();
         }
@@ -215,6 +262,10 @@ public interface NumberSupport
      */
     default void buildPrimitiveRemainder(BuildContext bctx, CodeBuilder code,
                                          RegisterInfo regTarget, int nArgId, int nQuotientId) {
+        if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
+            code.invokestatic(fp8CD, "$rem", MD_FP8Binary);
+            return;
+        }
         regTarget.load(code);
         bctx.loadArgument(code, nArgId);
         bctx.loadArgument(code, nQuotientId);
@@ -296,6 +347,10 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveMod(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
+            code.invokestatic(fp8CD, "$mod", MD_FP8Binary);
+            return;
+        }
         ClassDesc cd       = regTarget.cd();
         boolean   unsigned = regTarget.type().getValueString().startsWith("UInt");
         switch (cd.descriptorString()) {
@@ -314,7 +369,10 @@ public interface NumberSupport
                     code.invokestatic(CD_JavaMath, "floorMod", MD_FloorModJ);
                 }
             }
-            case "F" -> code.frem();
+            case "F" -> {
+                code.frem();
+                narrowFloat(code, regTarget.type());
+            }
             case "D" -> code.drem();
             default  -> throw new IllegalStateException();
         }
@@ -360,6 +418,12 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveNeg(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        if (fp8Class(regTarget.type()) != null) {
+            // an FP8 value is carried as its encoding, so negation just flips the sign bit
+            code.loadConstant(0x80)
+                .ixor();
+            return;
+        }
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.ineg();
@@ -412,13 +476,20 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveMul(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
+            code.invokestatic(fp8CD, "$mul", MD_FP8Binary);
+            return;
+        }
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.imul();
                 Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.lmul();
-            case "F" -> code.fmul();
+            case "F" -> {
+                code.fmul();
+                narrowFloat(code, regTarget.type());
+            }
             case "D" -> code.dmul();
             default  -> throw new IllegalStateException();
         }
@@ -714,13 +785,20 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveSub(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        if (fp8Class(regTarget.type()) instanceof ClassDesc fp8CD) {
+            code.invokestatic(fp8CD, "$sub", MD_FP8Binary);
+            return;
+        }
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.isub();
                 Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.lsub();
-            case "F" -> code.fsub();
+            case "F" -> {
+                code.fsub();
+                narrowFloat(code, regTarget.type());
+            }
             case "D" -> code.dsub();
             default  -> throw new IllegalStateException();
         }

@@ -1,7 +1,5 @@
 package org.xvm.asm;
 
-import java.io.File;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -18,7 +16,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Regression / red-on-master proof for the DirRepository scan-cache race.
@@ -40,29 +37,20 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * lookup cache).</p>
  */
 public class DirRepositoryConcurrentScanTest {
-    private static final File LIB =
-            new File("xdk/build/install/xdk/lib").isDirectory()
-                    ? new File("xdk/build/install/xdk/lib")
-                    : new File("../xdk/build/install/xdk/lib");
+    /**
+     * The repository only needs several parseable modules to scan, so the test writes its own
+     * rather than reaching into the XDK build output: a javatools test must not depend on the
+     * distribution having been built, and these are far smaller than the real modules anyway.
+     */
+    private static final int MODULE_COUNT = 6;
 
     @Test
     public void concurrentScanDoesNotCorruptTheCache() throws Exception {
-        assumeTrue(LIB.isDirectory(), "need built .xtc modules to feed the repository");
-        File[] xtc = LIB.listFiles((d, n) -> n.endsWith(".xtc"));
-        assumeTrue(xtc != null && xtc.length >= 4, "need several .xtc modules");
-
-        Path dir    = Files.createTempDirectory("dirrepo-race");
-        int  copied = 0;
-        for (File f : xtc) {
-            if (f.getName().equals("ecstasy.xtc")) {
-                continue;   // skip the big one to keep per-scan parse cost low
-            }
-            Files.copy(f.toPath(), dir.resolve(f.getName()));
-            if (++copied >= 6) {
-                break;
-            }
+        Path dir = Files.createTempDirectory("dirrepo-race");
+        for (int i = 0; i < MODULE_COUNT; i++) {
+            String sModule = "scan" + i + ".test.xtclang.org";
+            new FileStructure(sModule).writeTo(dir.resolve(sModule + ".xtc").toFile());
         }
-        assumeTrue(copied >= 4, "need several small .xtc modules");
 
         int threads = 8;
         var pool    = Executors.newFixedThreadPool(threads);

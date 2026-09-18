@@ -4336,6 +4336,8 @@ public class CommonBuilder
             "org.xtclang.ecstasy.numbers.BinaryFPNumber",
             "org.xtclang.ecstasy.numbers.Bit",
             "org.xtclang.ecstasy.numbers.Dec*",
+            "org.xtclang.ecstasy.numbers.Float8e4",
+            "org.xtclang.ecstasy.numbers.Float8e5",
             "org.xtclang.ecstasy.numbers.Float16",
             "org.xtclang.ecstasy.numbers.Float32",
             "org.xtclang.ecstasy.numbers.Float64",

@@ -7428,6 +7428,20 @@ public abstract class TypeConstant
      *                   computed and the jump needs be generated; otherwise the result of the
      *                   comparison should be placed on the Java stack
      */
+    /**
+     * The 8-bit FP formats are carried as their encoding in an int, sharing the "I" carrier with
+     * the small integer types while sharing none of their ordering: the encoding is sign-magnitude.
+     *
+     * @return the jitbridge ClassDesc for an FP8 type, or null if this is not one
+     */
+    private ClassDesc fp8JitClass() {
+        return switch (getSingleUnderlyingClass(false).getName()) {
+            case "Float8e4" -> Builder.CD_Float8e4;
+            case "Float8e5" -> Builder.CD_Float8e5;
+            default         -> null;
+        };
+    }
+
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, Loader argLoader, Label lblTrue) {
         TypeConstant type1 = reg1.type();
@@ -7454,6 +7468,25 @@ public abstract class TypeConstant
             }
             convertIfUnsignedPrimitive(code);
 
+            ClassDesc cdFP8 = fp8JitClass();
+            if (cdFP8 != null) {
+                // an FP8 value is carried as its 8-bit encoding, which is sign-magnitude and
+                // therefore cannot be compared as an int: -4.0 encodes as 0xC8 and 4.0 as 0x48
+                code.invokestatic(cdFP8, "$compare", MethodTypeDesc.of(CD_int, CD_int, CD_int));
+                switch (nOp) {
+                case Op.OP_CMP -> {
+                    generateOrdered(bctx, code);
+                    return;
+                }
+                case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> code.ifeq(lblTrue);
+                case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> code.ifne(lblTrue);
+                case Op.OP_IS_GT,  Op.OP_JMP_GT  -> code.ifgt(lblTrue);
+                case Op.OP_IS_GTE, Op.OP_JMP_GTE -> code.ifge(lblTrue);
+                case Op.OP_IS_LT,  Op.OP_JMP_LT  -> code.iflt(lblTrue);
+                case Op.OP_IS_LTE, Op.OP_JMP_LTE -> code.ifle(lblTrue);
+                default                          -> throw new IllegalStateException();
+                }
+            } else
             switch (desc) {
             case "I", "S", "B", "Z":
                 switch (nOp) {
