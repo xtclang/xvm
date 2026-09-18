@@ -343,10 +343,42 @@ Throughout: `./gradlew spotlessCheck` alone before every commit, since locally `
 
 ## What is left
 
-Nothing in the seven phases. What remains is one decision and the work that follows from it, plus
-two independent questions.
+Nothing in the seven phases. This section is the gap between what those phases did and the full
+shape the prior-art branch reached, measured against this tree.
 
-### Ownership: the request owns it, and nothing else should
+### Gap to full parity
+
+| | state |
+|---|---|
+| Dedup key, `PROBE`/`BLACKHOLE`, `suppressCascade`, `Site` + varargs, never-null, no parent-mutating setter, no null-as-state | done, phases 1-7 |
+| `log()` returns `void`, abort asked separately | **postponed** by decision, revisit after the PR |
+| `ErrorListener.RUNTIME` stops throwing from inside `log()` | not started |
+| `ResolutionCollector.getErrorListener()` - the listener smuggled through a callback interface | not started |
+| `TypeInfo` carries and replays its own diagnostics | not started; the real shape of the last 8 sites |
+| `EvalCompiler.m_errs` / `ModuleInfo.Node.m_errs` final and created with their owner | not started |
+| Runtime-side listener: `Container`, the connector, `recordRuntimeFailure` | not started |
+| Failures with nowhere to go: 56 `System.err`/`printStackTrace`, 34 empty catches | not started |
+| `Origin` (thread, fiber) stamped on each diagnostic | not started |
+| Decorators - tee, SLF4J, JFR sinks | not started, and not needed until a host asks |
+| `ErrorList` thread-safety | **answered differently**; see below |
+
+Two of these are worth doing next and are small:
+
+**`RUNTIME` throwing from `log()`.** It throws `IllegalStateException` at `ERROR` and above, so the
+same diagnostic behaves differently depending on who is listening, and the throw pre-empts whatever
+the detecting code meant to throw next - making even the exception *type* depend on the listener.
+Reporting is not control flow.
+
+**`ResolutionCollector.getErrorListener()`**, which still defaults to a silent listener, so name
+resolution reports into a sink nobody chose. The prior art passed it explicitly instead.
+
+The rest is either large (`TypeInfo` diagnostics, the runtime side, the `System.err` census) or
+speculative (decorators, `Origin`), and none of it blocks an LSP that compiles a document with its
+own listener and reads what it collected.
+
+### The decision, and what follows from it
+
+#### Ownership: the request owns it, and nothing else should
 
 Decided by looking at the two consumers rather than in the abstract.
 
@@ -397,7 +429,7 @@ than to find an ambient listener to report them to once. Then:
 That is a bigger piece of work than the seven phases and should be its own plan. It is a
 memoization problem wearing an ownership problem's clothes.
 
-### Thread safety without synchronization
+#### Thread safety without synchronization
 
 `ErrorList` is not thread-safe. The way to keep it that way is for a listener never to be shared:
 one per request, as both consumers already do, so there is nothing to synchronize. A branch is
