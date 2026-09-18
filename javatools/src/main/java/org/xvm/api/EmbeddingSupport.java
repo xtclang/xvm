@@ -40,6 +40,8 @@ import org.xvm.tool.ModuleInfo.Node;
 import static org.xvm.util.Handy.readFileChars;
 
 import static org.xvm.util.Severity.ERROR;
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.at;
 
 /**
  * A class used to support embedding Ecstasy tools. This implementation uses the Connector API to
@@ -215,8 +217,7 @@ public class EmbeddingSupport {
             // as in run(): the compiler runs over caller-supplied source, so a failure in it is
             // reported here rather than thrown at the caller, who was promised a null instead
             if (errs != null) {
-                errs.log(ERROR, ERR_INTERNAL,
-                        new Object[] {e, "Compilation failed"}, null);
+                errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
             }
             return null;
         }
@@ -240,8 +241,7 @@ public class EmbeddingSupport {
             module = compile(new String(readFileChars(file)), input, errs);
         } catch (IOException e) {
             if (errs != null) {
-                errs.log(ERROR, ERR_INTERNAL,
-                        new Object[] {e, "Unable to read module " + file}, null);
+                errs.error(ERR_INTERNAL, NOWHERE, e, "Unable to read module " + file);
             }
             return false;
         }
@@ -256,8 +256,8 @@ public class EmbeddingSupport {
                 output.storeModule(module);
             } catch (IOException e) {
                 if (errs != null) {
-                    errs.log(ERROR, ERR_INTERNAL,
-                            new Object[] {e, "Unable to store module " + module.getName()}, module);
+                    errs.error(ERR_INTERNAL, at(module), e,
+                            "Unable to store module " + module.getName());
                 }
                 return false;
             }
@@ -472,8 +472,8 @@ public class EmbeddingSupport {
                 : repository.loadModule(moduleName, version, true);
         if (module == null) {
             if (errs != null) {
-                errs.log(ERROR, version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
-                        new Object[] {moduleName, version}, null);
+                errs.error(version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
+                        NOWHERE, moduleName, version);
             }
             return null;
         }
@@ -495,8 +495,8 @@ public class EmbeddingSupport {
             // not caught wholesale: a VirtualMachineError says the JVM is in trouble, not that
             // this module failed to start, and handling one is not something to rely on
             if (errs != null) {
-                errs.log(ERROR, ERR_CREATE_APP_CONTAINER,
-                        new Object[] {e, "Unable to start " + moduleName}, module);
+                errs.error(ERR_CREATE_APP_CONTAINER, at(module), e,
+                        "Unable to start " + moduleName);
             }
             return null;
         }

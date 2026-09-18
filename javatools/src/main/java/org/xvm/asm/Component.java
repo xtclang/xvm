@@ -2011,8 +2011,9 @@ public abstract class Component
                 }
                 if (m_FVisited != null && m_FVisited.booleanValue() == fAllowInto) {
                     // recursive contribution
-                    collector.getErrorListener().log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
-                            new Object[] {getName(), contrib.getComposition().toString().toLowerCase()}, this);
+                    collector.getErrorListener().fatal(Constants.VE_CYCLICAL_CONTRIBUTION,
+                            ErrorListener.at(this),
+                            getName(), contrib.getComposition().toString().toLowerCase());
                     return ResolutionResult.ERROR;
                 }
 
