@@ -26,12 +26,15 @@ public interface ErrorListener {
     /**
      * Handles the logging of an error that originates in Ecstasy source code.
      *
-     * @param err  the error info
+     * Recording a diagnostic says nothing about whether the work should continue; ask
+     * {@link #isAbortDesired()} for that. The two used to be one boolean, which left a listener
+     * that only wants to watch with no correct value to return - false suppressed a legitimate
+     * abort and true invented one - and made whether the compiler kept going a property of who was
+     * listening.
      *
-     * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt to continue the process
+     * @param err  the error info
      */
-    boolean log(ErrorInfo err);
+    void log(ErrorInfo err);
 
     /**
      * Handles the logging of an error that originates in Ecstasy source code.
@@ -48,9 +51,9 @@ public interface ErrorListener {
      * @return true to attempt to abort the process that reported the error, or
      *         false to attempt to continue the process
      */
-    default boolean log(Severity severity, String sCode, Object[] aoParam,
+    default void log(Severity severity, String sCode, Object[] aoParam,
             Source source, long lPosStart, long lPosEnd) {
-        return log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
+        log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
     }
 
     /**
@@ -67,8 +70,8 @@ public interface ErrorListener {
      * @return true to attempt to abort the process that reported the error, or
      *         false to attempt continue the process
      */
-    default boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
-        return log(new ErrorInfo(severity, sCode, aoParam, xs));
+    default void log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
+        log(new ErrorInfo(severity, sCode, aoParam, xs));
     }
 
     // ----- reporting -----------------------------------------------------------------------------
@@ -88,13 +91,13 @@ public interface ErrorListener {
      *
      * @return true to attempt to abort the process that reported the error
      */
-    default boolean log(Severity severity, String sCode, Site site, Object... aoParam) {
-        return switch (site) {
+    default void log(Severity severity, String sCode, Site site, Object... aoParam) {
+        switch (site) {
             case Site.In in -> log(new ErrorInfo(severity, sCode, aoParam,
                     in.source(), in.lPosStart(), in.lPosEnd()));
             case Site.At at -> log(new ErrorInfo(severity, sCode, aoParam, at.xs()));
             case Site.None ignore -> log(new ErrorInfo(severity, sCode, aoParam, null, 0, 0));
-        };
+        }
     }
 
     /**
@@ -102,8 +105,8 @@ public interface ErrorListener {
      *
      * @see #log(Severity, String, Site, Object...)
      */
-    default boolean error(String sCode, Site site, Object... aoParam) {
-        return log(Severity.ERROR, sCode, site, aoParam);
+    default void error(String sCode, Site site, Object... aoParam) {
+        log(Severity.ERROR, sCode, site, aoParam);
     }
 
     /**
@@ -111,8 +114,8 @@ public interface ErrorListener {
      *
      * @see #log(Severity, String, Site, Object...)
      */
-    default boolean warn(String sCode, Site site, Object... aoParam) {
-        return log(Severity.WARNING, sCode, site, aoParam);
+    default void warn(String sCode, Site site, Object... aoParam) {
+        log(Severity.WARNING, sCode, site, aoParam);
     }
 
     /**
@@ -120,8 +123,8 @@ public interface ErrorListener {
      *
      * @see #log(Severity, String, Site, Object...)
      */
-    default boolean info(String sCode, Site site, Object... aoParam) {
-        return log(Severity.INFO, sCode, site, aoParam);
+    default void info(String sCode, Site site, Object... aoParam) {
+        log(Severity.INFO, sCode, site, aoParam);
     }
 
     /**
@@ -130,8 +133,8 @@ public interface ErrorListener {
      *
      * @see #log(Severity, String, Site, Object...)
      */
-    default boolean fatal(String sCode, Site site, Object... aoParam) {
-        return log(Severity.FATAL, sCode, site, aoParam);
+    default void fatal(String sCode, Site site, Object... aoParam) {
+        log(Severity.FATAL, sCode, site, aoParam);
     }
 
     /**
@@ -273,8 +276,7 @@ public interface ErrorListener {
         }
 
         @Override
-        public boolean log(ErrorInfo err) {
-            return false;
+        public void log(ErrorInfo err) {
         }
 
         @Override
@@ -304,15 +306,25 @@ public interface ErrorListener {
     class RuntimeErrorListener
             implements ErrorListener {
         @Override
-        public boolean log(ErrorInfo err) {
-            String s = err.toString();
+        public void log(ErrorInfo err) {
+            System.out.println(err.getSeverity() + ": " + err);
             if (err.getSeverity().ordinal() >= Severity.ERROR.ordinal()) {
-                throw new IllegalStateException(s);
-            } else {
-                System.out.println(err.getSeverity() + ": " + s);
-                return false;
+                m_fAbort = true;
             }
         }
+
+        /**
+         * This used to throw from inside log(), which made the decision to stop - and the type of
+         * the exception that stopped it - a property of who was listening rather than of what went
+         * wrong. A caller that asks gets the same answer; a caller that does not is no longer
+         * interrupted in the middle of reporting.
+         */
+        @Override
+        public boolean isAbortDesired() {
+            return m_fAbort;
+        }
+
+        private volatile boolean m_fAbort;
 
         @Override
         public String toString() {
