@@ -22,8 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Drop-in compatibility tests that verify the pure Java implementation produces keystores
  * and entries that are interchangeable with those created by the native keytool/openssl
  * commands.
- * <p>
- * Tests annotated with {@code @EnabledIf("isKeytoolAvailable")} run only when keytool is
+ *
+ * <p>Tests annotated with {@code @EnabledIf("isKeytoolAvailable")} run only when keytool is
  * on the PATH. Tests annotated with {@code @EnabledIf("isOpensslAvailable")} run only
  * when openssl is on the PATH.
  */
