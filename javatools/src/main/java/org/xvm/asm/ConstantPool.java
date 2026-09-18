@@ -3797,13 +3797,13 @@ public class ConstantPool
 
     /**
      * The JIT primitive types, computed on demand and discarded by {@link #optimize}.
-     * <p/>
-     * Bound rather than plain for two reasons: {@link #optimize} must be able to discard the value,
+     *
+     * <p>Bound rather than plain for two reasons: {@link #optimize} must be able to discard the value,
      * which only the resettable forms allow; and the value derives from this pool, so taking the
      * owner at access time avoids capturing a partially constructed {@code this} in this field
      * initializer.
-     * <p/>
-     * Note that computing it acquires this pool's monitor, by way of the {@code typeXxx()} calls
+     *
+     * <p>Note that computing it acquires this pool's monitor, by way of the {@code typeXxx()} calls
      * registering constants, while holding the holder's own monitor. Nothing acquires those in the
      * opposite order today, and the work done under the pool monitor in {@link #register} is narrow
      * bookkeeping that does not reach type queries. A caller that reached
