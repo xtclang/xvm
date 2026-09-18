@@ -135,7 +135,7 @@ public class EnumerationBuilder extends CommonBuilder {
         code.new_(thisCD)
             .dup()
             .aload(ctxSlot)
-            .invokespecial(thisCD, "<init>", md(CD_void, CD_Ctx))
+            .invokespecial(thisCD, "<init>", MD_xvmVoid)
             .putstatic(thisCD, Instance, thisCD);
 
         // set the $names array static field
@@ -183,7 +183,7 @@ public class EnumerationBuilder extends CommonBuilder {
         MethodTypeDesc mdSuper = md(CD_void, CD_Ctx, CD_TypeConstant);
         int            flags   = ClassFile.ACC_PUBLIC;
 
-        classBuilder.withMethodBody("<init>", md(CD_void, CD_Ctx), flags, code -> {
+        classBuilder.withMethodBody("<init>", MD_xvmVoid, flags, code -> {
             code.aload(0)
                 .aload(code.parameterSlot(0))
                 .getstatic(art.CD(), "$sc0", CD_TypeConstant)

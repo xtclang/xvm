@@ -371,7 +371,7 @@ public class FPNumberBuilder extends NumberBuilder {
      */
     protected void loadIsFinite(CodeBuilder code, ClassDesc valueCD) {
         if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
-            code.invokestatic(fp8CD, "$finite", md(CD_boolean, CD_int));
+            code.invokestatic(fp8CD, "$finite", MD_FP8Predicate);
         } else {
             code.invokestatic(valueCD.equals(CD_float) ? CD_JavaFloat : CD_JavaDouble,
                     "isFinite", md(CD_boolean, valueCD));

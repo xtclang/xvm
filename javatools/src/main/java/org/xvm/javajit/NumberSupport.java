@@ -221,7 +221,7 @@ public interface NumberSupport
             case "I" -> {
                 boolean fUnsigned = typeTarget.getValueString().charAt(0) == 'U';
                 if (fUnsigned) {
-                    code.invokestatic(CD_Integer,"divideUnsigned", md(CD_int, CD_int, CD_int));
+                    code.invokestatic(CD_Integer,"divideUnsigned", MD_UDivInt);
                 } else {
                     code.idiv();
                 }

@@ -30,6 +30,7 @@ import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nTuple;
+import static org.xvm.javajit.Builder.MD_xvmVoid;
 import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -283,7 +284,7 @@ public abstract class OpVar
         if (type.isImmutable()) {
             code.dup();
             bctx.loadCtx(code);
-            code.invokevirtual(cdArray, "$makeImmut", md(CD_void, CD_Ctx));
+            code.invokevirtual(cdArray, "$makeImmut", MD_xvmVoid);
         }
 
         reg.store(bctx, code, type);
