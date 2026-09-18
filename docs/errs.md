@@ -4,7 +4,9 @@ Scoping document for making `ErrorListener` an always-present, non-null, immutab
 compiler's call stack, so that an embedding host — an LSP server above all — can rely on hearing
 every diagnostic the compiler produces.
 
-Nothing here is implemented yet. Measurements are from `origin/master` at `794bf23e6`.
+Measurements are from `origin/master` at `794bf23e6`.
+
+**Status.** Phases 1 and 2 are implemented on `lagergren/errs`; phases 3-7 are not started.
 
 ## Why
 
