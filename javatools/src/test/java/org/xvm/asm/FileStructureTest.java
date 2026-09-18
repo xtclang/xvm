@@ -5,8 +5,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+
+import java.nio.file.Path;
 
 import java.time.Instant;
 
@@ -16,8 +19,10 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import org.xvm.asm.ErrorListener.ErrorInfo;
+import org.xvm.asm.constants.NamedCondition;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
@@ -29,9 +34,13 @@ import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.util.Severity;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -150,6 +159,256 @@ public class FileStructureTest {
                 () -> new FileStructure(new ByteArrayInputStream(ab)));
     }
 
+    @Test
+    public void testMergeAlreadyPresentModuleDoesNotCloneChildrenTwice() {
+        FileStructure   source    = createNestedModule("Test");
+        ModuleStructure sourceMod = source.getModule();
+        Component       sourcePkg = sourceMod.getChildByNameMap().get("util");
+        Component       sourceClz = sourcePkg.getChildByNameMap().get("Helper");
+        int             sourceKids = sourceMod.getChildrenCount();
+
+        FileStructure dest = new FileStructure(sourceMod, false);
+        ModuleStructure destMod = dest.getModule();
+        Component       destPkg = destMod.getChildByNameMap().get("util");
+        Component       destClz = destPkg.getChildByNameMap().get("Helper");
+        assertNotNull(destPkg);
+        assertNotNull(destClz);
+        assertNotSame(sourcePkg, destPkg);
+
+        assertDoesNotThrow(() -> dest.merge(sourceMod, true, false));
+
+        assertSame(sourcePkg, sourceMod.getChildByNameMap().get("util"));
+        assertSame(sourceClz, sourcePkg.getChildByNameMap().get("Helper"));
+        assertEquals(sourceKids, sourceMod.getChildrenCount());
+        assertEquals(1, siblingCount(sourcePkg));
+        assertEquals(1, siblingCount(sourceClz));
+
+        assertSame(destPkg, destMod.getChildByNameMap().get("util"));
+        assertSame(destClz, destPkg.getChildByNameMap().get("Helper"));
+        assertEquals(1, siblingCount(destPkg));
+        assertEquals(1, siblingCount(destClz));
+        assertTrue(dest.validateModuleConstants());
+        assertSame(dest.getConstantPool(), destMod.getIdentityConstant().getConstantPool());
+        assertSame(dest.getConstantPool(), destPkg.getIdentityConstant().getConstantPool());
+
+        assertDoesNotThrow(() -> dest.merge(sourceMod, true, false));
+        assertSame(destPkg, dest.getModule().getChildByNameMap().get("util"));
+        assertSame(destClz, destPkg.getChildByNameMap().get("Helper"));
+        assertEquals(1, siblingCount(destPkg));
+        assertEquals(1, siblingCount(destClz));
+        assertTrue(siblingCount(dest.getModule()) >= 1);
+        assertTrue(dest.validateModuleConstants());
+    }
+
+    @Test
+    public void testMergeTakeFileSelectsMergedModuleAndMetadata(@TempDir Path tempDir)
+            throws IOException {
+        File fileLib = tempDir.resolve("lib.xtc").toFile();
+        createNestedModule("Lib").writeTo(fileLib);
+        FileStructure lib = new FileStructure(fileLib);
+
+        File fileApp = tempDir.resolve("app.xtc").toFile();
+        new FileStructure("App").writeTo(fileApp);
+        FileStructure dest = new FileStructure(fileApp);
+        assertEquals("App", dest.getModuleId().getName());
+        assertEquals(fileApp, dest.getOSFile());
+
+        dest.merge(lib.getModule(), false, true);
+
+        assertEquals("Lib", dest.getModuleId().getName());
+        assertEquals(fileLib, dest.getOSFile());
+        assertNotNull(dest.getModule().getChild("util"));
+        assertNotNull(dest.getModule().getChild("util").getChild("Helper"));
+        assertTrue(dest.getModule().isMainModule());
+        assertTrue(dest.validateModuleConstants());
+
+        dest.merge(lib.getModule(), false, true);
+        assertEquals("Lib", dest.getModuleId().getName());
+        assertEquals(fileLib, dest.getOSFile());
+        assertEquals(1, siblingCount(dest.getModule().getChildByNameMap().get("util")));
+        assertTrue(dest.validateModuleConstants());
+    }
+
+    @Test
+    public void testMergeWithoutTakeFileRetainsPrimary(@TempDir Path tempDir)
+            throws IOException {
+        File fileLib = tempDir.resolve("lib.xtc").toFile();
+        createNestedModule("Lib").writeTo(fileLib);
+        FileStructure lib = new FileStructure(fileLib);
+
+        File fileApp = tempDir.resolve("app.xtc").toFile();
+        new FileStructure("App").writeTo(fileApp);
+        FileStructure dest = new FileStructure(fileApp);
+
+        dest.merge(lib.getModule(), false, false);
+
+        assertEquals("App", dest.getModuleId().getName());
+        assertEquals(fileApp, dest.getOSFile());
+        assertNotNull(dest.getChild("Lib").getChild("util"));
+        assertNotNull(dest.getChild("Lib").getChild("util").getChild("Helper"));
+        assertTrue(dest.getModule().isMainModule());
+        assertFalse(dest.getChild("Lib").isMainModule());
+        assertTrue(dest.validateModuleConstants());
+
+        dest.merge(lib.getModule(), false, false);
+        assertEquals("App", dest.getModuleId().getName());
+        assertEquals(fileApp, dest.getOSFile());
+        assertEquals(1, siblingCount(dest.getChild("Lib").getChildByNameMap().get("util")));
+        assertTrue(dest.validateModuleConstants());
+    }
+
+    @Test
+    public void testMergeAbsentModuleClonesChildrenAndFingerprints() {
+        FileStructure lib = createNestedModule("Lib");
+        lib.ensureModule("dep.example.org").fingerprintRequired();
+
+        FileStructure dest = new FileStructure("App");
+        dest.merge(lib.getModule(), false, false);
+
+        ModuleStructure merged = dest.getChild("Lib");
+        assertNotNull(merged);
+        assertFalse(merged.isFingerprint());
+        assertNotNull(merged.getChild("util"));
+        assertNotNull(merged.getChild("util").getChild("Helper"));
+        assertEquals(1, siblingCount(merged.getChildByNameMap().get("util")));
+        assertEquals(1, siblingCount(merged.getChild("util").getChildByNameMap().get("Helper")));
+
+        ModuleStructure fingerprint = dest.getChild("dep.example.org");
+        assertNotNull(fingerprint);
+        assertTrue(fingerprint.isFingerprint());
+        assertTrue(dest.validateModuleConstants());
+    }
+
+    @Test
+    public void testMergeReplacesFingerprintWithRealModuleAndPropagatesDependencies() {
+        FileStructure dest = new FileStructure("App");
+        dest.ensureModule("Lib").fingerprintRequired();
+        assertTrue(dest.getChild("Lib").isFingerprint());
+
+        FileStructure lib = createNestedModule("Lib");
+        lib.ensureModule("dep.example.org").fingerprintRequired();
+
+        dest.merge(lib.getModule(), false, false);
+
+        ModuleStructure merged = dest.getChild("Lib");
+        assertNotNull(merged);
+        assertFalse(merged.isFingerprint());
+        assertNotNull(merged.getChild("util"));
+        assertNotNull(merged.getChild("util").getChild("Helper"));
+        assertEquals(1, siblingCount(merged.getChildByNameMap().get("util")));
+
+        ModuleStructure fingerprint = dest.getChild("dep.example.org");
+        assertNotNull(fingerprint);
+        assertTrue(fingerprint.isFingerprint());
+        assertTrue(dest.validateModuleConstants());
+
+        lib.ensureModule("other.example.org").fingerprintRequired();
+        dest.merge(lib.getModule(), false, false);
+        assertNotNull(dest.getChild("other.example.org"));
+        assertTrue(dest.getChild("other.example.org").isFingerprint());
+        assertEquals(1, siblingCount(dest.getChild("Lib").getChildByNameMap().get("util")));
+        assertTrue(dest.validateModuleConstants());
+    }
+
+    @Test
+    public void testMergeBundleSynthesizesDependencyFingerprints() {
+        FileStructure lib = createNestedModule("Lib");
+        FileStructure dep = createNestedModule("Dep");
+        FileStructure bundle = new FileStructure(lib.getModule(), false);
+        bundle.merge(dep.getModule(), false, false);
+        bundle.getChild("Dep").markEmbedded();
+
+        PackageStructure importPkg = bundle.getModule().createPackage(
+                Constants.Access.PUBLIC, "dep", null);
+        importPkg.setImportedModule(bundle.getChild("Dep"));
+
+        FileStructure dest = new FileStructure("App");
+        dest.merge(bundle.getModule(), false, false);
+
+        assertFalse(dest.getChild("Lib").isFingerprint());
+        assertNotNull(dest.getChild("Lib").getChild("util"));
+        assertNotNull(dest.getChild("Lib").getChild("util").getChild("Helper"));
+        assertTrue(dest.getChild("Dep").isFingerprint());
+        assertTrue(dest.validateModuleConstants());
+    }
+
+    @Test
+    public void testMergePreservesVersionSiblingsAndFileCopy()
+            throws IOException {
+        FileStructure v1 = createNestedModule("Test");
+        v1.getModule().setVersion(new Version("1.0"));
+        FileStructure v2 = createNestedModule("Test");
+        v2.getModule().setVersion(new Version("2.0"));
+
+        FileStructure dest = new FileStructure(v1.getModule(), false);
+        dest.merge(v2.getModule(), false, false);
+
+        ModuleStructure first = dest.getModule();
+        assertEquals(new Version("1.0"), first.getVersion());
+        ModuleStructure second = (ModuleStructure) first.getNextSibling();
+        assertNotNull(second);
+        assertEquals(new Version("2.0"), second.getVersion());
+        assertNull(second.getNextSibling());
+        assertEquals(1, siblingCount(first.getChildByNameMap().get("util")));
+        assertEquals(1, siblingCount(first.getChild("util").getChildByNameMap().get("Helper")));
+        var versions = dest.buildFileInfo().modules().get("Test");
+        assertNotNull(versions);
+        assertTrue(versions.contains(new Version("1.0")));
+        assertTrue(versions.contains(new Version("2.0")));
+        assertTrue(dest.validateModuleConstants());
+
+        FileStructure copy = new FileStructure(dest);
+        ModuleStructure copyFirst = copy.getModule();
+        assertEquals(new Version("1.0"), copyFirst.getVersion());
+        ModuleStructure copySecond = (ModuleStructure) copyFirst.getNextSibling();
+        assertNotNull(copySecond);
+        assertEquals(new Version("2.0"), copySecond.getVersion());
+        assertEquals(1, siblingCount(copyFirst.getChildByNameMap().get("util")));
+        assertEquals(1, siblingCount(copyFirst.getChild("util").getChildByNameMap().get("Helper")));
+        assertTrue(copy.validateModuleConstants());
+
+        var out = new ByteArrayOutputStream();
+        copy.writeTo(out);
+        var reread = new FileStructure(new ByteArrayInputStream(out.toByteArray()));
+        assertEquals(copy, reread);
+        assertEquals(new Version("1.0"), reread.getModule().getVersion());
+        ModuleStructure rereadSecond = (ModuleStructure) reread.getModule().getNextSibling();
+        assertNotNull(rereadSecond);
+        assertEquals(new Version("2.0"), rereadSecond.getVersion());
+        assertEquals(1, siblingCount(reread.getModule().getChildByNameMap().get("util")));
+    }
+
+    @Test
+    public void testMergePreservesConditionalSiblingsAndFileCopy()
+            throws IOException {
+        FileStructure base = createNestedModule("Test");
+        FileStructure debug = createNestedModule("Test");
+        debug.getModule().setCondition(debug.getConstantPool().ensureNamedCondition("debug"));
+
+        FileStructure dest = new FileStructure(base.getModule(), false);
+        dest.merge(debug.getModule(), false, false);
+
+        ModuleStructure first = dest.getModule();
+        assertNull(first.getCondition());
+        ModuleStructure second = (ModuleStructure) first.getNextSibling();
+        assertNotNull(second);
+        assertEquals("debug", ((NamedCondition) second.getCondition()).getName());
+        assertEquals(1, siblingCount(first.getChildByNameMap().get("util")));
+        assertEquals(1, siblingCount(first.getChild("util").getChildByNameMap().get("Helper")));
+        assertTrue(dest.validateModuleConstants());
+
+        FileStructure copy = new FileStructure(dest);
+        ModuleStructure copyFirst = copy.getModule();
+        assertNull(copyFirst.getCondition());
+        ModuleStructure copySecond = (ModuleStructure) copyFirst.getNextSibling();
+        assertNotNull(copySecond);
+        assertEquals("debug", ((NamedCondition) copySecond.getCondition()).getName());
+        assertEquals(1, siblingCount(copyFirst.getChildByNameMap().get("util")));
+        assertTrue(copy.validateModuleConstants());
+
+        testFileStructure(copy);
+    }
+
     @Test @Disabled("TODO: Re-enable test")
     public void testEmptyModule()
             throws IOException {
@@ -223,6 +482,21 @@ public class FileStructureTest {
         Compiler                 compiler = new Compiler(module, errlist);
         assertEquals(0, errlist.getSeriousErrorCount());
         return compiler.generateInitialFileStructure();
+    }
+
+    private static FileStructure createNestedModule(String sName) {
+        FileStructure    file = new FileStructure(sName);
+        PackageStructure pkg  = file.getModule().createPackage(Constants.Access.PUBLIC, "util", null);
+        pkg.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Helper", null);
+        return file;
+    }
+
+    private static int siblingCount(Component component) {
+        int count = 0;
+        for (Component sibling = component; sibling != null; sibling = sibling.getNextSibling()) {
+            ++count;
+        }
+        return count;
     }
 
     // ----- internal -----
