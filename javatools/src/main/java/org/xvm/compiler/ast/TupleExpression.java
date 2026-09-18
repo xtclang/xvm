@@ -147,7 +147,7 @@ public class TupleExpression
     @Override
     public TypeConstant getImplicitType(Context ctx) {
         ConstantPool pool      = pool();
-        TypeConstant typeTuple = type == null ? pool.typeTuple() : type.ensureTypeConstant(ctx, ErrorListener.BLACKHOLE);
+        TypeConstant typeTuple = type == null ? pool.typeTuple() : type.ensureTypeConstant(ctx, ErrorListener.PROBE);
 
         if (typeTuple.containsUnresolved() || !typeTuple.isTuple()) {
             // let someone else log an error later, e.g. during validation, if the specified type

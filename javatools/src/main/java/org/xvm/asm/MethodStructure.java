@@ -810,7 +810,7 @@ public class MethodStructure
                                          boolean fParam, Map<FormalConstant, TypeConstant> mapTypeParams) {
         if (typeResult != null) {
             // downgrade enum value types to their base type (e.g. True -> Boolean)
-            TypeInfo info = typeResult.ensureTypeInfo(ErrorListener.BLACKHOLE);
+            TypeInfo info = typeResult.ensureTypeInfo(ErrorListener.PROBE);
             if (info.getFormat() == Format.ENUMVALUE) {
                 typeResult = info.getExtends();
             }
@@ -826,7 +826,7 @@ public class MethodStructure
                     // the new parameter type is wider or the old return type is narrower; use it instead
                 } else {
                     // the type are not compatible; use the common type (TODO: consider union?)
-                    typeResult = Op.selectCommonType(typePrev, typeResult, ErrorListener.BLACKHOLE);
+                    typeResult = Op.selectCommonType(typePrev, typeResult, ErrorListener.PROBE);
                     if (typeResult == null) {
                         // different arguments cause the formal type to resolve into
                         // incompatible types

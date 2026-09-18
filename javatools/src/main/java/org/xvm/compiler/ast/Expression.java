@@ -466,8 +466,8 @@ public abstract class Expression
         // real error depended on what that caller happened to pass. validateAsType(), below,
         // already had this right
         TypeExpression exprType = toTypeExpression();
-        return new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20)
-                ? exprType.testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE)
+        return new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.PROBE).fastForward(20)
+                ? exprType.testFit(ctx, typeRequired, fExhaustive, ErrorListener.PROBE)
                 : TypeFit.NoFit;
     }
 
@@ -479,7 +479,7 @@ public abstract class Expression
     protected Expression validateAsType(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         TypeExpression exprType = toTypeExpression();
 
-        if (new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20)) {
+        if (new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.PROBE).fastForward(20)) {
             ErrorListener errsTemp = errs.branch(this);
             Expression    exprNew  = exprType.validate(ctx, typeRequired, errsTemp);
             if (exprNew != null) {
@@ -1939,7 +1939,7 @@ public abstract class Expression
             TypeConstant typeElse = atypeElse[i];
 
             ConstantPool pool       = pool();
-            TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, ErrorListener.BLACKHOLE);
+            TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, ErrorListener.PROBE);
             atypeCommon[i] = typeCommon == null && typeThen != null && typeElse != null
                     ? typeThen.isOnlyNullable() ? pool.ensureNullableTypeConstant(typeElse)
                     : typeElse.isOnlyNullable() ? pool.ensureNullableTypeConstant(typeThen)

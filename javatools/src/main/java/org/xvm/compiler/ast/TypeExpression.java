@@ -39,7 +39,7 @@ public abstract class TypeExpression
      * @return a TypeConstant
      */
     public TypeConstant ensureTypeConstant() {
-        return ensureTypeConstant(null, ErrorListener.BLACKHOLE);
+        return ensureTypeConstant(null, ErrorListener.PROBE);
     }
 
     /**
@@ -184,7 +184,7 @@ public abstract class TypeExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        TypeConstant type = ensureTypeConstant(ctx, ErrorListener.BLACKHOLE);
+        TypeConstant type = ensureTypeConstant(ctx, ErrorListener.PROBE);
         if (type == null) {
             throw new IllegalStateException("type has not yet been determined for this: " + this);
         }
