@@ -2344,7 +2344,7 @@ public abstract class TypeConstant
 
         // validate the type parameters against the properties
         checkTypeParameterProperties(mapTypeParams, mapVirtProps,
-                fComplete && !errs.hasSeriousErrors() ? errs : ErrorListener.BLACKHOLE);
+                fComplete && !errs.hasSeriousErrors() ? errs : errs.suppressCascade());
 
         Annotation[] aAnnoMixin = fComplete
                 ? collectMixinAnnotations(listProcess)
@@ -2737,7 +2737,7 @@ public abstract class TypeConstant
                     }
                 } else {
                     fIncomplete = true;
-                    errs        = ErrorListener.BLACKHOLE;
+                    errs        = errs.suppressCascade();
                 }
                 break;
             }}
@@ -3538,7 +3538,7 @@ public abstract class TypeConstant
                 if (!isComplete(infoContrib)) {
                     fIncomplete |= computeIncomplete(composition, typeContrib, infoContrib, setDepends);
                     if (fIncomplete) {
-                        errs = ErrorListener.BLACKHOLE;
+                        errs = errs.suppressCascade();
                     }
                 }
                 if (infoContrib != null) {
@@ -3705,7 +3705,7 @@ public abstract class TypeConstant
 
                 if (!collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, nBasePropRank, errs)) {
                     fIncomplete = true;
-                    errs        = ErrorListener.BLACKHOLE;
+                    errs        = errs.suppressCascade();
                 }
 
                 var     listExplode = new ArrayList<PropertyConstant>();
@@ -3714,7 +3714,7 @@ public abstract class TypeConstant
                         mapContribProps, mapContribMethods, mapContribChildren, listExplode,
                         mapVirtProps, nBasePropRank, nBaseMethRank, errs)) {
                     fIncomplete = true;
-                    errs        = ErrorListener.BLACKHOLE;
+                    errs        = errs.suppressCascade();
                 }
 
                 // the order in which the properties are layered on and exploded is extremely
@@ -3742,7 +3742,7 @@ public abstract class TypeConstant
                     if (!fNative && !explodeProperty(constId, struct, idProp, prop,
                             mapProps, mapVirtProps, mapMethods, mapVirtMethods, errs)) {
                         fIncomplete = true;
-                        errs        = ErrorListener.BLACKHOLE;
+                        errs        = errs.suppressCascade();
                     }
                 }
             } else {
@@ -3750,7 +3750,7 @@ public abstract class TypeConstant
                 if (!isComplete(infoContrib)) {
                     if (computeIncomplete(composition, typeContrib, infoContrib, setDepends)) {
                         fIncomplete = true;
-                        errs        = ErrorListener.BLACKHOLE;
+                        errs        = errs.suppressCascade();
                     }
                     if (infoContrib == null) {
                         // even if the contribution has an incomplete info we can still proceed
@@ -3941,7 +3941,7 @@ public abstract class TypeConstant
             infoProp.getHead().markExploded();
         } else {
             fComplete = false;
-            errs      = ErrorListener.BLACKHOLE;
+            errs      = errs.suppressCascade();
         }
 
         // layer on any annotations, if any
@@ -3962,7 +3962,7 @@ public abstract class TypeConstant
             TypeInfo infoAnno = typeAnno.ensureTypeInfoInternal(errs);
             if (infoAnno == null) {
                 fComplete = false;
-                errs      = ErrorListener.BLACKHOLE;
+                errs      = errs.suppressCascade();
             } else {
                 nestAndLayerOn(constId, idProp, mapProps, mapVirtProps, mapMethods, mapVirtMethods,
                                typeAnno, infoAnno, ContribSource.Annotation, errs);
@@ -7586,7 +7586,7 @@ public abstract class TypeConstant
     public TypeConstant getJitICType() {
         // TODO CP: plug in the new logic
         TypeConstant type = getJitCCType();
-        assert type.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
+        assert type.ensureTypeInfo().isNewable(false, ErrorListener.PROBE);
         return type;
     }
 
