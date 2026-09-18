@@ -286,10 +286,18 @@ public class Compiler {
             if (m_mgr.processComplete()) {
                 setStage(Stage.Emitted);
 
-                if (!m_errs.hasSeriousErrors()) {
-                    // "purge" the constant pool and do a final validation on the entire module structure
-                    m_structFile.reregisterConstants(true);
-                    m_structFile.validate(m_errs);
+                // the file was parked on BLACKHOLE for the duration of the compilation; restore
+                // it whatever the outcome. Restoring it only when the compilation succeeded left a
+                // file that had reported errors permanently silenced, which a resident compiler
+                // would then reuse
+                try {
+                    if (!m_errs.hasSeriousErrors()) {
+                        // "purge" the constant pool and do a final validation on the entire module
+                        // structure
+                        m_structFile.reregisterConstants(true);
+                        m_structFile.validate(m_errs);
+                    }
+                } finally {
                     m_structFile.setErrorListener(null);
                 }
             }
