@@ -1680,10 +1680,34 @@ public abstract class TypeConstant
 
         TypeInfo info = getTypeInfo();
         if (isComplete(info) && isUpToDate(info)) {
+            // the cached answer was built for whoever asked first. If that was a speculative
+            // probe, the probe produced the diagnostics and this caller - which may be the one
+            // that actually cared - would otherwise hear nothing. Replay them instead, so what a
+            // caller is told does not depend on the order callers happen to arrive in
+            replayDiagnostics(errs);
             return info;
         }
 
-        return ensureTypeInfo(info, errs);
+        // record what building it has to say, so a later caller can be told the same
+        ErrorList recorder = new ErrorList(ErrorList.UNLIMITED);
+        info = ensureTypeInfo(info, ErrorListener.tee(errs, recorder));
+        m_diagnostics = recorder;
+        return info;
+    }
+
+    /**
+     * Report the diagnostics that were produced while this type's TypeInfo was built.
+     *
+     * Deduplication in the receiving listener makes this idempotent: a caller that asks twice, or
+     * two callers sharing a listener, are told once.
+     *
+     * @param errs  the listener to replay them to
+     */
+    private void replayDiagnostics(ErrorListener errs) {
+        ErrorList diagnostics = m_diagnostics;
+        if (diagnostics != null && diagnostics.hasErrors()) {
+            diagnostics.logTo(errs);
+        }
     }
 
     private synchronized TypeInfo ensureTypeInfo(TypeInfo info, ErrorListener errs) {
@@ -1948,6 +1972,12 @@ public abstract class TypeConstant
             }
         }
     }
+
+    /**
+     * The diagnostics produced while this type's TypeInfo was built, replayed to later callers
+     * that get the memoized result; see {@link #replayDiagnostics}.
+     */
+    private transient volatile ErrorList m_diagnostics;
 
     /**
      * @return the invalidation count that this TypeConstant has already processed
