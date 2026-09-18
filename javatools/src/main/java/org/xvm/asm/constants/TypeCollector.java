@@ -466,6 +466,7 @@ public class TypeCollector {
 
     /**
      * Holds a value indicating whether the common type is a "conditional" type.
+     *
      * <p>This is a cached result of analyzing the collector for a common type.
      */
     private transient Boolean m_FConditional;

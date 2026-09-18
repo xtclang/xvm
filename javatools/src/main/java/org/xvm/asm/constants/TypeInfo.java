@@ -22,6 +22,7 @@ import org.xvm.util.ListMap;
 
 /**
  * Represents the "flattened" information about a type.
+ *
  * <p>An implementation may fully realize the information or provide a view of another TypeInfo.
  */
 public abstract class TypeInfo {
@@ -185,9 +186,11 @@ public abstract class TypeInfo {
 
     /**
      * Check if this type can be instantiated.
+     *
      * <p>Note, that a virtual child that is not explicitly marked as @Abstract is always assumed to be
      * instantiatable, since any abstract aspects of the class could be implemented by its virtual
      * sub-classes at the parent's sub level.
+     *
      * <p>The actual check is always done at the parent's level, so for a parent class to be "newable",
      * all the virtual children have to be non-abstract.
      *
@@ -376,6 +379,7 @@ public abstract class TypeInfo {
 
     /**
      * Look up the property by its nested identity.
+     *
      * <p>Note: this lookup is not cached since the results are always cached by the caller.
      *
      * @param nid  the id (String | NestedIdentity)
@@ -634,6 +638,7 @@ public abstract class TypeInfo {
 
     /**
      * Obtain all the matching methods for the specified name and the number of parameters.
+     *
      * <p>Note: the returned method constants could be synthetic and with auto-narrowing resolved.
      *
      * @param sName    the method name

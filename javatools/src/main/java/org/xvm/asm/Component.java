@@ -59,10 +59,13 @@ import static org.xvm.util.Handy.writePackedLong;
  * and other data structures that make up the structural components of the module format. The
  * Component encapsulates a number of complex aspects of the XVM module format, most notably the
  * conditional structure of XVM modules.
+ *
  * <p>The Component has an identity, tracks some standard flags / settings, and keeps track of whether
  * it has been modified.
+ *
  * <p>Here is the Component containment model, with container type on the left and containee type
  * across the top:
+ *
  * <p><code><pre>
  *           Module  Package  Class  MultiMethod  Method  Property  |  Conditional
  * File        x                                                    |
@@ -73,16 +76,19 @@ import static org.xvm.util.Handy.writePackedLong;
  * MultiMethod                                      x               |
  * Method                      x       x                    x       |    x
  * </pre></code>
+ *
  * <p>Based on the containment model, of these types, there are three groups of containment:
  * <ul>
  * <li><i>(Multi-)Method</i></li>
  * <li><i>(Multi-)Method + Property + Class</i></li>
  * <li><i>(Multi-)Method + Property + Class + Package</i></li>
  * </ul>
+ *
  * <p>Normally, an XVM structure has a single parent structure and any number of child structures, but
  * a Component can differ dramatically from this model, in that it can have any number of parent
  * Components (only one of which at most is valid for a given condition), and it can have any number
  * of child Components, of which only some are (perhaps none is) appropriate for a given condition.
+ *
  * <p>The persistent form of a Component is relatively complicated, in order to handle the potentially
  * conditional nature of the component, the ability to have several components (called siblings)
  * that share the same spot in the namespace (based on condition), and the ability to defer the
@@ -162,6 +168,7 @@ public abstract class Component
     /**
      * Each Component has a parent. The one exception is the file structure, which is not contained
      * within another component.
+     *
      * <p>This is a far more complex request than it first appears, because of the possibility of
      * conditions. While an XvmStructure has one and only one Containing XvmStructure, each
      * component can have more than one parent, depending on the condition. Imagine for example
@@ -742,6 +749,7 @@ public abstract class Component
 
     /**
      * Obtain a read-only map of all children identified by name.
+     *
      * <p>Note: the returned map does not contain any of the child methods.
      *
      * @return a read-only map from name to child component; never null, even if there are no
@@ -757,6 +765,7 @@ public abstract class Component
 
     /**
      * Obtain the actual read/write map of all children that are identified by name.
+     *
      * <p>Note: the returned map does not contain any of the child methods.
      *
      * @return obtain the actual map from name to child component, creating the map if necessary
@@ -1908,6 +1917,7 @@ public abstract class Component
     /**
      * Determine if the specified name is referring to a name introduced by any of the contributions
      * for this class.
+     *
      * <p>Note, that this method is used *before* the integrity of the structures is validated,
      * so must be ready for "infinite recursions", that will be reported later.
      *
@@ -2251,6 +2261,7 @@ public abstract class Component
 
     /**
      * {@inheritDoc}
+     *
      * <p>For all but the FileStructure Component, this method applies only to the body of the
      * component and not to its children.
      *
@@ -2275,6 +2286,7 @@ public abstract class Component
 
     /**
      * {@inheritDoc}
+     *
      * <p>For all but the FileStructure Component, this method applies only to the body of the
      * component and not to its children.
      *
@@ -2298,6 +2310,7 @@ public abstract class Component
 
     /**
      * {@inheritDoc}
+     *
      * <p>For all but the FileStructure Component, this method applies only to the body of the
      * component and not to its children.
      *
@@ -2338,6 +2351,7 @@ public abstract class Component
 
     /**
      * {@inheritDoc}
+     *
      * <p>For all but the FileStructure Component, this method applies only to the body of the
      * component and not to its children.
      *
@@ -2420,6 +2434,7 @@ public abstract class Component
     /**
      * The Format enumeration defines the multiple different binary formats used to store component
      * information.
+     *
      * <p>Those beginning with "RSVD_" are reserved, and must not be used.
      */
     public enum Format {
@@ -2577,6 +2592,7 @@ public abstract class Component
     public enum Composition {
         /**
          * Represents an annotation.
+         *
          * <p>The constant is a TypeConstant. (It could be a ClassConstant, but TypeConstant
          * was selected to keep it compatible with the other compositions.) An annotation has
          * optional annotation parameters, each of which is also a constant from the ConstantPool.
@@ -2584,16 +2600,19 @@ public abstract class Component
         Annotation,
         /**
          * Represents class inheritance.
+         *
          * <p>The constant is a TypeConstant for the class.
          */
         Extends,
         /**
          * Represents interface inheritance.
+         *
          * <p>The constant is a TypeConstant.
          */
         Implements,
         /**
          * Represents interface inheritance plus default delegation of interface functionality.
+         *
          * <p>The constant is a TypeConstant. A "delegates" composition must specify a property that
          * provides the reference to which it delegates; this is represented by a PropertyConstant.
          */
@@ -2601,11 +2620,13 @@ public abstract class Component
         /**
          * Represents that the class being composed is an annotation or a mixin that applies to the
          * specified type.
+         *
          * <p>The constant is a TypeConstant.
          */
         Into,
         /**
          * Represents the combining-in of a mix-in.
+         *
          * <p>The constant is a TypeConstant.
          */
         Incorporates,
@@ -2615,11 +2636,13 @@ public abstract class Component
         RebasesOnto,
         /**
          * Represents that the package being composed represents an imported module.
+         *
          * <p>The constant is a ModuleConstant.
          */
         Import,
         /**
          * Synthetic (transient) composition indicating an equivalency.
+         *
          * <p>The constant is a ClassConstant.
          */
         Equal,

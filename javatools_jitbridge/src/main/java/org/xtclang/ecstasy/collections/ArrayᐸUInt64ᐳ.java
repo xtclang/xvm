@@ -16,6 +16,7 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of UInt64, stored in an array of Java longs.
+ *
  * <p>Object header
  * xObj - 64 bits of flags
  * ---

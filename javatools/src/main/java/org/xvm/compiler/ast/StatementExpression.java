@@ -29,11 +29,14 @@ import org.xvm.util.Severity;
  * <code><pre>
  *   x = {return 2 + 2;}
  * </pre></code>
+ *
  * <p>To determine the type of the StatementExpression, the one or more required "return" statements
  * need to be analyzed to determine their types.
  *
  * <p>REVIEW this expression could theoretically support a multi value
+ *
  * <p>REVIEW this expression could theoretically support a conditional return
+ *
  * <p>REVIEW this expression could theoretically calculate to a constant value
  */
 public class StatementExpression

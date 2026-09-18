@@ -16,6 +16,7 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of Int32, stored in an array of Java longs, two Int32 per long.
+ *
  * <p>Object header
  * xObj - 64 bits of flags
  * ---

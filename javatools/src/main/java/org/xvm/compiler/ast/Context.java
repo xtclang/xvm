@@ -214,6 +214,7 @@ public class Context {
 
     /**
      * Used in the validation phase to track scopes.
+     *
      * <p>Note: This can only be used during the validate() stage.
      */
     public Context enter() {
@@ -222,6 +223,7 @@ public class Context {
 
     /**
      * Create a nested "if" of this context.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new "if" context
@@ -232,6 +234,7 @@ public class Context {
 
     /**
      * Create a nested "and-if" of this context.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new multi-condition "and-if" context
@@ -242,6 +245,7 @@ public class Context {
 
     /**
      * Create a nested fork of this context.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @param fWhenTrue  false iff the new context is for the "when false" fork (and thus true
@@ -256,6 +260,7 @@ public class Context {
     /**
      * Create a nested context that behaves as a "true" branch of an IfContext and automatically
      * marks the corresponding "false" branch as unreachable.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new (forked) context
@@ -268,6 +273,7 @@ public class Context {
 
     /**
      * Create a short-circuiting "and" context.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new "and" context
@@ -278,6 +284,7 @@ public class Context {
 
     /**
      * Create a short-circuiting "or" context.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new "or" context
@@ -288,6 +295,7 @@ public class Context {
 
     /**
      * Create a negated form of this context.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new (negating) context
@@ -300,6 +308,7 @@ public class Context {
      * Create a context that tracks variable assignment data within a loop. The assignments within
      * a loop are assumed to be <i>at least once</i>; entering a forked context before or after
      * entering the loop context allows a <i>zero or more times</i> loop to be constructed.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new (forked) context
@@ -311,6 +320,7 @@ public class Context {
     /**
      * Create a delegating context that allows an expression to resolve names based on the
      * specified type's contributions.
+     *
      * <p>As a result, it allows us to write:
      * <pre><code>
      *    Color color = Red;
@@ -338,6 +348,7 @@ public class Context {
 
     /**
      * Create a delegating context that allows this context to resolve names for elements in a list.
+     *
      * <p>As a result, it allows us to write:
      * <pre><code>
      *    FileChannel open(ReadOption read=Read, WriteOption... write=[Write]);
@@ -373,6 +384,7 @@ public class Context {
     /**
      * Exit the scope that was created by calling {@link #enter()}. Used in the validation
      * phase to track scopes.
+     *
      * <p>Note: This can only be used during the validate() stage.
      */
     public Context exit() {
@@ -733,6 +745,7 @@ public class Context {
 
     /**
      * Register the specified variable name in this context.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @param tokName  the token from the source code for the variable
@@ -828,6 +841,7 @@ public class Context {
 
     /**
      * Determine if the specified variable name is already declared in the current scope.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @param sName  the variable name
@@ -887,6 +901,7 @@ public class Context {
     /**
      * Determine if the name refers to a readable variable. A variable is only readable if it
      * has been definitely assigned a value.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @param sName  the variable name
@@ -982,6 +997,7 @@ public class Context {
 
     /**
      * Determine if the name refers to a writable variable.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @param sName  the variable name
@@ -1119,6 +1135,7 @@ public class Context {
 
     /**
      * Resolve the name of a variable, structure, etc.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @param sName  the name to resolve
@@ -1131,6 +1148,7 @@ public class Context {
 
     /**
      * Resolve the name of a variable, structure, etc.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @param name  the name token to resolve
@@ -1143,6 +1161,7 @@ public class Context {
 
     /**
      * Resolve the name of a variable, structure, etc.
+     *
      * <p>Note: This can only be used during the validate() stage.
      *
      * @param sName  the name to resolve
@@ -2556,6 +2575,7 @@ public class Context {
 
         /**
          * Obtain the map of names to the registers, if it has been built.
+         *
          * <p>Note: built by exit()
          *
          * @return a non-null map of the variable name to a Register for all variables to capture

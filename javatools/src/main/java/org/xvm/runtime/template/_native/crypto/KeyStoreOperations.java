@@ -40,6 +40,7 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
  * PKCS12 keystore entries that are byte-compatible with those created by the corresponding
  * native commands — verified by bidirectional cross-tool tests (Java-created keystores
  * readable by keytool/openssl, and vice versa). See {@code KeyStoreCompatibilityTest}.
+ *
  * <p>This class has no XVM runtime dependencies and can be unit tested independently.
  */
 public class KeyStoreOperations {
@@ -95,6 +96,7 @@ public class KeyStoreOperations {
 
     /**
      * Create a self-signed certificate and store it in a PKCS12 keystore.
+     *
      * <p>Equivalent to {@code keytool -genkeypair -keyalg RSA -keysize 2048 -validity 90}.
      * Uses the same JDK {@link KeyPairGenerator} for RSA-2048 key generation and
      * BouncyCastle for X.509 certificate construction with SHA256WithRSA signing.
@@ -127,6 +129,7 @@ public class KeyStoreOperations {
 
     /**
      * Generate an AES-256 symmetric key and store it in a PKCS12 keystore.
+     *
      * <p>Equivalent to {@code keytool -genseckey -keyalg AES -keysize 256}. Uses the same
      * JDK {@link javax.crypto.KeyGenerator} API that keytool uses internally.
      */
@@ -147,6 +150,7 @@ public class KeyStoreOperations {
 
     /**
      * Store a password value as a PBE secret key entry in a PKCS12 keystore.
+     *
      * <p>Equivalent to {@code keytool -importpass}. Creates a PBE secret key from the
      * password using {@link javax.crypto.SecretKeyFactory} and stores it as a
      * {@link KeyStore.SecretKeyEntry} — the same internal representation.
@@ -169,6 +173,7 @@ public class KeyStoreOperations {
     /**
      * Change the password on a PKCS12 keystore by loading with the old password and
      * saving with the new one.
+     *
      * <p>Equivalent to {@code keytool -storepasswd -keystore <path> -storepass <old> -new <new>}.
      */
     public static void changeStorePassword(String sPath, char[] achPwd, char[] achPwdNew)

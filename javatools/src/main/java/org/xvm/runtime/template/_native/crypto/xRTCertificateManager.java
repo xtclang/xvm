@@ -64,6 +64,7 @@ import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
 
 /**
  * Native implementation of the xRTCertificateManager.x service.
+ *
  * <p>It uses pure Java APIs (JDK crypto, BouncyCastle, acme4j) that produce byte-for-byte compatible
  * PKCS12 keystore entries. Keystores created by this implementation can be read by keytool and
  * openssl, and vice versa — verified by {@code KeyStoreCompatibilityTest}.
@@ -164,6 +165,7 @@ public class xRTCertificateManager
     /**
      * Native implementation of
      *     "createCertificateImpl(String path, Password pwd, String name, String dName)"
+     *
      * <p>For provider "self", replaces:
      * <pre>{@code
      *   keytool -delete -alias <name> -keystore <path> -storepass <pwd>
@@ -175,6 +177,7 @@ public class xRTCertificateManager
      * and BouncyCastle's {@code X509v3CertificateBuilder} with SHA256WithRSA — the same
      * JDK crypto primitives that keytool uses internally. The resulting PKCS12 keystore
      * entry is interchangeable with keytool output.
+     *
      * <p>For providers "certbot"/"certbot-staging", replaces the multistep native flow:
      * <pre>{@code
      *    openssl genpkey
@@ -226,6 +229,7 @@ public class xRTCertificateManager
 
     /**
      * Create a certificate using the ACME protocol (Let's Encrypt) via acme4j.
+     *
      * <p>Replaces the old five-step native flow (openssl genpkey → openssl req → certbot
      * certonly → openssl pkcs12 -export → keytool -importkeystore) with a single
      * in-process ACME interaction. The domain keypair and certificate chain are stored
@@ -276,6 +280,7 @@ public class xRTCertificateManager
 
     /**
      * Process HTTP-01 challenges for each pending authorization.
+     *
      * <p>Writes challenge token files to {@code .challenge/.well-known/acme-challenge/} —
      * the same directory layout that certbot's {@code --webroot --webroot-path} mode used.
      * The platform's {@code AcmeChallenge} web service serves these files at the path
@@ -346,6 +351,7 @@ public class xRTCertificateManager
     /**
      * Native implementation of
      *     "revokeCertificateImpl(String path, Password pwd, String name)"
+     *
      * <p>Replaces the old native flow:
      * <pre>{@code
      *   certbot revoke --config-dir <certs>/config --cert-name <name> --reason unspecified
@@ -383,6 +389,7 @@ public class xRTCertificateManager
 
     /**
      * Revoke a certificate using the ACME protocol via acme4j.
+     *
      * <p>Uses domain-key-authenticated revocation: the private key that signed the CSR is extracted
      * from the keystore and used to prove ownership to the ACME server. This is one of two
      * revocation mechanisms defined in RFC 8555 §7.6 (the other being account-key revocation).
@@ -414,6 +421,7 @@ public class xRTCertificateManager
     /**
      * Native implementation of
      *     "invokeCreateSymmetricKeyImpl(String path, Password pwd, String name)"
+     *
      * <p>Replaces:
      * <pre>{@code
      *   keytool -delete -alias <name> -keystore <path> -storepass <pwd>
@@ -440,6 +448,7 @@ public class xRTCertificateManager
     /**
      * Native implementation of
      *     "invokeCreatePasswordImpl(String path, Password pwd, String name, String pwdValue)"
+     *
      * <p>Replaces:
      * <pre>{@code
      *   keytool -delete -alias <name> -keystore <path> -storepass <pwd>
@@ -526,6 +535,7 @@ public class xRTCertificateManager
     /**
      * Native implementation of
      *     "encryptKeyStoreImpl(String path, Password pwd, String newPwd)"
+     *
      * <p>Loads the keystore with the old password and saves with the new one — the same
      * operation that keytool's {@code -storepasswd} performs internally via the JDK
      * {@link java.security.KeyStore} API.

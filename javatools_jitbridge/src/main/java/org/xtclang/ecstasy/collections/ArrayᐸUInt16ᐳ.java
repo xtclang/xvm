@@ -16,6 +16,7 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of UInt16, stored in an array of Java longs, four UInt16 per long.
+ *
  * <p>Object header
  * xObj - 64 bits of flags
  * ---

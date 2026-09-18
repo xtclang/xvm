@@ -352,6 +352,7 @@ public class MultiMethodStructure
 
     /**
      * Obtain a read-only map of all method children identified by method signature constant.
+     *
      * <p>Note: the returned map contains only methods
      *
      * @return a read-only map from method constant to method component; never null, even if there
@@ -368,6 +369,7 @@ public class MultiMethodStructure
     /**
      * Obtain the actual read/write map of all method children identified by method signature
      * constant.
+     *
      * <p>Note: the returned map contains only methods
      *
      * @return obtain the actual map from method constant to method component, creating the map if

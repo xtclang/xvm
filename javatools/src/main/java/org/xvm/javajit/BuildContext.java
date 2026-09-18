@@ -319,6 +319,7 @@ public class BuildContext {
     /**
      * Preprocess the ops and collect all necessary information to produce the code for "finally"
      * blocks.
+     *
      * <p>For every GUARD_ALL - FINALLY - E_FINALLY block we create synthetic variables to generate
      * conditional jumps as necessary. As an example, for a block:
      * <pre><code>
@@ -337,6 +338,7 @@ public class BuildContext {
      *      }
      *   }
      * </code></pre>
+     *
      * <p>we produce the bytecode that look like the following pseudocode:
      *
      * <pre><code>
@@ -1386,6 +1388,7 @@ public class BuildContext {
 
     /**
      * Build the code to load a value for a constant on the Java stack.
+     *
      * <p>We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(CodeBuilder code, Constant constant) {
@@ -1395,6 +1398,7 @@ public class BuildContext {
     /**
      * Generate a load of the specified TypeConstant, resolving formal types against this build
      * context when possible.
+     *
      * <p>Out: TypeConstant on Java stack
      */
     public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
@@ -1403,7 +1407,9 @@ public class BuildContext {
 
     /**
      * Generate a "load" for an nType object for the specified TypeConstant.
+     *
      * <p>Note: the specified type must be {@link TypeConstant#isTypeOfType() type-of-type}.
+     *
      * <p>Out: nType object instance
      */
     public RegisterInfo loadType(CodeBuilder code, TypeConstant type) {
@@ -1592,6 +1598,7 @@ public class BuildContext {
 
     /**
      * Store the values on the Java stack.
+     *
      * <p>If the register represents a property, the property value will be updated with the values
      * on the stack, otherwise the values on the stack will be stored into the register's slots.
      *
@@ -1611,6 +1618,7 @@ public class BuildContext {
 
     /**
      * Store the values on the Java stack.
+     *
      * <p>If the register represents a property, the property value will be updated with the values
      * on the stack, otherwise the values on the stack will be stored into the register's slots.
      *
@@ -2236,6 +2244,7 @@ public class BuildContext {
      * Narrow the type of the specified register in the code starting at the "from" op address.
      * Note, that passing the current address **does not** put the narrowed register into the
      * registry.
+     *
      * <p>Note, that unlike the dead code elimination below, the narrowing could "stop" at any point an
      * assignment is made to the register.
      *
@@ -2658,6 +2667,7 @@ public class BuildContext {
 
     /**
      * Set a property value using the specified register.
+     *
      * <p>The target object that owns the property is assumed to be in this context's "this" register.
      *
      * @param code    the code builder
@@ -2690,6 +2700,7 @@ public class BuildContext {
 
     /**
      * Set a property using the values from the stack.
+     *
      * <p>The target object that owns the property is assumed to be in this context's "this" register.
      *
      * @param code       the code builder
@@ -3389,6 +3400,7 @@ public class BuildContext {
 
     /**
      * Create a String and store the reference to the String on the stack.
+     *
      * <p>The String template is formatted with values from the provided slots.
      * Each occurrence of {@code "\u0001"} is replaced with the value from an entry in the {@code
      * argSlots} array.
@@ -3411,6 +3423,7 @@ public class BuildContext {
 
     /**
      * Create a String and store the reference to the String in a new local variable slot.
+     *
      * <p>The String template is formatted with values from the provided slots.
      * Each occurrence of {@code "\u0001"} is replaced with the value from an entry in the {@code
      * argSlots} array.

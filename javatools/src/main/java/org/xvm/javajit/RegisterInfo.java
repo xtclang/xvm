@@ -19,6 +19,7 @@ public interface RegisterInfo {
 
     /**
      * Returns the Java slot for this register or -1 if the register is stored on the stack.
+     *
      * <p>If this register is made up of multiple slots, this method will return the first slot.
      *
      * @return the corresponding Java slot index or -1 if the corresponding value has been placed on

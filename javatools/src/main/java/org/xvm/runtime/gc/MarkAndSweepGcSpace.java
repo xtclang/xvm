@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 
 /**
  * A simple {@code mark-and-sweep} style collector.
+ *
  * <p>Objects are allocated on the java heap but tracked via the {@link GcSpace}.
  */
 public class MarkAndSweepGcSpace<V>

@@ -165,6 +165,7 @@ public class VersionTree<V>
      * Find the closest version (that is present in the tree) to the specified version, and return
      * it. The "closest version" must be substitutable for the specified version, which means it
      * needs to be the exact same version as specified, or it needs to unambiguously precede it.
+     *
      * <p>Consider the following tree:
      * <code><pre>
      * VersionTree

@@ -248,6 +248,7 @@ public abstract class Container
 
     /**
      * A delegation method into the ConstHeap API.
+     *
      * <p>Could be overridden by Container implementations to use container-specific heaps.
      */
     public ObjectHandle ensureConstHandle(Frame frame, Constant constValue) {
@@ -382,6 +383,7 @@ public abstract class Container
 
     /**
      * Produce a ClassComposition for the specified inception type.
+     *
      * <p>Note: the passed inception type should be normalized (all formal parameters resolved).
      */
     public ClassComposition ensureClassComposition(TypeConstant typeInception, ClassTemplate template) {
@@ -766,6 +768,7 @@ public abstract class Container
 
     /**
      * A cache of "instantiate-able" ClassCompositions keyed by the "inception type".
+     *
      * <p>Any ClassComposition in this map is defined by a {@link ClassConstant} referring to a
      * concrete natural class. It also keeps the secondary map of compositions for revealed types.
      */

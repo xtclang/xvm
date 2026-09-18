@@ -90,6 +90,7 @@ public class IntNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "leftmostBit$get$p()".
+     *
      * <p>{@code return Integer.highestOneBit(value);}
      */
     protected void generateLeftmostBitGet(CodeBuilder code, JitMethodDesc jmd) {
@@ -157,6 +158,7 @@ public class IntNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "rightmostBit$get$p()".
+     *
      * <p>{@code return Integer.lowestOneBit(value);}
      */
     protected void generateRightmostBitGet(CodeBuilder code, JitMethodDesc jmd) {
@@ -215,6 +217,7 @@ public class IntNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "leadingZeroCount$get$p()".
+     *
      * <p>{@code return Integer.numberOfLeadingZeros(value, bitLength);}
      */
     protected void generateLeadingZeroCountGet(CodeBuilder code, JitMethodDesc jmd) {
@@ -283,6 +286,7 @@ public class IntNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "trailingZeroCount$get$p()".
+     *
      * <p>{@code return Integer.numberOfTrailingZeros(value, bitLength);}
      */
     protected void generateTrailingZeroCountGet(CodeBuilder code, JitMethodDesc jmd) {
@@ -353,6 +357,7 @@ public class IntNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "toIntN$p()" or "toUIntN$p()".
+     *
      * <p>{@code return Target.$box(value);}
      */
     protected void generateUnboundedConversion(CodeBuilder code, JitMethodDesc jmd) {
@@ -419,6 +424,7 @@ public class IntNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static fixed-length integer conversion.
+     *
      * <p>{@code return checkBounds ? checkedConvert(value) : truncate(value);}
      */
     protected void generateFixedConversion(CodeBuilder code, JitMethodDesc jmd) {
@@ -668,6 +674,7 @@ public class IntNumberBuilder extends NumberBuilder {
     /**
      * Assemble optimized static implementations of "and$p(IntNumber)", "or$p(IntNumber)", and
      * "xor$p(IntNumber)".
+     *
      * <p>{@code and(that) -> value & that;}
      * {@code or(that)  -> value | that;}
      * {@code xor(that) -> value ^ that;}
@@ -721,6 +728,7 @@ public class IntNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "not$p()".
+     *
      * <p>{@code return ~value;}
      */
     protected void generateNot(CodeBuilder code, JitMethodDesc jmd) {

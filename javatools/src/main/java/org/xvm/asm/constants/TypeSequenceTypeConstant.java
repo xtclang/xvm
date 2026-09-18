@@ -17,6 +17,7 @@ import org.xvm.asm.Register;
 /**
  * Type constant that represents а constraint for a formal type parameter that materializes into
  * a sequence (tuple) of types.
+ *
  * <p>Examples of such a constraint in Ecstasy are:
  *
  * <li>{@code interface Tuple<ElementTypes extends Tuple<ElementTypes>>}</li>

@@ -91,6 +91,7 @@ import org.xvm.util.Severity;
  * since it can conceptually capture the "this" of the method. The presence of a "this" has to
  * be tracked, because the interpretation of a name will differ in some cases based on whether
  * there is a "this" or not.
+ *
  * <p>A name resolution also has an implicit de-reference, or an explicit non-dereference (a
  * suppression of the de-reference using the "&" symbol). The result of the name being resolved
  * will differ based on whether the name is implicitly de-referenced, or explicitly not
@@ -126,6 +127,7 @@ import org.xvm.util.Severity;
  * import, then that name is resolved first (recursively), such that the result is that the name
  * no longer refers to the name of an import, but rather to the component (Module, Package,
  * Class, Property, Multi-Method) being imported by that name.
+ *
  * <p><code><pre>
  *   Name          method             specifies            "static" context /    specifies
  *   refers to     context            no-de-ref            identity mode         no-de-ref
@@ -148,8 +150,11 @@ import org.xvm.util.Severity;
  *
  *   MultiMethod   Error              Error                Error                 Error
  * </pre></code>
+ *
  * <p>Note: '*' signifies potential "identity mode"
+ *
  * <p>[1] must have a left-hand side in identity mode; otherwise it is an Error
+ *
  * <p>Method and function evaluation is the most complex of these scenarios, because the no-de-ref
  * flag is on the name expression, but can also be implied by an argument of the
  * NonBindingExpression type. As a result, the InvocationExpression is responsible for checking
@@ -159,6 +164,7 @@ import org.xvm.util.Severity;
  *     evaluating to true; or</li>
  * <li>Any invocation argument with {@link #isNonBinding()} evaluating to true.</li>
  * </ul>
+ *
  * <p>The invocation expression does not delegate validation to the name expression; instead, it takes
  * on the responsibility of recognizing that there is a name expression, and validating the contents
  * on the name expression's behalf.
@@ -3158,6 +3164,7 @@ public class NameExpression
 
     /**
      * Narrow the type of the variable represented by this expression for the specified context branch.
+     *
      * <p>Note: This can only be used during the validate() stage after this name expression
      *       has been validated.
      *

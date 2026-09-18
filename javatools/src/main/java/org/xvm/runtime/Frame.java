@@ -1588,6 +1588,7 @@ public class Frame
 
     /**
      * Create an array of ObjectHandles holding the specified arguments.
+     *
      * <p>Note, that the arguments are retrieved in the inverse order, to allow the
      * {@link org.xvm.compiler.ast.InvocationExpression}, {@link org.xvm.compiler.ast.NewExpression}
      * and {@link org.xvm.compiler.ast.RelOpExpression} to use stack collecting the arguments.

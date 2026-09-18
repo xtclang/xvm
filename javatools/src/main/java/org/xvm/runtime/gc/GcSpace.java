@@ -6,6 +6,7 @@ import java.util.function.Supplier;
 
 /**
  * An interface describing an automatic memory manager for objects with {@code long} addresses.
+ *
  * <p>{@link #allocate allocated} objects are considered to be garbage once they are not reachable from a {@link #addRoot root}.
  */
 public interface GcSpace {
@@ -20,6 +21,7 @@ public interface GcSpace {
 
     /**
      * Allocate a weak-ref based object.
+     *
      * <p>As the object is indicated to a "weak" reference, {@link #getField field 0} must be the field which stores
      * the weak referent, and {@link #getField field 1} if it exists is used to store the notifier (if any).
      *
@@ -61,6 +63,7 @@ public interface GcSpace {
 
     /**
      * Add a gc root to this space.
+     *
      * <p>Added roots must ultimately be {@link #removeRoot removed}.
      *
      * @param root the root object

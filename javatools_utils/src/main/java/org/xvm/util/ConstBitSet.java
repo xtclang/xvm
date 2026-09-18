@@ -15,8 +15,10 @@ import static org.xvm.util.PackedInteger.writeLong;
 
 /**
  * An immutable BitSet implementation that stores a compressed form of the BitSet in a byte array.
+ *
  * <p>The data structure is somewhat reminiscent of a skip-list, and somewhat reminiscent of a binary
  * tree, so it could be called the "skip-blist" format.
+ *
  * <p>The goal of the design was to create a relatively compact form of the BitSet data structure that
  * could be used to store persistent bit set images for efficient consumption by the Ecstasy class
  * library. Specifically, a significant amount of tabular information for the Unicode standard
@@ -29,6 +31,7 @@ import static org.xvm.util.PackedInteger.writeLong;
  * </li><li>Ability to iterate sequentially ("in order");
  * </li><li>Well-compressed if the bit set is either very sparse or very full.
  * </li></ul>
+ *
  * <p>The format is a variable-length header followed by a sequence of variable-length nodes. Integer
  * values encoded within the formal all use the {@link PackedInteger} format. The header contains:
  * <ul><li>The magnitude of this field indicates the cardinality of the bit set, which is the count
@@ -40,6 +43,7 @@ import static org.xvm.util.PackedInteger.writeLong;
  *          second field which is the original (non-inverse) bit-set's <i>length</i> in bits, which
  *          is one more than the index of the last '1' bit in the non-inverse bit-set.
  * </li></ul>
+ *
  * <p>The format is a sequence of variable-length nodes. Each node is composed of:
  * <ul><li>An <i>implicit</i> byte id for the node (a byte id is the index into a <i>conceptual</i>
  *         byte array that backs the bit set);
@@ -54,6 +58,7 @@ import static org.xvm.util.PackedInteger.writeLong;
  * </li><li>The number of bytes of bit-encoded data in this node (which may be 0 in the first node);
  * </li><li>The sequence of bytes of bit-encoded data.
  * </li></ul>
+ *
  * <p>The encoding of the "skip" information is designed to achieve O(log(n)) behavior, by allowing a
  * skip forward of approximately half of the remaining nodes. For example, in a bit set that is
  * encoded in 28 nodes [0..27], the following table shows each node and its skip-to-node option:

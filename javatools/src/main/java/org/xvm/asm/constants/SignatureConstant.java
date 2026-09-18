@@ -37,12 +37,15 @@ import static org.xvm.util.Handy.writePackedLong;
  * have to specify which exact method is being invoked (such as a particular method on a particular
  * class), but rather that some virtual method chain exists such that it matches a particular
  * signature.
+ *
  * <p>In Ecstasy, a type is simply a collection of methods and properties. Even properties can be
  * expressed as methods; a property of type T and name N can be represented as a method N that takes
  * no parameters and returns a single value of type T. As such, a type can be represented as a
  * collection of method signatures.
+ *
  * <p>Method signatures are not necessarily exact, however. Consider the support in Ecstasy for auto-
  * narrowing types:
+ *
  * <p><code><pre>
  *     interface I
  *         {
@@ -50,7 +53,9 @@ import static org.xvm.util.Handy.writePackedLong;
  *         void bar(I i);
  *     }
  * </pre></code>
+ *
  * <p>Now consider a class:
+ *
  * <p><code><pre>
  *     class C
  *         {
@@ -58,9 +63,11 @@ import static org.xvm.util.Handy.writePackedLong;
  *         void bar(C! c) {...}
  *     }
  * </pre></code>
+ *
  * <p>While the class does not explicitly implement the interface I, and while the methods on the class
  * are explicit (not auto-narrowing), the class C does implicitly implement interface I, and thus an
  * instance of C can be passed to (or returned from) any method that accepts (or returns) an "I".
+ *
  * <p>A SignatureConstant can also be used to represent a property, but such a use is never serialized;
  * i.e. it is a transient use case.
  */
@@ -90,6 +97,7 @@ public class SignatureConstant
 
     /**
      * Construct a constant whose value is a property signature identifier.
+     *
      * <p>This use case allows methods and properties to both be represented in a transient data
      * structure as SignatureConstants; this form of a SignatureConstant cannot be serialized.
      *

@@ -159,7 +159,9 @@ public abstract class Builder {
      * In other words, if this Builder is building {@code List<Int>} and this method is told to load
      * the TypeConstant for {@code Array<Element>}, then it will load the TypeConstant
      * {@code Array<Element>}.
+     *
      * <p>This method never resolves formal types.
+     *
      * <p>Out: TypeConstant on Java stack
      */
     public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
@@ -171,8 +173,10 @@ public abstract class Builder {
      * build context indicates that resolution is applicable. In other words, if a method on
      * {@code List<Int>} is being compiled, and it loads the TypeConstant for
      * {@code Array<Element>}, then the TypeConstant {@code Array<Int>} will be loaded.
+     *
      * <p>If no build context is supplied, the TypeConstant is loaded without performing any formal
      * type resolution.
+     *
      * <p>Out: TypeConstant on Java stack
      */
     protected void loadTypeConstant(BuildContext bctx, CodeBuilder code, TypeConstant type) {
@@ -195,6 +199,7 @@ public abstract class Builder {
 
     /**
      * Build the code to load a value for a constant on the Java stack.
+     *
      * <p>We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(CodeBuilder code, Constant constant) {
@@ -203,6 +208,7 @@ public abstract class Builder {
 
     /**
      * Build the code to load a value for a constant on the Java stack.
+     *
      * <p>We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(BuildContext bctx, CodeBuilder code, Constant constant) {

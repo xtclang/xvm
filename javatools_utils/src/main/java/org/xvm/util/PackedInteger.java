@@ -8,8 +8,10 @@ import java.math.BigInteger;
 
 /**
  * A PackedInteger represents a signed, 2's-complement integer of 1 byte to 64KB (512Kb) in size.
+ *
  * <p>Signed values up to 8 bytes can be written and read as a Java <code>long</code> value; values up to
  * the maximum size can be written and read as a Java BigInteger.
+ *
  * <p>The storage format (XVM Integer Packing, or "XIP") uses a variable length compression scheme. It
  * defines four internal formats for XIP'd integers:
  * <ul><li>
@@ -37,6 +39,7 @@ import java.math.BigInteger;
  * The following bytes contain the value {@code b}, encoded as a XIP'd integer. The following
  * {@code b} bytes form the 2's complement integer value {@code n}.
  * </li></ul>
+ *
  * <p>To maximize density, the algorithms in this file use the smallest possible encoding for each
  * value.
  */

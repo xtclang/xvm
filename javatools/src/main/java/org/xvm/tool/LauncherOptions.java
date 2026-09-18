@@ -37,6 +37,7 @@ import org.jetbrains.annotations.NotNull;
  * Base class for launcher command-line options that wraps Apache Commons CLI.
  * Provides both command-line parsing and programmatic building via Builder pattern.
  * Subclasses provide typed getters for specific launcher options.
+ *
  * <p>This class must be public to allow its public static nested classes (CompilerOptions,
  * RunnerOptions, DisassemblerOptions) to be accessible from other packages.
  */
@@ -229,6 +230,7 @@ public abstract class LauncherOptions {
     /**
      * Common helper to parse path options that support both multiple invocations and path separator splitting.
      * For example: -L path1 -L path2 and -L path1:path2 both work.
+     *
      * <p>NOTE: Tilde expansion and glob/wildcard expansion are handled by the shell before arguments reach Java.
      * For programmatic use via the Builder API, callers should provide resolved paths.
      *

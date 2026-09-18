@@ -34,6 +34,7 @@ import org.xvm.util.Severity;
 /**
  * A list expression is an expression containing some number (0 or more) expressions of some common
  * type.
+ *
  * <p><pre>
  * ListLiteral
  *     "[" ExpressionList-opt "]"

@@ -282,6 +282,7 @@ public class MethodStructure
     /**
      * Check if all annotations are resolved; move those that don't apply to the method to the
      * return value type.
+     *
      * <p>Important note: this method is called during the "resolve name" compilation phase, so
      *      while the annotation names must have already bee resolved, the annotation arguments
      *      may not yet. It doesn't present any problem, since the argument values don't affect
@@ -857,6 +858,7 @@ public class MethodStructure
     /**
      * Given arrays of actual argument types and return types, return a ListMap with the actual
      * (resolved) type parameters types.
+     *
      * <p>For example: given a method: <T, U> T foo(U u, T t) actual argument types: String, Int and
      * actual return type: Number this method would return a map {"T":Number, "U":String}
      *
@@ -1225,10 +1227,13 @@ public class MethodStructure
     /**
      * Determine if this method might act as a property initializer. For example, in the property
      * declaration:
+     *
      * <p><code><pre>
      *     Int MB = KB * KB;
      * </pre></code>
+     *
      * <p>... the value of the property could be compiled as an initializer function named "=":
+     *
      * <p><code><pre>
      *     Int MB
      *       {
@@ -2302,6 +2307,7 @@ public class MethodStructure
 
         /**
          * Obtain the op at the specified index.
+         *
          * <p>This method is intended to support implementation of the {@link Op#resolveCode
          * Op.resolveCode()} method.
          *

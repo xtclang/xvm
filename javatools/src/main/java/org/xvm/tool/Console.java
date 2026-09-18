@@ -9,6 +9,7 @@ import org.xvm.util.Severity;
 
 /**
  * An interface representing the launcher tool's interaction with output streams.
+ *
  * <p>Console provides simple output methods for displaying messages. It does NOT track severity state
  * or perform filtering - that is the responsibility of the {@link Launcher}.
  */

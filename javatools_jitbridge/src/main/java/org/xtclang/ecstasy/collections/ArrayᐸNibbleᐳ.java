@@ -18,6 +18,7 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of Nibble, stored in an array of Java longs, sixteen Nibbles per long.
+ *
  * <p>Object header
  * xObj - 64 bits of flags
  * ---
@@ -164,6 +165,7 @@ public class ArrayᐸNibbleᐳ
 
     /**
      * Internal method to create a nibble array from a long array.
+     *
      * <p>This is called by various number types to return a nibble array representation of the number.
      */
     public static ArrayᐸNibbleᐳ $fromLongs(Ctx ctx, Mutability mutability, long bits, long... values) {

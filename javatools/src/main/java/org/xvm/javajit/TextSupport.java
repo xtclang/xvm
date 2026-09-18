@@ -19,6 +19,7 @@ import static org.xvm.javajit.Builder.MD_StringOf;
 public interface TextSupport {
     /**
      * Generate the byte codes to add an Int, Char, or String to a Char.
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -43,8 +44,10 @@ public interface TextSupport {
 
     /**
      * Generate the byte codes to add an Int to a Char.
+     *
      * <p>Validation is performed to ensure the addition would not result in a code point outside
      * the valid Unicode range. If it does, an OutOfBounds exception is thrown.
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -65,6 +68,7 @@ public interface TextSupport {
 
     /**
      * Generate the byte codes to add a Char to a Char, resulting on a String on the stack.
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -89,6 +93,7 @@ public interface TextSupport {
 
     /**
      * Generate the byte codes to add a String to a Char, resulting on a String on the stack.
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -112,6 +117,7 @@ public interface TextSupport {
 
     /**
      * Generate the byte codes to subtract an Int or Char from a Char.
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -135,8 +141,10 @@ public interface TextSupport {
 
     /**
      * Generate the byte codes to subtract an Int from a Char.
+     *
      * <p>Validation is performed to ensure the subtraction would not result in a code point outside
      * the valid Unicode range. If it does, an OutOfBounds exception is thrown.
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
@@ -160,6 +168,7 @@ public interface TextSupport {
      * <pre>
      *     UInt32 sub(Char ch) = this.codepoint - ch.codepoint;
      * </pre>
+     *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context

@@ -16,6 +16,7 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of Boolean, stored in an array of Java longs, sixty-four Booleans per long.
+ *
  * <p>Object header
  * xObj - 64 bits of flags
  * ---

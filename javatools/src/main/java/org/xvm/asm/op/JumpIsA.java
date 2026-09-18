@@ -30,6 +30,7 @@ import static org.xvm.javajit.Builder.MD_xvmType;
 
 /**
  * JMP_ISA rvalue, #:(CONST, addr), addr-default ; if value "isA" a constant, jump to address, otherwise default
+ *
  * <p>Note: No support for wild-cards or ranges.
  */
 public class JumpIsA
