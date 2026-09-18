@@ -353,7 +353,7 @@ shape the prior-art branch reached, measured against this tree.
 | Dedup key, `PROBE`/`BLACKHOLE`, `suppressCascade`, `Site` + varargs, never-null, no parent-mutating setter, no null-as-state | done, phases 1-7 |
 | `log()` returns `void`, abort asked separately | **postponed** by decision, revisit after the PR |
 | `ErrorListener.RUNTIME` stops throwing from inside `log()` | not started |
-| `ResolutionCollector.getErrorListener()` - the listener smuggled through a callback interface | not started |
+| `ResolutionCollector.getErrorListener()` - the listener smuggled through a callback interface | done |
 | `TypeInfo` carries and replays its own diagnostics | not started; the real shape of the last 8 sites |
 | `EvalCompiler.m_errs` / `ModuleInfo.Node.m_errs` final and created with their owner | not started |
 | Runtime-side listener: `Container`, the connector, `recordRuntimeFailure` | not started |
@@ -365,11 +365,12 @@ shape the prior-art branch reached, measured against this tree.
 None of it blocks an LSP that compiles a document with its own listener and reads what it
 collected. Why you would do each, and why you might not:
 
-**`ResolutionCollector.getErrorListener()` - do it next.** It defaults to a silent listener, so
-name resolution reports into a sink nobody chose: the "quiet by default" hole phase 4 removed from
-parameters, surviving in a callback interface. Seven call sites plus the default; the fix is to
-pass `errs` to the three resolution methods. Compiler-enforced, low risk. Against: it widens three
-signatures that implementors must follow.
+**`ResolutionCollector.getErrorListener()` - done, and smaller than expected.** It defaulted to a
+silent listener, so name resolution reported into a sink nobody chose. Both collectors in the tree
+already overrode it, so the default was never reached and existed only as a trap for the next one:
+deleting it compiles untouched and is enforced from here on. The prior art threaded `errs` through
+the three resolution methods instead, which would have meant 8 implementors and 18 call sites of
+`resolveName` to enforce an invariant two implementations already kept.
 
 **`RUNTIME` throwing from `log()` - a correctness hazard, not a style one.** It throws
 `IllegalStateException` from inside the reporting call at `ERROR` and above, so the throw pre-empts
