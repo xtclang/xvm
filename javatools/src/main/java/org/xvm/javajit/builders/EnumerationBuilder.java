@@ -22,7 +22,6 @@ import org.xvm.javajit.TypeSystem.Artifact;
 
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_long;
-import static java.lang.constant.ConstantDescs.CD_void;
 
 /**
  * The builder for Enumeration types.
@@ -99,7 +98,7 @@ public class EnumerationBuilder extends CommonBuilder {
         classBuilder.withMethodBody(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC,
                 code -> {
             code.loadConstant((long) enumValues.length)
-                .invokestatic(CD_Int64, "$box", MethodTypeDesc.of(CD_Int64, CD_long))
+                .invokestatic(CD_Int64, "$box", md(CD_Int64, CD_long))
                 .areturn();
         });
     }
@@ -135,7 +134,7 @@ public class EnumerationBuilder extends CommonBuilder {
         code.new_(thisCD)
             .dup()
             .aload(ctxSlot)
-            .invokespecial(thisCD, "<init>", MethodTypeDesc.of(CD_void, CD_Ctx))
+            .invokespecial(thisCD, "<init>", MD_xvmVoid)
             .putstatic(thisCD, Instance, thisCD);
 
         // set the $names array static field
@@ -148,10 +147,10 @@ public class EnumerationBuilder extends CommonBuilder {
                 .loadConstant(i)
                 .aload(ctxSlot)
                 .loadConstant(value.getName())
-                .invokestatic(CD_String, "of", MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString))
+                .invokestatic(CD_String, "of", md(CD_String, CD_Ctx, CD_JavaString))
                 .aastore();
         }
-        MethodTypeDesc mdBoxString = MethodTypeDesc.of(CD_ArrayObj, CD_Ctx, CD_String.arrayType());
+        MethodTypeDesc mdBoxString = md(CD_ArrayObj, CD_Ctx, CD_String.arrayType());
         code.invokestatic(CD_ArrayObj, "$makeStringArray", mdBoxString)
             .putstatic(thisCD, NAMES, CD_ArrayObj);
 
@@ -168,7 +167,7 @@ public class EnumerationBuilder extends CommonBuilder {
                 .getstatic(cdValue, Instance, cdValue)
                 .aastore();
         }
-        MethodTypeDesc mdBoxObj = MethodTypeDesc.of(CD_ArrayObj, CD_Ctx, CD_Object.arrayType());
+        MethodTypeDesc mdBoxObj = md(CD_ArrayObj, CD_Ctx, CD_Object.arrayType());
         code.invokestatic(CD_ArrayObj, "$makeArray", mdBoxObj)
             .putstatic(thisCD, VALUES, CD_ArrayObj);
     }
@@ -180,15 +179,11 @@ public class EnumerationBuilder extends CommonBuilder {
     }
 
     private void assembleConstructor(ClassBuilder classBuilder) {
-        MethodTypeDesc md      = MethodTypeDesc.of(CD_void, CD_Ctx);
-        MethodTypeDesc mdSuper = MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant);
-        int            flags   = ClassFile.ACC_PUBLIC;
-
-        classBuilder.withMethodBody("<init>", md, flags, code -> {
+        classBuilder.withMethodBody("<init>", MD_xvmVoid, ClassFile.ACC_PUBLIC, code -> {
             code.aload(0)
                 .aload(code.parameterSlot(0))
                 .getstatic(art.CD(), "$sc0", CD_TypeConstant)
-                .invokespecial(CD_Enumeration, "<init>", mdSuper)
+                .invokespecial(CD_Enumeration, "<init>", MD_xvmInitType)
                 .return_();
         });
     }

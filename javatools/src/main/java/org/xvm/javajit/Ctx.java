@@ -17,6 +17,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 import static org.xvm.javajit.Builder.CD_JavaObject;
 import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * The runtime context of a logical thread of execution. Enables multiple returns, tuple
@@ -164,11 +165,9 @@ public final class Ctx {
 
     // ----- method descriptors --------------------------------------------------------------------
 
-    public static final MethodTypeDesc MD_log = MethodTypeDesc.of(CD_void, CD_JavaString);
+    public static final MethodTypeDesc MD_log = md(CD_void, CD_JavaString);
 
-    public static final MethodTypeDesc MD_inject = MethodTypeDesc.of(
-            CD_JavaObject, CD_TypeConstant, CD_JavaString, CD_JavaObject);
+    public static final MethodTypeDesc MD_inject = md(CD_JavaObject, CD_TypeConstant, CD_JavaString, CD_JavaObject);
 
-    public static final MethodTypeDesc MD_getStatic =
-            MethodTypeDesc.of(CD_JavaObject, CD_MethodHandle);
+    public static final MethodTypeDesc MD_getStatic = md(CD_JavaObject, CD_MethodHandle);
 }

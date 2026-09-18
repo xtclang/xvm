@@ -204,12 +204,11 @@ public class CommonBuilder
         classBuilder.withInterfaceSymbols(interfaces.toArray(new ClassDesc[0]));
 
         // add the constructor
-        MethodTypeDesc initMD = MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant);
-        classBuilder.withMethodBody(INIT_NAME, initMD, ClassFile.ACC_PUBLIC, code ->
+        classBuilder.withMethodBody(INIT_NAME, MD_xvmInitType, ClassFile.ACC_PUBLIC, code ->
             code.aload(0)
                 .aload(1)
                 .aload(2)
-                .invokespecial(CD_Class, INIT_NAME, initMD)
+                .invokespecial(CD_Class, INIT_NAME, MD_xvmInitType)
                 .return_());
 
         TypeConstant targetType = typeInfo.getType();
@@ -748,7 +747,7 @@ public class CommonBuilder
         ClassDesc      CD_this        = art.CD();
         ClassDesc      cdClassLoader  = ClassDesc.of(ClassLoader.class.getName());
         ClassDesc      cdModuleLoader = ClassDesc.of(ModuleLoader.class.getName());
-        MethodTypeDesc mdGetConstant  = MethodTypeDesc.of(ClassDesc.of(Constant.class.getName()), CD_int);
+        MethodTypeDesc mdGetConstant  = md(ClassDesc.of(Constant.class.getName()), CD_int);
 
         classBuilder.withMethodBody(ConstantDescs.CLASS_INIT_NAME, MTD_void,
                 ClassFile.ACC_STATIC | ClassFile.ACC_PUBLIC, code -> {
@@ -770,13 +769,12 @@ public class CommonBuilder
 
             // use the fact that this class is loaded by the corresponding ModuleLoader
             code.ldc(CD_this)
-                .invokevirtual(ConstantDescs.CD_Class, "getClassLoader",
-                        MethodTypeDesc.of(cdClassLoader))
+                .invokevirtual(ConstantDescs.CD_Class, "getClassLoader", md(cdClassLoader))
                 .checkcast(cdModuleLoader)
                 .astore(loaderSlot);
 
             code.aload(loaderSlot)
-                .invokevirtual(cdModuleLoader, "getCtx", MethodTypeDesc.of(CD_Ctx))
+                .invokevirtual(cdModuleLoader, "getCtx", md(CD_Ctx))
                 .astore(ctxSlot);
 
             // initialize synthetic "TypeConstant" and other static "Constant" fields; to make the
@@ -836,7 +834,7 @@ public class CommonBuilder
                     code.ldc(injection.resourceName());               // resourceName
                     injection.optsLoader.run();                       // opts
                     code.invokestatic(CD_Container, "createInjectionHandle",
-                                MethodTypeDesc.of(CD_MethodHandle,
+                                md(CD_MethodHandle,
                                         CD_TypeConstant, CD_JavaString, CD_JavaObject))
                         .putstatic(CD_this, jitName, CD_MethodHandle);
                     continue;
@@ -853,7 +851,7 @@ public class CommonBuilder
 
                     code.ldc(MethodHandleDesc.ofMethod(Kind.STATIC, CD_this, initName, jmd.standardMD))
                         .invokestatic(CD_Container, "createInitializerHandle",
-                                MethodTypeDesc.of(CD_MethodHandle, CD_MethodHandle))
+                                md(CD_MethodHandle, CD_MethodHandle))
                         .putstatic(CD_this, jitName, CD_MethodHandle);
                     continue;
                 }
@@ -934,10 +932,9 @@ public class CommonBuilder
                 if (isScoped) {
                     // store the singleton construction handle; each container computes its instance
                     code.ldc(MethodHandleDesc.ofMethod(
-                                Kind.STATIC, CD_this, InstanceInit,
-                                MethodTypeDesc.of(CD_this, CD_Ctx)))
+                                Kind.STATIC, CD_this, InstanceInit, md(CD_this, CD_Ctx)))
                         .invokestatic(CD_Container, "createInitializerHandle",
-                                MethodTypeDesc.of(CD_MethodHandle, CD_MethodHandle))
+                                md(CD_MethodHandle, CD_MethodHandle))
                         .putstatic(CD_this, Instance, CD_MethodHandle);
                 } else {
                     // $INSTANCE = new Singleton($ctx);
@@ -972,7 +969,7 @@ public class CommonBuilder
     private void assembleSingletonInitializer(ClassBuilder classBuilder) {
         ClassDesc CD_this = art.CD();
 
-        classBuilder.withMethodBody(InstanceInit, MethodTypeDesc.of(CD_this, CD_Ctx),
+        classBuilder.withMethodBody(InstanceInit, md(CD_this, CD_Ctx),
                 ClassFile.ACC_PRIVATE | ClassFile.ACC_STATIC, code -> {
             int ctxSlot = code.parameterSlot(0);
 
@@ -991,9 +988,9 @@ public class CommonBuilder
 
         code.aload(ctxSlot)
             .ldc(implSize)
-            .invokevirtual(CD_Ctx, "allocated", MethodTypeDesc.of(CD_void, CD_long))
+            .invokevirtual(CD_Ctx, "allocated", md(CD_void, CD_long))
             .aload(ctxSlot)
-            .invokevirtual(CD_this, jitInit, MethodTypeDesc.of(CD_this, CD_Ctx));
+            .invokevirtual(CD_this, jitInit, md(CD_this, CD_Ctx));
     }
 
     private ClassDesc constantClassDesc(Constant constant) {
@@ -1457,14 +1454,13 @@ public class CommonBuilder
      * Assemble the generic property accessors for the "Impl" shape.
      */
     protected void assembleGenericProperty(ClassBuilder classBuilder, String name) {
-        classBuilder.withMethodBody(name + "$get", MethodTypeDesc.of(CD_nType, CD_Ctx),
+        classBuilder.withMethodBody(name + "$get", md(CD_nType, CD_Ctx),
             ClassFile.ACC_PUBLIC, code ->
                 // return nObject.$typeForName(ctx, name);
                 code.aload(0)                     // this
                     .aload(code.parameterSlot(0)) // ctx
                     .ldc(name)
-                    .invokevirtual(CD_nObject, "$typeForName",
-                            MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString))
+                    .invokevirtual(CD_nObject, "$typeForName", md(CD_nType, CD_Ctx, CD_JavaString))
                     .areturn()
         );
     }
@@ -2164,8 +2160,8 @@ public class CommonBuilder
             ClassDesc      cdThis      = art.CD();
             String         eqName      = eqSig.getName();
             String         eqOptName   = eqName + OPT;
-            MethodTypeDesc mdWrapper   = MethodTypeDesc.of(CD_Boolean, CD_Ctx, CD_nType, cdThis, cdThis);
-            MethodTypeDesc mdPrimitive = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cdThis, cdThis);
+            MethodTypeDesc mdWrapper   = md(CD_Boolean, CD_Ctx, CD_nType, cdThis, cdThis);
+            MethodTypeDesc mdPrimitive = md(CD_boolean, CD_Ctx, CD_nType, cdThis, cdThis);
 
             if (!isNativeMethod(eqName, mdWrapper)) {
                 // generate the standard "equals" wrapper that delegates to the optimized "equals$p"
@@ -2212,7 +2208,7 @@ public class CommonBuilder
         if (baseType != null) {
             // found super class with equals method, so call it first
             ClassDesc      cdBase  = ensureClassDesc(baseType);
-            MethodTypeDesc mdSuper = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cdBase, cdBase);
+            MethodTypeDesc mdSuper = md(CD_boolean, CD_Ctx, CD_nType, cdBase, cdBase);
 
             loadCtx(code);
             code.aload(1)
@@ -2324,7 +2320,7 @@ public class CommonBuilder
             } else if (propType.isXvmPrimitive()) {
                 // XVM primitive: call static $equals(primitives1..., primitives2...)
                 ClassDesc[]    cdParams = getJitPrimitivePairMethodParams(propType);
-                MethodTypeDesc md       = MethodTypeDesc.of(CD_boolean, cdParams);
+                MethodTypeDesc mdEquals = md(CD_boolean, cdParams);
 
                 // load both property values as unboxed primitives onto the stack
                 code.aload(value1Slot);
@@ -2335,7 +2331,7 @@ public class CommonBuilder
                 loadProperty(code, type, propId, true);
                 loadOptimizedReturnsToStack(code, jmd);
 
-                code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_EQUALS, md)
+                code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_EQUALS, mdEquals)
                     .ifeq(returnFalse);
             } else if (propType.isA(pool().typeService())) {
                 buildGetIdentityHashCode(code, prop, value1Slot);
@@ -2359,8 +2355,7 @@ public class CommonBuilder
                 // load nType for the property type: nType.$ensureType(Ctx, TypeConstant)
                 loadCtx(code);
                 loadTypeConstant(code, propType);
-                code.invokestatic(CD_nType, "$ensureType",
-                        MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+                code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
 
                 // load the values
                 code.aload(value1Slot);
@@ -2406,13 +2401,13 @@ public class CommonBuilder
         // If the method is not explicitly implemented or the declaring type does not match the
         // current type (i.e., the method is declared on a supe class), then we can build the method
         if (impl != Implementation.Explicit || !thisId.equals(targetId)) {
-            ClassDesc      cdThis  = art.CD();
-            String         cmpName = cmpSig.getName();
-            MethodTypeDesc md      = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, cdThis, cdThis);
+            ClassDesc      cdThis    = art.CD();
+            String         cmpName   = cmpSig.getName();
+            MethodTypeDesc mdCompare = md(CD_Ordered, CD_Ctx, CD_nType, cdThis, cdThis);
 
-            if (!isNativeMethod(cmpName, md)) {
+            if (!isNativeMethod(cmpName, mdCompare)) {
                 // generate the standard "compare" method
-                classBuilder.withMethodBody(cmpName, md,
+                classBuilder.withMethodBody(cmpName, mdCompare,
                         ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
                         code -> assembleConstCompare(code, thisType, cmpSig));
             }
@@ -2456,7 +2451,7 @@ public class CommonBuilder
         if (baseType != null) {
             // found super class with compare method, so call it first
             ClassDesc      cdExt   = ensureClassDesc(baseType);
-            MethodTypeDesc mdSuper = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, cdExt, cdExt);
+            MethodTypeDesc mdSuper = md(CD_Ordered, CD_Ctx, CD_nType, cdExt, cdExt);
 
             loadCtx(code);
             code.aload(1)
@@ -2558,8 +2553,8 @@ public class CommonBuilder
                 convertIntToOrdered(code);
             } else if (propType.isXvmPrimitive()) {
                 // XVM primitive: call static $compare(primitives1..., primitives2...)
-                ClassDesc[]    cdParams = getJitPrimitivePairMethodParams(propType);
-                MethodTypeDesc md       = MethodTypeDesc.of(CD_int, cdParams);
+                ClassDesc[]    cdParams  = getJitPrimitivePairMethodParams(propType);
+                MethodTypeDesc mdCompare = md(CD_int, cdParams);
 
                 code.aload(value1Slot);
                 PropertyInfo  info = loadProperty(code, type, propId, true);
@@ -2569,7 +2564,7 @@ public class CommonBuilder
                 loadProperty(code, type, propId, true);
                 loadOptimizedReturnsToStack(code, jmd);
 
-                code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_COMPARE, md);
+                code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_COMPARE, mdCompare);
 
                 // int result on stack: if zero, this property is equal; continue to next
                 // otherwise convert to an Ordered and return
@@ -2602,8 +2597,7 @@ public class CommonBuilder
                 // get and load the nType to the stack (compare param 1)
                 loadCtx(code);
                 loadTypeConstant(code, propType);
-                code.invokestatic(CD_nType, "$ensureType",
-                        MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+                code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
 
                 // invoke the static compare method
                 IdentityConstant idTarget = cmpMethod.getIdentity().getClassIdentity();
@@ -2666,10 +2660,10 @@ public class CommonBuilder
             ClassDesc      cdThis      = art.CD();
             String         hashName    = hashSig.getName();
             String         hashOptName = hashName + OPT;
-            MethodTypeDesc mdWrapper   = MethodTypeDesc.of(CD_Int64, CD_Ctx, CD_nType, cdThis);
+            MethodTypeDesc mdWrapper   = md(CD_Int64, CD_Ctx, CD_nType, cdThis);
             MethodTypeDesc mdOptimized = thisType.isJitPrimitive()
                     ? hashMethod.getJitDesc(this, thisType).optimizedMD
-                    : MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdThis);
+                    : md(CD_long, CD_Ctx, CD_nType, cdThis);
 
             if (!isNativeMethod(hashName, mdWrapper)) {
                 // generate the standard "hashCode" wrapper that delegates to the optimized
@@ -2725,15 +2719,13 @@ public class CommonBuilder
             // type of the primitive and the value can take more than one slot
             Builder.loadCtx(code);
             loadTypeConstant(code, type);
-            code.invokestatic(CD_nType, "$ensureType",
-                    MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+            code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
             Builder.loadCtx(code);
             for (int i = 2, count = mdOptimized.parameterCount(); i < count; i++) {
                 Builder.load(code, mdOptimized.parameterType(i), code.parameterSlot(i));
             }
             Builder.box(code, type);
-            code.invokevirtual(CD_nType, "hashCode$p",
-                    MethodTypeDesc.of(CD_long, CD_Ctx, CD_Hashable));
+            code.invokevirtual(CD_nType, "hashCode$p", md(CD_long, CD_Ctx, CD_Hashable));
             code.lreturn();
             return;
         }
@@ -2774,19 +2766,19 @@ public class CommonBuilder
         ClassDesc cdHashCollector = ClassDesc.of(ByteHashCollector.class.getName());
 
         Builder.loadCtx(code);
-        code.invokevirtual(CD_Ctx, "createHashCollector", MethodTypeDesc.of(cdHashCollector));
+        code.invokevirtual(CD_Ctx, "createHashCollector", md(cdHashCollector));
         // the HashCollector is now on the stack, we do not need to store it into a slot
         // because each call to its add method returns the collector, so as we loop
         // over properties, it will always be on the top of the stack for the next loop
         // or for the final compute call
 
-        MethodTypeDesc mdAdd     = MethodTypeDesc.of(cdHashCollector, CD_long);
-        MethodTypeDesc mdCompute = MethodTypeDesc.of(CD_long);
+        MethodTypeDesc mdAdd     = md(cdHashCollector, CD_long);
+        MethodTypeDesc mdCompute = md(CD_long);
 
         if (baseType != null) {
             // found super class with hashCode method, so call it first
             ClassDesc      cdBase  = ensureClassDesc(baseType);
-            MethodTypeDesc mdSuper = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdBase);
+            MethodTypeDesc mdSuper = md(CD_long, CD_Ctx, CD_nType, cdBase);
 
             // load the hash collector to the stack so we can later add the super class hash code
             loadCtx(code);
@@ -2837,13 +2829,11 @@ public class CommonBuilder
                 // generate the same code that used for primitive constant hashCode$p
                 Builder.loadCtx(code);
                 loadTypeConstant(code, propType);
-                code.invokestatic(CD_nType, "$ensureType",
-                        MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+                code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
                 Builder.loadCtx(code);
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
-                code.invokevirtual(CD_nType, "hashCode$p",
-                        MethodTypeDesc.of(CD_long, CD_Ctx, CD_Hashable));
+                code.invokevirtual(CD_nType, "hashCode$p", md(CD_long, CD_Ctx, CD_Hashable));
                 // long primitive hashCode on the stack
             } else if (propType.isA(pool().typeService())) {
                 buildGetIdentityHashCode(code, prop, valueSlot);
@@ -2858,8 +2848,7 @@ public class CommonBuilder
                 // nType for the property type: nType.$ensureType(Ctx, TypeConstant)
                 loadCtx(code);
                 loadTypeConstant(code, propType);
-                code.invokestatic(CD_nType, "$ensureType",
-                        MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+                code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
 
@@ -2918,8 +2907,8 @@ public class CommonBuilder
             ClassDesc      cdThis        = art.CD();
             String         methodName    = signature.getName();
             String         methodOptName = methodName + OPT;
-            MethodTypeDesc mdWrapper     = MethodTypeDesc.of(CD_Int64, CD_Ctx);
-            MethodTypeDesc mdPrimitive   = MethodTypeDesc.of(CD_long, CD_Ctx);
+            MethodTypeDesc mdWrapper     = md(CD_Int64, CD_Ctx);
+            MethodTypeDesc mdPrimitive   = md(CD_long, CD_Ctx);
 
             if (!isNativeMethod(methodName, mdWrapper)) {
                 // generate the standard "estimateStingLength" wrapper that delegates to the
@@ -2953,9 +2942,9 @@ public class CommonBuilder
         TypeConstant      typeStringable  = pool.typeStringable();
         SignatureConstant sigEstStringLen = pool.sigEstimateStrLen();
         SignatureConstant sigToString     = pool.sigToString();
-        MethodTypeDesc    mdEstStringLen  = MethodTypeDesc.of(CD_long, CD_Ctx);
-        MethodTypeDesc    mdToString      = MethodTypeDesc.of(CD_String, CD_Ctx);
-        MethodTypeDesc    mdStringSize    = MethodTypeDesc.of(CD_long, CD_Ctx);
+        MethodTypeDesc    mdEstStringLen  = md(CD_long, CD_Ctx);
+        MethodTypeDesc    mdToString      = md(CD_String, CD_Ctx);
+        MethodTypeDesc    mdStringSize    = md(CD_long, CD_Ctx);
         int               thisSlot        = 0;
         int               resultSlot      = 2;
 
@@ -3075,12 +3064,12 @@ public class CommonBuilder
         if ((impl != Implementation.Explicit && impl != Implementation.Capped)
             || !thisId.equals(targetId)) {
 
-            String         name = appendSig.getName();
-            MethodTypeDesc md   = MethodTypeDesc.of(CD_AppenderChar, CD_Ctx, CD_AppenderChar);
+            String         name       = appendSig.getName();
+            MethodTypeDesc mdAppendTo = md(CD_AppenderChar, CD_Ctx, CD_AppenderChar);
 
-            if (!isNativeMethod(name, md)) {
+            if (!isNativeMethod(name, mdAppendTo)) {
                 // generate the standard "compare" method
-                classBuilder.withMethodBody(name, md, ClassFile.ACC_PUBLIC, code ->
+                classBuilder.withMethodBody(name, mdAppendTo, ClassFile.ACC_PUBLIC, code ->
                         assembleConstAppendTo(code, thisType));
             }
         }
@@ -3097,9 +3086,9 @@ public class CommonBuilder
         TypeConstant      typeStringable = pool.typeStringable();
         SignatureConstant sigAppendTo    = pool.sigAppendTo();
         SignatureConstant sigToString    = pool.sigToString();
-        MethodTypeDesc    mdAppendTo     = MethodTypeDesc.of(CD_AppenderChar, CD_Ctx, CD_AppenderChar);
-        MethodTypeDesc    mdAdd          = MethodTypeDesc.of(CD_AppenderChar, CD_Ctx, CD_int);
-        MethodTypeDesc    mdToString     = MethodTypeDesc.of(CD_String, CD_Ctx);
+        MethodTypeDesc    mdAppendTo     = md(CD_AppenderChar, CD_Ctx, CD_AppenderChar);
+        MethodTypeDesc    mdAdd          = md(CD_AppenderChar, CD_Ctx, CD_int);
+        MethodTypeDesc    mdToString     = md(CD_String, CD_Ctx);
         int               thisSlot       = 0;
         int               appenderSlot   = 2;
 
@@ -3405,8 +3394,7 @@ public class CommonBuilder
         code.aload(ownerSlot);
         loadProperty(code, thisType, propId, false);
         // call Java's System.identityHashCode(prop);
-        code.invokestatic(CD_JavaSystem, "identityHashCode",
-                          MethodTypeDesc.of(CD_int, CD_JavaObject))
+        code.invokestatic(CD_JavaSystem, "identityHashCode", md(CD_int, CD_JavaObject))
             .i2l();
     }
 
@@ -3993,7 +3981,7 @@ public class CommonBuilder
                 // step 2: get permission to use the memory
                 code.aload(ctxSlot)
                     .ldc(implSize)
-                    .invokevirtual(CD_Ctx, "alloc", MethodTypeDesc.of(CD_void, CD_long));
+                    .invokevirtual(CD_Ctx, "alloc", md(CD_void, CD_long));
 
                 // step 3: (initializer)
                 thisSlot = code.allocateLocal(TypeKind.REFERENCE);
@@ -4019,7 +4007,7 @@ public class CommonBuilder
                 code.localVariable(cctxSlot, "cctx", CD_CtorCtx, startScope, endScope);
             }
             code.aload(ctxSlot)
-                .invokevirtual(CD_Ctx, "ctorCtx", MethodTypeDesc.of(CD_CtorCtx))
+                .invokevirtual(CD_Ctx, "ctorCtx", md(CD_CtorCtx))
                 .astore(cctxSlot)
             ;
 

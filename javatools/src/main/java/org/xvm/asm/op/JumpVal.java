@@ -9,8 +9,6 @@ import java.lang.classfile.Label;
 
 import java.lang.classfile.instruction.SwitchCase;
 
-import java.lang.constant.MethodTypeDesc;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +43,7 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import static java.lang.constant.ConstantDescs.CD_long;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -164,7 +163,7 @@ public class JumpVal
 
                 // we only need to compare the range if there is a chance that it can impact
                 // the result (the range case precedes the exact match case)
-                if (Index == null || Index.intValue() > index) {
+                if (Index == null || Index > index) {
                     ObjectHandle hLow  = (ObjectHandle) ao[0];
                     ObjectHandle hHigh = (ObjectHandle) ao[1];
 
@@ -305,7 +304,7 @@ public class JumpVal
 
             if (algorithm.isNative()) {
                 if (hCase.isNativeEqual()) {
-                    mapJump.put(hCase, Integer.valueOf(iCase));
+                    mapJump.put(hCase, iCase);
                 } else if (fRange) {
                     if (addRange((GenericHandle) hCase, iCase)) {
                         algorithm = Algorithm.NativeRange;
@@ -323,7 +322,7 @@ public class JumpVal
                 } else {
                     algorithm = algorithm.worstOf(Algorithm.NaturalSimple);
 
-                    mapJump.put(hCase, Integer.valueOf(iCase));
+                    mapJump.put(hCase, iCase);
                 }
             }
         }
@@ -362,7 +361,7 @@ public class JumpVal
             index |= HI_EX;
         }
 
-        list.add(new Object[]{hLo, hHi, Integer.valueOf(index)});
+        list.add(new Object[]{hLo, hHi, index});
         return hLo.isNativeEqual();
     }
 
@@ -460,8 +459,8 @@ public class JumpVal
             Constant constant = bctx.getConstant(m_anConstCase[iRow]);
             Label    label    = bctx.ensureLabel(code, nThis + aofCase[iRow]);
             if (constant instanceof RangeConstant range) {
-                int iFirst = ((ByteConstant) range.getEffectiveFirst()).getValue().intValue();
-                int iLast = ((ByteConstant) range.getEffectiveLast()).getValue().intValue();
+                int iFirst = ((ByteConstant) range.getEffectiveFirst()).getValue();
+                int iLast = ((ByteConstant) range.getEffectiveLast()).getValue();
 
                 iMin = Math.min(iMin, iFirst);
                 iMax = Math.max(iMax, iLast);
@@ -473,7 +472,7 @@ public class JumpVal
                 // must be the Null case, which we have already handled
                 continue;
             } else {
-                int iVal = ((ByteConstant) constant).getValue().intValue();
+                int iVal = ((ByteConstant) constant).getValue();
 
                 iMin = Math.min(iMin, iVal);
                 iMax = Math.max(iMax, iVal);
@@ -611,7 +610,7 @@ public class JumpVal
         int   nMin    = Integer.MAX_VALUE;
         int   nMax    = Integer.MIN_VALUE;
         int   cCases  = cRows;
-        int   cSpread = 0;
+        int   cSpread;
 
         Constant[] aConst = new Constant[cRows];
         for (int iRow = 0; iRow < cRows; iRow++) {
@@ -727,7 +726,7 @@ public class JumpVal
         // enumValue -> enumValue.ordinal;
         regArg.load(code);
         bctx.loadCtx(code);
-        code.invokevirtual(regArg.cd(), "ordinal$get$p", MethodTypeDesc.of(CD_long, CD_Ctx))
+        code.invokevirtual(regArg.cd(), "ordinal$get$p", md(CD_long, CD_Ctx))
             .l2i();
 
         Label labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);

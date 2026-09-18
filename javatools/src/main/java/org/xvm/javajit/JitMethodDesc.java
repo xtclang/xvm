@@ -16,6 +16,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_nObject;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.javajit.JitFlavor.NullablePrimitiveWithDefault;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
@@ -201,8 +202,8 @@ public class JitMethodDesc {
             paramCDs[ix++] = params[i].cd;
         }
 
-        return MethodTypeDesc.of(returns.length == 0 ? CD_void : returns[0].cd, paramCDs);
-        }
+        return md(returns.length == 0 ? CD_void : returns[0].cd, paramCDs);
+    }
 
     /**
      * @return the number of extra parameters

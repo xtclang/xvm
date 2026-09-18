@@ -12,6 +12,7 @@ import org.xvm.asm.constants.TypeConstant;
 import static org.xvm.asm.Op.*;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * An interface of default utility methods for implementing in-place operations.
@@ -432,19 +433,19 @@ public interface InPlaceSupport
         int            op       = getOpCode();
         int            slot     = reg.slot();
         ClassDesc      cd       = bctx.builder.ensureClassDesc(baseType);
-        MethodTypeDesc md       = MethodTypeDesc.of(cd, CD_Ctx);
+        MethodTypeDesc mdSeqOp  = md(cd, CD_Ctx);
         switch (getOpCode()) {
             case OP_IP_DEC, OP_IIP_DEC, OP_PIP_DEC:
                 reg.load(code);
                 bctx.loadCtx(code);
-                code.invokevirtual(cd, "prevValue", md)
+                code.invokevirtual(cd, "prevValue", mdSeqOp)
                     .astore(slot);
                 break;
 
             case OP_IP_INC, OP_IIP_INC, OP_PIP_INC:
                 reg.load(code);
                 bctx.loadCtx(code);
-                code.invokevirtual(cd, "nextValue", md)
+                code.invokevirtual(cd, "nextValue", mdSeqOp)
                     .astore(slot);
                 break;
 
@@ -452,7 +453,7 @@ public interface InPlaceSupport
                 reg.load(code);
                 code.dup();
                 bctx.loadCtx(code);
-                code.invokevirtual(cd, "prevValue", md)
+                code.invokevirtual(cd, "prevValue", mdSeqOp)
                     .astore(slot);
                 break;
 
@@ -460,14 +461,14 @@ public interface InPlaceSupport
                 reg.load(code);
                 code.dup();
                 bctx.loadCtx(code);
-                code.invokevirtual(cd, "nextValue", md)
+                code.invokevirtual(cd, "nextValue", mdSeqOp)
                     .astore(slot);
                 break;
 
             case OP_IP_DECB, OP_IIP_DECB, OP_PIP_DECB:
                 reg.load(code);
                 bctx.loadCtx(code);
-                code.invokevirtual(cd, "prevValue", md)
+                code.invokevirtual(cd, "prevValue", mdSeqOp)
                     .dup()
                     .astore(slot);
                 break;
@@ -475,7 +476,7 @@ public interface InPlaceSupport
             case OP_IP_INCB, OP_IIP_INCB, OP_PIP_INCB:
                 reg.load(code);
                 bctx.loadCtx(code);
-                code.invokevirtual(cd, "nextValue", md)
+                code.invokevirtual(cd, "nextValue", mdSeqOp)
                     .dup()
                     .astore(slot);
                 break;

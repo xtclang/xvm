@@ -5,7 +5,6 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
-import java.lang.constant.MethodTypeDesc;
 
 import java.util.Collection;
 
@@ -194,8 +193,7 @@ public class FPNumberBuilder extends NumberBuilder {
                 break;
             case "F":
                 code.fload(slot)
-                    .invokestatic(CD_JavaFloat, "floatToRawIntBits",
-                            MethodTypeDesc.of(CD_int, CD_float))
+                    .invokestatic(CD_JavaFloat, "floatToRawIntBits", md(CD_int, CD_float))
                     .loadConstant(Integer.MAX_VALUE)
                     .iand()
                     .loadConstant(sigLen)
@@ -204,8 +202,7 @@ public class FPNumberBuilder extends NumberBuilder {
                 break;
             case "D":
                 code.dload(slot)
-                    .invokestatic(CD_JavaDouble, "doubleToRawLongBits",
-                            MethodTypeDesc.of(CD_long, CD_double))
+                    .invokestatic(CD_JavaDouble, "doubleToRawLongBits", md(CD_long, CD_double))
                     .loadConstant(Long.MAX_VALUE)
                     .land()
                     .loadConstant(sigLen)
@@ -252,8 +249,7 @@ public class FPNumberBuilder extends NumberBuilder {
                 break;
             case "F":
                 code.fload(slot)
-                    .invokestatic(CD_JavaFloat, "floatToRawIntBits",
-                            MethodTypeDesc.of(CD_int, CD_float))
+                    .invokestatic(CD_JavaFloat, "floatToRawIntBits", md(CD_int, CD_float))
                     .loadConstant(shift)
                     .ishl()
                     .loadConstant(shift)
@@ -262,8 +258,7 @@ public class FPNumberBuilder extends NumberBuilder {
                 break;
             case "D":
                 code.dload(slot)
-                    .invokestatic(CD_JavaDouble, "doubleToRawLongBits",
-                            MethodTypeDesc.of(CD_long, CD_double))
+                    .invokestatic(CD_JavaDouble, "doubleToRawLongBits", md(CD_long, CD_double))
                     .loadConstant(shift)
                     .lshl()
                     .loadConstant(shift)
@@ -334,7 +329,7 @@ public class FPNumberBuilder extends NumberBuilder {
         if (mode != null) {
             loadBinaryValueAsDouble(code, valueCD);
             code.invokestatic(CD_JavaMath, mode.equals("FLOOR") ? "floor" : "ceil",
-                    MethodTypeDesc.of(CD_double, CD_double));
+                    md(CD_double, CD_double));
             narrowDoubleToCarrier(code, valueCD);
             addPrimitiveReturn(code, jmd);
             return;
@@ -351,9 +346,9 @@ public class FPNumberBuilder extends NumberBuilder {
             .new_(CD_BigDecimal)
             .dup();
         loadBinaryValueAsDouble(code, valueCD);
-        code.invokespecial(CD_BigDecimal, INIT_NAME, MethodTypeDesc.of(CD_void, CD_double));
+        code.invokespecial(CD_BigDecimal, INIT_NAME, md(CD_void, CD_double));
         generateSetScale(code, jmd, null);
-        code.invokevirtual(CD_BigDecimal, "doubleValue", MethodTypeDesc.of(CD_double));
+        code.invokevirtual(CD_BigDecimal, "doubleValue", md(CD_double));
         narrowDoubleToCarrier(code, valueCD);
         addPrimitiveReturn(code, jmd);
     }
@@ -365,7 +360,7 @@ public class FPNumberBuilder extends NumberBuilder {
         if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
             // an FP8 value is carried as its 8-bit encoding, so re-encode the result
             code.d2f()
-                .invokestatic(fp8CD, "$toBits", MethodTypeDesc.of(CD_int, CD_float));
+                .invokestatic(fp8CD, "$toBits", md(CD_int, CD_float));
         } else if (valueCD.equals(CD_float)) {
             code.d2f();
         }
@@ -376,10 +371,10 @@ public class FPNumberBuilder extends NumberBuilder {
      */
     protected void loadIsFinite(CodeBuilder code, ClassDesc valueCD) {
         if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
-            code.invokestatic(fp8CD, "$finite", MethodTypeDesc.of(CD_boolean, CD_int));
+            code.invokestatic(fp8CD, "$finite", MD_FP8Predicate);
         } else {
             code.invokestatic(valueCD.equals(CD_float) ? CD_JavaFloat : CD_JavaDouble,
-                    "isFinite", MethodTypeDesc.of(CD_boolean, valueCD));
+                    "isFinite", md(CD_boolean, valueCD));
         }
     }
 
@@ -393,10 +388,8 @@ public class FPNumberBuilder extends NumberBuilder {
 
         Label finite = code.newLabel();
         loadTarget(code, jmd);
-        code.invokestatic(CD_DecimalFPNumber, "$leftmost7Bits",
-                    MethodTypeDesc.of(CD_int, valueCDs))
-            .invokestatic(CD_DecimalFPNumber, "$isFinite",
-                    MethodTypeDesc.of(CD_boolean, CD_int))
+        code.invokestatic(CD_DecimalFPNumber, "$leftmost7Bits", md(CD_int, valueCDs))
+            .invokestatic(CD_DecimalFPNumber, "$isFinite", md(CD_boolean, CD_int))
             .ifne(finite);
         loadTarget(code, jmd);
         addPrimitiveReturn(code, jmd);
@@ -404,13 +397,12 @@ public class FPNumberBuilder extends NumberBuilder {
         code.labelBinding(finite)
             .aload(code.parameterSlot(jmd.optimizedCtx()));
         loadTarget(code, jmd);
-        code.invokestatic(valueCD, "$toBigDecimal",
-                MethodTypeDesc.of(CD_BigDecimal, valueCDs));
+        code.invokestatic(valueCD, "$toBigDecimal", md(CD_BigDecimal, valueCDs));
         generateSetScale(code, jmd, mode);
 
         ClassDesc returnCD = jmd.optimizedMD.returnType();
         code.invokestatic(valueCD, returnCD.equals(CD_int) ? "$toIntBits" : "$toLongBits",
-                    MethodTypeDesc.of(returnCD, CD_Ctx, CD_BigDecimal));
+                    md(returnCD, CD_Ctx, CD_BigDecimal));
         addReturn(code, returnCD);
     }
 
@@ -425,7 +417,7 @@ public class FPNumberBuilder extends NumberBuilder {
             // already a double
         } else if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
             // an FP8 value is carried as its 8-bit encoding, so decode it before widening
-            code.invokestatic(fp8CD, "$toFloat", MethodTypeDesc.of(CD_float, CD_int))
+            code.invokestatic(fp8CD, "$toFloat", md(CD_float, CD_int))
                 .f2d();
         } else {
             throw new IllegalStateException("Unsupported binary FPNumber type " + thisType);
@@ -472,14 +464,12 @@ public class FPNumberBuilder extends NumberBuilder {
                 .getstatic(CD_RoundingMode, "UP", CD_RoundingMode)
                 .goto_(loaded)
                 .labelBinding(specified)
-                .invokevirtual(CD_Rounding, "$roundingMode",
-                        MethodTypeDesc.of(CD_RoundingMode))
+                .invokevirtual(CD_Rounding, "$roundingMode", md(CD_RoundingMode))
                 .labelBinding(loaded);
         } else {
             code.getstatic(CD_RoundingMode, mode, CD_RoundingMode);
         }
-        code.invokevirtual(CD_BigDecimal, "setScale",
-                MethodTypeDesc.of(CD_BigDecimal, CD_int, CD_RoundingMode));
+        code.invokevirtual(CD_BigDecimal, "setScale", md(CD_BigDecimal, CD_int, CD_RoundingMode));
     }
 
     private static final ClassDesc CD_BigDecimal = ClassDesc.of("java.math.BigDecimal");

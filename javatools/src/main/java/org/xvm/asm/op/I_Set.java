@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
-import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -34,6 +33,7 @@ import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -176,7 +176,7 @@ public class I_Set
         bctx.loadCtx(code);
         bctx.loadArgument(code, m_nIndex);
         bctx.loadArgument(code, getValueId());
-        code.invokevirtual(regArray.cd(), "setElement$pi", MethodTypeDesc.of(CD_void, cdArgs));
+        code.invokevirtual(regArray.cd(), "setElement$pi", md(CD_void, cdArgs));
     }
 
     // ----- fields --------------------------------------------------------------------------------

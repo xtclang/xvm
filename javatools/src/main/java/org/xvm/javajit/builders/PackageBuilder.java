@@ -5,12 +5,10 @@ import java.lang.classfile.ClassFile;
 import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
-import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
 
-import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 /**
@@ -42,7 +40,6 @@ public class PackageBuilder
         code.aload(0)
             .aload(code.parameterSlot(0));
         loadTypeConstant(code, thisType);
-        code.invokespecial(getSuperCD(), INIT_NAME,
-                MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant));
+        code.invokespecial(getSuperCD(), INIT_NAME, MD_xvmInitType);
     }
 }
