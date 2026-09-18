@@ -73,7 +73,7 @@ public class ExceptionBuilder extends CommonBuilder {
      *     }
      *</pre></code>
      */
-    public void assembleJavaException(@SuppressWarnings("unused") String className, ClassBuilder classBuilder) {
+    public void assembleJavaException(String className, ClassBuilder classBuilder) {
         TypeConstant superType = typeInfo.getExtends();
         ClassDesc    superCD   = getJavaExceptionSuperCD();
         ClassDesc    exCD      = ensureClassDesc(thisType);

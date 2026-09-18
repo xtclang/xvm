@@ -26,7 +26,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 
 /**
  * The builder for Enumeration types.
- * <p>
+ *
  * It overrides the CommonBuilder to do the following:
  *   - augment the Java constructor
  *   - add synthetic "$names" and "$values" properties
@@ -92,12 +92,12 @@ public class EnumerationBuilder extends CommonBuilder {
 
         classBuilder.withMethodBody(getterName + OPT, jmDesc.optimizedMD, ClassFile.ACC_PUBLIC,
                 code -> code.loadConstant((long) enumValues.length)
-                    .lreturn());
+                            .lreturn());
 
         classBuilder.withMethodBody(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC,
                 code -> code.loadConstant((long) enumValues.length)
-                    .invokestatic(CD_Int64, "$box", MethodTypeDesc.of(CD_Int64, CD_long))
-                    .areturn());
+                            .invokestatic(CD_Int64, "$box", MethodTypeDesc.of(CD_Int64, CD_long))
+                            .areturn());
     }
 
     private void assembleNamesProp(ClassBuilder classBuilder) {
@@ -181,10 +181,10 @@ public class EnumerationBuilder extends CommonBuilder {
         int            flags   = ClassFile.ACC_PUBLIC;
 
         classBuilder.withMethodBody("<init>", md, flags, code -> code.aload(0)
-            .aload(code.parameterSlot(0))
-            .getstatic(art.CD(), "$sc0", CD_TypeConstant)
-            .invokespecial(CD_Enumeration, "<init>", mdSuper)
-            .return_());
+                .aload(code.parameterSlot(0))
+                .getstatic(art.CD(), "$sc0", CD_TypeConstant)
+                .invokespecial(CD_Enumeration, "<init>", mdSuper)
+                .return_());
     }
 
     /**

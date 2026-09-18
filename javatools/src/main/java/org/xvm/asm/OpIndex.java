@@ -498,7 +498,7 @@ public abstract class OpIndex
         ClassDesc[] cds;
         ClassDesc   cdEl;
         if (javaPrimitive) {
-            cdEl = JitTypeDesc.getJavaPrimitive(typeEl);
+            cdEl = JitTypeDesc.requireJavaPrimitive(typeEl);
             cds  = new ClassDesc[]{cdEl};
         } else {
             assert xvmPrimitive;

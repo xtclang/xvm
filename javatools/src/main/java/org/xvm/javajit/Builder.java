@@ -1347,7 +1347,7 @@ public abstract class Builder {
         TypeConstant typeSansNull = type.removeNullable();
         ClassDesc[]  primitiveCds = typeSansNull.isXvmPrimitive()
                                     ? JitTypeDesc.getXvmPrimitiveClasses(typeSansNull)
-                                    : new ClassDesc[]{JitTypeDesc.getJavaPrimitive(typeSansNull)};
+                                    : new ClassDesc[]{JitTypeDesc.requireJavaPrimitive(typeSansNull)};
 
         code.dup();
         loadNull(code);

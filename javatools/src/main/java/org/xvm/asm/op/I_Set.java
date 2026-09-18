@@ -164,7 +164,7 @@ public class I_Set
         ClassDesc[] cdArgs;
         ClassDesc   cdEl;
         if (javaPrimitive) {
-            cdEl   = JitTypeDesc.getJavaPrimitive(typeEl);
+            cdEl   = JitTypeDesc.requireJavaPrimitive(typeEl);
             cdArgs = new ClassDesc[]{CD_Ctx, CD_long, cdEl};
         } else {
             assert xvmPrimitive;

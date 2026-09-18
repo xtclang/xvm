@@ -2636,7 +2636,7 @@ public class BuildContext {
             }
             TypeConstant type = propInfo.getType().removeNullable();
             cdField = type.isJavaPrimitive()
-                            ? JitTypeDesc.getPrimitiveFieldClass(type)
+                            ? JitTypeDesc.requirePrimitiveFieldClass(type)
                             : returns[0].cd;
         } else {
             returns = new JitParamDesc[] {jmd.standardReturns[0]};
@@ -2892,7 +2892,7 @@ public class BuildContext {
             }
             TypeConstant type = propInfo.getType().removeNullable();
             cdField = type.isJavaPrimitive()
-                            ? JitTypeDesc.getPrimitiveFieldClass(type)
+                            ? JitTypeDesc.requirePrimitiveFieldClass(type)
                             : params[0].cd;
         } else {
             params  = new JitParamDesc[] {jmd.standardParams[0]};
