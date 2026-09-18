@@ -18,6 +18,7 @@ module TestLiterals {
         testDurations();
 //        testLexer();
         testInterval();
+        testLiteralText();
     }
 
     void testFactors() {
@@ -410,5 +411,40 @@ module TestLiterals {
 
         for (Int i : 1..<2) { count++; }
         assert count == 2;
+    }
+
+    /**
+     * An IntLiteral or FPLiteral keeps the text it was written as, so an explicit sign, a radix
+     * prefix and digit separators all survive; regenerating the text from the value loses them.
+     */
+    void testLiteralText() {
+        console.print("\n** testLiteralText()");
+
+        IntLiteral plusOne  = +1;
+        IntLiteral minusOne = -1;
+        IntLiteral zero     = 0;
+        IntLiteral one      = 1;
+        IntLiteral grouped  = +1_000;
+        IntLiteral hex      = 0x1F;
+        IntLiteral plusHex  = +0x1F;
+
+        assert plusOne.toString()  == "+1";
+        assert minusOne.toString() == "-1";
+        assert zero.toString()     == "0";
+        assert one.toString()      == "1";
+        assert grouped.toString()  == "+1_000";
+        assert hex.toString()      == "0x1F";
+        assert plusHex.toString()  == "+0x1F";
+
+        // the same holds for the IntLiteral reached through a constant, such as Signum.factor
+        assert Signum.Negative.factor.toString() == "-1";
+        assert Signum.Zero.factor.toString()     == "0";
+        assert Signum.Positive.factor.toString() == "+1";
+
+        FPLiteral plusHalf  = +1.5;
+        FPLiteral minusHalf = -1.5;
+
+        assert plusHalf.toString()  == "+1.5";
+        assert minusHalf.toString() == "-1.5";
     }
 }

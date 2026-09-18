@@ -440,6 +440,7 @@ public class xIntLiteral
             assert piValue != null;
 
             m_piValue = piValue;
+            m_hText   = hText;
         }
 
         public StringHandle getText() {
