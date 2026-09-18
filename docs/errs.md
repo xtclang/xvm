@@ -346,20 +346,74 @@ Throughout: `./gradlew spotlessCheck` alone before every commit, since locally `
 Nothing in the seven phases. What remains is one decision and the work that follows from it, plus
 two independent questions.
 
-**The ownership decision.** Who owns the compile-time listener - `ConstantPool`, `FileStructure`,
-or the `Compiler`? Phase 5 was completed around this rather than through it: the hazards went, but
-`FileStructure` still holds a settable field and still consults the ambient pool. Settling this is
-what retires the last 8 null-coalescing sites and the RUNTIME/silent asymmetry, and it is the
-larger piece: 8 constructors and 67 call sites, and deleting the no-arg `ensureTypeInfo()` overload
-that depends on it would touch 126 call sites across 46 files.
+### Ownership: the request owns it, and nothing else should
+
+Decided by looking at the two consumers rather than in the abstract.
+
+**The Gradle plugin already does the right thing.** `IsolatedDirectExecutor` builds a fresh
+`ErrorList(100)` per compile, per run and per test, and passes it in:
+
+```java
+final var err = new ErrorList(DEFAULT_ERROR_LIMIT);
+return Launcher.launch(options, console, err);
+```
+
+One listener per request, created by the caller, discarded with the result. Gradle runs tasks in
+parallel, so several of these can be live at once in one JVM.
+
+**The language server needs exactly the same shape.** `Adapter.compile(uri, content)` returns a
+`CompilationResult` carrying `List<Diagnostic>`, where `Diagnostic` is already an immutable record
+of location, severity, message and code - which is `ErrorInfo` plus `Site` under a different name.
+The existing adapters note that `compile()` runs on the LSP message thread while reads happen on
+the ForkJoin pool, so per-document results are already held in a `ConcurrentHashMap`. A compiler
+adapter would compile a document with its own listener and convert what it collected.
+
+**So the listener must not be owned by a long-lived structure.** Putting it on `ConstantPool` -
+which is what the prior-art branch did - is wrong for these two consumers, and for the reason that
+branch itself gives when arguing against a shared sink: a pool outlives the request, and library
+pools are shared across requests, so two concurrent compiles would race, last writer winning, each
+reporting the other's diagnostics. A `FileStructure` outlives the request too; that is exactly why
+leaving one silenced after a failed compile was a bug worth fixing.
+
+The listener is therefore a **parameter**, which it already is at 586 sites and is now non-null.
+Nothing needs re-homing.
+
+**Which reframes the remaining 8 sites.** They are not an ownership question. They exist to serve
+`ensureTypeInfo()` with no argument, and `XvmStructure.log` where no listener is in hand - and the
+reason those have no listener is that `TypeInfo` is *memoized*. Whichever caller builds it first
+produces its diagnostics; a later caller that actually cared gets the cached result and hears
+nothing. Which caller owns them is decided by call ordering.
+
+The fix is to make `TypeInfo` carry its own diagnostics and replay them to whoever asks, rather
+than to find an ambient listener to report them to once. Then:
+
+- `ensureTypeInfo()` with no argument either goes away or means "the cached info, reporting
+  nothing";
+- `FileStructure.getErrorListener()`, its field and the ambient pool lookup are deleted rather than
+  re-homed;
+- the `RUNTIME`-throws-versus-silent asymmetry goes with them, because nothing looks for an absent
+  listener any more.
+
+That is a bigger piece of work than the seven phases and should be its own plan. It is a
+memoization problem wearing an ownership problem's clothes.
+
+### Thread safety without synchronization
+
+`ErrorList` is not thread-safe. The way to keep it that way is for a listener never to be shared:
+one per request, as both consumers already do, so there is nothing to synchronize. A branch is
+per-subtree and merges back into its parent on one thread, which does not change that.
+
+Where something genuinely does cross threads, make it immutable rather than locked. `ErrorInfo`
+and `Site` are already values and should become records; a host that fans diagnostics out to
+another thread is then safe by construction. If a concurrent sink is ever unavoidable - parallel
+compilation reporting into one list - it should accumulate lock-free rather than with a monitor,
+and be a separate implementation of the interface rather than a change to `ErrorList`, so the
+single-threaded path pays nothing.
 
 ## Open questions
-- Should `log()` keep returning `boolean`? It currently means *abort*, which conflates recording
+- **Postponed until after the PR.** Should `log()` keep returning `boolean`? It currently means *abort*, which conflates recording
   with control flow and leaves a host that only wants to watch with no correct value to return.
   The prior art made it `void` and asked `isAbortDesired()` separately; only 3–5 call sites read
   the result. Cheap, but it is an API break.
-- Is `ErrorList` required to be thread-safe? It is not today. A resident LSP compiler serving
-  concurrent requests would need it, or would need per-request lists that never share.
-
-Both of these bite the LSP specifically and neither is large; they are held here because they are
-decisions rather than work.
+Thread safety is answered above: per-request listeners, immutable value types, and no explicit
+synchronization.
