@@ -354,12 +354,12 @@ shape the prior-art branch reached, measured against this tree.
 | `log()` returns `void`, abort asked separately | done |
 | `ErrorListener.RUNTIME` stops throwing from inside `log()` | done |
 | `ResolutionCollector.getErrorListener()` - the listener smuggled through a callback interface | done |
-| `TypeInfo` carries and replays its own diagnostics | not started; the real shape of the last 8 sites |
+| `TypeInfo` carries and replays its own diagnostics | mechanism POC done; the 126-call-site migration is not |
 | `EvalCompiler.m_errs` / `ModuleInfo.Node.m_errs` final and created with their owner | not started |
 | Runtime-side listener: `Container`, the connector, `recordRuntimeFailure` | not started |
-| Failures with nowhere to go: 56 `System.err`/`printStackTrace`, 34 empty catches | not started |
-| `Origin` (thread, fiber) stamped on each diagnostic | not started |
-| Decorators - tee, SLF4J, JFR sinks | not started, and not needed until a host asks |
+| Failures with nowhere to go: 56 `System.err`, 35 empty catches | audited; see `errs-audit.md` |
+| `Origin` (thread, fiber) stamped on each diagnostic | POC done, unconsumed |
+| Decorators - tee, SLF4J, JFR sinks | `tee` done, the rest not needed until a host asks |
 | `ErrorList` thread-safety | **answered differently**; see below |
 
 None of it blocks an LSP that compiles a document with its own listener and reads what it
