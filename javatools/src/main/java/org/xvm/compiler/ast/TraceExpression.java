@@ -29,7 +29,7 @@ public class TraceExpression
         assert expr.isValidated();
 
         finishValidations(null, null, expr.getTypes(), expr.getTypeFit(), expr.toConstants(),
-                ErrorListener.BLACKHOLE);
+                ErrorListener.PROBE);
     }
 
     // ----- accessors -----------------------------------------------------------------------------

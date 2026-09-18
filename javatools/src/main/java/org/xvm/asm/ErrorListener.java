@@ -217,6 +217,20 @@ public interface ErrorListener {
     }
 
     /**
+     * Obtain a listener for the remainder of a computation that has become incomplete.
+     *
+     * A result built from incomplete information produces diagnostics that describe the
+     * incompleteness rather than the user's code, and reporting them buries the one diagnostic that
+     * matters under a cascade of consequences. This names that decision, which was previously made
+     * by overwriting the caller's listener with a silent one.
+     *
+     * @return a listener that discards what the rest of this computation has to say
+     */
+    default ErrorListener suppressCascade() {
+        return PROBE;
+    }
+
+    /**
      * @return true if the ErrorListener has decided to abort the process that reported the error
      */
     default boolean isAbortDesired() {
@@ -252,8 +266,12 @@ public interface ErrorListener {
      * A simple implementation of the ErrorListener that converts reported errors to ErrorInfo
      * objects and routes them to a single sink method.
      */
-    class BlackholeErrorListener
+    class SilentErrorListener
             implements ErrorListener {
+        public SilentErrorListener(String sName) {
+            f_sName = sName;
+        }
+
         @Override
         public boolean log(ErrorInfo err) {
             return false;
@@ -271,8 +289,10 @@ public interface ErrorListener {
 
         @Override
         public String toString() {
-            return "(Blackhole)";
+            return f_sName;
         }
+
+        private final String f_sName;
     }
 
     // ----- inner class: Runtime ErrorListener ----------------------------------------------------
@@ -564,7 +584,26 @@ public interface ErrorListener {
     /**
      * Stateless ErrorListeners.
      */
-    ErrorListener BLACKHOLE = new BlackholeErrorListener();
+    /**
+     * The listener for a question: speculative work whose failure is the answer, and whose failure
+     * must therefore not be audible. The compiler constantly asks "would this expression fit that
+     * type?", and the return value - not a diagnostic - is what the caller acts on.
+     *
+     * Behaviourally identical to {@link #BLACKHOLE}, and deliberately so: nothing may branch on
+     * which of the two it holds. They are separate constants because they are separate intentions,
+     * and because grepping for this one is the list of the compiler's speculative paths.
+     *
+     * Not for work whose failure the user should hear about if every alternative also fails; that
+     * is {@link #branch}.
+     */
+    ErrorListener PROBE     = new SilentErrorListener("(Probe)");
+
+    /**
+     * The listener for a caller that has no sink to attach: the diagnostics are genuinely not
+     * wanted by anyone. A convenience overload that wants no diagnostics says so by naming this,
+     * so that "I do not want them" and "I did not think about them" no longer look alike.
+     */
+    ErrorListener BLACKHOLE = new SilentErrorListener("(Blackhole)");
     ErrorListener RUNTIME   = new RuntimeErrorListener();
 
     /**
