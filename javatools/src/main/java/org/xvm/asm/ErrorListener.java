@@ -71,6 +71,118 @@ public interface ErrorListener {
         return log(new ErrorInfo(severity, sCode, aoParam, xs));
     }
 
+    // ----- reporting -----------------------------------------------------------------------------
+
+    /**
+     * Report a diagnostic.
+     *
+     * The message parameters are the trailing arguments, which is why the location is a
+     * {@link Site} rather than the two shapes it takes: an {@code Object[]} in the middle of the
+     * signature is what the older overloads need in order to leave room for the location after it,
+     * and it is why call sites have to write {@code new Object[]&#123;...&#125;} by hand.
+     *
+     * @param severity  the severity of the diagnostic
+     * @param sCode     the error code that identifies the message
+     * @param site      where the diagnostic belongs; see {@link #at} and {@link #in}
+     * @param aoParam   the message parameters
+     *
+     * @return true to attempt to abort the process that reported the error
+     */
+    default boolean log(Severity severity, String sCode, Site site, Object... aoParam) {
+        return switch (site) {
+            case Site.In in -> log(new ErrorInfo(severity, sCode, aoParam,
+                    in.source(), in.lPosStart(), in.lPosEnd()));
+            case Site.At at -> log(new ErrorInfo(severity, sCode, aoParam, at.xs()));
+            case Site.None ignore -> log(new ErrorInfo(severity, sCode, aoParam, null, 0, 0));
+        };
+    }
+
+    /**
+     * Report that the caller's operation failed.
+     *
+     * @see #log(Severity, String, Site, Object...)
+     */
+    default boolean error(String sCode, Site site, Object... aoParam) {
+        return log(Severity.ERROR, sCode, site, aoParam);
+    }
+
+    /**
+     * Report something the compiler recovered from.
+     *
+     * @see #log(Severity, String, Site, Object...)
+     */
+    default boolean warn(String sCode, Site site, Object... aoParam) {
+        return log(Severity.WARNING, sCode, site, aoParam);
+    }
+
+    /**
+     * Report something that is only being traced.
+     *
+     * @see #log(Severity, String, Site, Object...)
+     */
+    default boolean info(String sCode, Site site, Object... aoParam) {
+        return log(Severity.INFO, sCode, site, aoParam);
+    }
+
+    /**
+     * Report that the caller cannot continue. Throw on the next line; a diagnostic is a report,
+     * not a control-flow mechanism, and nothing should depend on what the listener does with it.
+     *
+     * @see #log(Severity, String, Site, Object...)
+     */
+    default boolean fatal(String sCode, Site site, Object... aoParam) {
+        return log(Severity.FATAL, sCode, site, aoParam);
+    }
+
+    /**
+     * @param xs  the structure a diagnostic is about
+     *
+     * @return the site of a diagnostic about an XVM structure
+     */
+    static Site at(XvmStructure xs) {
+        return new Site.At(xs);
+    }
+
+    /**
+     * @param source     the source being compiled
+     * @param lPosStart  where the diagnostic starts
+     * @param lPosEnd    where it ends
+     *
+     * @return the site of a diagnostic about a span of source
+     */
+    static Site in(Source source, long lPosStart, long lPosEnd) {
+        return new Site.In(source, lPosStart, lPosEnd);
+    }
+
+    /**
+     * Where a diagnostic belongs.
+     *
+     * A listener receives the location as one of a small closed set of shapes, so a host that
+     * republishes diagnostics - an LSP server turning them into editor squiggles, say - can switch
+     * over them exhaustively instead of testing which of several nullable fields was populated.
+     */
+    sealed interface Site {
+        /**
+         * A diagnostic about a span of source.
+         */
+        record In(Source source, long lPosStart, long lPosEnd) implements Site {}
+
+        /**
+         * A diagnostic about an XVM structure, whose location is wherever that structure is.
+         */
+        record At(XvmStructure xs) implements Site {}
+
+        /**
+         * A diagnostic with no location.
+         */
+        record None() implements Site {}
+    }
+
+    /**
+     * The site of a diagnostic that is not about any particular place.
+     */
+    Site NOWHERE = new Site.None();
+
     /**
      * Branch this ErrorListener by creating a new one that will collect subsequent errors
      * in the same manner as this one until it is {@link #merge() merged} or discarded in the
@@ -221,6 +333,19 @@ public interface ErrorListener {
             m_aoParam  = aoParam;
             m_xs       = xs;
             // TODO need to be able to ask the XVM structure for the source & location
+        }
+
+        /**
+         * The location of this diagnostic, as a closed set of shapes rather than as several
+         * fields of which some are null. A host that republishes diagnostics can switch over the
+         * result exhaustively.
+         *
+         * @return where this diagnostic belongs
+         */
+        public Site site() {
+            return m_source != null ? new Site.In(m_source, m_lPosStart, m_lPosEnd)
+                 : m_xs     != null ? new Site.At(m_xs)
+                                    : NOWHERE;
         }
 
         /**
