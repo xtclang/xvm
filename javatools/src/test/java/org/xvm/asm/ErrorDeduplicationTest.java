@@ -61,6 +61,39 @@ public class ErrorDeduplicationTest {
         assertEquals(1, errs.getErrors().size());
     }
 
+    /**
+     * The origin says which thread reported a diagnostic. It must not take part in deduplication:
+     * two reports of the same problem from two threads are one problem, and keying on the thread
+     * would turn every duplicate into a distinct diagnostic - which is the failure this class
+     * exists to prevent.
+     */
+    @Test
+    public void testTheOriginIsNotPartOfTheIdentity() throws Exception {
+        Source    source = new Source(SOURCE);
+        ErrorList errs   = new ErrorList(10);
+
+        errs.log(Severity.ERROR, CODE, new Object[]{"a", "b"}, source, 0, 10);
+
+        // the same diagnostic, reported from a different thread
+        Thread other = new Thread(() ->
+                errs.log(Severity.ERROR, CODE, new Object[]{"a", "b"}, source, 0, 10), "other");
+        other.start();
+        other.join();
+
+        assertEquals(1, errs.getErrors().size(), "the same problem twice is still one problem");
+    }
+
+    @Test
+    public void testTheOriginRecordsTheReportingThread() {
+        Source    source = new Source(SOURCE);
+        ErrorList errs   = new ErrorList(10);
+
+        errs.log(Severity.ERROR, CODE, new Object[]{"a", "b"}, source, 0, 10);
+
+        assertEquals(Thread.currentThread().getName(),
+                errs.getErrors().get(0).origin().thread());
+    }
+
     private static final String SOURCE = "module TestSimple { void run() {} }";
     private static final String CODE   = "PARSER-03";
 }
