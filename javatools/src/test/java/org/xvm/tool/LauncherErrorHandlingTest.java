@@ -67,13 +67,12 @@ class LauncherErrorHandlingTest {
         private Severity worstSeverity = NONE;
 
         @Override
-        public boolean log(final ErrorInfo err) {
+        public void log(final ErrorInfo err) {
             severities.add(err.getSeverity());
             errors.add(err.getCode() + ": " + err);
             if (err.getSeverity().compareTo(worstSeverity) > 0) {
                 worstSeverity = err.getSeverity();
             }
-            return false; // Don't abort
         }
 
         @SuppressWarnings("unused")
