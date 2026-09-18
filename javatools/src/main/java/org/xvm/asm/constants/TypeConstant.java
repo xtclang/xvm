@@ -96,6 +96,7 @@ import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.Builder.XVM_PRIMITIVE_COMPARE;
 import static org.xvm.javajit.Builder.XVM_PRIMITIVE_EQUALS;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
@@ -108,7 +109,6 @@ import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyAddAll;
-import static org.xvm.javajit.Builder.md;
 
 /**
  * A base class for the various forms of Constants that will represent data types.

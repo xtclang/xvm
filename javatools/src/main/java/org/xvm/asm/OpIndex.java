@@ -42,10 +42,10 @@ import static java.lang.constant.ConstantDescs.CD_void;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.MD_xvmVoid;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-import static org.xvm.javajit.Builder.md;
 
 /**
  * Base class for I_ (index based) and IIP_ (index based in-place) op codes.

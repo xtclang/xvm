@@ -53,12 +53,12 @@ import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nType;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-import static org.xvm.javajit.Builder.md;
 
 /**
  * Common base for CALL_ ops.

@@ -43,10 +43,10 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import static java.lang.constant.ConstantDescs.CD_long;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-import static org.xvm.javajit.Builder.md;
 
 /**
  * JMP_VAL rvalue, #:(CONST, addr), addr-default ; if value equals a constant, jump to address, otherwise default

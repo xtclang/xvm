@@ -32,10 +32,10 @@ import static org.xvm.javajit.Builder.CD_JavaObject;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nMethod;
 import static org.xvm.javajit.Builder.CD_nObject;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-import static org.xvm.javajit.Builder.md;
 
 /**
  * MBIND rvalue-target, CONST-METHOD, lvalue-fn-result

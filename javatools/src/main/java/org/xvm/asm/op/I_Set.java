@@ -33,10 +33,10 @@ import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-import static org.xvm.javajit.Builder.md;
 
 /**
  * I_SET rvalue-target, rvalue-ix, rvalue ; T[ix] = T

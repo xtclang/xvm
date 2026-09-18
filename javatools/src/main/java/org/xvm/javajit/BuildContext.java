@@ -100,6 +100,7 @@ import static org.xvm.javajit.Builder.CD_nTuple;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.OPT;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
@@ -111,7 +112,6 @@ import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
 
 import static org.xvm.javajit.TypeSystem.HASH;
-import static org.xvm.javajit.Builder.md;
 
 /**
  * Whatever is necessary for the method bytecode production.

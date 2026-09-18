@@ -13,9 +13,9 @@ import static java.lang.constant.ConstantDescs.CD_long;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Int128;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.javajit.RegisterInfo.JAVA_STACK;
-import static org.xvm.javajit.Builder.md;
 
 /**
  * A "mixin" interface to generate bytecodes for operations on Ecstasy 128-bit integer types.

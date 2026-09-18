@@ -16,6 +16,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_nObject;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.javajit.JitFlavor.NullablePrimitiveWithDefault;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
@@ -29,7 +30,6 @@ import static org.xvm.javajit.JitFlavor.SpecificWithDefault;
 import static org.xvm.javajit.JitFlavor.Widened;
 import static org.xvm.javajit.JitFlavor.WidenedWithDefault;
 import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
-import static org.xvm.javajit.Builder.md;
 
 /**
  * JIT specific information for a method.

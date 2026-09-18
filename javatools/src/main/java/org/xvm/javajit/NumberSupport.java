@@ -19,11 +19,11 @@ import static java.lang.constant.ConstantDescs.CD_short;
 
 import static org.xvm.javajit.Builder.CD_JavaMath;
 import static org.xvm.javajit.Builder.MD_FP8Binary;
-import static org.xvm.javajit.Builder.md;
 import static org.xvm.javajit.Builder.MD_FloorModI;
 import static org.xvm.javajit.Builder.MD_FloorModJ;
 import static org.xvm.javajit.Builder.MD_UDivInt;
 import static org.xvm.javajit.Builder.MD_UDivLong;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * A "mixin" interface to generate bytecodes for operations on Ecstasy numeric types.
