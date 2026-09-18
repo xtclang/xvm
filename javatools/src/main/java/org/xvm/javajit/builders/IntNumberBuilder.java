@@ -95,7 +95,7 @@ public class IntNumberBuilder extends NumberBuilder {
      */
     protected void generateLeftmostBitGet(CodeBuilder code, JitMethodDesc jmd) {
         if (thisType.isJavaPrimitive()) {
-            ClassDesc cd   = JitTypeDesc.getJavaPrimitive(thisType);
+            ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
             int       slot = code.parameterSlot(0);
             assert cd != null;
 
@@ -163,7 +163,7 @@ public class IntNumberBuilder extends NumberBuilder {
      */
     protected void generateRightmostBitGet(CodeBuilder code, JitMethodDesc jmd) {
         if (thisType.isJavaPrimitive()) {
-            ClassDesc cd   = JitTypeDesc.getJavaPrimitive(thisType);
+            ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
             int       slot = code.parameterSlot(0);
             assert cd != null;
 
@@ -216,13 +216,40 @@ public class IntNumberBuilder extends NumberBuilder {
     }
 
     /**
+     * Count the zero bits of a 128-bit value, which is carried as two longs. The count comes from
+     * the word the bits are counted from first; only if that word contributes a full 64 does the
+     * other word need to be looked at, and then the two counts add.
+     *
+     * @param sMethod    the {@code java.lang.Long} counting method
+     * @param slotFirst  the slot of the word the count starts from
+     * @param slotSecond the slot of the word that only matters when the first is all zeroes
+     */
+    private void generate128ZeroCount(CodeBuilder code, String sMethod,
+                                      int slotFirst, int slotSecond) {
+        Label second = code.newLabel();
+        code.lload(slotFirst)
+            .invokestatic(CD_JavaLong, sMethod, md(CD_int, CD_long))
+            .dup()                  // keep the count, it is the addend if the word was all zeroes
+            .loadConstant(64)
+            .if_icmpeq(second)
+            .i2l()                  // the bits are in this word, so this count is the answer
+            .lreturn()
+            .labelBinding(second)
+            .lload(slotSecond)
+            .invokestatic(CD_JavaLong, sMethod, md(CD_int, CD_long))
+            .iadd()                 // the duplicated 64 plus this word's count
+            .i2l()
+            .lreturn();
+    }
+
+    /**
      * Assemble an optimized static implementation of "leadingZeroCount$get$p()".
      *
      * {@code return Integer.numberOfLeadingZeros(value, bitLength);}
      */
     protected void generateLeadingZeroCountGet(CodeBuilder code, JitMethodDesc jmd) {
         if (thisType.isJavaPrimitive()) {
-            ClassDesc cd = JitTypeDesc.getJavaPrimitive(thisType);
+            ClassDesc cd = JitTypeDesc.requireJavaPrimitive(thisType);
             assert cd != null;
 
             int slot      = code.parameterSlot(0);
@@ -255,25 +282,9 @@ public class IntNumberBuilder extends NumberBuilder {
             String name = thisType.getSingleUnderlyingClass(false).getName();
             switch (name) {
                 case "Int128", "UInt128":
-                    int   slotLow  = code.parameterSlot(0);
-                    int   slotHigh = code.parameterSlot(1);
-                    Label labelLow = code.newLabel();
-
-                    // get the high bits first
-                    code.lload(slotHigh)
-                        .invokestatic(CD_JavaLong, "numberOfLeadingZeros", md(CD_int, CD_long))
-                        .dup()                    // duplicate the hig result
-                        .loadConstant(64)         // compare result to 64
-                        .if_icmpeq(labelLow)      // if result is 64, do the low value
-                        .i2l()                    // else convert the result to a long (Int64)
-                        .lreturn()                // and return
-                        // duplicated high result on the stack is 64, calculate the low value
-                        .labelBinding(labelLow)
-                        .lload(slotLow)
-                        .invokestatic(CD_JavaLong, "numberOfLeadingZeros", md(CD_int, CD_long))
-                        .iadd()     // high result (64) and low result are on the stack, add them
-                        .i2l()      // convert to long and return
-                        .lreturn();
+                    // leading zeroes are in the high word unless it is entirely zero
+                    generate128ZeroCount(code, "numberOfLeadingZeros",
+                            code.parameterSlot(1), code.parameterSlot(0));
                     break;
                 default:
                     throw new UnsupportedOperationException("Unsupported XVM primitive number "
@@ -291,7 +302,7 @@ public class IntNumberBuilder extends NumberBuilder {
      */
     protected void generateTrailingZeroCountGet(CodeBuilder code, JitMethodDesc jmd) {
         if (thisType.isJavaPrimitive()) {
-            ClassDesc cd   = JitTypeDesc.getJavaPrimitive(thisType);
+            ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
             assert cd != null;
 
             int bitLength = getBitLength();
@@ -324,25 +335,9 @@ public class IntNumberBuilder extends NumberBuilder {
             String name = thisType.getSingleUnderlyingClass(false).getName();
             switch (name) {
                 case "Int128", "UInt128":
-                    int   slotLow  = code.parameterSlot(0);
-                    int   slotHigh = code.parameterSlot(1);
-                    Label labelHigh = code.newLabel();
-
-                    // get the low bits first
-                    code.lload(slotLow)
-                        .invokestatic(CD_JavaLong, "numberOfTrailingZeros", md(CD_int, CD_long))
-                        .dup()                    // duplicate the low result
-                        .loadConstant(64)   // compare result to 64
-                        .if_icmpeq(labelHigh)     // if result is 64, do the high value
-                        .i2l()                    // else convert the result to a long (Int64)
-                        .lreturn()                // and return
-                        // duplicated low result on the stack is 64, calculate the high value
-                        .labelBinding(labelHigh)
-                        .lload(slotHigh)
-                        .invokestatic(CD_JavaLong, "numberOfTrailingZeros", md(CD_int, CD_long))
-                        .iadd()     // low result (64) and high result are on the stack, add them
-                        .i2l()      // convert to long and return
-                        .lreturn();
+                    // trailing zeroes are in the low word unless it is entirely zero
+                    generate128ZeroCount(code, "numberOfTrailingZeros",
+                            code.parameterSlot(0), code.parameterSlot(1));
                     break;
                 default:
                     throw new UnsupportedOperationException("Unsupported XVM primitive number "

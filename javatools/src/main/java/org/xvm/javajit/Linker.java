@@ -276,7 +276,7 @@ public class Linker {
                     return withMain(module);
                 }
             } else {
-                log(Severity.ERROR, LNK_MAIN_EXISTS, modules.get(0).getName(), moduleName);
+                log(Severity.ERROR, LNK_MAIN_EXISTS, modules.getFirst().getName(), moduleName);
             }
         }
         return this;
@@ -295,7 +295,7 @@ public class Linker {
             if (modules.isEmpty()) {
                 return addModule(module);
             } else {
-                log(Severity.ERROR, LNK_MAIN_EXISTS, modules.get(0).getName(), module.getName());
+                log(Severity.ERROR, LNK_MAIN_EXISTS, modules.getFirst().getName(), module.getName());
             }
         }
         return this;

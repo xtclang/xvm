@@ -699,11 +699,11 @@ public class CommonBuilder
             break;
 
         case Primitive:
-            classBuilder.withField(jitName, JitTypeDesc.getPrimitiveFieldClass(prop.getType()), flags);
+            classBuilder.withField(jitName, JitTypeDesc.requirePrimitiveFieldClass(prop.getType()), flags);
             break;
 
         case NullablePrimitive:
-            classBuilder.withField(jitName, JitTypeDesc.getPrimitiveFieldClass(prop.getType()), flags);
+            classBuilder.withField(jitName, JitTypeDesc.requirePrimitiveFieldClass(prop.getType()), flags);
             classBuilder.withField(jitName+EXT, CD_boolean, flags);
             break;
 
@@ -789,11 +789,11 @@ public class CommonBuilder
                 // create a snapshot of the work to do RIGHT AT THIS MOMENT IN TIME so that if other
                 // things get appended to the map in the process, we don't accidentally trigger a
                 // CME etc.
-                Map.Entry<Constant, Integer>[] entries =
+                List<Map.Entry<Constant, Integer>> entries =
                         constants.entrySet().stream().sorted(Map.Entry.comparingByValue())
-                                                     .toArray(Map.Entry[]::new);
-                for (int size = entries.length; emitted < size; ++emitted) {
-                    Map.Entry<Constant, Integer> entry = entries[emitted];
+                                                     .toList();
+                for (int size = entries.size(); emitted < size; ++emitted) {
+                    Map.Entry<Constant, Integer> entry = entries.get(emitted);
                     Constant constant = entry.getKey();
                     String   name     = CONST_PROP + entry.getValue();
                     if (constant instanceof TypeConstant type) {
@@ -909,7 +909,7 @@ public class CommonBuilder
 
                     case Primitive:
                         unbox(code, type);
-                        code.putstatic(CD_this, jitName, JitTypeDesc.getPrimitiveFieldClass(type));
+                        code.putstatic(CD_this, jitName, JitTypeDesc.requirePrimitiveFieldClass(type));
                         break;
 
                     case XvmPrimitive:
@@ -1089,7 +1089,7 @@ public class CommonBuilder
                 // must be setting a primitive to Null
                 assert reg.type().isOnlyNullable();
                 code.pop();
-                ClassDesc cd = JitTypeDesc.getPrimitiveFieldClass(baseType);
+                ClassDesc cd = JitTypeDesc.requirePrimitiveFieldClass(baseType);
                 Builder.defaultLoad(code, cd);
                 code.putfield(CD_this, jitName, cd)
                     .aload(0)
@@ -1112,7 +1112,7 @@ public class CommonBuilder
             }
 
             case "Primitive->Primitive" ->
-                code.putfield(CD_this, jitName, JitTypeDesc.getPrimitiveFieldClass(baseType));
+                code.putfield(CD_this, jitName, JitTypeDesc.requirePrimitiveFieldClass(baseType));
 
             case "Primitive->Specific", "XvmPrimitive->Specific" -> {
                 Builder.box(code, reg);
@@ -1236,7 +1236,7 @@ public class CommonBuilder
                 JitParamDesc pdOpt = jmd.optimizedReturns[0];
                 TypeConstant type  = prop.getType();
                 ClassDesc    cdOpt = type.removeNullable().isJavaPrimitive()
-                                        ? JitTypeDesc.getPrimitiveFieldClass(type)
+                                        ? JitTypeDesc.requirePrimitiveFieldClass(type)
                                         : pdOpt.cd;
                 switch (pdOpt.flavor) {
                 case Specific, Widened, Primitive:
@@ -1352,7 +1352,7 @@ public class CommonBuilder
                 JitParamDesc pdOpt   = jmd.optimizedParams[0];
                 TypeConstant type    = prop.getType();
                 ClassDesc    cdOpt   = type.isJavaPrimitive()
-                                            ? JitTypeDesc.getPrimitiveFieldClass(type)
+                                            ? JitTypeDesc.requirePrimitiveFieldClass(type)
                                             : pdOpt.cd;
                 int          extSlot = argSlot + toTypeKind(cdOpt).slotSize();
 
@@ -2141,6 +2141,27 @@ public class CommonBuilder
     }
 
     /**
+     * Look up a method the type is required to have, so that callers do not have to answer for a
+     * null they cannot get: every Const has equals, compare, hashCode, appendTo and
+     * estimateStringLength, and a property's type has whichever of those is being delegated to it.
+     *
+     * @param info  the type to look in
+     * @param sig   the signature to find
+     *
+     * @return the method, never null
+     *
+     * @throws IllegalStateException  if the type does not have it after all
+     */
+    private static MethodInfo requireMethod(TypeInfo info, SignatureConstant sig) {
+        MethodInfo method = info.getMethodBySignature(sig);
+        if (method == null) {
+            throw new IllegalStateException(
+                    "No " + sig.getValueString() + " on " + info.getType());
+        }
+        return method;
+    }
+
+    /**
      * Generate the const implementation of:
      * <pre>
      *     static <CompileType extends T> Boolean equals(T value1, T value2)
@@ -2150,7 +2171,7 @@ public class CommonBuilder
      */
     protected void assembleConstEquals(ClassBuilder classBuilder) {
         SignatureConstant eqSig    = pool().sigEquals();
-        MethodInfo        eqMethod = typeInfo.getMethodBySignature(eqSig);
+        MethodInfo        eqMethod = requireMethod(typeInfo, eqSig);
         Implementation    impl     = eqMethod.getHead().getImplementation();
         IdentityConstant  targetId = eqMethod.getIdentity().getNamespace();
 
@@ -2298,7 +2319,7 @@ public class CommonBuilder
                 code.aload(value2Slot);
                 loadProperty(code, type, propId, true);
 
-                ClassDesc cdPrim = JitTypeDesc.getJavaPrimitive(propType);
+                ClassDesc cdPrim = JitTypeDesc.requireJavaPrimitive(propType);
                 assert cdPrim != null;
                 switch (cdPrim.descriptorString()) {
                     case "I", "S", "B", "Z":
@@ -2340,7 +2361,7 @@ public class CommonBuilder
                     .ifne(returnFalse);
             } else {
                 // Object type: call static equals$p(Ctx, nType, T, T) -> boolean
-                MethodInfo     eqMethod = propType.ensureTypeInfo().getMethodBySignature(eqSig);
+                MethodInfo     eqMethod = requireMethod(propType.ensureTypeInfo(), eqSig);
                 MethodConstant eqTarget = eqMethod.getJitIdentity();
 
                 assert eqTarget != null;
@@ -2394,7 +2415,7 @@ public class CommonBuilder
      */
     protected void assembleConstCompare(ClassBuilder classBuilder) {
         SignatureConstant cmpSig    = pool().sigCompare();
-        MethodInfo        cmpMethod = typeInfo.getMethodBySignature(cmpSig);
+        MethodInfo        cmpMethod = requireMethod(typeInfo, cmpSig);
         Implementation    impl      = cmpMethod.getHead().getImplementation();
         IdentityConstant  targetId  = cmpMethod.getIdentity().getNamespace();
 
@@ -2522,7 +2543,7 @@ public class CommonBuilder
             code.labelBinding(checkProp);
             if (propType.isJavaPrimitive()) {
                 // Java primitive: load both values, compare directly, convert int to Ordered
-                ClassDesc cdPrim = JitTypeDesc.getJavaPrimitive(propType);
+                ClassDesc cdPrim = JitTypeDesc.requireJavaPrimitive(propType);
                 assert cdPrim != null;
 
                 code.aload(value1Slot);
@@ -2588,7 +2609,7 @@ public class CommonBuilder
                 convertIntToOrdered(code);
             } else {
                 // Object type: call static compare(Ctx, nType, T, T) -> Ordered
-                MethodInfo    cmpMethod = propType.ensureTypeInfo().getMethodBySignature(cmpSig);
+                MethodInfo    cmpMethod = requireMethod(propType.ensureTypeInfo(), cmpSig);
                 JitMethodDesc cmpJmd    = cmpMethod.getJitDesc(this, propType);
 
                 // load the context to the stack (compare param 0)
@@ -2641,7 +2662,7 @@ public class CommonBuilder
      */
     protected void assembleConstHashCode(ClassBuilder classBuilder) {
         SignatureConstant hashSig    = pool().sigHashCode();
-        MethodInfo        hashMethod = typeInfo.getMethodBySignature(hashSig);
+        MethodInfo        hashMethod = requireMethod(typeInfo, hashSig);
         Implementation    impl       = hashMethod.getHead().getImplementation();
         IdentityConstant  targetId   = hashMethod.getIdentity().getNamespace();
 
@@ -2852,7 +2873,7 @@ public class CommonBuilder
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
 
-                MethodInfo    hashMethod = propType.ensureTypeInfo().getMethodBySignature(hashSig);
+                MethodInfo    hashMethod = requireMethod(propType.ensureTypeInfo(), hashSig);
                 JitMethodDesc hashJmd    = hashMethod.getJitDesc(this, propType);
 
                 IdentityConstant idTarget = hashMethod.getIdentity().getClassIdentity();
@@ -2894,7 +2915,7 @@ public class CommonBuilder
      */
     protected void assembleConstEstimateStringLength(ClassBuilder classBuilder) {
         SignatureConstant signature = pool().sigEstimateStrLen();
-        MethodInfo        method    = typeInfo.getMethodBySignature(signature);
+        MethodInfo        method    = requireMethod(typeInfo, signature);
         Implementation    impl      = method.getHead().getImplementation();
         IdentityConstant  targetId  = method.getIdentity().getNamespace();
 
@@ -3054,7 +3075,7 @@ public class CommonBuilder
      */
     protected void assembleConstAppendTo(ClassBuilder classBuilder) {
         SignatureConstant appendSig    = pool().sigAppendTo();
-        MethodInfo        appendMethod = typeInfo.getMethodBySignature(appendSig);
+        MethodInfo        appendMethod = requireMethod(typeInfo, appendSig);
         Implementation    impl         = appendMethod.getHead().getImplementation();
         IdentityConstant  targetId     = appendMethod.getIdentity().getNamespace();
 
@@ -3239,7 +3260,7 @@ public class CommonBuilder
                                            ClassDesc cdProp, SignatureConstant signature,
                                            String standardName, MethodTypeDesc mdStandard) {
         if (propType.isJitPrimitive()) {
-            MethodInfo    method = propType.ensureTypeInfo().getMethodBySignature(signature);
+            MethodInfo    method = requireMethod(propType.ensureTypeInfo(), signature);
             JitMethodDesc jmd    = method.getJitDesc(this, propType);
             assert jmd.isOptimizedStatic;
             code.invokestatic(cdProp, signature.getName() + OPT, jmd.optimizedMD);
@@ -3300,7 +3321,7 @@ public class CommonBuilder
             System.arraycopy(cds, 0, cdParams, 0, cds.length);
             System.arraycopy(cds, 0, cdParams, cds.length, cds.length);
         } else {
-            ClassDesc cd = JitTypeDesc.getJavaPrimitive(type);
+            ClassDesc cd = JitTypeDesc.requireJavaPrimitive(type);
             cdParams = new ClassDesc[]{cd, cd};
         }
         return cdParams;

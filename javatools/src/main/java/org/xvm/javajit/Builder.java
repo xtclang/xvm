@@ -1046,27 +1046,17 @@ public abstract class Builder {
     /**
      * Generate a value "load" for the specified Java class.
      */
-    public static void load(CodeBuilder code, ClassDesc cd, int slot) {
-        if (cd.isPrimitive()) {
-            switch (cd.descriptorString()) {
-            case "I", "S", "B", "Z":
-                code.iload(slot);
-                break;
-            case "J":
-                code.lload(slot);
-                break;
-            case "F":
-                code.fload(slot);
-                break;
-            case "D":
-                code.dload(slot);
-                break;
-            default:
-                throw new IllegalStateException();
-            }
-        } else {
-            code.aload(slot);
+    public static CodeBuilder load(CodeBuilder code, ClassDesc cd, int slot) {
+        if (!cd.isPrimitive()) {
+            return code.aload(slot);
         }
+        return switch (cd.descriptorString()) {
+            case "I", "S", "B", "Z" -> code.iload(slot);
+            case "J"                -> code.lload(slot);
+            case "F"                -> code.fload(slot);
+            case "D"                -> code.dload(slot);
+            default -> throw new IllegalStateException("Unsupported carrier: " + cd.descriptorString());
+        };
     }
 
     /**
@@ -1353,7 +1343,7 @@ public abstract class Builder {
         TypeConstant typeSansNull = type.removeNullable();
         ClassDesc[]  primitiveCds = typeSansNull.isXvmPrimitive()
                                     ? JitTypeDesc.getXvmPrimitiveClasses(typeSansNull)
-                                    : new ClassDesc[]{JitTypeDesc.getJavaPrimitive(typeSansNull)};
+                                    : new ClassDesc[]{JitTypeDesc.requireJavaPrimitive(typeSansNull)};
 
         code.dup();
         loadNull(code);
