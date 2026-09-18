@@ -2321,7 +2321,7 @@ public class CommonBuilder
             } else if (propType.isXvmPrimitive()) {
                 // XVM primitive: call static $equals(primitives1..., primitives2...)
                 ClassDesc[]    cdParams = getJitPrimitivePairMethodParams(propType);
-                MethodTypeDesc md       = md(CD_boolean, cdParams);
+                MethodTypeDesc mdEquals = md(CD_boolean, cdParams);
 
                 // load both property values as unboxed primitives onto the stack
                 code.aload(value1Slot);
@@ -2332,7 +2332,7 @@ public class CommonBuilder
                 loadProperty(code, type, propId, true);
                 loadOptimizedReturnsToStack(code, jmd);
 
-                code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_EQUALS, md)
+                code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_EQUALS, mdEquals)
                     .ifeq(returnFalse);
             } else if (propType.isA(pool().typeService())) {
                 buildGetIdentityHashCode(code, prop, value1Slot);
@@ -2402,13 +2402,13 @@ public class CommonBuilder
         // If the method is not explicitly implemented or the declaring type does not match the
         // current type (i.e., the method is declared on a supe class), then we can build the method
         if (impl != Implementation.Explicit || !thisId.equals(targetId)) {
-            ClassDesc      cdThis  = art.CD();
-            String         cmpName = cmpSig.getName();
-            MethodTypeDesc md      = md(CD_Ordered, CD_Ctx, CD_nType, cdThis, cdThis);
+            ClassDesc      cdThis    = art.CD();
+            String         cmpName   = cmpSig.getName();
+            MethodTypeDesc mdCompare = md(CD_Ordered, CD_Ctx, CD_nType, cdThis, cdThis);
 
-            if (!isNativeMethod(cmpName, md)) {
+            if (!isNativeMethod(cmpName, mdCompare)) {
                 // generate the standard "compare" method
-                classBuilder.withMethodBody(cmpName, md,
+                classBuilder.withMethodBody(cmpName, mdCompare,
                         ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
                         code -> assembleConstCompare(code, thisType, cmpSig));
             }
@@ -2554,8 +2554,8 @@ public class CommonBuilder
                 convertIntToOrdered(code);
             } else if (propType.isXvmPrimitive()) {
                 // XVM primitive: call static $compare(primitives1..., primitives2...)
-                ClassDesc[]    cdParams = getJitPrimitivePairMethodParams(propType);
-                MethodTypeDesc md       = md(CD_int, cdParams);
+                ClassDesc[]    cdParams  = getJitPrimitivePairMethodParams(propType);
+                MethodTypeDesc mdCompare = md(CD_int, cdParams);
 
                 code.aload(value1Slot);
                 PropertyInfo  info = loadProperty(code, type, propId, true);
@@ -2565,7 +2565,7 @@ public class CommonBuilder
                 loadProperty(code, type, propId, true);
                 loadOptimizedReturnsToStack(code, jmd);
 
-                code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_COMPARE, md);
+                code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_COMPARE, mdCompare);
 
                 // int result on stack: if zero, this property is equal; continue to next
                 // otherwise convert to an Ordered and return
@@ -3065,12 +3065,12 @@ public class CommonBuilder
         if ((impl != Implementation.Explicit && impl != Implementation.Capped)
             || !thisId.equals(targetId)) {
 
-            String         name = appendSig.getName();
-            MethodTypeDesc md   = md(CD_AppenderChar, CD_Ctx, CD_AppenderChar);
+            String         name       = appendSig.getName();
+            MethodTypeDesc mdAppendTo = md(CD_AppenderChar, CD_Ctx, CD_AppenderChar);
 
-            if (!isNativeMethod(name, md)) {
+            if (!isNativeMethod(name, mdAppendTo)) {
                 // generate the standard "compare" method
-                classBuilder.withMethodBody(name, md, ClassFile.ACC_PUBLIC, code ->
+                classBuilder.withMethodBody(name, mdAppendTo, ClassFile.ACC_PUBLIC, code ->
                         assembleConstAppendTo(code, thisType));
             }
         }

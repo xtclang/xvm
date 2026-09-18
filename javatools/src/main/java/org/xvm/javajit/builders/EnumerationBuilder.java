@@ -180,11 +180,10 @@ public class EnumerationBuilder extends CommonBuilder {
     }
 
     private void assembleConstructor(ClassBuilder classBuilder) {
-        MethodTypeDesc md      = md(CD_void, CD_Ctx);
         MethodTypeDesc mdSuper = md(CD_void, CD_Ctx, CD_TypeConstant);
         int            flags   = ClassFile.ACC_PUBLIC;
 
-        classBuilder.withMethodBody("<init>", md, flags, code -> {
+        classBuilder.withMethodBody("<init>", md(CD_void, CD_Ctx), flags, code -> {
             code.aload(0)
                 .aload(code.parameterSlot(0))
                 .getstatic(art.CD(), "$sc0", CD_TypeConstant)

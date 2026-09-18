@@ -493,8 +493,8 @@ public class NumberBuilder extends AugmentingBuilder {
 
         // the populated long array is on the top of the stack
         // create the ArrayᐸBitᐳ and return it
-        MethodTypeDesc md = md(CD_ArrayBit, CD_Ctx, CD_long, CD_long.arrayType());
-        code.invokestatic(CD_ArrayBit, "$fromLongs", md)
+        MethodTypeDesc mdFromLongs = md(CD_ArrayBit, CD_Ctx, CD_long, CD_long.arrayType());
+        code.invokestatic(CD_ArrayBit, "$fromLongs", mdFromLongs)
             .areturn();
     }
 
@@ -1020,13 +1020,13 @@ public class NumberBuilder extends AugmentingBuilder {
             // the sign bit
             // we call a helper method on FPNumber to obtain the signum for this value
             // the helper signature params are the same as the method we are generating code for
-            ClassDesc      cd     = JitTypeDesc.getJitClass(this, pool.typeFPNumber());
-            MethodTypeDesc md     = md(CD_int, jmd.optimizedMD.parameterArray());
-            ClassDesc[]    params = md.parameterArray();
+            ClassDesc      cd       = JitTypeDesc.getJitClass(this, pool.typeFPNumber());
+            MethodTypeDesc mdSignum = md(CD_int, jmd.optimizedMD.parameterArray());
+            ClassDesc[]    params   = mdSignum.parameterArray();
             for (int i = 0; i < params.length; i++) {
                 load(code, params[i], code.parameterSlot(i));
             }
-            code.invokestatic(cd, "$signum", md);
+            code.invokestatic(cd, "$signum", mdSignum);
         } else {
             String name      = thisType.getSingleUnderlyingClass(false).getName();
             int    paramSlot = code.parameterSlot(0);
@@ -1148,16 +1148,16 @@ public class NumberBuilder extends AugmentingBuilder {
     }
 
     protected void generateCompare(ClassBuilder classBuilder) {
-        ClassDesc      thisCD  = art.CD();
-        MethodTypeDesc md      = md(CD_Ordered, CD_Ctx, CD_nType, thisCD, thisCD);
-        int            flags   = ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC;
-        String         jitName = "compare";
+        ClassDesc      thisCD    = art.CD();
+        MethodTypeDesc mdCompare = md(CD_Ordered, CD_Ctx, CD_nType, thisCD, thisCD);
+        int            flags     = ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC;
+        String         jitName   = "compare";
 
-        if (findMethod(jitName, md) != null) {
+        if (findMethod(jitName, mdCompare) != null) {
             return;
         }
 
-        classBuilder.withMethodBody(jitName, md, flags, code -> {
+        classBuilder.withMethodBody(jitName, mdCompare, flags, code -> {
             code.aload(code.parameterSlot(2));
             unbox(code, thisType);
             code.aload(code.parameterSlot(3));
