@@ -186,8 +186,8 @@ public class NumberBuilder extends AugmentingBuilder {
      * Assemble a method by generating its code, unless it is a case that has to keep the inherited
      * assembly: a property initializer, a natively implemented method, or one the type prefers to
      * implement naturally. A method with no generator gets an "unsupported" body.
-     * <p/>
-     * Shared with {@link IntNBuilder}, which takes this path even though IntN is not a JIT
+     *
+     * <p>Shared with {@link IntNBuilder}, which takes this path even though IntN is not a JIT
      * primitive and so would otherwise be turned away by {@link #assembleMethod} above.
      */
     protected void assembleGeneratedOrInherited(ClassBuilder classBuilder, MethodInfo method,
@@ -381,8 +381,8 @@ public class NumberBuilder extends AugmentingBuilder {
 
     /**
      * Load a primitive Number constructor's representation with the value in the low bits.
-     * <p/>
-     * {@link #loadConstructorLong} leaves the value in the high bits of the long, so a fixed-width
+     *
+     * <p>{@link #loadConstructorLong} leaves the value in the high bits of the long, so a fixed-width
      * type has to shift it down by its own width subtracted from the 64 bits of the long. A 64-bit
      * type needs no shift.
      */
