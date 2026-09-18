@@ -2242,6 +2242,7 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_UDivInt      = MethodTypeDesc.of(CD_int,     CD_int,  CD_int);
     public static final MethodTypeDesc MD_UDivLong     = MethodTypeDesc.of(CD_long,    CD_long, CD_long);
     public static final MethodTypeDesc MD_FP8Binary    = MethodTypeDesc.of(CD_int,     CD_int,  CD_int);
+    public static final MethodTypeDesc MD_FP8Predicate = MethodTypeDesc.of(CD_boolean, CD_int);
     public static final MethodTypeDesc MD_D2L          = MethodTypeDesc.of(CD_long,    CD_double);
     public static final MethodTypeDesc MD_L2D          = MethodTypeDesc.of(CD_double,  CD_long);
     public static final MethodTypeDesc MD_F2I          = MethodTypeDesc.of(CD_int,     CD_float);

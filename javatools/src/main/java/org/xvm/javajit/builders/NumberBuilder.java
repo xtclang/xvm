@@ -679,10 +679,15 @@ public class NumberBuilder extends AugmentingBuilder {
 
         if (thisType.isA(pool().typeBinFPNumber())) {
             switch (name) {
-                case "Float8e4", "Float8e5":
+                case "Float8e4":
                     code.iload(paramSlot)
-                        .invokestatic(name.equals("Float8e4") ? CD_Float8e4 : CD_Float8e5,
-                                "$finite", MethodTypeDesc.of(CD_boolean, CD_int))
+                        .invokestatic(CD_Float8e4, "$finite", MD_FP8Predicate)
+                        .ireturn();
+                    break;
+
+                case "Float8e5":
+                    code.iload(paramSlot)
+                        .invokestatic(CD_Float8e5, "$finite", MD_FP8Predicate)
                         .ireturn();
                     break;
 
@@ -719,10 +724,15 @@ public class NumberBuilder extends AugmentingBuilder {
             int    paramSlot = code.parameterSlot(0);
 
             switch (name) {
-                case "Float8e4", "Float8e5":
+                case "Float8e4":
                     code.iload(paramSlot)
-                        .invokestatic(name.equals("Float8e4") ? CD_Float8e4 : CD_Float8e5,
-                                "$infinity", MethodTypeDesc.of(CD_boolean, CD_int))
+                        .invokestatic(CD_Float8e4, "$infinity", MD_FP8Predicate)
+                        .ireturn();
+                    break;
+
+                case "Float8e5":
+                    code.iload(paramSlot)
+                        .invokestatic(CD_Float8e5, "$infinity", MD_FP8Predicate)
                         .ireturn();
                     break;
 
@@ -759,10 +769,15 @@ public class NumberBuilder extends AugmentingBuilder {
             int    paramSlot = code.parameterSlot(0);
 
             switch (name) {
-                case "Float8e4", "Float8e5":
+                case "Float8e4":
                     code.iload(paramSlot)
-                        .invokestatic(name.equals("Float8e4") ? CD_Float8e4 : CD_Float8e5,
-                                "$NaN", MethodTypeDesc.of(CD_boolean, CD_int))
+                        .invokestatic(CD_Float8e4, "$NaN", MD_FP8Predicate)
+                        .ireturn();
+                    break;
+
+                case "Float8e5":
+                    code.iload(paramSlot)
+                        .invokestatic(CD_Float8e5, "$NaN", MD_FP8Predicate)
                         .ireturn();
                     break;
 
