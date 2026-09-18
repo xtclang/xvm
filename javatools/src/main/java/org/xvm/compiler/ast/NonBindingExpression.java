@@ -51,7 +51,7 @@ public class NonBindingExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        return type == null ? null : type.ensureTypeConstant(ctx, ErrorListener.BLACKHOLE);
+        return type == null ? null : type.ensureTypeConstant(ctx, ErrorListener.PROBE);
     }
 
     @Override
