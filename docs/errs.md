@@ -6,7 +6,7 @@ every diagnostic the compiler produces.
 
 Measurements are from `origin/master` at `794bf23e6`.
 
-**Status.** Phases 1-6 are implemented on `lagergren/errs`; phase 7 is not started.
+**Status.** All seven phases are implemented on `lagergren/errs`.
 
 ## Why
 
