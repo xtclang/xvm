@@ -16,9 +16,18 @@ public class ErrorList
         implements ErrorListener {
     // ----- constructors --------------------------------------------------------------------------
 
+    /**
+     * @param cMaxErrors  the number of serious errors to tolerate before asking for the process to
+     *                    be abandoned, or {@link #UNLIMITED} to tolerate any number
+     */
     public ErrorList(int cMaxErrors) {
         f_cMaxErrors = cMaxErrors;
     }
+
+    /**
+     * Tolerate any number of serious errors: only a FATAL asks for the process to be abandoned.
+     */
+    public static final int UNLIMITED = 0;
 
     // ----- ErrorListener methods -----------------------------------------------------------------
 
