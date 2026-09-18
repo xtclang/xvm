@@ -1028,7 +1028,7 @@ public class ModuleInfo {
         public void registerName(String name, Node node) {
             if (name != null) {
                 if (children().containsKey(name)) {
-                    log(Severity.ERROR, DUP_NAME, new Object[] {name, descriptiveName()}, null);
+                    error(DUP_NAME, ErrorListener.NOWHERE, name, descriptiveName());
                 } else {
                     children().put(name, node);
                 }
@@ -1039,7 +1039,7 @@ public class ModuleInfo {
         public void linkParseTrees() {
             Node nodePkg = sourceNode();
             if (nodePkg == null) {
-                log(Severity.ERROR, MISSING_PKG_NODE, new Object[]{descriptiveName()}, null);
+                error(MISSING_PKG_NODE, ErrorListener.NOWHERE, descriptiveName());
             } else {
                 TypeCompositionStatement typePkg = nodePkg.type();
 
@@ -1267,7 +1267,7 @@ public class ModuleInfo {
             try {
                 return readFileChars(m_file);
             } catch (IOException e) {
-                log(Severity.ERROR, READ_FAILURE, new Object[] {m_file}, null);
+                error(READ_FAILURE, ErrorListener.NOWHERE, m_file);
             }
 
             return new char[0];

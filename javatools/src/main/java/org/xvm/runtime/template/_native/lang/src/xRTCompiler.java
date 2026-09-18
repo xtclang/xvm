@@ -225,7 +225,7 @@ public class xRTCompiler
     private int completeWithError(Frame frame, CompilerAdapter compiler, String
                                   sMissing, int[] aiReturn) {
         // org.xvm.compiler.Compiler.MODULE_MISSING
-        compiler.logError(Severity.FATAL, "MODULE_MISSING", new Object[] {sMissing});
+        compiler.logError(Severity.FATAL, "MODULE_MISSING", sMissing);
         return completeCompilation(frame, compiler, null, aiReturn);
     }
 
@@ -354,7 +354,7 @@ public class xRTCompiler
             return m_repoResults;
         }
 
-        protected void logError(Severity severity, String sCode, Object[] aoParam) {
+        protected void logError(Severity severity, String sCode, Object... aoParam) {
             m_errorList.log(severity, sCode, aoParam, null);
         }
 

@@ -1494,12 +1494,10 @@ public class TypeCompositionStatement
                 lEndPos   = compositions.getFirst().getEndPosition();
             }
 
-            errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
-                    new Object[] {
-                        contribCyclical.getComponent().getIdentityConstant().getValueString(),
-                        contribCyclical.getTypeConstant().getValueString()
-                    },
-                    getSource(), lStartPos, lEndPos);
+            errs.fatal(Constants.VE_CYCLICAL_CONTRIBUTION,
+                    ErrorListener.in(getSource(), lStartPos, lEndPos),
+                    contribCyclical.getComponent().getIdentityConstant().getValueString(),
+                    contribCyclical.getTypeConstant().getValueString());
             return;
         }
 
