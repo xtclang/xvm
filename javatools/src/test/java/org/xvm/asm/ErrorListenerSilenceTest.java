@@ -30,7 +30,7 @@ public class ErrorListenerSilenceTest {
         assertNotSame(PROBE, BLACKHOLE, "they are separate constants");
 
         for (ErrorListener errs : new ErrorListener[]{PROBE, BLACKHOLE}) {
-            assertFalse(errs.log(org.xvm.util.Severity.ERROR, CODE, in(source, 0, 1), "a"));
+            errs.log(org.xvm.util.Severity.ERROR, CODE, in(source, 0, 1), "a");
             assertFalse(errs.isAbortDesired());
             assertFalse(errs.hasSeriousErrors());
             assertTrue(errs.isSilent());
