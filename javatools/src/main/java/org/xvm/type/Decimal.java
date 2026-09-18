@@ -4,6 +4,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.math.BigDecimal;
+
+import java.util.function.DoubleUnaryOperator;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -308,210 +310,173 @@ public abstract class Decimal {
 
     // ----- operations ----------------------------------------------------------------------------
 
+    /**
+     * Apply a double-precision function to this value.
+     *
+     * <p>The double is a working representation only: a decimal that does not fit is approximated,
+     * which is the same accuracy every caller here already had. The non-finite result differs per
+     * operation, so each supplies its own.</p>
+     *
+     * @param op            the function to apply to this value as a double
+     * @param decNonFinite  what to return when this value is not finite
+     *
+     * @return the result of the function, as a Decimal of this format
+     */
+    private Decimal applyToDouble(DoubleUnaryOperator op, Decimal decNonFinite) {
+        return isFinite()
+                ? fromBigDecimal(BigDecimal.valueOf(op.applyAsDouble(toBigDecimal().doubleValue())))
+                : decNonFinite;
+    }
+
+    /**
+     * Apply a double-precision function to this value, yielding NaN when it is not finite.
+     *
+     * @param op  the function to apply to this value as a double
+     *
+     * @return the result of the function, as a Decimal of this format
+     */
+    private Decimal applyToDouble(DoubleUnaryOperator op) {
+        return applyToDouble(op, nan());
+    }
+
+    /**
+     * Scale this value by a power of the radix, which for a decimal floating point type is ten.
+     *
+     * @param n  the power of ten to scale by
+     *
+     * @return this value multiplied by ten raised to the power of n
+     */
+    public Decimal scaleByPow(int n) {
+        return isFinite()
+                ? fromBigDecimal(toBigDecimal().scaleByPowerOfTen(n))
+                : this;
+    }
+
     public Decimal abs() {
         if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(big.abs());
+            return fromBigDecimal(toBigDecimal().abs());
         }
         return isSigned() ? infinity(false) : this;
     }
 
     public Decimal neg() {
         if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(big.negate());
+            return fromBigDecimal(toBigDecimal().negate());
         }
         return infinity(!isSigned());
     }
 
     public Decimal floor() {
         if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(big.setScale(0, RoundingMode.FLOOR));
+            return fromBigDecimal(toBigDecimal().setScale(0, RoundingMode.FLOOR));
         }
         return this;
     }
 
     public Decimal ceil() {
         if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(big.setScale(0, RoundingMode.CEILING));
+            return fromBigDecimal(toBigDecimal().setScale(0, RoundingMode.CEILING));
         }
         return this;
     }
 
     public Decimal exp() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.exp(big.doubleValue())));
-        }
-        return isSigned() ? zero(false) : this;
+        return applyToDouble(Math::exp, isSigned() ? zero(false) : this);
     }
 
     public Decimal log() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.log(big.doubleValue())));
-        }
-        return isSigned() ? nan() : this;
+        return applyToDouble(Math::log, isSigned() ? nan() : this);
     }
 
     public Decimal log2() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.log10(big.doubleValue())*LOG2_10));
-        }
-        return isSigned() ? nan() : this;
+        return applyToDouble(d -> Math.log(d) / LOG_2, isSigned() ? nan() : this);
     }
 
     public Decimal log10() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.log10(big.doubleValue())));
-        }
-        return isSigned() ? nan() : this;
+        return applyToDouble(Math::log10, isSigned() ? nan() : this);
     }
 
     public Decimal sqrt() {
         if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(big.sqrt(getMathContext()));
+            return fromBigDecimal(toBigDecimal().sqrt(getMathContext()));
         }
         return isSigned() ? nan() : this;
     }
 
     public Decimal cbrt() {
         if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.cbrt(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.cbrt(toBigDecimal().doubleValue())));
         }
         return this;
     }
 
     public Decimal sin() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.sin(big.doubleValue())));
-        }
-        return nan();
+        return applyToDouble(Math::sin);
+    }
+
+    public Decimal cos() {
+        return applyToDouble(Math::cos);
     }
 
     public Decimal tan() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.tan(big.doubleValue())));
-        }
-        return nan();
+        return applyToDouble(Math::tan);
     }
 
     public Decimal asin() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.asin(big.doubleValue())));
-        }
-        return nan();
+        return applyToDouble(Math::asin);
     }
 
     public Decimal acos() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.acos(big.doubleValue())));
-        }
-        return nan();
+        return applyToDouble(Math::acos);
     }
 
     public Decimal atan() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.atan(big.doubleValue())));
-        }
-        return nan();
+        return applyToDouble(Math::atan);
     }
 
     public Decimal sinh() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.sinh(big.doubleValue())));
-        }
-        return nan();
+        return applyToDouble(Math::sinh);
     }
 
     public Decimal cosh() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.cosh(big.doubleValue())));
-        }
-        return nan();
+        return applyToDouble(Math::cosh);
     }
 
     public Decimal tanh() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.tanh(big.doubleValue())));
-        }
-        return nan();
+        return applyToDouble(Math::tanh);
     }
 
     public Decimal asinh() {
-        if (isFinite()) {
-            double d = toBigDecimal().doubleValue();
-            return fromBigDecimal(BigDecimal.valueOf(Math.log(d + Math.sqrt(d * d + 1.0))));
-        }
-        return nan();
+        return applyToDouble(d -> Math.log(d + Math.sqrt(d * d + 1.0)));
     }
 
     public Decimal acosh() {
-        if (isFinite()) {
-            double d = toBigDecimal().doubleValue();
-            return fromBigDecimal(BigDecimal.valueOf(Math.log(d + Math.sqrt(d * d - 1.0))));
-        }
-        return nan();
+        return applyToDouble(d -> Math.log(d + Math.sqrt(d * d - 1.0)));
     }
 
     public Decimal atanh() {
-        if (isFinite()) {
-            double d = toBigDecimal().doubleValue();
-            return fromBigDecimal(BigDecimal.valueOf(0.5 * Math.log((d + 1.0) / (d - 1.0))));
-        }
-        return nan();
+        return applyToDouble(d -> 0.5 * Math.log((1.0 + d) / (1.0 - d)));
     }
 
     public Decimal deg2rad() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.toRadians(big.doubleValue())));
-        }
-        return this;
+        return applyToDouble(Math::toRadians, this);
     }
 
     public Decimal rad2deg() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.toDegrees(big.doubleValue())));
-        }
-        return this;
+        return applyToDouble(Math::toDegrees, this);
     }
 
     public Decimal nextUp() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.nextUp(big.doubleValue())));
-        }
-        return this;
+        return applyToDouble(Math::nextUp, this);
     }
 
     public Decimal nextDown() {
-        if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.nextDown(big.doubleValue())));
-        }
-        return this;
+        return applyToDouble(Math::nextDown, this);
     }
 
     public Decimal round(RoundingMode mode) {
         if (isFinite()) {
-            BigDecimal big = toBigDecimal();
-            return fromBigDecimal(big.setScale(0, mode));
+            return fromBigDecimal(toBigDecimal().setScale(0, mode));
         }
         return this;
     }
@@ -878,5 +843,14 @@ public abstract class Decimal {
     /**
      * The log2(10) value.
      */
-    public static final double LOG2_10 = 1.0/Math.log10(2);
+    /**
+     * The natural logarithm of two, for computing a base-2 logarithm as log(x) / log(2). Shared
+     * with the binary FP templates, which compute log2 the same way; it lives here because
+     * org.xvm.type is the lower layer of the two.
+     *
+     * <p>NOTE: log2 used to be computed as log10(x) * (1/log10(2)). That identity is exact in real
+     * arithmetic but not in floating point: it returned a non-integer for 13 of the 41 exact
+     * powers of two between 2^-20 and 2^20, so log2(8.0) came back as 2.9999999999999996.</p>
+     */
+    public static final double LOG_2 = Math.log(2);
 }
