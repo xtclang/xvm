@@ -19,7 +19,7 @@ import static org.xvm.util.Handy.require;
 
 /**
  * A TypeSystem Linker is the "builder" for new TypeSystems.
- * <p>
+ *
  * TODO differentiate between "shared" in the Java sense (applies to any module that can be broken
  *      out) and "shared" in the Ecstasy sense (able to pass things back and forth using those types)
  * TODO show example of how shared modules can be associated with Ecstasy module imports, especially

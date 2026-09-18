@@ -123,7 +123,7 @@ public class ConstantPool
      * in the pool. The array is NOT an internal array from the constant pool, so the caller can
      * safely modify the array. The constants in the array are the actual constants in the constant
      * pool, so the caller must NOT modify them.
-     * <p>
+     *
      * Warning: Do NOT use this method in any performance sensitive tool.
      *
      * @return the Constant at that index
@@ -325,7 +325,6 @@ public class ConstantPool
      *
      * @return a {@link RegExConstant} for the passed regular expression value
      */
-    @SuppressWarnings("unused")
     public RegExConstant ensureRegExConstant(String expression, int nFlags) {
         // check the pre-existing constants first (only for default flags)
         RegExConstant constant = nFlags == 0
@@ -2212,7 +2211,6 @@ public class ConstantPool
     public ClassConstant     clzTransient()      {ClassConstant     c = m_clzTransient;      if (c == null) {m_clzTransient      = c = (ClassConstant) getImplicitlyImportedIdentity("Transient"       );} return c;}
     public ClassConstant     clzUnassigned()     {ClassConstant     c = m_clzUnassigned;     if (c == null) {m_clzUnassigned     = c = (ClassConstant) getImplicitlyImportedIdentity("Unassigned"      );} return c;}
     public ClassConstant     clzVolatile()       {ClassConstant     c = m_clzVolatile;       if (c == null) {m_clzVolatile       = c = (ClassConstant) getImplicitlyImportedIdentity("Volatile"        );} return c;}
-    @SuppressWarnings("unused")
     public ClassConstant     clzTest()           {ClassConstant     c = m_clzTest;           if (c == null) {m_clzTest           = c = (ClassConstant) getImplicitlyImportedIdentity("Test"            );} return c;}
 
     public TypeConstant      typeComparable()    {TypeConstant      c = m_typeComparable;    if (c == null) {m_typeComparable    = c = ensureTerminalTypeConstant(clzComparable()                      );} return c;}
@@ -2328,7 +2326,6 @@ public class ConstantPool
     public TypeConstant      typeInjector()      {TypeConstant      c = m_typeInjector;      if (c == null) {m_typeInjector      = c = ensureTerminalTypeConstant(clzInjector()                        );} return c;}
     public TypeConstant      typeRounding()      {TypeConstant      c = m_typeRounding;      if (c == null) {m_typeRounding      = c = ensureTerminalTypeConstant(clzRounding()                        );} return c;}
     public TypeConstant      typeAppender()      {TypeConstant      c = m_typeAppender;      if (c == null) {m_typeAppender      = c = ensureTerminalTypeConstant(clzAppender()                        );} return c;}
-    @SuppressWarnings("unused")
     public TypeConstant      typeUniformIndexed(){ /* Just an alias */ return typeIndexed();                                                                                                                  }
 
     public IntConstant       val0()              {IntConstant       c = m_val0;              if (c == null) {m_val0              = c = ensureIntConstant(0)                                             ;} return c;}
@@ -2479,7 +2476,7 @@ public class ConstantPool
     /**
      * Replace the parent identity for all IdentityConstants that are children of the specified
      * module.
-     * <p>
+     *
      * This method is absolutely destructive to the integrity of this ConstantPool and should only
      * be called on a freshly created copy of a FileStructure that would be immediately discarded
      * after serialization.

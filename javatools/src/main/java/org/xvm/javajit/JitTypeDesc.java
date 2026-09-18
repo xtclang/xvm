@@ -45,7 +45,7 @@ public class JitTypeDesc {
      */
     public static ClassDesc getJitClass(Builder builder, TypeConstant type) {
         return type.isJavaPrimitive()
-            ? JitParamDesc.getJavaPrimitive(type)
+            ? JitParamDesc.requireJavaPrimitive(type)
             : type.isSingleUnderlyingClass(true)
                 ? builder.ensureClassDesc(type)
                 : CD_Object;
@@ -55,7 +55,7 @@ public class JitTypeDesc {
      * @return the primitive ClassDesc if the specified type is optimizable to a primitive Java
      *         class; null otherwise
      */
-    public static ClassDesc findJavaPrimitive(TypeConstant type) {
+    public static ClassDesc getJavaPrimitive(TypeConstant type) {
         if (type.isJavaPrimitive()) {
             String name = type.getSingleUnderlyingClass(false).getName();
             return switch (name) {
@@ -80,7 +80,7 @@ public class JitTypeDesc {
     }
 
     /**
-     * The same carrier as {@link #findJavaPrimitive}, for a type already known to have one.
+     * The same carrier as {@link #getJavaPrimitive}, for a type already known to have one.
      * Callers that have checked {@link TypeConstant#isJavaPrimitive} should use this, so they do
      * not have to answer for a null that cannot occur.
      *
@@ -90,8 +90,8 @@ public class JitTypeDesc {
      *
      * @throws IllegalArgumentException  if the type has no primitive Java carrier
      */
-    public static ClassDesc getJavaPrimitive(TypeConstant type) {
-        ClassDesc cd = findJavaPrimitive(type);
+    public static ClassDesc requireJavaPrimitive(TypeConstant type) {
+        ClassDesc cd = getJavaPrimitive(type);
         if (cd == null) {
             throw new IllegalArgumentException("Not a Java primitive type: " + type);
         }
@@ -104,7 +104,7 @@ public class JitTypeDesc {
      */
     public static ClassDesc getNullablePrimitiveClass(TypeConstant type) {
         return type.isNullable()
-            ? findJavaPrimitive(type.removeNullable())
+            ? getJavaPrimitive(type.removeNullable())
             : null;
     }
 
@@ -151,7 +151,7 @@ public class JitTypeDesc {
                 case "Dec64" -> CDs_Long;
                 case "Dec128", "Int128", "UInt128", "Duration" -> CDs_LongLong;
                 default        -> {
-                    ClassDesc cd = findJavaPrimitive(baseType);
+                    ClassDesc cd = getJavaPrimitive(baseType);
                     if (cd == null) {
                         throw new IllegalArgumentException("Unsupported primitive: " + baseType);
                     }
@@ -166,7 +166,7 @@ public class JitTypeDesc {
      * @return the ClassDesc to use for a primitive field if the specified type is optimizable to a
      * single Java primitive ClassDesc; null otherwise
      */
-    public static ClassDesc findPrimitiveFieldClass(TypeConstant type) {
+    public static ClassDesc getPrimitiveFieldClass(TypeConstant type) {
         TypeConstant sansNullable = type.removeNullable();
         if (sansNullable.isJavaPrimitive()) {
             String name = sansNullable.getSingleUnderlyingClass(false).getName();
@@ -186,7 +186,7 @@ public class JitTypeDesc {
     }
 
     /**
-     * The same carrier as {@link #findPrimitiveFieldClass}, for a type already known to have one.
+     * The same carrier as {@link #getPrimitiveFieldClass}, for a type already known to have one.
      * Callers that have checked {@link TypeConstant#isJavaPrimitive} should use this, so they do
      * not have to answer for a null that cannot occur.
      *
@@ -196,8 +196,8 @@ public class JitTypeDesc {
      *
      * @throws IllegalArgumentException  if the type has no Java primitive carrier
      */
-    public static ClassDesc getPrimitiveFieldClass(TypeConstant type) {
-        ClassDesc cd = findPrimitiveFieldClass(type);
+    public static ClassDesc requirePrimitiveFieldClass(TypeConstant type) {
+        ClassDesc cd = getPrimitiveFieldClass(type);
         if (cd == null) {
             throw new IllegalArgumentException("Not a Java primitive type: " + type);
         }

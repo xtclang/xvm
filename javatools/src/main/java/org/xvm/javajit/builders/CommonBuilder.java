@@ -124,7 +124,7 @@ public class CommonBuilder
 
     /**
      * List of constant properties for every class name this builder assembles.
-     * <p>
+     *
      * Note: a vast majority of builders assemble one and only one class.
      */
     protected List<PropertyInfo> constProperties;
@@ -511,7 +511,7 @@ public class CommonBuilder
             return ShallowSizeOf.fieldOf(Object.class);
         }
         TypeConstant type = prop.getType();
-        ClassDesc    cd   = JitTypeDesc.findPrimitiveFieldClass(type);
+        ClassDesc    cd   = JitTypeDesc.getPrimitiveFieldClass(type);
         return cd == null
             ? ShallowSizeOf.fieldOf(Object.class)
             : ShallowSizeOf.fieldOf(cd);
@@ -699,11 +699,11 @@ public class CommonBuilder
             break;
 
         case Primitive:
-            classBuilder.withField(jitName, JitTypeDesc.getPrimitiveFieldClass(prop.getType()), flags);
+            classBuilder.withField(jitName, JitTypeDesc.requirePrimitiveFieldClass(prop.getType()), flags);
             break;
 
         case NullablePrimitive:
-            classBuilder.withField(jitName, JitTypeDesc.getPrimitiveFieldClass(prop.getType()), flags);
+            classBuilder.withField(jitName, JitTypeDesc.requirePrimitiveFieldClass(prop.getType()), flags);
             classBuilder.withField(jitName+EXT, CD_boolean, flags);
             break;
 
@@ -909,7 +909,7 @@ public class CommonBuilder
 
                     case Primitive:
                         unbox(code, type);
-                        code.putstatic(CD_this, jitName, JitTypeDesc.getPrimitiveFieldClass(type));
+                        code.putstatic(CD_this, jitName, JitTypeDesc.requirePrimitiveFieldClass(type));
                         break;
 
                     case XvmPrimitive:
@@ -1089,7 +1089,7 @@ public class CommonBuilder
                 // must be setting a primitive to Null
                 assert reg.type().isOnlyNullable();
                 code.pop();
-                ClassDesc cd = JitTypeDesc.getPrimitiveFieldClass(baseType);
+                ClassDesc cd = JitTypeDesc.requirePrimitiveFieldClass(baseType);
                 Builder.defaultLoad(code, cd);
                 code.putfield(CD_this, jitName, cd)
                     .aload(0)
@@ -1112,7 +1112,7 @@ public class CommonBuilder
             }
 
             case "Primitive->Primitive" ->
-                code.putfield(CD_this, jitName, JitTypeDesc.getPrimitiveFieldClass(baseType));
+                code.putfield(CD_this, jitName, JitTypeDesc.requirePrimitiveFieldClass(baseType));
 
             case "Primitive->Specific", "XvmPrimitive->Specific" -> {
                 Builder.box(code, reg);
@@ -1236,7 +1236,7 @@ public class CommonBuilder
                 JitParamDesc pdOpt = jmd.optimizedReturns[0];
                 TypeConstant type  = prop.getType();
                 ClassDesc    cdOpt = type.removeNullable().isJavaPrimitive()
-                                        ? JitTypeDesc.getPrimitiveFieldClass(type)
+                                        ? JitTypeDesc.requirePrimitiveFieldClass(type)
                                         : pdOpt.cd;
                 switch (pdOpt.flavor) {
                 case Specific, Widened, Primitive:
@@ -1352,7 +1352,7 @@ public class CommonBuilder
                 JitParamDesc pdOpt   = jmd.optimizedParams[0];
                 TypeConstant type    = prop.getType();
                 ClassDesc    cdOpt   = type.isJavaPrimitive()
-                                            ? JitTypeDesc.getPrimitiveFieldClass(type)
+                                            ? JitTypeDesc.requirePrimitiveFieldClass(type)
                                             : pdOpt.cd;
                 int          extSlot = argSlot + toTypeKind(cdOpt).slotSize();
 
@@ -1601,7 +1601,7 @@ public class CommonBuilder
 
     /**
      * Assemble the "public TypeConstant $xvmType()" method.
-     * <p>
+     *
      * TODO: consider using a couple of bits of $meta value to indicate the ACCESS trait
      *       of the type (or at least a bit for STRUCT); it would be used by this method
      *       to at least answer "is(struct)" question
@@ -2319,7 +2319,7 @@ public class CommonBuilder
                 code.aload(value2Slot);
                 loadProperty(code, type, propId, true);
 
-                ClassDesc cdPrim = JitTypeDesc.getJavaPrimitive(propType);
+                ClassDesc cdPrim = JitTypeDesc.requireJavaPrimitive(propType);
                 assert cdPrim != null;
                 switch (cdPrim.descriptorString()) {
                     case "I", "S", "B", "Z":
@@ -2543,7 +2543,7 @@ public class CommonBuilder
             code.labelBinding(checkProp);
             if (propType.isJavaPrimitive()) {
                 // Java primitive: load both values, compare directly, convert int to Ordered
-                ClassDesc cdPrim = JitTypeDesc.getJavaPrimitive(propType);
+                ClassDesc cdPrim = JitTypeDesc.requireJavaPrimitive(propType);
                 assert cdPrim != null;
 
                 code.aload(value1Slot);
@@ -3321,7 +3321,7 @@ public class CommonBuilder
             System.arraycopy(cds, 0, cdParams, 0, cds.length);
             System.arraycopy(cds, 0, cdParams, cds.length, cds.length);
         } else {
-            ClassDesc cd = JitTypeDesc.getJavaPrimitive(type);
+            ClassDesc cd = JitTypeDesc.requireJavaPrimitive(type);
             cdParams = new ClassDesc[]{cd, cd};
         }
         return cdParams;
@@ -3814,7 +3814,7 @@ public class CommonBuilder
 
     /**
      * Assemble the "$new" method.
-     * <p>
+     *
      * <code><pre>
      * Ecstasy:
      *      class C {...}

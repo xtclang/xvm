@@ -98,7 +98,7 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
             case Primitive -> {
                 Builder.unbox(code, referentType);
                 yield new SingleSlot(referentType, referentFlavor,
-                    JitTypeDesc.getJavaPrimitive(referentType), refName);
+                    JitTypeDesc.requireJavaPrimitive(referentType), refName);
             }
 
             default -> throw new UnsupportedOperationException("flavor: " + referentFlavor);

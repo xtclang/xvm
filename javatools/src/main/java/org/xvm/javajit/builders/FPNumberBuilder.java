@@ -94,7 +94,7 @@ public class FPNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "exponent$get$p()".
-     * <p>
+     *
      * {@code return Int64.valueOf((rawBits & exponentMask) >>> significandBitLength);}
      */
     protected void generateExponentGet(CodeBuilder code, JitMethodDesc jmd) {
@@ -104,7 +104,7 @@ public class FPNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "significand$get$p()".
-     * <p>
+     *
      * {@code return Int64.valueOf(rawBits & significandMask);}
      */
     protected void generateSignificandGet(CodeBuilder code, JitMethodDesc jmd) {
@@ -169,7 +169,7 @@ public class FPNumberBuilder extends NumberBuilder {
         int sigLen = getSignificandLength();
 
         if (thisType.isJavaPrimitive()) {
-            ClassDesc cd   = JitTypeDesc.getJavaPrimitive(thisType);
+            ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
             int       slot = code.parameterSlot(0);
 
             switch (cd.descriptorString()) {
@@ -224,7 +224,7 @@ public class FPNumberBuilder extends NumberBuilder {
         int  shift  = (int) (bitLen - sigLen);
 
         if (thisType.isJavaPrimitive()) {
-            ClassDesc cd   = JitTypeDesc.getJavaPrimitive(thisType);
+            ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
             int       slot = code.parameterSlot(0);
 
             switch (cd.descriptorString()) {
@@ -274,7 +274,7 @@ public class FPNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "round$p()".
-     * <p>
+     *
      * {@code return finite ? bigDecimal.setScale(0, direction).toFPNumber() : this;}
      */
     protected void generateRound(CodeBuilder code, JitMethodDesc jmd) {
@@ -283,7 +283,7 @@ public class FPNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "floor$p()".
-     * <p>
+     *
      * {@code return finite ? bigDecimal.setScale(0, FLOOR).toFPNumber() : this;}
      */
     protected void generateFloor(CodeBuilder code, JitMethodDesc jmd) {
@@ -292,7 +292,7 @@ public class FPNumberBuilder extends NumberBuilder {
 
     /**
      * Assemble an optimized static implementation of "ceil$p()".
-     * <p>
+     *
      * {@code return finite ? bigDecimal.setScale(0, CEILING).toFPNumber() : this;}
      */
     protected void generateCeil(CodeBuilder code, JitMethodDesc jmd) {
@@ -319,7 +319,7 @@ public class FPNumberBuilder extends NumberBuilder {
      * Generate a rounding operation for Float16, Float32, or Float64.
      */
     protected void generateBinaryRounding(CodeBuilder code, JitMethodDesc jmd, String mode) {
-        ClassDesc valueCD = JitTypeDesc.getJavaPrimitive(thisType);
+        ClassDesc valueCD = JitTypeDesc.requireJavaPrimitive(thisType);
         assert valueCD != null;
 
         if (mode != null) {
