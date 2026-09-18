@@ -169,7 +169,7 @@ public class FPNumberBuilder extends NumberBuilder {
         int sigLen = getSignificandLength();
 
         if (thisType.isJavaPrimitive()) {
-            ClassDesc cd   = JitTypeDesc.getJavaPrimitive(thisType);
+            ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
             int       slot = code.parameterSlot(0);
 
             switch (cd.descriptorString()) {
@@ -224,7 +224,7 @@ public class FPNumberBuilder extends NumberBuilder {
         int  shift  = (int) (bitLen - sigLen);
 
         if (thisType.isJavaPrimitive()) {
-            ClassDesc cd   = JitTypeDesc.getJavaPrimitive(thisType);
+            ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
             int       slot = code.parameterSlot(0);
 
             switch (cd.descriptorString()) {
@@ -319,7 +319,7 @@ public class FPNumberBuilder extends NumberBuilder {
      * Generate a rounding operation for Float16, Float32, or Float64.
      */
     protected void generateBinaryRounding(CodeBuilder code, JitMethodDesc jmd, String mode) {
-        ClassDesc valueCD = JitTypeDesc.getJavaPrimitive(thisType);
+        ClassDesc valueCD = JitTypeDesc.requireJavaPrimitive(thisType);
         assert valueCD != null;
 
         if (mode != null) {

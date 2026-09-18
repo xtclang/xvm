@@ -79,7 +79,7 @@ public class TerminalTypeConstant
      *
      * @throws IOException if an issue occurs reading the Constant value
      */
-    public TerminalTypeConstant(ConstantPool pool, @SuppressWarnings("unused") Format format, DataInput in)
+    public TerminalTypeConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException {
         super(pool);
 

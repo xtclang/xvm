@@ -95,7 +95,7 @@ public class IntNumberBuilder extends NumberBuilder {
      */
     protected void generateLeftmostBitGet(CodeBuilder code, JitMethodDesc jmd) {
         if (thisType.isJavaPrimitive()) {
-            ClassDesc cd   = JitTypeDesc.getJavaPrimitive(thisType);
+            ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
             int       slot = code.parameterSlot(0);
             assert cd != null;
 
@@ -163,7 +163,7 @@ public class IntNumberBuilder extends NumberBuilder {
      */
     protected void generateRightmostBitGet(CodeBuilder code, JitMethodDesc jmd) {
         if (thisType.isJavaPrimitive()) {
-            ClassDesc cd   = JitTypeDesc.getJavaPrimitive(thisType);
+            ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
             int       slot = code.parameterSlot(0);
             assert cd != null;
 
@@ -249,7 +249,7 @@ public class IntNumberBuilder extends NumberBuilder {
      */
     protected void generateLeadingZeroCountGet(CodeBuilder code, JitMethodDesc jmd) {
         if (thisType.isJavaPrimitive()) {
-            ClassDesc cd = JitTypeDesc.getJavaPrimitive(thisType);
+            ClassDesc cd = JitTypeDesc.requireJavaPrimitive(thisType);
             assert cd != null;
 
             int slot      = code.parameterSlot(0);
@@ -302,7 +302,7 @@ public class IntNumberBuilder extends NumberBuilder {
      */
     protected void generateTrailingZeroCountGet(CodeBuilder code, JitMethodDesc jmd) {
         if (thisType.isJavaPrimitive()) {
-            ClassDesc cd   = JitTypeDesc.getJavaPrimitive(thisType);
+            ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
             assert cd != null;
 
             int bitLength = getBitLength();
