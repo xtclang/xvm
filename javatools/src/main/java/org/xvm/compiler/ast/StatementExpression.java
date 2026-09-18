@@ -117,7 +117,7 @@ public class StatementExpression
         ctx = enterStatementContext(ctx);
 
         // the resulting returned types come back in the type collector
-        StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, ErrorListener.BLACKHOLE);
+        StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, ErrorListener.PROBE);
         ctx = ctx.exit();
 
         // extract the type information (if everything validated ok)
@@ -164,7 +164,7 @@ public class StatementExpression
         blockTempOld.suppressScope();
         ctx = enterStatementContext(ctx);
 
-        StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, ErrorListener.BLACKHOLE);
+        StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, ErrorListener.PROBE);
         ctx = ctx.exit();
 
         TypeFit fit = TypeFit.NoFit;

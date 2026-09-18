@@ -403,7 +403,7 @@ public class CmpExpression
             return pool.typeRef();
         }
 
-        TypeConstant typeCommon = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+        TypeConstant typeCommon = Op.selectCommonType(type1, type2, ErrorListener.PROBE);
 
         if (type1 == null || type2 == null) {
             return typeCommon;

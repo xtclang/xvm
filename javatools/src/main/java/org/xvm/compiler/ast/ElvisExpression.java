@@ -70,7 +70,7 @@ public class ElvisExpression
             return null;
         }
 
-        TypeConstant typeResult = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+        TypeConstant typeResult = Op.selectCommonType(type1, type2, ErrorListener.PROBE);
 
         // hey, wouldn't it be nice if we could just do this?
         //
@@ -127,7 +127,7 @@ public class ElvisExpression
         //
         ctx = ctx.enterIf();
 
-        if (expr1.testFitMulti(ctx, atypeCond, true, ErrorListener.BLACKHOLE).isFit()) {
+        if (expr1.testFitMulti(ctx, atypeCond, true, ErrorListener.PROBE).isFit()) {
             m_fCond = fCond = true;
 
             if (typeRequired != null) {
@@ -150,7 +150,7 @@ public class ElvisExpression
                 ? null
                 : Op.selectCommonType(type1.removeNullable(), null, errs);
         if (typeRequired == null) {
-            if (type2Req != null && !expr2.testFit(ctx, type2Req, true, ErrorListener.BLACKHOLE).isFit()) {
+            if (type2Req != null && !expr2.testFit(ctx, type2Req, true, ErrorListener.PROBE).isFit()) {
                 // there are no requirements from outside and the second expression is not going to
                 // validate against the first expression type. Compute the narrowest type that expr2
                 // has a chance of validating - a union of type1 and the implicit type for expr2
@@ -160,7 +160,7 @@ public class ElvisExpression
                 }
             }
         } else {
-            if (type2Req == null || !expr2.testFit(ctx, type2Req, false, ErrorListener.BLACKHOLE).isFit()) {
+            if (type2Req == null || !expr2.testFit(ctx, type2Req, false, ErrorListener.PROBE).isFit()) {
                 type2Req = typeRequired;
             }
         }

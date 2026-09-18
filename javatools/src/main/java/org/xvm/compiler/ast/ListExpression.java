@@ -106,7 +106,7 @@ public class ListExpression
             return pool.typeArray();
         }
 
-        return type.ensureTypeConstant(ctx, ErrorListener.BLACKHOLE);
+        return type.ensureTypeConstant(ctx, ErrorListener.PROBE);
     }
 
     private TypeConstant getImplicitElementType(Context ctx) {

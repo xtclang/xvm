@@ -500,7 +500,7 @@ public class NameExpression
     public TypeConstant getImplicitType(Context ctx) {
         return isValidated()
                 ? getType()
-                : getImplicitType(ctx, null, ErrorListener.BLACKHOLE);
+                : getImplicitType(ctx, null, ErrorListener.PROBE);
     }
 
     /**
@@ -542,7 +542,7 @@ public class NameExpression
             // outer type
             TypeConstant typeDesired = null;
             if (typeRequired != null && typeRequired.isTypeOfType() && isIdentityMode(ctx, true) &&
-                    testFit(ctx, pool.typeInner().getType(), false, ErrorListener.BLACKHOLE).isFit()) {
+                    testFit(ctx, pool.typeInner().getType(), false, ErrorListener.PROBE).isFit()) {
                 typeDesired = pool.typeOuter().getType();
             }
 
@@ -2135,7 +2135,7 @@ public class NameExpression
                     // process the "this.OuterName" construct
                     if (!typeLeft.isTypeOfType() && !fIdMode) {
                         Constant constTarget = new NameResolver(this, sName)
-                                .forceResolve(ErrorListener.BLACKHOLE);
+                                .forceResolve(ErrorListener.PROBE);
                         if (constTarget instanceof IdentityConstant && constTarget.isClass()) {
                             if (constTarget.equals(pool.clzOuter())) {
                                 // this.Outer
@@ -2867,7 +2867,7 @@ public class NameExpression
                 break CheckDynamic;
             }
 
-            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, ErrorListener.PROBE);
             if (!(argLeft instanceof Register regLeft)) {
                 break CheckDynamic;
             }
@@ -3172,7 +3172,7 @@ public class NameExpression
         if (typeNarrow != null) {
             assert isValidated();
 
-            Argument arg = resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+            Argument arg = resolveRawArgument(ctx, false, ErrorListener.PROBE);
 
             if (left != null) {
                 if (arg instanceof FormalTypeChildConstant constFormal) {
