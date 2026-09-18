@@ -2491,11 +2491,25 @@ public class Parser {
      * @return an expression
      */
     Expression parseElseExpression(boolean fExtended) {
-        Expression expr = parseTernaryExpression(fExtended);
-        if (peek(Id.COLON)) {
-            expr = new ElseExpression(expr, current(), parseElseExpression(false));
+        // every nested expression reaches the parser through here, and the descent costs a dozen
+        // or so Java frames per level, so without a limit deeply nested source exhausts the stack
+        // instead of producing a compiler error
+        if (++m_cExprDepth > MAX_EXPR_DEPTH) {
+            --m_cExprDepth;
+            Token token = peek();
+            log(Severity.ERROR, EXPR_TOO_DEEP, token.getStartPosition(), token.getEndPosition(),
+                    MAX_EXPR_DEPTH);
+            throw new CompilerException("expression nested deeper than " + MAX_EXPR_DEPTH);
         }
-        return expr;
+        try {
+            Expression expr = parseTernaryExpression(fExtended);
+            if (peek(Id.COLON)) {
+                expr = new ElseExpression(expr, current(), parseElseExpression(false));
+            }
+            return expr;
+        } finally {
+            --m_cExprDepth;
+        }
     }
 
     /**
@@ -5772,12 +5786,29 @@ public class Parser {
      */
     public static final String MISSING_SEMICOLON = "PARSER-29";
 
+    /**
+     * Expression nesting is too deep.
+     */
+    public static final String EXPR_TOO_DEEP     = "PARSER-30";
+
+    /**
+     * The deepest expression nesting the parser will descend into. Chosen well below the level at
+     * which the recursive descent exhausts a default thread stack, and far above anything that
+     * occurs in readable source.
+     */
+    public static final int MAX_EXPR_DEPTH = 256;
+
     // ----- data members --------------------------------------------------------------------------
 
     /**
      * The Source to parse.
      */
     private final Source m_source;
+
+    /**
+     * The current expression nesting depth; see {@link #MAX_EXPR_DEPTH}.
+     */
+    private int m_cExprDepth;
 
     /**
      * The ErrorListener to report errors to.
