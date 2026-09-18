@@ -220,8 +220,15 @@ public class EmbeddingSupport {
                     : null;
         } catch (RuntimeException | AssertionError e) {
             // as in run(): the compiler runs over caller-supplied source, so a failure in it is
-            // reported here rather than thrown at the caller, who was promised a null instead
-            errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
+            // reported here rather than thrown at the caller, who was promised a null instead.
+            // Aborting because the source has errors is the ordinary failure though, and those
+            // errors have already been reported through this same listener; saying "internal
+            // error" again would add a diagnostic that is not true and has no location, which a
+            // host showing a problem list puts at the top of a file whose real problems are
+            // further down
+            if (!errs.hasSeriousErrors()) {
+                errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
+            }
             return null;
         }
     }
