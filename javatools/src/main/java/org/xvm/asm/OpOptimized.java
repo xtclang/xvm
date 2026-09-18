@@ -21,10 +21,8 @@ public abstract class OpOptimized
     /**
      * Generate the code to load the binary Op's target and argument onto the stack and perform the
      * binary operation optimized for a Java primitive type.
-     * <p>
-     * This method will also validate that the argument type matches the target type.
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
+     * <p>This method will also validate that the argument type matches the target type.
+     * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -79,10 +77,8 @@ public abstract class OpOptimized
     /**
      * Generate the code to load the binary Op's target and argument onto the stack and perform the
      * binary operation optimized for an XVM primitive Number type.
-     * <p>
-     * This method will also validate that the argument type matches the target type.
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
+     * <p>This method will also validate that the argument type matches the target type.
+     * <p>Neither the target nor argument should have been loaded to the stack.
      *
      * @param bctx      the current build context
      * @param code      the code builder to add the op codes to
@@ -122,8 +118,7 @@ public abstract class OpOptimized
      * Generate the bytecodes for the corresponding unary op optimized for an XVM primitive Number
      * type.
      * The primitive value for the target must already be on the top of the Java stack.
-     * <p>
-     * The target register should not have been loaded to the stack.
+     * <p>The target register should not have been loaded to the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to

@@ -80,10 +80,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will add two XVM primitive Dec32 types
      * (T + T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented a Java {@code int} primitive value on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented a Java {@code int} primitive value on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -98,10 +96,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will add two XVM primitive Dec64 types
      * (T + T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented a Java {@code long} primitive value on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented a Java {@code long} primitive value on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -116,10 +112,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will add two XVM primitive Dec128 types
      * (T + T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented two Java {@code long} primitive values on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented two Java {@code long} primitive values on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -135,10 +129,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will add two XVM primitive Decimal types that are
      * (T + T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented by one or more Java primitive values on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented by one or more Java primitive values on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -158,10 +150,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will divide two XVM primitive Dec32 types
      * (T / T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented a Java {@code int} primitive value on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented a Java {@code int} primitive value on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -176,10 +166,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will divide two XVM primitive Dec64 types
      * (T / T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented a Java {@code long} primitive value on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented a Java {@code long} primitive value on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -194,10 +182,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will add two XVM primitive Dec128 types
      * (T / T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented two Java {@code long} primitive values on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented two Java {@code long} primitive values on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -213,10 +199,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will divide two XVM primitive Decimal types
      * (T / T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented by one or more Java primitive values on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented by one or more Java primitive values on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -235,10 +219,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will multiply two XVM primitive Dec32 types
      * (T % T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented a Java {@code int} primitive value on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented a Java {@code int} primitive value on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -253,10 +235,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will multiply two XVM primitive Dec64 types
      * (T % T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented a Java {@code long} primitive value on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented a Java {@code long} primitive value on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -271,10 +251,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will add two XVM primitive Dec128 types
      * (T % T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented two Java {@code long} primitive values on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented two Java {@code long} primitive values on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -290,10 +268,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will multiply two XVM primitive Decimal types
      * (T % T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented by one or more Java primitive values on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented by one or more Java primitive values on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -313,10 +289,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will multiply two XVM primitive Dec32 types
      * (T * T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented a Java {@code int} primitive value on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented a Java {@code int} primitive value on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -331,10 +305,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will multiply two XVM primitive Dec64 types
      * (T * T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented a Java {@code long} primitive value on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented a Java {@code long} primitive value on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -349,10 +321,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will add two XVM primitive Dec128 types
      * (T * T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented two Java {@code long} primitive values on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented two Java {@code long} primitive values on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -368,10 +338,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will multiply two XVM primitive Decimal types
      * (T * T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented by one or more Java primitive values on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented by one or more Java primitive values on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -390,8 +358,7 @@ public interface NumberSupportDec {
     /**
      * Build the optimized unary operation that will produce the negative of a XVM primitive Dec32
      * type (-T -> T).
-     * <p>
-     * The target should not have been loaded to the stack.
+     * <p>The target should not have been loaded to the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -404,8 +371,7 @@ public interface NumberSupportDec {
     /**
      * Build the optimized unary operation that will produce the negative of a XVM primitive Dec64
      * type (-T -> T).
-     * <p>
-     * The target should not have been loaded to the stack.
+     * <p>The target should not have been loaded to the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -418,8 +384,7 @@ public interface NumberSupportDec {
     /**
      * Build the optimized unary operation that will produce the negative of a XVM primitive Dec128
      * type (-T -> T).
-     * <p>
-     * The target should not have been loaded to the stack.
+     * <p>The target should not have been loaded to the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -433,8 +398,7 @@ public interface NumberSupportDec {
     /**
      * Build the optimized unary operation that will produce the negative of a XVM primitive Dec32
      * type (-T -> T).
-     * <p>
-     * The target should not have been loaded to the stack.
+     * <p>The target should not have been loaded to the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -451,10 +415,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will subtract two XVM primitive Dec32 types
      * (T - T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented a Java {@code int} primitive value on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented a Java {@code int} primitive value on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -469,10 +431,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will subtract two XVM primitive Dec64 types
      * (T - T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented a Java {@code long} primitive value on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented a Java {@code long} primitive value on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -487,10 +447,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will add two XVM primitive Dec128 types
      * (T - T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented two Java {@code long} primitive values on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented two Java {@code long} primitive values on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -506,10 +464,8 @@ public interface NumberSupportDec {
     /**
      * Build the optimized binary operation that will subtract two XVM primitive Decimal types
      * (T - T -> T).
-     * <p>
-     * Neither the target nor argument should have been loaded to the stack.
-     * <p>
-     * The result will be represented by one or more Java primitive values on the stack.
+     * <p>Neither the target nor argument should have been loaded to the stack.
+     * <p>The result will be represented by one or more Java primitive values on the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to

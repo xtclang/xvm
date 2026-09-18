@@ -122,8 +122,7 @@ public class ConstantPool
      * in the pool. The array is NOT an internal array from the constant pool, so the caller can
      * safely modify the array. The constants in the array are the actual constants in the constant
      * pool, so the caller must NOT modify them.
-     * <p>
-     * Warning: Do NOT use this method in any performance sensitive tool.
+     * <p>Warning: Do NOT use this method in any performance sensitive tool.
      *
      * @return the Constant at that index
      */
@@ -150,8 +149,7 @@ public class ConstantPool
      * can also be used directly by a consumer, and it's used during the bulk (re-)registration of
      * Constants by the {@link XvmStructure#registerConstants} method of all of the various parts
      * of the FileStructure.
-     * <p/>
-     * The caller should use the returned constant in lieu of the constant that the caller passed
+     * <p>The caller should use the returned constant in lieu of the constant that the caller passed
      * in.
      *
      * @param constant  the Constant to register
@@ -2476,8 +2474,7 @@ public class ConstantPool
     /**
      * Replace the parent identity for all IdentityConstants that are children of the specified
      * module.
-     * <p>
-     * This method is absolutely destructive to the integrity of this ConstantPool and should only
+     * <p>This method is absolutely destructive to the integrity of this ConstantPool and should only
      * be called on a freshly created copy of a FileStructure that would be immediately discarded
      * after serialization.
      */
@@ -3038,8 +3035,7 @@ public class ConstantPool
     /**
      * Obtain a Constant lookup table for Constants of the specified type, using Constants as the
      * keys of the lookup table.
-     * <p/>
-     * Constants are natural identities, so they act as the keys in this lookup structure. This data
+     * <p>Constants are natural identities, so they act as the keys in this lookup structure. This data
      * structure allows there to be exactly one instance of each Constant identity held by the
      * ConstantPool, similar to how String objects are "interned" in Java.
      *
@@ -3086,8 +3082,7 @@ public class ConstantPool
     /**
      * Obtain a Constant lookup table for Constants of the specified type, using locators as the
      * keys of the lookup table.
-     * <p/>
-     * Locators are optional identities that are specific to each different Type of Constant:
+     * <p>Locators are optional identities that are specific to each different Type of Constant:
      * <ul>
      * <li>A Constant Type may not support locators at all;</li>
      * <li>A Constant Type may support locators, but only for some of the
@@ -3971,15 +3966,13 @@ public class ConstantPool
 
     /**
      * Reverse lookup structure to find a particular constant by constant.
-     * <p>
-     * This map is not thread-safe and safety is provided via copy-on-write
+     * <p>This map is not thread-safe and safety is provided via copy-on-write
      */
     private volatile EnumMap<Format, Map<Constant, Constant>> m_mapConstants = new EnumMap<>(Format.class);
 
     /**
      * Reverse lookup structure to find a particular constant by locator.
-     * <p>
-     * This map is not thread-safe and safety is provided via copy-on-write
+     * <p>This map is not thread-safe and safety is provided via copy-on-write
      */
     private volatile EnumMap<Format, Map<Object, Constant>> m_mapLocators = new EnumMap<>(Format.class);
 

@@ -16,8 +16,7 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of Int8, stored in an array of Java longs, eight Int8 per long.
- * <p>
- * Object header
+ * <p>Object header
  * xObj - 64 bits of flags
  * ---
  * Delegate - ref

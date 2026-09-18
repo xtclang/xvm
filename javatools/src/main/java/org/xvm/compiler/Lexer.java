@@ -1532,7 +1532,7 @@ public class Lexer
      *
      * @param otherResults  either null, or an array of up to two "int" elements, to allow for
      *                      multiple "out" values from this method, the first of which is the radix
-     *                      and the second is the sign (<tt>-1</tt> or <tt>+1</tt>)
+     *                      and the second is the sign (<code>-1</code> or <code>+1</code>)
      *
      * @return a PackedInteger
      */
@@ -1902,7 +1902,7 @@ public class Lexer
     /**
      * Eat a literal version value.
      *
-     * <p/><code><pre>
+     * <p><code><pre>
      * VersionString
      *     NonGASuffix
      *     VersionNumbers VersionFinish-opt

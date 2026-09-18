@@ -115,7 +115,7 @@ public interface ModuleRepository {
     // ----- constants -----------------------------------------------------------------------------
 
     /**
-     * A constant empty array of <tt>ModuleRepository</tt>.
+     * A constant empty array of <code>ModuleRepository</code>.
      */
     ModuleRepository[] NO_REPOS = new ModuleRepository[0];
 }

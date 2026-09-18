@@ -479,8 +479,7 @@ public class PropertyStructure
      * For a property structure that contains annotations whose types are now resolved, sort the
      * annotations into the annotations that apply to the property, the annotations that apply to
      * the Ref/Var, and the annotations that apply to the property type.
-     * <p/>
-     * This method isn't responsible for validating the annotations, so it doesn't log any errors.
+     * <p>This method isn't responsible for validating the annotations, so it doesn't log any errors.
      * Anything that it finds that is suspect, it leaves for someone else to validate later.
      *
      * @return true iff the annotations are resolved

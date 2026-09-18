@@ -470,7 +470,7 @@ public class Dec64 extends DecimalFPNumber {
     }
 
     /**
-     * @return the exponent of the decimal as a Java <tt>int</tt>
+     * @return the exponent of the decimal as a Java <code>int</code>
      */
     public int $getExponent() {
         // combination field is 13 bits (from bit 50 to bit 62), including 8 "pure" exponent bits

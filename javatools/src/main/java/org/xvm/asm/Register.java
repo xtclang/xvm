@@ -166,8 +166,7 @@ public class Register
 
     /**
      * Create a register that is collocated with this register, but narrows its type.
-     * <p/>
-     * To be technically correct, there are scenarios when typeNarrowed is actually wider than
+     * <p>To be technically correct, there are scenarios when typeNarrowed is actually wider than
      * the original type. Imagine a following Ecstasy code:
      *   <pre><code>
      *   Element el = ...;

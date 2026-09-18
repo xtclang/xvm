@@ -19,7 +19,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
  *                                          ; rvalue sample rate (a compile-time or run-time
  *                                          ; constant)
  *
- * <p/>TODO verify that inverse-sample-rate is a constant or a runtime constant
+ * <p>TODO verify that inverse-sample-rate is a constant or a runtime constant
  */
 public class JumpNSample
         extends OpCondJump {

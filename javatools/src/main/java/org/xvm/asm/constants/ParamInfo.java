@@ -4,8 +4,7 @@ import org.xvm.asm.Constant.Format;
 
 /**
  * Represents information about a single, named type parameter.
- * <p/>
- * The ParamInfo does not maintain a reference to the containing TypeInfo, and is not modified after
+ * <p>The ParamInfo does not maintain a reference to the containing TypeInfo, and is not modified after
  * construction, so it can be referenced by any number of containing TypeInfo objects.
  */
 public class ParamInfo {

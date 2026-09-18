@@ -405,8 +405,7 @@ public class StageMgr {
 
     /**
      * Obtain the list of nodes that still require processing.
-     * <p/>
-     * Note: Normally the revisiting is performed by calling {@link #processComplete()} in a loop
+     * <p>Note: Normally the revisiting is performed by calling {@link #processComplete()} in a loop
      * until it returns {@code true}. Only call this method directly if assuming the responsibility
      * for finishing all of the processing.
      *

@@ -112,8 +112,7 @@ import static org.xvm.util.Handy.lazyAddAll;
 
 /**
  * A base class for the various forms of Constants that will represent data types.
- * <p/>
- * Each type has 0, 1, or 2 underlying types:
+ * <p>Each type has 0, 1, or 2 underlying types:
  * <ul>
  * <li>A {@link TerminalTypeConstant} has no underlying type(s); it is a terminal;</li>
  * <li>Type constants that modify a single underlying type include {@link
@@ -167,8 +166,7 @@ public abstract class TypeConstant
     /**
      * Determine if the type has exactly one underlying type that it modifies the meaning of.
      * An underlying type is a type whose definition is modified by this type constant.
-     * <p/>
-     * <ul>
+     * <p><ul>
      * <li>{@link ImmutableTypeConstant}</li>
      * <li>{@link AccessTypeConstant}</li>
      * <li>{@link ParameterizedTypeConstant}</li>
@@ -183,13 +181,12 @@ public abstract class TypeConstant
 
     /**
      * Determine if the type represents a relation between two underlying types.
-     * <p/>
-     * <ul>
+     * <p><ul>
      * <li>{@link IntersectionTypeConstant}</li>
      * <li>{@link UnionTypeConstant}</li>
      * <li>{@link DifferenceTypeConstant}</li>
      * </ul>
-     * <p/>
+     * <p>
      *
      * @return true iff this is a relational type constant
      */
@@ -628,8 +625,7 @@ public abstract class TypeConstant
 
     /**
      * Replace this VirtualChild's parent with the specified parent type.
-     * <p/>
-     * Consider the following class inheritance diagram:
+     * <p>Consider the following class inheritance diagram:
      * <pre>
      *    B.C0 <- D.C0
      *     ^
@@ -913,8 +909,7 @@ public abstract class TypeConstant
      * Produce a minimal representation of a type that is known to be assignable to both this
      * and the specified type. The resulting type is guaranteed to be the same or narrower than
      * this type.
-     * <p/>
-     * Note: while this operation is most of the time commutative, e.g.
+     * <p>Note: while this operation is most of the time commutative, e.g.
      *      t1.combine(t2) === t2.combine(t1)
      * there are some dynamic type scenarios where both t1.isA(t2)==true and t2.isA(t1)==true,
      * but still one time is more descriptive that another and the way combine() is called may be
@@ -1081,8 +1076,7 @@ public abstract class TypeConstant
      * Produce a minimal representation the type that is known to be assignable to this type but
      * is also known not to be assignable to the specified type. The resulting type is guaranteed
      * to be the same or narrower than this type.
-     * <p/>
-     * Unless this type is relational, the "not assignable to the specified type" part of the
+     * <p>Unless this type is relational, the "not assignable to the specified type" part of the
      * contract may not be achievable.
      *
      * @return a type that is equal or narrower than this type or null if such a representation is
@@ -1308,8 +1302,7 @@ public abstract class TypeConstant
 
     /**
      * Collect an array of generic type parameters for this "formalizable" type.
-     * <p/>
-     * An already parameterized class is not formalizable.
+     * <p>An already parameterized class is not formalizable.
      * <br>
      * A type that has a {@link #isExplicitClassIdentity explicit class identity} is formalizable
      * iff that class {@link ClassStructure#isParameterized() is parameterized}.
@@ -2258,8 +2251,7 @@ public abstract class TypeConstant
     /**
      * Analyze the mixin and determine what set of identities is represented by the mixin but not by
      * the type that the mixin mixes into.
-     * <p>
-     * When building the TypeInfo for a mixin (referred to as "the right side"), and adopting
+     * <p>When building the TypeInfo for a mixin (referred to as "the right side"), and adopting
      * information from the "into" of the mixin (referred to as "the left side"), the TypeInfo must
      * avoid including any information from the "into" that actually came from the right side. the
      * simplest example is the mixin's own members, which will appear in the "into" TypeInfo if the
@@ -2268,8 +2260,7 @@ public abstract class TypeConstant
      * mixin mixes into incorporates a subclass of the mixin; when this happens, the mixin has to
      * both make sure that its own members are not present in the "into" TypeInfo, but also those of
      * any subclass.
-     * <p>
-     * At the time that the mixin TypeInfo is built, the type dependencies must be evaluated in
+     * <p>At the time that the mixin TypeInfo is built, the type dependencies must be evaluated in
      * order to remove any information present being pulled in from the left side's TypeInfo (as the
      * "into" information is processed) that actually originates on the right side (this mixin
      * "column"). To do this, the graph of contributions must be walked completely in order to build
@@ -2278,8 +2269,7 @@ public abstract class TypeConstant
      * As long as the right side (the mixin TypeInfo) is built using this exact approach, the left
      * side does not need to do anything special, because the right side TypeInfo will have
      * explicitly broken the circular information flow.
-     * <p>
-     * Step one is to understand if (and how) the right column is going to be incorporated into the
+     * <p>Step one is to understand if (and how) the right column is going to be incorporated into the
      * left column by default, by checking the "into" clause of the mixin, and any mixin that this
      * mixin extends. (The rule is that a subclass can only narrow the super class' "into" type,
      * which the compiler and the verifier will both check.) The most narrow "into" type is then
@@ -2287,21 +2277,17 @@ public abstract class TypeConstant
      * portion of that set of mixins is (or leads to) the mixin that the TypeInfo is being built for
      * (aka the mixin represented by "this" TypeConstant). any mixin from that set that is (or is in
      * the column that leads to) this TypeConstant mixin is considered to be in the "exclusion set".
-     * <p>
-     * Step two is to collect the constituent types that form the right column, i.e. the mixin(s)
+     * <p>Step two is to collect the constituent types that form the right column, i.e. the mixin(s)
      * and any superclasses and interfaces (etc.) -- but no "into" types! -- that form the exclusion
      * set.
-     * <p>
-     * Step three is to collect the constituent types that are represented by the narrowest of the
+     * <p>Step three is to collect the constituent types that are represented by the narrowest of the
      * into types -- but none of the mixins from the "exclusion set"! these types are considered to
      * be the "into set".
-     * <p>
-     * Step four is to remove any types in the exclusion set that also exist in the into set; an
+     * <p>Step four is to remove any types in the exclusion set that also exist in the into set; an
      * obvious example is the Object interface, which will necessarily exist in both prior to this
      * step. The result is the "unique exclusion set". What remains is a set of types that
      * represents "everything on the right side that is unique to the right side".
-     * <p>
-     * Using the unique exclusion set, the right side (the process building the TypeInfo for "this"
+     * <p>Using the unique exclusion set, the right side (the process building the TypeInfo for "this"
      * TypeConstant) can correctly (and completely) evaluate the incoming "from into" TypeInfo,
      * discarding everything in the "from into" that actually originates on the "right side", thus
      * eliminating any circularity of TypeInfo data.
@@ -6328,8 +6314,7 @@ public abstract class TypeConstant
      * </li></ul>
      *
      * Determine whether M2 could be invoked via a signature of M1, and M2 could then "super" to M1.
-     * <p/>
-     * Note: despite the name this method also handling the auto-narrowing covariance.
+     * <p>Note: despite the name this method also handling the auto-narrowing covariance.
      *
      * @param typeBase  the type to determine the contravariance with
      * @param typeCtx   (optional) the type within which context the covariance is to be determined
@@ -7334,15 +7319,13 @@ public abstract class TypeConstant
      *
      * The canonical type C(T) is always a {@link #isSingleUnderlyingClass single underlying class}
      * that could parameterized by non-parameterized callable JIT types as parameters.
-     * <p/>
-     * The following should hold :
+     * <p>The following should hold :
      *  <ul>
      *    <li>for any type T: T is-a C(T)</li>
      *    <li>if T2 is-a T1, then C(T2) is-a C(T1)</li>
      *    <li>for any type T, the CC(T) == CC(C(T)))</li>
      *  </ul>
-     * <p/>
-     * For every non-parameterized type of {@link #isSingleUnderlyingClass single underlying class}
+     * <p>For every non-parameterized type of {@link #isSingleUnderlyingClass single underlying class}
      * (regardless of access and immutability modifications) the canonical type is the corresponding
      * {@link TerminalTypeConstant}.
      * <br/>
@@ -7753,8 +7736,7 @@ public abstract class TypeConstant
     /**
      * Convert an unsigned primitive on the top of the stack to a signed primitive prior to a
      * compare operation.
-     * <p>
-     * This is the same thing that Java does prior when performing a comparison on unsigned
+     * <p>This is the same thing that Java does prior when performing a comparison on unsigned
      * primitives such as {@link Integer#compareUnsigned(int, int)} or
      * {@link Long#compareUnsigned(long, long)}.
      *

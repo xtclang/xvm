@@ -16,33 +16,33 @@ import org.xvm.compiler.Token;
  * Generic expression for something that follows the pattern "expression operator expression".
  *
  * <ul>
- * <li><tt>COLON:      ":"</tt> - an "else" for nullability checks</li>
- * <li><tt>COND_ELSE:  "?:"</tt> - the "elvis" operator</li>
- * <li><tt>COND_OR:    "||"</tt> - </li>
- * <li><tt>COND_XOR:   "^^"</tt> - </li>
- * <li><tt>COND_AND:   "&&"</tt> - </li>
- * <li><tt>BIT_OR:     "|"</tt> - </li>
- * <li><tt>BIT_XOR:    "^"</tt> - </li>
- * <li><tt>BIT_AND:    "&"</tt> - </li>
- * <li><tt>COMP_EQ:    "=="</tt> - </li>
- * <li><tt>COMP_NEQ:   "!="</tt> - </li>
- * <li><tt>COMP_LT:    "<"</tt> - </li>
- * <li><tt>COMP_GT:    ">"</tt> - </li>
- * <li><tt>COMP_LTEQ:  "<="</tt> - </li>
- * <li><tt>COMP_GTEQ:  ">="</tt> - </li>
- * <li><tt>COMP_ORD:   "<=><tt>"</tt> - </li>
- * <li><tt>AS:         "as"</tt> - </li>
- * <li><tt>IS:         "is"</tt> - </li>
- * <li><tt>DOTDOT:     ".."</tt> - </li>
- * <li><tt>SHL:        "<<"</tt> - </li>
- * <li><tt>SHR:        ">>"</tt> - </li>
- * <li><tt>USHR:       ">>><tt>"</tt> - </li>
- * <li><tt>ADD:        "+"</tt> - </li>
- * <li><tt>SUB:        "-"</tt> - </li>
- * <li><tt>MUL:        "*"</tt> - </li>
- * <li><tt>DIV:        "/"</tt> - </li>
- * <li><tt>MOD:        "%"</tt> - </li>
- * <li><tt>DIVREM:     "/%"</tt> - </li>
+ * <li><code>COLON:      ":"</code> - an "else" for nullability checks</li>
+ * <li><code>COND_ELSE:  "?:"</code> - the "elvis" operator</li>
+ * <li><code>COND_OR:    "||"</code> - </li>
+ * <li><code>COND_XOR:   "^^"</code> - </li>
+ * <li><code>COND_AND:   "&&"</code> - </li>
+ * <li><code>BIT_OR:     "|"</code> - </li>
+ * <li><code>BIT_XOR:    "^"</code> - </li>
+ * <li><code>BIT_AND:    "&"</code> - </li>
+ * <li><code>COMP_EQ:    "=="</code> - </li>
+ * <li><code>COMP_NEQ:   "!="</code> - </li>
+ * <li><code>COMP_LT:    "<"</code> - </li>
+ * <li><code>COMP_GT:    ">"</code> - </li>
+ * <li><code>COMP_LTEQ:  "<="</code> - </li>
+ * <li><code>COMP_GTEQ:  ">="</code> - </li>
+ * <li><code>COMP_ORD:   "&lt;=&gt;"</code> - </li>
+ * <li><code>AS:         "as"</code> - </li>
+ * <li><code>IS:         "is"</code> - </li>
+ * <li><code>DOTDOT:     ".."</code> - </li>
+ * <li><code>SHL:        "<<"</code> - </li>
+ * <li><code>SHR:        ">>"</code> - </li>
+ * <li><code>USHR:       "&gt;&gt;&gt;"</code> - </li>
+ * <li><code>ADD:        "+"</code> - </li>
+ * <li><code>SUB:        "-"</code> - </li>
+ * <li><code>MUL:        "*"</code> - </li>
+ * <li><code>DIV:        "/"</code> - </li>
+ * <li><code>MOD:        "%"</code> - </li>
+ * <li><code>DIVREM:     "/%"</code> - </li>
  * </ul>
  */
 public abstract class BiExpression

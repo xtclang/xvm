@@ -32,12 +32,10 @@ import static java.lang.System.arraycopy;
 /**
  * An {@link Array} implementation where the elements are mapped into an array of Java {@code long}
  * values.
- * <p>
- * Array elements are mapped to long values in the {@link #$storage} array depending on their
+ * <p>Array elements are mapped to long values in the {@link #$storage} array depending on their
  * size, for example, eight 8-bit values can be packed into each {@code long} value in the
  * {@link #$storage} array, whereas storing a 128-bit value will require two {@code long} values.
- * <p>
- * Object header
+ * <p>Object header
  * xObj - 64 bits of flags
  * ---
  * Delegate - ref
@@ -281,8 +279,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Return the element from the array at the specified index.
-     * <p>
-     * For subclasses that are storing values that are less than 64-bits, the return value is
+     * <p>For subclasses that are storing values that are less than 64-bits, the return value is
      * always converted to a {@link long} value.
      *
      * @param ctx    the current context
@@ -348,14 +345,11 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Return the element from the array at the specified index.
-     * <p>
-     * Subclasses should override this method to correctly unpack the required element from the
+     * <p>Subclasses should override this method to correctly unpack the required element from the
      * underlying {@link #$storage} array.
-     * <p>
-     * This method is not required to check for a {@link #$delegate} or perform a range check as
+     * <p>This method is not required to check for a {@link #$delegate} or perform a range check as
      * this will have been done by the caller.
-     * <p>
-     * For subclasses that are storing values that are less than 64-bits, the return value should
+     * <p>For subclasses that are storing values that are less than 64-bits, the return value should
      * always be converted to a {@link long} value.
      *
      * @param ctx    the current context
@@ -369,8 +363,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Return the 1-bit value from the specified array index.
-     * <p>
-     * This method assumes that sixty-four 1-bit elements have been packed into each long value in
+     * <p>This method assumes that sixty-four 1-bit elements have been packed into each long value in
      * the long array.
      *
      * @param index  the index of the 1-bit value to obtain
@@ -383,10 +376,8 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Return the 4-bit value from the specified array index.
-     * <p>
-     * This method will NOT sign-extend the 4-bit value to a full 64-bit long value.
-     * <p>
-     * This method assumes that sixteen 4-bit elements have been packed into each long value in
+     * <p>This method will NOT sign-extend the 4-bit value to a full 64-bit long value.
+     * <p>This method assumes that sixteen 4-bit elements have been packed into each long value in
      * the long array.
      *
      * @param index  the index of the 4-bit value to obtain
@@ -399,10 +390,8 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Return the 8-bit value from the specified array index.
-     * <p>
-     * This method will NOT sign-extend the 8-bit value to a full 64-bit long value.
-     * <p>
-     * This method assumes that eight 8-bit elements have been packed into each long value in the
+     * <p>This method will NOT sign-extend the 8-bit value to a full 64-bit long value.
+     * <p>This method assumes that eight 8-bit elements have been packed into each long value in the
      * long array.
      *
      * @param index  the index of the 8-bit value to obtain
@@ -415,10 +404,8 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Return the 8-bit value from the specified array index.
-     * <p>
-     * This method will sign-extend the 8-bit value to a full 64-bit long value.
-     * <p>
-     * This method assumes that eight 8-bit elements have been packed into each long value in the
+     * <p>This method will sign-extend the 8-bit value to a full 64-bit long value.
+     * <p>This method assumes that eight 8-bit elements have been packed into each long value in the
      * long array.
      *
      * @param index  the index of the 8-bit value to obtain
@@ -436,10 +423,8 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Return the 16-bit value from the specified array index.
-     * <p>
-     * This method will NOT sign-extend the 16-bit value to a full 64-bit long value.
-     * <p>
-     * This method assumes that eight 16-bit elements have been packed into each long value in the
+     * <p>This method will NOT sign-extend the 16-bit value to a full 64-bit long value.
+     * <p>This method assumes that eight 16-bit elements have been packed into each long value in the
      * long array.
      *
      * @param index  the index of the 16-bit value to obtain
@@ -452,10 +437,8 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Return the 16-bit value from the specified array index.
-     * <p>
-     * This method will sign-extend the 16-bit value to a full 64-bit long value.
-     * <p>
-     * This method assumes that eight 16-bit elements have been packed into each long value in the
+     * <p>This method will sign-extend the 16-bit value to a full 64-bit long value.
+     * <p>This method assumes that eight 16-bit elements have been packed into each long value in the
      * long array.
      *
      * @param index  the index of the 16-bit value to obtain
@@ -473,10 +456,8 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Return the 21-bit value from the specified array index.
-     * <p>
-     * This method will NOT sign-extend the 8-bit value to a full 64-bit long value.
-     * <p>
-     * This method assumes that three 21-bit elements have been packed into each long value in the
+     * <p>This method will NOT sign-extend the 8-bit value to a full 64-bit long value.
+     * <p>This method assumes that three 21-bit elements have been packed into each long value in the
      * long array.
      *
      * @param index  the index of the 21-bit value to obtain
@@ -491,10 +472,8 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Return the 32-bit value from the specified array index.
-     * <p>
-     * This method will NOT sign-extend the 32-bit value to a full 64-bit long value.
-     * <p>
-     * This method assumes that eight 32-bit elements have been packed into each long value in the
+     * <p>This method will NOT sign-extend the 32-bit value to a full 64-bit long value.
+     * <p>This method assumes that eight 32-bit elements have been packed into each long value in the
      * long array.
      *
      * @param index  the index of the 32-bit value to obtain
@@ -507,10 +486,8 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Return the 32-bit value from the specified array index.
-     * <p>
-     * This method will sign-extend the 32-bit value to a full 64-bit long value.
-     * <p>
-     * This method assumes that eight 32-bit elements have been packed into each long value in the
+     * <p>This method will sign-extend the 32-bit value to a full 64-bit long value.
+     * <p>This method assumes that eight 32-bit elements have been packed into each long value in the
      * long array.
      *
      * @param index  the index of the 32-bit value to obtain
@@ -528,11 +505,9 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Return the 128-bit value from the specified array index.
-     * <p>
-     * The low 64-bits of the 128-bit value will be returned, and the high 64-bits will be set into
+     * <p>The low 64-bits of the 128-bit value will be returned, and the high 64-bits will be set into
      * the {@link Ctx#i0} field.
-     * <p>
-     * This method assumes that the 128-bit values have been stored using two long array elements
+     * <p>This method assumes that the 128-bit values have been stored using two long array elements
      * for each 128-bit value.
      *
      * @param index  the index of the 128-bit value to obtain
@@ -586,8 +561,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Store a 1-bit element value into the array.
-     * <p>
-     * This method will pack sixty-four 1-bit elements into each long value in the long array.
+     * <p>This method will pack sixty-four 1-bit elements into each long value in the long array.
      *
      * @param index  the index to store the element at
      * @param value  the value to store (0 or 1)
@@ -601,8 +575,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Store a 4-bit element value into the array.
-     * <p>
-     * This method will pack sixteen 4-bit elements into each long value in the long array.
+     * <p>This method will pack sixteen 4-bit elements into each long value in the long array.
      *
      * @param index  the index to store the element at
      * @param value  the value to store (0-15)
@@ -616,8 +589,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Store an 8-bit element value into the array.
-     * <p>
-     * This method will pack eight 8-bit elements into each long value in the long array.
+     * <p>This method will pack eight 8-bit elements into each long value in the long array.
      *
      * @param index  the index to store the element at
      * @param value  the value to store
@@ -676,8 +648,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Store a 16-bit element value into the array.
-     * <p>
-     * This method will pack two 16-bit elements into each long value in the long array.
+     * <p>This method will pack two 16-bit elements into each long value in the long array.
      *
      * @param index  the index to store the element at
      * @param value  the value to store
@@ -691,8 +662,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Store a 32-bit element value into the array.
-     * <p>
-     * This method will pack two 32-bit elements into each long value in the long array.
+     * <p>This method will pack two 32-bit elements into each long value in the long array.
      *
      * @param index  the index to store the element at
      * @param value  the value to store
@@ -706,8 +676,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * Store a 128-bit element value into the array.
-     * <p>
-     * This method will store 128-bit elements into the array using two long array elements for
+     * <p>This method will store 128-bit elements into the array using two long array elements for
      * each 128-bit value
      *
      * @param index     the index to store the element at

@@ -16,11 +16,9 @@ import org.xvm.asm.constants.TypeInfo;
 
 /**
  * The API between Java host environment and an XVM runtime.
- * <p>
- * For a given Connector there is one and only one Runtime and one and only one top level
+ * <p>For a given Connector there is one and only one Runtime and one and only one top level
  * Container. All underlying Containers will use the same Runtime.
- * <p>
- * Normally, the usage of the Connector follows these steps:
+ * <p>Normally, the usage of the Connector follows these steps:
  * <ul>
  *   <li> instantiate a Connector
  *   <li> add necessary module repositories

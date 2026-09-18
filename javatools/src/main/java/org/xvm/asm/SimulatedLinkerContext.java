@@ -23,8 +23,7 @@ import org.xvm.util.Handy;
  * This is a compile-time LinkerContext emulator, that is driven off of the information managed by
  * the AssemblerContext -- and only that information! Specifically, it takes the conditions that
  * have (for a given code path) already been tested (specified), and thus are known to be true.
- * <p/>
- * For example, if a Module is marked as version 1 (using a VersionedCondition) and the package
+ * <p>For example, if a Module is marked as version 1 (using a VersionedCondition) and the package
  * under it is conditional on "debug" being defined, then the AssemblerContext at that point in the
  * hierarchy implies a LinkerContext that returns true for {@link #isSpecified(String)
  * isSpecified("debug")} and true for {@link #isVersion(VersionConstant) isVersion(1)} -- and

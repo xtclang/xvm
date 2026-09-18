@@ -8,11 +8,9 @@ import java.math.BigInteger;
 
 /**
  * A PackedInteger represents a signed, 2's-complement integer of 1 byte to 64KB (512Kb) in size.
- * <p/>
- * Signed values up to 8 bytes can be written and read as a Java <tt>long</tt> value; values up to
+ * <p>Signed values up to 8 bytes can be written and read as a Java <code>long</code> value; values up to
  * the maximum size can be written and read as a Java BigInteger.
- * <p/>
- * The storage format (XVM Integer Packing, or "XIP") uses a variable length compression scheme. It
+ * <p>The storage format (XVM Integer Packing, or "XIP") uses a variable length compression scheme. It
  * defines four internal formats for XIP'd integers:
  * <ul><li>
  * <b>Small</b>: For a value in the range {@code -64..127}, the value is encoded as the least
@@ -39,8 +37,7 @@ import java.math.BigInteger;
  * The following bytes contain the value {@code b}, encoded as a XIP'd integer. The following
  * {@code b} bytes form the 2's complement integer value {@code n}.
  * </li></ul>
- * <p/>
- * To maximize density, the algorithms in this file use the smallest possible encoding for each
+ * <p>To maximize density, the algorithms in this file use the smallest possible encoding for each
  * value.
  */
 public class PackedInteger
@@ -54,18 +51,18 @@ public class PackedInteger
     }
 
     /**
-     * Construct a PackedInteger using a <tt>long</tt> value.
+     * Construct a PackedInteger using a <code>long</code> value.
      *
-     * @param lVal  the <tt>long</tt> value for the PackedInteger
+     * @param lVal  the <code>long</code> value for the PackedInteger
      */
     public PackedInteger(long lVal) {
         setLong(lVal);
     }
 
     /**
-     * Construct a PackedInteger using a <tt>BigInteger</tt> value.
+     * Construct a PackedInteger using a <code>BigInteger</code> value.
      *
-     * @param bigint  the <tt>BigInteger</tt> value for the PackedInteger
+     * @param bigint  the <code>BigInteger</code> value for the PackedInteger
      */
     public PackedInteger(BigInteger bigint) {
         setBigInteger(bigint);
@@ -86,10 +83,10 @@ public class PackedInteger
     // ----- public methods ------------------------------------------------------------------------
 
     /**
-     * Obtain a PackedInteger that has the specified <tt>long</tt> value. This method is useful for
+     * Obtain a PackedInteger that has the specified <code>long</code> value. This method is useful for
      * taking advantage of the built-in "cache" of commonly-used PackedInteger instances.
      *
-     * @param lVal  the <tt>long</tt> value for the PackedInteger
+     * @param lVal  the <code>long</code> value for the PackedInteger
      */
     public static PackedInteger valueOf(long lVal) {
         if (lVal >= CACHE_MIN & lVal <= CACHE_MAX) {
@@ -145,7 +142,7 @@ public class PackedInteger
 
     /**
      * Determine if the value of the PackedInteger is "big". The value is considered to be "big" if
-     * it cannot fit into a <tt>long</tt>.
+     * it cannot fit into a <code>long</code>.
      *
      * @return true if the value of the PackedInteger does not fit into a long
      */
@@ -196,12 +193,12 @@ public class PackedInteger
     }
 
     /**
-     * Obtain the <tt>long</tt> value of the PackedInteger. If the PackedInteger is "big", i.e. if
-     * the {@link #isBig} method returns <tt>true</tt>, then this method will throw an
-     * IllegalStateException, because the value cannot be expressed as a <tt>long</tt> without
+     * Obtain the <code>long</code> value of the PackedInteger. If the PackedInteger is "big", i.e. if
+     * the {@link #isBig} method returns <code>true</code>, then this method will throw an
+     * IllegalStateException, because the value cannot be expressed as a <code>long</code> without
      * losing data.
      *
-     * @return the <tt>long</tt> value of this PackedInteger
+     * @return the <code>long</code> value of this PackedInteger
      *
      * @throws IllegalStateException if the value of this PackedInteger does not fit into a long
      */
@@ -215,9 +212,9 @@ public class PackedInteger
     }
 
     /**
-     * Initialize the PackedInteger using a <tt>long</tt> value.
+     * Initialize the PackedInteger using a <code>long</code> value.
      *
-     * @param lVal  the <tt>long</tt> value for the PackedInteger
+     * @param lVal  the <code>long</code> value for the PackedInteger
      */
     public void setLong(long lVal) {
         verifyUninitialized();
@@ -227,7 +224,7 @@ public class PackedInteger
 
     /**
      * Obtain the BigInteger value of the PackedInteger. Whether or not the PackedInteger value is
-     * too large to be held in a <tt>long</tt>, the caller can request the BigInteger value; one
+     * too large to be held in a <code>long</code>, the caller can request the BigInteger value; one
      * will be lazily instantiated (and subsequently cached) if necessary.
      *
      * @return the BigInteger that represents the integer value of this PackedInteger object
@@ -680,8 +677,8 @@ public class PackedInteger
     /**
      * Write a signed 64-bit integer to a stream using variable-length encoding.
      *
-     * @param out  the <tt>DataOutput</tt> stream to write to
-     * @param l    the <tt>long</tt> value to write
+     * @param out  the <code>DataOutput</code> stream to write to
+     * @param l    the <code>long</code> value to write
      *
      * @throws IOException  if an I/O exception occurs
      */
@@ -739,12 +736,12 @@ public class PackedInteger
     /**
      * Read a variable-length encoded integer value from a stream.
      *
-     * @param in  a <tt>DataInput</tt> stream to read from
+     * @param in  a <code>DataInput</code> stream to read from
      *
-     * @return a <tt>long</tt> value
+     * @return a <code>long</code> value
      *
      * @throws IOException  if an I/O exception occurs
-     * @throws NumberFormatException  if the integer does not fit into a <tt>long</tt> value
+     * @throws NumberFormatException  if the integer does not fit into a <code>long</code> value
      */
     public static long readLong(DataInput in)
             throws IOException {
@@ -944,18 +941,18 @@ public class PackedInteger
     private boolean m_fInitialized;
 
     /**
-     * Set to true if the value is too large to fit into a <tt>long</tt> (for signed values).
+     * Set to true if the value is too large to fit into a <code>long</code> (for signed values).
      */
     private boolean m_fBig;
 
     /**
-     * The <tt>long</tt> value if the value fits into a <tt>long</tt>. Note, the value could be
+     * The <code>long</code> value if the value fits into a <code>long</code>. Note, the value could be
      * "big", as a signed one but still fit the long as unsigned.
      */
     private long m_lValue;
 
     /**
-     * The <tt>BigInteger</tt> value, which is non-null in several different cases, including if the
+     * The <code>BigInteger</code> value, which is non-null in several different cases, including if the
      * PackedInteger was constructed with a BigInteger value, if the value was set to a BigInteger,
      * or if the BigInteger was lazily instantiated by a call to {@link #getBigInteger}.
      */
@@ -981,16 +978,16 @@ public class PackedInteger
     private static final long CACHE_MAX = CACHE_MIN + CACHE.length - 1;
 
     /**
-     * The PackedInteger for the value <tt>0</tt>. Also used as the smallest 1-, 2-, 4-, 8-, 16-,
+     * The PackedInteger for the value <code>0</code>. Also used as the smallest 1-, 2-, 4-, 8-, 16-,
      * and 32-byte <b>un</b>signed integer value.
      */
     public static final PackedInteger ZERO       = valueOf(0L);
     /**
-     * The PackedInteger for the value <tt>1</tt>.
+     * The PackedInteger for the value <code>1</code>.
      */
     public static final PackedInteger ONE        = valueOf(1L);
     /**
-     * The PackedInteger for the value <tt>-1</tt>.
+     * The PackedInteger for the value <code>-1</code>.
      */
     public static final PackedInteger NEG_ONE    = valueOf(-1L);
 

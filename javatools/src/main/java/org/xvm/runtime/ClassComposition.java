@@ -912,12 +912,10 @@ public class ClassComposition
 
     /**
      * A cache of derivative TypeCompositions keyed by the "revealed type".
-     * <p/>
-     * We assume that there will never be two instantiate-able classes with the same inception type,
+     * <p>We assume that there will never be two instantiate-able classes with the same inception type,
      * but different revealed type. The ClassComposition may hide (or mask) its original identity
      * via the {@link #maskAs(TypeConstant)} operation and later reveal it back.
-     * <p/>
-     * Most of the time the revealed type is identical to the inception type so this map is going
+     * <p>Most of the time the revealed type is identical to the inception type so this map is going
      * to be empty. One exception is the native types (e.g. Ref, Service), for which the inception
      * type is defined by a {@link NativeRebaseConstant} class constant and the revealed type refers
      * to the corresponding natural interface.

@@ -19,8 +19,7 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of Int64, stored in an array of Java longs.
- * <p>
- * Object header
+ * <p>Object header
  * xObj - 64 bits of flags
  * ---
  * Delegate - ref

@@ -28,8 +28,7 @@ import static org.xvm.util.Handy.writeMagnitude;
 
 /**
  * Represent a constant that stores its value as a StringConstant.
- * <p/>
- * This class implements the following constant formats:
+ * <p>This class implements the following constant formats:
  * <ul>
  * <li>IntLiteral</li>
  * <li>FPLiteral</li>
@@ -198,8 +197,7 @@ public class LiteralConstant
 
      /**
      * Obtain the radix of the numeric literal.
-     * <p/>
-     * This must not be called if the constant is not an IntLiteral or FPLiteral.
+     * <p>This must not be called if the constant is not an IntLiteral or FPLiteral.
      *
      * @return the radix of an IntLiteral
      */
@@ -237,8 +235,7 @@ public class LiteralConstant
 
     /**
      * Obtain the value of the integer literal.
-     * <p/>
-     * This must not be called if the constant is not an IntLiteral.
+     * <p>This must not be called if the constant is not an IntLiteral.
      *
      * @return the PackedInteger value of an IntLiteral
      */
@@ -378,8 +375,7 @@ public class LiteralConstant
 
     /**
      * Obtain the BigDecimal value of the floating point literal.
-     * <p/>
-     * This must not be called if the constant is not an IntLiteral or an FPLiteral.
+     * <p>This must not be called if the constant is not an IntLiteral or an FPLiteral.
      *
      * @return the BigDecimal value of the floating point literal
      */
@@ -405,8 +401,7 @@ public class LiteralConstant
 
     /**
      * Obtain the Decimal value of the floating point literal.
-     * <p/>
-     * This must not be called if the constant is not an IntLiteral or an FPLiteral of radix 10.
+     * <p>This must not be called if the constant is not an IntLiteral or an FPLiteral of radix 10.
      *
      * @return the Decimal value of the floating point literal
      */
@@ -422,8 +417,7 @@ public class LiteralConstant
 
     /**
      * Obtain the radix-2 value of the floating point literal.
-     * <p/>
-     * This must not be called if the constant is not an IntLiteral or an FPLiteral.
+     * <p>This must not be called if the constant is not an IntLiteral or an FPLiteral.
      *
      * @return the Java "float" value of the floating point literal
      */
@@ -442,8 +436,7 @@ public class LiteralConstant
 
     /**
      * Obtain the radix-2 value of the floating point literal.
-     * <p/>
-     * This must not be called if the constant is not an IntLiteral or an FPLiteral.
+     * <p>This must not be called if the constant is not an IntLiteral or an FPLiteral.
      *
      * @return the Java "double" value of the floating point literal
      */

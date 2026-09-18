@@ -57,8 +57,7 @@ import org.xvm.util.Severity;
  * A name expression specifies a name. This handles a simple name, a qualified name, a dot name
  * expression, and names with type parameters and/or suppress-de-reference symbols.
  *
- * <p/>
- * A simple name can refer to:
+ * <p>A simple name can refer to:
  * <ul>
  * <li>An import, which in turn refers to a module/package/class, property/constant,
  *     multi-method, or typedef;</li>
@@ -87,20 +86,17 @@ import org.xvm.util.Severity;
  *     or (iii) defined by a containing class/package/module;</li>
  * </ul>
  *
- * <p/>
- * The context either has a "this" (i.e. context from inside an instance method), or it
+ * <p>The context either has a "this" (i.e. context from inside an instance method), or it
  * doesn't (i.e. context from inside a function). Even a lambda within a method has a "this",
  * since it can conceptually capture the "this" of the method. The presence of a "this" has to
  * be tracked, because the interpretation of a name will differ in some cases based on whether
  * there is a "this" or not.
- * <p/>
- * A name resolution also has an implicit de-reference, or an explicit non-dereference (a
+ * <p>A name resolution also has an implicit de-reference, or an explicit non-dereference (a
  * suppression of the de-reference using the "&" symbol). The result of the name being resolved
  * will differ based on whether the name is implicitly de-referenced, or explicitly not
  * de-referenced.
  *
- * <p/>
- * The starting point for de-referencing is within a "method body", which is one of:
+ * <p>The starting point for de-referencing is within a "method body", which is one of:
  * <ul>
  * <li>A method;</li>
  * <li>A function;</li>
@@ -108,8 +104,7 @@ import org.xvm.util.Severity;
  *     or a function (for a constant);</li>
  * </ul>
  *
- * <p/>
- * Furthermore, the starting point (i.e. the point at which the name to resolve is being used)
+ * <p>Furthermore, the starting point (i.e. the point at which the name to resolve is being used)
  * may be nested within a lambda expression. The lambda boundary represents a point at which
  * capture information must be accumulated, because each capture adds an implicit parameter to
  * the lambda (and thus an implicit argument to be included by the initializer of the lambda).
@@ -127,13 +122,11 @@ import org.xvm.util.Severity;
  *     from the outer lambda (and recursively so, if nested more than one level deep).</li>
  * </ul>
  *
- * <p/>
- * Lastly, there is the determination of the name itself. If the name refers to the name of an
+ * <p>Lastly, there is the determination of the name itself. If the name refers to the name of an
  * import, then that name is resolved first (recursively), such that the result is that the name
  * no longer refers to the name of an import, but rather to the component (Module, Package,
  * Class, Property, Multi-Method) being imported by that name.
- * <p/>
- * <code><pre>
+ * <p><code><pre>
  *   Name          method             specifies            "static" context /    specifies
  *   refers to     context            no-de-ref            identity mode         no-de-ref
  *   ------------  -----------------  -------------------  ------------------    -------------------
@@ -155,12 +148,9 @@ import org.xvm.util.Severity;
  *
  *   MultiMethod   Error              Error                Error                 Error
  * </pre></code>
- * <p/>
- * Note: '*' signifies potential "identity mode"
- * <p/>
- * [1] must have a left-hand side in identity mode; otherwise it is an Error
- * <p/>
- * Method and function evaluation is the most complex of these scenarios, because the no-de-ref
+ * <p>Note: '*' signifies potential "identity mode"
+ * <p>[1] must have a left-hand side in identity mode; otherwise it is an Error
+ * <p>Method and function evaluation is the most complex of these scenarios, because the no-de-ref
  * flag is on the name expression, but can also be implied by an argument of the
  * NonBindingExpression type. As a result, the InvocationExpression is responsible for checking
  * for a non-binding effect, which requires <i>at least</i> one of:
@@ -169,8 +159,7 @@ import org.xvm.util.Severity;
  *     evaluating to true; or</li>
  * <li>Any invocation argument with {@link #isNonBinding()} evaluating to true.</li>
  * </ul>
- * <p/>
- * The invocation expression does not delegate validation to the name expression; instead, it takes
+ * <p>The invocation expression does not delegate validation to the name expression; instead, it takes
  * on the responsibility of recognizing that there is a name expression, and validating the contents
  * on the name expression's behalf.
  */
@@ -3169,8 +3158,7 @@ public class NameExpression
 
     /**
      * Narrow the type of the variable represented by this expression for the specified context branch.
-     * <p/>
-     * Note: This can only be used during the validate() stage after this name expression
+     * <p>Note: This can only be used during the validate() stage after this name expression
      *       has been validated.
      *
      * @param ctx         the context

@@ -81,8 +81,7 @@ public class PackageStructure
 
     /**
      * Specify the module that this package imports.
-     * <p/>
-     * This method must only be called once.
+     * <p>This method must only be called once.
      *
      * @param module         the module being imported
      */
@@ -97,8 +96,7 @@ public class PackageStructure
 
     /**
      * Specify the injector for the module that this package imports.
-     * <p/>
-     * This method must only be called once.
+     * <p>This method must only be called once.
      *
      * @param constInjector  optional injector
      * @param listInject     optional list of injections
