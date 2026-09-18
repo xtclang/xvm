@@ -351,8 +351,8 @@ shape the prior-art branch reached, measured against this tree.
 | | state |
 |---|---|
 | Dedup key, `PROBE`/`BLACKHOLE`, `suppressCascade`, `Site` + varargs, never-null, no parent-mutating setter, no null-as-state | done, phases 1-7 |
-| `log()` returns `void`, abort asked separately | **postponed** by decision, revisit after the PR |
-| `ErrorListener.RUNTIME` stops throwing from inside `log()` | not started |
+| `log()` returns `void`, abort asked separately | done |
+| `ErrorListener.RUNTIME` stops throwing from inside `log()` | done |
 | `ResolutionCollector.getErrorListener()` - the listener smuggled through a callback interface | done |
 | `TypeInfo` carries and replays its own diagnostics | not started; the real shape of the last 8 sites |
 | `EvalCompiler.m_errs` / `ModuleInfo.Node.m_errs` final and created with their owner | not started |
@@ -483,7 +483,7 @@ and be a separate implementation of the interface rather than a change to `Error
 single-threaded path pays nothing.
 
 ## Open questions
-- **Postponed until after the PR.** Should `log()` keep returning `boolean`? It currently means *abort*, which conflates recording
+- ~~Should `log()` keep returning `boolean`?~~ Done: it is `void`, and `isAbortDesired()` is asked separately. It currently means *abort*, which conflates recording
   with control flow and leaves a host that only wants to watch with no correct value to return.
   The prior art made it `void` and asked `isAbortDesired()` separately; only 3–5 call sites read
   the result. Cheap, but it is an API break.
