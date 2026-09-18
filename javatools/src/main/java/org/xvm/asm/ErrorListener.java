@@ -1,5 +1,7 @@
 package org.xvm.asm;
 
+import static java.util.Objects.requireNonNull;
+
 import java.lang.management.ManagementFactory;
 
 import java.text.MessageFormat;
@@ -135,6 +137,49 @@ public interface ErrorListener {
      */
     default void fatal(String sCode, Site site, Object... aoParam) {
         log(Severity.FATAL, sCode, site, aoParam);
+    }
+
+    /**
+     * Report to both listeners.
+     *
+     * The abort question is answered by either: a caller that wrapped a budgeted listener has to
+     * keep getting the stop it asked for, whatever else is also listening.
+     *
+     * @param first   one listener
+     * @param second  the other
+     *
+     * @return a listener that reports to both
+     */
+    static ErrorListener tee(ErrorListener first, ErrorListener second) {
+        requireNonNull(first, "first");
+        requireNonNull(second, "second");
+        return new ErrorListener() {
+            @Override
+            public void log(ErrorInfo err) {
+                first.log(err);
+                second.log(err);
+            }
+
+            @Override
+            public boolean isAbortDesired() {
+                return first.isAbortDesired() || second.isAbortDesired();
+            }
+
+            @Override
+            public boolean hasSeriousErrors() {
+                return first.hasSeriousErrors() || second.hasSeriousErrors();
+            }
+
+            @Override
+            public boolean isSilent() {
+                return first.isSilent() && second.isSilent();
+            }
+
+            @Override
+            public String toString() {
+                return "Tee(" + first + ", " + second + ")";
+            }
+        };
     }
 
     /**
