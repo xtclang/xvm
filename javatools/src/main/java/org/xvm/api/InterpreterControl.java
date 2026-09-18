@@ -43,7 +43,7 @@ import static org.xvm.api.EmbeddingSupport.ERR_UNHANDLED_EXCEPTION;
 import static org.xvm.api.EmbeddingSupport.WARN_ARGUMENTS_IGNORED;
 
 import static org.xvm.util.Severity.ERROR;
-import static org.xvm.util.Severity.WARNING;
+import static org.xvm.asm.ErrorListener.at;
 
 /**
  * Interpreter-backed management and monitoring for one runner task.
@@ -194,7 +194,7 @@ class InterpreterControl
             } else {
                 this.result = null;
                 if (errs != null) {
-                    errs.log(ERROR, ERR_UNHANDLED_EXCEPTION, new Object[] {failure}, module);
+                    errs.error(ERR_UNHANDLED_EXCEPTION, at(module), failure);
                 }
             }
         } finally {
