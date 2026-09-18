@@ -1469,9 +1469,17 @@ public class FileStructure
         return errs == null ? ErrorListener.RUNTIME : errs;
     }
 
-    @Override
+    /**
+     * Direct diagnostics raised against this file, where no listener was passed, to the specified
+     * one; null restores the default.
+     *
+     * This is the file's own setting and not a mutation of it. It is deliberately not inherited
+     * from XvmStructure: a structure used to be able to reach through its parent and redirect the
+     * diagnostics of a whole containment tree it did not own.
+     *
+     * @param errs  the error listener, or null to fall back to ErrorListener.RUNTIME
+     */
     public void setErrorListener(ErrorListener errs) {
-        // this is not considered a "mutation" of the FileStructure
         m_errs = errs;
     }
 
