@@ -12,6 +12,7 @@ import org.xvm.util.Severity;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.xvm.asm.ErrorListener.in;
 
@@ -97,6 +98,45 @@ public class ErrorListenerBranchTest {
         HostListener host = new HostListener();
 
         assertSame(host, host.merge());
+    }
+
+    /**
+     * The interface is functional, so a host can lambda it - and a lambda supplies only log(),
+     * inheriting defaults that answer as though nothing had been reported. The compiler asks those
+     * questions around a hundred times to decide whether a stage may proceed, so a bare lambda
+     * tells it that the host's own diagnostics did not happen.
+     */
+    @Test
+    public void testABareLambdaAnswersAsThoughNothingWasReported() {
+        Source        source = new Source(SOURCE);
+        List<String>  seen   = new ArrayList<>();
+        ErrorListener naive  = err -> seen.add(err.getCode());
+
+        naive.error(CODE, in(source, 0, 1), "a");
+
+        assertEquals(1, seen.size(), "it did receive the diagnostic");
+        assertFalse(naive.hasSeriousErrors(), "but it reports that nothing serious happened");
+        assertFalse(naive.hasError(CODE));
+    }
+
+    /**
+     * collecting() is the same one-liner for a host, and answers truthfully.
+     */
+    @Test
+    public void testACollectingListenerAnswersTruthfully() {
+        Source        source = new Source(SOURCE);
+        List<String>  seen   = new ArrayList<>();
+        ErrorListener host   = ErrorListener.collecting(err -> seen.add(err.getCode()));
+
+        host.error(CODE, in(source, 0, 1), "a");
+
+        assertEquals(1, seen.size());
+        assertTrue(host.hasSeriousErrors());
+        assertTrue(host.hasError(CODE));
+        assertFalse(host.isAbortDesired(), "an error is not by itself a reason to abandon");
+
+        host.fatal(CODE, in(source, 2, 3), "b");
+        assertTrue(host.isAbortDesired(), "a fatal is");
     }
 
     private static final String SOURCE = "module TestSimple { void run() {} }";
