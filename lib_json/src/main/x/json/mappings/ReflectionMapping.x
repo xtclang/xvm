@@ -160,9 +160,8 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
             Value?                      defaultValue = Null) {
 
         conditional Value hasDefault() {
-            if (defaultValue != Null) {
-                return True, defaultValue;
-            }
+            return True, defaultValue?;
+
             if (Null.is(Value)) {
                 return True, Null;
             }

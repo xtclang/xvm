@@ -550,12 +550,12 @@ const Uri
      * The "after the end" (exclusive) position for this Uri.
      */
     @RO Position endPosition.get() {
-        return fragment  != Null ? Section.Fragment .end(fragment)
-             : opaque    != Null ? assert
-             : query     != Null ? Section.Query    .end(query)
-             : path      != Null ? Section.Path     .end(path)
-             : authority != Null ? Section.Authority.end(authority)
-             : scheme    != Null ? Section.Scheme   .end(scheme)
+        return Section.Fragment .end(fragment?)
+             : opaque != Null   ? assert
+             : Section.Query    .end(query?)
+             : Section.Path     .end(path?)
+             : Section.Authority.end(authority?)
+             : Section.Scheme   .end(scheme?)
              : assert;
     }
 

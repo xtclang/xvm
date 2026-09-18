@@ -3211,16 +3211,6 @@ public class NameExpression
 
                         if (idProp.isFormalType()) {
                             ctx.replaceGenericArgument(idProp, branch, new TargetInfo(info, typeNarrow));
-                        } else { // allow narrowing for immutable properties
-                            TypeConstant     typeTarget = info.getTargetType();
-                            IdentityConstant idTarget   = typeTarget.getSingleUnderlyingClass(false);
-                            MethodStructure  method     = ctx.getMethod();
-                            if (idTarget.equals(ctx.getThisClassId()) &&
-                                    (method.isConstructor() || method.isValidator())) {
-                                // no property narrowing in the constructor
-                            } else if (typeTarget.isImmutable()) {
-                                ctx.narrowProperty(sName, idProp, branch, new TargetInfo(info, typeNarrow));
-                            }
                         }
                     } else if (id instanceof IdentityConstant) {
                         // narrow the "outer this"
@@ -3239,14 +3229,6 @@ public class NameExpression
 
                         TargetInfo info = new TargetInfo(sName, idProp, true, idProp.getNamespace().getType(), 0);
                         ctx.replaceGenericArgument(idProp, branch, new TargetInfo(info, typeNarrow));
-                    } else { // allow narrowing for immutable properties
-                        MethodStructure method = ctx.getMethod();
-                        if (method.isConstructor() || method.isValidator()) {
-                            // no property narrowing in the constructor
-                        } else if (ctx.getThisClass().isConst()) {
-                            TargetInfo info = new TargetInfo(sName, idProp, true, ctx.getThisType(), 0);
-                            ctx.narrowProperty(sName, idProp, branch, new TargetInfo(info, typeNarrow));
-                        }
                     }
                 } else if (arg instanceof TypeParameterConstant constTypeParam) {
                     ctx.replaceGenericType(constTypeParam, branch, typeNarrow);

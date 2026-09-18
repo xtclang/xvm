@@ -61,7 +61,10 @@ const Error {
     /**
      * The string identity of the error code corresponding to the error.
      */
-    String code.get() = errorCode.is(ErrorCode)?.code : errorCode;
+    String code.get() {
+        var errorCode = this.errorCode;
+        return errorCode.is(ErrorCode)?.code : errorCode;
+    }
 
     /**
      * The parameters used to fill in information in the error message related to the error code.

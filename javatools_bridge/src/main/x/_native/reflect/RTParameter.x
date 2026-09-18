@@ -7,9 +7,8 @@ const RTParameter<ParamType>(Int ordinal, String? name, Boolean formal, Boolean 
         implements Parameter<ParamType> {
     @Override
     conditional String hasName() {
-        return name == Null
-                ? False
-                : (True, name);
+        return (True, name?);
+        return False;
     }
 
     @Override

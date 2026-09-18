@@ -341,9 +341,9 @@ const Range<Element extends Orderable>
             op.appendTo(buf);
             last.appendTo(buf);
         } else {
-            (first.is(Stringable) ? first : first.toString()).appendTo(buf);
+            (first.is(Stringable) ?: first.toString()).appendTo(buf);
             op.appendTo(buf);
-            (last.is(Stringable) ? last : last.toString()).appendTo(buf);
+            (last.is(Stringable) ?: last.toString()).appendTo(buf);
         }
 
         return buf;

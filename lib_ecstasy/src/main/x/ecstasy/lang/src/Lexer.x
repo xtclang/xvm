@@ -2483,6 +2483,7 @@ class Lexer
 
         @Override
         public String toString() {
+            Object value = this.value;
             return switch (id) {
                 case LitIntStr:
                 case LitDecStr:

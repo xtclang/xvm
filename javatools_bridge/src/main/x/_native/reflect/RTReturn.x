@@ -8,8 +8,7 @@ const RTReturn<ReturnType>(Int ordinal, String? name)
 
     @Override
     conditional String hasName() {
-        return name == Null
-                ? False
-                : (True, name);
+        return (True, name?);
+        return False;
     }
 }

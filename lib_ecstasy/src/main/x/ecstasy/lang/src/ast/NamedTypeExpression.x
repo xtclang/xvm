@@ -34,9 +34,7 @@ const NamedTypeExpression(Token[]?          moduleNames,
     @Override
     conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False) {
         Module? mod;
-        if (moduleNames == Null) {
-            mod = typeSystem.primaryModule;
-        } else {
+        if (var moduleNames ?= this.moduleNames) {
             // build the module name
             String moduleName = toDotDelimString(moduleNames);
             if (mod := typeSystem.moduleByQualifiedName.get(moduleName)) {
@@ -47,6 +45,8 @@ const NamedTypeExpression(Token[]?          moduleNames,
                 // no matching module
                 return False;
             }
+        } else {
+            mod = typeSystem.primaryModule;
         }
 
         // process names
@@ -62,7 +62,7 @@ const NamedTypeExpression(Token[]?          moduleNames,
         }
 
         // process access
-        if (access != Null) {
+        if (var access ?= this.access) {
             if (Class clz := type.fromClass()) {
                 type = switch (access.id) {
                     case Public:    clz.PublicType;
@@ -80,7 +80,7 @@ const NamedTypeExpression(Token[]?          moduleNames,
         // -> noNarrow has no meaning at runtime
 
         // process params
-        if (params != Null) {
+        if (var params ?= this.params) {
             Type[] paramTypes = new Type[];
             for (Int i : 0 ..< params.size) {
                 if (Type paramType := params[i].resolveType(typeSystem, hideExceptions)) {
@@ -107,7 +107,7 @@ const NamedTypeExpression(Token[]?          moduleNames,
     String toString() {
         StringBuffer buf = new StringBuffer();
 
-        if (moduleNames != Null) {
+        if (var moduleNames ?= this.moduleNames) {
             Loop: for (Token token : moduleNames) {
                 if (!Loop.first) {
                     buf.add('.');
@@ -125,16 +125,14 @@ const NamedTypeExpression(Token[]?          moduleNames,
             token.appendTo(buf);
         }
 
-        if (access != Null) {
+        if (var access ?= this.access) {
             buf.add(':');
             access.id.text.appendTo(buf);
         }
 
-        if (noNarrow != Null) {
-            noNarrow.id.text.appendTo(buf);
-        }
+        noNarrow?.id.text.appendTo(buf);
 
-        if (params != Null) {
+        if (var params ?= this.params) {
             buf.add('<');
             for (TypeExpression param : params) {
                 param.appendTo(buf);
