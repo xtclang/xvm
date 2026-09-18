@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
@@ -77,11 +79,12 @@ public class ModuleCompiler {
      *
      * @param source  the source code for an entire module to compile
      * @param input   (optional) the module repository to read any required modules from
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the ErrorListener to log any compiler messages to
      *
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      */
-    public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
+    public ModuleStructure compile(String source, ModuleRepository input, @NotNull ErrorListener errs) {
+        Objects.requireNonNull(errs, "errs");
         try {
             EmbeddingCompiler compiler = new EmbeddingCompiler(source, input, coreRepo, errs);
             return compiler.process() == 0
@@ -91,7 +94,7 @@ public class ModuleCompiler {
             // the compiler stops at the end of a stage that logged errors; those errors are already
             // in "errs", so this is an ordinary failed compile, as it is for the command-line
             // compiler. A tool-level failure is logged only to the silent console, so report it
-            if (errs != null && !errs.hasSeriousErrors()) {
+            if (!errs.hasSeriousErrors()) {
                 errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
             }
             return null;
@@ -99,9 +102,7 @@ public class ModuleCompiler {
             // as in EmbeddingSupport.run(): the compiler runs over caller-supplied source, so a
             // failure in it is reported here rather than thrown at the caller, who was promised a
             // null instead
-            if (errs != null) {
-                errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
-            }
+            errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
             return null;
         }
     }
@@ -112,24 +113,23 @@ public class ModuleCompiler {
      * @param file    the module source file
      * @param input   (optional) the module repository to read any required modules from
      * @param output  (optional) the module repository to write any compiled modules to
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the ErrorListener to log any compiler messages to
      *
      * @return true if the compilation succeeded and the result was placed into the output
      */
     public boolean compile(File file, ModuleRepository input, ModuleRepository output,
-                           ErrorListener errs) {
+                           @NotNull ErrorListener errs) {
+        Objects.requireNonNull(errs, "errs");
         ModuleStructure module;
         try {
             module = compile(new String(readFileChars(file)), input, errs);
         } catch (IOException e) {
-            if (errs != null) {
-                errs.error(ERR_INTERNAL, NOWHERE, e, "Unable to read module " + file);
-            }
+            errs.error(ERR_INTERNAL, NOWHERE, e, "Unable to read module " + file);
             return false;
         }
 
         if (module == null) {
-            assert errs == null || errs.hasSeriousErrors();
+            assert errs.hasSeriousErrors();
             return false;
         }
 
@@ -137,9 +137,7 @@ public class ModuleCompiler {
             try {
                 output.storeModule(module);
             } catch (IOException e) {
-                if (errs != null) {
-                    errs.error(ERR_INTERNAL, at(module), e, "Unable to store module " + module.getName());
-                }
+                errs.error(ERR_INTERNAL, at(module), e, "Unable to store module " + module.getName());
                 return false;
             }
         }

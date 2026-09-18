@@ -46,7 +46,7 @@ public class UnaryComplementExpression
             // the "!" operator only applies to a boolean
             typeRight = pool().typeBoolean();
             fBoolean  = true;
-        } else if (typeRequired != null && exprRight.testFit(ctx, typeRequired, false, null).isFit()
+        } else if (typeRequired != null && exprRight.testFit(ctx, typeRequired, false, ErrorListener.BLACKHOLE).isFit()
                 && !typeRequired.ensureTypeInfo(errs).findOpMethods("not", "~", 0).isEmpty()) {
             typeRight = typeRequired;
             fBoolean  = typeRight.isA(pool().typeBoolean());
