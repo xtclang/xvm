@@ -31,9 +31,8 @@ public class ErrorListenerBranchTest {
     private static class HostListener
             implements ErrorListener {
         @Override
-        public boolean log(ErrorInfo err) {
+        public void log(ErrorInfo err) {
             received.add(err.getCode());
-            return false;
         }
 
         final List<String> received = new ArrayList<>();
