@@ -122,7 +122,7 @@ public class ConstantPool
      * in the pool. The array is NOT an internal array from the constant pool, so the caller can
      * safely modify the array. The constants in the array are the actual constants in the constant
      * pool, so the caller must NOT modify them.
-     *
+     * <p>
      * Warning: Do NOT use this method in any performance sensitive tool.
      *
      * @return the Constant at that index
@@ -2476,7 +2476,7 @@ public class ConstantPool
     /**
      * Replace the parent identity for all IdentityConstants that are children of the specified
      * module.
-     *
+     * <p>
      * This method is absolutely destructive to the integrity of this ConstantPool and should only
      * be called on a freshly created copy of a FileStructure that would be immediately discarded
      * after serialization.
