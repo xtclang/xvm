@@ -140,6 +140,59 @@ public interface ErrorListener {
     }
 
     /**
+     * A listener that hands each diagnostic to the given consumer, and answers the questions the
+     * compiler asks about what it has seen.
+     *
+     * This is how a host should build one. {@link ErrorListener} is a functional interface, so a
+     * bare lambda compiles - but a lambda only supplies {@link #log}, and inherits defaults for
+     * {@link #hasSeriousErrors()}, {@link #isAbortDesired()} and {@link #hasError} that answer as
+     * though nothing had been reported. The compiler asks those questions around a hundred times
+     * during a compilation, to decide whether a stage may proceed, so a host that lambdas the
+     * interface directly is telling the compiler that its own diagnostics did not happen.
+     *
+     * @param consumer  receives each diagnostic as it is reported
+     *
+     * @return a listener that reports to the consumer and remembers what it reported
+     */
+    static ErrorListener collecting(java.util.function.Consumer<ErrorInfo> consumer) {
+        requireNonNull(consumer, "consumer");
+        return new ErrorListener() {
+            @Override
+            public void log(ErrorInfo err) {
+                Severity severity = err.getSeverity();
+                if (severity.ordinal() > m_severity.ordinal()) {
+                    m_severity = severity;
+                }
+                f_setCodes.add(err.getCode());
+                consumer.accept(err);
+            }
+
+            @Override
+            public boolean isAbortDesired() {
+                return m_severity == Severity.FATAL;
+            }
+
+            @Override
+            public boolean hasSeriousErrors() {
+                return m_severity.compareTo(Severity.ERROR) >= 0;
+            }
+
+            @Override
+            public boolean hasError(String sCode) {
+                return f_setCodes.contains(sCode);
+            }
+
+            @Override
+            public String toString() {
+                return "Collecting(worst=" + m_severity + ")";
+            }
+
+            private final java.util.Set<String> f_setCodes = java.util.concurrent.ConcurrentHashMap.newKeySet();
+            private volatile Severity           m_severity = Severity.NONE;
+        };
+    }
+
+    /**
      * Report to both listeners.
      *
      * The abort question is answered by either: a caller that wrapped a budgeted listener has to
