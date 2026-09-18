@@ -1,5 +1,9 @@
 package org.xvm.asm;
 
+import org.jetbrains.annotations.NotNull;
+
+import static java.util.Objects.requireNonNull;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -3529,8 +3533,8 @@ public abstract class Component
      */
     public static class SimpleCollector
             implements ResolutionCollector {
-        public SimpleCollector(ErrorListener errs) {
-            m_errs = errs;
+        public SimpleCollector(@NotNull ErrorListener errs) {
+            m_errs = requireNonNull(errs, "errs");
         }
 
         @Override
