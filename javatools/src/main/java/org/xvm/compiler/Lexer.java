@@ -2500,7 +2500,8 @@ public class Lexer
      * Log an error.
      */
     protected void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd) {
-        if (m_errs.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd)) {
+        m_errs.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd);
+        if (m_errs.isAbortDesired()) {
             throw new CompilerException("error list is full: " + m_errs);
         }
     }
@@ -2513,7 +2514,8 @@ public class Lexer
      * to build one by hand.
      */
     protected void log(Severity severity, String sCode, ErrorListener.Site site, Object... aoParam) {
-        if (m_errs.log(severity, sCode, site, aoParam)) {
+        m_errs.log(severity, sCode, site, aoParam);
+        if (m_errs.isAbortDesired()) {
             throw new CompilerException("error list is full: " + m_errs);
         }
     }

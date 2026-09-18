@@ -803,8 +803,8 @@ public class ModuleInfo {
         public abstract TypeCompositionStatement type();
 
         @Override
-        public boolean log(ErrorInfo err) {
-            return errs().log(err);
+        public void log(ErrorInfo err) {
+            errs().log(err);
         }
 
         @Override
