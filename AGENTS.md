@@ -86,8 +86,7 @@ Non-`clean` combinations are fine: `./gradlew build installDist`, `./gradlew tes
 
 - Always end files with a newline.
 - Don't use star imports unless there is more than 20 from the same package.
-- Keep imports in alphabetical order within their group; a new import goes in its sorted position,
-  not appended to the end of the block.
+- Keep imports in alphabetical order within their group; a new import goes in its sorted position, not appended to the end of the block.
 - Don't use fully-qualified Java type names in source when an import works (`ObjectFactory`, not `org.gradle.api.model.ObjectFactory`).
 - For new code, write modern Java — records, streams, generics, fluent/functional style — not Java-1.0-style raw objects/arrays.
 - Prefer immutable or minimally mutable state when there is no concrete reason for mutation; this reduces the amount of

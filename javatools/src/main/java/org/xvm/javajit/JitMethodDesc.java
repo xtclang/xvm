@@ -203,7 +203,7 @@ public class JitMethodDesc {
         }
 
         return md(returns.length == 0 ? CD_void : returns[0].cd, paramCDs);
-        }
+    }
 
     /**
      * @return the number of extra parameters

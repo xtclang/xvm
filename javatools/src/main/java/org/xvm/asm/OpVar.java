@@ -265,8 +265,7 @@ public abstract class OpVar
         bctx.loadTypeConstant(code, type.removeImmutable());
         code.loadConstant((long) anArgValue.length)
                 .iconst_0()
-                .invokestatic(cdArray, "$new$p",
-                    md(cdArray, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean));
+                .invokestatic(cdArray, "$new$p", md(cdArray, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean));
 
         for (int nArg : anArgValue) {
             code.dup();
@@ -321,8 +320,7 @@ public abstract class OpVar
             }
             code.aastore();
         }
-        code.invokespecial(CD_nTuple, "<init>",
-                md(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
+        code.invokespecial(CD_nTuple, "<init>", md(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
         reg.store(bctx, code, type);
         return -1;
     }

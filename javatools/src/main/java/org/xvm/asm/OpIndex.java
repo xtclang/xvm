@@ -277,8 +277,7 @@ public abstract class OpIndex
 
                     case OP_I_SET -> {
                         bctx.loadArgument(code, getValueId());
-                        code.invokevirtual(cdArray, "setElement$p",
-                            md(CD_void, CD_Ctx, CD_long, CD_Object));
+                        code.invokevirtual(cdArray, "setElement$p", md(CD_void, CD_Ctx, CD_long, CD_Object));
                     }
 
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));

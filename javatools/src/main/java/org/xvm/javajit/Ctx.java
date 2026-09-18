@@ -167,9 +167,7 @@ public final class Ctx {
 
     public static final MethodTypeDesc MD_log = md(CD_void, CD_JavaString);
 
-    public static final MethodTypeDesc MD_inject = md(
-            CD_JavaObject, CD_TypeConstant, CD_JavaString, CD_JavaObject);
+    public static final MethodTypeDesc MD_inject = md(CD_JavaObject, CD_TypeConstant, CD_JavaString, CD_JavaObject);
 
-    public static final MethodTypeDesc MD_getStatic =
-            md(CD_JavaObject, CD_MethodHandle);
+    public static final MethodTypeDesc MD_getStatic = md(CD_JavaObject, CD_MethodHandle);
 }

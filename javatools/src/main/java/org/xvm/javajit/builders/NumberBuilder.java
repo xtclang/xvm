@@ -807,7 +807,7 @@ public class NumberBuilder extends AugmentingBuilder {
         switch (name) {
         case "Int8":
             code.iload(code.parameterSlot(0))
-                .loadConstant((int) Byte.MIN_VALUE)
+                .loadConstant(Byte.MIN_VALUE)
                 .if_icmpne(valid);
             throwOutOfBounds(code, "", ctxSlot);
             code.labelBinding(valid);
@@ -815,7 +815,7 @@ public class NumberBuilder extends AugmentingBuilder {
 
         case "Int16":
             code.iload(code.parameterSlot(0))
-                .loadConstant((int) Short.MIN_VALUE)
+                .loadConstant(Short.MIN_VALUE)
                 .if_icmpne(valid);
             throwOutOfBounds(code, "", ctxSlot);
             code.labelBinding(valid);

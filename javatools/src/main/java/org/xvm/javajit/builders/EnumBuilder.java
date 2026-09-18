@@ -115,8 +115,7 @@ public class EnumBuilder extends CommonBuilder {
             .aload(1)
             .aload(2)
             .aload(3)
-            .invokestatic(CD_nEnum, "equals$p",
-                md(CD_boolean, CD_Ctx, CD_nType, CD_nEnum, CD_nEnum))
+            .invokestatic(CD_nEnum, "equals$p", md(CD_boolean, CD_Ctx, CD_nType, CD_nEnum, CD_nEnum))
             .ireturn();
     }
 
